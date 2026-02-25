@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.svelte-kit/
+
+# WASM build artifacts (compiled from C++)
+wasm/*.wasm
+wasm/*.js
+wasm/*.d.ts
+
+# C++ build
+src/dsp/build/
+src/dsp/CMakeFiles/
+src/dsp/CMakeCache.txt
+src/dsp/*.o
+src/dsp/*.a
+
+# Vite
+.vite/
+vite.config.js.timestamp-*
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.vscode/settings.json
+.vscode/launch.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
