@@ -1,44 +1,43 @@
 # UI Design
 
-## Direction: Brutalist Minimal + Geometric Graphic Design — DECIDED
+## Direction: Warm Brutalist + Geometric Graphic Design — DECIDED
 
-Inspired by Swiss International Style and New Brutalism.
-Treats the UI as graphic design first — geometric shapes, bold typography, and high-contrast zones are compositional elements, not decoration added on top of a functional layout.
+Inspired by Swiss International Style and New Brutalism, adapted with a warm cream/navy color palette.
+Treats the UI as graphic design first — geometric shapes, bold typography, and high-contrast zones are compositional elements.
 
 ### Principles
 
-1. **Geometry drives composition** — Large geometric shapes (rectangles, circles, triangles) anchor the visual hierarchy before any content is placed.
-2. **Black zones and white zones** — Large areas can flip to inverted (black bg / white fg). This is a compositional tool, not theming.
-3. **Bold numbers as visual anchors** — BPM, step count, pattern number are displayed at display scale, dominating their zone.
+1. **Geometry drives composition** — Large geometric shapes anchor the visual hierarchy.
+2. **Zone inversion** — Dark zones (navy bg / cream fg) and light zones (cream bg / navy fg) create separation without borders.
+3. **Bold numbers as visual anchors** — BPM, step count, pattern number displayed at display scale.
 4. **No gradients, no shadows** — Depth through border weight, whitespace, and zone contrast only.
-5. **Two font roles** — Display font (bold grotesque) for large numbers and headings; monospace for all functional data and labels.
-6. **Color is reserved for state** — Only the accent color carries meaning (playing, active, record).
-7. **Geometric patterns as texture** — Stripe and grid patterns can fill muted/inactive areas to add visual rhythm without color.
+5. **Two font roles** — Display font (bold grotesque) for numbers/headings; monospace for all functional data.
+6. **Color is reserved for state** — Olive for active trigs, blue for playhead, salmon for alerts.
+7. **Geometric elements as texture** — Decorative shapes in zones for visual rhythm.
 
-## Color Palette
-
-```
---color-bg:       #ffffff   /* page background */
---color-fg:       #000000   /* primary text, borders */
---color-muted:    #888888   /* inactive steps, disabled controls */
---color-accent:   #ff3300   /* active trig, playhead, record state */
---color-surface:  #f0f0f0   /* subtle panel differentiation (use sparingly) */
-```
-
-> Only `--color-accent` is vivid. Everything else is black, white, or gray.
-
-## Typography
-
-Two font roles. Never mix them within the same element.
-
-### Display font — bold grotesque
-Used for: BPM number, pattern number, large step counter, section headings.
+## Color Palette — DECIDED
 
 ```css
-font-family: "Bebas Neue", "Anton", sans-serif;  /* condensed bold grotesque */
+--color-bg:      #EDE8DC;   /* warm cream — page background */
+--color-fg:      #1E2028;   /* dark navy — primary text, borders, dark zones */
+--color-surface: #E2DDD3;   /* slightly darker cream — subtle panel differentiation */
+--color-muted:   #9A9680;   /* warm gray — inactive steps, disabled controls */
+--color-olive:   #787845;   /* olive green — active trig, selected key */
+--color-blue:    #4472B4;   /* steel blue — playhead, FILL/REV buttons */
+--color-salmon:  #E8A090;   /* salmon — BRK button, record/alert, GLT node */
+--color-purple:  #9B6BA0;   /* soft violet — granular FX node */
 ```
 
-Sizes: 48px / 32px / 24px only. Always uppercase. No letter-spacing (condensed fonts tighten naturally).
+The palette is warm and restrained. Olive, blue, salmon, and purple are chromatic; everything else is cream/navy/gray.
+
+## Typography — DECIDED
+
+### Display font — bold grotesque
+Used for: BPM number, pattern number, split-flap displays, section headings.
+
+```css
+font-family: "Bebas Neue", "Anton", sans-serif;
+```
 
 ### Data font — monospace
 Used for: parameter values, labels, step numbers, all interactive controls.
@@ -49,338 +48,267 @@ font-size-base: 12px;
 line-height: 1.4;
 ```
 
-- All sizes are multiples of 4px.
-- Labels are ALL CAPS with `letter-spacing: 0.08em`.
-- No italic. Bold only for emphasis, never decoration.
+Labels are ALL CAPS with `letter-spacing: 0.08em`.
 
-## Graphic Design Language
-
-### Zone Inversion
-
-The UI is divided into zones. Any zone can be inverted (black bg / white fg).
-Inversion is a compositional choice — it creates visual separation without borders.
+## Zone Layout — DECIDED
 
 ```
-White zone:  background #ffffff, text/border #000000
-Black zone:  background #000000, text/border #ffffff
-```
-
-Typical usage:
-- Header bar → **black zone** (anchors the top edge strongly)
-- Step grid → **white zone** (content area, maximum readability)
-- Selected track param panel → **black zone** (visually separates from grid)
-- Muted track row → subtle stripe texture (see below)
-
-### Geometric Decorative Elements
-
-Large geometric SVG shapes are placed in compositional positions — not as icons, but as visual mass.
-They are always flat, monochrome, and belong to the zone color (white on black, black on white).
-
-**Permitted shapes:**
-- Filled rectangle (any aspect ratio)
-- Circle / semicircle
-- Right triangle (45° or 30/60°)
-- Horizontal or vertical line (1px–8px weight)
-
-**Placement rules:**
-- Decorative shapes live in their own layer behind content (z-index below interactive elements).
-- Never obscure interactive elements.
-- Anchor to corners or edges of their containing zone — not floating in the middle.
-- Max 2 decorative shapes per zone to avoid visual clutter.
-
-**Example placements:**
-```
-Header (black zone):
-  ┌────────────────────────────────────────┐
-  │ ●  INBOIL   120   [▶][■]    PAT: 01   │
-  │ (large filled circle, top-left corner) │
-  └────────────────────────────────────────┘
-
-Param panel (black zone):
-  ┌────────────────────────────────────────┐
-  │ CUTOFF  RESO  DECAY          ▐▐▐▐      │
-  │                  (right-aligned rect cluster as graphic mass)
-  └────────────────────────────────────────┘
-```
-
-### Geometric Pattern Textures
-
-Stripe and grid patterns (SVG `<pattern>`) are used as fills for inactive states.
-They replace solid color fills in contexts where "dimmed but present" needs to be communicated.
-
-**Patterns:**
-```
-stripe-h:  horizontal lines, 2px stroke, 4px gap, 45° rotation  →  muted track rows
-stripe-v:  vertical lines, same spec  →  empty pattern slots
-dot-grid:  2×2px dots on 8px grid  →  background of inactive zones (PROPOSED)
-```
-
-All patterns use `--color-fg` at `opacity: 0.15` on a white background.
-On a black zone: white at `opacity: 0.12`.
-
-### Large Number Display
-
-BPM and pattern number are displayed at display scale as visual anchors.
-
-```
-BPM:     48px Bebas Neue, white on black
-PAT:     32px Bebas Neue, white on black, right-aligned in header
-Step counter (mobile):  32px Bebas Neue, "01 / 16"
-```
-
-These numbers are not just labels — they are the dominant visual element of their zone.
-
-## Layout
-
-### Main Screen (desktop, 1280px+)
-
-Zone breakdown:
-- **Header**: black zone — large BPM number (display font), geometric circle anchor left
-- **Step grid**: white zone — maximum readability, no decoration
-- **Param panel**: black zone — creates clear separation from grid above
-
-```
-█ = black zone   ░ = white zone
+█ = dark zone (navy bg)   ░ = light zone (cream bg)
 
 ┌█████████████████████████████████████████████████┐
-│█ ●  INBOIL        120    [▶][■][●]    PAT: 01  █│  ← Header (56px, black zone)
-│█    (circle)   (48px BN)              (32px BN)█│
-├░░░░░░░░░░┬░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ KICK  ▶ │░ [■][ ][ ][■][ ][ ][■][ ][ ][ ]...  │  ← Step grid (white zone)
-│░ SNARE   │░ [ ][ ][ ][ ][■][ ][ ][ ][ ][ ]...  │    Track label left, steps right
-│░ HATS    │░ [■][■][ ][■][■][■][ ][■][ ][ ]...  │
-│░ ░░░░░░░░│░ (muted row: stripe-h texture)       │
-│░ ░░░░░░░░│░ ...                                 │
+│█ ●  INBOIL   120   [▶][■][RND]      PAT: 01  █│  ← AppHeader (dark zone)
+│█  (split-flap)                    (split-flap)█│
 ├█████████████████████████████████████████████████┤
-│█  CUTOFF        RESONANCE       DECAY        ████│  ← Param panel (black zone)
-│█  [knob]          [knob]        [knob]       ████│    rect cluster right as graphic mass
-│█  880 Hz           0.4          120ms        ████│
+│█ [KEY] [OCT▼▲] [LOW MID HIGH] [GAIN]          █│  ← PerfBar (dark zone)
+│█                       [FILL REV GLT BRK] [FX] █│  ← FX button toggles view
+├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
+│░ KICK [V][P] M [■][ ][ ][■][ ][ ][■][ ][ ]... ░│  ← StepGrid (light zone)
+│░ SNARE[V][P] M [ ][ ][ ][ ][■][ ][ ][ ][ ]... ░│     VOL + PAN knobs per track
+│░ C.HH [V][P] M [■][■][ ][■][■][■][ ][■][ ]... ░│
+│░ ...                                           ░│
+├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
+│░ (PianoRoll — shown conditionally for melodic) ░│  ← PianoRoll (light zone)
+├█████████████████████████████████████████████████┤
+│█ [KICK] [knob][knob][knob]       DUCK COMP    █│  ← ParamPanel (dark zone)
+│█  (split-flap)   (synth params)   (global FX)  █│
+└─────────────────────────────────────────────────┘
+
+── FX View (ui.view === 'fx') ──────────────────────
+
+┌█████████████████████████████████████████████████┐
+│█        AppHeader + PerfBar (same as above)    █│
+├█████████████████████████████████████████████████┤
+│█                                               █│  ← FxPad (dark zone)
+│█     (VERB)         ~~~3D wireframe terrain~~~  █│     XY pad + audio visualizer
+│█              (DLY)                             █│     tap=toggle, drag=move
+│█   (GLT)                          (GRN)        █│
+│█                                               █│
+├█████████████████████████████████████████████████┤
+│█ [●●●○●●●●] KICK | VERB DLY GLT GRN [knobs]  █│  ← FxPad sends bar
+├█████████████████████████████████████████████████┤
+│█ [KICK] [knob][knob][knob]       DUCK COMP    █│  ← ParamPanel (desktop only)
 └─────────────────────────────────────────────────┘
 ```
 
-### Responsive Behavior — DECIDED
+## Components
 
-Responsive design is required. The UI must be usable on smartphones without feeling broken.
+### SplitFlap (パタパタ) Display — DECIDED
 
-#### Breakpoints
+Split-flap mechanical display for BPM, pattern number, and track name.
+Each character flips independently with a 3D CSS animation:
+- Top half: previous value → rotates down (`rotateX(-90deg)`)
+- Bottom half: next value revealed
 
-```
-sm:  < 640px   (smartphone portrait)
-md:  640–1023px (tablet / smartphone landscape)
-lg:  ≥ 1024px  (desktop — primary design target)
-```
+Uses `perspective`, `transform-style: preserve-3d`, `backface-visibility: hidden`.
+Flip duration: 180ms ease-out.
 
-#### Desktop (lg) — Primary layout
-See ASCII diagram above.
+### Step Button (Trig) — DECIDED
 
-#### Tablet (md)
+Steps use an **Othello-style flip** to toggle between active/empty states.
 
-```
-┌─────────────────────────────────┐
-│  INBOIL   BPM:120  [▶][■]  P:01 │  ← Header (40px)
-├─────────────────────────────────┤
-│  T1 KICK  [■][ ][ ][■][ ][ ]…  │  ← Track list fills full width
-│  T2 SNARE [ ][ ][ ][ ][■][ ]…  │    Track label + steps in one row
-│  T3 HATS  [■][■][ ][■][■][■]…  │    Steps may scroll horizontally
-│  ...                            │
-├─────────────────────────────────┤
-│  SYNTH PARAMS (selected track)  │  ← Param panel below grid
-└─────────────────────────────────┘
+**Structure:**
+```html
+<button class="step">
+  <span class="step-flip" class:flipped={trig.active}>
+    <span class="face off"></span>   <!-- cream/empty face -->
+    <span class="face on"></span>    <!-- olive/active face, rotateY(180deg) back -->
+  </span>
+</button>
 ```
 
-#### Smartphone (sm)
+**Toggle animation:** 3D `rotateY` flip (200ms ease-in-out) between faces.
+- Empty → Active: flip from cream to olive face.
+- Active → Empty: flip back.
 
-```
-┌───────────────────┐
-│ INBOIL  [▶][■] »  │  ← Minimal header; BPM hidden, tap » to expand
-├───────────────────┤
-│ T1 KICK     [SEL] │  ← Track list: name + select only (no inline steps)
-│ T2 SNARE    [SEL] │
-│ T3 HATS     [SEL] │
-│ ...               │
-├───────────────────┤
-│ [■][■][ ][■][ ]…  │  ← Selected track steps (horizontal scroll)
-│ Step 1–16 of 16   │
-├───────────────────┤
-│ CUTOFF  RESO  DEC │  ← Params: 3 knobs visible at a time, swipe for more
-└───────────────────┘
-```
+**Playhead animation:** `filter: brightness(1.5→1)` glow pulse (180ms ease-out). Uses CSS `filter` rather than `transform` to avoid conflicting with the flip animation.
 
-#### Touch Interaction
+### Knob / Parameter Control — DECIDED
 
-- Step buttons must be at least **44×44px** on mobile (tap target, may be larger than the visual square).
-- Knob drag remains vertical drag; pinch is not used.
-- No hover states on mobile — active state triggers on `touchstart`.
-- BPM tap-tempo: double-tap the BPM display to set tempo by tapping rhythm (PROPOSED for mobile only).
-
-## Component Conventions
-
-### Step Button (Trig)
-
-A step button has four persistent states and two transient states.
-
-**Persistent states:**
-
-```
-State                      Background        Border
-─────────────────────────────────────────────────────
-Empty, not playing         #ffffff           1px solid #000
-Active trig, not playing   #000000           1px solid #000
-Empty, playhead here       var(--color-accent)   1px solid #000
-Active trig, playhead here var(--color-accent) + inner white 4×4px square
-```
-
-The inner white square on the last state makes it unmistakable that both
-"trig exists" and "it is currently being played" are true simultaneously.
-
-**Transient states (animation):**
-
-```
-State                Duration   Visual
-────────────────────────────────────────────────────────────────
-Trig just fired      80ms       accent bg → returns to Active state
-User pressing        60ms       scale(0.88) on press, scale(1) on release
-```
-
-- Size: 20×20px desktop, 44×44px tap target on mobile (visual remains 20px, touch area enlarged).
-- No border-radius (square).
-- Toggled on `mousedown` / `touchstart` (no waiting for release — immediate feedback).
-- No drag-to-activate in v1.
-
-### Knob / Parameter Control
-
-- SVG-based rotary knob.
+SVG-based rotary knob with 270° travel arc.
 - Drag vertically to change value (up = increase).
-- Double-click to enter numeric value.
-- Displays current value as text below the knob in monospace, **updates live while dragging**.
+- Shows arc indicator and ALL CAPS label below.
 - Cursor: `ns-resize` on hover.
-- While dragging: show a floating tooltip directly above the knob with the exact value (`1px solid #000`, white bg, monospace). Disappears on release.
-- No decorative chrome — just the arc indicator and label.
+- Default size: 32px. PerfBar knobs: 36px. StepGrid inline knobs: 20px.
+- Value is 0.0–1.0 normalized; actual value computed by `paramDefs.ts`.
 
-### Buttons (transport / action)
+Props:
+- `light`: dark strokes for use on cream background (StepGrid track row).
+- `compact`: hides the numeric value display, keeps label visible. Used for inline VOL/PAN knobs in track rows.
 
-```css
-border: 1px solid #000;
-background: #fff;
-padding: 4px 12px;
-font-family: monospace;
-font-size: 11px;
-letter-spacing: 0.08em;
-text-transform: uppercase;
-cursor: pointer;
+### PerfBar — DECIDED
 
-/* active / pressed */
-background: #000;
-color: #fff;
+Performance controls strip (dark zone). Layout:
+
+```
+[KEY piano] | [OCT ▼ 0 ▲] | [LOW MID HIGH] | [GAIN] | [FILL] [REV] [GLT] [BRK] | [FX]
 ```
 
-### Track List Item
+- **KEY**: 12-key piano keyboard. Active key shown in olive.
+- **OCT**: Octave shift ▼/▲ buttons with SplitFlap display (-2 to +2). Applied at cycle boundary (pending shown with blink).
+- **EQ knobs**: LOW / MID / HIGH (0=kill, 0.5=unity, 1.0=boost).
+- **GAIN knob**: Master volume.
+- **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
+  - FILL, REV: `--color-blue` border/active
+  - GLT: `--color-olive` border/active
+  - BRK: `--color-salmon` border/active
+- **FX**: View toggle between grid view and FxPad view (`ui.view = 'grid' | 'fx'`).
 
-- One row per track.
-- Shows: track number, track name (ALL CAPS), mute button, volume bar.
-- Selected track has a `1px solid #000` left border indicator (no fill change).
+On mobile (`< 640px`): EQ and GAIN hidden, elements shrunk to fit single row.
 
-## Interaction Model
+### FxPad — DECIDED
+
+XY performance surface (dark zone). Switches with StepGrid via PerfBar FX button.
+
+**Structure:**
+- `fx-view` outer container (`flex: 1`, column layout)
+- `fx-pad` inner area: XY touch surface with canvas visualizer + draggable nodes
+- `sends-bar` footer: per-track send mixer
+
+**4 FX nodes** (circle buttons, 48px):
+- VERB (olive), DLY (blue), GLT (salmon), GRN (purple)
+- Tap: toggle on/off. Drag: move position (XY 0–1).
+- Active: filled with node color + glow shadow. Inactive: outline only.
+- Dragging: scale(1.25) + larger glow.
+
+**Audio visualizer** (Canvas 2D behind nodes):
+- 3D wireframe terrain: 18 rows × 32 columns, frequency-displaced
+- Colors: olive → blue → salmon → purple by depth
+- Perspective projection, DPR-aware
+- RAF loop only when `ui.view === 'fx'`
+
+**Sends bar** (compact dark footer):
+- Track dots (8, olive active), track name label
+- VERB, DLY, GLT, GRN send knobs (28px) for selected track
+- This is the sole location for per-track FX send controls
+
+### ParamPanel — DECIDED
+
+Dark zone footer. Shows:
+1. **Track name** (SplitFlap display)
+2. **♪ NOTES button** (melodic tracks only, toggles PianoRoll)
+3. **Synth params** (knobs from `paramDefs.ts`, scrollable)
+4. **Global FX**: DUCK, COMP
+
+Per-track sends (VERB, DLY, GLT, GRN) are in the FxPad sends bar only. PAN and VOL are in the StepGrid track row.
+
+Decorative geometric elements (circle + rect, olive/blue, 20% opacity) anchored right.
+
+### PianoRoll — DECIDED
+
+Note editor grid for melodic tracks (6–7). Positioned between StepGrid and ParamPanel.
+24-note range (C3–B4). Click cell to set note + activate; click same note to deactivate.
+Playhead column shown when playing.
+
+### AppHeader — DECIDED
+
+Dark zone. Contains:
+- Logo ("INBOIL")
+- BPM display (SplitFlap, editable)
+- Transport: Play/Stop/Random buttons
+- Pattern navigation: `◄ PAT:01 ►` (SplitFlap display)
+- Pending pattern: when queued switch is active, shows target PAT with blinking animation (400ms pulse)
+
+### MobileTrackView — DECIDED
+
+Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × 4 rows for 16 steps).
+Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop.
+
+Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the mute button. Global FX (DUCK, COMP) in params bar.
+
+## Interaction Model — DECIDED
 
 | Action | Gesture |
 |---|---|
-| Toggle trig | Click step button |
-| Select track | Click track name |
+| Toggle trig | Click/tap step button (immediate on pointerdown) |
+| Select track | Click track name or track dot |
 | Adjust parameter | Drag knob vertically |
-| Enter value | Double-click knob |
 | Play / Stop | Spacebar or transport button |
 | Change BPM | Drag BPM display vertically, or double-click to type |
-| Mute track | Click M button on track |
+| Mute track | Click M button on track row |
+| Toggle piano roll | Click ♪ NOTES in ParamPanel |
+| Switch pattern | Click ◄ ► in header |
+| Performance controls | Press-hold buttons (FILL, REV, GLT, BRK) |
+| Key change | Click piano key in PerfBar |
+| Octave shift | Click ▼/▲ in PerfBar OCT controls |
+| Toggle FX view | Click FX button in PerfBar |
+| Toggle FX node | Tap FxPad node (no drag) |
+| Move FX node | Drag FxPad node (pointer capture) |
+| Select track (FxPad) | Click track dot in FxPad sends bar |
 
-## Animation & Feedback
-
-Animation serves one purpose only: **communicating state**. Never used for aesthetics.
+## Animation & Feedback — DECIDED
 
 ### Timing Rules
 
 ```
-All durations:  ≤ 150ms
-Easing:         linear or ease-out only (no spring / bounce)
-Properties:     transform and background only (no layout-triggering properties)
+All durations:  ≤ 200ms
+Easing:         ease-out or ease-in-out (no spring/bounce)
+Properties:     transform, filter, opacity only (no layout-triggering)
 ```
 
-### Playhead
-
-The current step indicator moves **instantly** with the sequencer clock — no easing.
-It is always the accent color (`#ff3300`), making the playhead immediately locatable at a glance.
-
-### Trig Fire Flash
-
-When the WASM engine fires a trig (audio plays), the UI receives a `TRIG_FIRED` event via MessagePort.
+### Step Toggle (Othello Flip)
 
 ```css
-/* Applied for 80ms then removed */
-.step--fired {
-  background: var(--color-accent);
-  transform: scale(1.15);
-  transition: transform 80ms linear, background 80ms linear;
+.step-flip {
+  transition: transform 200ms ease-in-out;
+  transform-style: preserve-3d;
+}
+.step-flip.flipped { transform: rotateY(180deg); }
+```
+
+### Playhead Glow
+
+```css
+.step.playhead { animation: ph-glow 180ms ease-out; }
+@keyframes ph-glow {
+  0%   { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
 }
 ```
 
-This flash is distinct from the persistent playhead highlight — it scales slightly larger to draw the eye.
+### SplitFlap Flip
 
-### Trig Toggle (user press)
+Per-character 3D flip animation (180ms ease-out) triggered on value change.
 
-Applied on `mousedown` / `touchstart`:
-
-```css
-.step:active {
-  transform: scale(0.88);
-  transition: transform 60ms linear;
-}
-```
-
-State (active/empty) changes immediately on press — never wait for mouse-up.
-
-### Track Selection
-
-Left border indicator appears **instantly** on click (no transition).
-Param panel below updates **instantly** to show the new track's parameters.
-No sliding, fading, or crossfading panels.
-
-### Transport Buttons
-
-| State | Visual |
-|---|---|
-| Default | white bg, black border, black text |
-| Pressed (active) | black bg, white text — stays while in that state |
-| PLAYING | Play button stays inverted for the entire play session |
-| RECORDING | Record button blinks: 500ms on / 500ms off at accent color |
-
-### BPM Beat Indicator
-
-The BPM display in the header flashes its border on each quarter note beat.
+### Pending Pattern Blink
 
 ```css
-/* Applied for 50ms on each beat */
-.bpm--beat {
-  border-width: 2px;  /* normally 1px */
-  transition: border-width 50ms linear;
+.pat-value.pending {
+  animation: pat-blink 400ms ease-in-out infinite;
+}
+@keyframes pat-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
 }
 ```
-
-Gives a visual tempo pulse without using color or animation that distracts from the step grid.
-
-### Error / Constraint Feedback
-
-| Situation | Feedback |
-|---|---|
-| Invalid input (e.g. BPM out of range) | Input display flashes accent color for 150ms |
-| Action blocked (e.g. max steps reached) | Horizontal shake: `translateX(±3px)` × 2, 120ms total |
 
 ### No Animation Zones
 
-These transitions are **always instant**, no exceptions:
+Always instant, no transition:
 - Page or section transitions
-- Opening / closing param panel
-- Applying a pattern switch
-- Mute toggle
+- Opening/closing PianoRoll
+- Pattern switch application
+- Mute toggle (visual — audio uses smooth fade)
+
+## Responsive Behavior — DECIDED
+
+### Breakpoints
+
+```
+sm:  < 640px   (smartphone portrait) → MobileTrackView
+md:  640–1023px (tablet / landscape) → StepGrid with compact layout
+lg:  ≥ 1024px  (desktop)            → Full StepGrid layout
+```
+
+### Mobile (sm)
+
+Uses MobileTrackView: calculator-style step buttons, track navigation via ◄ ►, ♪ NOTES toggle for melodic tracks.
+
+### Scrolling
+
+`overscroll-behavior: none` applied at every level of the scroll chain (html → body → #app → .app → .step-grid → .track-row → .steps) to prevent Mac trackpad rubber banding.
+
+All native scrollbars hidden via `scrollbar-width: none` and `::-webkit-scrollbar { display: none }`.
 
 ## Accessibility — DEFERRED
 
-WCAG compliance is not a v1 goal but the color contrast of the palette (black on white) naturally meets AA.
+WCAG compliance is not a v1 goal but the warm palette naturally provides good contrast.

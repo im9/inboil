@@ -1,0 +1,384 @@
+<script lang="ts">
+  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, effects } from '../state.svelte.ts'
+  import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
+  import PianoRoll from './PianoRoll.svelte'
+  import Knob from './Knob.svelte'
+  import SplitFlap from './SplitFlap.svelte'
+
+  const track = $derived(pattern.tracks[ui.selectedTrack])
+  const drum = $derived(isDrum(track))
+  const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
+
+  function prevTrack() {
+    ui.selectedTrack = (ui.selectedTrack - 1 + pattern.tracks.length) % pattern.tracks.length
+  }
+  function nextTrack() {
+    ui.selectedTrack = (ui.selectedTrack + 1) % pattern.tracks.length
+  }
+</script>
+
+<div class="mobile-view">
+
+  <!-- Track navigation -->
+  <div class="track-nav">
+    <button class="nav-btn" onpointerdown={prevTrack}>◀</button>
+
+    <div class="track-info">
+      <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
+      <div class="track-meta">
+        <span class="track-type">{track.synthType}</span>
+        <Knob
+          value={track.volume}
+          label="VOL"
+          size={28}
+          light
+          compact
+          onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }}
+        />
+        <Knob
+          value={(track.pan + 1) / 2}
+          label="PAN"
+          size={28}
+          light
+          compact
+          onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }}
+        />
+        <button
+          class="btn-mute"
+          onpointerdown={() => toggleMute(ui.selectedTrack)}
+        >
+          <span class="mute-flip" class:flipped={track.muted}>
+            <span class="face off">M</span>
+            <span class="face on">M</span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <button class="nav-btn" onpointerdown={nextTrack}>▶</button>
+  </div>
+
+  <!-- View toggle: STEPS / NOTES (melodic tracks only) -->
+  {#if !drum}
+    <div class="view-tabs">
+      <button
+        class="tab"
+        class:active={track.bottomPanel !== 'piano'}
+        onpointerdown={() => { if (track.bottomPanel === 'piano') toggleBottomPanel(ui.selectedTrack) }}
+      >STEPS</button>
+      <button
+        class="tab"
+        class:active={track.bottomPanel === 'piano'}
+        onpointerdown={() => { if (track.bottomPanel !== 'piano') toggleBottomPanel(ui.selectedTrack) }}
+      >NOTES</button>
+    </div>
+  {/if}
+
+  <!-- Main area: step calculator or piano roll -->
+  {#if drum || track.bottomPanel !== 'piano'}
+    <div class="calculator">
+      {#each track.trigs as trig, stepIdx}
+        {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
+        <button
+          class="calc-btn"
+          class:playhead={isPlayhead}
+          onpointerdown={() => toggleTrig(ui.selectedTrack, stepIdx)}
+        >
+          <span class="btn-flip" class:flipped={trig.active}>
+            <span class="face off"><span class="step-num">{stepIdx + 1}</span></span>
+            <span class="face on"><span class="step-num">{stepIdx + 1}</span></span>
+          </span>
+        </button>
+      {/each}
+    </div>
+  {:else}
+    <div class="piano-wrap">
+      <PianoRoll trackId={ui.selectedTrack} />
+    </div>
+  {/if}
+
+  <!-- Params (always visible at bottom) -->
+  <div class="params-bar">
+    {#each params as p}
+      <Knob
+        value={normalizeParam(p, track.voiceParams[p.key] ?? p.default)}
+        label={p.label}
+        size={40}
+        onchange={v => setVoiceParam(ui.selectedTrack, p.key, denormalizeParam(p, v))}
+      />
+    {/each}
+
+    <!-- Global FX -->
+    <div class="sends-sep" aria-hidden="true"></div>
+    <Knob
+      value={effects.ducker.depth}
+      label="DUCK"
+      size={40}
+      onchange={v => { effects.ducker.depth = v }}
+    />
+    <Knob
+      value={(effects.comp.makeup - 1.0) / 2.5}
+      label="COMP"
+      size={40}
+      onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }}
+    />
+  </div>
+
+  <!-- Track indicator dots -->
+  <div class="track-dots">
+    {#each pattern.tracks as _t, i}
+      <button
+        class="dot"
+        class:active={i === ui.selectedTrack}
+        onpointerdown={() => { ui.selectedTrack = i }}
+        aria-label="Track {i + 1}"
+      ></button>
+    {/each}
+  </div>
+
+</div>
+
+<style>
+  .mobile-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+
+  /* ── Track nav ── */
+  .track-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(30,32,40,0.1);
+  }
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-fg);
+    background: transparent;
+    color: var(--color-fg);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-btn:active { background: var(--color-fg); color: var(--color-bg); }
+
+  .track-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+  .track-name {
+    font-family: var(--font-display);
+    font-size: 32px;
+    line-height: 1;
+    color: var(--color-fg);
+    letter-spacing: 0.02em;
+  }
+  .track-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .track-type {
+    font-size: 9px;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .btn-mute {
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    perspective: 60px;
+  }
+  .mute-flip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 180ms ease-out;
+  }
+  .mute-flip.flipped { transform: rotateY(180deg); }
+  .btn-mute:active .mute-flip { transform: scale(0.85); }
+  .btn-mute:active .mute-flip.flipped { transform: rotateY(180deg) scale(0.85); }
+  .mute-flip > .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    backface-visibility: hidden;
+  }
+  .mute-flip > .face.off {
+    border: 1px solid var(--color-fg);
+    background: transparent;
+    color: var(--color-fg);
+  }
+  .mute-flip > .face.on {
+    border: 1px solid var(--color-fg);
+    background: var(--color-fg);
+    color: var(--color-bg);
+    transform: rotateY(180deg);
+  }
+
+  /* ── View tabs ── */
+  .view-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(30,32,40,0.1);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 7px;
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active {
+    color: var(--color-fg);
+    border-bottom-color: var(--color-olive);
+  }
+
+  /* ── Calculator (4 columns × 4 rows) ── */
+  .calculator {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 8px;
+    align-content: center;
+    overflow: hidden;
+  }
+  .calc-btn {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    border: none;
+    background: transparent;
+    perspective: 120px;
+    padding: 0;
+  }
+
+  .btn-flip {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transition: transform 180ms ease-out;
+  }
+  .btn-flip.flipped {
+    transform: rotateY(180deg);
+  }
+  .calc-btn:active .btn-flip { transform: scale(0.9); }
+  .calc-btn:active .btn-flip.flipped { transform: rotateY(180deg) scale(0.9); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .face.off {
+    background: var(--color-bg);
+    border: 1.5px solid rgba(30,32,40,0.5);
+  }
+  .face.on {
+    background: var(--color-olive);
+    border: 1.5px solid var(--color-olive);
+    transform: rotateY(180deg);
+  }
+
+  .step-num {
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .face.off .step-num {
+    color: var(--color-fg);
+    opacity: 0.3;
+  }
+  .face.on .step-num {
+    color: var(--color-bg);
+    opacity: 0.5;
+  }
+
+  /* ── Playhead glow ── */
+  .calc-btn.playhead {
+    animation: ph-glow 180ms ease-out;
+  }
+
+  @keyframes ph-glow {
+    0%   { filter: brightness(1.5); }
+    100% { filter: brightness(1); }
+  }
+
+  /* ── Piano roll ── */
+  .piano-wrap {
+    flex: 1;
+    overflow: hidden;
+  }
+  .piano-wrap :global(.piano-roll) {
+    height: 100%;
+  }
+
+  /* ── Params bar ── */
+  .params-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    background: var(--color-fg);
+    flex-shrink: 0;
+    padding: 6px 10px;
+    gap: 6px 10px;
+  }
+  .sends-sep {
+    width: 1px;
+    height: 32px;
+    background: rgba(237,232,220,0.12);
+    flex-shrink: 0;
+  }
+
+  /* ── Track dots ── */
+  .track-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    background: var(--color-fg);
+    border-top: 1px solid rgba(237,232,220,0.08);
+    flex-shrink: 0;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid rgba(237,232,220,0.35);
+    background: transparent;
+    padding: 0;
+  }
+  .dot.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+  }
+</style>

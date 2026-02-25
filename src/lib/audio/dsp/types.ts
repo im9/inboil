@@ -1,0 +1,54 @@
+/**
+ * Message types for UI ↔ AudioWorklet communication.
+ */
+
+export interface WorkletCommand {
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern'
+  bpm?: number
+  pattern?: WorkletPattern
+}
+
+export interface WorkletPattern {
+  bpm: number
+  tracks: WorkletTrack[]
+  fx: {
+    reverb:  { size: number; damp: number }
+    delay:   { time: number; feedback: number }
+    ducker:  { depth: number; release: number }
+    comp:    { threshold: number; ratio: number; makeup: number }
+  }
+  perf: {
+    rootNote: number
+    octave: number
+    eqLow: number
+    eqMid: number
+    eqHigh: number
+    breaking: boolean
+    masterGain: number
+    filling: boolean
+    reversing: boolean
+    glitchX: number
+    glitchY: number
+    granularOn: boolean
+    granularX: number
+    granularY: number
+  }
+}
+
+export interface WorkletTrack {
+  steps: number; trigs: WorkletTrig[]
+  muted: boolean; synthType: string
+  volume: number
+  pan: number
+  reverbSend: number; delaySend: number
+  glitchSend: number; granularSend: number
+  voiceParams: Record<string, number>
+}
+
+export interface WorkletTrig {
+  active: boolean; note: number; velocity: number
+}
+
+export interface WorkletEvent {
+  type: 'step'; playheads: number[]
+}

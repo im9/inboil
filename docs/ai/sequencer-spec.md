@@ -10,48 +10,70 @@ Each pattern contains multiple tracks; each track has an independent step count 
 | Term | Definition |
 |---|---|
 | Pattern | A collection of tracks played simultaneously. One pattern plays at a time. |
-| Track | A single instrument lane. Has its own step count, BPM multiplier, and trig list. |
+| Track | A single instrument lane. Has its own step count, synth type, and trig list. |
 | Trig | An active step that triggers a note/sound. Inactive steps are "empty". |
-| Step | One position in a track's sequence grid (1-indexed). |
-| Parameter Lock (p-lock) | Per-trig override of a synth parameter. See status below. |
+| Step | One position in a track's sequence grid (0-indexed internally, 1-indexed in UI). |
+| Pattern Bank | 8 pattern slots stored in memory. Switching saves/loads full pattern state. |
 
-## Pattern
+## Pattern — DECIDED
 
-```
+```typescript
 Pattern {
-  id:        string
-  name:      string
+  id:        number          // 1–8 (maps to patternBank index 0–7)
+  name:      string          // e.g. "PAT 01"
   bpm:       number          // 20–300
-  tracks:    Track[]         // fixed at 8 tracks (v1)
+  tracks:    Track[]         // fixed at 8 tracks
 }
 ```
 
-## Track
+The app maintains a **pattern bank** of 8 slots. Slot 0 is initialized with a demo pattern; slots 1–7 are empty. Switching patterns saves the current pattern to its bank slot and loads the target.
 
-```
+## Track — DECIDED
+
+```typescript
 Track {
-  id:          string
-  synthType:   SynthType      // see sound-design.md
-  steps:       number         // DECIDED: 1–64 (default 16)
-  scale:       number         // step length multiplier: 0.5 | 1 | 2  (e.g. 2 = half-speed)
-  trigs:       Trig[]
+  id:          number
+  name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
+  synthType:   SynthType       // 'DrumSynth' | 'NoiseSynth' | 'AnalogSynth' | 'FMSynth' | 'Sampler' | 'ChordSynth'
+  steps:       number          // 1–64 (default 16)
+  trigs:       Trig[]          // length === steps; index 0 = step 1
   muted:       boolean
-  volume:      number         // 0.0–1.0
-  pan:         number         // -1.0 to 1.0
+  volume:      number          // 0.0–1.0
+  pan:         number          // -1.0 to 1.0
+  bottomPanel: 'params' | 'piano'   // which panel to show (melodic tracks only)
+  reverbSend:  number          // 0.0–1.0 send level to reverb
+  delaySend:   number          // 0.0–1.0 send level to delay
+  voiceParams: Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
 }
 ```
 
-## Trig
+## Trig — DECIDED
 
-```
+```typescript
 Trig {
-  step:        number         // 1-indexed step position
-  note:        number         // MIDI note number 0–127
-  velocity:    number         // 0.0–1.0
-  length:      number         // gate length in steps (0.0–1.0 = fraction of one step)
-  paramLocks:  ParamLock[]    // DEFERRED — see below
+  active:      boolean         // whether this step triggers
+  note:        number          // MIDI note number 0–127 (60 = C4)
+  velocity:    number          // 0.0–1.0
 }
 ```
+
+No `length` or `paramLocks` fields — those are deferred.
+
+## Default Track Layout — DECIDED
+
+| Track | Name | SynthType | Voice Class | Default Note | Default Pan |
+|---|---|---|---|---|---|
+| 0 | KICK | DrumSynth | KickVoice | 60 | 0.00 |
+| 1 | SNARE | DrumSynth | SnareVoice | 60 | -0.10 |
+| 2 | CLAP | DrumSynth | ClapVoice | 60 | 0.15 |
+| 3 | C.HH | NoiseSynth | HatVoice | 60 | -0.30 |
+| 4 | O.HH | NoiseSynth | OpenHatVoice | 60 | 0.35 |
+| 5 | CYM | NoiseSynth | CymbalVoice | 60 | 0.25 |
+| 6 | BASS | AnalogSynth | TB303Voice | 48 | 0.00 |
+| 7 | LEAD | AnalogSynth | MoogVoice | 64 | 0.10 |
+
+Tracks 0–5 are drums (note is ignored; fixed pitch set by voice params).
+Tracks 6–7 are melodic (note from trigs, transposable by KEY).
 
 ## Variable Step Count — DECIDED
 
@@ -60,59 +82,59 @@ Trig {
 - When tracks have different step counts, they cycle independently (polymetric sequencing).
 - Example: Track 1 = 16 steps, Track 2 = 12 steps → creates a phasing rhythm.
 
-## Parameter Lock (p-lock) — DEFERRED
+## Playback Engine — DECIDED
 
-Parameter locks allow any synth parameter to be overridden on a per-trig basis,
-reverting to the track default on the next trig.
+- Global BPM stored in Pattern.
+- The sequencer clock runs in TypeScript on the AudioWorklet thread.
+- One step = `(60 / bpm / 4) * sampleRate` samples (16th note resolution).
+- The UI receives playhead positions via MessagePort `step` events.
+- Each track maintains an independent playhead (0-indexed).
 
-```
-ParamLock {
-  param:  string    // parameter name, e.g. "filterCutoff"
-  value:  number
-}
-```
-
-**Implementation status:** DEFERRED to a later milestone.
-The data model above is included so the architecture supports it from the start.
-Do NOT implement p-lock UI or DSP handling in v1.
-
-## Playback Engine
-
-- Global BPM stored in Pattern; individual tracks can have a `scale` multiplier.
-- The sequencer clock runs inside the WASM DSP on the AudioWorklet thread.
-- The UI reads playhead position via SharedArrayBuffer (read-only from UI side).
-- Trig events are sent from WASM → UI via MessagePort for visual feedback only.
-
-## Playback States
+## Playback States — DECIDED
 
 ```
 STOPPED → PLAYING → STOPPED
-              ↕
-           PAUSED
 ```
 
-- STOPPED: Playhead at step 1, no audio output from sequencer.
-- PLAYING: Advancing step clock, triggering synth voices.
-- PAUSED: Clock frozen; resuming continues from current step.
+- **STOPPED**: Playheads at 0, no audio output from sequencer.
+- **PLAYING**: Advancing step clock, triggering synth voices.
 
-## Pattern Chaining
+No PAUSED state is implemented.
 
-### End-of-pattern switch — DECIDED
+## Pattern Switching — DECIDED
 
-When the user selects a new pattern during playback, the switch happens at the end of the current pattern's cycle (not immediately).
-This prevents mid-pattern interruptions during live performance.
+### During stopped state
+Switching pattern immediately saves the current pattern to its bank slot and loads the target.
+
+### During playback (queued switch)
+When the user selects a new pattern during playback, the switch is **queued** and applies at the **end of the current loop** (when track 0's playhead wraps to step 0).
 
 ```
 State: playing PAT:01
 User selects PAT:02
-→ PAT:01 plays to the end of its longest track
-→ PAT:02 starts from step 1
+→ patternNav.pendingId = 2
+→ AppHeader shows PAT:02 with blinking animation
+→ PAT:01 plays to the end of its cycle
+→ onStep detects track 0 wraps → applyPendingSwitch()
+→ PAT:02 starts from step 0
 ```
 
-The "pending next pattern" is displayed in the UI (e.g. `PAT:01 → 02`) until the switch occurs.
-If the user selects a different pattern before the switch, the pending target is replaced.
+If the user selects a different pattern before the switch happens, the pending target is replaced.
+On stop, any pending switch is applied immediately.
 
-### Multi-pattern Queue — DEFERRED
+See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
-Pre-queuing a sequence of patterns (e.g. 01→02→02→03) is a future feature.
-Do not implement in v1.
+## Parameter Lock (p-lock) — DEFERRED
+
+Per-trig parameter overrides. The data model is not implemented in v1.
+
+## Scale (per-track time multiplier) — DEFERRED
+
+The `scale` field (0.5 | 1 | 2) for per-track speed multiplier is not yet implemented.
+
+## Randomize — DECIDED
+
+The randomize function generates musically coherent patterns:
+- **Drum tracks**: Probability-based per-drum-type generation (kick: beats 1+3, snare: beats 2+4, etc.)
+- **Melodic tracks**: Scale-quantized random notes from a randomly chosen root + scale (minor/major pentatonic, dorian)
+- Bass uses lower note pool (C3–B3), lead uses upper pool (C4–B4)

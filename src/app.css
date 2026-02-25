@@ -1,0 +1,50 @@
+/* ── Reset ─────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Hide scrollbars while keeping scroll functionality */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
+/* ── Design tokens (from reference image) ───── */
+:root {
+  --color-bg:      #EDE8DC;   /* warm cream */
+  --color-fg:      #1E2028;   /* dark navy */
+  --color-surface: #E2DDD3;   /* slightly darker cream */
+  --color-muted:   #9A9680;   /* warm gray */
+  --color-olive:   #787845;   /* olive green — active trig */
+  --color-blue:    #4472B4;   /* steel blue — playhead */
+  --color-salmon:  #E8A090;   /* salmon — record / alert */
+  --color-purple:  #9B6BA0;   /* soft violet — granular FX */
+
+  --font-display: "Bebas Neue", "Anton", sans-serif;
+  --font-data:    "JetBrains Mono", "Fira Code", monospace;
+}
+
+/* ── Base ───────────────────────────────────── */
+html, body, #app {
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: var(--font-data);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}

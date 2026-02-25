@@ -1,0 +1,117 @@
+/**
+ * engine.ts — main thread audio engine API.
+ */
+import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
+import type { Pattern, Effects } from '../state.svelte.ts'
+
+type PerfState = {
+  rootNote: number; octave: number
+  eqLow: number; eqMid: number; eqHigh: number
+  breaking: boolean; masterGain: number
+  filling: boolean; reversing: boolean
+}
+
+type FxNode = { on: boolean; x: number; y: number }
+type FxPadState = { verb: FxNode; delay: FxNode; glitch: FxNode; granular: FxNode }
+
+export class GrooveboxEngine {
+  private ctx:  AudioContext | null = null
+  private node: AudioWorkletNode | null = null
+  private analyser: AnalyserNode | null = null
+  private _onStep: ((playheads: number[]) => void) | null = null
+
+  set onStep(cb: (playheads: number[]) => void) { this._onStep = cb }
+
+  getAnalyser(): AnalyserNode | null { return this.analyser }
+
+  async init(): Promise<void> {
+    if (this.ctx) return
+    this.ctx = new AudioContext()
+    const workletUrl = new URL('./worklet-processor.ts', import.meta.url)
+    await this.ctx.audioWorklet.addModule(workletUrl)
+    this.node = new AudioWorkletNode(this.ctx, 'groovebox-processor', {
+      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+    })
+    this.analyser = this.ctx.createAnalyser()
+    this.analyser.fftSize = 1024
+    this.analyser.smoothingTimeConstant = 0.8
+    this.node.connect(this.analyser)
+    this.analyser.connect(this.ctx.destination)
+    this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
+      if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads)
+    }
+  }
+
+  sendPattern(pattern: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState): void {
+    if (!this.node) return
+    this._post({ type: 'setPattern', pattern: patternToWorklet(pattern, fx, perf, fxPad) })
+  }
+
+  play(): void {
+    if (this.ctx?.state === 'suspended') void this.ctx.resume()
+    this._post({ type: 'play' })
+  }
+
+  stop(): void { this._post({ type: 'stop' }) }
+
+  private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }
+}
+
+function patternToWorklet(
+  pattern: Pattern,
+  fx: Effects,
+  perf?: PerfState,
+  fxPad?: FxPadState,
+): WorkletPattern {
+  // Reverb params: use XY when verb is on, otherwise pattern defaults
+  const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
+  const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
+  // Delay params: use XY when delay is on
+  const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
+  const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
+
+  return {
+    bpm: pattern.bpm,
+    fx:  {
+      reverb: { size: reverbSize, damp: reverbDamp },
+      delay:  { time: (60000 / pattern.bpm) * delayTimeFrac, feedback: delayFb },
+      ducker: { ...fx.ducker },
+      comp:   { ...fx.comp },
+    },
+    perf: {
+      rootNote:   perf?.rootNote   ?? 0,
+      octave:     perf?.octave    ?? 0,
+      eqLow:      perf?.eqLow     ?? 0.5,
+      eqMid:      perf?.eqMid     ?? 0.5,
+      eqHigh:     perf?.eqHigh    ?? 0.5,
+      breaking:   perf?.breaking   ?? false,
+      masterGain: perf?.masterGain ?? 0.8,
+      filling:    perf?.filling    ?? false,
+      reversing:  perf?.reversing  ?? false,
+      glitchX:    fxPad?.glitch.x  ?? 0.5,
+      glitchY:    fxPad?.glitch.y  ?? 0.5,
+      granularOn: fxPad?.granular.on ?? false,
+      granularX:  fxPad?.granular.x  ?? 0.5,
+      granularY:  fxPad?.granular.y  ?? 0.3,
+    },
+    tracks: pattern.tracks.map(t => ({
+      steps:       t.steps,
+      muted:       t.muted,
+      synthType:   t.synthType,
+      volume:      t.volume,
+      pan:         t.pan,
+      reverbSend:    t.reverbSend,
+      delaySend:     t.delaySend,
+      glitchSend:    t.glitchSend,
+      granularSend:  t.granularSend,
+      voiceParams: { ...t.voiceParams },
+      trigs: t.trigs.map(trig => ({
+        active:   trig.active,
+        note:     trig.note,
+        velocity: trig.velocity,
+      })),
+    })),
+  }
+}
+
+export const engine = new GrooveboxEngine()
