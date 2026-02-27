@@ -92,7 +92,7 @@ const TRACK_DEFAULTS: { name: string; synthType: SynthType; note: number; pan: n
 function makeEmptyPattern(id: number): Pattern {
   return {
     id,
-    name: `PAT ${String(id).padStart(2, '0')}`,
+    name: '',
     bpm: 120,
     tracks: TRACK_DEFAULTS.map((d, i) => ({
       ...makeTrack(i, d.name, d.synthType, [], d.note),
@@ -101,34 +101,78 @@ function makeEmptyPattern(id: number): Pattern {
   }
 }
 
-function makeDemoPattern(): Pattern {
+// ── Factory pattern definitions ──────────────────────────────────────
+// Display 00–09 (internal ID 1–10)
+
+type FactoryDef = {
+  name: string; bpm: number
+  kick: number[]; snare: number[]; clap: number[]; chh: number[]
+  ohh: number[]; cym: number[]; bass: [number[], number]; lead: [number[], number]
+}
+
+const FACTORY: FactoryDef[] = [
+  { name: '4FLOOR', bpm: 120,
+    kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [3,11], cym: [1], bass: [[1,3,7,11], 48], lead: [[2,6,10], 64] },
+  { name: 'TRAP', bpm: 140,
+    kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [4,8,12,16], cym: [1], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60] },
+  { name: 'BREAK', bpm: 130,
+    kick: [1,4,7,11], snare: [5,10,13], clap: [], chh: [1,3,5,7,9,11,13,15],
+    ohh: [2,8,14], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,6,11], 62] },
+  { name: '2STEP', bpm: 132,
+    kick: [1,6,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [4,12], cym: [], bass: [[1,4,9,12], 48], lead: [[3,7,11,15], 65] },
+  { name: 'LOFI', bpm: 85,
+    kick: [1,6,9,14], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
+    ohh: [7,15], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67] },
+  { name: 'TECHNO', bpm: 135,
+    kick: [1,5,9,13], snare: [], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [3,7,11,15], cym: [1,9], bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,9], 60] },
+  { name: 'HOUSE', bpm: 124,
+    kick: [1,5,9,13], snare: [], clap: [5,13], chh: [3,7,11,15],
+    ohh: [7,15], cym: [1], bass: [[1,4,7,11], 48], lead: [[3,5,11,13], 64] },
+  { name: 'DNB', bpm: 174,
+    kick: [1,11], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
+    ohh: [4,12], cym: [1], bass: [[1,3,7,9,13], 36], lead: [[5,13], 67] },
+  { name: 'HYPER', bpm: 150,
+    kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [2,6,10,14], cym: [1,9], bass: [[1,2,5,6,9,10,13,14], 48], lead: [[1,3,5,9,11,13], 72] },
+  { name: 'MINIMAL', bpm: 100,
+    kick: [1,9], snare: [5], clap: [], chh: [1,5,9,13],
+    ohh: [], cym: [1], bass: [[1,9], 48], lead: [[5,13], 60] },
+]
+
+function makeFactoryPattern(id: number): Pattern {
+  const f = FACTORY[id - 1]
   return {
-    id: 1,
-    name: 'PAT 01',
-    bpm: 120,
+    id,
+    name: f.name,
+    bpm: f.bpm,
     tracks: [
-      { ...makeTrack(0, 'KICK',  'DrumSynth',   [1, 5, 9, 13]),                 pan:  0.00 },
-      { ...makeTrack(1, 'SNARE', 'DrumSynth',   [5, 13]),                       pan: -0.10 },
-      { ...makeTrack(2, 'CLAP',  'DrumSynth',   [5, 13]),                       pan:  0.15 },
-      { ...makeTrack(3, 'C.HH',  'NoiseSynth',  [1, 3, 5, 7, 9, 11, 13, 15]),  pan: -0.30 },
-      { ...makeTrack(4, 'O.HH',  'NoiseSynth',  [3, 11]),                       pan:  0.35 },
-      { ...makeTrack(5, 'CYM',   'NoiseSynth',  [1]),                           pan:  0.25 },
-      { ...makeTrack(6, 'BASS',  'AnalogSynth', [1, 3, 7, 11], 48),            pan:  0.00 },
-      { ...makeTrack(7, 'LEAD',  'AnalogSynth', [2, 6, 10],    64),            pan:  0.10 },
+      { ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick),            pan:  0.00 },
+      { ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare),           pan: -0.10 },
+      { ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap),            pan:  0.15 },
+      { ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh),             pan: -0.30 },
+      { ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh),             pan:  0.35 },
+      { ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym),             pan:  0.25 },
+      { ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1]), pan:  0.00 },
+      { ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1]), pan:  0.10 },
     ],
   }
 }
 
-export const PATTERN_COUNT = 8
+export const PATTERN_COUNT = 100
+export const FACTORY_COUNT = 10
 
 // ── Reactive state ───────────────────────────────────────────────────
 
-export const pattern = $state<Pattern>(makeDemoPattern())
+export const pattern = $state<Pattern>(makeFactoryPattern(1))
 
-// Pattern bank: slot 0 = demo, slots 1–7 = empty
+// Pattern bank: slots 0–9 = factory presets, slots 10–99 = user (empty)
 const patternBank: Pattern[] = [
-  makeDemoPattern(),
-  ...Array.from({ length: 7 }, (_, i) => makeEmptyPattern(i + 2)),
+  ...Array.from({ length: FACTORY_COUNT }, (_, i) => makeFactoryPattern(i + 1)),
+  ...Array.from({ length: PATTERN_COUNT - FACTORY_COUNT }, (_, i) => makeEmptyPattern(i + FACTORY_COUNT + 1)),
 ]
 
 function saveToBank(): void {
@@ -213,6 +257,7 @@ export const perf = $state({
   masterGain: 0.8,       // 0.0–1.0 master volume (×0.8 headroom in worklet)
   filling: false,        // drum fill mode (random snare rolls)
   reversing: false,      // reverse step playback
+  swing: 0,              // 0.0–1.0 → maps to 50%–75% swing in worklet
 })
 
 export const fxPad = $state({
@@ -236,6 +281,10 @@ export const effects = $state<Effects>({
 export function toggleTrig(trackId: number, stepIndex: number) {
   pattern.tracks[trackId].trigs[stepIndex].active =
     !pattern.tracks[trackId].trigs[stepIndex].active
+}
+
+export function setTrigVelocity(trackId: number, stepIdx: number, v: number) {
+  pattern.tracks[trackId].trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
 }
 
 /** For piano roll: click cell sets note + activates; click same note deactivates */

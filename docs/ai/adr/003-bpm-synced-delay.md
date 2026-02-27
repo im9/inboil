@@ -1,6 +1,6 @@
 # ADR 003: BPM-Synced Delay via Beat Fraction
 
-## Status: DECIDED
+## Status: IMPLEMENTED
 
 ## Context
 

@@ -9,6 +9,7 @@ type PerfState = {
   eqLow: number; eqMid: number; eqHigh: number
   breaking: boolean; masterGain: number
   filling: boolean; reversing: boolean
+  swing: number
 }
 
 type FxNode = { on: boolean; x: number; y: number }
@@ -88,11 +89,12 @@ function patternToWorklet(
       masterGain: perf?.masterGain ?? 0.8,
       filling:    perf?.filling    ?? false,
       reversing:  perf?.reversing  ?? false,
-      glitchX:    fxPad?.glitch.x  ?? 0.5,
-      glitchY:    fxPad?.glitch.y  ?? 0.5,
+      glitchX:    fxPad?.glitch.on ? fxPad.glitch.x : 0.5,
+      glitchY:    fxPad?.glitch.on ? fxPad.glitch.y : 0.5,
       granularOn: fxPad?.granular.on ?? false,
       granularX:  fxPad?.granular.x  ?? 0.5,
       granularY:  fxPad?.granular.y  ?? 0.3,
+      swing:      perf?.swing       ?? 0,
     },
     tracks: pattern.tracks.map(t => ({
       steps:       t.steps,
@@ -100,10 +102,10 @@ function patternToWorklet(
       synthType:   t.synthType,
       volume:      t.volume,
       pan:         t.pan,
-      reverbSend:    t.reverbSend,
-      delaySend:     t.delaySend,
-      glitchSend:    t.glitchSend,
-      granularSend:  t.granularSend,
+      reverbSend:    Math.min(1, t.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),
+      delaySend:     Math.min(1, t.delaySend    + (fxPad?.delay.on   ? 0.3 : 0)),
+      glitchSend:    Math.min(1, t.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
+      granularSend:  Math.min(1, t.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
       voiceParams: { ...t.voiceParams },
       trigs: t.trigs.map(trig => ({
         active:   trig.active,

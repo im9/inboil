@@ -1,6 +1,6 @@
 # ADR 002: TypeScript AudioWorklet as Current DSP Runtime
 
-## Status: DECIDED
+## Status: IMPLEMENTED
 
 ## Context
 

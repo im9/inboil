@@ -122,6 +122,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchY        = 0.5
   private filling        = false
   private reversing      = false
+  private swing          = 0.5          // effective swing 0.5–0.75
+  private swingPhase     = 0            // 0 or 1, toggles each step
+  private currentThreshold = 0          // samples until next step (swing-adjusted)
   private gateEnv        = 1.0
   private limiter        = new PeakLimiter(sampleRate)
   // Step-quantized pending values
@@ -145,6 +148,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   constructor(opts?: AudioWorkletNodeOptions) {
     super(opts)
     this.samplesPerStep = this._calcSps()
+    this.currentThreshold = this.samplesPerStep
     this.delay.setTime(375)
     this.reverb.setSize(0.72); this.reverb.setDamp(0.5)
     this.eqLpL.setParams(300, 0.707, sampleRate)
@@ -160,19 +164,29 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
           if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
           if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
-          this.playing = true; this.accumulator = 0
+          this.playing = true; this.accumulator = 0; this.swingPhase = 0
+          this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
           break
         case 'stop':
           this.playing = false; this.playheads.fill(0)
           for (const v of this.voices) v.reset()
           break
         case 'setBpm':
-          if (cmd.bpm !== undefined) { this.bpm = cmd.bpm; this.samplesPerStep = this._calcSps() }
+          if (cmd.bpm !== undefined) {
+            this.bpm = cmd.bpm; this.samplesPerStep = this._calcSps()
+            this.currentThreshold = this.swingPhase === 0
+              ? (1 - this.swing) * 2 * this.samplesPerStep
+              : this.swing * 2 * this.samplesPerStep
+          }
           break
         case 'setPattern': {
           if (!cmd.pattern) break
           const p = cmd.pattern
           this.bpm = p.bpm; this.samplesPerStep = this._calcSps()
+          this.swing = 0.5 + p.perf.swing * 0.17
+          this.currentThreshold = this.swingPhase === 0
+            ? (1 - this.swing) * 2 * this.samplesPerStep
+            : this.swing * 2 * this.samplesPerStep
           if (this.voices.length !== p.tracks.length)
             this.voices = p.tracks.map((t, i) => makeVoice(i, t.synthType, sampleRate))
           for (let i = 0; i < p.tracks.length; i++) {
@@ -262,9 +276,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       if (this.playing) {
         this.accumulator++
-        if (this.accumulator >= this.samplesPerStep) {
-          this.accumulator -= this.samplesPerStep
+        if (this.accumulator >= this.currentThreshold) {
+          this.accumulator -= this.currentThreshold
           this._advanceStep()
+          this.swingPhase ^= 1
+          this.currentThreshold = this.swingPhase === 1
+            ? this.swing * 2 * this.samplesPerStep
+            : (1 - this.swing) * 2 * this.samplesPerStep
         }
         for (let t = 0; t < this.voices.length; t++) {
           const track = this.tracks[t]
@@ -333,7 +351,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // ── Rhythmic break gate ───────────────────────────────────────
       const gateTarget = this.breaking
-        ? (this.accumulator < this.samplesPerStep * 0.5 ? 1.0 : 0.0)
+        ? (this.accumulator < this.currentThreshold * 0.5 ? 1.0 : 0.0)
         : 1.0
       this.gateEnv += (gateTarget - this.gateEnv) * 0.03
       fL *= this.gateEnv

@@ -56,9 +56,10 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- Master gain -->
+  <!-- Master gain + Swing -->
   <span class="gain-wrap">
     <Knob value={perf.masterGain} label="GAIN" size={36} onchange={v => { perf.masterGain = v }} />
+    <Knob value={perf.swing} label="SWG" size={36} onchange={v => { perf.swing = v }} />
   </span>
 
   <div class="sep" aria-hidden="true"></div>

@@ -1,6 +1,6 @@
 # ADR 004: Queued Pattern Switching at Loop Boundary
 
-## Status: DECIDED
+## Status: IMPLEMENTED
 
 ## Context
 

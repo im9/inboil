@@ -32,6 +32,7 @@ export interface WorkletPattern {
     granularOn: boolean
     granularX: number
     granularY: number
+    swing: number
   }
 }
 

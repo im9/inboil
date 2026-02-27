@@ -37,10 +37,14 @@
 
 See [adr/](./adr/) for full rationale.
 
-- **DSP in WASM (long-term)** — Enables reuse on iOS and VST. → [adr/001-wasm-dsp.md](./adr/001-wasm-dsp.md)
-- **TypeScript AudioWorklet (current)** — Rapid iteration; WASM integration deferred. → [adr/002-ts-worklet.md](./adr/002-ts-worklet.md)
-- **BPM-synced delay** — Delay time stored as beat fraction, computed to ms at send time. → [adr/003-bpm-synced-delay.md](./adr/003-bpm-synced-delay.md)
-- **Queued pattern switching** — Pattern changes queue during playback, apply at loop boundary. → [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md)
+- **DSP in WASM (long-term)** — Enables reuse on iOS and VST. C++ exists, not yet integrated. → [adr/001-wasm-dsp.md](./adr/001-wasm-dsp.md)
+- **TypeScript AudioWorklet** (IMPLEMENTED) — Rapid iteration; WASM integration deferred. → [adr/002-ts-worklet.md](./adr/002-ts-worklet.md)
+- **BPM-synced delay** (IMPLEMENTED) — Beat fraction → ms at send time. → [adr/003-bpm-synced-delay.md](./adr/003-bpm-synced-delay.md)
+- **Queued pattern switching** (IMPLEMENTED) — Queue during playback, apply at loop boundary. → [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md)
+- **Swing / shuffle** (PROPOSED) — Global swing parameter for groove timing. → [adr/005-swing.md](./adr/005-swing.md)
+- **Per-step velocity editing** (PROPOSED) — UI for editing per-step velocity. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
+- **Pattern persistence** (PROPOSED) — localStorage save/load for patterns. → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
+- **Granular enhancements** (PROPOSED) — Pitch shift, reverse grains, freeze mode. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
 
 ## Threading Model
 
