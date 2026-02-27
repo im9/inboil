@@ -49,7 +49,9 @@ struct FxParams {
 class Engine {
 public:
     Engine()  = default;
-    ~Engine() = default;
+    ~Engine() {
+        for (int i = 0; i < MAX_TRACKS; ++i) delete _voices[i];
+    }
 
     /// Must be called once before process().
     void init(float sampleRate, int blockSize);
@@ -77,7 +79,10 @@ public:
     void setFx(const FxParams& fx);
 
     /// Current playhead positions (read by UI)
-    int  getPlayhead(int trackIdx) const { return _playheads[trackIdx]; }
+    int  getPlayhead(int trackIdx) const {
+        if (trackIdx < 0 || trackIdx >= MAX_TRACKS) return 0;
+        return _playheads[trackIdx];
+    }
 
 private:
     void _advanceStep();

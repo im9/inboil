@@ -375,7 +375,7 @@ export function switchPattern(id: number): void {
   }
 }
 
-/** Called from onStep when track 0 wraps to step 0 */
+/** Apply any pending pattern switch (called at beat boundary or on stop) */
 export function applyPendingSwitch(): void {
   if (patternNav.pendingId > 0) {
     const id = patternNav.pendingId
@@ -385,15 +385,8 @@ export function applyPendingSwitch(): void {
   }
 }
 
-/** Called on stop — apply any pending switch immediately */
-export function clearPendingSwitch(): void {
-  if (patternNav.pendingId > 0) {
-    const id = patternNav.pendingId
-    patternNav.pendingId = 0
-    saveToBank()
-    loadFromBank(id - 1)
-  }
-}
+/** Alias for applyPendingSwitch — called on stop to apply immediately */
+export const clearPendingSwitch = applyPendingSwitch
 
 export const playback = $state({
   playing: false,

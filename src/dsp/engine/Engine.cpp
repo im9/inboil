@@ -186,9 +186,9 @@ void Engine::process(float* outL, float* outR) {
         float cL = mixL, cR = mixR;
         if (_comp) _comp->process(mixL, mixR, _compThreshold, _compRatio, _compMakeup, cL, cR);
 
-        // Final limiter: tanh with 1.6× drive — harmonic saturation + hard roof
-        outL[s] = std::tanh(cL * 1.6f) * 0.92f;
-        outR[s] = std::tanh(cR * 1.6f) * 0.92f;
+        // Final limiter: fastTanh with 1.6× drive — harmonic saturation + hard roof
+        outL[s] = fastTanh(cL * 1.6f) * 0.92f;
+        outR[s] = fastTanh(cR * 1.6f) * 0.92f;
     }
 }
 

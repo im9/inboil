@@ -18,10 +18,11 @@ private:
 public:
     explicit AnalogSynth(float sr) : SynthBase(sr) {
         _env.setSampleRate(sr);
-        _env.attack  = 0.008f;
-        _env.decay   = 0.18f;
-        _env.sustain = 0.4f;
-        _env.release = 0.25f;
+        _env.attack   = 0.008f;
+        _env.decay    = 0.18f;
+        _env.sustain  = 0.4f;
+        _env.release  = 0.25f;
+        _env.gateTime = 0.15f;  // auto-release after 150ms (step sequencer has no noteOff)
     }
 
     // Parameters
@@ -46,8 +47,8 @@ public:
         _phase += _freq / _sr;
         if (_phase >= 1.0f) _phase -= 1.0f;
 
-        // Pre-filter tanh saturation (even harmonics → warmer/brighter)
-        const float sat = std::tanh((_phase * 2.0f - 1.0f) * 1.8f);
+        // Pre-filter saturation (even harmonics → warmer/brighter)
+        const float sat = fastTanh((_phase * 2.0f - 1.0f) * 1.8f);
 
         // Filter cutoff modulated by envelope
         const float fc = cutoff + envMod * env;

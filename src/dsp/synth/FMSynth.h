@@ -18,10 +18,11 @@ private:
 public:
     explicit FMSynth(float sr) : SynthBase(sr) {
         _env.setSampleRate(sr);
-        _env.attack  = 0.003f;
-        _env.decay   = 0.22f;
-        _env.sustain = 0.15f;
-        _env.release = 0.3f;
+        _env.attack   = 0.003f;
+        _env.decay    = 0.22f;
+        _env.sustain  = 0.15f;
+        _env.release  = 0.3f;
+        _env.gateTime = 0.12f;  // auto-release after 120ms (step sequencer has no noteOff)
     }
 
     // Parameters

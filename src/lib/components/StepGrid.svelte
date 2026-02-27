@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
 
@@ -43,24 +44,32 @@
   // ── Vel-fill grow/shrink animation on trig toggle ──
   let growing: Set<string> = $state(new Set())
   let shrinking: Set<string> = $state(new Set())
+  const timers = new Map<string, number>()
+
+  onDestroy(() => { timers.forEach(id => clearTimeout(id)); timers.clear() })
 
   function handleToggle(trackId: number, stepIdx: number) {
     const trig = pattern.tracks[trackId].trigs[stepIdx]
     const key = `${trackId}-${stepIdx}`
+    // Cancel any pending timer for this step to avoid stacking
+    if (timers.has(key)) { clearTimeout(timers.get(key)!); timers.delete(key) }
+
     if (trig.active) {
       // About to turn OFF → play shrink, then toggle
       shrinking = new Set([...shrinking, key])
-      setTimeout(() => {
+      timers.set(key, window.setTimeout(() => {
+        timers.delete(key)
         shrinking = new Set([...shrinking].filter(k => k !== key))
         toggleTrig(trackId, stepIdx)
-      }, 180)
+      }, 180))
     } else {
       // Turn ON → toggle immediately, then play grow
       toggleTrig(trackId, stepIdx)
       growing = new Set([...growing, key])
-      setTimeout(() => {
+      timers.set(key, window.setTimeout(() => {
+        timers.delete(key)
         growing = new Set([...growing].filter(k => k !== key))
-      }, 180)
+      }, 180))
     }
   }
 </script>

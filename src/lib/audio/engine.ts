@@ -53,7 +53,13 @@ export class GrooveboxEngine {
     this._post({ type: 'play' })
   }
 
-  stop(): void { this._post({ type: 'stop' }) }
+  stop(): void {
+    this._post({ type: 'stop' })
+    // Suspend context after a brief delay to allow FX tails to ring out
+    if (this.ctx && this.ctx.state === 'running') {
+      setTimeout(() => { if (this.ctx?.state === 'running') void this.ctx.suspend() }, 2000)
+    }
+  }
 
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }
 }

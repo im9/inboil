@@ -29,8 +29,8 @@ public:
         oL = _bL[rL]; oR = _bR[rR];
         _bL[_pL] = iL + oR * fb;
         _bR[_pR] = iR + oL * fb;
-        _pL = (_pL + 1) % len;
-        _pR = (_pR + 1) % len;
+        if (++_pL >= len) _pL = 0;
+        if (++_pR >= len) _pR = 0;
     }
 
 private:

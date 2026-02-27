@@ -19,17 +19,21 @@
   const isMobile = $derived(windowWidth < 640)
 
   // ── Audio engine ──────────────────────────────────────────────────
-  // Sync pattern + effects → worklet on any state change
+  // Sync pattern + effects → worklet on any state change (rAF-throttled)
+  let rafId = 0
   $effect(() => {
     // JSON.stringify traverses all nested props so Svelte tracks them
-    const snap = JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad)
-    void snap
-    engine.sendPattern(pattern, effects, perf, fxPad)
+    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad))
+    cancelAnimationFrame(rafId)
+    rafId = requestAnimationFrame(() => {
+      engine.sendPattern(pattern, effects, perf, fxPad)
+    })
+    return () => cancelAnimationFrame(rafId)
   })
 
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
-    for (let i = 0; i < heads.length; i++) playback.playheads[i] = heads[i]
+    playback.playheads = heads  // single reactive notification instead of 8 individual mutations
     if (heads[0] === 0 && prev0 !== 0) applyPendingSwitch()
   }
 

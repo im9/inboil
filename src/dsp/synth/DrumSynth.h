@@ -49,7 +49,7 @@ public:
 
         // Exponential pitch sweep
         const float t    = _pitchT / (_sr * std::max(0.001f, pitchDecay));
-        const float freq = pitchEnd + (pitchStart - pitchEnd) * std::exp(-pitchCurve * t);
+        const float freq = pitchEnd + (pitchStart - pitchEnd) * fastExp(-pitchCurve * t);
         _pitchT += 1.0f;
 
         _phase += freq / _sr;

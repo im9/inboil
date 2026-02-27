@@ -13,7 +13,7 @@ public:
         float b   = _buf[_ptr];
         float y   = b - x;
         _buf[_ptr] = x + b * _fb;
-        _ptr      = (_ptr + 1) % static_cast<int>(_buf.size());
+        if (++_ptr >= static_cast<int>(_buf.size())) _ptr = 0;
         return y;
     }
 

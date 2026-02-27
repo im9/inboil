@@ -133,8 +133,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private pendingBreaking: boolean | null = null
   private pendingFilling: boolean | null = null
   private pendingReversing: boolean | null = null
-  // Per-track mute fade
+  // Per-track mute fade and precomputed pan gains
   private muteGains      = new Float64Array(8).fill(1.0)
+  private panGainsL      = new Float64Array(8).fill(Math.SQRT1_2)
+  private panGainsR      = new Float64Array(8).fill(Math.SQRT1_2)
   // Fill PRNG
   private fillSeed       = 12321
   // Glitch DSP state
@@ -196,6 +198,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             }
           }
           this.tracks = p.tracks
+          for (let i = 0; i < p.tracks.length; i++) {
+            const angle = ((p.tracks[i].pan ?? 0) + 1) * 0.25 * Math.PI
+            this.panGainsL[i] = Math.cos(angle)
+            this.panGainsR[i] = Math.sin(angle)
+          }
           this.reverb.setSize(p.fx.reverb.size)
           this.reverb.setDamp(p.fx.reverb.damp)
           this.delay.setTime(p.fx.delay.time)
@@ -291,14 +298,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.muteGains[t] += (muteTarget - this.muteGains[t]) * mc
           if (this.muteGains[t] < 0.0001 && track?.muted) continue
           const sig = this.voices[t].tick() * this.muteGains[t] * (track?.volume ?? 0.8)
-          const pan = track?.pan ?? 0
-          const angle = (pan + 1) * 0.25 * Math.PI
-          const panL = Math.cos(angle)
-          const panR = Math.sin(angle)
           if (t === 0) {
             kickDry += sig
           } else {
-            restL += sig * panL; restR += sig * panR
+            restL += sig * this.panGainsL[t]; restR += sig * this.panGainsR[t]
           }
           reverbIn   += sig * (track?.reverbSend   ?? 0)
           delayIn    += sig * (track?.delaySend    ?? 0)
@@ -308,9 +311,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
-      const [revL, revR] = this.reverb.process(reverbIn)
-      const [delL, delR] = this.delay.process(delayIn, delayIn, this.delayFeedback)
-      const [grnL, grnR] = this.granular.process(granularIn, granularIn)
+      const rev = this.reverb.process(reverbIn)
+      const del = this.delay.process(delayIn, delayIn, this.delayFeedback)
+      const grn = this.granular.process(granularIn, granularIn)
 
       // Glitch send: downsample + bitcrush on send bus
       let gltL = 0, gltR = 0
@@ -330,19 +333,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // Sidechain: duck rest + FX returns; kick punches through untouched
       const duck = this.ducker.tick()
-      const mixL = kickDry + (restL + revL + delL + grnL + gltL) * duck
-      const mixR = kickDry + (restR + revR + delR + grnR + gltR) * duck
+      const mixL = kickDry + (restL + rev[0] + del[0] + grn[0] + gltL) * duck
+      const mixR = kickDry + (restR + rev[1] + del[1] + grn[1] + gltR) * duck
 
       // Bus compressor
-      const [cL, cR] = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
+      const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
 
       // ── 3-band DJ EQ (subtractive crossover) ──────────────────────
-      const lowL  = this.eqLpL.process(cL)
-      const lowR  = this.eqLpR.process(cR)
-      const highL = this.eqHpL.process(cL)
-      const highR = this.eqHpR.process(cR)
-      const midL  = cL - lowL - highL
-      const midR  = cR - lowR - highR
+      const lowL  = this.eqLpL.process(cmp[0])
+      const lowR  = this.eqLpR.process(cmp[1])
+      const highL = this.eqHpL.process(cmp[0])
+      const highR = this.eqHpR.process(cmp[1])
+      const midL  = cmp[0] - lowL - highL
+      const midR  = cmp[1] - lowR - highR
       const gL = this.eqLow  * 2
       const gM = this.eqMid  * 2
       const gH = this.eqHigh * 2
@@ -360,9 +363,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       // Master gain + peak limiter
       fL *= this.masterGain * 0.8
       fR *= this.masterGain * 0.8
-      const [lL, lR] = this.limiter.process(fL, fR)
-      outL[s] = lL
-      if (outR) outR[s] = lR
+      const lim = this.limiter.process(fL, fR)
+      outL[s] = lim[0]
+      if (outR) outR[s] = lim[1]
     }
 
     return true

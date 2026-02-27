@@ -17,7 +17,7 @@ class CombFilter {
     const y = this.buf[this.ptr]
     this.filt = y * (1 - this.damp) + this.filt * this.damp
     this.buf[this.ptr] = x + this.filt * this.fb
-    this.ptr = (this.ptr + 1) % this.buf.length
+    if (++this.ptr >= this.buf.length) this.ptr = 0
     return y
   }
 }
@@ -29,7 +29,7 @@ class AllpassFilter {
     const b = this.buf[this.ptr]
     const y = b - x
     this.buf[this.ptr] = x + b * this.fb
-    this.ptr = (this.ptr + 1) % this.buf.length
+    if (++this.ptr >= this.buf.length) this.ptr = 0
     return y
   }
 }
@@ -50,13 +50,16 @@ export class SimpleReverb {
   }
   setSize(s: number) { const fb = 0.60 + s * 0.36; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
   setDamp(d: number) { const v = d * 0.4;  [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
-  process(x: number): [number, number] {
+  // Reusable output to avoid per-sample tuple allocation
+  private out = new Float64Array(2)
+  process(x: number): Float64Array {
     const g = 0.015; let L = 0, R = 0
     for (const c of this.combsL) L += c.process(x * g)
     for (const c of this.combsR) R += c.process(x * g)
     for (const a of this.apL) L = a.process(L)
     for (const a of this.apR) R = a.process(R)
-    return [L, R]
+    this.out[0] = L; this.out[1] = R
+    return this.out
   }
 }
 
@@ -68,14 +71,16 @@ export class PingPongDelay {
     this.bL = new Float32Array(max); this.bR = new Float32Array(max)
   }
   setTime(ms: number) { this.ds = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length) }
-  process(iL: number, iR: number, fb: number): [number, number] {
-    if (this.ds === 0) return [0, 0]
+  private out = new Float64Array(2)
+  process(iL: number, iR: number, fb: number): Float64Array {
+    if (this.ds === 0) { this.out[0] = 0; this.out[1] = 0; return this.out }
     const len = this.bL.length
     const rL = (this.pL - this.ds + len) % len, rR = (this.pR - this.ds + len) % len
     const oL = this.bL[rL], oR = this.bR[rR]
     this.bL[this.pL] = iL + oR * fb;  this.bR[this.pR] = iR + oL * fb
-    this.pL = (this.pL + 1) % len;    this.pR = (this.pR + 1) % len
-    return [oL, oR]
+    if (++this.pL >= len) this.pL = 0;  if (++this.pR >= len) this.pR = 0
+    this.out[0] = oL; this.out[1] = oR
+    return this.out
   }
 }
 
@@ -108,7 +113,8 @@ export class BusCompressor {
     this.aCoeff = Math.exp(-1 / (0.0008 * sr))   // 0.8 ms attack
     this.rCoeff = Math.exp(-1 / (0.060  * sr))   // 60 ms release
   }
-  process(L: number, R: number, threshold: number, ratio: number, makeup: number): [number, number] {
+  private out = new Float64Array(2)
+  process(L: number, R: number, threshold: number, ratio: number, makeup: number): Float64Array {
     const level = Math.max(Math.abs(L), Math.abs(R))
     const c = level > this.env ? this.aCoeff : this.rCoeff
     this.env = level + (this.env - level) * c
@@ -117,7 +123,8 @@ export class BusCompressor {
       const desired = threshold + (this.env - threshold) / ratio
       gain = desired / this.env
     }
-    return [L * gain * makeup, R * gain * makeup]
+    this.out[0] = L * gain * makeup; this.out[1] = R * gain * makeup
+    return this.out
   }
 }
 
@@ -138,18 +145,18 @@ export class PeakLimiter {
     this.bufR = new Float64Array(this.len)
   }
 
-  process(inL: number, inR: number): [number, number] {
+  private out = new Float64Array(2)
+  process(inL: number, inR: number): Float64Array {
     const peak = Math.max(Math.abs(inL), Math.abs(inR))
     const targetGR = peak > this.ceiling ? this.ceiling / peak : 1.0
     const coeff = targetGR < this.gainReduction ? 0.4 : 0.0002
     this.gainReduction += (targetGR - this.gainReduction) * coeff
     this.bufL[this.pos] = inL
     this.bufR[this.pos] = inR
-    const readPos = (this.pos + 1) % this.len
-    const outL = this.bufL[readPos] * this.gainReduction
-    const outR = this.bufR[readPos] * this.gainReduction
-    this.pos = readPos
-    return [outL, outR]
+    if (++this.pos >= this.len) this.pos = 0
+    this.out[0] = this.bufL[this.pos] * this.gainReduction
+    this.out[1] = this.bufR[this.pos] * this.gainReduction
+    return this.out
   }
 }
 
@@ -208,12 +215,13 @@ export class GranularProcessor {
     }
   }
 
-  process(inL: number, inR: number): [number, number] {
+  private out = new Float64Array(2)
+  process(inL: number, inR: number): Float64Array {
     this.bufL[this.writePos] = inL
     this.bufR[this.writePos] = inR
-    this.writePos = (this.writePos + 1) % this.bufLen
+    if (++this.writePos >= this.bufLen) this.writePos = 0
 
-    if (!this.active && !this.ringingOut) return [0, 0]
+    if (!this.active && !this.ringingOut) { this.out[0] = 0; this.out[1] = 0; return this.out }
 
     if (this.active) {
       this.spawnCounter--
@@ -233,14 +241,15 @@ export class GranularProcessor {
       const pos = this.grainPos[i]
       wetL += this.bufL[pos] * env
       wetR += this.bufR[pos] * env
-      this.grainPos[i] = (pos + 1) % this.bufLen
+      this.grainPos[i] = pos + 1 >= this.bufLen ? 0 : pos + 1
       this.grainRemaining[i]--
       if (this.grainRemaining[i] <= 0) this.grainActive[i] = false
     }
 
     if (this.ringingOut && !anyActive) this.ringingOut = false
     const gain = this.active ? 0.85 : (anyActive ? 0.6 : 0)
-    return [wetL * gain, wetR * gain]
+    this.out[0] = wetL * gain; this.out[1] = wetR * gain
+    return this.out
   }
 
   private _spawnGrain() {
