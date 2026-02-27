@@ -16,13 +16,12 @@ export interface WorkletPattern {
     delay:   { time: number; feedback: number }
     ducker:  { depth: number; release: number }
     comp:    { threshold: number; ratio: number; makeup: number }
+    filter:  { on: boolean; x: number; y: number }
+    eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }
   }
   perf: {
     rootNote: number
     octave: number
-    eqLow: number
-    eqMid: number
-    eqHigh: number
     breaking: boolean
     masterGain: number
     filling: boolean

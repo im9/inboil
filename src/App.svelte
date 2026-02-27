@@ -5,6 +5,7 @@
   import PianoRoll from './lib/components/PianoRoll.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import FxPad from './lib/components/FxPad.svelte'
+  import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import { pattern, playback, ui, isDrum, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
@@ -68,22 +69,36 @@
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
     <PerfBar />
-    {#if ui.view === 'fx'}
-      <FxPad />
-    {:else}
-      <MobileTrackView />
-    {/if}
+    <div class="view-area">
+      <div class="perf-flash fill" class:on={perf.filling}></div>
+      <div class="perf-flash rev" class:on={perf.reversing}></div>
+      <div class="perf-flash brk" class:on={perf.breaking}></div>
+      {#if ui.view === 'fx'}
+        <FxPad />
+      {:else if ui.view === 'eq'}
+        <FilterView />
+      {:else}
+        <MobileTrackView />
+      {/if}
+    </div>
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />
-    {#if ui.view === 'fx'}
-      <FxPad />
-    {:else}
-      <StepGrid />
-      {#if showPianoRoll}
-        <PianoRoll trackId={ui.selectedTrack} />
+    <div class="view-area">
+      <div class="perf-flash fill" class:on={perf.filling}></div>
+      <div class="perf-flash rev" class:on={perf.reversing}></div>
+      <div class="perf-flash brk" class:on={perf.breaking}></div>
+      {#if ui.view === 'fx'}
+        <FxPad />
+      {:else if ui.view === 'eq'}
+        <FilterView />
+      {:else}
+        <StepGrid />
+        {#if showPianoRoll}
+          <PianoRoll trackId={ui.selectedTrack} />
+        {/if}
       {/if}
-    {/if}
+    </div>
     <ParamPanel />
   {/if}
 </div>
@@ -96,4 +111,29 @@
     overflow: hidden;
     overscroll-behavior: none;
   }
+
+  .view-area {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Perf flash ── */
+  .perf-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 350ms ease-out;
+  }
+  .perf-flash.on {
+    opacity: 1;
+    transition: opacity 40ms ease-in;
+  }
+  .perf-flash.fill { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-blue) 18%, transparent) 0%, transparent 75%); }
+  .perf-flash.rev  { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-blue) 14%, transparent) 0%, transparent 75%); }
+  .perf-flash.brk  { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--color-salmon) 22%, transparent) 0%, transparent 75%); }
 </style>

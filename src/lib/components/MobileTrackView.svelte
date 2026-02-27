@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, effects } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
@@ -8,6 +8,16 @@
   const track = $derived(pattern.tracks[ui.selectedTrack])
   const drum = $derived(isDrum(track))
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
+
+  // Dynamic column count based on step count
+  const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
+
+  function cycleSteps() {
+    const current = track.steps
+    const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
+    const next = STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length]
+    setTrackSteps(ui.selectedTrack, next)
+  }
 
   function prevTrack() {
     ui.selectedTrack = (ui.selectedTrack - 1 + pattern.tracks.length) % pattern.tracks.length
@@ -27,6 +37,7 @@
       <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
       <div class="track-meta">
         <span class="track-type">{track.synthType}</span>
+        <button class="step-count" onpointerdown={cycleSteps}>{track.steps}</button>
         <Knob
           value={track.volume}
           label="VOL"
@@ -76,7 +87,7 @@
 
   <!-- Main area: step calculator or piano roll -->
   {#if drum || track.bottomPanel !== 'piano'}
-    <div class="calculator">
+    <div class="calculator" style="--cols: {calcCols}">
       {#each track.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
         <button
@@ -194,6 +205,20 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
+  .step-count {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-olive);
+    background: transparent;
+    border: 1px solid var(--color-olive);
+    padding: 1px 5px;
+    line-height: 14px;
+  }
+  .step-count:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
   .btn-mute {
     width: 20px;
     height: 20px;
@@ -258,15 +283,16 @@
     border-bottom-color: var(--color-olive);
   }
 
-  /* ── Calculator (4 columns × 4 rows) ── */
+  /* ── Calculator (dynamic columns) ── */
   .calculator {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(var(--cols, 4), 1fr);
     gap: 4px;
     padding: 8px;
-    align-content: center;
-    overflow: hidden;
+    align-content: start;
+    overflow-y: auto;
+    overscroll-behavior: none;
   }
   .calc-btn {
     position: relative;

@@ -1,7 +1,14 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
+
+  function cycleSteps(trackId: number) {
+    const current = pattern.tracks[trackId].steps
+    const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
+    const next = STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length]
+    setTrackSteps(trackId, next)
+  }
 
   // ── Velocity drag state ──
   let velContainer: HTMLDivElement | undefined = $state(undefined)
@@ -55,15 +62,15 @@
     if (timers.has(key)) { clearTimeout(timers.get(key)!); timers.delete(key) }
 
     if (trig.active) {
-      // About to turn OFF → play shrink, then toggle
+      // Turn OFF → toggle immediately + play shrink simultaneously
+      toggleTrig(trackId, stepIdx)
       shrinking = new Set([...shrinking, key])
       timers.set(key, window.setTimeout(() => {
         timers.delete(key)
         shrinking = new Set([...shrinking].filter(k => k !== key))
-        toggleTrig(trackId, stepIdx)
       }, 180))
     } else {
-      // Turn ON → toggle immediately, then play grow
+      // Turn ON → toggle immediately + play grow simultaneously
       toggleTrig(trackId, stepIdx)
       growing = new Set([...growing, key])
       timers.set(key, window.setTimeout(() => {
@@ -150,6 +157,7 @@
       >
         <div class="vel-label">
           <span class="vel-name">VEL</span>
+          <button class="step-count" onpointerdown={() => cycleSteps(trackId)}>{track.steps}</button>
         </div>
         <div class="vel-spacer"></div>
         <div class="vel-bars" style="--count: {track.steps}">
@@ -385,7 +393,9 @@
     width: 64px;
     flex-shrink: 0;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
     padding: 0 6px;
   }
   .vel-name {
@@ -394,6 +404,23 @@
     letter-spacing: 0.08em;
     color: var(--color-muted);
     text-transform: uppercase;
+  }
+  .step-count {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-olive);
+    background: transparent;
+    border: 1px solid var(--color-olive);
+    padding: 0 4px;
+    line-height: 14px;
+    width: fit-content;
+    text-align: center;
+    cursor: pointer;
+  }
+  .step-count:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
   }
   .vel-spacer {
     width: calc(20px + 2px + 20px + 4px + 20px);

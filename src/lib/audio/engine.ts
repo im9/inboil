@@ -6,14 +6,16 @@ import type { Pattern, Effects } from '../state.svelte.ts'
 
 type PerfState = {
   rootNote: number; octave: number
-  eqLow: number; eqMid: number; eqHigh: number
   breaking: boolean; masterGain: number
   filling: boolean; reversing: boolean
   swing: number
 }
 
 type FxNode = { on: boolean; x: number; y: number }
-type FxPadState = { verb: FxNode; delay: FxNode; glitch: FxNode; granular: FxNode }
+type FxPadState = {
+  verb: FxNode; delay: FxNode; glitch: FxNode; granular: FxNode; filter: FxNode
+  eqLow: FxNode; eqMid: FxNode; eqHigh: FxNode
+}
 
 export class GrooveboxEngine {
   private ctx:  AudioContext | null = null
@@ -84,13 +86,22 @@ function patternToWorklet(
       delay:  { time: (60000 / pattern.bpm) * delayTimeFrac, feedback: delayFb },
       ducker: { ...fx.ducker },
       comp:   { ...fx.comp },
+      filter: {
+        on: fxPad?.filter.on ?? false,
+        x:  fxPad?.filter.x  ?? 0.5,
+        y:  fxPad?.filter.y  ?? 0.3,
+      },
+      eq: {
+        bands: [
+          { on: fxPad?.eqLow.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqLow.x  ?? 0.33), gain: ((fxPad?.eqLow.y  ?? 0.5) - 0.5) * 24 },
+          { on: fxPad?.eqMid.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqMid.x  ?? 0.57), gain: ((fxPad?.eqMid.y  ?? 0.5) - 0.5) * 24 },
+          { on: fxPad?.eqHigh.on ?? true, freq: 20 * Math.pow(1000, fxPad?.eqHigh.x ?? 0.87), gain: ((fxPad?.eqHigh.y ?? 0.5) - 0.5) * 24 },
+        ],
+      },
     },
     perf: {
       rootNote:   perf?.rootNote   ?? 0,
       octave:     perf?.octave    ?? 0,
-      eqLow:      perf?.eqLow     ?? 0.5,
-      eqMid:      perf?.eqMid     ?? 0.5,
-      eqHigh:     perf?.eqHigh    ?? 0.5,
       breaking:   perf?.breaking   ?? false,
       masterGain: perf?.masterGain ?? 0.8,
       filling:    perf?.filling    ?? false,

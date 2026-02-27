@@ -139,7 +139,7 @@ export class PeakLimiter {
   private pos = 0
   private gainReduction = 1.0
 
-  constructor(sr: number, lookaheadMs = 1.5) {
+  constructor(sr: number, lookaheadMs = 2.5) {
     this.len = Math.max(1, Math.round(sr * lookaheadMs / 1000))
     this.bufL = new Float64Array(this.len)
     this.bufR = new Float64Array(this.len)
@@ -149,7 +149,7 @@ export class PeakLimiter {
   process(inL: number, inR: number): Float64Array {
     const peak = Math.max(Math.abs(inL), Math.abs(inR))
     const targetGR = peak > this.ceiling ? this.ceiling / peak : 1.0
-    const coeff = targetGR < this.gainReduction ? 0.4 : 0.0002
+    const coeff = targetGR < this.gainReduction ? 0.6 : 0.0002
     this.gainReduction += (targetGR - this.gainReduction) * coeff
     this.bufL[this.pos] = inL
     this.bufR[this.pos] = inR

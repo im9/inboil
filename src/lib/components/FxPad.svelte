@@ -61,7 +61,7 @@
   // ── Audio Visualizer ──────────────────────────────────────────────
   let canvasEl: HTMLCanvasElement
   let animFrameId: number | null = null
-  let freqData: Uint8Array | null = null
+  let freqData: Uint8Array<ArrayBuffer> | null = null
 
   const ROWS = 18
   const COLS = 32
@@ -74,7 +74,8 @@
 
   function draw() {
     const analyser = engine.getAnalyser()
-    if (!analyser || !canvasEl) return
+    if (!canvasEl) { animFrameId = requestAnimationFrame(draw); return }
+    if (!analyser) { animFrameId = requestAnimationFrame(draw); return }
 
     const ctx = canvasEl.getContext('2d')!
     const w = canvasEl.clientWidth
@@ -96,7 +97,7 @@
     const binCount = freqData.length
 
     for (let row = 0; row < ROWS; row++) {
-      const depth = row / (ROWS - 1)   // 0=back, 1=front
+      const depth = row / (ROWS - 1)
       const alpha = 0.06 + depth * 0.28
       const amplitude = 8 + depth * 45
       const yBase = h * 0.88 - depth * h * 0.58
@@ -132,8 +133,6 @@
 
   function startVis() {
     if (animFrameId !== null) return
-    const analyser = engine.getAnalyser()
-    if (!analyser) return
     draw()
   }
 

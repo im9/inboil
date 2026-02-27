@@ -47,15 +47,6 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- 3-band EQ -->
-  <div class="perf-group eq-group">
-    <Knob value={perf.eqLow}  label="LOW"  size={36} onchange={v => { perf.eqLow  = v }} />
-    <Knob value={perf.eqMid}  label="MID"  size={36} onchange={v => { perf.eqMid  = v }} />
-    <Knob value={perf.eqHigh} label="HIGH" size={36} onchange={v => { perf.eqHigh = v }} />
-  </div>
-
-  <div class="sep" aria-hidden="true"></div>
-
   <!-- Ducker + Comp -->
   <div class="perf-group dyn-group">
     <Knob value={effects.ducker.depth} label="DUC" size={36} onchange={v => { effects.ducker.depth = v }} />
@@ -72,7 +63,7 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- View toggle: GRID / FX -->
+  <!-- View toggle: GRID / FX / EQ -->
   <div class="view-toggle">
     <button
       class="btn-view"
@@ -84,6 +75,11 @@
       class:active={ui.view === 'fx'}
       onpointerdown={() => { ui.view = 'fx' }}
     >FX</button>
+    <button
+      class="btn-view"
+      class:active={ui.view === 'eq'}
+      onpointerdown={() => { ui.view = 'eq' }}
+    >EQ</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -215,11 +211,6 @@
     50%      { opacity: 0.3; }
   }
 
-  /* ── EQ knobs ── */
-  .eq-group {
-    gap: 10px;
-  }
-
   /* ── Dynamics (ducker + comp) ── */
   .dyn-group {
     gap: 10px;
@@ -251,7 +242,7 @@
     transition: background 40ms linear, color 40ms linear;
     user-select: none;
   }
-  .btn-view:first-child { border-right: none; }
+  .btn-view:not(:last-child) { border-right: none; }
   .btn-view.active {
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
@@ -302,7 +293,6 @@
     }
 
     .sep,
-    .eq-group,
     .dyn-group,
     .gain-wrap,
     .group-label { display: none; }

@@ -10,7 +10,9 @@
  *                                                         │
  *                                                   BusCompressor
  *                                                         │
- *                                                     3-band EQ
+ *                                                  PeakingEQ ×3
+ *                                                         │
+ *                                                     DJ Filter
  *                                                         │
  *                                                     Break gate
  *                                                         │
@@ -31,7 +33,7 @@ declare function registerProcessor(name: string, ctor: new (opts?: AudioWorkletN
 declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { ResonantLP, BiquadHP } from './dsp/filters.ts'
+import { DJFilter, PeakingEQ } from './dsp/filters.ts'
 import { SimpleReverb, PingPongDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor } from './dsp/effects.ts'
 import { makeVoice } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
@@ -97,11 +99,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private delay  = new PingPongDelay(1000, sampleRate)
   private ducker = new SidechainDucker(sampleRate)
   private comp   = new BusCompressor(sampleRate)
-  // 3-band EQ crossover (subtractive design)
-  private eqLpL = new ResonantLP()
-  private eqLpR = new ResonantLP()
-  private eqHpL = new BiquadHP()
-  private eqHpR = new BiquadHP()
+  // 3-band parametric EQ (peaking filters in series)
+  private peakEq = [new PeakingEQ(), new PeakingEQ(), new PeakingEQ()]
 
   // Param cache
   private delayFeedback  = 0.42
@@ -113,9 +112,6 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   // Performance
   private rootNote       = 0
   private octave         = 0
-  private eqLow          = 0.5
-  private eqMid          = 0.5
-  private eqHigh         = 0.5
   private breaking       = false
   private masterGain     = 0.8
   private glitchX        = 0.5
@@ -146,6 +142,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchSeed     = 55555
   // Granular DSP
   private granular       = new GranularProcessor(sampleRate)
+  // DJ Filter (XY pad sweep)
+  private djFilter       = new DJFilter(sampleRate)
 
   constructor(opts?: AudioWorkletNodeOptions) {
     super(opts)
@@ -153,10 +151,6 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     this.currentThreshold = this.samplesPerStep
     this.delay.setTime(375)
     this.reverb.setSize(0.72); this.reverb.setDamp(0.5)
-    this.eqLpL.setParams(300, 0.707, sampleRate)
-    this.eqLpR.setParams(300, 0.707, sampleRate)
-    this.eqHpL.setParams(3000, 0.707, sampleRate)
-    this.eqHpR.setParams(3000, 0.707, sampleRate)
 
     this.port.onmessage = (e: MessageEvent<WorkletCommand>) => {
       const cmd = e.data
@@ -221,9 +215,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchY   = p.perf.glitchY
           this.granular.setParams(p.perf.granularX, p.perf.granularY)
           this.granular.setActive(p.perf.granularOn)
-          this.eqLow      = p.perf.eqLow
-          this.eqMid      = p.perf.eqMid
-          this.eqHigh     = p.perf.eqHigh
+          this.djFilter.set(p.fx.filter.x, p.fx.filter.y, p.fx.filter.on)
+          for (let i = 0; i < p.fx.eq.bands.length && i < 3; i++) {
+            const b = p.fx.eq.bands[i]
+            this.peakEq[i].set(b.freq, b.gain, 1.5, sampleRate)
+            this.peakEq[i].setActive(b.on)
+          }
           this.masterGain = p.perf.masterGain
           break
         }
@@ -339,18 +336,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
 
-      // ── 3-band DJ EQ (subtractive crossover) ──────────────────────
-      const lowL  = this.eqLpL.process(cmp[0])
-      const lowR  = this.eqLpR.process(cmp[1])
-      const highL = this.eqHpL.process(cmp[0])
-      const highR = this.eqHpR.process(cmp[1])
-      const midL  = cmp[0] - lowL - highL
-      const midR  = cmp[1] - lowR - highR
-      const gL = this.eqLow  * 2
-      const gM = this.eqMid  * 2
-      const gH = this.eqHigh * 2
-      let fL = lowL * gL + midL * gM + highL * gH
-      let fR = lowR * gL + midR * gM + highR * gH
+      // ── 3-band parametric EQ (peaking filters in series) ──────────
+      let fL = cmp[0], fR = cmp[1]
+      for (let i = 0; i < 3; i++) {
+        const eq = this.peakEq[i].process(fL, fR)
+        fL = eq[0]; fR = eq[1]
+      }
+
+      // ── DJ Filter (XY pad sweep) ────────────────────────────────
+      const filt = this.djFilter.process(fL, fR)
+      fL = filt[0]; fR = filt[1]
 
       // ── Rhythmic break gate ───────────────────────────────────────
       const gateTarget = this.breaking

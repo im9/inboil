@@ -58,12 +58,13 @@ function makeTrack(
   synthType: SynthType,
   activeSteps: number[],
   note = 60,
+  steps = 16,
 ): Track {
   const drum = DRUM_SYNTHS.includes(synthType)
   return {
     id, name, synthType,
-    steps: 16,
-    trigs: makeTrigs(16, activeSteps, note),
+    steps,
+    trigs: makeTrigs(steps, activeSteps, note),
     muted: false,
     volume: 0.8,
     pan: 0,
@@ -105,10 +106,12 @@ function makeEmptyPattern(id: number): Pattern {
 // Display 00–09 (internal ID 1–10)
 
 type FactoryDef = {
-  name: string; bpm: number
+  name: string; bpm: number; steps?: number  // default 16 (global)
   kick: number[]; snare: number[]; clap: number[]; chh: number[]
   ohh: number[]; cym: number[]; bass: [number[], number]; lead: [number[], number]
   vp?: Record<number, Record<string, number>>  // track index → voice param overrides
+  ts?: Record<number, number>                  // track index → per-track step count override
+  mel?: Record<number, number[]>               // track index → per-active-step MIDI notes
 }
 
 // Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
@@ -116,11 +119,14 @@ const FACTORY: FactoryDef[] = [
   // 00 — 4 on the floor, classic house/techno starter
   { name: '4FLOOR', bpm: 120,
     kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [3,11], cym: [1], bass: [[1,3,7,11], 48], lead: [[2,6,10], 64] },
-  // 01 — Deep 808 trap
-  { name: 'TRAP', bpm: 140,
-    kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [4,8,12,16], cym: [1], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60],
+    ohh: [3,11], cym: [1], bass: [[1,3,7,11], 48], lead: [[2,6,10], 64],
+    mel: { 6: [48, 48, 46, 43], 7: [63, 67, 70] } },
+  // 01 — Deep 808 trap (32 steps = 2 bars)
+  { name: 'TRAP', bpm: 140, steps: 32,
+    kick: [1,4,8,11,17,20,24,27], snare: [5,13,21,29], clap: [5,13,21,29],
+    chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32],
+    ohh: [4,8,12,16,20,28], cym: [1,17], bass: [[1,5,9,13,17,21,25,29], 36], lead: [[3,7,19,23,27], 60],
+    mel: { 6: [36, 39, 36, 41, 36, 39, 43, 39], 7: [60, 63, 67, 65, 63] },
     vp: {
       0: { pitchStart: 200, pitchEnd: 38, pitchDecay: 0.06, ampDecay: 0.8, drive: 1.8 },
       1: { toneDecay: 0.05, noiseDecay: 0.05, noiseFc: 4500 },
@@ -131,6 +137,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'BREAK', bpm: 130,
     kick: [1,4,7,11], snare: [5,10,13], clap: [], chh: [1,3,5,7,9,11,13,15],
     ohh: [2,8,14], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,6,11], 62],
+    mel: { 6: [48, 51, 53, 51], 7: [62, 67, 65] },
     vp: {
       0: { pitchStart: 400, pitchEnd: 60, pitchDecay: 0.03, ampDecay: 0.25 },
       1: { toneDecay: 0.06, noiseAmt: 1.0, noiseFc: 4000 },
@@ -140,14 +147,17 @@ const FACTORY: FactoryDef[] = [
   { name: '2STEP', bpm: 132,
     kick: [1,6,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [4,12], cym: [], bass: [[1,4,9,12], 48], lead: [[3,7,11,15], 65],
+    mel: { 6: [48, 51, 55, 53], 7: [65, 67, 70, 67] },
     vp: {
       0: { ampDecay: 0.20, drive: 1.0 },
       6: { cutoffBase: 150, envMod: 5000, resonance: 8.0, decay: 0.15 },
     } },
-  // 04 — Lo-fi hip hop, mellow everything
+  // 04 — Lo-fi hip hop, mellow everything (bass=12 for triplet feel, lead=24 for detail)
   { name: 'LOFI', bpm: 85,
     kick: [1,6,9,14], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [7,15], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67],
+    ohh: [7,15], cym: [], bass: [[1,4,7,10], 48], lead: [[2,5,8,11,14,17,20,23], 67],
+    ts: { 6: 12, 7: 24 },
+    mel: { 6: [48, 53, 51, 48], 7: [67, 65, 63, 67, 65, 63, 60, 63] },
     vp: {
       0: { pitchStart: 250, ampDecay: 0.40, drive: 0.8 },
       1: { noiseFc: 2000, noiseAmt: 0.60 },
@@ -159,24 +169,29 @@ const FACTORY: FactoryDef[] = [
   { name: 'TECHNO', bpm: 135,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,7,11,15], cym: [1,9], bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,9], 60],
+    mel: { 6: [36, 36, 39, 41, 36, 39, 36, 43], 7: [60, 63] },
     vp: {
       0: { pitchStart: 380, pitchEnd: 48, ampDecay: 0.30, drive: 1.6 },
       2: { decay: 0.12 },
       3: { baseFreq: 1000, hpCutoff: 7000 },
       6: { cutoffBase: 100, envMod: 6000, resonance: 10.0, decay: 0.12, drive: 2.2 },
     } },
-  // 06 — Deep house, warm bass
+  // 06 — Deep house, warm bass (bass=24 for shuffle, lead=12 for triplet phrase)
   { name: 'HOUSE', bpm: 124,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [3,7,11,15],
-    ohh: [7,15], cym: [1], bass: [[1,4,7,11], 48], lead: [[3,5,11,13], 64],
+    ohh: [7,15], cym: [1], bass: [[1,4,7,10,13,16,19,22], 48], lead: [[1,4,7,10], 64],
+    ts: { 6: 24, 7: 12 },
+    mel: { 6: [48, 51, 55, 53, 48, 46, 48, 51], 7: [63, 67, 70, 67] },
     vp: {
       0: { pitchStart: 320, pitchEnd: 50, ampDecay: 0.35 },
       6: { cutoffBase: 150, envMod: 3500, resonance: 5.0, decay: 0.20 },
     } },
-  // 07 — Drum & bass, fast + sharp
+  // 07 — Drum & bass, fast + sharp (HH=32 for detail, bass=12 for triplet bounce)
   { name: 'DNB', bpm: 174,
     kick: [1,11], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [4,12], cym: [1], bass: [[1,3,7,9,13], 36], lead: [[5,13], 67],
+    ohh: [4,12], cym: [1], bass: [[1,3,5,7,9,11], 36], lead: [[5,13], 67],
+    ts: { 3: 32, 6: 12 },
+    mel: { 6: [36, 39, 36, 43, 41, 39], 7: [67, 70] },
     vp: {
       0: { ampDecay: 0.20, pitchDecay: 0.025 },
       1: { toneDecay: 0.04, noiseDecay: 0.04, noiseFc: 5000 },
@@ -187,16 +202,18 @@ const FACTORY: FactoryDef[] = [
   { name: 'HYPER', bpm: 150,
     kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [2,6,10,14], cym: [1,9], bass: [[1,2,5,6,9,10,13,14], 48], lead: [[1,3,5,9,11,13], 72],
+    mel: { 6: [48, 51, 48, 55, 51, 48, 55, 53], 7: [72, 70, 67, 72, 70, 67] },
     vp: {
       0: { pitchStart: 500, ampDecay: 0.20, drive: 2.5 },
       1: { noiseFc: 5500, noiseAmt: 1.1 },
       6: { cutoffBase: 250, envMod: 7000, resonance: 9.0, drive: 2.8 },
       7: { cutoffBase: 800, envMod: 8000 },
     } },
-  // 09 — Minimal ambient, soft + sparse
-  { name: 'MINIMAL', bpm: 100,
-    kick: [1,9], snare: [5], clap: [], chh: [1,5,9,13],
-    ohh: [], cym: [1], bass: [[1,9], 48], lead: [[5,13], 60],
+  // 09 — Minimal ambient, soft + sparse (8 steps = half bar)
+  { name: 'MINIMAL', bpm: 100, steps: 8,
+    kick: [1,5], snare: [3], clap: [], chh: [1,3,5,7],
+    ohh: [], cym: [1], bass: [[1,5], 48], lead: [[3,7], 60],
+    mel: { 6: [48, 43], 7: [60, 63] },
     vp: {
       0: { pitchStart: 200, pitchEnd: 45, ampDecay: 0.50, drive: 0.8 },
       3: { volume: 0.35 },
@@ -207,6 +224,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'REGGAETN', bpm: 95,
     kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,7,11,15], cym: [], bass: [[1,4,8,11], 48], lead: [[3,7,11,15], 60],
+    mel: { 6: [48, 51, 48, 46], 7: [60, 63, 65, 67] },
     vp: {
       0: { ampDecay: 0.30, drive: 1.5 },
       1: { toneDecay: 0.06 },
@@ -217,6 +235,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'DISCO', bpm: 118,
     kick: [1,5,9,13], snare: [5,13], clap: [], chh: [3,7,11,15],
     ohh: [1,5,9,13], cym: [1], bass: [[1,3,5,8,11,13], 48], lead: [[2,6,10,14], 67],
+    mel: { 6: [48, 51, 55, 53, 48, 51], 7: [67, 72, 70, 67] },
     vp: {
       0: { ampDecay: 0.30 },
       4: { volume: 0.75, decay: 0.20 },
@@ -227,6 +246,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'ELECTRO', bpm: 128,
     kick: [1,5,9,14], snare: [5,13], clap: [3,11], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [4,12], cym: [1], bass: [[1,3,7,9,13,15], 36], lead: [[1,5,9,13], 62],
+    mel: { 6: [36, 39, 41, 36, 39, 43], 7: [62, 65, 67, 63] },
     vp: {
       0: { pitchStart: 450, drive: 2.0, ampDecay: 0.25 },
       1: { noiseFc: 4500 },
@@ -237,6 +257,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'DUBSTEP', bpm: 140,
     kick: [1,9], snare: [7,15], clap: [7,15], chh: [1,3,5,7,9,11,13,15],
     ohh: [4,12], cym: [1], bass: [[1,3,5,9,11,13], 36], lead: [[1,9], 55],
+    mel: { 6: [36, 36, 39, 36, 41, 39], 7: [55, 58] },
     vp: {
       0: { pitchEnd: 38, ampDecay: 0.60, drive: 1.8 },
       1: { noiseAmt: 1.1, noiseFc: 3500 },
@@ -246,6 +267,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'DRILL', bpm: 142,
     kick: [1,4,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [3,7,11,15], cym: [], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60],
+    mel: { 6: [36, 39, 41, 36], 7: [60, 63, 65, 60] },
     vp: {
       0: { pitchStart: 220, pitchEnd: 38, ampDecay: 0.70, drive: 1.6 },
       3: { decay: 0.02, hpCutoff: 7000, volume: 0.50 },
@@ -255,15 +277,18 @@ const FACTORY: FactoryDef[] = [
   { name: 'SYNTHWV', bpm: 110,
     kick: [1,5,9,13], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
     ohh: [7,15], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,2,3,5,6,7,9,10,11,13,14,15], 64],
+    mel: { 6: [48, 55, 53, 48], 7: [63, 67, 72, 63, 67, 72, 60, 63, 67, 60, 63, 67] },
     vp: {
       0: { pitchStart: 280, ampDecay: 0.35, drive: 1.0 },
       6: { cutoffBase: 150, envMod: 3000, resonance: 4.0, decay: 0.35 },
       7: { cutoffBase: 350, envMod: 5000, resonance: 2.0, decay: 0.60 },
     } },
-  // 16 — Afrobeat, bouncy polyrhythm
-  { name: 'AFROBT', bpm: 105,
-    kick: [1,5,11,13], snare: [5,13], clap: [3,11], chh: [1,3,5,7,9,11,13,15],
-    ohh: [2,6,10,14], cym: [1], bass: [[1,4,7,11], 48], lead: [[2,5,10,13], 64],
+  // 16 — Afrobeat, bouncy polyrhythm (12/8 drums, 8-step bass = 3:2 polyrhythm)
+  { name: 'AFROBT', bpm: 105, steps: 12,
+    kick: [1,4,7,10], snare: [4,10], clap: [3,9], chh: [1,3,5,7,9,11],
+    ohh: [2,6,8,12], cym: [1], bass: [[1,3,5,7], 48], lead: [[2,5,8,11], 64],
+    ts: { 6: 8, 7: 24 },  // bass=8 steps (3:2 vs drums), lead=24 (doubled density)
+    mel: { 6: [48, 53, 51, 48], 7: [64, 67, 69, 67] },
     vp: {
       0: { ampDecay: 0.30, drive: 1.2 },
       6: { cutoffBase: 160, envMod: 4000, resonance: 5.0, decay: 0.18 },
@@ -273,6 +298,7 @@ const FACTORY: FactoryDef[] = [
   { name: 'JERSEY', bpm: 150,
     kick: [1,4,7,10,13], snare: [5,13], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [4,8,12,16], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67],
+    mel: { 6: [48, 51, 48, 46], 7: [67, 70, 67, 65] },
     vp: {
       0: { ampDecay: 0.20, drive: 1.5 },
       2: { decay: 0.10, filterFc: 2000 },
@@ -283,15 +309,17 @@ const FACTORY: FactoryDef[] = [
   { name: 'GARAGE', bpm: 130,
     kick: [1,6,9,14], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,7,11,15], cym: [1], bass: [[1,3,6,9,11,14], 48], lead: [[2,6,10,14], 65],
+    mel: { 6: [48, 51, 55, 48, 51, 55], 7: [65, 67, 70, 67] },
     vp: {
       0: { pitchStart: 300, ampDecay: 0.30 },
       6: { cutoffBase: 130, envMod: 4000, resonance: 7.0, decay: 0.20 },
       7: { cutoffBase: 350, envMod: 4500, resonance: 1.5 },
     } },
-  // 19 — Ambient, ethereal + slow
-  { name: 'AMBIENT', bpm: 70,
-    kick: [1,9], snare: [], clap: [], chh: [1,5,9,13],
-    ohh: [5,13], cym: [1], bass: [[1,9], 48], lead: [[1,5,9,13], 60],
+  // 19 — Ambient, ethereal + slow (32 steps = 2 bars)
+  { name: 'AMBIENT', bpm: 70, steps: 32,
+    kick: [1,17], snare: [], clap: [], chh: [1,9,17,25],
+    ohh: [5,13,21,29], cym: [1], bass: [[1,9,17,25], 48], lead: [[1,5,13,17,21,29], 60],
+    mel: { 6: [48, 55, 51, 46], 7: [60, 63, 67, 60, 58, 55] },
     vp: {
       0: { pitchStart: 180, pitchEnd: 42, ampDecay: 0.60, drive: 0.7 },
       3: { volume: 0.30, hpCutoff: 6000 },
@@ -303,20 +331,32 @@ const FACTORY: FactoryDef[] = [
 
 function makeFactoryPattern(id: number): Pattern {
   const f = FACTORY[id - 1]
+  const s = f.steps ?? 16
+  const ts = (i: number) => f.ts?.[i] ?? s  // per-track override or global
   const base: [Track & { pan: number }][] = [
-    [{ ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick),            pan:  0.00 }],
-    [{ ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare),           pan: -0.10 }],
-    [{ ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap),            pan:  0.15 }],
-    [{ ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh),             pan: -0.30 }],
-    [{ ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh),             pan:  0.35 }],
-    [{ ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym),             pan:  0.25 }],
-    [{ ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1]), pan:  0.00 }],
-    [{ ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1]), pan:  0.10 }],
+    [{ ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick, 60, ts(0)),            pan:  0.00 }],
+    [{ ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare, 60, ts(1)),           pan: -0.10 }],
+    [{ ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap, 60, ts(2)),            pan:  0.15 }],
+    [{ ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh, 60, ts(3)),             pan: -0.30 }],
+    [{ ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh, 60, ts(4)),             pan:  0.35 }],
+    [{ ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym, 60, ts(5)),             pan:  0.25 }],
+    [{ ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1], ts(6)), pan:  0.00 }],
+    [{ ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1], ts(7)), pan:  0.10 }],
   ]
   const tracks = base.map(([t], i) => {
     if (f.vp?.[i]) t.voiceParams = { ...t.voiceParams, ...f.vp[i] }
     return t
   })
+  // Apply per-step melodies: mel[trackIdx] = array of MIDI notes aligned to active steps
+  if (f.mel) {
+    for (const [k, notes] of Object.entries(f.mel)) {
+      const tIdx = parseInt(k)
+      let ni = 0
+      for (const trig of tracks[tIdx].trigs) {
+        if (trig.active && ni < notes.length) trig.note = notes[ni++]
+      }
+    }
+  }
   return { id, name: f.name, bpm: f.bpm, tracks }
 }
 
@@ -395,15 +435,12 @@ export const playback = $state({
 
 export const ui = $state({
   selectedTrack: 0,
-  view: 'grid' as 'grid' | 'fx',
+  view: 'grid' as 'grid' | 'fx' | 'eq',
 })
 
 export const perf = $state({
   rootNote: 0,           // 0-11 chromatic key (0=C, 2=D, …) — OP-XY Brain style
   octave: 0,             // -2 to +2 octave shift for melodic tracks
-  eqLow:  0.5,           // 0.0 = kill, 0.5 = unity, 1.0 = boost (×2)
-  eqMid:  0.5,
-  eqHigh: 0.5,
   breaking: false,       // true = rhythmic gate at 8th-note rate
   masterGain: 0.8,       // 0.0–1.0 master volume (×0.8 headroom in worklet)
   filling: false,        // drum fill mode (random snare rolls)
@@ -416,6 +453,10 @@ export const fxPad = $state({
   delay:  { on: false, x: 0.70, y: 0.40 },  // x=time, y=feedback — right-mid: longer delay
   glitch:   { on: false, x: 0.45, y: 0.15 },  // x=rate, y=crush — center-low: subtle
   granular: { on: false, x: 0.50, y: 0.30 },  // x=grain size, y=density
+  filter:   { on: false, x: 0.50, y: 0.30 },  // x=LP←0.5→HP sweep, y=resonance
+  eqLow:    { on: true,  x: 0.33, y: 0.50 },  // x=freq (200Hz), y=gain (0dB)
+  eqMid:    { on: true,  x: 0.57, y: 0.50 },  // x=freq (1kHz),  y=gain (0dB)
+  eqHigh:   { on: true,  x: 0.87, y: 0.50 },  // x=freq (8kHz),  y=gain (0dB)
 })
 
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -455,6 +496,24 @@ export function toggleMute(trackId: number) {
 
 export function isDrum(track: Track): boolean {
   return DRUM_SYNTHS.includes(track.synthType)
+}
+
+export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
+
+export function setTrackSteps(trackId: number, newSteps: number) {
+  const clamped = Math.max(2, Math.min(64, newSteps))
+  const track = pattern.tracks[trackId]
+  const old = track.steps
+  if (clamped === old) return
+  if (clamped > old) {
+    const lastNote = track.trigs[old - 1]?.note ?? 60
+    for (let i = old; i < clamped; i++) {
+      track.trigs.push(makeTrig(false, lastNote))
+    }
+  } else {
+    track.trigs.length = clamped
+  }
+  track.steps = clamped
 }
 
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
