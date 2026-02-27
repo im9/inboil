@@ -62,7 +62,7 @@
         <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id - 1) }}>◀</button>
         <span class="pat-value" class:pending={isPending}><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
-        <span class="pat-name"><SplitFlap value={pattern.name} width={7} /></span>
+        <span class="pat-name"><SplitFlap value={pattern.name} width={8} /></span>
         <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id + 1) }}>▶</button>
       </div>
     </div>
@@ -143,7 +143,7 @@
   /* ── BPM ── */
   .bpm-block {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 4px;
   }
 
@@ -174,8 +174,6 @@
     letter-spacing: 0.1em;
     color: rgba(237,232,220,0.35);
     text-transform: uppercase;
-    align-self: flex-end;
-    padding-bottom: 2px;
   }
 
   /* ── Transport ── */
@@ -255,6 +253,7 @@
     font-size: 24px;
     line-height: 1;
     color: var(--color-bg);
+    transform: translateY(2px);
   }
   .compact .pat-value { font-size: 20px; }
   .pat-value.pending {
@@ -264,6 +263,7 @@
     font-size: 24px;
     line-height: 1;
     color: rgba(237,232,220,0.5);
+    transform: translateY(2px);
   }
   .compact .pat-name { font-size: 18px; }
   @keyframes pat-blink {

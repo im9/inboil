@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, toggleBottomPanel, setVoiceParam, effects } from '../state.svelte.ts'
+  import { pattern, ui, isDrum, toggleBottomPanel, setVoiceParam } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -40,21 +40,6 @@
       {/each}
     </div>
 
-    <!-- Global FX -->
-    <div class="sends">
-      <Knob
-        value={effects.ducker.depth}
-        label="DUCK"
-        size={32}
-        onchange={v => { effects.ducker.depth = v }}
-      />
-      <Knob
-        value={(effects.comp.makeup - 1.0) / 2.5}
-        label="COMP"
-        size={32}
-        onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }}
-      />
-    </div>
   </div>
 </div>
 
@@ -139,12 +124,4 @@
     flex: 1;
   }
 
-  /* ── Pan + Global FX ── */
-  .sends {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-    padding-left: 8px;
-    border-left: 1px solid rgba(237,232,220,0.12);
-  }
 </style>

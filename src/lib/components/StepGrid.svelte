@@ -1,6 +1,68 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
+
+  // ── Velocity drag state ──
+  let velContainer: HTMLDivElement | undefined = $state(undefined)
+  let velDragging = $state(false)
+
+  function velStartDrag(e: PointerEvent, trackId: number, idx: number) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    velDragging = true
+    velApply(e, trackId, idx)
+  }
+
+  function velOnMove(e: PointerEvent) {
+    if (!velDragging || !velContainer) return
+    const barsEl = velContainer.querySelector('.vel-bars') as HTMLElement
+    if (!barsEl) return
+    const trackId = ui.selectedTrack
+    const track = pattern.tracks[trackId]
+    const rect = barsEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left
+    const cellWidth = rect.width / track.steps
+    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / cellWidth)))
+    velApply(e, trackId, idx)
+  }
+
+  function velApply(e: PointerEvent, trackId: number, idx: number) {
+    const barsEl = velContainer?.querySelector('.vel-bars') as HTMLElement
+    if (!barsEl) return
+    const cell = barsEl.children[idx] as HTMLElement
+    if (!cell) return
+    const rect = cell.getBoundingClientRect()
+    const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
+    setTrigVelocity(trackId, idx, v)
+  }
+
+  function velEndDrag() {
+    velDragging = false
+  }
+
+  // ── Vel-fill grow/shrink animation on trig toggle ──
+  let growing: Set<string> = $state(new Set())
+  let shrinking: Set<string> = $state(new Set())
+
+  function handleToggle(trackId: number, stepIdx: number) {
+    const trig = pattern.tracks[trackId].trigs[stepIdx]
+    const key = `${trackId}-${stepIdx}`
+    if (trig.active) {
+      // About to turn OFF → play shrink, then toggle
+      shrinking = new Set([...shrinking, key])
+      setTimeout(() => {
+        shrinking = new Set([...shrinking].filter(k => k !== key))
+        toggleTrig(trackId, stepIdx)
+      }, 180)
+    } else {
+      // Turn ON → toggle immediately, then play grow
+      toggleTrig(trackId, stepIdx)
+      growing = new Set([...growing, key])
+      setTimeout(() => {
+        growing = new Set([...growing].filter(k => k !== key))
+      }, 180)
+    }
+  }
 </script>
 
 <div class="step-grid">
@@ -57,7 +119,7 @@
           <button
             class="step"
             class:playhead={isPlayhead}
-            onpointerdown={() => toggleTrig(trackId, stepIdx)}
+            onpointerdown={() => handleToggle(trackId, stepIdx)}
           >
             <span class="step-flip" class:flipped={trig.active}>
               <span class="face off"></span>
@@ -67,6 +129,40 @@
         {/each}
       </div>
     </div>
+
+    <!-- Inline velocity lane for selected track -->
+    {#if selected}
+      <div
+        class="vel-row"
+        bind:this={velContainer}
+        onpointermove={velOnMove}
+        onpointerup={velEndDrag}
+        onpointercancel={velEndDrag}
+      >
+        <div class="vel-label">
+          <span class="vel-name">VEL</span>
+        </div>
+        <div class="vel-spacer"></div>
+        <div class="vel-bars" style="--count: {track.steps}">
+          {#each track.trigs as trig, i}
+            {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
+            <div
+              class="vel-cell"
+              onpointerdown={e => velStartDrag(e, trackId, i)}
+            >
+              <div
+                class="vel-fill"
+                class:active={trig.active || shrinking.has(`${trackId}-${i}`)}
+                class:growing={growing.has(`${trackId}-${i}`)}
+                class:shrinking={shrinking.has(`${trackId}-${i}`)}
+                class:playhead={isPlayhead}
+                style="height: {trig.velocity * 100}%"
+              ></div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
   {/each}
 </div>
 
@@ -244,6 +340,102 @@
   }
 
   @keyframes ph-glow {
+    0%   { filter: brightness(1.5); }
+    100% { filter: brightness(1); }
+  }
+
+  /* ── Inline velocity lane ── */
+  .vel-row {
+    display: flex;
+    align-items: stretch;
+    height: 40px;
+    padding: 0 8px;
+    gap: 4px;
+    background: var(--color-surface);
+    border-bottom: 1px solid rgba(30,32,40,0.08);
+    touch-action: none;
+    user-select: none;
+    border-left: 3px solid var(--color-olive);
+    padding-left: 5px;
+    animation: vel-expand 180ms ease-out;
+    transform-origin: bottom;
+    overflow: hidden;
+  }
+
+  @keyframes vel-expand {
+    from {
+      height: 0;
+      opacity: 0;
+    }
+    to {
+      height: 40px;
+      opacity: 1;
+    }
+  }
+  .vel-label {
+    width: 64px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+  }
+  .vel-name {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    text-transform: uppercase;
+  }
+  .vel-spacer {
+    width: calc(20px + 2px + 20px + 4px + 20px);
+    flex-shrink: 0;
+  }
+  .vel-bars {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(var(--count), 1fr);
+    gap: 2px;
+    padding: 4px 0;
+  }
+  .vel-cell {
+    display: flex;
+    align-items: flex-end;
+    max-width: 28px;
+    min-width: 14px;
+    cursor: ns-resize;
+  }
+  .vel-fill {
+    width: 100%;
+    background: rgba(237,232,220,0.12);
+    border-radius: 1px 1px 0 0;
+    transition: height 40ms;
+    min-height: 2px;
+    transform-origin: bottom;
+  }
+  .vel-fill.active {
+    background: var(--color-olive);
+    opacity: 0.7;
+  }
+  .vel-fill.growing {
+    animation: vel-bar-grow 180ms ease-out;
+  }
+  .vel-fill.shrinking {
+    animation: vel-bar-shrink 180ms ease-out forwards;
+  }
+
+  @keyframes vel-bar-grow {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  @keyframes vel-bar-shrink {
+    from { transform: scaleY(1); }
+    to   { transform: scaleY(0); }
+  }
+  .vel-fill.playhead {
+    animation: vel-glow 180ms ease-out;
+  }
+
+  @keyframes vel-glow {
     0%   { filter: brightness(1.5); }
     100% { filter: brightness(1); }
   }

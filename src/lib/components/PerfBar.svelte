@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, playback, ui, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, effects, NOTE_NAMES } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
 
   const KEYS = NOTE_NAMES.map((note, i) => ({
@@ -52,6 +52,14 @@
     <Knob value={perf.eqLow}  label="LOW"  size={36} onchange={v => { perf.eqLow  = v }} />
     <Knob value={perf.eqMid}  label="MID"  size={36} onchange={v => { perf.eqMid  = v }} />
     <Knob value={perf.eqHigh} label="HIGH" size={36} onchange={v => { perf.eqHigh = v }} />
+  </div>
+
+  <div class="sep" aria-hidden="true"></div>
+
+  <!-- Ducker + Comp -->
+  <div class="perf-group dyn-group">
+    <Knob value={effects.ducker.depth} label="DUC" size={36} onchange={v => { effects.ducker.depth = v }} />
+    <Knob value={(effects.comp.makeup - 1.0) / 2.5} label="CMP" size={36} onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }} />
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -212,6 +220,11 @@
     gap: 10px;
   }
 
+  /* ── Dynamics (ducker + comp) ── */
+  .dyn-group {
+    gap: 10px;
+  }
+
   /* ── Separator ── */
   .sep {
     width: 1px;
@@ -290,6 +303,7 @@
 
     .sep,
     .eq-group,
+    .dyn-group,
     .gain-wrap,
     .group-label { display: none; }
 

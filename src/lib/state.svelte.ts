@@ -92,7 +92,7 @@ const TRACK_DEFAULTS: { name: string; synthType: SynthType; note: number; pan: n
 function makeEmptyPattern(id: number): Pattern {
   return {
     id,
-    name: '',
+    name: 'INIT',
     bpm: 120,
     tracks: TRACK_DEFAULTS.map((d, i) => ({
       ...makeTrack(i, d.name, d.synthType, [], d.note),
@@ -108,62 +108,220 @@ type FactoryDef = {
   name: string; bpm: number
   kick: number[]; snare: number[]; clap: number[]; chh: number[]
   ohh: number[]; cym: number[]; bass: [number[], number]; lead: [number[], number]
+  vp?: Record<number, Record<string, number>>  // track index → voice param overrides
 }
 
+// Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
 const FACTORY: FactoryDef[] = [
+  // 00 — 4 on the floor, classic house/techno starter
   { name: '4FLOOR', bpm: 120,
     kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,11], cym: [1], bass: [[1,3,7,11], 48], lead: [[2,6,10], 64] },
+  // 01 — Deep 808 trap
   { name: 'TRAP', bpm: 140,
     kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [4,8,12,16], cym: [1], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60] },
+    ohh: [4,8,12,16], cym: [1], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60],
+    vp: {
+      0: { pitchStart: 200, pitchEnd: 38, pitchDecay: 0.06, ampDecay: 0.8, drive: 1.8 },
+      1: { toneDecay: 0.05, noiseDecay: 0.05, noiseFc: 4500 },
+      3: { decay: 0.02, hpCutoff: 7000, volume: 0.50 },
+      6: { cutoffBase: 80, envMod: 2000, resonance: 4.0, decay: 0.30 },
+    } },
+  // 02 — Breakbeat, punchy drums
   { name: 'BREAK', bpm: 130,
     kick: [1,4,7,11], snare: [5,10,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [2,8,14], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,6,11], 62] },
+    ohh: [2,8,14], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,6,11], 62],
+    vp: {
+      0: { pitchStart: 400, pitchEnd: 60, pitchDecay: 0.03, ampDecay: 0.25 },
+      1: { toneDecay: 0.06, noiseAmt: 1.0, noiseFc: 4000 },
+      4: { decay: 0.25 },
+    } },
+  // 03 — UK Garage 2-step, tight kick
   { name: '2STEP', bpm: 132,
     kick: [1,6,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [4,12], cym: [], bass: [[1,4,9,12], 48], lead: [[3,7,11,15], 65] },
+    ohh: [4,12], cym: [], bass: [[1,4,9,12], 48], lead: [[3,7,11,15], 65],
+    vp: {
+      0: { ampDecay: 0.20, drive: 1.0 },
+      6: { cutoffBase: 150, envMod: 5000, resonance: 8.0, decay: 0.15 },
+    } },
+  // 04 — Lo-fi hip hop, mellow everything
   { name: 'LOFI', bpm: 85,
     kick: [1,6,9,14], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [7,15], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67] },
+    ohh: [7,15], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67],
+    vp: {
+      0: { pitchStart: 250, ampDecay: 0.40, drive: 0.8 },
+      1: { noiseFc: 2000, noiseAmt: 0.60 },
+      3: { volume: 0.40, hpCutoff: 4000 },
+      6: { cutoffBase: 120, envMod: 2500, resonance: 3.0 },
+      7: { cutoffBase: 250, envMod: 3000, resonance: 1.2 },
+    } },
+  // 05 — Straight techno, 909 punchy + acid bass
   { name: 'TECHNO', bpm: 135,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [3,7,11,15], cym: [1,9], bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,9], 60] },
+    ohh: [3,7,11,15], cym: [1,9], bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,9], 60],
+    vp: {
+      0: { pitchStart: 380, pitchEnd: 48, ampDecay: 0.30, drive: 1.6 },
+      2: { decay: 0.12 },
+      3: { baseFreq: 1000, hpCutoff: 7000 },
+      6: { cutoffBase: 100, envMod: 6000, resonance: 10.0, decay: 0.12, drive: 2.2 },
+    } },
+  // 06 — Deep house, warm bass
   { name: 'HOUSE', bpm: 124,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [3,7,11,15],
-    ohh: [7,15], cym: [1], bass: [[1,4,7,11], 48], lead: [[3,5,11,13], 64] },
+    ohh: [7,15], cym: [1], bass: [[1,4,7,11], 48], lead: [[3,5,11,13], 64],
+    vp: {
+      0: { pitchStart: 320, pitchEnd: 50, ampDecay: 0.35 },
+      6: { cutoffBase: 150, envMod: 3500, resonance: 5.0, decay: 0.20 },
+    } },
+  // 07 — Drum & bass, fast + sharp
   { name: 'DNB', bpm: 174,
     kick: [1,11], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [4,12], cym: [1], bass: [[1,3,7,9,13], 36], lead: [[5,13], 67] },
+    ohh: [4,12], cym: [1], bass: [[1,3,7,9,13], 36], lead: [[5,13], 67],
+    vp: {
+      0: { ampDecay: 0.20, pitchDecay: 0.025 },
+      1: { toneDecay: 0.04, noiseDecay: 0.04, noiseFc: 5000 },
+      3: { decay: 0.02, hpCutoff: 7500 },
+      6: { cutoffBase: 100, envMod: 3000, resonance: 6.0, decay: 0.25, drive: 2.0 },
+    } },
+  // 08 — Hyperpop, distorted + bright
   { name: 'HYPER', bpm: 150,
     kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [2,6,10,14], cym: [1,9], bass: [[1,2,5,6,9,10,13,14], 48], lead: [[1,3,5,9,11,13], 72] },
+    ohh: [2,6,10,14], cym: [1,9], bass: [[1,2,5,6,9,10,13,14], 48], lead: [[1,3,5,9,11,13], 72],
+    vp: {
+      0: { pitchStart: 500, ampDecay: 0.20, drive: 2.5 },
+      1: { noiseFc: 5500, noiseAmt: 1.1 },
+      6: { cutoffBase: 250, envMod: 7000, resonance: 9.0, drive: 2.8 },
+      7: { cutoffBase: 800, envMod: 8000 },
+    } },
+  // 09 — Minimal ambient, soft + sparse
   { name: 'MINIMAL', bpm: 100,
     kick: [1,9], snare: [5], clap: [], chh: [1,5,9,13],
-    ohh: [], cym: [1], bass: [[1,9], 48], lead: [[5,13], 60] },
+    ohh: [], cym: [1], bass: [[1,9], 48], lead: [[5,13], 60],
+    vp: {
+      0: { pitchStart: 200, pitchEnd: 45, ampDecay: 0.50, drive: 0.8 },
+      3: { volume: 0.35 },
+      6: { cutoffBase: 100, envMod: 2000, resonance: 3.0, decay: 0.30 },
+      7: { cutoffBase: 200, envMod: 2500, resonance: 1.0 },
+    } },
+  // 10 — Reggaeton, dembow rhythm
+  { name: 'REGGAETN', bpm: 95,
+    kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [3,7,11,15], cym: [], bass: [[1,4,8,11], 48], lead: [[3,7,11,15], 60],
+    vp: {
+      0: { ampDecay: 0.30, drive: 1.5 },
+      1: { toneDecay: 0.06 },
+      2: { decay: 0.15, filterFc: 1800 },
+      6: { cutoffBase: 130, envMod: 3000, resonance: 5.0 },
+    } },
+  // 11 — Disco, funky bass + open hats
+  { name: 'DISCO', bpm: 118,
+    kick: [1,5,9,13], snare: [5,13], clap: [], chh: [3,7,11,15],
+    ohh: [1,5,9,13], cym: [1], bass: [[1,3,5,8,11,13], 48], lead: [[2,6,10,14], 67],
+    vp: {
+      0: { ampDecay: 0.30 },
+      4: { volume: 0.75, decay: 0.20 },
+      6: { cutoffBase: 180, envMod: 5000, resonance: 6.0, decay: 0.15 },
+      7: { cutoffBase: 600, envMod: 7000 },
+    } },
+  // 12 — Electro, hard kick + acid
+  { name: 'ELECTRO', bpm: 128,
+    kick: [1,5,9,14], snare: [5,13], clap: [3,11], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [4,12], cym: [1], bass: [[1,3,7,9,13,15], 36], lead: [[1,5,9,13], 62],
+    vp: {
+      0: { pitchStart: 450, drive: 2.0, ampDecay: 0.25 },
+      1: { noiseFc: 4500 },
+      6: { cutoffBase: 80, envMod: 7000, resonance: 11.0, drive: 2.5 },
+      7: { cutoffBase: 500, envMod: 6500 },
+    } },
+  // 13 — Dubstep, heavy half-time
+  { name: 'DUBSTEP', bpm: 140,
+    kick: [1,9], snare: [7,15], clap: [7,15], chh: [1,3,5,7,9,11,13,15],
+    ohh: [4,12], cym: [1], bass: [[1,3,5,9,11,13], 36], lead: [[1,9], 55],
+    vp: {
+      0: { pitchEnd: 38, ampDecay: 0.60, drive: 1.8 },
+      1: { noiseAmt: 1.1, noiseFc: 3500 },
+      6: { cutoffBase: 80, envMod: 6000, resonance: 8.0, decay: 0.40, drive: 2.5 },
+    } },
+  // 14 — Drill, sliding 808
+  { name: 'DRILL', bpm: 142,
+    kick: [1,4,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [3,7,11,15], cym: [], bass: [[1,5,9,13], 36], lead: [[3,7,11,15], 60],
+    vp: {
+      0: { pitchStart: 220, pitchEnd: 38, ampDecay: 0.70, drive: 1.6 },
+      3: { decay: 0.02, hpCutoff: 7000, volume: 0.50 },
+      6: { cutoffBase: 70, envMod: 2500, resonance: 5.0, decay: 0.30 },
+    } },
+  // 15 — Synthwave, lush pads
+  { name: 'SYNTHWV', bpm: 110,
+    kick: [1,5,9,13], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
+    ohh: [7,15], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,2,3,5,6,7,9,10,11,13,14,15], 64],
+    vp: {
+      0: { pitchStart: 280, ampDecay: 0.35, drive: 1.0 },
+      6: { cutoffBase: 150, envMod: 3000, resonance: 4.0, decay: 0.35 },
+      7: { cutoffBase: 350, envMod: 5000, resonance: 2.0, decay: 0.60 },
+    } },
+  // 16 — Afrobeat, bouncy polyrhythm
+  { name: 'AFROBT', bpm: 105,
+    kick: [1,5,11,13], snare: [5,13], clap: [3,11], chh: [1,3,5,7,9,11,13,15],
+    ohh: [2,6,10,14], cym: [1], bass: [[1,4,7,11], 48], lead: [[2,5,10,13], 64],
+    vp: {
+      0: { ampDecay: 0.30, drive: 1.2 },
+      6: { cutoffBase: 160, envMod: 4000, resonance: 5.0, decay: 0.18 },
+      7: { cutoffBase: 500, envMod: 6000 },
+    } },
+  // 17 — Jersey club, rapid kicks
+  { name: 'JERSEY', bpm: 150,
+    kick: [1,4,7,10,13], snare: [5,13], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [4,8,12,16], cym: [], bass: [[1,5,9,13], 48], lead: [[2,6,10,14], 67],
+    vp: {
+      0: { ampDecay: 0.20, drive: 1.5 },
+      2: { decay: 0.10, filterFc: 2000 },
+      3: { decay: 0.02, volume: 0.50 },
+      6: { cutoffBase: 140, envMod: 4500, resonance: 6.0 },
+    } },
+  // 18 — UK Garage, bumpy bass
+  { name: 'GARAGE', bpm: 130,
+    kick: [1,6,9,14], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [3,7,11,15], cym: [1], bass: [[1,3,6,9,11,14], 48], lead: [[2,6,10,14], 65],
+    vp: {
+      0: { pitchStart: 300, ampDecay: 0.30 },
+      6: { cutoffBase: 130, envMod: 4000, resonance: 7.0, decay: 0.20 },
+      7: { cutoffBase: 350, envMod: 4500, resonance: 1.5 },
+    } },
+  // 19 — Ambient, ethereal + slow
+  { name: 'AMBIENT', bpm: 70,
+    kick: [1,9], snare: [], clap: [], chh: [1,5,9,13],
+    ohh: [5,13], cym: [1], bass: [[1,9], 48], lead: [[1,5,9,13], 60],
+    vp: {
+      0: { pitchStart: 180, pitchEnd: 42, ampDecay: 0.60, drive: 0.7 },
+      3: { volume: 0.30, hpCutoff: 6000 },
+      5: { decay: 0.80 },
+      6: { cutoffBase: 100, envMod: 1500, resonance: 2.0, decay: 0.45 },
+      7: { cutoffBase: 200, envMod: 2000, resonance: 1.0, decay: 0.80 },
+    } },
 ]
 
 function makeFactoryPattern(id: number): Pattern {
   const f = FACTORY[id - 1]
-  return {
-    id,
-    name: f.name,
-    bpm: f.bpm,
-    tracks: [
-      { ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick),            pan:  0.00 },
-      { ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare),           pan: -0.10 },
-      { ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap),            pan:  0.15 },
-      { ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh),             pan: -0.30 },
-      { ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh),             pan:  0.35 },
-      { ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym),             pan:  0.25 },
-      { ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1]), pan:  0.00 },
-      { ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1]), pan:  0.10 },
-    ],
-  }
+  const base: [Track & { pan: number }][] = [
+    [{ ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick),            pan:  0.00 }],
+    [{ ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare),           pan: -0.10 }],
+    [{ ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap),            pan:  0.15 }],
+    [{ ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh),             pan: -0.30 }],
+    [{ ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh),             pan:  0.35 }],
+    [{ ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym),             pan:  0.25 }],
+    [{ ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1]), pan:  0.00 }],
+    [{ ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1]), pan:  0.10 }],
+  ]
+  const tracks = base.map(([t], i) => {
+    if (f.vp?.[i]) t.voiceParams = { ...t.voiceParams, ...f.vp[i] }
+    return t
+  })
+  return { id, name: f.name, bpm: f.bpm, tracks }
 }
 
 export const PATTERN_COUNT = 100
-export const FACTORY_COUNT = 10
+export const FACTORY_COUNT = 20
 
 // ── Reactive state ───────────────────────────────────────────────────
 

@@ -5,7 +5,6 @@
   import PianoRoll from './lib/components/PianoRoll.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import FxPad from './lib/components/FxPad.svelte'
-  import StepLane from './lib/components/StepLane.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import { pattern, playback, ui, isDrum, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
@@ -77,7 +76,6 @@
       <FxPad />
     {:else}
       <StepGrid />
-      <StepLane trackId={ui.selectedTrack} />
       {#if showPianoRoll}
         <PianoRoll trackId={ui.selectedTrack} />
       {/if}
