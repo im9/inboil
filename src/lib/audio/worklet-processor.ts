@@ -260,6 +260,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
       const trig = track.trigs[this.playheads[t]]
 
+      // P-Lock: restore base params, then overlay per-step locks
+      if (this.voices[t] && track.voiceParams) {
+        for (const k in track.voiceParams) this.voices[t].setParam(k, track.voiceParams[k])
+      }
+      if (this.voices[t] && trig?.active && trig.paramLocks) {
+        for (const k in trig.paramLocks) this.voices[t].setParam(k, trig.paramLocks[k])
+      }
+
       // Was the previous note's gate still open?
       const wasGated = this.gateCounters[t] > 0
       // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303

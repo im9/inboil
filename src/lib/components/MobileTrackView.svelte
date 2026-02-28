@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, setParamLock, clearAllParamLocks, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
@@ -12,6 +12,39 @@
   // Dynamic column count based on step count
   const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
 
+  // P-Lock: selected step's trig and lock state
+  const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
+  const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
+
+  function stepAction(stepIdx: number) {
+    if (ui.lockMode) {
+      ui.selectedStep = ui.selectedStep === stepIdx ? null : stepIdx
+    } else {
+      toggleTrig(ui.selectedTrack, stepIdx)
+    }
+  }
+
+  function knobValue(p: { key: string; default: number }): number {
+    if (ui.lockMode && selTrig) {
+      const lockVal = selTrig.paramLocks?.[p.key]
+      return lockVal !== undefined ? lockVal : (track.voiceParams[p.key] ?? p.default)
+    }
+    return track.voiceParams[p.key] ?? p.default
+  }
+
+  function knobChange(p: { key: string }, v: number) {
+    const actual = denormalizeParam(p as any, v)
+    if (ui.lockMode && ui.selectedStep !== null) {
+      setParamLock(ui.selectedTrack, ui.selectedStep, p.key, actual)
+    } else {
+      setVoiceParam(ui.selectedTrack, p.key, actual)
+    }
+  }
+
+  function isParamLocked(key: string): boolean {
+    return !!(ui.lockMode && selTrig?.paramLocks?.[key] !== undefined)
+  }
+
   function cycleSteps() {
     const current = track.steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
@@ -21,9 +54,11 @@
 
   function prevTrack() {
     ui.selectedTrack = (ui.selectedTrack - 1 + pattern.tracks.length) % pattern.tracks.length
+    ui.selectedStep = null
   }
   function nextTrack() {
     ui.selectedTrack = (ui.selectedTrack + 1) % pattern.tracks.length
+    ui.selectedStep = null
   }
 </script>
 
@@ -38,6 +73,11 @@
       <div class="track-meta">
         <span class="track-type">{track.synthType}</span>
         <button class="step-count" onpointerdown={cycleSteps}>{track.steps}</button>
+        <button
+          class="btn-lock"
+          class:active={ui.lockMode}
+          onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
+        >LOCK</button>
         <Knob
           value={track.volume}
           label="VOL"
@@ -90,15 +130,19 @@
     <div class="calculator" style="--cols: {calcCols}">
       {#each track.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
+        {@const isSelected = ui.lockMode && ui.selectedStep === stepIdx}
+        {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
         <button
           class="calc-btn"
           class:playhead={isPlayhead}
-          onpointerdown={() => toggleTrig(ui.selectedTrack, stepIdx)}
+          class:lock-selected={isSelected}
+          onpointerdown={() => stepAction(stepIdx)}
         >
           <span class="btn-flip" class:flipped={trig.active}>
             <span class="face off"><span class="step-num">{stepIdx + 1}</span></span>
             <span class="face on"><span class="step-num">{stepIdx + 1}</span></span>
           </span>
+          {#if hasLocks}<span class="lock-dot"></span>{/if}
         </button>
       {/each}
     </div>
@@ -110,12 +154,19 @@
 
   <!-- Params (always visible at bottom) -->
   <div class="params-bar">
+    {#if ui.lockMode && ui.selectedStep !== null}
+      <span class="lock-label">STEP {ui.selectedStep + 1}</span>
+      {#if hasAnyLock}
+        <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
+      {/if}
+    {/if}
     {#each params as p}
       <Knob
-        value={normalizeParam(p, track.voiceParams[p.key] ?? p.default)}
+        value={normalizeParam(p, knobValue(p))}
         label={p.label}
         size={40}
-        onchange={v => setVoiceParam(ui.selectedTrack, p.key, denormalizeParam(p, v))}
+        locked={isParamLocked(p.key)}
+        onchange={v => knobChange(p, v)}
       />
     {/each}
 
@@ -217,6 +268,21 @@
   }
   .step-count:active {
     background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .btn-lock {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(30,32,40,0.4);
+    background: transparent;
+    border: 1px solid rgba(30,32,40,0.25);
+    padding: 1px 5px;
+    line-height: 14px;
+  }
+  .btn-lock.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
     color: var(--color-bg);
   }
   .btn-mute {
@@ -349,6 +415,26 @@
     opacity: 0.5;
   }
 
+  /* ── P-Lock indicators ── */
+  .calc-btn.lock-selected .face.off {
+    border-color: var(--color-olive);
+    box-shadow: 0 0 0 1px var(--color-olive);
+  }
+  .calc-btn.lock-selected .face.on {
+    box-shadow: inset 0 0 0 2px var(--color-bg);
+  }
+  .lock-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-olive);
+    z-index: 1;
+    pointer-events: none;
+  }
+
   /* ── Playhead glow ── */
   .calc-btn.playhead {
     animation: ph-glow 180ms ease-out;
@@ -377,6 +463,27 @@
     flex-shrink: 0;
     padding: 6px 10px;
     gap: 6px 10px;
+  }
+  .lock-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-olive);
+    white-space: nowrap;
+  }
+  .btn-clr {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.5);
+    background: transparent;
+    border: 1px solid rgba(237,232,220,0.25);
+    padding: 1px 5px;
+    line-height: 14px;
+  }
+  .btn-clr:active {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.85);
   }
   .sends-sep {
     width: 1px;

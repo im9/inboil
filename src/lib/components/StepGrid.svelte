@@ -89,6 +89,12 @@
 
   function stepStartDrag(e: PointerEvent, trackId: number, stepIdx: number) {
     e.preventDefault()
+    // Lock mode: select step instead of toggling
+    if (ui.lockMode) {
+      ui.selectedTrack = trackId
+      ui.selectedStep = ui.selectedStep === stepIdx && ui.selectedTrack === trackId ? null : stepIdx
+      return
+    }
     const trig = pattern.tracks[trackId].trigs[stepIdx]
     stepPaintOn = !trig.active
     stepDragTrack = trackId
@@ -183,9 +189,12 @@
       >
         {#each track.trigs as trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
+          {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
+          {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
           <button
             class="step"
             class:playhead={isPlayhead}
+            class:lock-selected={isLockSel}
             aria-label="Step {stepIdx + 1}"
             onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
           >
@@ -193,6 +202,7 @@
               <span class="face off"></span>
               <span class="face on"></span>
             </span>
+            {#if hasLocks}<span class="lock-dot"></span>{/if}
           </button>
         {/each}
       </div>
@@ -433,6 +443,26 @@
     background: var(--color-olive);
     border: 1px solid var(--color-olive);
     transform: rotateY(180deg);
+  }
+
+  /* ── P-Lock indicators ── */
+  .step.lock-selected .face.off {
+    border-color: var(--color-olive);
+    box-shadow: 0 0 0 1px var(--color-olive);
+  }
+  .step.lock-selected .face.on {
+    box-shadow: inset 0 0 0 2px var(--color-bg);
+  }
+  .lock-dot {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-olive);
+    z-index: 1;
+    pointer-events: none;
   }
 
   /* ── Playhead glow ── */

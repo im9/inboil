@@ -5,12 +5,16 @@
     size?: number       // SVG px
     light?: boolean     // true = dark strokes for cream background
     compact?: boolean   // true = SVG only, no value/label text
+    locked?: boolean    // true = P-Lock active (olive value arc)
     onchange: (v: number) => void
   }
-  let { value, label, size = 32, light = false, compact = false, onchange }: Props = $props()
+  let { value, label, size = 32, light = false, compact = false, locked = false, onchange }: Props = $props()
 
   const trackStroke = $derived(light ? 'rgba(30,32,40,0.15)' : 'rgba(237,232,220,0.18)')
-  const valueStroke = $derived(light ? 'rgba(30,32,40,0.75)' : 'rgba(237,232,220,0.82)')
+  const valueStroke = $derived(
+    locked ? 'var(--color-olive, #6C7744)'
+    : light ? 'rgba(30,32,40,0.75)' : 'rgba(237,232,220,0.82)'
+  )
 
   // Arc geometry
   const r    = size / 2 - 4        // radius

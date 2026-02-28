@@ -18,6 +18,7 @@ export interface Trig {
   velocity: number  // 0.0–1.0
   duration: number  // step count 1-16 (default 1)
   slide: boolean    // slide/glide to next note (default false)
+  paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
 export interface Track {
@@ -482,6 +483,8 @@ function saveToBank(): void {
       trigs: t.trigs.map(tr => ({
         active: tr.active, note: tr.note, velocity: tr.velocity,
         duration: tr.duration, slide: tr.slide,
+        ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
+          ? { paramLocks: { ...tr.paramLocks } } : {}),
       })),
     })),
   }
@@ -499,6 +502,7 @@ function loadFromBank(idx: number): void {
       ...tr,
       duration: tr.duration ?? 1,
       slide: tr.slide ?? false,
+      ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
     })),
     voiceParams: { ...t.voiceParams },
   }))
@@ -544,6 +548,8 @@ export const ui = $state({
   selectedTrack: 0,
   view: 'grid' as 'grid' | 'fx' | 'eq',
   sidebar: null as 'help' | 'system' | null,
+  lockMode: false,
+  selectedStep: null as number | null,
 })
 
 // ── Persisted preferences (single localStorage key) ─────────────────
@@ -729,6 +735,23 @@ export function setVoiceParam(trackId: number, key: string, value: number) {
   pattern.tracks[trackId].voiceParams[key] = value
 }
 
+export function setParamLock(trackId: number, stepIdx: number, key: string, value: number) {
+  const trig = pattern.tracks[trackId].trigs[stepIdx]
+  if (!trig.paramLocks) trig.paramLocks = {}
+  trig.paramLocks[key] = value
+}
+
+export function clearParamLock(trackId: number, stepIdx: number, key: string) {
+  const trig = pattern.tracks[trackId].trigs[stepIdx]
+  if (!trig.paramLocks) return
+  delete trig.paramLocks[key]
+  if (Object.keys(trig.paramLocks).length === 0) trig.paramLocks = undefined
+}
+
+export function clearAllParamLocks(trackId: number, stepIdx: number) {
+  pattern.tracks[trackId].trigs[stepIdx].paramLocks = undefined
+}
+
 export function toggleBottomPanel(trackId: number) {
   const track = pattern.tracks[trackId]
   if (!isDrum(track)) {
@@ -755,6 +778,8 @@ export function factoryReset(): void {
   ui.selectedTrack = 0
   ui.view = 'grid'
   ui.sidebar = null
+  ui.lockMode = false
+  ui.selectedStep = null
   // Reset effects
   effects.reverb = { ...DEFAULT_EFFECTS.reverb }
   effects.delay = { ...DEFAULT_EFFECTS.delay }

@@ -131,6 +131,8 @@ function patternToWorklet(
         velocity: trig.velocity,
         duration: trig.duration ?? 1,
         slide:    trig.slide ?? false,
+        ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
+          ? { paramLocks: { ...trig.paramLocks } } : {}),
       })),
     })),
   }
