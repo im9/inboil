@@ -26,7 +26,7 @@
   <!-- Key / Root note: Piano keyboard (OP-XY Brain style) -->
   <div class="perf-group">
     <span class="group-label">KEY</span>
-    <div class="keyboard">
+    <div class="keyboard" data-tip="Set root note for scale transposition" data-tip-ja="スケール移調のルートノートを設定">
       {#each KEYS as key, i}
         <button
           class="key"
@@ -38,9 +38,9 @@
     </div>
     <!-- Octave shift -->
     <div class="oct-block">
-      <button class="oct-adj" onpointerdown={() => { perf.octave = Math.max(-2, perf.octave - 1) }}>−</button>
-      <span class="oct-value" class:pending={isPendingOct}>{octDisplay}</span>
-      <button class="oct-adj" onpointerdown={() => { perf.octave = Math.min(2, perf.octave + 1) }}>+</button>
+      <button class="oct-adj" onpointerdown={() => { perf.octave = Math.max(-2, perf.octave - 1) }} data-tip="Lower octave" data-tip-ja="オクターブを下げる">−</button>
+      <span class="oct-value" class:pending={isPendingOct} data-tip="Current octave offset" data-tip-ja="現在のオクターブオフセット">{octDisplay}</span>
+      <button class="oct-adj" onpointerdown={() => { perf.octave = Math.min(2, perf.octave + 1) }} data-tip="Raise octave" data-tip-ja="オクターブを上げる">+</button>
       <span class="group-label">OCT</span>
     </div>
   </div>
@@ -49,16 +49,24 @@
 
   <!-- Ducker + Comp -->
   <div class="perf-group dyn-group">
+    <span data-tip="Sidechain ducker depth" data-tip-ja="サイドチェインダッカーの深さ">
     <Knob value={effects.ducker.depth} label="DUC" size={36} onchange={v => { effects.ducker.depth = v }} />
+    </span>
+    <span data-tip="Compressor makeup gain" data-tip-ja="コンプレッサーのメイクアップゲイン">
     <Knob value={(effects.comp.makeup - 1.0) / 2.5} label="CMP" size={36} onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }} />
+    </span>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
 
   <!-- Master gain + Swing -->
   <span class="gain-wrap">
+    <span data-tip="Master output volume" data-tip-ja="マスター出力音量">
     <Knob value={perf.masterGain} label="GAIN" size={36} onchange={v => { perf.masterGain = v }} />
+    </span>
+    <span data-tip="Swing amount (shuffle feel)" data-tip-ja="スウィング量 (シャッフル感)">
     <Knob value={perf.swing} label="SWG" size={36} onchange={v => { perf.swing = v }} />
+    </span>
   </span>
 
   <div class="sep" aria-hidden="true"></div>
@@ -69,16 +77,19 @@
       class="btn-view"
       class:active={ui.view === 'grid'}
       onpointerdown={() => { ui.view = 'grid' }}
+      data-tip="Step sequencer view" data-tip-ja="ステップシーケンサー画面"
     >GRID</button>
     <button
       class="btn-view"
       class:active={ui.view === 'fx'}
       onpointerdown={() => { ui.view = 'fx' }}
+      data-tip="Effects pad view" data-tip-ja="エフェクトパッド画面"
     >FX</button>
     <button
       class="btn-view"
       class:active={ui.view === 'eq'}
       onpointerdown={() => { ui.view = 'eq' }}
+      data-tip="Filter/EQ view" data-tip-ja="フィルター/EQ画面"
     >EQ</button>
   </div>
 
@@ -92,6 +103,7 @@
       onpointerdown={() => { perf.filling = true }}
       onpointerup={() => { perf.filling = false }}
       onpointerleave={() => { perf.filling = false }}
+      data-tip="Hold for drum fill" data-tip-ja="長押しでドラムフィル"
     >FILL</button>
     <button
       class="btn-perf"
@@ -99,6 +111,7 @@
       onpointerdown={() => { perf.reversing = true }}
       onpointerup={() => { perf.reversing = false }}
       onpointerleave={() => { perf.reversing = false }}
+      data-tip="Hold to reverse playback" data-tip-ja="長押しで逆再生"
     >REV</button>
     <button
       class="btn-perf btn-brk"
@@ -106,6 +119,7 @@
       onpointerdown={() => { perf.breaking = true }}
       onpointerup={() => { perf.breaking = false }}
       onpointerleave={() => { perf.breaking = false }}
+      data-tip="Hold for rhythmic break" data-tip-ja="長押しでリズムブレイク"
     >BRK</button>
   </div>
 </div>

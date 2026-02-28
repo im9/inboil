@@ -1,23 +1,22 @@
 <script lang="ts">
   import { fxPad, ui, pattern, setTrackSend } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
+  import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
   import Knob from './Knob.svelte'
 
   const track = $derived(pattern.tracks[ui.selectedTrack])
 
   const nodes = [
-    { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)' },
-    { key: 'delay'    as const, label: 'DLY',  color: 'var(--color-blue)' },
-    { key: 'glitch'   as const, label: 'GLT',  color: 'var(--color-salmon)' },
-    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)' },
+    { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)',  tip: 'Reverb — adds space and depth', tipJa: 'リバーブ — 空間と奥行きを付加' },
+    { key: 'delay'    as const, label: 'DLY',  color: 'var(--color-blue)',   tip: 'Delay — rhythmic echo repeats', tipJa: 'ディレイ — リズミカルなエコー' },
+    { key: 'glitch'   as const, label: 'GLT',  color: 'var(--color-salmon)', tip: 'Glitch — stutter and slice effects', tipJa: 'グリッチ — スタッター/スライスエフェクト' },
+    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — texture and grain effects', tipJa: 'グラニュラー — テクスチャ/粒子エフェクト' },
   ]
 
   let padEl: HTMLDivElement
   let dragging: typeof nodes[number]['key'] | null = $state(null)
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
-  const TAP_THRESHOLD = 5
-  const PAD_INSET = 32  // px inset so nodes don't clip edges
 
   function startDrag(e: PointerEvent, key: typeof nodes[number]['key']) {
     e.preventDefault()
@@ -65,12 +64,7 @@
 
   const ROWS = 18
   const COLS = 32
-  const colors = [
-    { r: 120, g: 120, b: 69 },   // olive (low freq)
-    { r: 68,  g: 114, b: 180 },  // blue (mid freq)
-    { r: 232, g: 160, b: 144 },  // salmon (high freq)
-    { r: 155, g: 107, b: 160 },  // purple (very high)
-  ]
+  const colors = [COLORS_RGB.olive, COLORS_RGB.blue, COLORS_RGB.salmon, COLORS_RGB.purple]
 
   function draw() {
     const analyser = engine.getAnalyser()
@@ -153,10 +147,12 @@
 <div class="fx-view">
   <div
     class="fx-pad"
+    role="application"
     bind:this={padEl}
     onpointermove={onMove}
     onpointerup={endDrag}
     onpointercancel={endDrag}
+    data-tip="Tap node to toggle, drag to adjust" data-tip-ja="ノードをタップでON/OFF、ドラッグで調整"
   >
     <!-- Audio visualizer canvas -->
     <canvas bind:this={canvasEl} class="visualizer"></canvas>
@@ -184,6 +180,8 @@
           --node-color: {node.color};
         "
         onpointerdown={e => startDrag(e, node.key)}
+        data-tip={node.tip}
+        data-tip-ja={node.tipJa}
       >
         <span class="node-label">{node.label}</span>
       </button>
@@ -192,7 +190,7 @@
 
   <!-- Per-track send mixer -->
   <div class="sends-bar">
-    <div class="track-dots">
+    <div class="track-dots" data-tip="Select track for send mix" data-tip-ja="センドミックスのトラックを選択">
       {#each pattern.tracks as _t, i}
         <button
           class="dot"
@@ -204,37 +202,47 @@
     </div>
     <span class="send-track-name">{track.name}</span>
     <div class="send-sep" aria-hidden="true"></div>
+    <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
     <Knob
       value={track.reverbSend}
       label="VERB"
       size={28}
       onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)}
     />
+    </span>
+    <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
     <Knob
       value={track.delaySend}
       label="DLY"
       size={28}
       onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)}
     />
+    </span>
+    <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
     <Knob
       value={track.glitchSend}
       label="GLT"
       size={28}
       onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)}
     />
+    </span>
+    <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
     <Knob
       value={track.granularSend}
       label="GRN"
       size={28}
       onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)}
     />
+    </span>
     <div class="send-sep" aria-hidden="true"></div>
+    <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
     <Knob
       value={(track.pan + 1) / 2}
       label="PAN"
       size={28}
       onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }}
     />
+    </span>
   </div>
 </div>
 

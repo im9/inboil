@@ -26,9 +26,10 @@ Treats the UI as graphic design first — geometric shapes, bold typography, and
 --color-blue:    #4472B4;   /* steel blue — playhead, FILL/REV buttons */
 --color-salmon:  #E8A090;   /* salmon — BRK button, record/alert, GLT node */
 --color-purple:  #9B6BA0;   /* soft violet — granular FX node */
+--color-teal:    #508080;   /* teal — filter node */
 ```
 
-The palette is warm and restrained. Olive, blue, salmon, and purple are chromatic; everything else is cream/navy/gray.
+The palette is warm and restrained. Olive, blue, salmon, purple, and teal are chromatic; everything else is cream/navy/gray.
 
 ## Typography — DECIDED
 
@@ -55,39 +56,52 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 ```
 █ = dark zone (navy bg)   ░ = light zone (cream bg)
 
-┌█████████████████████████████████████████████████┐
-│█ ●  INBOIL   120   [▶][■][RND]      PAT: 01  █│  ← AppHeader (dark zone)
-│█  (split-flap)                    (split-flap)█│
-├█████████████████████████████████████████████████┤
-│█ [KEY] [OCT▼▲] [LOW MID HIGH] [GAIN]          █│  ← PerfBar (dark zone)
-│█                       [FILL REV GLT BRK] [FX] █│  ← FX button toggles view
-├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ KICK [V][P] M [■][ ][ ][■][ ][ ][■][ ][ ]... ░│  ← StepGrid (light zone)
-│░ SNARE[V][P] M [ ][ ][ ][ ][■][ ][ ][ ][ ]... ░│     VOL + PAN knobs per track
-│░ C.HH [V][P] M [■][■][ ][■][■][■][ ][■][ ]... ░│
-│░ ...                                           ░│
-├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ (PianoRoll — shown conditionally for melodic) ░│  ← PianoRoll (light zone)
-├█████████████████████████████████████████████████┤
-│█ [KICK] [knob][knob][knob]       DUCK COMP    █│  ← ParamPanel (dark zone)
-│█  (split-flap)   (synth params)   (global FX)  █│
-└─────────────────────────────────────────────────┘
+┌█████████████████████████████████████████████████████┐
+│█ ●  INBOIL   120   [▶][■][RND]      PAT ◀ 00 ▶ [⚙]█│  ← AppHeader (dark zone)
+│█  (split-flap)                    (split-flap)     █│
+├█████████████████████████████████████████████████████┤
+│█ [KEY] [OCT▼▲] | [DUC][CMP] | [GAIN][SWG] | GRID FX EQ | [FILL][REV][BRK] █│ ← PerfBar
+├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
+│░ KICK [V][P] M [■][ ][ ][■][ ][ ][■][ ][ ]...   ░│  ← StepGrid (light zone)
+│░ SNARE[V][P] M [ ][ ][ ][ ][■][ ][ ][ ][ ]...   ░│     VOL + PAN knobs per track
+│░ C.HH [V][P] M [■][■][ ][■][■][■][ ][■][ ]...   ░│
+│░ ...                                               ░│
+├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
+│░ (PianoRoll — shown conditionally for melodic)     ░│  ← PianoRoll (light zone)
+├█████████████████████████████████████████████████████┤
+│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (dark zone)
+│█  (split-flap)   (synth params)                    █│
+└─────────────────────────────────────────────────────┘
 
-── FX View (ui.view === 'fx') ──────────────────────
+── FX View (ui.view === 'fx') ──────────────────────────
 
-┌█████████████████████████████████████████████████┐
-│█        AppHeader + PerfBar (same as above)    █│
-├█████████████████████████████████████████████████┤
-│█                                               █│  ← FxPad (dark zone)
-│█     (VERB)         ~~~3D wireframe terrain~~~  █│     XY pad + audio visualizer
-│█              (DLY)                             █│     tap=toggle, drag=move
-│█   (GLT)                          (GRN)        █│
-│█                                               █│
-├█████████████████████████████████████████████████┤
-│█ [●●●○●●●●] KICK | VERB DLY GLT GRN [knobs]  █│  ← FxPad sends bar
-├█████████████████████████████████████████████████┤
-│█ [KICK] [knob][knob][knob]       DUCK COMP    █│  ← ParamPanel (desktop only)
-└─────────────────────────────────────────────────┘
+┌█████████████████████████████████████████████████████┐
+│█        AppHeader + PerfBar (same as above)        █│
+├█████████████████████████████████████████████████████┤
+│█                                                   █│  ← FxPad (dark zone)
+│█     (VERB)         ~~~3D wireframe terrain~~~     █│     XY pad + audio visualizer
+│█              (DLY)                                █│     tap=toggle, drag=move
+│█   (GLT)                          (GRN)           █│
+│█                                                   █│
+├█████████████████████████████████████████████████████┤
+│█ [●●●○●●●●] KICK | VERB DLY GLT GRN [knobs]     █│  ← FxPad sends bar
+├█████████████████████████████████████████████████████┤
+│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (desktop only)
+└─────────────────────────────────────────────────────┘
+
+── EQ View (ui.view === 'eq') ──────────────────────────
+
+┌█████████████████████████████████████████████████████┐
+│█        AppHeader + PerfBar (same as above)        █│
+├█████████████████████████████████████████████████████┤
+│█                                                   █│  ← FilterView (dark zone)
+│█  (FILTER)                                         █│     XY pad, tap=toggle, drag=move
+│█           (LOW)                                   █│     Filter + 3-band EQ nodes
+│█                     (MID)                         █│
+│█                              (HIGH)               █│
+├█████████████████████████████████████████████████████┤
+│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (desktop only)
+└─────────────────────────────────────────────────────┘
 ```
 
 ## Components
@@ -140,24 +154,23 @@ Props:
 Performance controls strip (dark zone). Layout:
 
 ```
-[KEY piano] | [OCT ▼ 0 ▲] | [LOW MID HIGH] | [GAIN] | [FILL] [REV] [GLT] [BRK] | [FX]
+[KEY piano] | [OCT ▼ 0 ▲] | [DUC] [CMP] | [GAIN] [SWG] | GRID FX EQ | [FILL] [REV] [BRK]
 ```
 
 - **KEY**: 12-key piano keyboard. Active key shown in olive.
-- **OCT**: Octave shift ▼/▲ buttons with SplitFlap display (-2 to +2). Applied at cycle boundary (pending shown with blink).
-- **EQ knobs**: LOW / MID / HIGH (0=kill, 0.5=unity, 1.0=boost).
-- **GAIN knob**: Master volume.
+- **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink.
+- **DUC / CMP knobs**: Sidechain ducker depth and compressor makeup gain (36px).
+- **GAIN / SWG knobs**: Master volume and swing amount (36px).
+- **View toggle**: Segmented button group `GRID | FX | EQ` switching between StepGrid, FxPad, and FilterView (`ui.view = 'grid' | 'fx' | 'eq'`). Active button has lighter background + brighter text.
 - **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
   - FILL, REV: `--color-blue` border/active
-  - GLT: `--color-olive` border/active
   - BRK: `--color-salmon` border/active
-- **FX**: View toggle between grid view and FxPad view (`ui.view = 'grid' | 'fx'`).
 
-On mobile (`< 640px`): EQ and GAIN hidden, elements shrunk to fit single row.
+On mobile (`< 640px`): DUC, CMP, GAIN, SWG, separators, and labels hidden. Elements shrunk to fit single row.
 
 ### FxPad — DECIDED
 
-XY performance surface (dark zone). Switches with StepGrid via PerfBar FX button.
+XY performance surface (dark zone). Switches with StepGrid via PerfBar view toggle (`ui.view = 'fx'`).
 
 **Structure:**
 - `fx-view` outer container (`flex: 1`, column layout)
@@ -181,23 +194,61 @@ XY performance surface (dark zone). Switches with StepGrid via PerfBar FX button
 - VERB, DLY, GLT, GRN send knobs (28px) for selected track
 - This is the sole location for per-track FX send controls
 
+### FilterView — DECIDED
+
+XY filter/EQ surface (dark zone). Switches with StepGrid via PerfBar view toggle (`ui.view = 'eq'`).
+
+**Structure:**
+- `.filt-pad` inner area: touch/drag surface with 4 nodes
+- No sends bar — nodes directly control master filter and 3-band EQ
+
+**4 nodes** (circle buttons, 44px):
+- **FILTER** (teal): Master filter sweep. X = LP ← 0.5 → HP, Y = resonance. Tap toggles on/off.
+- **LOW** (olive): Low-band EQ. X = frequency, Y = gain (center = 0dB). Tap toggles on/off.
+- **MID** (blue): Mid-band EQ. Same as LOW.
+- **HIGH** (salmon): High-band EQ. Same as LOW.
+- Active: filled with node color. Inactive: outline only, shows "OFF" label.
+
+**Node positioning:** X/Y mapped to 0–1 range within padded area (20px inset). Nodes clamped to pad bounds. Drag with pointer capture.
+
+### Sidebar — DECIDED
+
+Right-side overlay panel (280px width, dark zone) sharing a single slot for both help and settings content. Positioned absolutely inside `.view-area`.
+
+**Structure:**
+- Header: title (HELP / SYSTEM), language toggle (help only), close button
+- Body: scrollable content area
+- Footer: hover guide (help) or factory reset (system)
+
+**Help mode:**
+- Collapsible accordion sections (9 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, FX Pad)
+- GUIDE footer: shows contextual description when user hovers over `data-tip` elements (desktop only)
+
+**System mode:**
+- Scale Mode toggle (ON/OFF)
+- Language toggle (JP/EN)
+- About section (version info)
+- Factory Reset with two-step confirmation (footer)
+
+See ADR 017 and ADR 018 for details.
+
 ### ParamPanel — DECIDED
 
 Dark zone footer. Shows:
 1. **Track name** (SplitFlap display)
 2. **♪ NOTES button** (melodic tracks only, toggles PianoRoll)
-3. **Synth params** (knobs from `paramDefs.ts`, scrollable)
-4. **Global FX**: DUCK, COMP
+3. **Synth params** (knobs from `paramDefs.ts`, horizontally scrollable)
+4. **? help button** (right side, Othello-style flip animation matching step/mute buttons)
 
 Per-track sends (VERB, DLY, GLT, GRN) are in the FxPad sends bar only. PAN and VOL are in the StepGrid track row.
-
-Decorative geometric elements (circle + rect, olive/blue, 20% opacity) anchored right.
 
 ### PianoRoll — DECIDED
 
 Note editor grid for melodic tracks (6–7). Positioned between StepGrid and ParamPanel.
 24-note range (C3–B4). Click cell to set note + activate; click same note to deactivate.
 Playhead column shown when playing.
+
+**Scale mode** (`prefs.scaleMode`): Out-of-scale rows (non-white-key positions) are disabled with salmon tint (`rgba(232,160,144,0.06)`), dimmed opacity (0.3 for keys, 0.12 for cells), and `pointer-events: none`.
 
 ### AppHeader — DECIDED
 
@@ -206,6 +257,7 @@ Dark zone. Contains:
 - BPM display (SplitFlap, editable)
 - Transport: Play/Stop/Random buttons
 - Pattern navigation: `◄ PAT:01 ►` (SplitFlap display)
+- ⚙ system button (top-right, opens SYSTEM sidebar)
 - Pending pattern: when queued switch is active, shows target PAT with blinking animation (400ms pulse)
 
 ### MobileTrackView — DECIDED
@@ -213,7 +265,7 @@ Dark zone. Contains:
 Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × 4 rows for 16 steps).
 Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop.
 
-Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the mute button. Global FX (DUCK, COMP) in params bar.
+Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the mute button.
 
 ## Interaction Model — DECIDED
 
@@ -227,13 +279,16 @@ Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the
 | Mute track | Click M button on track row |
 | Toggle piano roll | Click ♪ NOTES in ParamPanel |
 | Switch pattern | Click ◄ ► in header |
-| Performance controls | Press-hold buttons (FILL, REV, GLT, BRK) |
+| Performance controls | Press-hold buttons (FILL, REV, BRK) |
 | Key change | Click piano key in PerfBar |
-| Octave shift | Click ▼/▲ in PerfBar OCT controls |
-| Toggle FX view | Click FX button in PerfBar |
+| Octave shift | Click −/+ in PerfBar OCT controls |
+| Switch view | Click GRID/FX/EQ in PerfBar view toggle |
 | Toggle FX node | Tap FxPad node (no drag) |
 | Move FX node | Drag FxPad node (pointer capture) |
 | Select track (FxPad) | Click track dot in FxPad sends bar |
+| Open help | Click ? in ParamPanel |
+| Open settings | Click ⚙ in AppHeader |
+| Close sidebar | Click ✕ or re-press trigger button |
 
 ## Animation & Feedback — DECIDED
 
@@ -253,6 +308,19 @@ Properties:     transform, filter, opacity only (no layout-triggering)
   transform-style: preserve-3d;
 }
 .step-flip.flipped { transform: rotateY(180deg); }
+```
+
+### Help Button Flip
+
+Same Othello-style 3D flip as step/mute buttons. `?` icon flips between off (bordered outline) and on (blue filled) states:
+
+```css
+.help-flip {
+  transition: transform 180ms ease-out;
+  transform-style: preserve-3d;
+  perspective: 80px;
+}
+.help-flip.flipped { transform: rotateY(180deg); }
 ```
 
 ### Playhead Glow
@@ -281,6 +349,24 @@ Per-character 3D flip animation (180ms ease-out) triggered on value change.
 }
 ```
 
+### Sidebar Open/Close
+
+50ms fade + subtle slide. Uses deferred DOM removal (`visibleMode` + `closing` state) to keep DOM alive during exit animation:
+
+```css
+.sidebar { animation: sidebar-in 50ms ease-out; }
+.sidebar.closing { animation: sidebar-out 50ms ease-in forwards; }
+
+@keyframes sidebar-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes sidebar-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(24px); }
+}
+```
+
 ### No Animation Zones
 
 Always instant, no transition:
@@ -288,6 +374,7 @@ Always instant, no transition:
 - Opening/closing PianoRoll
 - Pattern switch application
 - Mute toggle (visual — audio uses smooth fade)
+- View switching (GRID/FX/EQ)
 
 ## Responsive Behavior — DECIDED
 

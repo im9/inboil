@@ -1,5 +1,12 @@
 // Mock state — no WASM, JS clock only
 import { defaultVoiceParams } from './paramDefs.ts'
+import {
+  SCALE_DEGREES_SET,
+  PIANO_ROLL_MIN, PIANO_ROLL_MAX,
+  DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_PERF,
+} from './constants.ts'
+
+export { NOTE_NAMES } from './constants.ts'
 
 export type SynthType = 'DrumSynth' | 'NoiseSynth' | 'AnalogSynth' | 'FMSynth' | 'Sampler' | 'ChordSynth'
 
@@ -436,36 +443,96 @@ export const playback = $state({
 export const ui = $state({
   selectedTrack: 0,
   view: 'grid' as 'grid' | 'fx' | 'eq',
+  sidebar: null as 'help' | 'system' | null,
 })
 
-export const perf = $state({
-  rootNote: 0,           // 0-11 chromatic key (0=C, 2=D, …) — OP-XY Brain style
-  octave: 0,             // -2 to +2 octave shift for melodic tracks
-  breaking: false,       // true = rhythmic gate at 8th-note rate
-  masterGain: 0.8,       // 0.0–1.0 master volume (×0.8 headroom in worklet)
-  filling: false,        // drum fill mode (random snare rolls)
-  reversing: false,      // reverse step playback
-  swing: 0,              // 0.0–1.0 → maps to 50%–75% swing in worklet
+// ── Persisted preferences (single localStorage key) ─────────────────
+const STORAGE_KEY = 'inboil'
+const STORAGE_VERSION = 1
+
+interface StoredPrefs {
+  v: number
+  lang: Lang
+  visited: boolean
+  scaleMode: boolean
+}
+
+function loadPrefs(): StoredPrefs {
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true }
+  if (typeof localStorage === 'undefined') return defaults
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) {
+      // Migrate legacy key
+      const legacyLang = localStorage.getItem('inboil-lang')
+      if (legacyLang) {
+        defaults.lang = legacyLang as Lang
+        localStorage.removeItem('inboil-lang')
+      }
+      return defaults
+    }
+    const parsed = JSON.parse(raw)
+    if (parsed.v !== STORAGE_VERSION) return defaults  // schema mismatch → reset
+    return { ...defaults, ...parsed }
+  } catch { return defaults }
+}
+
+function savePrefs(): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    v: STORAGE_VERSION,
+    lang: lang.value,
+    visited: prefs.visited,
+    scaleMode: prefs.scaleMode,
+  }))
+}
+
+const initialPrefs = loadPrefs()
+
+export type Lang = 'ja' | 'en'
+export const lang = $state({ value: initialPrefs.lang })
+export const prefs = $state({
+  visited: initialPrefs.visited,
+  scaleMode: initialPrefs.scaleMode,
 })
+
+// First visit → show help sidebar
+if (!prefs.visited) {
+  ui.sidebar = 'help'
+  prefs.visited = true
+  savePrefs()
+}
+
+export function toggleLang(): void {
+  lang.value = lang.value === 'ja' ? 'en' : 'ja'
+  savePrefs()
+}
+export function toggleSidebar(panel: 'help' | 'system'): void {
+  ui.sidebar = ui.sidebar === panel ? null : panel
+}
+export function toggleScaleMode(): void {
+  prefs.scaleMode = !prefs.scaleMode
+  savePrefs()
+}
+
+export const perf = $state({ ...DEFAULT_PERF })
 
 export const fxPad = $state({
-  verb:   { on: false, x: 0.25, y: 0.65 },  // x=size, y=damp — left-upper: short bright room
-  delay:  { on: false, x: 0.70, y: 0.40 },  // x=time, y=feedback — right-mid: longer delay
-  glitch:   { on: false, x: 0.45, y: 0.15 },  // x=rate, y=crush — center-low: subtle
-  granular: { on: false, x: 0.50, y: 0.30 },  // x=grain size, y=density
-  filter:   { on: false, x: 0.50, y: 0.30 },  // x=LP←0.5→HP sweep, y=resonance
-  eqLow:    { on: true,  x: 0.33, y: 0.50 },  // x=freq (200Hz), y=gain (0dB)
-  eqMid:    { on: true,  x: 0.57, y: 0.50 },  // x=freq (1kHz),  y=gain (0dB)
-  eqHigh:   { on: true,  x: 0.87, y: 0.50 },  // x=freq (8kHz),  y=gain (0dB)
+  verb:     { ...DEFAULT_FX_PAD.verb },
+  delay:    { ...DEFAULT_FX_PAD.delay },
+  glitch:   { ...DEFAULT_FX_PAD.glitch },
+  granular: { ...DEFAULT_FX_PAD.granular },
+  filter:   { ...DEFAULT_FX_PAD.filter },
+  eqLow:    { ...DEFAULT_FX_PAD.eqLow },
+  eqMid:    { ...DEFAULT_FX_PAD.eqMid },
+  eqHigh:   { ...DEFAULT_FX_PAD.eqHigh },
 })
 
-export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
 export const effects = $state<Effects>({
-  reverb: { size: 0.72, damp: 0.5 },
-  delay:  { time: 0.75, feedback: 0.42 },  // 0.75 = dotted 8th (beat fraction)
-  ducker: { depth: 0.85, release: 120 },  // hyperpop-style aggressive duck
-  comp:   { threshold: 0.30, ratio: 6, makeup: 2.2 },
+  reverb: { ...DEFAULT_EFFECTS.reverb },
+  delay:  { ...DEFAULT_EFFECTS.delay },
+  ducker: { ...DEFAULT_EFFECTS.ducker },
+  comp:   { ...DEFAULT_EFFECTS.comp },
 })
 
 // ── Actions ─────────────────────────────────────────────────────────
@@ -531,6 +598,48 @@ export function toggleBottomPanel(trackId: number) {
   }
 }
 
+// ── Factory reset ────────────────────────────────────────────────────
+
+export function factoryReset(): void {
+  // Reset pattern bank
+  for (let i = 0; i < FACTORY_COUNT; i++) {
+    patternBank[i] = makeFactoryPattern(i + 1)
+  }
+  for (let i = FACTORY_COUNT; i < PATTERN_COUNT; i++) {
+    patternBank[i] = makeEmptyPattern(i + 1)
+  }
+  // Load pattern 1
+  loadFromBank(0)
+  patternNav.pendingId = 0
+  // Reset UI
+  ui.selectedTrack = 0
+  ui.view = 'grid'
+  ui.sidebar = null
+  // Reset effects
+  effects.reverb = { ...DEFAULT_EFFECTS.reverb }
+  effects.delay = { ...DEFAULT_EFFECTS.delay }
+  effects.ducker = { ...DEFAULT_EFFECTS.ducker }
+  effects.comp = { ...DEFAULT_EFFECTS.comp }
+  // Reset perf
+  Object.assign(perf, DEFAULT_PERF)
+  // Reset FX pad
+  fxPad.verb = { ...DEFAULT_FX_PAD.verb }
+  fxPad.delay = { ...DEFAULT_FX_PAD.delay }
+  fxPad.glitch = { ...DEFAULT_FX_PAD.glitch }
+  fxPad.granular = { ...DEFAULT_FX_PAD.granular }
+  fxPad.filter = { ...DEFAULT_FX_PAD.filter }
+  fxPad.eqLow = { ...DEFAULT_FX_PAD.eqLow }
+  fxPad.eqMid = { ...DEFAULT_FX_PAD.eqMid }
+  fxPad.eqHigh = { ...DEFAULT_FX_PAD.eqHigh }
+  // Reset prefs (keep lang)
+  prefs.scaleMode = true
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY)
+  }
+  prefs.visited = true
+  savePrefs()
+}
+
 // ── Randomize ────────────────────────────────────────────────────────
 
 // Scale intervals (semitones from root)
@@ -546,13 +655,26 @@ export function randomizePattern(): void {
   const root  = roots[Math.floor(Math.random() * roots.length)]
   const scale = SCALES[Math.floor(Math.random() * SCALES.length)]
 
-  // Build note pool spanning the full piano-roll range (48–71)
-  const allNotes: number[] = []
+  // Build note pool spanning the full piano-roll range
+  let allNotes: number[] = []
   for (let oct = 0; oct < 3; oct++) {
     for (const interval of scale) {
       const n = root + oct * 12 + interval
-      if (n >= 48 && n <= 71) allNotes.push(n)
+      if (n >= PIANO_ROLL_MIN && n <= PIANO_ROLL_MAX) allNotes.push(n)
     }
+  }
+
+  // When scale mode is on, quantize to grid scale positions
+  if (prefs.scaleMode) {
+    allNotes = allNotes
+      .map(n => {
+        if (SCALE_DEGREES_SET.has(n % 12)) return n
+        // Snap to nearest grid-scale position
+        const up = n + 1 <= PIANO_ROLL_MAX && SCALE_DEGREES_SET.has((n + 1) % 12) ? n + 1 : n + 2
+        const down = n - 1 >= PIANO_ROLL_MIN && SCALE_DEGREES_SET.has((n - 1) % 12) ? n - 1 : n - 2
+        return (n - down <= up - n) ? down : up
+      })
+      .filter((n, i, arr) => n >= PIANO_ROLL_MIN && n <= PIANO_ROLL_MAX && arr.indexOf(n) === i)
   }
   const lowNotes  = allNotes.filter(n => n < 60)
   const highNotes = allNotes.filter(n => n >= 60)

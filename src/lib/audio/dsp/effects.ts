@@ -2,7 +2,6 @@
  * Send/bus effects: reverb, delay, sidechain ducker, bus compressor,
  * peak limiter, granular processor.
  */
-import { ResonantLP } from './filters.ts'
 
 // ── Reverb internals ────────────────────────────────────────────────
 

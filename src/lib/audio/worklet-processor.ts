@@ -160,8 +160,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
           if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
           if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
-          this.playing = true; this.accumulator = 0; this.swingPhase = 0
+          this.playing = true; this.swingPhase = 0
           this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
+          // Position playheads so first _advanceStep lands on step 0
+          for (let t = 0; t < this.tracks.length; t++) {
+            const steps = this.tracks[t]?.steps ?? 16
+            this.playheads[t] = steps - 1
+          }
+          this.accumulator = this.currentThreshold  // trigger step 0 immediately
           break
         case 'stop':
           this.playing = false; this.playheads.fill(0)

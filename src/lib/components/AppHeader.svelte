@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, switchPattern, patternNav } from '../state.svelte.ts'
+  import { pattern, playback, switchPattern, patternNav, ui, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
 
   interface Props {
@@ -22,18 +22,21 @@
     {#if !compact}
       <span class="app-name">INBOIL</span>
     {/if}
-    <div class="geo-rects" aria-hidden="true">
-      <div class="rect-a"></div>
-      <div class="rect-b"></div>
-    </div>
+    <button
+      class="btn-system"
+      class:active={ui.sidebar === 'system'}
+      onpointerdown={() => toggleSidebar('system')}
+      aria-label="System settings"
+      data-tip="System settings" data-tip-ja="システム設定"
+    >&#x2699;</button>
   </header>
 
   <!-- Sub header: BPM, transport, pattern -->
   <div class="sub-header">
     <div class="bpm-block">
-      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.max(40, pattern.bpm - 1) }}>−</button>
-      <span class="bpm-value"><SplitFlap value={pattern.bpm} /></span>
-      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.min(240, pattern.bpm + 1) }}>+</button>
+      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.max(40, pattern.bpm - 1) }} data-tip="Decrease tempo" data-tip-ja="テンポを下げる">−</button>
+      <span class="bpm-value" data-tip="Current tempo (BPM)" data-tip-ja="現在のテンポ (BPM)"><SplitFlap value={pattern.bpm} /></span>
+      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.min(240, pattern.bpm + 1) }} data-tip="Increase tempo" data-tip-ja="テンポを上げる">+</button>
       <span class="bpm-label">BPM</span>
     </div>
 
@@ -43,27 +46,30 @@
         class:active={playback.playing}
         onpointerdown={onPlay}
         aria-label="Play"
+        data-tip="Play pattern" data-tip-ja="パターンを再生"
       >▶</button>
       <button
         class="btn-transport"
         onpointerdown={onStop}
         aria-label="Stop"
+        data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>
       <button
         class="btn-rand"
         onpointerdown={onRandom}
         aria-label="Randomize"
+        data-tip="Randomize pattern" data-tip-ja="パターンをランダム生成"
       >RAND</button>
     </div>
 
     <div class="pat-block">
       <span class="pat-label">PAT</span>
       <div class="pat-display">
-        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id - 1) }}>◀</button>
-        <span class="pat-value" class:pending={isPending}><SplitFlap value={displayNum} width={2} /></span>
+        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id - 1) }} data-tip="Previous pattern" data-tip-ja="前のパターン">◀</button>
+        <span class="pat-value" class:pending={isPending} data-tip="Current pattern number" data-tip-ja="現在のパターン番号"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
         <span class="pat-name"><SplitFlap value={pattern.name} width={8} /></span>
-        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id + 1) }}>▶</button>
+        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id + 1) }} data-tip="Next pattern" data-tip-ja="次のパターン">▶</button>
       </div>
     </div>
   </div>
@@ -112,20 +118,28 @@
     margin-left: 38px;
   }
 
-  .geo-rects {
+  .btn-system {
     position: absolute;
-    right: 76px;
-    top: 0;
-    bottom: 0;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.45);
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 3px;
-    pointer-events: none;
-    opacity: 0.18;
+    line-height: 1;
   }
-  .rect-a { width: 28px; height: 10px; background: var(--color-blue); }
-  .rect-b { width: 16px; height: 10px; background: var(--color-blue); }
+  .btn-system:active,
+  .btn-system.active {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.85);
+  }
 
   /* ── Sub header (controls) ── */
   .sub-header {

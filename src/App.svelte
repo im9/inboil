@@ -6,6 +6,7 @@
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
+  import Sidebar from './lib/components/Sidebar.svelte'
   import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
@@ -91,6 +92,7 @@
       {:else}
         <StepGrid />
       {/if}
+      <Sidebar />
     </div>
     <ParamPanel />
   {/if}

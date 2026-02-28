@@ -1,20 +1,19 @@
 <script lang="ts">
   import { fxPad, ui } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
+  import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
 
   let padEl: HTMLDivElement
   let dragging: 'filter' | 'eqLow' | 'eqMid' | 'eqHigh' | null = $state(null)
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
-  const TAP_THRESHOLD = 5
-  const PAD_INSET = 32
 
   // ── Node definitions ───────────────────────────────────────────
   const nodes = [
-    { key: 'filter' as const, label: () => filtLabel, color: 'var(--color-teal)' },
-    { key: 'eqLow'  as const, label: () => fxPad.eqLow.on  ? 'LOW'  : 'OFF', color: 'var(--color-olive)' },
-    { key: 'eqMid'  as const, label: () => fxPad.eqMid.on  ? 'MID'  : 'OFF', color: 'var(--color-blue)' },
-    { key: 'eqHigh' as const, label: () => fxPad.eqHigh.on ? 'HIGH' : 'OFF', color: 'var(--color-salmon)' },
+    { key: 'filter' as const, label: () => filtLabel, color: 'var(--color-teal)',   tip: 'Filter — sweep between low-pass and high-pass', tipJa: 'フィルター — ローパスとハイパスをスイープ' },
+    { key: 'eqLow'  as const, label: () => fxPad.eqLow.on  ? 'LOW'  : 'OFF', color: 'var(--color-olive)',  tip: 'Low EQ — boost or cut low frequencies', tipJa: '低域EQ — 低音域のブースト/カット' },
+    { key: 'eqMid'  as const, label: () => fxPad.eqMid.on  ? 'MID'  : 'OFF', color: 'var(--color-blue)',   tip: 'Mid EQ — boost or cut mid frequencies', tipJa: '中域EQ — 中音域のブースト/カット' },
+    { key: 'eqHigh' as const, label: () => fxPad.eqHigh.on ? 'HIGH' : 'OFF', color: 'var(--color-salmon)', tip: 'High EQ — boost or cut high frequencies', tipJa: '高域EQ — 高音域のブースト/カット' },
   ] as const
 
   const filtLabel = $derived(
@@ -96,10 +95,10 @@
   }
 
   // ── Colors (raw RGB for canvas) ────────────────────────────────
-  const COL_OLIVE  = { r: 120, g: 120, b:  69 }  // --color-olive
-  const COL_BLUE   = { r:  68, g: 114, b: 180 }  // --color-blue
-  const COL_SALMON = { r: 232, g: 160, b: 144 }  // --color-salmon
-  const COL_CREAM  = { r: 237, g: 232, b: 220 }  // --color-bg
+  const COL_OLIVE  = COLORS_RGB.olive
+  const COL_BLUE   = COLORS_RGB.blue
+  const COL_SALMON = COLORS_RGB.salmon
+  const COL_CREAM  = COLORS_RGB.cream
 
   // ── Grid frequencies & dB labels ───────────────────────────────
   const FREQ_GRID = [50, 100, 200, 500, 1000, 2000, 5000, 10000]
@@ -476,10 +475,12 @@
 <div class="filt-view">
   <div
     class="filt-pad"
+    role="application"
     bind:this={padEl}
     onpointermove={onMove}
     onpointerup={endDrag}
     onpointercancel={endDrag}
+    data-tip="Tap node to toggle, drag to adjust frequency & gain" data-tip-ja="ノードをタップでON/OFF、ドラッグで周波数&ゲインを調整"
   >
     <canvas bind:this={glCanvasEl} class="visualizer gl-layer"></canvas>
     <canvas bind:this={canvasEl} class="visualizer eq-layer"></canvas>
@@ -497,6 +498,8 @@
           --node-color: {node.color};
         "
         onpointerdown={(e) => startDrag(node.key, e)}
+        data-tip={node.tip}
+        data-tip-ja={node.tipJa}
       >
         <span class="node-label">{node.label()}</span>
       </button>

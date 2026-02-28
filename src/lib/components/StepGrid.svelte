@@ -79,6 +79,43 @@
       }, 180))
     }
   }
+
+  // ── Step drag-to-paint state ──
+  let stepDragging = $state(false)
+  let stepPaintOn = $state(true)
+  let stepDragTrack = $state(-1)
+  let stepVisited = new Set<number>()
+  let stepStepsEl: HTMLElement | null = null
+
+  function stepStartDrag(e: PointerEvent, trackId: number, stepIdx: number) {
+    e.preventDefault()
+    const trig = pattern.tracks[trackId].trigs[stepIdx]
+    stepPaintOn = !trig.active
+    stepDragTrack = trackId
+    stepDragging = true
+    stepVisited = new Set([stepIdx])
+    stepStepsEl = (e.currentTarget as HTMLElement).closest('.steps') as HTMLElement
+    stepStepsEl?.setPointerCapture(e.pointerId)
+    handleToggle(trackId, stepIdx)
+  }
+
+  function stepOnMove(e: PointerEvent) {
+    if (!stepDragging || !stepStepsEl) return
+    const rect = stepStepsEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left + stepStepsEl.scrollLeft
+    const track = pattern.tracks[stepDragTrack]
+    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    if (stepVisited.has(idx)) return
+    stepVisited.add(idx)
+    const trig = track.trigs[idx]
+    if (stepPaintOn && !trig.active) handleToggle(stepDragTrack, idx)
+    else if (!stepPaintOn && trig.active) handleToggle(stepDragTrack, idx)
+  }
+
+  function stepEndDrag() {
+    stepDragging = false
+    stepStepsEl = null
+  }
 </script>
 
 <div class="step-grid">
@@ -94,6 +131,7 @@
       <button
         class="track-label"
         onpointerdown={() => { ui.selectedTrack = trackId }}
+        data-tip="Select track to edit" data-tip-ja="トラックを選択"
       >
         <span class="track-name">{track.name}</span>
         <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
@@ -101,6 +139,7 @@
 
       <!-- Gain, Pan, Mute -->
       <div class="track-knobs">
+        <span data-tip="Track volume" data-tip-ja="トラック音量">
         <Knob
           value={track.volume}
           label="VOL"
@@ -109,6 +148,8 @@
           compact
           onchange={v => { pattern.tracks[trackId].volume = v }}
         />
+        </span>
+        <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
         <Knob
           value={(track.pan + 1) / 2}
           label="PAN"
@@ -117,10 +158,12 @@
           compact
           onchange={v => { pattern.tracks[trackId].pan = v * 2 - 1 }}
         />
+        </span>
       </div>
       <button
         class="btn-mute"
         onpointerdown={() => toggleMute(trackId)}
+        data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
       >
         <span class="mute-flip" class:flipped={track.muted}>
           <span class="face off">M</span>
@@ -129,13 +172,22 @@
       </button>
 
       <!-- Steps -->
-      <div class="steps" style="--count: {track.steps}">
+      <div
+        class="steps"
+        role="application"
+        style="--steps: {track.steps}"
+        onpointermove={stepOnMove}
+        onpointerup={stepEndDrag}
+        onpointercancel={stepEndDrag}
+        data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
+      >
         {#each track.trigs as trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
           <button
             class="step"
             class:playhead={isPlayhead}
-            onpointerdown={() => handleToggle(trackId, stepIdx)}
+            aria-label="Step {stepIdx + 1}"
+            onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
           >
             <span class="step-flip" class:flipped={trig.active}>
               <span class="face off"></span>
@@ -150,21 +202,25 @@
     {#if selected}
       <div
         class="vel-row"
+        role="application"
         bind:this={velContainer}
         onpointermove={velOnMove}
         onpointerup={velEndDrag}
         onpointercancel={velEndDrag}
       >
         <div class="vel-label">
-          <span class="vel-name">VEL</span>
-          <button class="step-count" onpointerdown={() => cycleSteps(trackId)}>{track.steps}</button>
+          <span class="vel-name" data-tip="Velocity — per-step volume" data-tip-ja="ベロシティ (各ステップの音量)">VEL</span>
+          <button class="step-count" onpointerdown={() => cycleSteps(trackId)} data-tip="Change step count" data-tip-ja="ステップ数を変更">{track.steps}</button>
         </div>
         <div class="vel-spacer"></div>
-        <div class="vel-bars" style="--count: {track.steps}">
+        <div class="vel-bars" style="--steps: {track.steps}" data-tip="Drag up/down to adjust velocity" data-tip-ja="上下ドラッグでベロシティを調整">
           {#each track.trigs as trig, i}
             {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
             <div
               class="vel-cell"
+              role="slider"
+              tabindex="-1"
+              aria-valuenow={trig.velocity}
               onpointerdown={e => velStartDrag(e, trackId, i)}
             >
               <div
@@ -307,7 +363,7 @@
   .steps {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--count), 24px);
+    grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -432,7 +488,7 @@
   .vel-bars {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--count), 24px);
+    grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
     padding: 4px 0;
   }

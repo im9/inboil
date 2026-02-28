@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { pattern, playback, perf, setTrigNote } from '../state.svelte.ts'
+  import { pattern, playback, perf, prefs, setTrigNote } from '../state.svelte.ts'
+  import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
     trackId: number
@@ -8,13 +9,8 @@
 
   const track = $derived(pattern.tracks[trackId])
 
-  // 2 octaves: C3(48) to B4(71), rendered top=high → bottom=low
-  const MIN_NOTE = 48
-  const MAX_NOTE = 71
-  const NOTES = Array.from({ length: MAX_NOTE - MIN_NOTE + 1 }, (_, i) => MAX_NOTE - i)
-  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
-  const BASE_SCALE = [0, 2, 4, 5, 7, 9, 11]
+  // 2 octaves: C3–B4, rendered top=high → bottom=low
+  const NOTES = Array.from({ length: PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1 }, (_, i) => PIANO_ROLL_MAX - i)
   const SCALE_TEMPLATES: number[][] = [
     [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian
     [0, 2, 4, 5, 7, 9, 11],  //  1 C# major
@@ -34,7 +30,7 @@
     for (let p = 0; p < 12; p++) {
       let b = 0, bd = 12
       for (let d = 0; d < 7; d++) {
-        const dist = Math.min(Math.abs(p - BASE_SCALE[d]), 12 - Math.abs(p - BASE_SCALE[d]))
+        const dist = Math.min(Math.abs(p - SCALE_DEGREES[d]), 12 - Math.abs(p - SCALE_DEGREES[d]))
         if (dist < bd) { bd = dist; b = d }
       }
       m[p] = b
@@ -49,7 +45,7 @@
     const pc = pos % 12
     const octave = Math.floor(pos / 12)
     const degree = PC_TO_DEG[pc]
-    const chromaOffset = pc - BASE_SCALE[degree]
+    const chromaOffset = pc - SCALE_DEGREES[degree]
     const scale = SCALE_TEMPLATES[root]
     return root + scale[degree] + chromaOffset + octave * 12
   }
@@ -69,15 +65,65 @@
     const trig = track.trigs[stepIdx]
     return trig.active && trig.note === note
   }
+
+  function isOutOfScale(note: number): boolean {
+    return prefs.scaleMode && !SCALE_DEGREES_SET.has(note % 12)
+  }
+
+  // ── Drag-to-paint state ──
+  let noteDragging = $state(false)
+  let notePaintOn = $state(true)
+  let noteLastStep = -1
+  let noteLastNote = -1
+  let noteGridEl: HTMLElement | null = null
+
+  function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
+    e.preventDefault()
+    const active = isCellActive(stepIdx, note)
+    notePaintOn = !active
+    noteDragging = true
+    noteLastStep = stepIdx
+    noteLastNote = note
+    noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
+    noteGridEl?.setPointerCapture(e.pointerId)
+    setTrigNote(trackId, stepIdx, note)
+  }
+
+  function noteOnMove(e: PointerEvent) {
+    if (!noteDragging || !noteGridEl) return
+    const rect = noteGridEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+    const relY = e.clientY - rect.top
+    const stepIdx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    const rowHeight = rect.height / NOTES.length
+    const noteRowIdx = Math.max(0, Math.min(NOTES.length - 1, Math.floor(relY / rowHeight)))
+    const note = NOTES[noteRowIdx]
+    if (stepIdx === noteLastStep && note === noteLastNote) return
+    if (isOutOfScale(note)) return
+    noteLastStep = stepIdx
+    noteLastNote = note
+    const trig = track.trigs[stepIdx]
+    if (notePaintOn) {
+      trig.active = true
+      trig.note = note
+    } else {
+      if (trig.active) trig.active = false
+    }
+  }
+
+  function noteEndDrag() {
+    noteDragging = false
+    noteGridEl = null
+  }
 </script>
 
 <div class="piano-roll">
   <!-- Left spacer to align grid with step columns -->
   <div class="piano-spacer">
     <!-- Piano keys -->
-    <div class="keys">
+    <div class="keys" data-tip="Note reference — shows transposed pitch" data-tip-ja="音程リファレンス (移調後のピッチ)">
       {#each NOTES as note}
-        <div class="key" class:black={isBlack(note)}>
+        <div class="key" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
           <span class="key-label">{noteLabel(note)}</span>
         </div>
       {/each}
@@ -85,16 +131,25 @@
   </div>
 
   <!-- Note grid -->
-  <div class="grid" style="--steps: {track.steps}">
+  <div
+    class="grid"
+    role="application"
+    style="--steps: {track.steps}"
+    data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
+    onpointermove={noteOnMove}
+    onpointerup={noteEndDrag}
+    onpointercancel={noteEndDrag}
+  >
     {#each NOTES as note}
-      <div class="row" class:black={isBlack(note)}>
+      <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
         {#each track.trigs as _trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
           <button
             class="cell"
             class:active={isCellActive(stepIdx, note)}
             class:playhead={isPlayhead}
-            onpointerdown={() => setTrigNote(trackId, stepIdx, note)}
+            aria-label="Step {stepIdx + 1} note {note}"
+            onpointerdown={(e) => { if (!isOutOfScale(note)) noteStartDrag(e, stepIdx, note) }}
           ></button>
         {/each}
       </div>
@@ -144,6 +199,10 @@
   .key.black {
     background: var(--color-surface);
   }
+  .key.disabled {
+    opacity: 0.3;
+    background: rgba(232,160,144,0.08);
+  }
   .key-label {
     font-size: 7px;
     color: var(--color-muted);
@@ -166,6 +225,13 @@
   }
   .row.black {
     background: rgba(30,32,40,0.025);
+  }
+  .row.disabled {
+    background: rgba(232,160,144,0.06);
+    pointer-events: none;
+  }
+  .row.disabled .cell {
+    opacity: 0.12;
   }
 
   .cell {

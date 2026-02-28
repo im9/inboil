@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, toggleBottomPanel, setVoiceParam } from '../state.svelte.ts'
+  import { pattern, ui, isDrum, toggleBottomPanel, setVoiceParam, toggleSidebar } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -10,11 +10,17 @@
 </script>
 
 <div class="param-panel">
-  <!-- Geometric decoration: circle + rect -->
-  <div class="geo" aria-hidden="true">
-    <div class="geo-circle"></div>
-    <div class="geo-rect"></div>
-  </div>
+  <button
+    class="btn-help"
+    onpointerdown={() => toggleSidebar('help')}
+    aria-label="Help"
+    data-tip="Show help" data-tip-ja="ヘルプを表示"
+  >
+    <span class="help-flip" class:flipped={ui.sidebar === 'help'}>
+      <span class="face off">?</span>
+      <span class="face on">?</span>
+    </span>
+  </button>
 
   <div class="inner">
     <div class="track-info">
@@ -24,12 +30,13 @@
           class="btn-notes"
           class:active={track.bottomPanel === 'piano'}
           onpointerdown={() => toggleBottomPanel(ui.selectedTrack)}
+          data-tip="Toggle piano roll" data-tip-ja="ピアノロールを表示/非表示"
         >♪ NOTES</button>
       {/if}
     </div>
 
     <!-- Synth params (interactive knobs) -->
-    <div class="knobs">
+    <div class="knobs" data-tip="Synth parameters — drag to adjust" data-tip-ja="シンセパラメータ — ドラッグで調整">
       {#each params as p}
         <Knob
           value={normalizeParam(p, track.voiceParams[p.key] ?? p.default)}
@@ -54,27 +61,54 @@
     min-height: 84px;
   }
 
-  /* ── Geometric decoration ── */
-  .geo {
+  /* ── Help button (Othello flip) ── */
+  .btn-help {
     position: absolute;
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 2;
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    perspective: 80px;
+  }
+  .help-flip {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-end;
-    pointer-events: none;
-    opacity: 0.2;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 180ms ease-out;
   }
-  .geo-circle {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    background: var(--color-olive);
+  .help-flip.flipped {
+    transform: rotateY(180deg);
   }
-  .geo-rect {
-    width: 24px; height: 10px;
+  .btn-help:active .help-flip { transform: scale(0.85); }
+  .btn-help:active .help-flip.flipped { transform: rotateY(180deg) scale(0.85); }
+  .help-flip > .face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    backface-visibility: hidden;
+  }
+  .help-flip > .face.off {
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.45);
+  }
+  .help-flip > .face.on {
+    border: 1px solid var(--color-blue);
     background: var(--color-blue);
+    color: white;
+    transform: rotateY(180deg);
   }
 
   /* ── Inner layout ── */

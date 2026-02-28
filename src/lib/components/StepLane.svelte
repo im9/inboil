@@ -47,6 +47,7 @@
 
 <div
   class="step-lane"
+  role="application"
   bind:this={containerEl}
   onpointermove={onMove}
   onpointerup={endDrag}
@@ -56,11 +57,14 @@
     <span class="lane-name">VEL</span>
   </div>
   <div class="lane-spacer"></div>
-  <div class="bars" style="--count: {track.steps}">
+  <div class="bars" style="--steps: {track.steps}">
     {#each track.trigs as trig, i}
       {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
       <div
         class="bar-cell"
+        role="slider"
+        tabindex="-1"
+        aria-valuenow={trig.velocity}
         onpointerdown={e => startDrag(e, i)}
       >
         <div
@@ -109,7 +113,7 @@
   .bars {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--count), 1fr);
+    grid-template-columns: repeat(var(--steps), 1fr);
     gap: 2px;
     padding: 4px 0;
   }

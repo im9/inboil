@@ -1,6 +1,6 @@
 # ADR 017: Help Sidebar
 
-## Status: PROPOSED
+## Status: IMPLEMENTED (mobile overlay pending)
 
 ## Context
 
@@ -10,10 +10,10 @@ inboil has no in-app help or documentation. New users must figure out the interf
 
 - Provide in-app guide explaining all features and interactions
 - Support Japanese and English
-- Desktop: contextual tooltips on hover
+- Desktop: contextual hover guide in help mode
 - Minimal UI footprint — sidebar overlays the step grid area, not a separate page
 
-## Proposed Design
+## Design
 
 ### A. Icon Placement — Top/Bottom Split
 
@@ -37,14 +37,15 @@ Each trigger replaces a decorative element in its respective location:
   - Rarely used — appropriate for less prominent position
 - **`?` HELP** → ParamPanel bottom-right (replaces `.geo` decoration)
   - Contextual: user asks "what does this knob do?" while looking at ParamPanel
-  - Matches existing visual weight of the decoration it replaces
+  - **Othello-style flip animation** (180ms ease-out, `rotateY(180deg)`, matching step/mute buttons)
+  - Off state: bordered outline, dim text. On state: blue filled background, white text
 - Both styled consistently — small, bordered, subtle (same style as `.btn-notes`)
 
 ```typescript
-// UI state extension
+// UI state
 export const ui = $state({
   // existing fields...
-  sidebar: 'none' as 'none' | 'help' | 'settings',
+  sidebar: null as 'help' | 'system' | null,
 })
 ```
 
@@ -55,201 +56,277 @@ A right-side panel that overlays the step grid area. Both `?` (bottom) and `⚙`
 ```
 ┌──────────────────────────────────────────────── [⚙] ────┐
 │ AppHeader                                                │
-├──────────────────────────────────────────┬───────────────┤
-│                                          │  ✕    JP|EN  │
-│  StepGrid                                │              │
-│  (partially obscured)                    │  HELP         │
-│                                          │              │
-│                                          │  ▸ STEPS      │
-│                                          │    Tap to     │
-│                                          │    toggle...  │
-│                                          │              │
-│                                          │  ▸ VELOCITY   │
-│                                          │    Drag bars  │
-│                                          │    to set...  │
-│                                          │              │
-│                                          │  ▸ PIANO ROLL │
-│                                          │    ...        │
-├──────────────────────────────────────────┴──── [?] ─────┤
+├──────────────────────────────────────┬───────────────────┤
+│                                      │  HELP    [EN] [✕] │
+│  StepGrid                            │                   │
+│  (partially obscured)                │  ▸ ABOUT          │
+│                                      │    inboil とは...  │
+│                                      │                   │
+│                                      │  ▸ BASICS         │
+│                                      │                   │
+│                                      │  ▸ TRACKS         │
+│                                      │    8トラック...     │
+│                                      │                   │
+│                                      │  ────────────────  │
+│                                      │  GUIDE             │
+│                                      │  UI要素にカーソルを │
+│                                      │  合わせると説明が   │
+│                                      │  表示されます       │
+├──────────────────────────────────────┴──── [?] ──────────┤
 │ ParamPanel                                               │
 └──────────────────────────────────────────────────────────┘
 ```
 
-#### Layout
+#### Implementation
+
+The sidebar is a single `Sidebar.svelte` component placed inside `.view-area` in App.svelte:
 
 ```svelte
 <!-- In App.svelte view-area -->
 <div class="view-area">
   <StepGrid />
-  {#if ui.sidebar !== 'none'}
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <button class="sidebar-close" onclick={() => { ui.sidebar = 'none' }}>✕</button>
-        <button class="lang-toggle" onclick={toggleLang}>{lang === 'ja' ? 'EN' : 'JP'}</button>
-      </div>
-      {#if ui.sidebar === 'help'}
-        <HelpContent {lang} />
-      {:else if ui.sidebar === 'settings'}
-        <SettingsContent />
-      {/if}
-    </div>
-  {/if}
+  <Sidebar />
 </div>
 ```
 
-#### Sidebar CSS
+`Sidebar.svelte` handles both help and system modes internally, using `ui.sidebar` state.
+
+#### Open/Close Animation
+
+50ms fade + slide (translateX 24px), with deferred DOM removal for exit animation:
+
+```typescript
+// Sidebar.svelte — animation state
+let closing = $state(false)
+let visibleMode = $state<'help' | 'system' | null>(null)
+
+$effect(() => {
+  if (mode) {
+    closing = false
+    visibleMode = mode  // show immediately
+  } else if (visibleMode) {
+    closing = true      // trigger exit animation, keep DOM alive
+  }
+})
+
+function onAnimEnd() {
+  if (closing) {
+    closing = false
+    visibleMode = null  // now remove from DOM
+  }
+}
+```
 
 ```css
 .sidebar {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  top: 0; right: 0; bottom: 0;
   width: 280px;
+  z-index: 20;
   background: var(--color-fg);
   color: var(--color-bg);
-  overflow-y: auto;
-  z-index: 20;
-  animation: slide-in 200ms ease-out;
-  border-left: 1px solid rgba(237,232,220,0.1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.3);
+  animation: sidebar-in 50ms ease-out;
 }
-
-@keyframes slide-in {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+.sidebar.closing {
+  animation: sidebar-out 50ms ease-in forwards;
+}
+@keyframes sidebar-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes sidebar-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(24px); }
 }
 ```
 
 ### C. Help Content Structure
 
-Content organized by feature, with collapsible sections:
+Content is organized by feature, with collapsible accordion sections. Sections are defined inline in `Sidebar.svelte` as a `$derived` array using the current language:
 
 ```typescript
-interface HelpSection {
-  id: string
-  title: { ja: string; en: string }
-  body: { ja: string; en: string }
-}
-
-const HELP_SECTIONS: HelpSection[] = [
-  {
-    id: 'steps',
-    title: { ja: 'ステップ', en: 'Steps' },
-    body: {
-      ja: 'タップでトリガーをON/OFF。選択したトラックのステップ数はVELレーンの数字をタップして変更。',
-      en: 'Tap to toggle triggers. Change step count by tapping the number in the VEL lane.'
-    }
-  },
-  {
-    id: 'velocity',
-    title: { ja: 'ベロシティ', en: 'Velocity' },
-    body: {
-      ja: '選択トラックの下に表示されるバーを上下ドラッグで音量を調整。',
-      en: 'Drag bars up/down below the selected track to adjust note volume.'
-    }
-  },
-  {
-    id: 'piano-roll',
-    title: { ja: 'ピアノロール', en: 'Piano Roll' },
-    body: {
-      ja: 'メロディトラック選択時に「♪ NOTES」を押すと表示。グリッドをタップしてノートを配置。',
-      en: 'Press "♪ NOTES" on melodic tracks. Tap the grid to place notes.'
-    }
-  },
-  {
-    id: 'transport',
-    title: { ja: 'トランスポート', en: 'Transport' },
-    body: {
-      ja: '▶ 再生、■ 停止、スペースキーでトグル。RANDでパターンをランダム生成。',
-      en: '▶ play, ■ stop, Space to toggle. RAND generates a random pattern.'
-    }
-  },
-  {
-    id: 'params',
-    title: { ja: 'パラメータ', en: 'Parameters' },
-    body: {
-      ja: '下部パネルのノブをドラッグして音色を調整。各トラックのシンセタイプに応じたパラメータが表示される。',
-      en: 'Drag knobs in the bottom panel to shape the sound. Parameters change based on each track\'s synth type.'
-    }
-  },
-  {
-    id: 'performance',
-    title: { ja: 'パフォーマンス', en: 'Performance' },
-    body: {
-      ja: 'FILLでフィルイン、REVで逆再生、BRKでブレイク。Root Noteでキーを変更。',
-      en: 'FILL for fills, REV for reverse, BRK for break. Root Note changes the key.'
-    }
-  },
-  {
-    id: 'patterns',
-    title: { ja: 'パターン', en: 'Patterns' },
-    body: {
-      ja: 'PAT ◀▶ でパターンを切り替え。再生中は次のバー頭で切り替わる。',
-      en: 'PAT ◀▶ to switch patterns. During playback, switch happens at the next bar start.'
-    }
-  },
-  // ... FX Pad, Filter, mobile-specific sections
-]
+const helpSections = $derived([
+  { title: L === 'ja' ? 'inboil とは' : 'ABOUT', body: '...' },
+  { title: L === 'ja' ? '基本操作' : 'BASICS', body: '...' },
+  { title: L === 'ja' ? 'トラック' : 'TRACKS', body: '...' },
+  { title: L === 'ja' ? 'ベロシティ & ステップ数' : 'VELOCITY & STEPS', body: '...' },
+  { title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL', body: '...' },
+  { title: L === 'ja' ? 'パフォーマンス' : 'PERFORMANCE', body: '...' },
+  { title: L === 'ja' ? 'パターン' : 'PATTERNS', body: '...' },
+  { title: L === 'ja' ? 'シンセパラメータ' : 'SYNTH PARAMS', body: '...' },
+  { title: 'GRID', body: '...' },
+  { title: L === 'ja' ? 'FX パッド' : 'FX PAD', body: '...' },
+  { title: 'EQ', body: '...' },
+])
 ```
+
+Section 0 is open by default. Toggle via `openSections` Set.
 
 ### D. Language
 
-```typescript
-// Persisted in localStorage
-let lang = $state<'ja' | 'en'>(
-  localStorage.getItem('inboil-lang') as 'ja' | 'en' || 'ja'
-)
+Persisted as part of consolidated `StoredPrefs` under the `inboil` localStorage key (see ADR 018). Language state is `lang.value: 'ja' | 'en'`.
 
-function toggleLang() {
-  lang = lang === 'ja' ? 'en' : 'ja'
-  localStorage.setItem('inboil-lang', lang)
+```typescript
+export type Lang = 'ja' | 'en'
+export const lang = $state({ value: initialPrefs.lang })
+
+export function toggleLang(): void {
+  lang.value = lang.value === 'ja' ? 'en' : 'ja'
+  savePrefs()
 }
 ```
 
 Default: Japanese (primary user base). Toggle shows `EN` / `JP` label.
 
-### E. Desktop Contextual Tooltips
+### E. First Visit Behavior
 
-On desktop (`!isMobile`), hovering over interactive elements shows a brief tooltip:
+On first visit (`!prefs.visited`), the help sidebar opens automatically to onboard new users:
 
-```css
-[data-tip]:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-fg);
-  color: var(--color-bg);
-  font-size: 10px;
-  padding: 3px 8px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 30;
+```typescript
+if (!prefs.visited) {
+  ui.sidebar = 'help'
+  prefs.visited = true
+  savePrefs()
 }
 ```
 
-```svelte
-<button data-tip={lang === 'ja' ? 'ランダム生成' : 'Randomize'}>RAND</button>
+### F. Desktop Hover Guide (Help Mode)
+
+When `ui.sidebar === 'help'`, hovering over UI elements shows contextual descriptions in the sidebar's **GUIDE footer** area. This is a "learning mode" — the guide is invisible during normal operation.
+
+**Approach:** Document-level `mouseover` event delegation + `data-tip` / `data-tip-ja` attributes:
+
+```typescript
+// Sidebar.svelte — hover guide
+let guideText = $state('')
+
+onMount(() => {
+  function onOver(e: Event) {
+    if (ui.sidebar !== 'help') return
+    const el = (e.target as Element)?.closest?.('[data-tip]')
+    if (!el) { guideText = ''; return }
+    const tip = L === 'ja'
+      ? (el.getAttribute('data-tip-ja') || el.getAttribute('data-tip'))
+      : el.getAttribute('data-tip')
+    guideText = tip || ''
+  }
+  document.addEventListener('mouseover', onOver)
+  return () => document.removeEventListener('mouseover', onOver)
+})
 ```
 
-Tooltips are only shown when the help sidebar is open (opt-in learning mode), to avoid cluttering the normal workflow.
+The guide footer is always visible at the bottom of the help sidebar:
 
-### F. Mobile
+```svelte
+<div class="guide-footer" class:active={guideText}>
+  <span class="guide-label">GUIDE</span>
+  <p class="guide-text">{guideText || 'UI要素にカーソルを合わせると説明が表示されます'}</p>
+</div>
+```
 
-On mobile, the `?` icon is placed in the sub-header (or MobileTrackView header). The sidebar becomes a full-screen overlay with a back button instead of `✕`.
+**Why sidebar footer instead of CSS `::after` tooltips:**
+- No z-index / positioning conflicts with complex nested components
+- Bilingual support via `data-tip` (EN) + `data-tip-ja` (JP) attributes, selected by `lang.value`
+- Works consistently across all components without per-element CSS adjustments
+- Guide text area always visible as a gentle prompt to explore
+
+**Target elements with `data-tip` / `data-tip-ja`:**
+
+| Component | Element | EN | JP |
+|-----------|---------|----|----|
+| AppHeader | BPM − | Decrease tempo | テンポを下げる |
+| AppHeader | BPM + | Increase tempo | テンポを上げる |
+| AppHeader | ▶ Play | Play pattern | パターンを再生 |
+| AppHeader | ■ Stop | Stop playback | 再生を停止 |
+| AppHeader | RAND | Randomize pattern | パターンをランダム生成 |
+| AppHeader | PAT ◀ | Previous pattern | 前のパターン |
+| AppHeader | PAT ▶ | Next pattern | 次のパターン |
+| AppHeader | ⚙ | System settings | システム設定 |
+| StepGrid | Track name | Select track to edit | トラックを選択 |
+| StepGrid | VOL knob | Track volume | トラック音量 |
+| StepGrid | PAN knob | Stereo panning | ステレオパン |
+| StepGrid | M button | Mute/unmute track | トラックをミュート |
+| StepGrid | Steps area | Tap or drag to toggle steps | タップ/ドラッグでステップを切り替え |
+| StepGrid | VEL label | Velocity — per-step volume | ベロシティ (各ステップの音量) |
+| StepGrid | Step count | Change step count | ステップ数を変更 |
+| StepGrid | VEL lane | Drag up/down to adjust velocity | 上下ドラッグでベロシティを調整 |
+| PerfBar | KEY piano | Set root note for scale transposition | スケール移調のルートノートを設定 |
+| PerfBar | OCT −/+ | Lower/Raise octave | オクターブを下げる/上げる |
+| PerfBar | DUC knob | Sidechain ducker depth | サイドチェインダッカーの深さ |
+| PerfBar | CMP knob | Compressor makeup gain | コンプレッサーのメイクアップゲイン |
+| PerfBar | GAIN knob | Master output volume | マスター出力音量 |
+| PerfBar | SWG knob | Swing amount (shuffle feel) | スウィング量 (シャッフル感) |
+| PerfBar | GRID/FX/EQ | View toggle descriptions | 画面切替の説明 |
+| PerfBar | FILL/REV/BRK | Performance button descriptions | パフォーマンスボタンの説明 |
+| ParamPanel | ? button | Show help | ヘルプを表示 |
+| ParamPanel | ♪ NOTES | Toggle piano roll | ピアノロールを表示/非表示 |
+| ParamPanel | Synth knobs | Synth parameters — drag to adjust | シンセパラメータ — ドラッグで調整 |
+| PianoRoll | Keys area | Note reference — shows transposed pitch | 音程リファレンス (移調後のピッチ) |
+| PianoRoll | Note grid | Tap or drag to place/erase notes | タップ/ドラッグでノートを配置/消去 |
+| FxPad | FX pad | Tap node to toggle, drag to adjust | ノードをタップでON/OFF、ドラッグで調整 |
+| FxPad | FX nodes | Per-node descriptions | 各ノードの説明 |
+| FilterView | Filter pad | Tap node to toggle, drag to adjust frequency & gain | ノードをタップでON/OFF、ドラッグで周波数&ゲインを調整 |
+| FilterView | EQ nodes | Per-node descriptions | 各ノードの説明 |
+
+**Scope:** Desktop only (`!isMobile`). Mobile has no hover — help sidebar content serves as the reference.
+
+### G. Sidebar Collapse (Guide-Only Mode)
+
+When viewing FX or EQ, the full-height sidebar can obscure nodes. A collapse toggle minimizes it to just the header + GUIDE footer, anchored to the bottom-right:
+
+```
+Expanded:                        Collapsed:
+┌──────── 280px ──────┐        ┌──────── 280px ──────┐
+│ [▾] HELP   [EN] [✕] │        │ [▴] GUIDE            │
+│ ──────────────────── │        │ ──────────────────── │
+│ ▸ ABOUT              │        │ GUIDE                │
+│ ▾ BASICS             │        │ (hover guide text)   │
+│ ...                  │        └──────────────────────┘
+│ ──────────────────── │
+│ GUIDE                │
+│ (hover guide text)   │
+└──────────────────────┘
+```
+
+- **Toggle button** `▾`/`▴` at the left of the sidebar header (help mode only, not system)
+- **Collapsed state:** `top: auto` (bottom-anchored, natural height), sidebar-body removed via `{#if !collapsed}`, header border-bottom removed to avoid double border with guide-footer border-top
+- **Reset:** `collapsed = false` whenever the sidebar is opened (in the existing `$effect`)
+- **Hover guide** continues to work in collapsed mode — the GUIDE footer remains visible
+
+### H. Sidebar Dismiss Behavior
+
+The sidebar does **not** close on outside click (no backdrop). Users often want to reference help while interacting with the grid. Close triggers are limited to:
+
+1. **✕ button** — sidebar header
+2. **⚙ re-press** — AppHeader (toggles SYSTEM off)
+3. **? re-press** — ParamPanel (toggles HELP off)
+
+No backdrop overlay — the grid remains fully interactive while the sidebar is open.
+
+### I. Mobile
+
+Not yet implemented. Plan: `?` icon in MobileTrackView header, sidebar becomes full-screen overlay with back button.
 
 ## Implementation Order
 
-1. Add `sidebar` to `ui` state
-2. Replace `.geo` decoration in ParamPanel with `?` button (bottom-right)
-3. Replace `.geo-rects` decoration in AppHeader with `⚙` button (top-right)
-4. Create `Sidebar.svelte` shell (slide-in, close button, lang toggle)
-5. Create `HelpContent.svelte` with collapsible sections
-6. Wire up in App.svelte (overlay in view-area)
-7. Add language persistence
-8. Desktop tooltips (optional, lower priority)
-9. Mobile overlay variant
+1. ~~Add `sidebar` to `ui` state~~ ✅
+2. ~~Replace `.geo` decoration in ParamPanel with `?` button~~ ✅
+3. ~~Replace `.geo-rects` decoration in AppHeader with `⚙` button~~ ✅
+4. ~~Create `Sidebar.svelte` shell~~ ✅
+5. ~~Help content with collapsible sections~~ ✅
+6. ~~Wire up in App.svelte~~ ✅
+7. ~~Language persistence~~ ✅
+8. ~~No backdrop (grid stays interactive while sidebar open)~~ ✅
+9. ~~Sidebar open/close animation (50ms fade+slide)~~ ✅
+10. ~~Help button Othello flip animation~~ ✅
+11. ~~Desktop hover guide (`data-tip` + sidebar footer)~~ ✅
+12. ~~First visit auto-open~~ ✅
+13. ~~Sidebar collapse (guide-only mode) for FX/EQ views~~ ✅
+14. ~~Add GRID, EQ help sections; enrich FX PAD section~~ ✅
+15. Mobile overlay variant
 
 ## Consequences
 
@@ -257,6 +334,10 @@ On mobile, the `?` icon is placed in the sub-header (or MobileTrackView header).
 - **Positive:** JP/EN toggle supports international audience.
 - **Positive:** Sidebar reuses the same slot for help and settings — minimal UI surface.
 - **Positive:** Replaces purely decorative element with functional UI.
+- **Positive:** No backdrop — grid stays interactive while referencing help.
+- **Positive:** Hover guide provides contextual learning without cluttering normal workflow.
+- **Positive:** First visit auto-open gently onboards new users.
 - **Negative:** Help content must be maintained as features change.
-- **Negative:** Sidebar partially obscures step grid — acceptable for a reference panel.
-- **Risk:** Tooltip system could become noisy if not gated behind help mode.
+- **Positive:** Collapse mode lets users keep hover guide visible without obscuring FX/EQ nodes.
+- **Negative:** Sidebar partially obscures step grid when expanded — acceptable for a reference panel; collapse mode mitigates for FX/EQ views.
+- **Negative:** `data-tip` attributes add minor markup overhead across components.
