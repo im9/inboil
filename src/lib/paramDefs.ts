@@ -79,6 +79,10 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'ampDecay',    label: 'ADCY',  min: 0.01,  max: 1.0,  default: 0.3   },
     { key: 'ampSustain',  label: 'SUST',  min: 0.0,   max: 1.0,  default: 0.8   },
     { key: 'ampRelease',  label: 'RLS',   min: 0.01,  max: 2.0,  default: 0.25  },
+    { key: 'arpMode',    label: 'ARP',   min: 0,     max: 4,    default: 0     },
+    { key: 'arpRate',    label: 'RATE',  min: 1,     max: 4,    default: 2     },
+    { key: 'arpChord',   label: 'CHRD',  min: 0,     max: 4,    default: 0     },
+    { key: 'arpOct',     label: 'AOCT',  min: 1,     max: 4,    default: 1     },
   ],
   FM: [
     { key: 'op2Ratio',     label: 'RATIO', min: 0.5, max: 4.0, default: 2.1  },

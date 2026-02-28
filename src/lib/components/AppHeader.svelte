@@ -1,6 +1,7 @@
 <script lang="ts">
   import { pattern, playback, switchPattern, patternNav, getPatternName, ui, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
+  import Oscilloscope from './Oscilloscope.svelte'
 
   interface Props {
     onPlay: () => void
@@ -53,9 +54,9 @@
 </script>
 
 <div class="header-wrap" class:compact>
-  <!-- Top bar: logo only -->
+  <!-- Top bar: logo + oscilloscope background -->
   <header class="app-header">
-    <div class="geo-circle" aria-hidden="true"></div>
+    <Oscilloscope />
     {#if !compact}
       <span class="app-name">INBOIL</span>
     {/if}
@@ -110,6 +111,8 @@
       </div>
     </div>
   </div>
+
+
 </div>
 
 <style>
@@ -119,31 +122,18 @@
     flex-direction: column;
   }
 
-  /* ── Top bar (logo) ── */
+  /* ── Top bar (logo + oscilloscope) ── */
   .app-header {
     position: relative;
     display: flex;
     align-items: center;
-    height: 28px;
-    padding: 0 12px 0 8px;
+    height: 40px;
+    padding: 0 12px 0 12px;
     background: var(--color-fg);
     color: var(--color-bg);
     overflow: hidden;
   }
-  .compact .app-header { height: 22px; }
-
-  .geo-circle {
-    position: absolute;
-    left: -22px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 76px;
-    height: 76px;
-    border-radius: 50%;
-    background: var(--color-olive);
-    opacity: 0.3;
-    pointer-events: none;
-  }
+  .compact .app-header { height: 32px; }
 
   .app-name {
     font-size: 10px;
@@ -152,7 +142,6 @@
     text-transform: uppercase;
     position: relative;
     z-index: 1;
-    margin-left: 38px;
   }
 
   .btn-system {

@@ -83,6 +83,50 @@ function transposeNote(storedMidi: number, root: number, octShift: number): numb
   return root + scale[degree] + chromaOffset + oct * 12
 }
 
+// Scale-degree chord templates (offsets in diatonic degrees from root)
+const ARP_CHORD_DEGS: number[][] = [
+  [0],           // 0 = OCT  (octave unison, expanded by arpOct)
+  [0, 4],        // 1 = 5TH  (root + diatonic 5th)
+  [0, 2, 4],     // 2 = TRD  (diatonic triad — auto major/minor)
+  [0, 3, 4],     // 3 = SUS  (root + 4th + 5th)
+  [0, 2, 4, 6],  // 4 = 7TH  (diatonic 7th — auto quality)
+]
+
+/** Generate arp note list using scale-degree intervals resolved via SCALE_TEMPLATES */
+function generateArpNotes(base: number, mode: number, chord: number, oct: number, root: number): number[] {
+  const scale = SCALE_TEMPLATES[root] ?? SCALE_TEMPLATES[0]
+  const degOffsets = ARP_CHORD_DEGS[chord] ?? ARP_CHORD_DEGS[0]
+
+  // Find the scale degree of the base note
+  const pc = ((base % 12) - root + 12) % 12
+  let baseDeg = 0
+  for (let d = 0; d < 7; d++) {
+    if (scale[d] <= pc) baseDeg = d
+  }
+
+  const baseOctave = Math.floor(base / 12)
+  const notes: number[] = []
+
+  for (let o = 0; o < oct; o++) {
+    for (const dOff of degOffsets) {
+      const deg = baseDeg + dOff + o * 7
+      const octShift = Math.floor(deg / 7)
+      const scaleDeg = ((deg % 7) + 7) % 7
+      notes.push(root + scale[scaleDeg] + (baseOctave + octShift) * 12)
+    }
+  }
+
+  switch (mode) {
+    case 2: notes.reverse(); break  // DOWN
+    case 3: {                        // UP-DOWN
+      if (notes.length > 1) notes.push(...notes.slice(1, -1).reverse())
+      break
+    }
+    // case 1 (UP) & case 4 (RANDOM): UP order, RANDOM picks at tick time
+  }
+  return notes
+}
+
 // ── Processor ─────────────────────────────────────────────────────────────────
 
 class GrooveboxProcessor extends AudioWorkletProcessor {
@@ -134,6 +178,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private muteGains      = new Float64Array(8).fill(1.0)
   private panGainsL      = new Float64Array(8).fill(Math.SQRT1_2)
   private panGainsR      = new Float64Array(8).fill(Math.SQRT1_2)
+  // Arpeggiator — per-track state (melodic tracks t>=6)
+  private arpNotes:    number[][] = Array.from({length: 8}, () => [])
+  private arpIdx       = new Int32Array(8)
+  private arpCounter   = new Int32Array(8)
+  private arpTickSize  = new Int32Array(8)
+  private arpVel       = new Float64Array(8)
+  private arpSeed      = new Uint32Array(8).fill(77777)
   // Fill PRNG
   private fillSeed       = 12321
   // Glitch DSP state
@@ -281,7 +332,27 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         this.gateCounters[t]--
         if (this.gateCounters[t] === 0 && !isLegato) {
           this.voices[t]?.noteOff()
+          this.arpNotes[t] = []
         }
+      }
+
+      // Step-synced arp: advance on step boundary for continuing notes
+      if (t >= 6 && this.arpNotes[t].length > 0 && this.gateCounters[t] > 0 && !trig?.active) {
+        const rate = Math.round(track.voiceParams?.arpRate ?? 1)
+        if (rate <= 1) {
+          // Rate=1: advance arp once per step (step-synced only)
+          if (Math.round(track.voiceParams?.arpMode ?? 1) === 4) {
+            this.arpSeed[t] = (this.arpSeed[t] * 1664525 + 1013904223) >>> 0
+            this.arpIdx[t] = (this.arpSeed[t] >>> 16) % this.arpNotes[t].length
+          } else {
+            this.arpIdx[t] = (this.arpIdx[t] + 1) % this.arpNotes[t].length
+          }
+          if (!track.muted) {
+            this.voices[t]?.slideNote(this.arpNotes[t][this.arpIdx[t]], this.arpVel[t])
+          }
+        }
+        // Reset sub-step counter on step boundary (keeps sub-ticks aligned)
+        this.arpCounter[t] = 0
       }
 
       if (this.filling && t <= 5) {
@@ -307,6 +378,23 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
         }
         this.gateCounters[t] = trig.duration ?? 1
+        // Arpeggiator: start on melodic trigs with arp enabled
+        if (t >= 6) {
+          const am = Math.round(trig.paramLocks?.arpMode  ?? track.voiceParams?.arpMode  ?? 0)
+          const ar = Math.round(trig.paramLocks?.arpRate  ?? track.voiceParams?.arpRate  ?? 1)
+          const ac = Math.round(trig.paramLocks?.arpChord ?? track.voiceParams?.arpChord ?? 0)
+          const ao = Math.round(trig.paramLocks?.arpOct   ?? track.voiceParams?.arpOct   ?? 1)
+          if (am > 0 && (ac > 0 || ao >= 2)) {
+            this.arpNotes[t] = generateArpNotes(note, am, ac, ao, this.rootNote)
+            this.arpIdx[t] = 0
+            this.arpCounter[t] = 0
+            this.arpTickSize[t] = Math.round(this.samplesPerStep / Math.max(1, ar))
+            this.arpVel[t] = trig.velocity
+            this.arpSeed[t] = (note * 7919 + this.playheads[t] * 104729) >>> 0
+          } else {
+            this.arpNotes[t] = []
+          }
+        }
       }
     }
     if (this.playheads[0] === 0 && this.pendingOctave !== null) {
@@ -334,6 +422,26 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.currentThreshold = this.swingPhase === 1
             ? this.swing * 2 * this.samplesPerStep
             : (1 - this.swing) * 2 * this.samplesPerStep
+        }
+        // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceStep)
+        for (let t = 6; t < this.voices.length; t++) {
+          if (this.arpNotes[t].length === 0) continue
+          const arpRate = Math.round(this.tracks[t]?.voiceParams?.arpRate ?? 1)
+          if (arpRate <= 1) continue
+          this.arpCounter[t]++
+          if (this.arpCounter[t] >= this.arpTickSize[t]) {
+            this.arpCounter[t] -= this.arpTickSize[t]
+            if (Math.round(this.tracks[t]?.voiceParams?.arpMode ?? 1) === 4) {
+              // RANDOM: LCG pick
+              this.arpSeed[t] = (this.arpSeed[t] * 1664525 + 1013904223) >>> 0
+              this.arpIdx[t] = (this.arpSeed[t] >>> 16) % this.arpNotes[t].length
+            } else {
+              this.arpIdx[t] = (this.arpIdx[t] + 1) % this.arpNotes[t].length
+            }
+            if (!this.tracks[t]?.muted) {
+              this.voices[t]?.slideNote(this.arpNotes[t][this.arpIdx[t]], this.arpVel[t])
+            }
+          }
         }
         for (let t = 0; t < this.voices.length; t++) {
           const track = this.tracks[t]

@@ -1,6 +1,6 @@
 # ADR 022 — Lead Arpeggiator
 
-## Status: Accepted
+## Status: Implemented
 
 ## Context
 
@@ -15,40 +15,56 @@
 
 ### パラメータ設計
 
-voiceParams として3つのパラメータを追加し、既存の ParamPanel ノブで操作できるようにする。
+voiceParams として4つのパラメータを追加し、既存の ParamPanel ノブで操作できるようにする。
+対象トラックは **MoogLead（LEAD）のみ**。
 
 | key      | label | min | max | default | 説明 |
 |----------|-------|-----|-----|---------|------|
 | arpMode  | ARP   | 0   | 4   | 0       | 0=OFF, 1=UP, 2=DOWN, 3=UP-DOWN, 4=RANDOM |
 | arpRate  | RATE  | 1   | 4   | 2       | ステップあたりの分割数 (1=1/4, 2=1/8, 3=triplet, 4=1/16) |
+| arpChord | CHRD  | 0   | 4   | 0       | 0=OCT, 1=5TH, 2=MAJ, 3=MIN, 4=7TH |
 | arpOct   | AOCT  | 1   | 4   | 1       | アルペジオのオクターブ範囲 |
 
-arpMode は連続ノブだが、worklet 側で `Math.round()` して離散値として扱う。
+arpMode / arpRate / arpChord / arpOct は連続ノブだが、worklet 側で `Math.round()` して離散値として扱う。
 UI 的にはノブを回すとカチカチとモードが切り替わるイメージ。
+
+### コードインターバルテーブル
+
+`arpChord` でノートリストの構成音を決定する：
+
+| arpChord | 名前 | インターバル（半音） | C3 からの例 |
+|----------|------|---------------------|-------------|
+| 0        | OCT  | [0]                 | C3 (オクターブユニゾン) |
+| 1        | 5TH  | [0, 7]              | C3, G3 |
+| 2        | MAJ  | [0, 4, 7]           | C3, E3, G3 |
+| 3        | MIN  | [0, 3, 7]           | C3, Eb3, G3 |
+| 4        | 7TH  | [0, 4, 7, 10]       | C3, E3, G3, Bb3 |
 
 ### アルペジオノート生成ロジック
 
 ```
-入力: baseNote, mode, octaves
+入力: baseNote, mode, chord, octaves
 出力: notes[] (繰り返し再生するノートリスト)
-
-UP:       [C3, E3, G3, C4, E4, G4]  (1オクターブずつ上昇)
-DOWN:     [G4, E4, C4, G3, E3, C3]  (逆順)
-UP-DOWN:  [C3, E3, G3, C4, E4, G4, E4, C4, G3, E3]  (折り返し、端は重複しない)
-RANDOM:   シャッフル（LCG疑似乱数で決定論的）
 ```
 
-ただし現在のシーケンサーは単音（コードなし）なので、
-アルペジオは **baseNote のオクターブ展開** として動作する：
+1. `chord` のインターバルを `octaves` 分のオクターブで展開:
+   - chord=MAJ, oct=1: `[C3, E3, G3]`
+   - chord=MAJ, oct=2: `[C3, E3, G3, C4, E4, G4]`
+   - chord=OCT, oct=2: `[C3, C4]` (従来の動作)
 
-- `octaves = 1`: `[note]` (アルペジオなし、通常再生)
-- `octaves = 2`: `[note, note+12]`
-- `octaves = 3`: `[note, note+12, note+24]`
-- `octaves = 4`: `[note, note+12, note+24, note+36]`
+2. `mode` がリストの走査順を決定:
+   - UP: そのまま
+   - DOWN: 逆順
+   - UP-DOWN: 折り返し（端は重複しない）
+   - RANDOM: LCG 疑似乱数で決定論的にピック
 
-mode がこのリストの走査順を決定する。
-将来的にコード入力（P-Lock で和音指定など）が追加されれば、
-コードトーンのアルペジオに自然に拡張できる。
+### 起動条件
+
+`arpMode > 0 && (arpChord > 0 || arpOct >= 2)`
+
+- chord=OCT + oct=1 → ノート1つのみ → arp 無効（通常再生）
+- chord=MAJ + oct=1 → トライアド3音 → arp 有効
+- chord=OCT + oct=2 → オクターブ展開 → arp 有効
 
 ### Worklet 実装
 
@@ -79,7 +95,7 @@ private arpTickSize: number[]   = []   // サンプル数 / arp tick
 ### データフロー
 
 ```
-ParamPanel ノブ → voiceParams.arpMode/arpRate/arpOct
+ParamPanel ノブ → voiceParams.arpMode/arpRate/arpChord/arpOct
     ↓
 state.svelte.ts → engine.ts → worklet postMessage (既存パイプライン)
     ↓
@@ -93,8 +109,8 @@ worklet process loop → サブステップ tick → slideNote
 
 | ファイル | 変更内容 |
 |----------|----------|
-| `src/lib/paramDefs.ts` | MoogLead / Bass303 に `arpMode`, `arpRate`, `arpOct` 追加 |
-| `src/lib/audio/worklet-processor.ts` | arp ステート追加、`_advanceStep` でアルペジオ開始、`process` でサブステップ tick |
+| `src/lib/paramDefs.ts` | MoogLead に `arpMode`, `arpRate`, `arpChord`, `arpOct` 追加 |
+| `src/lib/audio/worklet-processor.ts` | `ARP_CHORDS` テーブル、arp ステート追加、`_advanceStep` でアルペジオ開始、`process` でサブステップ tick |
 
 - `state.svelte.ts` — 変更不要（voiceParams は Record<string, number> で動的）
 - `engine.ts` — 変更不要（voiceParams をそのまま転送）
@@ -109,16 +125,21 @@ worklet process loop → サブステップ tick → slideNote
 
 ## Verification
 
-1. LEAD トラックで ARP=1 (UP), AOCT=2 にして1ノート配置 → オクターブ上下の交互再生
-2. RATE を 1→4 に変更 → 分割が細かくなる
-3. ARP=3 (UP-DOWN) → 上昇→下降の折り返しパターン
-4. ARP=0 → 通常の単音再生に戻る
-5. duration=4 のロングノートでアルペジオ → 4ステップ分アルペジオが継続
-6. slide=true の次ノートへの接続が自然に聞こえる
+1. LEAD トラックで ARP=1 (UP), CHRD=MAJ, AOCT=1 → C-E-G トライアドアルペジオ
+2. AOCT=2 → 2オクターブに展開 (C3-E3-G3-C4-E4-G4)
+3. CHRD=7TH → ドミナント7thアルペジオ (C-E-G-Bb)
+4. CHRD=OCT, AOCT=2 → オクターブユニゾン（従来動作）
+5. ARP=2 (DOWN) → 下降パターン
+6. ARP=3 (UP-DOWN) → 折り返しパターン
+7. ARP=4 (RANDOM) → ランダムピック
+8. RATE を 1→4 に変更 → 分割が細かくなる
+9. ARP=0 → 通常の単音再生に戻る
+10. CHRD=OCT, AOCT=1 → arp 無効（通常再生）
+11. duration=4 のロングノートでアルペジオ → 4ステップ分アルペジオが継続
+12. P-Lock で特定ステップだけ CHRD=MAJ → そのステップだけコードアルペジオ
 
 ## Future Extensions
 
-- **コードアルペジオ**: P-Lock でコードトーンを指定し、オクターブ展開ではなく
-  コード構成音をアルペジオする（パラメーターロック実装後）
 - **ARP パターン**: gate length パターン（長短長短など）の追加
 - **ARP hold**: ノートをホールドしてアルペジオを継続するモード
+- **カスタムコード**: P-Lock で任意のコードトーンを指定するモード
