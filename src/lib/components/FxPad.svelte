@@ -131,23 +131,29 @@
 
     // ── Audio-reactive background ──
     // Base: #1E2028 (30,32,40) — only reacts when at least one FX is ON
-    let tintR = 0, tintG = 0, tintB = 0, tintCount = 0
+    let tintR = 0, tintG = 0, tintB = 0, tintW = 0
     for (let ni = 0; ni < nodes.length; ni++) {
       if (fxPad[nodes[ni].key].on) {
-        tintR += colors[ni].r
-        tintG += colors[ni].g
-        tintB += colors[ni].b
-        tintCount++
+        // VERB drives background brightness; others contribute subtly
+        const weight = nodes[ni].key === 'verb' ? 2.0 : 0.5
+        tintR += colors[ni].r * weight
+        tintG += colors[ni].g * weight
+        tintB += colors[ni].b * weight
+        tintW += weight
       }
     }
     let bgR = 30, bgG = 32, bgB = 40
-    if (tintCount > 0) {
-      const bgBright = smoothLow * 20
-      const bgWarm = smoothAvg * 8
-      const tintMix = smoothAvg * 0.12
-      bgR = Math.min(255, 30 + bgBright + bgWarm + (tintR / tintCount) * tintMix)
-      bgG = Math.min(255, 32 + bgBright + bgWarm * 0.5 + (tintG / tintCount) * tintMix)
-      bgB = Math.min(255, 40 + bgBright * 0.6 + (tintB / tintCount) * tintMix)
+    if (tintW > 0) {
+      // VERB position drives background brightness; others stay dark
+      const verbOn = fxPad.verb.on
+      const verbInt = verbOn ? Math.sqrt(fxPad.verb.x ** 2 + fxPad.verb.y ** 2) / Math.SQRT2 : 0
+      const brightScale = verbOn ? 0.3 + verbInt * 0.7 : 0.25
+      const bgBright = smoothLow * 20 * brightScale
+      const bgWarm = smoothAvg * 8 * brightScale
+      const tintMix = smoothAvg * (verbOn ? 0.04 + verbInt * 0.10 : 0.04)
+      bgR = Math.min(255, 30 + bgBright + bgWarm + (tintR / tintW) * tintMix)
+      bgG = Math.min(255, 32 + bgBright + bgWarm * 0.5 + (tintG / tintW) * tintMix)
+      bgB = Math.min(255, 40 + bgBright * 0.6 + (tintB / tintW) * tintMix)
     }
     ctx.fillStyle = `rgb(${bgR}, ${bgG}, ${bgB})`
     ctx.fillRect(0, 0, w, h)
@@ -227,6 +233,9 @@
     }
 
     // ── Per-effect node animations (canvas, band-driven) ──
+    const screenR = Math.hypot(w, h)
+    const now = performance.now() / 1000
+
     for (let ni = 0; ni < nodes.length; ni++) {
       const node = nodes[ni]
       const state = fxPad[node.key]
@@ -237,14 +246,13 @@
       const intensity = Math.sqrt(state.x * state.x + state.y * state.y) / Math.SQRT2
 
       // intensity drives base size; band drives audio-reactive scaling
-      // Use intensity^0.5 to exaggerate difference between low/high param positions
       const intPow = intensity * intensity  // quadratic: low values shrink fast
 
       switch (node.key) {
         case 'verb': {
           // Wide breathing glow — low-mid energy
-          const r = 30 + intPow * 90 + band * 120
-          const a = 0.05 + intPow * 0.15 + band * 0.50
+          const r = 20 + intPow * 120 + band * 100
+          const a = 0.03 + intPow * 0.25 + band * 0.40
           const grd = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r)
           grd.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${a})`)
           grd.addColorStop(0.3, `rgba(${c.r}, ${c.g}, ${c.b}, ${a * 0.5})`)
@@ -253,10 +261,40 @@
           ctx.beginPath()
           ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2)
           ctx.fill()
+          // Fog wash — position drives coverage, audio adds shimmer
+          const fogR = screenR * (0.15 + intPow * 0.85)
+          const fogA = 0.01 + intPow * 0.25 + band * 0.10
+          if (fogA > 0.005) {
+            const fog = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, fogR)
+            fog.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${fogA})`)
+            fog.addColorStop(0.3, `rgba(${c.r}, ${c.g}, ${c.b}, ${fogA * 0.55})`)
+            fog.addColorStop(0.7, `rgba(${c.r}, ${c.g}, ${c.b}, ${fogA * 0.15})`)
+            fog.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`)
+            ctx.fillStyle = fog
+            ctx.fillRect(0, 0, w, h)
+          }
+          // Breathing pulse — swells with audio
+          const breathPhase = Math.sin(now * 1.2) * 0.5 + 0.5
+          const breathR = screenR * (0.1 + intPow * 0.6) * (0.7 + breathPhase * 0.3 + band * 0.4)
+          const breathA = (0.01 + intPow * 0.15 + band * 0.06) * (0.6 + breathPhase * 0.4)
+          if (breathA > 0.005) {
+            const breath = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, breathR)
+            breath.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, ${breathA})`)
+            breath.addColorStop(0.5, `rgba(${c.r}, ${c.g}, ${c.b}, ${breathA * 0.3})`)
+            breath.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`)
+            ctx.fillStyle = breath
+            ctx.fillRect(0, 0, w, h)
+          }
+          // Room ambient — position dominates
+          const roomA = intPow * 0.08 + band * 0.03
+          if (roomA > 0.003) {
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${roomA})`
+            ctx.fillRect(0, 0, w, h)
+          }
           break
         }
         case 'delay': {
-          // Echo rings expanding outward — mid energy
+          // Echo rings — close-range audio-reactive
           const ringCount = 3 + Math.floor(intPow * 4)
           for (let ri = 0; ri < ringCount; ri++) {
             const phase = (band * 1.2 + ri / ringCount) % 1
@@ -266,6 +304,39 @@
             ctx.arc(pos.x, pos.y, rr, 0, Math.PI * 2)
             ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${ra})`
             ctx.lineWidth = 1 + intPow * 2 + band * 3
+            ctx.stroke()
+          }
+          // Expanding ripples — born, expand outward past screen, fade and die
+          const expandRate = 60 + intPow * 200 + band * 100
+          const birthInterval = 1 / (1 + intPow * 3)
+          const decayRate = 1.8 - intPow * 1.0
+          const rippleAlpha = 0.08 + intPow * 0.20 + band * 0.25
+          const latestBirth = Math.floor(now / birthInterval) * birthInterval
+          for (let ri = 0; ri < 8; ri++) {
+            const age = now - (latestBirth - ri * birthInterval)
+            const rr = age * expandRate
+            if (rr < 4 || rr > screenR * 1.5) continue
+            const fade = Math.exp(-age * decayRate)
+            if (fade < 0.005) continue
+            // Glow band around the ring — fading halo
+            const glowW = 8 + fade * (12 + intPow * 20)
+            const inner = Math.max(0, rr - glowW)
+            const outer = rr + glowW
+            const glowA = fade * rippleAlpha * 0.5
+            const glow = ctx.createRadialGradient(pos.x, pos.y, inner, pos.x, pos.y, outer)
+            glow.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`)
+            glow.addColorStop(0.45, `rgba(${c.r}, ${c.g}, ${c.b}, ${glowA})`)
+            glow.addColorStop(0.55, `rgba(${c.r}, ${c.g}, ${c.b}, ${glowA})`)
+            glow.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`)
+            ctx.fillStyle = glow
+            ctx.beginPath()
+            ctx.arc(pos.x, pos.y, outer, 0, Math.PI * 2)
+            ctx.fill()
+            // Crisp ring stroke
+            ctx.beginPath()
+            ctx.arc(pos.x, pos.y, rr, 0, Math.PI * 2)
+            ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${fade * rippleAlpha})`
+            ctx.lineWidth = fade * (1.5 + intPow * 3)
             ctx.stroke()
           }
           break
@@ -293,21 +364,61 @@
             ctx.arc(pos.x, pos.y, fr, 0, Math.PI * 2)
             ctx.fill()
           }
+          // Scan lines — broken CRT at high intensity
+          const lineCount = Math.floor(intPow * 6 + band * 8)
+          for (let li = 0; li < lineCount; li++) {
+            const seed = Math.sin(now * 3.7 + li * 127.1) * 0.5 + 0.5
+            const ly = seed * h
+            const lh = 1 + Math.random() * (2 + intPow * 4)
+            const la = (0.03 + intPow * 0.10 + band * 0.18) * (0.3 + Math.random() * 0.7)
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${la})`
+            ctx.fillRect(0, ly, w, lh)
+          }
           break
         }
         case 'granular': {
-          // Scattered grains — high frequency shimmer
-          const count = 5 + Math.floor(intPow * 20 + band * 30)
-          const spread = 15 + intPow * 55 + band * 40
-          for (let g = 0; g < count; g++) {
-            const angle = (g / count) * Math.PI * 2 + smoothAvg * 6
-            const dist = spread * (0.3 + Math.random() * 0.7)
-            const gx = pos.x + Math.cos(angle) * dist
-            const gy = pos.y + Math.sin(angle) * dist
-            const gr = 0.8 + Math.random() * (1.5 + intPow * 3) + band * 2
-            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${0.10 + intPow * 0.25 + band * 0.55})`
+          // Pollen particles — drifting in wind
+          const GA = 2.3998277  // golden angle
+          const pollenCount = 60 + Math.floor(intPow * 120 + band * 40)  // 60–220
+          const birthGap = 0.06 - intPow * 0.035  // 0.06s→0.025s
+          const driftSpeed = 20 + intPow * 90 + band * 45
+          const windSpeed = 15 + intPow * 45
+          const windAngle = now * 0.13  // slowly rotating wind direction
+          const lifetime = 4 + intPow * 9  // 4s→13s
+          const pollenAlpha = 0.07 + intPow * 0.18 + band * 0.25
+          const latestBirth = Math.floor(now / birthGap) * birthGap
+
+          for (let pi = 0; pi < pollenCount; pi++) {
+            const born = latestBirth - pi * birthGap
+            const age = now - born
+            if (age < 0 || age > lifetime) continue
+            const t = age / lifetime
+            const fade = Math.sqrt(1 - t)  // stays visible longer, then quick fade
+
+            // Per-particle deterministic variation (no Math.random)
+            const seed = (pi * 7 + 3) % 11 / 10  // 0.27–1.0
+            const baseAngle = pi * GA + Math.floor(born / birthGap) * 0.381
+
+            // Radial drift from center (varied speed per particle)
+            const radialDist = age * driftSpeed * (0.3 + seed * 0.7)
+
+            // Wind push — shared direction, slight per-particle spread
+            const wx = age * windSpeed * Math.cos(windAngle + pi * 0.08)
+            const wy = age * windSpeed * Math.sin(windAngle + pi * 0.08) * 0.5
+
+            // Sinusoidal wobble — pollen floating feel
+            const wFreq = 0.5 + (pi % 7) * 0.2
+            const wAmp = 6 + intPow * 18 + t * 20
+            const wobX = Math.sin(now * wFreq + pi * 2.3) * wAmp
+            const wobY = Math.cos(now * wFreq * 0.65 + pi * 1.7) * wAmp * 0.7
+
+            const px = pos.x + Math.cos(baseAngle) * radialDist + wx + wobX
+            const py = pos.y + Math.sin(baseAngle) * radialDist + wy + wobY
+
+            const pr = 0.5 + fade * (1.0 + intPow * 2.2) + band * 1.5
+            ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${fade * pollenAlpha})`
             ctx.beginPath()
-            ctx.arc(gx, gy, gr, 0, Math.PI * 2)
+            ctx.arc(px, py, pr, 0, Math.PI * 2)
             ctx.fill()
           }
           // Central glow
@@ -323,6 +434,7 @@
           break
         }
       }
+
     }
 
     // ── Pulse CSS variable on DOM nodes (kick-driven scale) ──
