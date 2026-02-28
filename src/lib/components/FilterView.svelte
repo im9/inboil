@@ -264,6 +264,11 @@
     if (!glFreqData) glFreqData = new Uint8Array(analyser.frequencyBinCount)
     analyser.getByteFrequencyData(glFreqData)
 
+    // Zero out near-silent residual to prevent frozen dots after context suspends
+    let maxBin = 0
+    for (let i = 0; i < glFreqData.length; i++) if (glFreqData[i] > maxBin) maxBin = glFreqData[i]
+    if (maxBin < 3) glFreqData.fill(0)
+
     g.activeTexture(g.TEXTURE0)
     g.bindTexture(g.TEXTURE_2D, glFreqTex)
     g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, glFreqData.length, 1, g.RED, g.UNSIGNED_BYTE, glFreqData)

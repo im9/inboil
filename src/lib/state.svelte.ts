@@ -126,55 +126,59 @@ type FactoryDef = {
 
 // Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
 const FACTORY: FactoryDef[] = [
-  // 00 — 4 on the floor, classic house/techno (Am→F→C→G)
+  // 00 — "Blue Monday" synth-pop: driving 8th bass riff + rhythmic stab lead
   { name: '4FLOOR', bpm: 120,
     kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [3,11], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,3,5,7,9,11,13,15], 64],
-    mel: { 6: [57, 53, 48, 55], 7: [64, 67, 69, 72, 69, 67, 64, 60] },
-    dur: { 6: [3, 3, 3, 3], 7: [1, 1, 2, 1, 1, 2, 1, 2] } },
-  // 01 — Deep 808 trap (32 steps, bar1=Am dark, bar2=F→G lift)
+    ohh: [3,11], cym: [1],
+    bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,5,9,13], 64],
+    mel: { 6: [41,41,40,38,36,36,38,40], 7: [64,64,67,72] },
+    dur: { 7: [2,2,2,2] } },
+  // 01 — "Mask Off" trap flute: pentatonic hook over deep 808 (32 steps)
   { name: 'TRAP', bpm: 140, steps: 32,
     kick: [1,4,8,11,17,20,24,27], snare: [5,13,21,29], clap: [5,13,21,29],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32],
     ohh: [4,8,12,16,20,28], cym: [1,17],
-    bass: [[1,5,9,13,17,21,25,29], 36],
-    lead: [[3,7,11,15,19,23,27,31], 60],
-    mel: { 6: [33, 36, 33, 36, 29, 31, 33, 36], 7: [60, 63, 65, 60, 65, 67, 69, 67] },
-    dur: { 6: [3, 3, 3, 3, 3, 3, 3, 3], 7: [2, 2, 2, 4, 2, 2, 2, 4] },
+    bass: [[1,5,13,17,21,29], 36],
+    lead: [[3,5,7,9,11,19,21,23,25,27], 60],
+    mel: { 6: [36,36,36,36,36,36], 7: [67,69,71,69,67,67,69,71,69,64] },
+    dur: { 6: [3,6,3,3,6,3], 7: [1,1,2,1,1,1,1,2,1,1] },
     vp: {
       0: { pitchStart: 200, pitchEnd: 38, pitchDecay: 0.06, ampDecay: 0.8, drive: 1.8 },
       1: { toneDecay: 0.05, noiseDecay: 0.05, noiseFc: 4500 },
       3: { decay: 0.02, hpCutoff: 7000, volume: 0.50 },
       6: { cutoffBase: 80, envMod: 2000, resonance: 4.0, decay: 0.30 },
     } },
-  // 02 — Breakbeat, punchy drums + syncopated lead riff
+  // 02 — "Firestarter" breakbeat: aggressive octave-jumping stabs
   { name: 'BREAK', bpm: 130,
     kick: [1,4,7,11], snare: [5,10,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [2,8,14], cym: [1], bass: [[1,5,9,13], 48], lead: [[1,4,6,9,11,14], 62],
-    mel: { 6: [48, 53, 55, 53], 7: [62, 65, 67, 69, 67, 65] },
-    dur: { 6: [3, 2, 2, 2], 7: [2, 1, 2, 2, 1, 2] },
+    ohh: [2,8,14], cym: [1],
+    bass: [[1,3,5,9,11,13], 36], lead: [[1,3,5,9,11,14], 60],
+    mel: { 6: [36,36,43,36,36,43], 7: [72,60,72,60,67,60] },
+    dur: { 6: [1,1,2,1,1,2], 7: [1,1,2,1,1,2] },
     vp: {
       0: { pitchStart: 400, pitchEnd: 60, pitchDecay: 0.03, ampDecay: 0.25 },
       1: { toneDecay: 0.06, noiseAmt: 1.0, noiseFc: 4000 },
       4: { decay: 0.25 },
     } },
-  // 03 — UK Garage 2-step, soulful vocal-like lead
+  // 03 — "Sweet Like Chocolate" 2-step: soulful wide-interval melody
   { name: '2STEP', bpm: 132,
     kick: [1,6,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [4,12], cym: [], bass: [[1,4,9,12], 48], lead: [[1,3,5,8,11,13,15], 65],
-    mel: { 6: [48, 51, 55, 53], 7: [67, 69, 72, 69, 67, 65, 64] },
-    dur: { 6: [2, 3, 2, 3], 7: [2, 1, 2, 2, 1, 1, 2] },
+    ohh: [4,12], cym: [],
+    bass: [[1,4,9,12], 48], lead: [[1,3,6,9,11,14], 65],
+    mel: { 6: [48,52,55,52], 7: [67,72,69,67,64,67] },
+    dur: { 6: [2,3,2,3], 7: [2,2,2,2,2,2] },
     vp: {
       0: { ampDecay: 0.20, drive: 1.0 },
       6: { cutoffBase: 150, envMod: 5000, resonance: 8.0, decay: 0.15 },
     } },
-  // 04 — Lo-fi hip hop, dreamy descending melody (bass=12 triplet, lead=24)
+  // 04 — Nujabes-style lo-fi: jazzy floating melody (bass=12, lead=24)
   { name: 'LOFI', bpm: 85,
     kick: [1,6,9,14], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [7,15], cym: [], bass: [[1,4,7,10], 48], lead: [[1,4,7,10,13,16,19,22], 67],
+    ohh: [7,15], cym: [],
+    bass: [[1,4,7,10], 48], lead: [[1,4,7,10,13,16,19,22], 67],
     ts: { 6: 12, 7: 24 },
-    mel: { 6: [57, 53, 48, 55], 7: [72, 69, 67, 69, 67, 65, 64, 60] },
-    dur: { 6: [2, 2, 2, 3], 7: [2, 2, 3, 2, 2, 3, 2, 4] },
+    mel: { 6: [57,55,53,48], 7: [69,72,71,67,64,67,69,64] },
+    dur: { 6: [2,2,2,3], 7: [2,2,3,2,2,3,2,4] },
     vp: {
       0: { pitchStart: 250, ampDecay: 0.40, drive: 0.8 },
       1: { noiseFc: 2000, noiseAmt: 0.60 },
@@ -182,195 +186,200 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 120, envMod: 2500, resonance: 3.0 },
       7: { cutoffBase: 250, envMod: 3000, resonance: 1.2 },
     } },
-  // 05 — Straight techno, 909 + acid bass + hypnotic lead stab (32 steps for tension/release)
+  // 05 — "Strings of Life" techno: dramatic octave tension + acid (32 steps)
   { name: 'TECHNO', bpm: 135, steps: 32,
     kick: [1,5,9,13,17,21,25,29], snare: [], clap: [5,13,21,29],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [3,7,11,15,19,23,27,31], cym: [1,17],
     bass: [[1,2,3,5,7,9,11,13,14,15,17,18,19,21,23,25,27,29,30,31], 36],
     lead: [[1,5,9,13,17,21,25,29], 60],
-    mel: { 6: [36, 36, 39, 41, 36, 39, 36, 43, 43, 41, 36, 36, 39, 41, 36, 39, 36, 43, 41, 39],
-           7: [60, 63, 60, 58, 63, 65, 67, 63] },
-    dur: { 7: [3, 3, 3, 3, 3, 3, 3, 3] },
+    mel: { 6: [36,36,40,43,36,40,36,43,43,40,36,36,40,43,36,40,36,43,40,38],
+           7: [60,60,67,60,72,72,67,60] },
+    dur: { 7: [2,2,4,2,2,2,4,2] },
     vp: {
       0: { pitchStart: 380, pitchEnd: 48, ampDecay: 0.30, drive: 1.6 },
       2: { decay: 0.12 },
       3: { baseFreq: 1000, hpCutoff: 7000 },
       6: { cutoffBase: 100, envMod: 6000, resonance: 10.0, decay: 0.12, drive: 2.2 },
     } },
-  // 06 — Deep house, warm bass + arpeggio lead (bass=24, lead=12 triplet)
+  // 06 — "Show Me Love" house: piano arpeggio + warm bass (bass=24, lead=12)
   { name: 'HOUSE', bpm: 124,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [3,7,11,15],
-    ohh: [7,15], cym: [1], bass: [[1,4,10,13,19,22], 48],
+    ohh: [7,15], cym: [1],
+    bass: [[1,4,10,13,19,22], 48],
     lead: [[1,2,3,4,5,6,7,8,9,10,11,12], 64],
     ts: { 6: 24, 7: 12 },
-    mel: { 6: [57, 53, 48, 53, 55, 48], 7: [60, 64, 67, 72, 67, 64, 60, 64, 69, 72, 69, 64] },
-    dur: { 6: [2, 4, 2, 4, 2, 2] },
+    mel: { 6: [48,55,53,48,55,53], 7: [60,64,67,72,67,64,60,64,69,72,69,64] },
+    dur: { 6: [2,4,2,4,2,2] },
     vp: {
       0: { pitchStart: 320, pitchEnd: 50, ampDecay: 0.35 },
       6: { cutoffBase: 150, envMod: 3500, resonance: 5.0, decay: 0.20 },
     } },
-  // 07 — Drum & bass, fast + melodic lead over rolling bass (HH=32, bass=12)
+  // 07 — "Inner City Life" DnB: haunting wide leaps + rolling bass (HH=32, bass=12)
   { name: 'DNB', bpm: 174,
     kick: [1,11], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
-    ohh: [4,12], cym: [1], bass: [[1,3,5,7,9,11], 36],
-    lead: [[1,3,5,7,9,11,13,15], 67],
+    ohh: [4,12], cym: [1],
+    bass: [[1,3,5,7,9,11], 36], lead: [[1,3,7,9,13,15], 67],
     ts: { 3: 32, 6: 12 },
-    mel: { 6: [36, 39, 36, 43, 41, 39], 7: [67, 69, 72, 69, 67, 64, 60, 64] },
-    dur: { 6: [2, 1, 1, 2, 1, 1], 7: [1, 1, 2, 1, 1, 2, 1, 2] },
+    mel: { 6: [36,43,36,40,36,43], 7: [72,69,60,64,67,60] },
+    dur: { 6: [2,1,1,2,1,1], 7: [2,3,2,3,1,2] },
     vp: {
       0: { ampDecay: 0.20, pitchDecay: 0.025 },
       1: { toneDecay: 0.04, noiseDecay: 0.04, noiseFc: 5000 },
       3: { decay: 0.02, hpCutoff: 7500 },
       6: { cutoffBase: 100, envMod: 3000, resonance: 6.0, decay: 0.25, drive: 2.0 },
     } },
-  // 08 — Hyperpop, wild jumpy melody + distorted
+  // 08 — 100 gecs hyperpop: chaotic octave jumps + distorted bass
   { name: 'HYPER', bpm: 150,
-    kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [2,6,10,14], cym: [1,9], bass: [[1,5,9,13], 48],
-    lead: [[1,2,3,5,7,9,11,13,14,15], 72],
-    mel: { 6: [48, 55, 51, 53], 7: [72, 67, 60, 64, 72, 69, 65, 60, 64, 67] },
-    dur: { 6: [3, 3, 3, 3], 7: [1, 1, 1, 2, 1, 1, 1, 2, 1, 2] },
+    kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15],
+    chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [2,6,10,14], cym: [1,9],
+    bass: [[1,5,9,13], 48], lead: [[1,2,3,5,7,9,11,13,14,15], 72],
+    mel: { 6: [48,60,48,55], 7: [72,60,79,64,72,55,67,76,60,72] },
+    dur: { 6: [3,3,3,3], 7: [1,1,1,2,1,1,1,2,1,2] },
     vp: {
       0: { pitchStart: 500, ampDecay: 0.20, drive: 2.5 },
       1: { noiseFc: 5500, noiseAmt: 1.1 },
       6: { cutoffBase: 250, envMod: 7000, resonance: 9.0, drive: 2.8 },
       7: { cutoffBase: 800, envMod: 8000 },
     } },
-  // 09 — Minimal ambient, soft + sparse (16 steps, call & response)
+  // 09 — Richie Hawtin minimal: hypnotic single-note repeat with subtle drop
   { name: 'MINIMAL', bpm: 100,
     kick: [1,9], snare: [5], clap: [], chh: [1,5,9,13],
-    ohh: [], cym: [1], bass: [[1,5,9,13], 48], lead: [[3,7,11,15], 60],
-    mel: { 6: [48, 43, 48, 55], 7: [64, 67, 60, 62] },
-    dur: { 6: [3, 3, 3, 3], 7: [3, 3, 3, 3] },
+    ohh: [], cym: [1],
+    bass: [[1,5,9,13], 48], lead: [[3,7,11,15], 60],
+    mel: { 6: [48,48,48,43], 7: [67,67,67,64] },
+    dur: { 6: [3,3,3,3], 7: [3,3,3,3] },
     vp: {
       0: { pitchStart: 200, pitchEnd: 45, ampDecay: 0.50, drive: 0.8 },
       3: { volume: 0.35 },
       6: { cutoffBase: 100, envMod: 2000, resonance: 3.0, decay: 0.30 },
       7: { cutoffBase: 200, envMod: 2500, resonance: 1.0, filterDecay: 0.60 },
     } },
-  // 10 — Reggaeton, dembow rhythm + catchy hook
+  // 10 — "Gasolina" reggaeton: dembow + descending hook repeat
   { name: 'REGGAETN', bpm: 95,
     kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [3,7,11,15], cym: [], bass: [[1,4,8,11], 48],
-    lead: [[1,3,5,7,9,11,13,15], 60],
-    mel: { 6: [48, 51, 48, 46], 7: [67, 65, 64, 67, 69, 67, 65, 64] },
-    dur: { 6: [2, 3, 2, 3], 7: [1, 1, 2, 1, 1, 1, 2, 2] },
+    ohh: [3,7,11,15], cym: [],
+    bass: [[1,4,8,11], 48], lead: [[1,3,5,7,9,11,13,15], 60],
+    mel: { 6: [48,48,53,48], 7: [67,67,65,64,67,67,65,64] },
+    dur: { 6: [2,3,2,3], 7: [1,1,1,2,1,1,1,2] },
     vp: {
       0: { ampDecay: 0.30, drive: 1.5 },
       1: { toneDecay: 0.06 },
       2: { decay: 0.15, filterFc: 1800 },
       6: { cutoffBase: 130, envMod: 3000, resonance: 5.0 },
     } },
-  // 11 — Disco, funky bass + bright lead melody (32 steps, verse→chorus)
+  // 11 — "I Feel Love" disco: Moroder pulsating bass + vocal lead (32 steps)
   { name: 'DISCO', bpm: 118, steps: 32,
     kick: [1,5,9,13,17,21,25,29], snare: [5,13,21,29], clap: [],
     chh: [3,7,11,15,19,23,27,31],
     ohh: [1,5,9,13,17,21,25,29], cym: [1,17],
-    bass: [[1,3,5,8,11,13,17,19,21,24,27,29], 48],
-    lead: [[2,4,6,10,14,18,20,22,26,30], 67],
-    mel: { 6: [48, 51, 55, 53, 48, 51, 53, 55, 57, 55, 53, 48],
-           7: [67, 69, 72, 69, 67, 72, 74, 76, 74, 72] },
-    dur: { 6: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-           7: [1, 1, 2, 2, 3, 1, 1, 2, 2, 3] },
+    bass: [[1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31], 36],
+    lead: [[1,5,9,13,17,21,25,29], 64],
+    mel: { 6: [36,43,36,43,36,43,36,43,41,48,41,48,41,48,41,48],
+           7: [72,72,69,67,72,72,69,67] },
+    dur: { 7: [2,2,2,2,2,2,2,2] },
     vp: {
       0: { ampDecay: 0.30 },
       4: { volume: 0.75, decay: 0.20 },
       6: { cutoffBase: 180, envMod: 5000, resonance: 6.0, decay: 0.15 },
       7: { cutoffBase: 600, envMod: 7000 },
     } },
-  // 12 — Electro, hard kick + acid bass + sharp lead riff
+  // 12 — "Planet Rock" electro: Kraftwerk-esque robotic repeat
   { name: 'ELECTRO', bpm: 128,
-    kick: [1,5,9,14], snare: [5,13], clap: [3,11], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [4,12], cym: [1], bass: [[1,3,5,7,9,11,13,15], 36],
-    lead: [[1,3,5,7,9,11,13,15], 62],
-    mel: { 6: [36, 39, 41, 43, 36, 39, 43, 41], 7: [62, 67, 65, 62, 60, 65, 67, 69] },
-    dur: { 6: [2, 1, 1, 2, 2, 1, 1, 2], 7: [1, 1, 1, 2, 1, 1, 1, 2] },
+    kick: [1,5,9,14], snare: [5,13], clap: [3,11],
+    chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [4,12], cym: [1],
+    bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,3,5,7,9,11,13,15], 62],
+    mel: { 6: [36,36,40,36,43,43,40,36], 7: [64,64,64,62,64,67,67,64] },
+    dur: { 6: [2,1,1,2,2,1,1,2], 7: [1,1,1,2,1,1,1,2] },
     vp: {
       0: { pitchStart: 450, drive: 2.0, ampDecay: 0.25 },
       1: { noiseFc: 4500 },
       6: { cutoffBase: 80, envMod: 7000, resonance: 11.0, drive: 2.5 },
       7: { cutoffBase: 500, envMod: 6500 },
     } },
-  // 13 — Dubstep, heavy half-time (dark menacing lead, 32 steps)
+  // 13 — Dubstep halftime: heavy octave-diving lead (32 steps)
   { name: 'DUBSTEP', bpm: 140, steps: 32,
     kick: [1,9,17,25], snare: [7,15,23,31], clap: [7,15,23,31],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [4,12,20,28], cym: [1,17],
     bass: [[1,5,9,13,17,21,25,29], 36],
     lead: [[1,5,9,17,21,25], 55],
-    mel: { 6: [36, 39, 36, 41, 34, 36, 34, 31],
-           7: [55, 58, 60, 58, 55, 53] },
-    dur: { 6: [3, 3, 3, 3, 3, 3, 3, 3], 7: [3, 3, 4, 3, 3, 6] },
+    mel: { 6: [36,43,41,36,36,43,41,38], 7: [60,55,48,60,55,48] },
+    dur: { 6: [3,3,3,3,3,3,3,3], 7: [3,3,4,3,3,6] },
     vp: {
       0: { pitchEnd: 38, ampDecay: 0.60, drive: 1.8 },
       1: { noiseAmt: 1.1, noiseFc: 3500 },
       6: { cutoffBase: 80, envMod: 6000, resonance: 8.0, decay: 0.40, drive: 2.5 },
     } },
-  // 14 — Drill, sliding 808 + eerie pentatonic melody
+  // 14 — Pop Smoke drill: eerie Am pentatonic descent + dark 808
   { name: 'DRILL', bpm: 142,
-    kick: [1,4,11], snare: [5,13], clap: [5,13], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [3,7,11,15], cym: [], bass: [[1,5,9,13], 36],
-    lead: [[1,3,5,7,9,11,13,15], 60],
-    mel: { 6: [36, 39, 41, 36], 7: [60, 63, 67, 63, 60, 58, 55, 58] },
-    dur: { 6: [3, 3, 3, 4], 7: [1, 1, 2, 1, 1, 2, 1, 2] },
+    kick: [1,4,11], snare: [5,13], clap: [5,13],
+    chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [3,7,11,15], cym: [],
+    bass: [[1,5,9,13], 36], lead: [[1,3,5,7,9,11,13,15], 60],
+    mel: { 6: [36,43,40,36], 7: [69,67,64,60,57,60,64,57] },
+    dur: { 6: [3,3,3,4], 7: [1,1,2,1,1,2,1,2] },
     vp: {
       0: { pitchStart: 220, pitchEnd: 38, ampDecay: 0.70, drive: 1.6 },
       3: { decay: 0.02, hpCutoff: 7000, volume: 0.50 },
       6: { cutoffBase: 70, envMod: 2500, resonance: 5.0, decay: 0.30 },
     } },
-  // 15 — Synthwave, lush pads (32 steps, A=verse B=soaring chorus)
+  // 15 — "Nightcall" synthwave: retro arpeggio + driving octave bass (32 steps)
   { name: 'SYNTHWV', bpm: 110, steps: 32,
     kick: [1,5,9,13,17,21,25,29], snare: [5,13,21,29], clap: [],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [7,15,23,31], cym: [1,17],
     bass: [[1,5,9,13,17,21,25,29], 48],
     lead: [[1,3,5,9,13,17,19,21,25,29], 64],
-    mel: { 6: [57, 53, 48, 55, 53, 48, 55, 57],
-           7: [64, 67, 69, 67, 64, 69, 72, 74, 72, 69] },
-    dur: { 6: [3, 3, 3, 3, 3, 3, 3, 3],
-           7: [2, 2, 4, 2, 4, 2, 2, 4, 2, 4] },
+    mel: { 6: [48,48,55,55,53,53,48,48],
+           7: [60,64,67,72,67,60,64,67,72,67] },
+    dur: { 6: [3,3,3,3,3,3,3,3],
+           7: [2,2,4,2,4,2,2,4,2,4] },
     vp: {
       0: { pitchStart: 280, ampDecay: 0.35, drive: 1.0 },
       6: { cutoffBase: 150, envMod: 3000, resonance: 4.0, decay: 0.35 },
       7: { cutoffBase: 350, envMod: 5000, resonance: 2.0, filterDecay: 0.60 },
     } },
-  // 16 — Afrobeat, bouncy polyrhythm (12/8, call-and-response lead=24)
+  // 16 — Fela Kuti afrobeat: horn-like call & response riff (12/8, lead=24)
   { name: 'AFROBT', bpm: 105, steps: 12,
     kick: [1,4,7,10], snare: [4,10], clap: [3,9], chh: [1,3,5,7,9,11],
-    ohh: [2,6,8,12], cym: [1], bass: [[1,3,5,7], 48],
+    ohh: [2,6,8,12], cym: [1],
+    bass: [[1,3,5,7], 48],
     lead: [[1,3,5,7,9,11,13,15,17,19,21,23], 64],
     ts: { 6: 8, 7: 24 },
-    mel: { 6: [48, 53, 51, 48],
-           7: [64, 67, 69, 72, 69, 67, 64, 67, 69, 67, 64, 62] },
-    dur: { 6: [2, 1, 1, 2] },
+    mel: { 6: [48,55,53,48],
+           7: [67,67,69,67,64,60,67,67,69,67,64,62] },
+    dur: { 6: [2,1,1,2] },
     vp: {
       0: { ampDecay: 0.30, drive: 1.2 },
       6: { cutoffBase: 160, envMod: 4000, resonance: 5.0, decay: 0.18 },
       7: { cutoffBase: 500, envMod: 6000 },
     } },
-  // 17 — Jersey club, rapid kicks + bouncy melodic hook
+  // 17 — Jersey club: bouncy bed-squeak octave alternation
   { name: 'JERSEY', bpm: 150,
-    kick: [1,4,7,10,13], snare: [5,13], clap: [3,7,11,15], chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
-    ohh: [4,8,12,16], cym: [], bass: [[1,5,9,13], 48],
-    lead: [[1,3,5,7,9,11,13,15], 67],
-    mel: { 6: [48, 51, 48, 46], 7: [67, 72, 69, 67, 69, 72, 67, 64] },
-    dur: { 6: [3, 3, 3, 3], 7: [1, 1, 1, 2, 1, 1, 1, 2] },
+    kick: [1,4,7,10,13], snare: [5,13], clap: [3,7,11,15],
+    chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    ohh: [4,8,12,16], cym: [],
+    bass: [[1,5,9,13], 48], lead: [[1,2,5,6,9,10,13,14], 67],
+    mel: { 6: [48,55,48,48], 7: [72,67,72,67,72,67,72,67] },
+    dur: { 6: [3,3,3,3] },
     vp: {
       0: { ampDecay: 0.20, drive: 1.5 },
       2: { decay: 0.10, filterFc: 2000 },
       3: { decay: 0.02, volume: 0.50 },
       6: { cutoffBase: 140, envMod: 4500, resonance: 6.0 },
     } },
-  // 18 — UK Garage, bumpy bass + soulful lead (32 steps for A/B)
+  // 18 — "Re-Rewind" UK Garage: soulful ascending arc (32 steps A/B)
   { name: 'GARAGE', bpm: 130, steps: 32,
     kick: [1,6,9,14,17,22,25,30], snare: [5,13,21,29], clap: [5,13,21,29],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [3,7,11,15,19,23,27,31], cym: [1,17],
     bass: [[1,3,6,9,11,14,17,19,22,25,27,30], 48],
     lead: [[2,4,6,10,14,18,20,22,26,30], 65],
-    mel: { 6: [48, 51, 55, 48, 51, 55, 53, 55, 57, 53, 55, 53],
-           7: [65, 67, 69, 67, 65, 69, 72, 74, 72, 69] },
+    mel: { 6: [48,52,55,48,52,55,53,55,57,53,55,53],
+           7: [67,69,72,69,64,67,69,72,69,64] },
     dur: { 6: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
            7: [1, 1, 2, 2, 3, 1, 1, 2, 2, 3] },
     vp: {
@@ -378,15 +387,15 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 130, envMod: 4000, resonance: 7.0, decay: 0.20 },
       7: { cutoffBase: 350, envMod: 4500, resonance: 1.5 },
     } },
-  // 19 — Ambient, ethereal + slow (64 steps, evolving pads A→B→C→D)
+  // 19 — Brian Eno ambient: wide ethereal arcs (64 steps, evolving pads)
   { name: 'AMBIENT', bpm: 70, steps: 64,
     kick: [1,17,33,49], snare: [], clap: [], chh: [1,9,17,25,33,41,49,57],
     ohh: [5,13,21,29,37,45,53,61], cym: [1,33],
     bass: [[1,9,17,25,33,41,49,57], 48],
     lead: [[1,9,17,25,33,41,49,57], 60],
-    mel: { 6: [48, 55, 53, 48, 53, 57, 55, 48],
-           7: [60, 64, 67, 72, 69, 67, 64, 60] },
-    dur: { 6: [6, 6, 6, 6, 6, 6, 6, 6], 7: [6, 6, 6, 6, 6, 6, 6, 6] },
+    mel: { 6: [48,55,53,48,55,57,53,48],
+           7: [72,67,64,60,64,69,72,67] },
+    dur: { 6: [7,7,7,7,7,7,7,7], 7: [7,7,7,7,7,7,7,7] },
     vp: {
       0: { pitchStart: 180, pitchEnd: 42, ampDecay: 0.60, drive: 0.7 },
       3: { volume: 0.30, hpCutoff: 6000 },
@@ -491,6 +500,10 @@ function loadFromBank(idx: number): void {
 }
 
 export const patternNav = $state({ pendingId: 0 })
+
+export function getPatternName(id: number): string {
+  return patternBank[id - 1]?.name ?? ''
+}
 
 export function switchPattern(id: number): void {
   if (id < 1 || id > PATTERN_COUNT) return

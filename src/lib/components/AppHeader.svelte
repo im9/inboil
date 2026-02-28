@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, switchPattern, patternNav, ui, toggleSidebar } from '../state.svelte.ts'
+  import { pattern, playback, switchPattern, patternNav, getPatternName, ui, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
 
   interface Props {
@@ -12,7 +12,44 @@
 
   const displayPatId = $derived(patternNav.pendingId > 0 ? patternNav.pendingId : pattern.id)
   const displayNum = $derived(String(displayPatId - 1).padStart(2, '0'))
+  const displayName = $derived(patternNav.pendingId > 0 ? getPatternName(patternNav.pendingId) : pattern.name)
   const isPending = $derived(patternNav.pendingId > 0)
+
+  // ── Long-press auto-repeat for ◀/▶ buttons ──
+  let repeatTimer: ReturnType<typeof setTimeout> | null = null
+  let repeatInterval: ReturnType<typeof setInterval> | null = null
+
+  function startRepeat(dir: -1 | 1) {
+    switchPattern(displayPatId + dir)
+    repeatTimer = setTimeout(() => {
+      repeatInterval = setInterval(() => switchPattern(displayPatId + dir), 100)
+    }, 400) // 400ms initial delay, then 100ms repeat
+  }
+
+  function stopRepeat() {
+    if (repeatTimer) { clearTimeout(repeatTimer); repeatTimer = null }
+    if (repeatInterval) { clearInterval(repeatInterval); repeatInterval = null }
+  }
+
+  // ── Long-press auto-repeat for BPM ±buttons ──
+  let bpmRepeatTimer: ReturnType<typeof setTimeout> | null = null
+  let bpmRepeatInterval: ReturnType<typeof setInterval> | null = null
+
+  function bpmStep(dir: -1 | 1) {
+    pattern.bpm = Math.max(40, Math.min(240, pattern.bpm + dir))
+  }
+
+  function startBpmRepeat(dir: -1 | 1) {
+    bpmStep(dir)
+    bpmRepeatTimer = setTimeout(() => {
+      bpmRepeatInterval = setInterval(() => bpmStep(dir), 80)
+    }, 400)
+  }
+
+  function stopBpmRepeat() {
+    if (bpmRepeatTimer) { clearTimeout(bpmRepeatTimer); bpmRepeatTimer = null }
+    if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
+  }
 </script>
 
 <div class="header-wrap" class:compact>
@@ -34,9 +71,9 @@
   <!-- Sub header: BPM, transport, pattern -->
   <div class="sub-header">
     <div class="bpm-block">
-      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.max(40, pattern.bpm - 1) }} data-tip="Decrease tempo" data-tip-ja="テンポを下げる">−</button>
+      <button class="bpm-adj" onpointerdown={() => startBpmRepeat(-1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Decrease tempo (hold to scroll)" data-tip-ja="テンポを下げる (長押しでスクロール)">−</button>
       <span class="bpm-value" data-tip="Current tempo (BPM)" data-tip-ja="現在のテンポ (BPM)"><SplitFlap value={pattern.bpm} /></span>
-      <button class="bpm-adj" onpointerdown={() => { pattern.bpm = Math.min(240, pattern.bpm + 1) }} data-tip="Increase tempo" data-tip-ja="テンポを上げる">+</button>
+      <button class="bpm-adj" onpointerdown={() => startBpmRepeat(1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Increase tempo (hold to scroll)" data-tip-ja="テンポを上げる (長押しでスクロール)">+</button>
       <span class="bpm-label">BPM</span>
     </div>
 
@@ -65,11 +102,11 @@
     <div class="pat-block">
       <span class="pat-label">PAT</span>
       <div class="pat-display">
-        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id - 1) }} data-tip="Previous pattern" data-tip-ja="前のパターン">◀</button>
+        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
         <span class="pat-value" class:pending={isPending} data-tip="Current pattern number" data-tip-ja="現在のパターン番号"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
-        <span class="pat-name"><SplitFlap value={pattern.name} width={8} /></span>
-        <button class="pat-adj" onpointerdown={() => { switchPattern(pattern.id + 1) }} data-tip="Next pattern" data-tip-ja="次のパターン">▶</button>
+        <span class="pat-name"><SplitFlap value={displayName} width={8} /></span>
+        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
       </div>
     </div>
   </div>

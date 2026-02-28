@@ -57,9 +57,10 @@ export class GrooveboxEngine {
 
   stop(): void {
     this._post({ type: 'stop' })
-    // Suspend context after a brief delay to allow FX tails to ring out
+    // Suspend context after FX tails have fully decayed
+    // (delay feedback up to 0.85 needs ~6s to fall below -60dB)
     if (this.ctx && this.ctx.state === 'running') {
-      setTimeout(() => { if (this.ctx?.state === 'running') void this.ctx.suspend() }, 2000)
+      setTimeout(() => { if (this.ctx?.state === 'running') void this.ctx.suspend() }, 8000)
     }
   }
 
