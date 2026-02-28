@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
+  import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
     const current = pattern.tracks[trackId].steps
@@ -29,8 +30,7 @@
     const track = pattern.tracks[trackId]
     const rect = barsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left
-    const cellWidth = rect.width / track.steps
-    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / cellWidth)))
+    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
     velApply(e, trackId, idx)
   }
 
@@ -179,6 +179,11 @@
           {/each}
         </div>
       </div>
+
+      <!-- Inline piano roll for melodic tracks -->
+      {#if !isDrum(track) && track.bottomPanel === 'piano'}
+        <PianoRoll trackId={trackId} />
+      {/if}
     {/if}
   {/each}
 </div>
@@ -302,7 +307,7 @@
   .steps {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--count), 1fr);
+    grid-template-columns: repeat(var(--count), 24px);
     gap: 2px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -314,10 +319,8 @@
 
   .step {
     position: relative;
-    width: 100%;
-    aspect-ratio: 1;
-    max-width: 28px;
-    min-width: 14px;
+    width: 24px;
+    height: 24px;
     perspective: 80px;
     border: none;
     background: transparent;
@@ -429,15 +432,14 @@
   .vel-bars {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--count), 1fr);
+    grid-template-columns: repeat(var(--count), 24px);
     gap: 2px;
     padding: 4px 0;
   }
   .vel-cell {
     display: flex;
     align-items: flex-end;
-    max-width: 28px;
-    min-width: 14px;
+    width: 24px;
     cursor: ns-resize;
   }
   .vel-fill {

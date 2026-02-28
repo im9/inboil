@@ -2,12 +2,11 @@
   import AppHeader from './lib/components/AppHeader.svelte'
   import StepGrid from './lib/components/StepGrid.svelte'
   import ParamPanel from './lib/components/ParamPanel.svelte'
-  import PianoRoll from './lib/components/PianoRoll.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import { pattern, playback, ui, isDrum, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
+  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -58,9 +57,6 @@
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
   }
 
-  // ── Bottom panel (desktop) ────────────────────────────────────────
-  const selectedTrack = $derived(pattern.tracks[ui.selectedTrack])
-  const showPianoRoll = $derived(!isDrum(selectedTrack) && selectedTrack.bottomPanel === 'piano')
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -94,9 +90,6 @@
         <FilterView />
       {:else}
         <StepGrid />
-        {#if showPianoRoll}
-          <PianoRoll trackId={ui.selectedTrack} />
-        {/if}
       {/if}
     </div>
     <ParamPanel />

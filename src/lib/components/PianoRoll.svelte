@@ -72,13 +72,16 @@
 </script>
 
 <div class="piano-roll">
-  <!-- Piano keys -->
-  <div class="keys">
-    {#each NOTES as note}
-      <div class="key" class:black={isBlack(note)}>
-        <span class="key-label">{noteLabel(note)}</span>
-      </div>
-    {/each}
+  <!-- Left spacer to align grid with step columns -->
+  <div class="piano-spacer">
+    <!-- Piano keys -->
+    <div class="keys">
+      {#each NOTES as note}
+        <div class="key" class:black={isBlack(note)}>
+          <span class="key-label">{noteLabel(note)}</span>
+        </div>
+      {/each}
+    </div>
   </div>
 
   <!-- Note grid -->
@@ -104,8 +107,21 @@
     display: flex;
     height: 180px;
     overflow: hidden;
-    border-top: 1px solid rgba(30,32,40,0.12);
-    background: var(--color-bg);
+    background: var(--color-surface);
+    border-bottom: 1px solid rgba(30,32,40,0.08);
+    border-left: 3px solid var(--color-olive);
+    padding-left: 5px;
+    padding-right: 8px;
+  }
+
+  /* ── Left spacer: aligns grid with step columns ── */
+  .piano-spacer {
+    /* Must match: label(64) + gap(4) + knobs(42) + gap(4) + mute(20) + gap(4) = 138px */
+    width: 138px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
   }
 
   /* ── Keys ── */
@@ -144,7 +160,8 @@
   .row {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(var(--steps), minmax(16px, 1fr));
+    grid-template-columns: repeat(var(--steps), 24px);
+    gap: 2px;
     border-bottom: 1px solid rgba(30,32,40,0.06);
   }
   .row.black {
@@ -153,11 +170,11 @@
 
   .cell {
     border: none;
-    border-right: 1px solid rgba(30,32,40,0.08);
     background: transparent;
-    min-width: 16px;
+    width: 24px;
     cursor: pointer;
     transition: opacity 60ms linear;
+    padding: 0;
   }
   .cell:active { opacity: 0.6; }
 
