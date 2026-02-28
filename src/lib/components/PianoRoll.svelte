@@ -82,12 +82,13 @@
   /** Returns cell visual state for duration rendering */
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
     const trig = track.trigs[stepIdx]
-    if (trig.active && trig.note === note) return 'head'
+    if (trig?.active && trig.note === note) return 'head'
     // Look backwards for a head whose duration covers this step
-    for (let d = 1; d < 16; d++) {
-      const prevStep = (stepIdx - d + track.steps) % track.steps
+    const maxLook = Math.min(16, track.steps)
+    for (let d = 1; d < maxLook; d++) {
+      const prevStep = ((stepIdx - d) % track.steps + track.steps) % track.steps
       const prevTrig = track.trigs[prevStep]
-      if (prevTrig.active && prevTrig.note === note) {
+      if (prevTrig?.active && prevTrig.note === note) {
         return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
       }
     }

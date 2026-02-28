@@ -686,6 +686,7 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
     const prev = stepIdx - d
     if (prev < 0) break
     const trig = trigs[prev]
+    if (!trig) break
     if (trig.active && trig.note === note && (trig.duration ?? 1) > d) {
       return prev
     }
@@ -715,7 +716,7 @@ export function setTrackSteps(trackId: number, newSteps: number) {
       track.trigs.push(makeTrig(false, lastNote))
     }
   } else {
-    track.trigs.length = clamped
+    track.trigs.splice(clamped)
   }
   track.steps = clamped
 }
