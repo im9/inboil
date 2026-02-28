@@ -179,43 +179,47 @@
     </div>
   </div>
 
-  <!-- Note grid -->
-  <div
-    class="grid"
-    role="application"
-    style="--steps: {track.steps}"
-    data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
-    onpointermove={noteOnMove}
-    onpointerup={noteEndDrag}
-    onpointercancel={noteEndDrag}
-  >
-    {#each NOTES as note}
-      <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
-        {#each track.trigs as _trig, stepIdx}
-          {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
-          {@const state = getCellState(stepIdx, note)}
-          <button
-            class="cell"
-            class:active={state === 'head'}
-            class:continuation={state === 'continuation'}
-            class:playhead={isPlayhead}
-            aria-label="Step {stepIdx + 1} note {note}"
-            onpointerdown={(e) => { if (!isOutOfScale(note)) noteStartDrag(e, stepIdx, note) }}
-          >
-            {#if state === 'head'}
-              <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
-            {/if}
-          </button>
-        {/each}
-      </div>
-    {/each}
+  <!-- Note grid (wrapped to mirror oct-keys structure) -->
+  <div class="grid-outer">
+    <div class="grid-cap"></div>
+    <div
+      class="grid"
+      role="application"
+      style="--steps: {track.steps}"
+      data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
+      onpointermove={noteOnMove}
+      onpointerup={noteEndDrag}
+      onpointercancel={noteEndDrag}
+    >
+      {#each NOTES as note}
+        <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
+          {#each track.trigs as _trig, stepIdx}
+            {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
+            {@const state = getCellState(stepIdx, note)}
+            <button
+              class="cell"
+              class:active={state === 'head'}
+              class:continuation={state === 'continuation'}
+              class:playhead={isPlayhead}
+              aria-label="Step {stepIdx + 1} note {note}"
+              onpointerdown={(e) => { if (!isOutOfScale(note)) noteStartDrag(e, stepIdx, note) }}
+            >
+              {#if state === 'head'}
+                <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
+              {/if}
+            </button>
+          {/each}
+        </div>
+      {/each}
+    </div>
+    <div class="grid-cap"></div>
   </div>
 </div>
 
 <style>
   .piano-roll {
     display: flex;
-    height: 180px;
+    height: 196px;
     overflow: hidden;
     background: var(--color-surface);
     border-bottom: 1px solid rgba(30,32,40,0.08);
@@ -273,7 +277,8 @@
     border-right: 1px solid rgba(30,32,40,0.15);
   }
   .key {
-    flex: 1;
+    height: 7px;
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -293,16 +298,28 @@
     color: var(--color-muted);
   }
 
-  /* ── Grid ── */
+  /* ── Grid (mirrors .oct-keys structure) ── */
+  .grid-outer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .grid-cap {
+    height: 14px;
+    flex-shrink: 0;
+  }
   .grid {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow-x: auto;
     overflow-y: hidden;
   }
   .row {
-    flex: 1;
+    height: 7px;
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
@@ -317,6 +334,9 @@
   }
   .row.disabled .cell {
     opacity: 0.12;
+  }
+  .row.disabled .cell.playhead {
+    opacity: 1;
   }
 
   .cell {
@@ -360,11 +380,11 @@
 
   /* ── Octave scroll animation (~100ms, matching SplitFlap tempo) ── */
   .piano-roll[data-scroll="up"] .keys,
-  .piano-roll[data-scroll="up"] .grid {
+  .piano-roll[data-scroll="up"] .grid-outer {
     animation: oct-slide-up 100ms ease-out;
   }
   .piano-roll[data-scroll="down"] .keys,
-  .piano-roll[data-scroll="down"] .grid {
+  .piano-roll[data-scroll="down"] .grid-outer {
     animation: oct-slide-down 100ms ease-out;
   }
   @keyframes oct-slide-up {
