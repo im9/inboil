@@ -48,6 +48,7 @@ export interface Pattern {
   id: number
   name: string
   bpm: number
+  rootNote: number   // 0–11 (C=0, C#=1, ..., B=11)
   tracks: Track[]
 }
 
@@ -104,6 +105,7 @@ function makeEmptyPattern(id: number): Pattern {
     id,
     name: 'INIT',
     bpm: 120,
+    rootNote: 0,
     tracks: TRACK_DEFAULTS.map((d, i) => ({
       ...makeTrack(i, d.name, d.synthType, [], d.note),
       pan: d.pan,
@@ -115,7 +117,7 @@ function makeEmptyPattern(id: number): Pattern {
 // Display 00–09 (internal ID 1–10)
 
 type FactoryDef = {
-  name: string; bpm: number; steps?: number  // default 16 (global)
+  name: string; bpm: number; steps?: number; key?: number  // key: rootNote 0–11, default 0 (C)
   kick: number[]; snare: number[]; clap: number[]; chh: number[]
   ohh: number[]; cym: number[]; bass: [number[], number]; lead: [number[], number]
   vp?: Record<number, Record<string, number>>  // track index → voice param overrides
@@ -127,14 +129,14 @@ type FactoryDef = {
 // Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
 const FACTORY: FactoryDef[] = [
   // 00 — "Blue Monday" synth-pop: driving 8th bass riff + rhythmic stab lead
-  { name: '4FLOOR', bpm: 120,
+  { name: '4FLOOR', bpm: 120, key: 9,
     kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,11], cym: [1],
     bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,5,9,13], 64],
     mel: { 6: [41,41,40,38,36,36,38,40], 7: [64,64,67,72] },
     dur: { 7: [2,2,2,2] } },
   // 01 — "Mask Off" trap flute: pentatonic hook over deep 808 (32 steps)
-  { name: 'TRAP', bpm: 140, steps: 32,
+  { name: 'TRAP', bpm: 140, steps: 32, key: 9,
     kick: [1,4,8,11,17,20,24,27], snare: [5,13,21,29], clap: [5,13,21,29],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32],
     ohh: [4,8,12,16,20,28], cym: [1,17],
@@ -149,7 +151,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 80, envMod: 2000, resonance: 4.0, decay: 0.30 },
     } },
   // 02 — "Firestarter" breakbeat: aggressive octave-jumping stabs
-  { name: 'BREAK', bpm: 130,
+  { name: 'BREAK', bpm: 130, key: 4,
     kick: [1,4,7,11], snare: [5,10,13], clap: [], chh: [1,3,5,7,9,11,13,15],
     ohh: [2,8,14], cym: [1],
     bass: [[1,3,5,9,11,13], 36], lead: [[1,3,5,9,11,14], 60],
@@ -161,7 +163,7 @@ const FACTORY: FactoryDef[] = [
       4: { decay: 0.25 },
     } },
   // 03 — "Sweet Like Chocolate" 2-step: soulful wide-interval melody
-  { name: '2STEP', bpm: 132,
+  { name: '2STEP', bpm: 132, key: 2,
     kick: [1,6,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [4,12], cym: [],
     bass: [[1,4,9,12], 48], lead: [[1,3,6,9,11,14], 65],
@@ -172,7 +174,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 150, envMod: 5000, resonance: 8.0, decay: 0.15 },
     } },
   // 04 — Nujabes-style lo-fi: jazzy floating melody (bass=12, lead=24)
-  { name: 'LOFI', bpm: 85,
+  { name: 'LOFI', bpm: 85, key: 7,
     kick: [1,6,9,14], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
     ohh: [7,15], cym: [],
     bass: [[1,4,7,10], 48], lead: [[1,4,7,10,13,16,19,22], 67],
@@ -187,7 +189,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 250, envMod: 3000, resonance: 1.2 },
     } },
   // 05 — "Strings of Life" techno: dramatic octave tension + acid (32 steps)
-  { name: 'TECHNO', bpm: 135, steps: 32,
+  { name: 'TECHNO', bpm: 135, steps: 32, key: 4,
     kick: [1,5,9,13,17,21,25,29], snare: [], clap: [5,13,21,29],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [3,7,11,15,19,23,27,31], cym: [1,17],
@@ -203,7 +205,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 100, envMod: 6000, resonance: 10.0, decay: 0.12, drive: 2.2 },
     } },
   // 06 — "Show Me Love" house: piano arpeggio + warm bass (bass=24, lead=12)
-  { name: 'HOUSE', bpm: 124,
+  { name: 'HOUSE', bpm: 124, key: 5,
     kick: [1,5,9,13], snare: [], clap: [5,13], chh: [3,7,11,15],
     ohh: [7,15], cym: [1],
     bass: [[1,4,10,13,19,22], 48],
@@ -216,7 +218,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 150, envMod: 3500, resonance: 5.0, decay: 0.20 },
     } },
   // 07 — "Inner City Life" DnB: haunting wide leaps + rolling bass (HH=32, bass=12)
-  { name: 'DNB', bpm: 174,
+  { name: 'DNB', bpm: 174, key: 9,
     kick: [1,11], snare: [5,13], clap: [], chh: [1,3,5,7,9,11,13,15],
     ohh: [4,12], cym: [1],
     bass: [[1,3,5,7,9,11], 36], lead: [[1,3,7,9,13,15], 67],
@@ -230,7 +232,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 100, envMod: 3000, resonance: 6.0, decay: 0.25, drive: 2.0 },
     } },
   // 08 — 100 gecs hyperpop: chaotic octave jumps + distorted bass
-  { name: 'HYPER', bpm: 150,
+  { name: 'HYPER', bpm: 150, key: 11,
     kick: [1,3,5,9,11,13], snare: [5,7,13,15], clap: [3,7,11,15],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [2,6,10,14], cym: [1,9],
@@ -244,7 +246,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 800, envMod: 8000 },
     } },
   // 09 — Richie Hawtin minimal: hypnotic single-note repeat with subtle drop
-  { name: 'MINIMAL', bpm: 100,
+  { name: 'MINIMAL', bpm: 100, key: 2,
     kick: [1,9], snare: [5], clap: [], chh: [1,5,9,13],
     ohh: [], cym: [1],
     bass: [[1,5,9,13], 48], lead: [[3,7,11,15], 60],
@@ -257,7 +259,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 200, envMod: 2500, resonance: 1.0, filterDecay: 0.60 },
     } },
   // 10 — "Gasolina" reggaeton: dembow + descending hook repeat
-  { name: 'REGGAETN', bpm: 95,
+  { name: 'REGGAETN', bpm: 95, key: 4,
     kick: [1,4,8,11], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
     ohh: [3,7,11,15], cym: [],
     bass: [[1,4,8,11], 48], lead: [[1,3,5,7,9,11,13,15], 60],
@@ -286,7 +288,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 600, envMod: 7000 },
     } },
   // 12 — "Planet Rock" electro: Kraftwerk-esque robotic repeat
-  { name: 'ELECTRO', bpm: 128,
+  { name: 'ELECTRO', bpm: 128, key: 4,
     kick: [1,5,9,14], snare: [5,13], clap: [3,11],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [4,12], cym: [1],
@@ -300,7 +302,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 500, envMod: 6500 },
     } },
   // 13 — Dubstep halftime: heavy octave-diving lead (32 steps)
-  { name: 'DUBSTEP', bpm: 140, steps: 32,
+  { name: 'DUBSTEP', bpm: 140, steps: 32, key: 9,
     kick: [1,9,17,25], snare: [7,15,23,31], clap: [7,15,23,31],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [4,12,20,28], cym: [1,17],
@@ -314,7 +316,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 80, envMod: 6000, resonance: 8.0, decay: 0.40, drive: 2.5 },
     } },
   // 14 — Pop Smoke drill: eerie Am pentatonic descent + dark 808
-  { name: 'DRILL', bpm: 142,
+  { name: 'DRILL', bpm: 142, key: 9,
     kick: [1,4,11], snare: [5,13], clap: [5,13],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [3,7,11,15], cym: [],
@@ -327,7 +329,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 70, envMod: 2500, resonance: 5.0, decay: 0.30 },
     } },
   // 15 — "Nightcall" synthwave: retro arpeggio + driving octave bass (32 steps)
-  { name: 'SYNTHWV', bpm: 110, steps: 32,
+  { name: 'SYNTHWV', bpm: 110, steps: 32, key: 9,
     kick: [1,5,9,13,17,21,25,29], snare: [5,13,21,29], clap: [],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [7,15,23,31], cym: [1,17],
@@ -343,7 +345,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 350, envMod: 5000, resonance: 2.0, filterDecay: 0.60 },
     } },
   // 16 — Fela Kuti afrobeat: horn-like call & response riff (12/8, lead=24)
-  { name: 'AFROBT', bpm: 105, steps: 12,
+  { name: 'AFROBT', bpm: 105, steps: 12, key: 7,
     kick: [1,4,7,10], snare: [4,10], clap: [3,9], chh: [1,3,5,7,9,11],
     ohh: [2,6,8,12], cym: [1],
     bass: [[1,3,5,7], 48],
@@ -358,7 +360,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 500, envMod: 6000 },
     } },
   // 17 — Jersey club: bouncy bed-squeak octave alternation
-  { name: 'JERSEY', bpm: 150,
+  { name: 'JERSEY', bpm: 150, key: 2,
     kick: [1,4,7,10,13], snare: [5,13], clap: [3,7,11,15],
     chh: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
     ohh: [4,8,12,16], cym: [],
@@ -372,7 +374,7 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 140, envMod: 4500, resonance: 6.0 },
     } },
   // 18 — "Re-Rewind" UK Garage: soulful ascending arc (32 steps A/B)
-  { name: 'GARAGE', bpm: 130, steps: 32,
+  { name: 'GARAGE', bpm: 130, steps: 32, key: 2,
     kick: [1,6,9,14,17,22,25,30], snare: [5,13,21,29], clap: [5,13,21,29],
     chh: [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31],
     ohh: [3,7,11,15,19,23,27,31], cym: [1,17],
@@ -388,7 +390,7 @@ const FACTORY: FactoryDef[] = [
       7: { cutoffBase: 350, envMod: 4500, resonance: 1.5 },
     } },
   // 19 — Brian Eno ambient: wide ethereal arcs (64 steps, evolving pads)
-  { name: 'AMBIENT', bpm: 70, steps: 64,
+  { name: 'AMBIENT', bpm: 70, steps: 64, key: 5,
     kick: [1,17,33,49], snare: [], clap: [], chh: [1,9,17,25,33,41,49,57],
     ohh: [5,13,21,29,37,45,53,61], cym: [1,33],
     bass: [[1,9,17,25,33,41,49,57], 48],
@@ -447,7 +449,7 @@ function makeFactoryPattern(id: number): Pattern {
       }
     }
   }
-  return { id, name: f.name, bpm: f.bpm, tracks }
+  return { id, name: f.name, bpm: f.bpm, rootNote: f.key ?? 0, tracks }
 }
 
 export const PATTERN_COUNT = 100
@@ -464,10 +466,12 @@ const patternBank: Pattern[] = [
 ]
 
 function saveToBank(): void {
+  pattern.rootNote = perf.rootNote  // capture live key tweak into pattern
   patternBank[pattern.id - 1] = {
     id: pattern.id,
     name: pattern.name,
     bpm: pattern.bpm,
+    rootNote: pattern.rootNote,
     tracks: pattern.tracks.map(t => ({
       id: t.id, name: t.name, synthType: t.synthType,
       steps: t.steps, muted: t.muted, volume: t.volume,
@@ -488,6 +492,7 @@ function loadFromBank(idx: number): void {
   pattern.id = src.id
   pattern.name = src.name
   pattern.bpm = src.bpm
+  pattern.rootNote = src.rootNote ?? 0
   pattern.tracks = src.tracks.map(t => ({
     ...t,
     trigs: t.trigs.map(tr => ({
@@ -497,6 +502,7 @@ function loadFromBank(idx: number): void {
     })),
     voiceParams: { ...t.voiceParams },
   }))
+  perf.rootNote = pattern.rootNote  // sync KEY selector to loaded pattern
 }
 
 export const patternNav = $state({ pendingId: 0 })
@@ -739,6 +745,8 @@ export function factoryReset(): void {
   for (let i = FACTORY_COUNT; i < PATTERN_COUNT; i++) {
     patternBank[i] = makeEmptyPattern(i + 1)
   }
+  // Reset perf before load (loadFromBank sets perf.rootNote from pattern)
+  Object.assign(perf, DEFAULT_PERF)
   // Load pattern 1
   loadFromBank(0)
   patternNav.pendingId = 0
@@ -751,8 +759,6 @@ export function factoryReset(): void {
   effects.delay = { ...DEFAULT_EFFECTS.delay }
   effects.ducker = { ...DEFAULT_EFFECTS.ducker }
   effects.comp = { ...DEFAULT_EFFECTS.comp }
-  // Reset perf
-  Object.assign(perf, DEFAULT_PERF)
   // Reset FX pad
   fxPad.verb = { ...DEFAULT_FX_PAD.verb }
   fxPad.delay = { ...DEFAULT_FX_PAD.delay }
