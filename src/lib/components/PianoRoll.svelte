@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, perf, prefs, setTrigNote } from '../state.svelte.ts'
+  import { pattern, playback, perf, prefs, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
@@ -9,8 +9,22 @@
 
   const track = $derived(pattern.tracks[trackId])
 
-  // 2 octaves: C3–B4, rendered top=high → bottom=low
-  const NOTES = Array.from({ length: PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1 }, (_, i) => PIANO_ROLL_MAX - i)
+  // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
+  const RANGE = PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1  // 24 notes
+  const MIN_OFFSET = -2  // lowest: C1–B2
+  const MAX_OFFSET = 3   // highest: C6–B7
+  let octaveOffset = $state(0)
+  let scrollDir = $state<'up' | 'down' | null>(null)
+
+  function shiftOctave(dir: 1 | -1) {
+    if (dir === 1 && octaveOffset >= MAX_OFFSET) return
+    if (dir === -1 && octaveOffset <= MIN_OFFSET) return
+    scrollDir = dir === 1 ? 'up' : 'down'
+    octaveOffset += dir
+  }
+
+  const rollMax = $derived(PIANO_ROLL_MAX + octaveOffset * 12)
+  const NOTES = $derived(Array.from({ length: RANGE }, (_, i) => rollMax - i))
   const SCALE_TEMPLATES: number[][] = [
     [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian
     [0, 2, 4, 5, 7, 9, 11],  //  1 C# major
@@ -61,72 +75,106 @@
     const midi = transposedMidi(pos)
     return [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12)
   }
-  function isCellActive(stepIdx: number, note: number): boolean {
-    const trig = track.trigs[stepIdx]
-    return trig.active && trig.note === note
-  }
-
   function isOutOfScale(note: number): boolean {
     return prefs.scaleMode && !SCALE_DEGREES_SET.has(note % 12)
   }
 
-  // ── Drag-to-paint state ──
-  let noteDragging = $state(false)
-  let notePaintOn = $state(true)
-  let noteLastStep = -1
-  let noteLastNote = -1
+  /** Returns cell visual state for duration rendering */
+  function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
+    const trig = track.trigs[stepIdx]
+    if (trig.active && trig.note === note) return 'head'
+    // Look backwards for a head whose duration covers this step
+    for (let d = 1; d < 16; d++) {
+      const prevStep = (stepIdx - d + track.steps) % track.steps
+      const prevTrig = track.trigs[prevStep]
+      if (prevTrig.active && prevTrig.note === note) {
+        return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
+      }
+    }
+    return 'empty'
+  }
+
+  // ── DAW-style note bar drag state ──
+  let barDragging = $state(false)
+  let barStartStep = -1
+  let barNote = -1
   let noteGridEl: HTMLElement | null = null
 
   function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
     e.preventDefault()
-    const active = isCellActive(stepIdx, note)
-    notePaintOn = !active
-    noteDragging = true
-    noteLastStep = stepIdx
-    noteLastNote = note
+    const state = getCellState(stepIdx, note)
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
-    noteGridEl?.setPointerCapture(e.pointerId)
-    setTrigNote(trackId, stepIdx, note)
-  }
 
-  function noteOnMove(e: PointerEvent) {
-    if (!noteDragging || !noteGridEl) return
-    const rect = noteGridEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-    const relY = e.clientY - rect.top
-    const stepIdx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
-    const rowHeight = rect.height / NOTES.length
-    const noteRowIdx = Math.max(0, Math.min(NOTES.length - 1, Math.floor(relY / rowHeight)))
-    const note = NOTES[noteRowIdx]
-    if (stepIdx === noteLastStep && note === noteLastNote) return
-    if (isOutOfScale(note)) return
-    noteLastStep = stepIdx
-    noteLastNote = note
-    const trig = track.trigs[stepIdx]
-    if (notePaintOn) {
-      trig.active = true
-      trig.note = note
+    if (state === 'head') {
+      // Click on head → delete the note
+      track.trigs[stepIdx].active = false
+      barDragging = false
+    } else if (state === 'continuation') {
+      // Click on continuation → delete the parent note
+      const headStep = findNoteHead(trackId, stepIdx, note)
+      if (headStep >= 0) track.trigs[headStep].active = false
+      barDragging = false
     } else {
-      if (trig.active) trig.active = false
+      // Click on empty → place a new note and start bar drag
+      placeNoteBar(trackId, stepIdx, note, 1)
+      barDragging = true
+      barStartStep = stepIdx
+      barNote = note
+      noteGridEl?.setPointerCapture(e.pointerId)
     }
   }
 
+  function noteOnMove(e: PointerEvent) {
+    if (!noteGridEl) return
+    if (durationDragging) {
+      const rect = noteGridEl.getBoundingClientRect()
+      const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+      const dur = Math.max(1, Math.min(track.steps, Math.floor((relX - durationDragStep * 26) / 26) + 1))
+      setTrigDuration(trackId, durationDragStep, dur)
+      return
+    }
+    if (!barDragging) return
+    const rect = noteGridEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+    const endStep = Math.max(barStartStep, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    const duration = endStep - barStartStep + 1
+    placeNoteBar(trackId, barStartStep, barNote, duration)
+  }
+
   function noteEndDrag() {
-    noteDragging = false
+    barDragging = false
+    durationDragging = false
     noteGridEl = null
+  }
+
+  // ── Duration-resize drag state ──
+  let durationDragging = $state(false)
+  let durationDragStep = -1
+
+  function startDurationDrag(e: PointerEvent, stepIdx: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    durationDragging = true
+    durationDragStep = stepIdx
+    noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
+    noteGridEl?.setPointerCapture(e.pointerId)
   }
 </script>
 
-<div class="piano-roll">
+<div class="piano-roll" data-scroll={scrollDir} onanimationend={() => scrollDir = null}>
   <!-- Left spacer to align grid with step columns -->
   <div class="piano-spacer">
-    <!-- Piano keys -->
-    <div class="keys" data-tip="Note reference — shows transposed pitch" data-tip-ja="音程リファレンス (移調後のピッチ)">
-      {#each NOTES as note}
-        <div class="key" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
-          <span class="key-label">{noteLabel(note)}</span>
-        </div>
-      {/each}
+    <!-- Octave shift buttons + Piano keys -->
+    <div class="oct-keys">
+      <button class="oct-btn" disabled={octaveOffset >= MAX_OFFSET} onclick={() => shiftOctave(1)}>▲</button>
+      <div class="keys" data-tip="Note reference — shows transposed pitch" data-tip-ja="音程リファレンス (移調後のピッチ)">
+        {#each NOTES as note}
+          <div class="key" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
+            <span class="key-label">{noteLabel(note)}</span>
+          </div>
+        {/each}
+      </div>
+      <button class="oct-btn" disabled={octaveOffset <= MIN_OFFSET} onclick={() => shiftOctave(-1)}>▼</button>
     </div>
   </div>
 
@@ -144,13 +192,19 @@
       <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
         {#each track.trigs as _trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
+          {@const state = getCellState(stepIdx, note)}
           <button
             class="cell"
-            class:active={isCellActive(stepIdx, note)}
+            class:active={state === 'head'}
+            class:continuation={state === 'continuation'}
             class:playhead={isPlayhead}
             aria-label="Step {stepIdx + 1} note {note}"
             onpointerdown={(e) => { if (!isOutOfScale(note)) noteStartDrag(e, stepIdx, note) }}
-          ></button>
+          >
+            {#if state === 'head'}
+              <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
+            {/if}
+          </button>
         {/each}
       </div>
     {/each}
@@ -179,9 +233,39 @@
     justify-content: flex-end;
   }
 
+  /* ── Octave buttons + keys wrapper ── */
+  .oct-keys {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .oct-btn {
+    height: 14px;
+    border: none;
+    background: var(--color-surface);
+    color: var(--color-muted);
+    font-size: 8px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(30,32,40,0.15);
+  }
+  .oct-btn:hover:not(:disabled) {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .oct-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+
   /* ── Keys ── */
   .keys {
-    flex-shrink: 0;
+    flex: 1;
+    min-height: 0;
     width: 28px;
     display: flex;
     flex-direction: column;
@@ -235,6 +319,7 @@
   }
 
   .cell {
+    position: relative;
     border: none;
     background: transparent;
     width: 24px;
@@ -250,10 +335,43 @@
     border-radius: 1px;
     border-color: transparent;
   }
+  .cell.continuation {
+    background: rgba(108,119,68,0.3);
+    margin: 1px;
+    border-radius: 1px;
+  }
+  .resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+    background: rgba(0,0,0,0.15);
+    border-radius: 0 1px 1px 0;
+  }
   .cell.playhead {
     background: rgba(68,114,180,0.15) !important;
   }
   .cell.active.playhead {
     background: var(--color-blue) !important;
+  }
+
+  /* ── Octave scroll animation (~100ms, matching SplitFlap tempo) ── */
+  .piano-roll[data-scroll="up"] .keys,
+  .piano-roll[data-scroll="up"] .grid {
+    animation: oct-slide-up 100ms ease-out;
+  }
+  .piano-roll[data-scroll="down"] .keys,
+  .piano-roll[data-scroll="down"] .grid {
+    animation: oct-slide-down 100ms ease-out;
+  }
+  @keyframes oct-slide-up {
+    from { transform: translateY(-50%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes oct-slide-down {
+    from { transform: translateY(50%); }
+    to   { transform: translateY(0); }
   }
 </style>

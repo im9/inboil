@@ -1,6 +1,6 @@
 # ADR 021: Note Duration, Slide & Lead ADSR
 
-## Status: PROPOSED
+## Status: DECIDED (Implemented)
 
 ## Context
 
@@ -111,21 +111,23 @@ export interface Voice {
 
 各 Voice 実装で `noteOff()` を追加 — 内部の ADSR (amp/filter 両方) の `noteOff()` を呼ぶ。ドラムボイスでは no-op (自然減衰のため)。
 
-#### ピアノロール UI
+#### ピアノロール UI (DAW 風ノートバー描画)
 
-ノート長をピアノロールで視覚化・編集する:
+ノート長をピアノロールで視覚化・編集する。一般的な DAW と同じ操作モデル:
 
 ```
   C4 │ ■ ■ ─ ─ │ . . . . │ ■ . . . │ . . . . │
   B3 │ . . . . │ ■ ─ ─ . │ . . . . │ . . ■ . │
   A3 │ . . . . │ . . . . │ . ■ ─ ─ │ ─ . . . │
-      ■ = ノートヘッド   ─ = duration の延長部分
+      ■ = ノートヘッド   ─ = duration の延長部分 (continuation)
 ```
 
-- **表示**: アクティブなノートが `duration` ステップ分の幅で描画される
-- **編集**: ノートの右端をドラッグして duration を変更
-- **新規配置**: タップで duration=1 のノートを配置 (現状と同じ)
-- **duration > 1 のノート**: ヘッド部分と延長部分で色味を分ける (ヘッドは現状色、延長はやや薄く)
+- **配置**: 空セルをクリック → duration=1 のノートを配置。そのまま右にドラッグ → バーが伸びる
+- **削除**: ヘッドをクリック → ノート削除。continuation をクリック → 親ノートごと削除
+- **リサイズ**: 配置後、ヘッド右端のリサイズハンドルで duration を微調整
+- **描画中はピッチ固定**: ドラッグ中は横方向のみ (縦にドラッグしてもピッチは変わらない)
+- **表示**: ヘッド = `--color-olive`、continuation = `rgba(108,119,68,0.3)` (半透明)
+- **state ヘルパー**: `placeNoteBar()` (配置 + covered steps クリア)、`findNoteHead()` (continuation→親の逆引き)
 
 ### B. スライド (Slide / Glide)
 
@@ -133,15 +135,20 @@ export interface Voice {
 
 `Trig.slide: boolean` — スライドフラグ。このステップのノートから次のアクティブなノートへ滑らかにピッチが遷移する。
 
+#### Auto-Legato (メロディックトラック)
+
+メロディックトラック (t >= 6) は auto-legato: 連続するアクティブなノート (duration で繋がった or 隣接) が自動的にレガート接続される。明示的な slide フラグは不要。
+
+- **連続ノート**: `wasGated && isMelodic` → `slideNote()` 呼び出し (エンベロープ継続)
+- **rest あり**: ゲートカウンタ=0 → `noteOff()` → 次の `noteOn()` でリトリガー
+
 #### シンセ別の挙動
 
-スライドフラグの解釈はシンセ側で分ける:
-
-| シンセ | 挙動 | 詳細 |
+| シンセ | slideNote() 挙動 | 詳細 |
 |--------|------|------|
-| **TB303Voice** (Bass) | ポルタメントグライド | 303 的。前のノートの周波数から新しいノートへ指数的にスライド。グライドタイム ≈ 60ms |
-| **MoogVoice** (Lead) | ピッチベンド | 前のノートから新しいノートへ線形にベンド。ベンドタイム ≈ 80ms |
-| ドラム / その他 | 無視 | スライドフラグを無視 |
+| **TB303Voice** (Bass) | ポルタメントグライド | 303 的。`targetFreq` のみ変更、指数的スライド ~60ms。`filterEnv.noteOn()` でアシッドスクェルチ |
+| **MoogVoice** (Lead) | クリーンレガート | `freq` と `targetFreq` 両方を即時セット (グライドなし)。エンベロープ継続のみ |
+| ドラム / その他 | noteOn() と同等 | リトリガー (ドラムにレガートは不要) |
 
 #### Voice インターフェース拡張
 
@@ -162,54 +169,67 @@ export interface Voice {
 
 ```typescript
 // voices.ts — TB303Voice
-private targetFreq = 110
-private glideRate = 0     // 1サンプルあたりの周波数変化率
+private slideRate = 1 - Math.exp(-1 / (0.060 * sr))  // ~60ms exponential glide
 
 slideNote(note: number, v: number) {
   this.targetFreq = midiToHz(note)
   this.vel = v
-  // 指数的グライド: ~60ms で到達
-  this.glideRate = Math.exp(Math.log(this.targetFreq / this.freq) / (0.06 * this.sr))
+  this.filterEnv.noteOn()  // acid squelch: retrigger filter, NOT amp (legato)
 }
 
 // tick() 内でピッチを更新
 tick(): number {
-  if (this.glideRate !== 0) {
-    this.freq *= this.glideRate
-    if (Math.abs(this.freq - this.targetFreq) < 0.1) {
-      this.freq = this.targetFreq
-      this.glideRate = 0
-    }
-  }
-  // ... 既存の処理
+  this.freq += (this.targetFreq - this.freq) * this.slideRate
+  // ... oscillator → drive → filter → ampEnv
 }
 ```
 
-MoogVoice も同様だが線形補間で実装。
+#### MoogVoice のレガート実装
+
+```typescript
+// voices.ts — MoogVoice: clean legato (no glide)
+slideNote(note: number, v: number) {
+  const f = midiToHz(note)
+  this.freq = f; this.targetFreq = f  // instant pitch change
+  this.vel = v
+  // envelope continues (no noteOn/noteOff) → clean legato
+}
+```
 
 #### ワークレット側のスライド処理
 
 ```typescript
 // _advanceStep() 内
+const wasGated = this.gateCounters[t] > 0
+const isMelodic = t >= 6
+const isLegato = trig?.active && (isMelodic || trig.slide)
+
+// ゲートカウンタ: noteOff はレガート時には抑制
+if (this.gateCounters[t] > 0) {
+  this.gateCounters[t]--
+  if (this.gateCounters[t] === 0 && !isLegato) {
+    this.voices[t]?.noteOff()
+  }
+}
+
+// ノートオン/スライド判定
 if (trig?.active && !track.muted) {
-  const note = t >= 6 ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
-  if (trig.slide && this.gateCounters[t] > 0) {
-    // 前のノートがまだ鳴っている → スライド
-    voice.slideNote(note, trig.velocity)
+  if (wasGated && (isMelodic || trig.slide)) {
+    voice.slideNote(note, trig.velocity)  // レガート
   } else {
-    voice.noteOn(note, trig.velocity)
+    voice.noteOn(note, trig.velocity)     // リトリガー
   }
   this.gateCounters[t] = trig.duration
 }
 ```
 
-**スライドが有効になる条件:** `slide === true` かつ前のノートがまだ鳴っている (`gateCounters[t] > 0`)。これにより、duration > 1 でレガートに繋がったノート間でのみスライドが発生する。
+**レガート条件:** `wasGated` (前ノートのゲートが開いていた) かつ `isMelodic || trig.slide`。メロディックトラックは自動、ドラムは明示的 slide フラグが必要。
 
 #### ピアノロール / ステップグリッド UI
 
-- ピアノロールのノートヘッドに小さなスライドインジケーター (斜めの線や `⤴` 的なマーク) を表示
-- ノートをタップ (既にアクティブなノート) で slide をトグル、または長押しメニュー
-- ステップグリッドでは: スライドが有効なステップは底辺に小さなマーカーを表示
+- メロディックトラックは auto-legato のため、明示的な SLD レーンは非表示
+- 連続ノート = レガート、隙間 = リトリガーがピアノロール上で直接可視化される
+- StepGrid の SLD レーンは `{#if false}` で非表示 (将来の再利用に備えてコード保持)
 
 ### C. Lead ADSR
 

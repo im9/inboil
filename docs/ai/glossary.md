@@ -44,7 +44,9 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **ParamPanel** | Footer panel showing selected track's synth knobs, sends, and global FX. |
 | **Zone inversion** | Dark zone (navy bg) vs light zone (cream bg) — compositional tool for visual separation. |
 | **Knob** | SVG rotary control (270° arc). Vertical drag to change value. |
-| **PianoRoll** | Note editor grid for melodic tracks. 24-note range (C3–B4). |
+| **PianoRoll** | DAW-style note bar editor for melodic tracks. 24-note range (C3–B4). Click+drag to draw note bars, click head/continuation to delete. |
+| **Note Bar** | A trig with duration ≥ 1, visualized as a colored bar spanning multiple steps in the PianoRoll. Head = olive, continuation = semi-transparent. |
+| **Auto-Legato** | Melodic tracks (t≥6) automatically connect consecutive notes with legato (no retrigger). Rest = retrigger. No explicit slide flag needed. |
 
 ## Performance Terms
 

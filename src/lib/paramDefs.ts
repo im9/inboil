@@ -71,10 +71,14 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'drive',      label: 'DRIV',  min: 0.5,   max: 3.0,  default: 1.6   },
   ],
   MoogLead: [
-    { key: 'cutoffBase', label: 'CUT',   min: 100,   max: 2000, default: 400   },
-    { key: 'envMod',     label: 'MOD',   min: 1000,  max: 10000,default: 5500  },
-    { key: 'resonance',  label: 'RESO',  min: 0.5,   max: 3.5,  default: 1.8   },
-    { key: 'decay',      label: 'DCY',   min: 0.1,   max: 1.0,  default: 0.35  },
+    { key: 'cutoffBase',  label: 'CUT',   min: 100,   max: 2000, default: 400   },
+    { key: 'envMod',      label: 'MOD',   min: 1000,  max: 10000,default: 5500  },
+    { key: 'resonance',   label: 'RESO',  min: 0.5,   max: 3.5,  default: 1.8   },
+    { key: 'filterDecay', label: 'FDCY',  min: 0.1,   max: 1.0,  default: 0.35  },
+    { key: 'ampAttack',   label: 'ATCK',  min: 0.001, max: 0.5,  default: 0.005 },
+    { key: 'ampDecay',    label: 'ADCY',  min: 0.01,  max: 1.0,  default: 0.3   },
+    { key: 'ampSustain',  label: 'SUST',  min: 0.0,   max: 1.0,  default: 0.8   },
+    { key: 'ampRelease',  label: 'RLS',   min: 0.01,  max: 2.0,  default: 0.25  },
   ],
   FM: [
     { key: 'op2Ratio',     label: 'RATIO', min: 0.5, max: 4.0, default: 2.1  },

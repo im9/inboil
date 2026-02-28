@@ -186,10 +186,17 @@ const enum Stage { Idle, Attack, Decay, Sustain, Release }
 export class ADSR {
   attack = 0.01; decay = 0.1; sustain = 0.7; release = 0.3
   private level = 0; private stage = Stage.Idle; private sr = 44100
+  private releaseLevel = 0
   setSampleRate(sr: number) { this.sr = sr }
   noteOn()  { this.stage = Stage.Attack }
+  noteOff() {
+    if (this.stage !== Stage.Idle) {
+      this.releaseLevel = this.level
+      this.stage = Stage.Release
+    }
+  }
   isIdle()  { return this.stage === Stage.Idle }
-  reset()   { this.level = 0; this.stage = Stage.Idle }
+  reset()   { this.level = 0; this.releaseLevel = 0; this.stage = Stage.Idle }
   tick(): number {
     switch (this.stage) {
       case Stage.Idle: return 0
@@ -202,10 +209,12 @@ export class ADSR {
         if (this.level <= this.sustain) { this.level = this.sustain; this.stage = Stage.Sustain }
         break
       case Stage.Sustain: break
-      case Stage.Release:
-        this.level -= this.sustain / (Math.max(0.001, this.release) * this.sr)
+      case Stage.Release: {
+        const rate = this.releaseLevel / (Math.max(0.001, this.release) * this.sr)
+        this.level -= rate > 0.00001 ? rate : 0.00001
         if (this.level <= 0) { this.level = 0; this.stage = Stage.Idle }
         break
+      }
     }
     return this.level
   }

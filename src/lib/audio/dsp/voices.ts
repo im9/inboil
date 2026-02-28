@@ -9,6 +9,8 @@ export function midiToHz(note: number): number {
 
 export interface Voice {
   noteOn(note: number, velocity: number): void
+  noteOff(): void
+  slideNote(note: number, velocity: number): void
   tick(): number
   reset(): void
   setParam(key: string, value: number): void
@@ -24,6 +26,8 @@ export class KickVoice implements Voice {
   private ampDecay = 0.35; private drive = 1.4
   constructor(private sr: number) {}
   noteOn(_n: number, v: number) { this.vel = v; this.phase = 0; this.t = 0; this.playing = true }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() { this.phase = 0; this.t = 0; this.playing = false }
   tick(): number {
     if (!this.playing) return 0
@@ -66,6 +70,8 @@ export class SnareVoice implements Voice {
   noteOn(_n: number, v: number) {
     this.vel = v; this.phase = 0; this.t = 0; this.playing = true; this.noiseLp.reset()
   }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() { this.phase = 0; this.t = 0; this.playing = false; this.noiseLp.reset() }
   tick(): number {
     if (!this.playing) return 0
@@ -109,6 +115,8 @@ export class ClapVoice implements Voice {
   noteOn(_n: number, v: number) {
     this.vel = v; this.t = 0; this.playing = true; this.filter.reset()
   }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() { this.t = 0; this.playing = false; this.filter.reset() }
   tick(): number {
     if (!this.playing) return 0
@@ -161,6 +169,8 @@ export class HatVoice implements Voice {
   noteOn(_n: number, v: number) {
     this.vel = v; this.t = 0; this.playing = true; this.hp.reset()
   }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() { this.t = 0; this.playing = false; this.hp.reset(); this.phases.fill(0) }
   tick(): number {
     if (!this.playing) return 0
@@ -208,6 +218,8 @@ export class OpenHatVoice implements Voice {
   noteOn(_n: number, v: number) {
     this.vel = v; this.t = 0; this.playing = true; this.hp.reset()
   }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() { this.t = 0; this.playing = false; this.hp.reset(); this.phases.fill(0) }
   tick(): number {
     if (!this.playing) return 0
@@ -257,6 +269,8 @@ export class CymbalVoice implements Voice {
     this.vel = v; this.t = 0; this.playing = true
     this.bodyPhase = 0; this.hp.reset()
   }
+  noteOff() {}
+  slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() {
     this.t = 0; this.playing = false; this.bodyPhase = 0
     this.hp.reset(); this.phases.fill(0)
@@ -300,33 +314,58 @@ export class CymbalVoice implements Voice {
 
 // ── Melodic voices ──────────────────────────────────────────────────
 
-/** TB-303 acid bass — saw → drive → resonant LP (Q=7) → ADSR. */
+/** TB-303 acid bass — saw → drive → resonant LP (Q=7) → split filter/amp envelopes + slide.
+ *  Real 303 has separate VCA (gate-style, sustain=1) and VCF (acid sweep, sustain=0).
+ *  This split is essential for slide: amp stays open while pitch glides. */
 export class TB303Voice implements Voice {
-  private phase = 0; private freq = 110; private vel = 1
-  private env = new ADSR(); private filter = new ResonantLP()
+  private phase = 0; private freq = 110; private targetFreq = 110; private vel = 1
+  private filterEnv = new ADSR(); private ampEnv = new ADSR()
+  private filter = new ResonantLP()
   private cutoffBase = 200; private envMod = 4000; private resonance = 7.0; private drive = 1.6
+  private slideRate: number
   constructor(private sr: number) {
-    this.env.setSampleRate(sr)
-    this.env.attack = 0.002; this.env.decay = 0.18; this.env.sustain = 0.0; this.env.release = 0.10
+    this.filterEnv.setSampleRate(sr)
+    this.filterEnv.attack = 0.002; this.filterEnv.decay = 0.18
+    this.filterEnv.sustain = 0.0; this.filterEnv.release = 0.10
+    // VCA: gate-style — stays open while gate is high, fast release
+    this.ampEnv.setSampleRate(sr)
+    this.ampEnv.attack = 0.002; this.ampEnv.decay = 0.01
+    this.ampEnv.sustain = 1.0; this.ampEnv.release = 0.02
+    this.slideRate = 1 - Math.exp(-1 / (0.060 * sr))  // ~60ms glide
   }
-  noteOn(note: number, v: number) { this.freq = midiToHz(note); this.vel = v; this.env.noteOn() }
-  reset() { this.env.reset(); this.filter.reset(); this.phase = 0 }
+  noteOn(note: number, v: number) {
+    this.freq = midiToHz(note); this.targetFreq = this.freq
+    this.vel = v; this.filterEnv.noteOn(); this.ampEnv.noteOn()
+  }
+  noteOff() { this.filterEnv.noteOff(); this.ampEnv.noteOff() }
+  slideNote(note: number, v: number) {
+    this.targetFreq = midiToHz(note)
+    this.vel = v
+    // Retrigger filter envelope (acid squelch on each step) but NOT amp (legato)
+    this.filterEnv.noteOn()
+  }
+  reset() {
+    this.filterEnv.reset(); this.ampEnv.reset()
+    this.filter.reset(); this.phase = 0; this.freq = this.targetFreq = 110
+  }
   tick(): number {
-    if (this.env.isIdle()) return 0
-    const env = this.env.tick()
+    if (this.ampEnv.isIdle()) return 0
+    this.freq += (this.targetFreq - this.freq) * this.slideRate
+    const fenv = this.filterEnv.tick()
+    const aenv = this.ampEnv.tick()
     this.phase += this.freq / this.sr
     if (this.phase >= 1) this.phase -= 1
     const driven = Math.tanh((this.phase * 2 - 1) * this.drive)
-    this.filter.setParams(this.cutoffBase + this.envMod * env * env, this.resonance, this.sr)
-    return this.filter.process(driven) * env * this.vel * 0.75
+    this.filter.setParams(this.cutoffBase + this.envMod * fenv * fenv, this.resonance, this.sr)
+    return this.filter.process(driven) * aenv * this.vel * 0.75
   }
   setParam(key: string, value: number) {
     switch (key) {
-      case 'cutoffBase': this.cutoffBase = value; break
-      case 'envMod':     this.envMod     = value; break
-      case 'resonance':  this.resonance  = value; break
-      case 'decay':      this.env.decay  = value; break
-      case 'drive':      this.drive      = value; break
+      case 'cutoffBase': this.cutoffBase   = value; break
+      case 'envMod':     this.envMod       = value; break
+      case 'resonance':  this.resonance    = value; break
+      case 'decay':      this.filterEnv.decay = value; break
+      case 'drive':      this.drive        = value; break
     }
   }
 }
@@ -341,6 +380,8 @@ export class AnalogVoice implements Voice {
     this.env.attack = 0.008; this.env.decay = 0.25; this.env.sustain = 0.3; this.env.release = 0.3
   }
   noteOn(note: number, v: number) { this.freq = midiToHz(note); this.vel = v; this.env.noteOn() }
+  noteOff() { this.env.noteOff() }
+  slideNote(note: number, v: number) { this.noteOn(note, v) }
   reset() { this.env.reset(); this.filter.reset(); this.phase = 0 }
   tick(): number {
     if (this.env.isIdle()) return 0
@@ -361,39 +402,69 @@ export class AnalogVoice implements Voice {
   }
 }
 
-/** Moog-style 4-pole analog lead — two detuned saws → cascaded biquads. */
+/** Moog-style 4-pole analog lead — two detuned saws → cascaded biquads + slide. */
 export class MoogVoice implements Voice {
-  private phase1 = 0; private phase2 = 0; private freq = 220; private vel = 1
-  private env = new ADSR()
+  private phase1 = 0; private phase2 = 0
+  private freq = 220; private targetFreq = 220; private vel = 1
+  private filterEnv = new ADSR()
+  private ampEnv = new ADSR()
   private f1 = new ResonantLP(); private f2 = new ResonantLP()
   private cutoffBase = 400; private envMod = 5500; private resonance = 1.8; private detune = 1.0029
+  private slideRate: number
   constructor(private sr: number) {
-    this.env.setSampleRate(sr)
-    this.env.attack = 0.012; this.env.decay = 0.35; this.env.sustain = 0.45; this.env.release = 0.4
+    this.filterEnv.setSampleRate(sr)
+    this.filterEnv.attack = 0.002; this.filterEnv.decay = 0.35
+    this.filterEnv.sustain = 0.0; this.filterEnv.release = 0.1
+    this.ampEnv.setSampleRate(sr)
+    this.ampEnv.attack = 0.005; this.ampEnv.decay = 0.3
+    this.ampEnv.sustain = 0.8; this.ampEnv.release = 0.25
+    this.slideRate = 1 - Math.exp(-1 / (0.080 * sr))  // ~80ms glide
   }
-  noteOn(note: number, v: number) { this.freq = midiToHz(note); this.vel = v; this.env.noteOn() }
-  reset() { this.env.reset(); this.f1.reset(); this.f2.reset(); this.phase1 = this.phase2 = 0 }
+  noteOn(note: number, v: number) {
+    this.freq = midiToHz(note); this.targetFreq = this.freq
+    this.vel = v; this.filterEnv.noteOn(); this.ampEnv.noteOn()
+  }
+  noteOff() { this.filterEnv.noteOff(); this.ampEnv.noteOff() }
+  slideNote(note: number, v: number) {
+    // Clean legato: instant pitch change, no glide (unlike TB303)
+    const f = midiToHz(note)
+    this.freq = f; this.targetFreq = f
+    this.vel = v
+  }
+  reset() {
+    this.filterEnv.reset(); this.ampEnv.reset()
+    this.f1.reset(); this.f2.reset()
+    this.phase1 = this.phase2 = 0
+    this.freq = this.targetFreq = 220
+  }
   tick(): number {
-    if (this.env.isIdle()) return 0
-    const env = this.env.tick()
+    if (this.ampEnv.isIdle()) return 0
+    this.freq += (this.targetFreq - this.freq) * this.slideRate
+    const fenv = this.filterEnv.tick()
+    const aenv = this.ampEnv.tick()
     this.phase1 += this.freq / this.sr
     this.phase2 += (this.freq * this.detune) / this.sr
     if (this.phase1 >= 1) this.phase1 -= 1
     if (this.phase2 >= 1) this.phase2 -= 1
     const saw = ((this.phase1 * 2 - 1) + (this.phase2 * 2 - 1)) * 0.5
     const driven = Math.tanh(saw * 1.5)
-    const fc = Math.min(this.cutoffBase + this.envMod * env, this.sr * 0.4)
+    const fc = Math.min(this.cutoffBase + this.envMod * fenv, this.sr * 0.4)
     this.f1.setParams(fc, this.resonance, this.sr)
     this.f2.setParams(fc, this.resonance, this.sr)
-    return this.f2.process(Math.tanh(this.f1.process(driven) * 1.2)) * env * this.vel * 0.65
+    return this.f2.process(Math.tanh(this.f1.process(driven) * 1.2)) * aenv * this.vel * 0.65
   }
   setParam(key: string, value: number) {
     switch (key) {
-      case 'cutoffBase': this.cutoffBase = value; break
-      case 'envMod':     this.envMod     = value; break
-      case 'resonance':  this.resonance  = value; break
-      case 'decay':      this.env.decay  = value; break
-      case 'detune':     this.detune     = value; break
+      case 'cutoffBase':  this.cutoffBase = value; break
+      case 'envMod':      this.envMod     = value; break
+      case 'resonance':   this.resonance  = value; break
+      case 'decay':       // backward compat alias
+      case 'filterDecay': this.filterEnv.decay = value; break
+      case 'detune':      this.detune     = value; break
+      case 'ampAttack':   this.ampEnv.attack  = value; break
+      case 'ampDecay':    this.ampEnv.decay   = value; break
+      case 'ampSustain':  this.ampEnv.sustain = value; break
+      case 'ampRelease':  this.ampEnv.release = value; break
     }
   }
 }
@@ -417,6 +488,8 @@ export class FMVoice implements Voice {
     this.op1P = this.op2P = this.cP = this.fb = 0
     this.cEnv.noteOn(); this.op2Env.noteOn()
   }
+  noteOff() { this.cEnv.noteOff(); this.op2Env.noteOff() }
+  slideNote(note: number, v: number) { this.noteOn(note, v) }
   reset() {
     this.cEnv.reset(); this.op2Env.reset()
     this.op1P = this.op2P = this.cP = this.fb = 0

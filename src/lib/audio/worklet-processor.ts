@@ -89,6 +89,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private voices: Voice[] = []
   private tracks: WorkletTrack[] = []
   private playheads: number[] = new Array(8).fill(0)
+  private gateCounters = new Int32Array(8)  // remaining steps before noteOff
   private playing = false
   private bpm = 120
   private samplesPerStep = 0
@@ -167,10 +168,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             const steps = this.tracks[t]?.steps ?? 16
             this.playheads[t] = steps - 1
           }
+          this.gateCounters.fill(0)
           this.accumulator = this.currentThreshold  // trigger step 0 immediately
           break
         case 'stop':
           this.playing = false; this.playheads.fill(0)
+          this.gateCounters.fill(0)
           for (const v of this.voices) v.reset()
           break
         case 'setBpm':
@@ -228,6 +231,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.peakEq[i].setActive(b.on)
           }
           this.masterGain = p.perf.masterGain
+          // Don't reset gateCounters here — setPattern fires on every UI change.
+          // Resetting would orphan notes (noteOff never called → amp sustains forever).
+          // Counters expire naturally within a few steps. Only play/stop do hard resets.
           break
         }
       }
@@ -245,6 +251,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     for (let t = 0; t < this.tracks.length; t++) {
       const track = this.tracks[t]
       if (!track || track.steps === 0) continue
+
+      // Advance playhead first so we can peek at the incoming trig
       if (this.reversing) {
         this.playheads[t] = (this.playheads[t] - 1 + track.steps) % track.steps
       } else {
@@ -252,20 +260,45 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
       const trig = track.trigs[this.playheads[t]]
 
+      // Was the previous note's gate still open?
+      const wasGated = this.gateCounters[t] > 0
+      // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303
+      const isMelodic = t >= 6
+      // Legato condition: suppress noteOff if incoming trig continues the phrase
+      const isLegato = trig?.active && (isMelodic || trig.slide)
+
+      // Decrement gate counter — noteOff when it reaches 0,
+      // BUT suppress noteOff if incoming trig is legato (keeps envelope alive)
+      if (this.gateCounters[t] > 0) {
+        this.gateCounters[t]--
+        if (this.gateCounters[t] === 0 && !isLegato) {
+          this.voices[t]?.noteOff()
+        }
+      }
+
       if (this.filling && t <= 5) {
+        // Fill mode: random hits, always duration=1, no slide
         this.fillSeed = (this.fillSeed * 1664525 + 1013904223) >>> 0
         const rand = (this.fillSeed >>> 16) / 65536
         const prob = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
         if (rand < prob) {
           if (t === 0) this.ducker.trigger(this.duckDepth)
           if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, 0.6 + rand * 0.4)
+          this.gateCounters[t] = 1
         }
       } else if (trig?.active) {
+        const note = t >= 6 ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
         if (t === 0) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {
-          const note = t >= 6 ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
-          this.voices[t]?.noteOn(note, trig.velocity)
+          // Auto-legato: melodic tracks glide when previous note was gated (303 behavior)
+          // Explicit slide flag also enables glide on any track
+          if (wasGated && (isMelodic || trig.slide)) {
+            this.voices[t]?.slideNote(note, trig.velocity)
+          } else {
+            this.voices[t]?.noteOn(note, trig.velocity)
+          }
         }
+        this.gateCounters[t] = trig.duration ?? 1
       }
     }
     if (this.playheads[0] === 0 && this.pendingOctave !== null) {

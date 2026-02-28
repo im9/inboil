@@ -47,6 +47,8 @@ export interface WorkletTrack {
 
 export interface WorkletTrig {
   active: boolean; note: number; velocity: number
+  duration: number  // step count 1-16, default 1
+  slide: boolean    // default false
 }
 
 export interface WorkletEvent {

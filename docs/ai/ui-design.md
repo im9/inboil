@@ -244,9 +244,10 @@ Per-track sends (VERB, DLY, GLT, GRN) are in the FxPad sends bar only. PAN and V
 
 ### PianoRoll — DECIDED
 
-Note editor grid for melodic tracks (6–7). Positioned between StepGrid and ParamPanel.
-24-note range (C3–B4). Click cell to set note + activate; click same note to deactivate.
-Playhead column shown when playing.
+DAW-style note bar editor for melodic tracks (6–7). Positioned between StepGrid and ParamPanel.
+24-note range (C3–B4). Click empty cell to place note, drag right to extend duration (note bar).
+Click head to delete, click continuation to delete parent note. Resize handle on head's right edge for post-placement adjustment.
+Connected bars = auto-legato, gaps = retrigger. Playhead column shown when playing.
 
 **Scale mode** (`prefs.scaleMode`): Out-of-scale rows (non-white-key positions) are disabled with salmon tint (`rgba(232,160,144,0.06)`), dimmed opacity (0.3 for keys, 0.12 for cells), and `pointer-events: none`.
 

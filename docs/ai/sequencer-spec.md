@@ -54,10 +54,12 @@ Trig {
   active:      boolean         // whether this step triggers
   note:        number          // MIDI note number 0–127 (60 = C4)
   velocity:    number          // 0.0–1.0
+  duration:    number          // step count 1–16 (default 1), gate length
+  slide:       boolean         // slide/glide flag (default false)
 }
 ```
 
-No `length` or `paramLocks` fields — those are deferred.
+`paramLocks` are deferred. See ADR 021 for duration/slide details.
 
 ## Default Track Layout — DECIDED
 

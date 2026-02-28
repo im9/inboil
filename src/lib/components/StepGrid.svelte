@@ -236,6 +236,31 @@
         </div>
       </div>
 
+      <!-- Slide lane (hidden for melodic — auto-legato handles it) -->
+      {#if false}
+        <div class="slide-row">
+          <div class="slide-label">
+            <span class="slide-name" data-tip="Slide — legato pitch glide" data-tip-ja="スライド (レガートグライド)">SLD</span>
+          </div>
+          <div class="slide-spacer"></div>
+          <div class="slide-cells" style="--steps: {track.steps}">
+            {#each track.trigs as trig, stepIdx}
+              <button
+                class="slide-btn"
+                class:on={trig.slide}
+                class:disabled={!trig.active}
+                aria-label="Slide step {stepIdx + 1}"
+                onpointerdown={() => { if (trig.active) setTrigSlide(trackId, stepIdx, !trig.slide) }}
+              >
+                {#if trig.slide && trig.active}
+                  <svg viewBox="0 0 10 10" class="slide-icon"><line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
       <!-- Inline piano roll for melodic tracks -->
       {#if !isDrum(track) && track.bottomPanel === 'piano'}
         <PianoRoll trackId={trackId} />
@@ -532,5 +557,65 @@
   @keyframes vel-glow {
     0%   { filter: brightness(1.5); }
     100% { filter: brightness(1); }
+  }
+
+  /* ── Slide lane ── */
+  .slide-row {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    gap: 4px;
+    background: var(--color-surface);
+    border-bottom: 1px solid rgba(30,32,40,0.08);
+    border-left: 3px solid var(--color-olive);
+    padding-left: 5px;
+    overflow: hidden;
+  }
+  .slide-label {
+    width: 64px;
+    flex-shrink: 0;
+    padding: 0 6px;
+  }
+  .slide-name {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    text-transform: uppercase;
+  }
+  .slide-spacer {
+    width: calc(20px + 2px + 20px + 4px + 20px);
+    flex-shrink: 0;
+  }
+  .slide-cells {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(var(--steps), 24px);
+    gap: 2px;
+  }
+  .slide-btn {
+    width: 24px;
+    height: 16px;
+    border: 1px solid rgba(30,32,40,0.15);
+    background: transparent;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-olive);
+  }
+  .slide-btn.disabled {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .slide-btn.on {
+    background: rgba(108,119,68,0.25);
+    border-color: var(--color-olive);
+  }
+  .slide-icon {
+    width: 10px;
+    height: 10px;
   }
 </style>

@@ -99,6 +99,8 @@ Parameters:
 ### TB303Voice (acid bass)
 
 Sawtooth → pre-filter tanh drive → resonant LP (Q=7) with quadratic envelope sweep.
+Dual-envelope architecture: filterEnv (sustain=0, acid sweep) + ampEnv (sustain=1.0, gate-style VCA).
+Auto-legato: consecutive notes connect via `slideNote()` — 60ms exponential pitch glide + filter retrigger for acid squelch.
 
 Parameters:
 | Key | Label | Range | Default | Description |
@@ -106,12 +108,14 @@ Parameters:
 | cutoffBase | CUT | 50–500 Hz | 200 | Filter base cutoff |
 | envMod | MOD | 500–8000 Hz | 4000 | Envelope modulation depth |
 | resonance | RESO | 1.0–14.0 | 7.0 | Filter Q |
-| decay | DCY | 0.08–0.5 s | 0.18 | ADSR decay time |
+| decay | DCY | 0.08–0.5 s | 0.18 | Filter envelope decay time |
 | drive | DRIV | 0.5–3.0 | 1.6 | Pre-filter saturation |
 
 ### MoogVoice (4-pole analog lead)
 
 Two detuned sawtooth oscillators → tanh saturation → two cascaded resonant LP biquads (24 dB/oct total) with inter-stage soft clip.
+Dual-envelope architecture: filterEnv (sustain=0) + ampEnv (sustain=0.8).
+Auto-legato: consecutive notes connect via `slideNote()` — instant pitch change (no glide), envelopes continue.
 
 Parameters:
 | Key | Label | Range | Default | Description |
@@ -119,7 +123,11 @@ Parameters:
 | cutoffBase | CUT | 100–2000 Hz | 400 | Filter base cutoff |
 | envMod | MOD | 1000–10000 Hz | 5500 | Envelope modulation depth |
 | resonance | RESO | 0.5–3.5 | 1.8 | Filter Q |
-| decay | DCY | 0.1–1.0 s | 0.35 | ADSR decay time |
+| filterDecay | FDCY | 0.1–1.0 s | 0.35 | Filter envelope decay time |
+| ampAttack | ATCK | 0.001–0.5 s | 0.005 | Amp envelope attack |
+| ampDecay | ADCY | 0.05–1.0 s | 0.3 | Amp envelope decay |
+| ampSustain | SUST | 0.0–1.0 | 0.8 | Amp envelope sustain level |
+| ampRelease | RLS | 0.01–2.0 s | 0.25 | Amp envelope release |
 
 ### FMVoice (YM2612-inspired 3-operator FM)
 

@@ -128,6 +128,8 @@ function patternToWorklet(
         active:   trig.active,
         note:     trig.note,
         velocity: trig.velocity,
+        duration: trig.duration ?? 1,
+        slide:    trig.slide ?? false,
       })),
     })),
   }
