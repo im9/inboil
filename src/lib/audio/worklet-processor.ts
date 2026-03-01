@@ -282,9 +282,26 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.peakEq[i].setActive(b.on)
           }
           this.masterGain = p.perf.masterGain
-          // Don't reset gateCounters here — setPattern fires on every UI change.
-          // Resetting would orphan notes (noteOff never called → amp sustains forever).
-          // Counters expire naturally within a few steps. Only play/stop do hard resets.
+          // Pattern switch: reset notes and rewind playheads so step 0 replays
+          // with new data. Only when reset flag is set (not on normal param tweaks).
+          if (cmd.reset) {
+            for (let t = 0; t < this.voices.length; t++) {
+              this.voices[t]?.noteOff()
+              this.gateCounters[t] = 0
+              this.arpNotes[t] = []
+              const steps = this.tracks[t]?.steps ?? 16
+              this.playheads[t] = steps - 1
+            }
+            // Apply pending perf immediately (don't wait for next step boundary)
+            if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
+            if (this.pendingOctave !== null) { this.octave = this.pendingOctave; this.pendingOctave = null }
+            if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
+            if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
+            if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+            this.swingPhase = 0
+            this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
+            this.accumulator = this.currentThreshold  // trigger step 0 on next sample
+          }
           break
         }
       }

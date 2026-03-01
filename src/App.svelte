@@ -7,7 +7,7 @@
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
-  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch } from './lib/state.svelte.ts'
+  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -35,7 +35,11 @@
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
     playback.playheads = heads  // single reactive notification instead of 8 individual mutations
-    if (heads[0] === 0 && prev0 !== 0) applyPendingSwitch()
+    if (heads[0] === 0 && prev0 !== 0) {
+      const switching = patternNav.pendingId > 0
+      applyPendingSwitch()
+      if (switching) engine.sendPattern(pattern, effects, perf, fxPad, true)
+    }
   }
 
   async function play() {

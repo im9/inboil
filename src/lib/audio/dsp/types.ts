@@ -6,6 +6,7 @@ export interface WorkletCommand {
   type: 'play' | 'stop' | 'setBpm' | 'setPattern'
   bpm?: number
   pattern?: WorkletPattern
+  reset?: boolean
 }
 
 export interface WorkletPattern {

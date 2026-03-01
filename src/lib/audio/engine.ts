@@ -45,9 +45,9 @@ export class GrooveboxEngine {
     }
   }
 
-  sendPattern(pattern: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState): void {
+  sendPattern(pattern: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false): void {
     if (!this.node) return
-    this._post({ type: 'setPattern', pattern: patternToWorklet(pattern, fx, perf, fxPad) })
+    this._post({ type: 'setPattern', pattern: patternToWorklet(pattern, fx, perf, fxPad), reset })
   }
 
   play(): void {
