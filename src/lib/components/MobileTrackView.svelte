@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
+  import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -144,14 +144,21 @@
         <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
       {/if}
     {/if}
-    {#each params as p}
+    {#each params as p, i}
+      {#if i > 0 && p.group && p.group !== params[i - 1].group}
+        <div class="sends-sep" aria-hidden="true"></div>
+      {/if}
+      <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
       <Knob
         value={normalizeParam(p, knobValue(p))}
         label={p.label}
         size={40}
         locked={isParamLocked(p.key)}
+        steps={paramSteps(p)}
+        displayValue={displayLabel(p, knobValue(p))}
         onchange={v => knobChange(p, v)}
       />
+      </span>
     {/each}
 
     <!-- Global FX -->

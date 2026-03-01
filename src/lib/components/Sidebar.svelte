@@ -112,8 +112,8 @@
     {
       title: L === 'ja' ? 'シンセパラメータ' : 'SYNTH PARAMS',
       body: L === 'ja'
-        ? '下部パネルのノブをドラッグして音色を調整できます。各トラックのシンセタイプに応じたパラメータが表示されます。LEADトラックにはアルペジエーター (ARP/RATE/CHRD/AOCT) があり、1ノートから自動的にアルペジオパターンを生成します。'
-        : 'Drag knobs in the bottom panel to shape the sound. Parameters change based on each track\'s synth type. The LEAD track has an arpeggiator (ARP/RATE/CHRD/AOCT) that generates arpeggiated patterns from a single note.',
+        ? '下部パネルのノブをドラッグして音色を調整できます。パラメータは機能ごとにセパレーターで区切られています。例: LEAD = FILTER (CUT/MOD/RESO/FDCY) | ENV (ATCK/ADCY/SUST/RLS) | ARP (ARP/RATE/CHRD/AOCT)。アルペジエーターは1ノートから自動的にアルペジオパターンを生成し、KEYのスケールに沿ったコードが鳴ります。'
+        : 'Drag knobs in the bottom panel to shape the sound. Parameters are grouped by function with visual separators. Example: LEAD = FILTER (CUT/MOD/RESO/FDCY) | ENV (ATCK/ADCY/SUST/RLS) | ARP (ARP/RATE/CHRD/AOCT). The arpeggiator generates patterns from a single note, using scale-aware chords that follow the KEY setting.',
     },
     {
       title: 'GRID',

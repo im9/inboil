@@ -6,9 +6,17 @@
     light?: boolean     // true = dark strokes for cream background
     compact?: boolean   // true = SVG only, no value/label text
     locked?: boolean    // true = P-Lock active (olive value arc)
+    steps?: number      // number of discrete positions (e.g. 5 for 0-4) — snaps knob
+    displayValue?: string // override displayed value text (e.g. "UP", "OFF")
     onchange: (v: number) => void
   }
-  let { value, label, size = 32, light = false, compact = false, locked = false, onchange }: Props = $props()
+  let { value, label, size = 32, light = false, compact = false, locked = false, steps = 0, displayValue, onchange }: Props = $props()
+
+  function snap(v: number): number {
+    if (steps < 2) return v
+    const n = steps - 1
+    return Math.round(v * n) / n
+  }
 
   const trackStroke = $derived(light ? 'rgba(30,32,40,0.15)' : 'rgba(237,232,220,0.18)')
   const valueStroke = $derived(
@@ -41,7 +49,8 @@
   function onPointerMove(e: PointerEvent) {
     if (!dragging) return
     const delta = (startY - e.clientY) / 100
-    onchange(Math.min(1, Math.max(0, startVal + delta)))
+    const raw = Math.min(1, Math.max(0, startVal + delta))
+    onchange(snap(raw))
   }
   function onPointerUp() { dragging = false }
 </script>
@@ -82,7 +91,7 @@
       transform="rotate(-135 {cx} {cy})"
     />
   </svg>
-  {#if !compact}<span class="val">{Math.round(value * 100)}</span>{/if}
+  {#if !compact}<span class="val">{displayValue ?? Math.round(value * 100)}</span>{/if}
   <span class="lbl">{label}</span>
 </div>
 

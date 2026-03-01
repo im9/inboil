@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pattern, ui, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, toggleSidebar } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
+  import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
@@ -49,7 +49,7 @@
 
   <div class="inner">
     <div class="track-info">
-      <span class="track-display"><SplitFlap value={track.name} width={5} /></span>
+      <span class="track-display"><SplitFlap value={track.name} width={6} /></span>
       <div class="track-btns">
         <button
           class="btn-lock"
@@ -57,26 +57,30 @@
           onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
           data-tip="Parameter lock mode" data-tip-ja="パラメーターロックモード"
         >LOCK</button>
+        {#if ui.lockMode && ui.selectedStep !== null}
+          <span class="lock-label">STEP{ui.selectedStep + 1}</span>
+          <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
+        {/if}
       </div>
     </div>
 
-    {#if ui.lockMode && ui.selectedStep !== null}
-      <span class="lock-label">STEP {ui.selectedStep + 1}</span>
-      {#if hasAnyLock}
-        <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
-      {/if}
-    {/if}
-
     <!-- Synth params (interactive knobs) -->
-    <div class="knobs" data-tip="Synth parameters — drag to adjust" data-tip-ja="シンセパラメータ — ドラッグで調整">
-      {#each params as p}
+    <div class="knobs">
+      {#each params as p, i}
+        {#if i > 0 && p.group && p.group !== params[i - 1].group}
+          <div class="param-sep" aria-hidden="true"></div>
+        {/if}
+        <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
         <Knob
           value={normalizeParam(p, knobValue(p))}
           label={p.label}
           size={32}
           locked={isParamLocked(p.key)}
+          steps={paramSteps(p)}
+          displayValue={displayLabel(p, knobValue(p))}
           onchange={v => knobChange(p, v)}
         />
+        </span>
       {/each}
     </div>
 
@@ -167,6 +171,7 @@
   }
   .track-btns {
     display: flex;
+    align-items: center;
     gap: 4px;
   }
 
@@ -189,12 +194,11 @@
   }
 
   .lock-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-olive);
     white-space: nowrap;
-    flex-shrink: 0;
   }
   .btn-clr {
     font-size: 8px;
@@ -205,7 +209,9 @@
     border: 1px solid rgba(237,232,220,0.25);
     padding: 1px 5px;
     line-height: 14px;
-    flex-shrink: 0;
+  }
+  .btn-clr.hidden {
+    visibility: hidden;
   }
   .btn-clr:active {
     background: rgba(237,232,220,0.15);
@@ -218,6 +224,14 @@
     gap: 12px;
     overflow-x: auto;
     flex: 1;
+  }
+
+  .param-sep {
+    width: 1px;
+    height: 28px;
+    background: rgba(237,232,220,0.12);
+    flex-shrink: 0;
+    align-self: center;
   }
 
 </style>
