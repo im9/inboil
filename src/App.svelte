@@ -8,7 +8,7 @@
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
-  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, getPatternData } from './lib/state.svelte.ts'
+  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, updateChainPerf, getPatternData } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -39,16 +39,28 @@
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
     playback.playheads = heads
+    let chainSent = false
     if (heads[0] === 0 && prev0 !== 0) {
       // User-initiated pattern switch (editing pattern only)
       if (patternNav.pendingId > 0) {
         applyPendingSwitch()
         if (!chain.active) engine.sendPattern(pattern, effects, perf, fxPad, true)
       }
-      // Chain advance (independent of editing pattern)
+      // Chain: advance + FX/key on entry change
       const advanced = advanceChain()
-      if (advanced) {
-        applyChainEntry(chain.entries[chain.currentIndex])
+      if (chain.active && chain.entries.length > 0) {
+        if (advanced) {
+          applyChainEntry(chain.entries[chain.currentIndex])
+        }
+        updateChainPerf(heads[0])
+        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, true)
+        chainSent = true
+      }
+    }
+    // Mid-bar perf: check every step for sub-bar activation/deactivation
+    if (!chainSent && chain.active && chain.entries.length > 0) {
+      const changed = updateChainPerf(heads[0])
+      if (changed) {
         engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, true)
       }
     }

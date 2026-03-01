@@ -127,13 +127,17 @@ type FactoryDef = {
 
 // Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
 const FACTORY: FactoryDef[] = [
-  // 00 — "Blue Monday" synth-pop: driving 8th bass riff + rhythmic stab lead
-  { name: '4FLOOR', bpm: 120, key: 9,
+  // 00 — Acid house: squelchy 303 bass + acid stab lead, key=E
+  { name: '4FLOOR', bpm: 126, key: 4,
     kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
-    ohh: [3,11], cym: [1],
-    bass: [[1,3,5,7,9,11,13,15], 36], lead: [[1,5,9,13], 64],
-    mel: { 6: [41,41,40,38,36,36,38,40], 7: [64,64,67,72] },
-    dur: { 7: [2,2,2,2] } },
+    ohh: [3,7,11,15], cym: [1],
+    bass: [[1,2,3,5,7,9,10,11,13,15], 40], lead: [[1,3,5,7,9,11,13,15], 64],
+    mel: { 6: [40,43,40,43,52,40,43,40,52,52], 7: [64,76,64,67,71,64,76,67] },
+    dur: { 6: [1,1,2,2,1,1,1,2,1,2], 7: [1,1,1,1,1,1,1,1] },
+    vp: {
+      6: { cutoffBase: 120, envMod: 2225, resonance: 13.6, decay: 0.15, drive: 2.5 },
+      7: { cutoffBase: 350, envMod: 3340, resonance: 1.91, filterDecay: 0.12, ampDecay: 0.10 },
+    } },
   // 01 — "Mask Off" trap flute: pentatonic hook over deep 808 (32 steps)
   { name: 'TRAP', bpm: 140, steps: 32, key: 9,
     kick: [1,4,8,11,17,20,24,27], snare: [5,13,21,29], clap: [5,13,21,29],
@@ -404,6 +408,21 @@ const FACTORY: FactoryDef[] = [
       6: { cutoffBase: 100, envMod: 1500, resonance: 2.0, decay: 0.45 },
       7: { cutoffBase: 200, envMod: 2000, resonance: 1.0, filterDecay: 0.80 },
     } },
+  // 20 — Lo-fi B section: upbeat chorus counterpart to LOFI (bass=12, lead=24)
+  { name: 'LF.B', bpm: 85, key: 7,
+    kick: [1,5,9,13], snare: [5,13], clap: [5,13], chh: [1,3,5,7,9,11,13,15],
+    ohh: [3,11,15], cym: [1],
+    bass: [[1,4,7,10], 48], lead: [[1,3,5,7,9,11,13,15,17,19,21,23], 67],
+    ts: { 6: 12, 7: 24 },
+    mel: { 6: [48,52,55,57], 7: [67,69,71,72,74,72,71,69,67,64,67,69] },
+    dur: { 6: [2,3,2,3], 7: [2,2,2,2,2,2,2,2,2,2,2,4] },
+    vp: {
+      0: { pitchStart: 220, ampDecay: 0.35, drive: 0.9 },
+      1: { noiseFc: 2200, noiseAmt: 0.55 },
+      3: { volume: 0.45, hpCutoff: 4200 },
+      6: { cutoffBase: 140, envMod: 3000, resonance: 3.5 },
+      7: { cutoffBase: 300, envMod: 3500, resonance: 1.5 },
+    } },
 ]
 
 function makeFactoryPattern(id: number): Pattern {
@@ -452,7 +471,7 @@ function makeFactoryPattern(id: number): Pattern {
 }
 
 export const PATTERN_COUNT = 100
-export const FACTORY_COUNT = 20
+export const FACTORY_COUNT = 21
 
 // ── Reactive state ───────────────────────────────────────────────────
 
@@ -841,6 +860,12 @@ export function factoryReset(): void {
   fxPad.eqLow = { ...DEFAULT_FX_PAD.eqLow }
   fxPad.eqMid = { ...DEFAULT_FX_PAD.eqMid }
   fxPad.eqHigh = { ...DEFAULT_FX_PAD.eqHigh }
+  // Reset chain
+  chain.entries.length = 0
+  chain.active = false
+  chain.currentIndex = 0
+  chain.repeatCount = 0
+  chain.playingPatternId = 0
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -874,6 +899,7 @@ export interface ChainEntry {
   repeats: number
   key: number | null  // 0–11 override, null = use pattern's rootNote
   perf: number        // 0=NONE, 1=FILL, 2=BRK, 3=REV
+  perfLen: number     // steps (1/4/8/16) — perf activates for last N steps of last repeat
   verb: ChainFx
   delay: ChainFx
   glitch: ChainFx
@@ -893,10 +919,68 @@ export function getPatternData(id: number): Pattern {
   return patternBank[id - 1]
 }
 
+// ── Chain presets ──────────────────────────────────────────────────────
+// Pattern IDs are 1-indexed: 1=4FLOOR 2=TRAP 3=BREAK 4=2STEP 5=LOFI
+// 6=TECHNO 7=HOUSE 8=DNB 9=HYPER 10=MINIMAL 11=REGGAETN 12=DISCO
+// 13=ELECTRO 14=DUBSTEP 15=DRILL 16=SYNTHWV 17=AFROBT 18=JERSEY
+// 19=GARAGE 20=AMBIENT
+
+function makeChainEntry(patternId: number, repeats = 2, opts?: {
+  key?: number, perf?: number, perfLen?: number,
+  verb?: boolean, delay?: boolean, glitch?: boolean, granular?: boolean,
+  delaySend?: number,
+}): ChainEntry {
+  return {
+    patternId, repeats, key: opts?.key ?? null, perf: opts?.perf ?? 0,
+    perfLen: opts?.perfLen ?? 16,
+    verb:     { on: opts?.verb ?? false,     x: 0.25, y: 0.65 },
+    delay:    { on: opts?.delay ?? false,    x: opts?.delaySend ?? 0.70, y: 0.40 },
+    glitch:   { on: opts?.glitch ?? false,   x: 0.45, y: 0.15 },
+    granular: { on: opts?.granular ?? false, x: 0.50, y: 0.30 },
+  }
+}
+
+export const CHAIN_PRESETS = [
+  // LOFI(5)+LF.B(21) 85bpm key=G — lo-fi song with A/B sections
+  { name: 'LOFI',
+    entries: [
+      makeChainEntry(5, 2, { key: 0 }),                      // 01 intro: A key=C ×2
+      makeChainEntry(5, 2, { verb: true }),                  // 02 verse 1: A +VRB ×2
+      makeChainEntry(21, 4, { verb: true, delay: true }),    // 03 chorus 1: B +VRB+DLY ×4
+      makeChainEntry(5, 4, { verb: true, glitch: true }),    // 04 verse 2: A +VRB+GLT ×4
+      makeChainEntry(21, 4, { key: 0, verb: true, delay: true, glitch: true }),  // 05 chorus 2: B → C +VRB+DLY+GLT ×4
+      makeChainEntry(5, 4, { key: 4, perf: 2, perfLen: 4, verb: true, glitch: true, delay: true, delaySend: 1.0 }),  // 06 break: A → Em BRK ¼ +VRB+GLT+DLY max ×4
+      makeChainEntry(21, 4, { perf: 1, perfLen: 8, verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),  // 07 climax: B FILL ½ +VRB+GLT+GRN+DLY max ×4
+      makeChainEntry(5, 4, { verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),  // 08 outro: A +VRB+GLT+GRN+DLY max ×4
+    ] },
+] as const
+
+export function chainLoadPreset(index: number) {
+  const preset = CHAIN_PRESETS[index]
+  if (!preset) return
+  chain.entries.length = 0
+  for (const e of preset.entries) {
+    chain.entries.push({
+      patternId: e.patternId, repeats: e.repeats, key: e.key, perf: e.perf, perfLen: e.perfLen,
+      verb:     { ...e.verb },
+      delay:    { ...e.delay },
+      glitch:   { ...e.glitch },
+      granular: { ...e.granular },
+    })
+  }
+  chain.currentIndex = 0
+  chain.repeatCount = 0
+  chain.active = false
+  chain.playingPatternId = 0
+}
+
+// Pre-populate with LOFI preset
+chainLoadPreset(0)
+
 export function chainAppend(patternId: number) {
-  if (chain.entries.length >= 64) return
+  if (chain.entries.length >= 99) return
   chain.entries.push({
-    patternId, repeats: 1, key: null, perf: 0,
+    patternId, repeats: 1, key: null, perf: 0, perfLen: 16,
     verb:     { on: false, x: 0.25, y: 0.65 },
     delay:    { on: false, x: 0.70, y: 0.40 },
     glitch:   { on: false, x: 0.45, y: 0.15 },
@@ -949,6 +1033,14 @@ export function chainCyclePerf(index: number) {
   chain.entries[index].perf = (chain.entries[index].perf + 1) % 4
 }
 
+const PERF_LEN_OPTIONS = [16, 8, 4, 1] as const
+
+export function chainCyclePerfLen(index: number) {
+  const e = chain.entries[index]
+  const cur = PERF_LEN_OPTIONS.indexOf(e.perfLen as 16 | 8 | 4 | 1)
+  e.perfLen = PERF_LEN_OPTIONS[(cur + 1) % PERF_LEN_OPTIONS.length]
+}
+
 export type ChainFxKey = 'verb' | 'delay' | 'glitch' | 'granular'
 
 export function chainToggleFx(index: number, fx: ChainFxKey) {
@@ -959,12 +1051,9 @@ export function chainSetFxSend(index: number, fx: ChainFxKey, value: number) {
   chain.entries[index][fx].x = value
 }
 
+/** Apply FX and key for a chain entry (called on entry advance) */
 export function applyChainEntry(entry: ChainEntry) {
   if (entry.key !== null) perf.rootNote = entry.key
-  if (entry.perf === 0 && !entry.verb.on && !entry.delay.on && !entry.glitch.on && !entry.granular.on) return
-  perf.filling = entry.perf === 1
-  perf.breaking = entry.perf === 2
-  perf.reversing = entry.perf === 3
   fxPad.verb = entry.verb.on
     ? { on: true, x: entry.verb.x, y: entry.verb.y }
     : { ...fxPad.verb, on: false }
@@ -979,13 +1068,30 @@ export function applyChainEntry(entry: ChainEntry) {
     : { ...fxPad.granular, on: false }
 }
 
+/** Apply perf on last repeat — activates for last N steps (perfLen) of the last repeat.
+ *  Called on every step; returns true if any perf flag changed. */
+export function updateChainPerf(step: number): boolean {
+  if (!chain.active || chain.entries.length === 0) return false
+  const entry = chain.entries[chain.currentIndex]
+  const isLast = chain.repeatCount >= entry.repeats - 1
+  const inZone = isLast && step >= (16 - entry.perfLen)
+  const f = entry.perf === 1 && inZone
+  const b = entry.perf === 2 && inZone
+  const r = entry.perf === 3 && inZone
+  const changed = perf.filling !== f || perf.breaking !== b || perf.reversing !== r
+  perf.filling = f; perf.breaking = b; perf.reversing = r
+  return changed
+}
+
 /** Chain is fully independent of editing pattern — never calls switchPattern */
 export function chainToggle() {
   chain.active = !chain.active
   if (chain.active && chain.entries.length > 0) {
-    chain.currentIndex = 0
+    // Resume from current position (preserved from last stop)
     chain.repeatCount = 0
-    chain.playingPatternId = chain.entries[0].patternId
+    const entry = chain.entries[chain.currentIndex]
+    chain.playingPatternId = entry.patternId
+    applyChainEntry(entry)
   } else if (!chain.active) {
     perf.filling = false; perf.breaking = false; perf.reversing = false
     fxPad.verb     = { ...fxPad.verb, on: false }
@@ -993,6 +1099,29 @@ export function chainToggle() {
     fxPad.glitch   = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
     chain.playingPatternId = 0
+  }
+}
+
+/** Rewind chain to first entry */
+export function chainRewind() {
+  chain.currentIndex = 0
+  chain.repeatCount = 0
+  if (chain.active && chain.entries.length > 0) {
+    const entry = chain.entries[0]
+    chain.playingPatternId = entry.patternId
+    applyChainEntry(entry)
+  }
+}
+
+/** Jump chain to a specific entry */
+export function chainJump(index: number) {
+  if (index < 0 || index >= chain.entries.length) return
+  chain.currentIndex = index
+  chain.repeatCount = 0
+  if (chain.active) {
+    const entry = chain.entries[index]
+    chain.playingPatternId = entry.patternId
+    applyChainEntry(entry)
   }
 }
 

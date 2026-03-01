@@ -211,6 +211,40 @@ XY filter/EQ surface (dark zone). Switches with StepGrid via PerfBar view toggle
 
 **Node positioning:** X/Y mapped to 0–1 range within padded area (20px inset). Nodes clamped to pad bounds. Drag with pointer capture.
 
+### ChainView — DECIDED
+
+Full-screen chain editor view (`ui.view = 'chain'`). Arranges patterns into a song structure.
+
+**Header:**
+- CHAIN label + ON/OFF toggle (olive when active)
+- ⏮ rewind button (when entries exist)
+- Position display: SplitFlap `01/08` (current/total)
+- + ADD button (appends current pattern)
+- CLR button (clears all entries)
+
+**Entry row (single-line, 40px height):**
+```
+► ◀04|LOFI▶ C ◀×4▶ ●●○○ [VRB🎛][DLY🎛][GLT🎛][GRN🎛] [BRK][¼] [×]
+```
+- Row marker: number (tap to jump) or ► arrow (current entry)
+- Pattern: ◀▶ nav + SplitFlap ID|NAME
+- KEY: tap to cycle C–B, --- = pattern default
+- Repeats: ◀×N▶ (1–8) + progress dots during playback
+- FX nodes: 4× toggle + compact Knob (20px) — VRB(olive), DLY(blue), GLT(salmon), GRN(purple)
+- PERF: cycles NONE→FILL→BRK→REV, color-coded
+- PERF LEN: cycles BAR→½→¼→1S (16/8/4/1 steps), disabled when PERF=NONE
+- Delete (×)
+
+**Empty state:** "NO ENTRIES" + preset buttons (LOFI).
+
+**Interaction:**
+- Row number tap → jump to entry
+- ON/OFF preserves position (stop/resume)
+- ⏮ → rewind to entry 01
+- All elements have `data-tip` / `data-tip-ja` for hover guide
+
+See ADR 013 for data model and playback behavior.
+
 ### Sidebar — DECIDED
 
 Right-side overlay panel (280px width, dark zone) sharing a single slot for both help and settings content. Positioned absolutely inside `.view-area`.
@@ -221,7 +255,7 @@ Right-side overlay panel (280px width, dark zone) sharing a single slot for both
 - Footer: hover guide (help) or factory reset (system)
 
 **Help mode:**
-- Collapsible accordion sections (9 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, FX Pad)
+- Collapsible accordion sections (12 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, Grid, FX Pad, EQ, Chain)
 - GUIDE footer: shows contextual description when user hovers over `data-tip` elements (desktop only)
 
 **System mode:**

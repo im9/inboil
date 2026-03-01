@@ -3,8 +3,9 @@
     pattern, chain, playback, getPatternName, NOTE_NAMES,
     chainAppend, chainRemove, chainClear, chainSetPattern,
     chainStepRepeats, chainCycleKey, chainCyclePerf,
-    chainToggleFx, chainSetFxSend, chainToggle,
-    PATTERN_COUNT,
+    chainToggleFx, chainSetFxSend, chainToggle, chainLoadPreset,
+    chainCyclePerfLen, chainRewind, chainJump,
+    PATTERN_COUNT, CHAIN_PRESETS,
     type ChainFxKey,
   } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
@@ -12,6 +13,7 @@
 
   const PERF_LABELS = ['----', 'FILL', 'BRK', 'REV'] as const
   const PERF_CLASSES = ['', 'perf-fill', 'perf-brk', 'perf-rev'] as const
+  const PERF_LEN_LABELS: Record<number, string> = { 16: 'BAR', 8: '½', 4: '¼', 1: '1S' }
 
   const FX_DEFS: { key: ChainFxKey, label: string, cls: string }[] = [
     { key: 'verb',     label: 'VRB', cls: 'fx-vrb' },
@@ -49,17 +51,31 @@
       class="btn-toggle"
       class:active={chain.active}
       onpointerdown={chainToggle}
+      data-tip="Toggle chain playback ON/OFF. Resumes from current position."
+      data-tip-ja="チェーン再生のON/OFF。現在位置から再開します。"
     >{chain.active ? 'ON' : 'OFF'}</button>
+    {#if chain.entries.length > 0}
+      <button class="btn-rewind" onpointerdown={chainRewind}
+        data-tip="Rewind to the first entry."
+        data-tip-ja="先頭エントリに戻ります。"
+      >&#9198;</button>
+    {/if}
     <span class="chain-spacer"></span>
     <span class="chain-pos">
       {#if chain.entries.length > 0}
-        <SplitFlap value={chain.currentIndex + 1} width={2} />
-        <span class="pos-sep">/</span>
-        <span class="pos-total">{chain.entries.length}</span>
+        <SplitFlap value={String(chain.currentIndex + 1).padStart(2, '0')} width={2} />
+        <SplitFlap value="/" width={1} />
+        <SplitFlap value={String(chain.entries.length).padStart(2, '0')} width={2} />
       {/if}
     </span>
-    <button class="btn-add" onpointerdown={() => chainAppend(pattern.id)}>+ ADD</button>
-    <button class="btn-clear" onpointerdown={chainClear}>CLR</button>
+    <button class="btn-add" onpointerdown={() => chainAppend(pattern.id)}
+      data-tip="Append current pattern to the chain."
+      data-tip-ja="現在のパターンをチェーンに追加します。"
+    >+ ADD</button>
+    <button class="btn-clear" onpointerdown={chainClear}
+      data-tip="Clear all chain entries."
+      data-tip-ja="チェーンの全エントリを削除します。"
+    >CLR</button>
   </div>
 
   <div class="chain-list" bind:this={listEl}>
@@ -67,22 +83,32 @@
       <div class="chain-empty">
         <span class="empty-text">NO ENTRIES</span>
         <span class="empty-hint">TAP + ADD TO BUILD CHAIN</span>
+        <div class="preset-list">
+          {#each CHAIN_PRESETS as preset, pi}
+            <button class="btn-preset" onpointerdown={() => chainLoadPreset(pi)}>{preset.name}</button>
+          {/each}
+        </div>
       </div>
     {:else}
       {#each chain.entries as entry, i}
-        {@const isCurrent = chain.active && i === chain.currentIndex}
+        {@const isCurrent = i === chain.currentIndex}
         <div
           class="chain-entry"
           class:current={isCurrent}
         >
           <div class="chain-row">
-            <span class="row-marker">
-              {#if isCurrent}
+            <button class="row-marker" onpointerdown={() => chainJump(i)}
+              data-tip="Tap to jump playback to this entry."
+              data-tip-ja="タップでこのエントリにジャンプします。"
+            >
+              {#if isCurrent && chain.active}
                 <span class="marker-arrow">&#9658;</span>
+              {:else if isCurrent}
+                <span class="marker-arrow dim">&#9658;</span>
               {:else}
                 <span class="marker-num">{String(i + 1).padStart(2, '0')}</span>
               {/if}
-            </span>
+            </button>
 
             <button class="row-nav" onpointerdown={() => stepPattern(i, -1)}>&#9664;</button>
             <span class="row-pat-id"><SplitFlap value={String(entry.patternId - 1).padStart(2, '0')} width={2} /></span>
@@ -94,10 +120,15 @@
               class="row-key"
               class:has-key={entry.key !== null}
               onpointerdown={() => chainCycleKey(i)}
+              data-tip="Key transposition. Tap to cycle through keys (C–B). --- = use pattern default."
+              data-tip-ja="キー転調。タップで C〜B を順に切替。--- = パターンのデフォルトキー。"
             >{keyLabel(entry.key)}</button>
 
             <!-- Repeats: ◀ ×N ▶ + progress dots -->
-            <span class="rpt-group">
+            <span class="rpt-group"
+              data-tip="Repeat count. ◀▶ to adjust (1–8). Dots show progress during playback."
+              data-tip-ja="リピート回数。◀▶ で調整 (1〜8)。再生中はドットで進捗を表示。"
+            >
               <button class="rpt-nav" onpointerdown={() => chainStepRepeats(i, -1)}>&#9664;</button>
               <span class="rpt-display">
                 <span class="rpt-times">&times;</span>
@@ -114,7 +145,10 @@
             </span>
 
             <!-- FX toggle + send knobs -->
-            <div class="fx-nodes">
+            <div class="fx-nodes"
+              data-tip="FX sends. Tap label to toggle, drag knob to set send amount."
+              data-tip-ja="FXセンド。ラベルタップでON/OFF、ノブでセンド量を調整。"
+            >
               {#each FX_DEFS as fx}
                 <div class="fx-node {fx.cls}" class:active={entry[fx.key].on}>
                   <button
@@ -135,7 +169,16 @@
             <button
               class="row-perf {PERF_CLASSES[entry.perf]}"
               onpointerdown={() => chainCyclePerf(i)}
+              data-tip="Performance effect. Tap to cycle: NONE → FILL → BRK → REV. Activates on last repeat."
+              data-tip-ja="パフォーマンス。タップで切替: NONE → FILL → BRK → REV。ラストリピートで発動。"
             >{PERF_LABELS[entry.perf]}</button>
+            <button
+              class="row-perf-len {entry.perf > 0 ? PERF_CLASSES[entry.perf] : 'perf-none'}"
+              onpointerdown={() => chainCyclePerfLen(i)}
+              disabled={entry.perf === 0}
+              data-tip="Perf duration. Tap to cycle: BAR (full) → ½ → ¼ → 1S (1 step)."
+              data-tip-ja="パフォーマンスの長さ。タップで切替: BAR (全体) → ½ → ¼ → 1S (1ステップ)。"
+            >{entry.perf > 0 ? (PERF_LEN_LABELS[entry.perfLen] ?? entry.perfLen) : '---'}</button>
 
             <button class="row-del" onpointerdown={() => chainRemove(i)}>&times;</button>
           </div>
@@ -187,11 +230,19 @@
     color: var(--color-fg);
   }
 
+  .btn-rewind {
+    border: 1.5px solid rgba(237,232,220,0.20);
+    background: transparent;
+    color: rgba(237,232,220,0.35);
+    padding: 3px 6px;
+    font-size: 11px;
+    line-height: 1;
+  }
+  .btn-rewind:active { background: rgba(237,232,220,0.10); color: rgba(237,232,220,0.70); }
+
   .chain-spacer { flex: 1; }
 
-  .chain-pos { display: flex; align-items: center; gap: 4px; font-size: 18px; }
-  .pos-sep { font-size: 12px; color: rgba(237,232,220,0.25); }
-  .pos-total { font-family: var(--font-data); font-size: 12px; color: rgba(237,232,220,0.35); }
+  .chain-pos { display: flex; align-items: center; gap: 2px; font-size: 18px; }
 
   .btn-add {
     border: 1.5px solid var(--color-olive);
@@ -233,6 +284,31 @@
   .empty-text { font-size: 14px; letter-spacing: 0.15em; color: rgba(237,232,220,0.18); }
   .empty-hint { font-size: 10px; letter-spacing: 0.08em; color: rgba(237,232,220,0.12); }
 
+  .preset-list {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-preset {
+    border: 1.5px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.35);
+    padding: 5px 12px;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--font-data);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 40ms, color 40ms;
+  }
+  .btn-preset:active {
+    background: rgba(237,232,220,0.10);
+    color: rgba(237,232,220,0.70);
+    border-color: rgba(237,232,220,0.30);
+  }
+
   /* ── Entry wrapper ── */
   .chain-entry {
     border-bottom: 1px solid rgba(237,232,220,0.04);
@@ -249,8 +325,13 @@
     padding: 0 12px;
   }
 
-  .row-marker { width: 22px; text-align: center; flex-shrink: 0; }
+  .row-marker {
+    width: 22px; text-align: center; flex-shrink: 0;
+    background: none; border: none; padding: 0; cursor: pointer;
+  }
+  .row-marker:active .marker-num { color: rgba(237,232,220,0.55); }
   .marker-arrow { color: var(--color-olive); font-size: 12px; }
+  .marker-arrow.dim { opacity: 0.35; }
   .marker-num { font-family: var(--font-data); font-size: 10px; color: rgba(237,232,220,0.20); }
 
   .row-nav {
@@ -362,6 +443,27 @@
   .perf-brk  { color: var(--color-salmon); border-color: var(--color-salmon); }
   .perf-rev  { color: var(--color-blue); border-color: var(--color-blue); }
 
+  .row-perf-len {
+    border: 1px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.30);
+    padding: 2px 4px;
+    font-size: 7px;
+    font-weight: 700;
+    font-family: var(--font-data);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+    min-width: 22px;
+    text-align: center;
+    cursor: pointer;
+    margin-left: -2px;
+  }
+  .row-perf-len:active:not(:disabled) { background: rgba(237,232,220,0.08); }
+  .row-perf-len:disabled { cursor: default; opacity: 0.4; }
+  .row-perf-len.perf-fill { color: var(--color-olive); border-color: color-mix(in srgb, var(--color-olive) 50%, transparent); }
+  .row-perf-len.perf-brk  { color: var(--color-salmon); border-color: color-mix(in srgb, var(--color-salmon) 50%, transparent); }
+  .row-perf-len.perf-rev  { color: var(--color-blue); border-color: color-mix(in srgb, var(--color-blue) 50%, transparent); }
+
   .row-del {
     border: 1px solid rgba(237,232,220,0.12);
     background: transparent;
@@ -421,6 +523,7 @@
     .row-key { font-size: 8px; min-width: 24px; padding: 2px 3px; }
     .rpt-nav { width: 14px; height: 18px; font-size: 6px; }
     .row-perf { font-size: 7px; min-width: 28px; padding: 2px 4px; }
+    .row-perf-len { font-size: 6px; min-width: 18px; padding: 2px 3px; }
     .row-nav { width: 18px; height: 20px; font-size: 7px; }
     .row-del { width: 20px; height: 20px; font-size: 10px; }
     .fx-nodes { gap: 2px; }

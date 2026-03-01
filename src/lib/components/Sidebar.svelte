@@ -133,6 +133,12 @@
         ? '3バンドEQ (LOW, MID, HIGH) とフィルターのノードをドラッグして音質を調整します。フィルターは左でローパス、右でハイパスに変化します。各ノードをタップでON/OFFできます。'
         : 'Drag 3-band EQ nodes (LOW, MID, HIGH) and a filter node to shape the tone. Filter sweeps from low-pass (left) to high-pass (right). Tap nodes to toggle ON/OFF.',
     },
+    {
+      title: L === 'ja' ? 'チェーン' : 'CHAIN',
+      body: L === 'ja'
+        ? 'パターンを順番に並べて曲構成をつくります。+ ADD で現在のパターンを追加。◀▶ でパターンを変更、×N でリピート回数を設定します。FX (VRB/DLY/GLT/GRN) はトグル＋ノブでセンド量を調整できます。PERF (FILL/BRK/REV) はラストリピートで発動し、長さ (BAR/½/¼/1S) も設定可能です。KEY で転調、行番号タップでジャンプ、⏮ で先頭に戻ります。ON/OFF で途中再開もできます。'
+        : 'Arrange patterns into a song structure. + ADD appends the current pattern. ◀▶ changes pattern, ×N sets repeat count. FX (VRB/DLY/GLT/GRN) toggle + knob for send amount. PERF (FILL/BRK/REV) triggers on the last repeat with adjustable length (BAR/½/¼/1S). KEY for transposition, tap row number to jump, ⏮ to rewind. ON/OFF resumes from current position.',
+    },
   ])
 </script>
 
