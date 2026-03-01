@@ -9,6 +9,9 @@
   const drum = $derived(isDrum(track))
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
 
+  // Mobile tab: melodic tracks can switch between STEPS and NOTES
+  let mobileTab: 'steps' | 'notes' = $state('steps')
+
   // Dynamic column count based on step count
   const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
 
@@ -109,8 +112,16 @@
     <button class="nav-btn" onpointerdown={nextTrack}>▶</button>
   </div>
 
-  <!-- Main area: step calculator (drums) or piano roll (melodic) -->
-  {#if drum}
+  <!-- Melodic tab switcher -->
+  {#if !drum}
+    <div class="view-tabs">
+      <button class="tab" class:active={mobileTab === 'steps'} onpointerdown={() => { mobileTab = 'steps' }}>STEPS</button>
+      <button class="tab" class:active={mobileTab === 'notes'} onpointerdown={() => { mobileTab = 'notes' }}>NOTES</button>
+    </div>
+  {/if}
+
+  <!-- Main area -->
+  {#if drum || mobileTab === 'steps'}
     <div class="calculator" style="--cols: {calcCols}">
       {#each track.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
@@ -316,6 +327,27 @@
     background: var(--color-fg);
     color: var(--color-bg);
     transform: rotateY(180deg);
+  }
+
+  /* ── View tabs (melodic only) ── */
+  .view-tabs {
+    display: flex;
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(30,32,40,0.35);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active {
+    color: var(--color-fg);
+    border-bottom-color: var(--color-olive);
   }
 
   /* ── Calculator (dynamic columns) ── */
