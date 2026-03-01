@@ -4,142 +4,137 @@
 
 ## Context
 
-メロディックトラック（BASS / LEAD）は現在1ステップにつき1ノートしか鳴らせない。
-ステップ間をアルペジオで細分化すれば、シーケンスに1音置くだけで
-自動的にアルペジオパターンが走り、ライブ演奏感が大幅に向上する。
+Melodic tracks (BASS / LEAD) currently play only one note per step. Subdividing steps with arpeggiation lets a single placed note generate automatic arpeggio patterns, significantly improving live performance feel.
 
-ハードウェアグルーブボックス（Elektron Digitone, Roland MC-101, Novation Circuit）
-では定番機能であり、シンセウェーブ / ハウス / トランス系パターンと特に相性が良い。
+Arpeggiators are standard in hardware grooveboxes (Elektron Digitone, Roland MC-101, Novation Circuit) and pair especially well with synthwave / house / trance patterns.
 
 ## Decision
 
-### パラメータ設計
+### Parameter Design
 
-voiceParams として4つのパラメータを追加し、既存の ParamPanel ノブで操作できるようにする。
-対象トラックは **MoogLead（LEAD）のみ**。
+Four voiceParams added, controllable via existing ParamPanel knobs. Target track: **MoogLead (LEAD) only**.
 
-| key      | label | min | max | default | 説明 |
-|----------|-------|-----|-----|---------|------|
-| arpMode  | ARP   | 0   | 4   | 0       | 0=OFF, 1=UP, 2=DOWN, 3=UP-DOWN, 4=RANDOM |
-| arpRate  | RATE  | 1   | 4   | 2       | ステップあたりの分割数 (1=1/4, 2=1/8, 3=triplet, 4=1/16) |
-| arpChord | CHRD  | 0   | 4   | 0       | 0=OCT, 1=5TH, 2=MAJ, 3=MIN, 4=7TH |
-| arpOct   | AOCT  | 1   | 4   | 1       | アルペジオのオクターブ範囲 |
+| key | label | min | max | default | description |
+|-----|-------|-----|-----|---------|-------------|
+| arpMode | ARP | 0 | 4 | 0 | 0=OFF, 1=UP, 2=DOWN, 3=UP-DOWN, 4=RANDOM |
+| arpRate | RATE | 1 | 4 | 2 | Subdivisions per step (1=1/4, 2=1/8, 3=triplet, 4=1/16) |
+| arpChord | CHRD | 0 | 4 | 0 | 0=OCT, 1=5TH, 2=TRD, 3=SUS, 4=7TH |
+| arpOct | AOCT | 1 | 4 | 1 | Arpeggio octave range |
 
-arpMode / arpRate / arpChord / arpOct は連続ノブだが、worklet 側で `Math.round()` して離散値として扱う。
-UI 的にはノブを回すとカチカチとモードが切り替わるイメージ。
+All four are continuous knobs but rounded to integers (`Math.round()`) in the worklet. UI snaps to discrete positions.
 
-### コードインターバルテーブル
+### Chord Interval Table
 
-`arpChord` でノートリストの構成音を決定する：
+`arpChord` determines the note list chord tones (scale-degree based, resolved via `SCALE_TEMPLATES`):
 
-| arpChord | 名前 | インターバル（半音） | C3 からの例 |
-|----------|------|---------------------|-------------|
-| 0        | OCT  | [0]                 | C3 (オクターブユニゾン) |
-| 1        | 5TH  | [0, 7]              | C3, G3 |
-| 2        | MAJ  | [0, 4, 7]           | C3, E3, G3 |
-| 3        | MIN  | [0, 3, 7]           | C3, Eb3, G3 |
-| 4        | 7TH  | [0, 4, 7, 10]       | C3, E3, G3, Bb3 |
+| arpChord | Name | Scale Degrees | Example from C3 (C major) |
+|----------|------|---------------|---------------------------|
+| 0 | OCT | [0] | C3 (octave unison) |
+| 1 | 5TH | [0, 4] | C3, G3 |
+| 2 | TRD | [0, 2, 4] | C3, E3, G3 (diatonic triad) |
+| 3 | SUS | [0, 3, 4] | C3, F3, G3 (root + 4th + 5th) |
+| 4 | 7TH | [0, 2, 4, 6] | C3, E3, G3, B3 (diatonic 7th) |
 
-### アルペジオノート生成ロジック
+### Arpeggio Note Generation Logic
 
 ```
-入力: baseNote, mode, chord, octaves
-出力: notes[] (繰り返し再生するノートリスト)
+Input: baseNote, mode, chord, octaves, root
+Output: notes[] (note list for cyclic playback)
 ```
 
-1. `chord` のインターバルを `octaves` 分のオクターブで展開:
-   - chord=MAJ, oct=1: `[C3, E3, G3]`
-   - chord=MAJ, oct=2: `[C3, E3, G3, C4, E4, G4]`
-   - chord=OCT, oct=2: `[C3, C4]` (従来の動作)
+1. Resolve chord degrees through `SCALE_TEMPLATES[root]` for diatonic intervals
+2. Expand across `octaves` octave range:
+   - chord=TRD, oct=1: `[C3, E3, G3]`
+   - chord=TRD, oct=2: `[C3, E3, G3, C4, E4, G4]`
+   - chord=OCT, oct=2: `[C3, C4]` (legacy behavior)
 
-2. `mode` がリストの走査順を決定:
-   - UP: そのまま
-   - DOWN: 逆順
-   - UP-DOWN: 折り返し（端は重複しない）
-   - RANDOM: LCG 疑似乱数で決定論的にピック
+3. `mode` determines traversal order:
+   - UP: as-is
+   - DOWN: reversed
+   - UP-DOWN: ping-pong (no duplicate at endpoints)
+   - RANDOM: LCG pseudo-random for deterministic pick
 
-### 起動条件
+### Activation Condition
 
 `arpMode > 0 && (arpChord > 0 || arpOct >= 2)`
 
-- chord=OCT + oct=1 → ノート1つのみ → arp 無効（通常再生）
-- chord=MAJ + oct=1 → トライアド3音 → arp 有効
-- chord=OCT + oct=2 → オクターブ展開 → arp 有効
+- chord=OCT + oct=1 → single note → arp inactive (normal playback)
+- chord=TRD + oct=1 → triad (3 notes) → arp active
+- chord=OCT + oct=2 → octave expansion → arp active
 
-### Worklet 実装
+### Worklet Implementation
 
-`_advanceStep()` でトリガーが発火した時にアルペジオを開始する：
+Arp starts when a trig fires in `_advanceStep()`:
 
 ```typescript
-// Per-track arp state (worklet 内)
-private arpNotes:    number[][] = []   // トラックごとのノートリスト
-private arpIndex:    number[]   = []   // 現在のノートリスト位置
-private arpCounter:  number[]   = []   // サブステップカウンター
-private arpTickSize: number[]   = []   // サンプル数 / arp tick
+// Per-track arp state (in worklet)
+private arpNotes:    number[][] = []   // note list per track
+private arpIndex:    number[]   = []   // current position in note list
+private arpCounter:  number[]   = []   // sub-step sample counter
+private arpTickSize: number[]   = []   // samples per arp tick
 ```
 
-**ステップ発火時** (`_advanceStep` 内):
-1. `arpMode > 0` かつ `trig.active` → ノートリストを生成
-2. リストの最初のノートで `noteOn()` / `slideNote()`
+**On step trigger** (`_advanceStep`):
+1. `arpMode > 0` and `trig.active` → generate note list
+2. Play first note via `noteOn()` / `slideNote()`
 3. `arpCounter = 0`, `arpTickSize = samplesPerStep / arpRate`
 
-**毎サンプル** (`process` ループ内):
+**Every sample** (`process` loop):
 1. `arpCounter++`
-2. `arpCounter >= arpTickSize` のとき:
-   - `arpIndex` を進めて次のノートで `slideNote()` (滑らかに繋ぐ)
+2. When `arpCounter >= arpTickSize`:
+   - Advance `arpIndex`, play next note via `slideNote()` (smooth connection)
    - `arpCounter -= arpTickSize`
 
-**ゲート終了時** (`gateCounter === 0`):
-- `arpNotes[t] = []` でアルペジオ停止
+**On gate end** (`gateCounter === 0`):
+- `arpNotes[t] = []` to stop arpeggio
 
-### データフロー
+### Data Flow
 
 ```
-ParamPanel ノブ → voiceParams.arpMode/arpRate/arpChord/arpOct
+ParamPanel knobs → voiceParams.arpMode/arpRate/arpChord/arpOct
     ↓
-state.svelte.ts → engine.ts → worklet postMessage (既存パイプライン)
+state.svelte.ts → engine.ts → worklet postMessage (existing pipeline)
     ↓
 worklet setPattern → voices[t].setParam('arpMode', val)
     ↓
-worklet _advanceStep → arp ノートリスト生成 → noteOn/slideNote
-worklet process loop → サブステップ tick → slideNote
+worklet _advanceStep → arp note list generation → noteOn/slideNote
+worklet process loop → sub-step tick → slideNote
 ```
 
-### 変更ファイル
+### Changed Files
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/lib/paramDefs.ts` | MoogLead に `arpMode`, `arpRate`, `arpChord`, `arpOct` 追加 |
-| `src/lib/audio/worklet-processor.ts` | `ARP_CHORDS` テーブル、arp ステート追加、`_advanceStep` でアルペジオ開始、`process` でサブステップ tick |
+| File | Changes |
+|------|---------|
+| `src/lib/paramDefs.ts` | Add `arpMode`, `arpRate`, `arpChord`, `arpOct` to MoogLead |
+| `src/lib/audio/worklet-processor.ts` | `ARP_CHORD_DEGS` table, arp state, `_advanceStep` arp start, `process` sub-step tick |
 
-- `state.svelte.ts` — 変更不要（voiceParams は Record<string, number> で動的）
-- `engine.ts` — 変更不要（voiceParams をそのまま転送）
-- `ParamPanel.svelte` — 変更不要（paramDefs から自動生成）
+- `state.svelte.ts` — No changes (voiceParams is dynamic `Record<string, number>`)
+- `engine.ts` — No changes (voiceParams forwarded as-is)
+- `ParamPanel.svelte` — No changes (auto-generated from paramDefs)
 
-### 変更しないもの
+### Unchanged
 
-- AnalogSynth.h / voices.ts の Voice インターフェース
-  → アルペジオは worklet のステップ制御レイヤーで処理。ボイス自体は普通に noteOn/slideNote を受ける
-- PianoRoll — ノート表示はそのまま（アルペジオは再生時のみの効果）
-- Trig インターフェース — per-step データには含めない（トラック全体の設定）
+- AnalogSynth.h / voices.ts Voice interface — Arpeggio handled at worklet step-control layer. Voices just receive normal noteOn/slideNote
+- PianoRoll — Note display unchanged (arpeggio is a playback-only effect)
+- Trig interface — Not stored per-step (track-level setting)
 
 ## Verification
 
-1. LEAD トラックで ARP=1 (UP), CHRD=MAJ, AOCT=1 → C-E-G トライアドアルペジオ
-2. AOCT=2 → 2オクターブに展開 (C3-E3-G3-C4-E4-G4)
-3. CHRD=7TH → ドミナント7thアルペジオ (C-E-G-Bb)
-4. CHRD=OCT, AOCT=2 → オクターブユニゾン（従来動作）
-5. ARP=2 (DOWN) → 下降パターン
-6. ARP=3 (UP-DOWN) → 折り返しパターン
-7. ARP=4 (RANDOM) → ランダムピック
-8. RATE を 1→4 に変更 → 分割が細かくなる
-9. ARP=0 → 通常の単音再生に戻る
-10. CHRD=OCT, AOCT=1 → arp 無効（通常再生）
-11. duration=4 のロングノートでアルペジオ → 4ステップ分アルペジオが継続
-12. P-Lock で特定ステップだけ CHRD=MAJ → そのステップだけコードアルペジオ
+1. LEAD track: ARP=UP, CHRD=TRD, AOCT=1 → C-E-G triad arpeggio
+2. AOCT=2 → 2-octave expansion (C3-E3-G3-C4-E4-G4)
+3. CHRD=7TH → diatonic 7th arpeggio (C-E-G-B)
+4. CHRD=OCT, AOCT=2 → octave unison (legacy behavior)
+5. ARP=DOWN → descending pattern
+6. ARP=UP-DOWN → ping-pong pattern
+7. ARP=RANDOM → random pick
+8. RATE 1→4 → subdivisions increase
+9. ARP=OFF → normal single-note playback
+10. CHRD=OCT, AOCT=1 → arp inactive (normal playback)
+11. duration=4 long note → arpeggio sustains for 4 steps
+12. P-Lock: CHRD=TRD on specific step only → that step gets chord arpeggio
 
 ## Future Extensions
 
-- **ARP パターン**: gate length パターン（長短長短など）の追加
-- **ARP hold**: ノートをホールドしてアルペジオを継続するモード
-- **カスタムコード**: P-Lock で任意のコードトーンを指定するモード
+- **ARP patterns**: Gate-length patterns (long-short-long-short, etc.)
+- **ARP hold**: Hold note to continue arpeggio beyond gate
+- **Custom chords**: P-Lock arbitrary chord tones per step
