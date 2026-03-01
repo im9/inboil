@@ -166,7 +166,11 @@ Performance controls strip (dark zone). Layout:
   - FILL, REV: `--color-blue` border/active
   - BRK: `--color-salmon` border/active
 
-On mobile (`< 640px`): DUC, CMP, GAIN, SWG, separators, and labels hidden. Elements shrunk to fit single row.
+On mobile (`< 640px`):
+- DUC, CMP, GAIN, SWG, separators, and labels hidden.
+- **Keyboard → Fan-out bubble menu**: Full piano keyboard replaced by a circular trigger button (shows current root note, e.g. "C") + compact stacked octave ▲/▼. Tapping the trigger opens a **fan-arc keyboard overlay**: 12 rectangular piano keys arranged in a quarter-circle arc (0°–90°). White keys on outer ring (R=130), black keys on inner ring (R=78). Keys are rotated radially with counter-rotated labels. Semi-transparent backdrop (rgba(0,0,0,0.25)) dims the background. Animation: 150ms scale+rotate with 15ms stagger per key.
+- Key trigger + octave share a row with FILL/REV/BRK (3 rows → 2 rows, saving vertical space).
+- View toggle (GRID/FX/EQ/CHN) is a full-width tab bar with bottom border indicator.
 
 ### FxPad — DECIDED
 
@@ -231,7 +235,7 @@ Full-screen chain editor view (`ui.view = 'chain'`). Arranges patterns into a so
 - KEY: tap to cycle C–B, --- = pattern default
 - Repeats: ◀×N▶ (1–8) + progress dots during playback
 - FX nodes: 4× toggle + compact Knob (20px) — VRB(olive), DLY(blue), GLT(salmon), GRN(purple)
-- PERF: cycles NONE→FILL→BRK→REV, color-coded
+- PERF: cycles NONE→FILL→BRK→REV, color-coded (fixed `min-width: 38px` to prevent layout shift between 3/4-char labels)
 - PERF LEN: cycles BAR→½→¼→1S (16/8/4/1 steps), disabled when PERF=NONE
 - Delete (×)
 
@@ -252,7 +256,7 @@ Right-side overlay panel (280px width, dark zone) sharing a single slot for both
 **Structure:**
 - Header: title (HELP / SYSTEM), language toggle (help only), close button
 - Body: scrollable content area
-- Footer: hover guide (help) or factory reset (system)
+- Footer: hover guide (help, desktop only) or factory reset (system)
 
 **Help mode:**
 - Collapsible accordion sections (12 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, Grid, FX Pad, EQ, Chain)
@@ -284,6 +288,8 @@ Connected bars = auto-legato, gaps = retrigger. Playhead column shown when playi
 
 **Scale mode** (`prefs.scaleMode`): Out-of-scale rows (non-white-key positions) are disabled with salmon tint (`rgba(232,160,144,0.06)`), dimmed opacity (0.3 for keys, 0.12 for cells), and `pointer-events: none`.
 
+On mobile: Piano spacer narrowed (26px oct-keys only), cells shrunk to 18px with 1px gap, rows use `flex: 1; min-height: 10px` to fill available vertical space for better touch targets.
+
 ### AppHeader — DECIDED
 
 Dark zone. Contains:
@@ -294,12 +300,22 @@ Dark zone. Contains:
 - ⚙ system button (top-right, opens SYSTEM sidebar)
 - Pending pattern: when queued switch is active, shows target PAT with blinking animation (400ms pulse)
 
+On mobile (`compact` mode):
+- Transport (▶ ■ RAND) centered in header via absolute positioning.
+- BPM display (left) and pattern display (right) side-by-side in sub-header row.
+- **Pattern actions → Radial bubble menu**: CPY/PST/CLR buttons replaced by a ⋯ trigger that fans out 3 circular action buttons in a left-down arc. Animation: 150ms with 30ms stagger, `cubic-bezier(0.2, 0, 0.4, 1.3)`. Semi-transparent backdrop for dismissal.
+- ? help button opens help sidebar (hover guide footer hidden on mobile).
+
 ### MobileTrackView — DECIDED
 
-Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × 4 rows for 16 steps).
-Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop.
+Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × N rows). Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop. Melodic tracks can switch between STEPS and NOTES (piano roll) tabs.
 
-Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the mute button.
+**Track header:** Track name (SplitFlap) + synth type label + step count (−/+ buttons with "step" suffix).
+
+**Footer toolbar (bottom-up):**
+1. **Lock toolbar:** LOCK button + step label + CLR + MUTE button.
+2. **Param category tabs:** MIX | synth param groups (e.g. PITC, AMP) | FX — switches displayed knobs.
+3. **Params bar:** Knobs for selected category (VOL/PAN in MIX, synth params per group, DUC/CMP in FX).
 
 ## Interaction Model — DECIDED
 
@@ -421,7 +437,9 @@ lg:  ≥ 1024px  (desktop)            → Full StepGrid layout
 
 ### Mobile (sm)
 
-Uses MobileTrackView: calculator-style step buttons, track navigation via ◄ ►, ♪ NOTES toggle for melodic tracks.
+Uses MobileTrackView: calculator-style step buttons, track navigation via ◄ ►, STEPS/NOTES tab toggle for melodic tracks.
+
+Bubble menus (keyboard fan-out, pattern actions) use radial/arc animations with semi-transparent backdrop overlay (`rgba(0,0,0,0.25)`) for visual separation and dismissal.
 
 ### Scrolling
 

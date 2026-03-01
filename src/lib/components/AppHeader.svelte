@@ -51,14 +51,47 @@
     if (bpmRepeatTimer) { clearTimeout(bpmRepeatTimer); bpmRepeatTimer = null }
     if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
   }
+
+  // ── Pat actions bubble menu ──
+  let patMenuOpen = $state(false)
+
+  function patAction(fn: () => void) {
+    fn()
+    patMenuOpen = false
+  }
 </script>
 
 <div class="header-wrap" class:compact>
   <!-- Top bar: logo + oscilloscope background -->
   <header class="app-header">
     <Oscilloscope />
-    {#if !compact}
-      <span class="app-name">INBOIL</span>
+    <span class="app-name">INBOIL</span>
+    {#if compact}
+      <div class="transport-center">
+        <button
+          class="btn-transport"
+          class:active={playback.playing}
+          onpointerdown={onPlay}
+          aria-label="Play"
+        >▶</button>
+        <button
+          class="btn-transport"
+          onpointerdown={onStop}
+          aria-label="Stop"
+        >■</button>
+        <button
+          class="btn-rand"
+          onpointerdown={onRandom}
+          aria-label="Randomize"
+        >RAND</button>
+      </div>
+      <button
+        class="btn-help-mobile"
+        class:active={ui.sidebar === 'help'}
+        onpointerdown={() => toggleSidebar('help')}
+        aria-label="Help"
+        data-tip="Show help" data-tip-ja="ヘルプを表示"
+      >?</button>
     {/if}
     <button
       class="btn-system"
@@ -101,20 +134,31 @@
     </div>
 
     <div class="pat-block">
-      <div class="pat-top">
-        <span class="pat-label">PAT</span>
-        <div class="pat-actions">
-          <button class="pat-act" onpointerdown={() => copyPattern()} data-tip="Copy pattern" data-tip-ja="パターンをコピー">CPY</button>
-          <button class="pat-act" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) pastePattern(pattern.id) }} data-tip="Paste pattern to current slot" data-tip-ja="現在のスロットにペースト">PST</button>
-          <button class="pat-act" onpointerdown={() => clearPattern(pattern.id)} data-tip="Clear current pattern" data-tip-ja="現在のパターンをクリア">CLR</button>
-        </div>
-      </div>
       <div class="pat-display">
         <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
         <span class="pat-value" class:pending={isPending} data-tip="Current pattern number" data-tip-ja="現在のパターン番号"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
         <span class="pat-name"><SplitFlap value={displayName} width={8} /></span>
         <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
+        <!-- Pat actions: radial menu on mobile, inline on desktop -->
+        <div class="pat-menu-wrap" class:open={patMenuOpen}>
+          <button class="pat-menu-item" onpointerdown={() => patAction(() => copyPattern())}>CPY</button>
+          <button class="pat-menu-item" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) patAction(() => pastePattern(pattern.id)) }}>PST</button>
+          <button class="pat-menu-item" onpointerdown={() => patAction(() => clearPattern(pattern.id))}>CLR</button>
+          <button class="pat-menu-trigger" onpointerdown={() => { patMenuOpen = !patMenuOpen }}>⋯</button>
+        </div>
+        {#if patMenuOpen}
+          <button class="pat-menu-backdrop" onpointerdown={() => { patMenuOpen = false }}></button>
+        {/if}
+      </div>
+      <!-- Desktop: inline actions (hidden on mobile) -->
+      <div class="pat-bottom">
+        <span class="pat-label">PAT</span>
+        <div class="pat-actions">
+          <button class="pat-act" onpointerdown={() => copyPattern()} data-tip="Copy pattern" data-tip-ja="パターンをコピー">CPY</button>
+          <button class="pat-act" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) pastePattern(pattern.id) }} data-tip="Paste pattern to current slot" data-tip-ja="現在のスロットにペースト">PST</button>
+          <button class="pat-act" onpointerdown={() => clearPattern(pattern.id)} data-tip="Clear current pattern" data-tip-ja="現在のパターンをクリア">CLR</button>
+        </div>
       </div>
     </div>
   </div>
@@ -149,6 +193,30 @@
     text-transform: uppercase;
     position: relative;
     z-index: 1;
+  }
+
+  .btn-help-mobile {
+    position: absolute;
+    right: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.45);
+    font-size: 13px;
+    font-weight: 700;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .btn-help-mobile:active,
+  .btn-help-mobile.active {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.85);
   }
 
   .btn-system {
@@ -264,7 +332,7 @@
     align-items: flex-end;
     margin-left: auto;
   }
-  .pat-top {
+  .pat-bottom {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -339,6 +407,150 @@
     transform: translateY(2px);
   }
   .compact .pat-name { font-size: 18px; }
+
+  /* ── Pat radial menu ── */
+  .pat-menu-wrap {
+    position: relative;
+    display: none; /* shown on mobile only */
+  }
+  .pat-menu-trigger {
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.5);
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    position: relative;
+    z-index: 52;
+    transition: background 150ms, color 150ms;
+  }
+  .pat-menu-wrap.open .pat-menu-trigger {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.9);
+  }
+  .pat-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.25);
+    z-index: 50;
+    border: none;
+  }
+  .pat-menu-item {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(237,232,220,0.85);
+    background: var(--color-fg);
+    border: 1px solid rgba(237,232,220,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 51;
+    /* Closed: collapsed to trigger center */
+    top: -6px;
+    left: -6px;
+    transform: scale(0);
+    opacity: 0;
+    transition: all 150ms cubic-bezier(0.2, 0, 0.4, 1.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  .pat-menu-item:active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .pat-menu-item.disabled {
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  /* Fan out down-left from trigger */
+  .pat-menu-wrap.open .pat-menu-item {
+    transform: scale(1);
+    opacity: 1;
+  }
+  .pat-menu-wrap.open .pat-menu-item:nth-child(1) {
+    top: -20px;
+    left: -48px;
+    transition-delay: 0ms;
+  }
+  .pat-menu-wrap.open .pat-menu-item:nth-child(2) {
+    top: 16px;
+    left: -52px;
+    transition-delay: 30ms;
+  }
+  .pat-menu-wrap.open .pat-menu-item:nth-child(3) {
+    top: 48px;
+    left: -38px;
+    transition-delay: 60ms;
+  }
+
+  /* ── Transport center (mobile app-header) ── */
+  .transport-center {
+    display: none;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 639px) {
+    /* Transport in app-header */
+    .transport-center {
+      display: flex;
+      gap: 4px;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+    }
+    .transport-center .btn-transport {
+      padding: 3px 10px;
+      font-size: 10px;
+    }
+    .transport-center .btn-rand {
+      padding: 3px 6px;
+      font-size: 8px;
+    }
+    /* Hide original transport in sub-header */
+    .transport { display: none; }
+
+    .sub-header,
+    .compact .sub-header {
+      height: auto;
+      padding: 4px 8px;
+      gap: 4px;
+    }
+    .bpm-value { font-size: 22px; }
+    .bpm-adj { width: 20px; height: 20px; font-size: 12px; }
+    .bpm-label { display: none; }
+    /* BPM + pat side by side */
+    .pat-block {
+      margin-left: auto;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .pat-display {
+      gap: 3px;
+    }
+    .pat-adj { width: 20px; height: 20px; font-size: 10px; }
+    .pat-value { font-size: 16px; }
+    .pat-name { font-size: 14px; }
+    .pat-sep { font-size: 14px; }
+    /* Hide inline actions on mobile, use bubble menu instead */
+    .pat-bottom { display: none; }
+    .pat-menu-wrap { display: block; }
+    .pat-act {
+      font-size: 8px;
+      padding: 2px 6px;
+    }
+  }
+
   @keyframes pat-blink {
     0%, 100% { opacity: 1; }
     50%      { opacity: 0.3; }

@@ -501,4 +501,20 @@
     color: rgba(237,232,220,0.35);
     margin: 6px 0 0;
   }
+
+  /* ── Mobile: fullscreen overlay ── */
+  @media (max-width: 639px) {
+    .sidebar {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      z-index: 100;
+    }
+    .sidebar.collapsed {
+      top: auto;
+    }
+    .guide-footer {
+      display: none;
+    }
+  }
 </style>

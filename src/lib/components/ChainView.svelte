@@ -463,7 +463,7 @@
     font-family: var(--font-data);
     letter-spacing: 0.04em;
     flex-shrink: 0;
-    min-width: 32px;
+    min-width: 38px;
     text-align: center;
     cursor: pointer;
   }
@@ -544,7 +544,13 @@
 
   @media (max-width: 639px) {
     .chain-header { padding: 6px 8px; gap: 6px; }
-    .chain-row { height: 36px; gap: 3px; padding: 0 8px; }
+    .chain-row {
+      flex-wrap: wrap;
+      height: auto;
+      min-height: 36px;
+      gap: 3px;
+      padding: 4px 8px;
+    }
     .row-pat-id { font-size: 16px; }
     .row-pat-name { font-size: 14px; }
     .row-sep { font-size: 14px; }
@@ -552,11 +558,20 @@
     .row-key { font-size: 8px; min-width: 24px; padding: 2px 3px; }
     .row-oct { font-size: 8px; min-width: 24px; padding: 2px 3px; }
     .rpt-nav { width: 14px; height: 18px; font-size: 6px; }
-    .row-perf { font-size: 7px; min-width: 28px; padding: 2px 4px; }
-    .row-perf-len { font-size: 6px; min-width: 18px; padding: 2px 3px; }
     .row-nav { width: 18px; height: 20px; font-size: 7px; }
-    .row-del { width: 20px; height: 20px; font-size: 10px; }
-    .fx-nodes { gap: 2px; }
+    /* Delete stays on row 1, pushed right */
+    .row-del { width: 20px; height: 20px; font-size: 10px; margin-left: auto; }
+    /* FX nodes + perf wrap to row 2 via order */
+    .fx-nodes {
+      order: 20;
+      margin-left: 0;
+      gap: 2px;
+      padding-left: 22px;
+    }
     .fx-toggle { padding: 2px 4px; font-size: 7px; }
+    /* Hide knobs on mobile — toggle-only */
+    .fx-node :global(.knob-wrap) { display: none; }
+    .row-perf { order: 21; font-size: 7px; min-width: 28px; padding: 2px 4px; }
+    .row-perf-len { order: 22; font-size: 6px; min-width: 18px; padding: 2px 3px; }
   }
 </style>

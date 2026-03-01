@@ -9,6 +9,31 @@
   const drum = $derived(isDrum(track))
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
 
+  // Group params into categories for tab switching
+  interface ParamCategory { id: string; label: string; params: typeof params }
+  const paramCategories = $derived((): ParamCategory[] => {
+    const cats: ParamCategory[] = [{ id: 'mix', label: 'MIX', params: [] }]
+    let currentGroup = ''
+    for (const p of params) {
+      const g = p.group ?? ''
+      if (g !== currentGroup) {
+        currentGroup = g
+        cats.push({ id: g, label: g.toUpperCase().slice(0, 4), params: [] })
+      }
+      cats[cats.length - 1].params.push(p)
+    }
+    cats.push({ id: 'fx', label: 'FX', params: [] })
+    return cats
+  })
+
+  let paramTab = $state('mix')
+  // Reset tab when track changes and current tab no longer exists
+  $effect(() => {
+    void ui.selectedTrack
+    const cats = paramCategories()
+    if (!cats.find(c => c.id === paramTab)) paramTab = 'mix'
+  })
+
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
 
@@ -48,11 +73,13 @@
     return !!(ui.lockMode && selTrig?.paramLocks?.[key] !== undefined)
   }
 
-  function cycleSteps() {
-    const current = track.steps
-    const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
-    const next = STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length]
-    setTrackSteps(ui.selectedTrack, next)
+  function stepDown() {
+    const idx = STEP_OPTIONS.indexOf(track.steps as typeof STEP_OPTIONS[number])
+    if (idx > 0) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx - 1])
+  }
+  function stepUp() {
+    const idx = STEP_OPTIONS.indexOf(track.steps as typeof STEP_OPTIONS[number])
+    if (idx < STEP_OPTIONS.length - 1) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx + 1])
   }
 
   function prevTrack() {
@@ -75,37 +102,12 @@
       <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
       <div class="track-meta">
         <span class="track-type">{track.synthType}</span>
-        <button class="step-count" onpointerdown={cycleSteps}>{track.steps}</button>
-        <button
-          class="btn-lock"
-          class:active={ui.lockMode}
-          onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
-        >LOCK</button>
-        <Knob
-          value={track.volume}
-          label="VOL"
-          size={28}
-          light
-          compact
-          onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }}
-        />
-        <Knob
-          value={(track.pan + 1) / 2}
-          label="PAN"
-          size={28}
-          light
-          compact
-          onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }}
-        />
-        <button
-          class="btn-mute"
-          onpointerdown={() => toggleMute(ui.selectedTrack)}
-        >
-          <span class="mute-flip" class:flipped={track.muted}>
-            <span class="face off">M</span>
-            <span class="face on">M</span>
-          </span>
-        </button>
+      </div>
+      <div class="step-row">
+        <button class="step-adj" onpointerdown={stepDown}>−</button>
+        <span class="step-value">{track.steps}</span>
+        <span class="step-suffix">step</span>
+        <button class="step-adj" onpointerdown={stepUp}>+</button>
       </div>
     </div>
 
@@ -147,45 +149,84 @@
     </div>
   {/if}
 
-  <!-- Params (always visible at bottom) -->
-  <div class="params-bar">
+  <!-- Footer toolbar: LOCK + Mute -->
+  <div class="lock-toolbar">
+    <button
+      class="btn-lock"
+      class:active={ui.lockMode}
+      onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
+    >LOCK</button>
     {#if ui.lockMode && ui.selectedStep !== null}
       <span class="lock-label">STEP {ui.selectedStep + 1}</span>
       {#if hasAnyLock}
         <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
       {/if}
     {/if}
-    {#each params as p, i}
-      {#if i > 0 && p.group && p.group !== params[i - 1].group}
-        <div class="sends-sep" aria-hidden="true"></div>
-      {/if}
-      <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
-      <Knob
-        value={normalizeParam(p, knobValue(p))}
-        label={p.label}
-        size={40}
-        locked={isParamLocked(p.key)}
-        steps={paramSteps(p)}
-        displayValue={displayLabel(p, knobValue(p))}
-        onchange={v => knobChange(p, v)}
-      />
-      </span>
-    {/each}
+    <span class="toolbar-spacer"></span>
+    <button
+      class="btn-mute-bar"
+      class:muted={track.muted}
+      onpointerdown={() => toggleMute(ui.selectedTrack)}
+    >MUTE</button>
+  </div>
 
-    <!-- Global FX -->
-    <div class="sends-sep" aria-hidden="true"></div>
-    <Knob
-      value={effects.ducker.depth}
-      label="DUCK"
-      size={40}
-      onchange={v => { effects.ducker.depth = v }}
-    />
-    <Knob
-      value={(effects.comp.makeup - 1.0) / 2.5}
-      label="COMP"
-      size={40}
-      onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }}
-    />
+  <!-- Param category tabs -->
+  <div class="param-tabs">
+    {#each paramCategories() as cat}
+      <button
+        class="param-tab"
+        class:active={paramTab === cat.id}
+        onpointerdown={() => { paramTab = cat.id }}
+      >{cat.label}</button>
+    {/each}
+  </div>
+
+  <!-- Param knobs for selected category -->
+  <div class="params-bar">
+    {#if paramTab === 'mix'}
+      <Knob
+        value={track.volume}
+        label="VOL"
+        size={40}
+        onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }}
+      />
+      <Knob
+        value={(track.pan + 1) / 2}
+        label="PAN"
+        size={40}
+        onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }}
+      />
+    {:else if paramTab === 'fx'}
+      <Knob
+        value={effects.ducker.depth}
+        label="DUCK"
+        size={40}
+        onchange={v => { effects.ducker.depth = v }}
+      />
+      <Knob
+        value={(effects.comp.makeup - 1.0) / 2.5}
+        label="COMP"
+        size={40}
+        onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }}
+      />
+    {:else}
+      {@const cat = paramCategories().find(c => c.id === paramTab)}
+      {#if cat}
+        {#each cat.params as p}
+          <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
+          <Knob
+            value={normalizeParam(p, knobValue(p))}
+            label={p.label}
+            size={40}
+            locked={isParamLocked(p.key)}
+            steps={paramSteps(p)}
+            displayValue={displayLabel(p, knobValue(p))}
+            onchange={v => knobChange(p, v)}
+          />
+          </span>
+        {/each}
+      {/if}
+    {/if}
   </div>
 
   <!-- Track indicator dots -->
@@ -258,75 +299,73 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
-  .step-count {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--color-olive);
-    background: transparent;
-    border: 1px solid var(--color-olive);
-    padding: 1px 5px;
-    line-height: 14px;
+  .step-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 0;
   }
-  .step-count:active {
+  .step-adj {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-adj:active {
     background: var(--color-olive);
     color: var(--color-bg);
   }
+  .step-value {
+    font-family: var(--font-display);
+    font-size: 20px;
+    line-height: 1;
+    color: var(--color-olive);
+    min-width: 2ch;
+    text-align: right;
+  }
+  .step-suffix {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--color-olive);
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
   .btn-lock {
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(30,32,40,0.4);
+    color: rgba(237,232,220,0.4);
     background: transparent;
-    border: 1px solid rgba(30,32,40,0.25);
-    padding: 1px 5px;
-    line-height: 14px;
+    border: 1px solid rgba(237,232,220,0.25);
+    padding: 4px 8px;
+    line-height: 1;
   }
   .btn-lock.active {
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);
   }
-  .btn-mute {
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: transparent;
-    padding: 0;
-    perspective: 60px;
-  }
-  .mute-flip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 180ms ease-out;
-  }
-  .mute-flip.flipped { transform: rotateY(180deg); }
-  .btn-mute:active .mute-flip { transform: scale(0.85); }
-  .btn-mute:active .mute-flip.flipped { transform: rotateY(180deg) scale(0.85); }
-  .mute-flip > .face {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .btn-mute-bar {
     font-size: 9px;
-    backface-visibility: hidden;
-  }
-  .mute-flip > .face.off {
-    border: 1px solid var(--color-fg);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.4);
     background: transparent;
-    color: var(--color-fg);
+    border: 1px solid rgba(237,232,220,0.25);
+    padding: 4px 8px;
+    line-height: 1;
   }
-  .mute-flip > .face.on {
-    border: 1px solid var(--color-fg);
-    background: var(--color-fg);
+  .btn-mute-bar.muted {
+    background: var(--color-salmon);
+    border-color: var(--color-salmon);
     color: var(--color-bg);
-    transform: rotateY(180deg);
   }
 
   /* ── View tabs (melodic only) ── */
@@ -455,16 +494,17 @@
     height: 100%;
   }
 
-  /* ── Params bar ── */
-  .params-bar {
+  /* ── Lock toolbar ── */
+  .lock-toolbar {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 10px;
     background: var(--color-fg);
     flex-shrink: 0;
-    padding: 6px 10px;
-    gap: 6px 10px;
+    border-top: 1px solid rgba(237,232,220,0.08);
   }
+  .toolbar-spacer { flex: 1; }
   .lock-label {
     font-size: 9px;
     font-weight: 700;
@@ -486,11 +526,41 @@
     background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.85);
   }
-  .sends-sep {
-    width: 1px;
-    height: 32px;
-    background: rgba(237,232,220,0.12);
+
+  /* ── Param category tabs ── */
+  .param-tabs {
+    display: flex;
+    background: var(--color-fg);
     flex-shrink: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid rgba(237,232,220,0.06);
+  }
+  .param-tab {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.35);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+  }
+  .param-tab.active {
+    color: rgba(237,232,220,0.90);
+    border-bottom-color: var(--color-olive);
+  }
+
+  /* ── Params bar ── */
+  .params-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-fg);
+    flex-shrink: 0;
+    padding: 6px 10px;
+    gap: 6px;
   }
 
   /* ── Track dots ── */

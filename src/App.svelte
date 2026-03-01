@@ -112,6 +112,7 @@
       {:else}
         <MobileTrackView />
       {/if}
+      <Sidebar />
     </div>
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />

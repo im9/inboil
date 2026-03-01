@@ -395,4 +395,27 @@
     from { transform: translateY(50%); }
     to   { transform: translateY(0); }
   }
+
+  /* ── Mobile ── */
+  @media (max-width: 639px) {
+    .piano-roll {
+      height: auto;
+      padding-left: 2px;
+      padding-right: 4px;
+    }
+    .piano-spacer {
+      width: auto;
+    }
+    .oct-keys { width: 26px; }
+    .keys { width: 26px; }
+    .key { height: auto; flex: 1; min-height: 10px; }
+    .key-label { font-size: 6px; }
+    .grid { overflow-x: auto; }
+    .row {
+      height: auto; flex: 1; min-height: 10px;
+      grid-template-columns: repeat(var(--steps), 18px);
+      gap: 1px;
+    }
+    .cell { width: 18px; }
+  }
 </style>
