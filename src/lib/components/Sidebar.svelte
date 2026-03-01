@@ -106,8 +106,8 @@
     {
       title: L === 'ja' ? 'パターン' : 'PATTERNS',
       body: L === 'ja'
-        ? 'PAT ◀▶ でパターンを切り替えられます。00–19 はファクトリープリセットです。再生中はバーの境界で自動的に切り替わります。'
-        : 'PAT ◀▶ to switch patterns. 00–19: factory presets. During playback, switch happens at the bar boundary.',
+        ? 'PAT ◀▶ でパターンを切り替えられます。00–19 はファクトリープリセットです。再生中はバーの境界で自動的に切り替わります。CPY で現在のパターンをコピー、別スロットに移動して PST でペースト、CLR でパターンをクリアできます。'
+        : 'PAT ◀▶ to switch patterns. 00–19: factory presets. During playback, switch happens at the bar boundary. CPY copies the current pattern, navigate to another slot and PST to paste, CLR clears the pattern.',
     },
     {
       title: L === 'ja' ? 'シンセパラメータ' : 'SYNTH PARAMS',

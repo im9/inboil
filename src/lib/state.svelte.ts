@@ -509,6 +509,61 @@ function loadFromBank(idx: number): void {
 
 export const patternNav = $state({ pendingId: 0 })
 
+// ── Pattern clipboard (copy / paste / clear) ──────────────────────────
+let clipboardPattern: Pattern | null = null
+export const clipboard = $state({ hasData: false })
+
+export function copyPattern(): void {
+  clipboard.hasData = true
+  clipboardPattern = {
+    id: pattern.id,
+    name: pattern.name,
+    bpm: pattern.bpm,
+    rootNote: pattern.rootNote,
+    tracks: pattern.tracks.map(t => ({
+      id: t.id, name: t.name, synthType: t.synthType,
+      steps: t.steps, muted: t.muted, volume: t.volume,
+      pan: t.pan,
+      reverbSend: t.reverbSend, delaySend: t.delaySend,
+      glitchSend: t.glitchSend, granularSend: t.granularSend,
+      voiceParams: { ...t.voiceParams },
+      trigs: t.trigs.map(tr => ({
+        active: tr.active, note: tr.note, velocity: tr.velocity,
+        duration: tr.duration, slide: tr.slide,
+        ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
+          ? { paramLocks: { ...tr.paramLocks } } : {}),
+      })),
+    })),
+  }
+}
+
+export function pastePattern(targetId: number): void {
+  if (!clipboardPattern) return
+  if (targetId < 1 || targetId > PATTERN_COUNT) return
+  const src = clipboardPattern
+  patternBank[targetId - 1] = {
+    id: targetId,
+    name: src.name,
+    bpm: src.bpm,
+    rootNote: src.rootNote,
+    tracks: src.tracks.map(t => ({
+      ...t,
+      voiceParams: { ...t.voiceParams },
+      trigs: t.trigs.map(tr => ({
+        ...tr,
+        ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
+      })),
+    })),
+  }
+  if (targetId === pattern.id) loadFromBank(targetId - 1)
+}
+
+export function clearPattern(targetId: number): void {
+  if (targetId < 1 || targetId > PATTERN_COUNT) return
+  patternBank[targetId - 1] = makeEmptyPattern(targetId)
+  if (targetId === pattern.id) loadFromBank(targetId - 1)
+}
+
 export function getPatternName(id: number): string {
   return patternBank[id - 1]?.name ?? ''
 }

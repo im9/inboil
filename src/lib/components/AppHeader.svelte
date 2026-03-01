@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, switchPattern, patternNav, getPatternName, ui, toggleSidebar } from '../state.svelte.ts'
+  import { pattern, playback, switchPattern, patternNav, getPatternName, ui, toggleSidebar, copyPattern, pastePattern, clearPattern, clipboard } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -101,7 +101,14 @@
     </div>
 
     <div class="pat-block">
-      <span class="pat-label">PAT</span>
+      <div class="pat-top">
+        <span class="pat-label">PAT</span>
+        <div class="pat-actions">
+          <button class="pat-act" onpointerdown={() => copyPattern()} data-tip="Copy pattern" data-tip-ja="パターンをコピー">CPY</button>
+          <button class="pat-act" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) pastePattern(pattern.id) }} data-tip="Paste pattern to current slot" data-tip-ja="現在のスロットにペースト">PST</button>
+          <button class="pat-act" onpointerdown={() => clearPattern(pattern.id)} data-tip="Clear current pattern" data-tip-ja="現在のパターンをクリア">CLR</button>
+        </div>
+      </div>
       <div class="pat-display">
         <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
         <span class="pat-value" class:pending={isPending} data-tip="Current pattern number" data-tip-ja="現在のパターン番号"><SplitFlap value={displayNum} width={2} /></span>
@@ -257,11 +264,37 @@
     align-items: flex-end;
     margin-left: auto;
   }
+  .pat-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .pat-label {
     font-size: 9px;
     letter-spacing: 0.08em;
     color: rgba(237,232,220,0.35);
     text-transform: uppercase;
+  }
+  .pat-actions {
+    display: flex;
+    gap: 2px;
+  }
+  .pat-act {
+    border: 1px solid rgba(237,232,220,0.2);
+    background: transparent;
+    color: rgba(237,232,220,0.4);
+    font-size: 8px;
+    letter-spacing: 0.06em;
+    padding: 1px 4px;
+    line-height: 1.2;
+  }
+  .pat-act:active {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.8);
+  }
+  .pat-act.disabled {
+    opacity: 0.25;
+    pointer-events: none;
   }
   .pat-display {
     display: flex;
