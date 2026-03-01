@@ -96,6 +96,7 @@
     flex-shrink: 0;
     overflow: hidden;
     min-height: 84px;
+    border-top: 1px solid rgba(237,232,220,0.08);
   }
 
   /* ── Help button (Othello flip) ── */
