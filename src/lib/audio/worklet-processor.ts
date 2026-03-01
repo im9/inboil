@@ -145,7 +145,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private ducker = new SidechainDucker(sampleRate)
   private comp   = new BusCompressor(sampleRate)
   // 3-band parametric EQ (peaking filters in series)
-  private peakEq = [new PeakingEQ(), new PeakingEQ(), new PeakingEQ()]
+  private peakEq = [new PeakingEQ(sampleRate), new PeakingEQ(sampleRate), new PeakingEQ(sampleRate)]
 
   // Param cache
   private delayFeedback  = 0.42

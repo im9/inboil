@@ -79,9 +79,13 @@ export class DJFilter {
   private _gain = 1
   private _useLP = true
   private _active = false
+  private _wet = 0           // smooth crossfade 0=bypass, 1=active
+  private _fadeRate: number   // ~30ms exponential fade
   private out = new Float64Array(2)
 
-  constructor(private sr: number) {}
+  constructor(private sr: number) {
+    this._fadeRate = 1 - Math.exp(-1 / (0.03 * sr))
+  }
 
   set(x: number, y: number, on: boolean) {
     this._active = on
@@ -108,7 +112,15 @@ export class DJFilter {
   }
 
   process(inL: number, inR: number): Float64Array {
-    if (!this._active) { this.out[0] = inL; this.out[1] = inR; return this.out }
+    // Smooth crossfade toward target
+    const target = this._active ? 1 : 0
+    this._wet += (target - this._wet) * this._fadeRate
+    // Fully bypassed — skip filter math
+    if (this._wet < 0.0005) {
+      this._wet = 0
+      this.out[0] = inL; this.out[1] = inR
+      return this.out
+    }
     const a1 = this._a1, a2 = this._a2, a3 = this._a3, k = this._k
     // Left channel
     let v3 = inL - this.ic2eqL
@@ -116,17 +128,20 @@ export class DJFilter {
     let v2 = this.ic2eqL + a2 * this.ic1eqL + a3 * v3
     this.ic1eqL = 2 * v1 - this.ic1eqL
     this.ic2eqL = 2 * v2 - this.ic2eqL
-    const rawL = (this._useLP ? v2 : (inL - k * v1 - v2)) * this._gain
+    let wetL = (this._useLP ? v2 : (inL - k * v1 - v2)) * this._gain
     // Right channel
     v3 = inR - this.ic2eqR
     v1 = a1 * this.ic1eqR + a2 * v3
     v2 = this.ic2eqR + a2 * this.ic1eqR + a3 * v3
     this.ic1eqR = 2 * v1 - this.ic1eqR
     this.ic2eqR = 2 * v2 - this.ic2eqR
-    const rawR = (this._useLP ? v2 : (inR - k * v1 - v2)) * this._gain
+    let wetR = (this._useLP ? v2 : (inR - k * v1 - v2)) * this._gain
     // Soft-clip HP output to tame harsh resonant peaks
-    if (this._useLP) { this.out[0] = rawL; this.out[1] = rawR }
-    else { this.out[0] = Math.tanh(rawL); this.out[1] = Math.tanh(rawR) }
+    if (!this._useLP) { wetL = Math.tanh(wetL); wetR = Math.tanh(wetR) }
+    // Crossfade dry ↔ wet
+    const w = this._wet
+    this.out[0] = inL + (wetL - inL) * w
+    this.out[1] = inR + (wetR - inR) * w
     return this.out
   }
 }
@@ -140,7 +155,13 @@ export class PeakingEQ {
   private x1R = 0; private x2R = 0; private y1R = 0; private y2R = 0
   private b0 = 1; private b1 = 0; private b2 = 0; private a1 = 0; private a2 = 0
   private _active = true
+  private _wet = 1           // smooth crossfade 0=bypass, 1=active
+  private _fadeRate: number   // ~30ms exponential fade
   private out = new Float64Array(2)
+
+  constructor(sr: number) {
+    this._fadeRate = 1 - Math.exp(-1 / (0.03 * sr))
+  }
 
   set(freq: number, dBgain: number, Q: number, sr: number) {
     if (dBgain === 0) { this.b0 = 1; this.b1 = 0; this.b2 = 0; this.a1 = 0; this.a2 = 0; return }
@@ -166,7 +187,15 @@ export class PeakingEQ {
   }
 
   process(inL: number, inR: number): Float64Array {
-    if (!this._active) { this.out[0] = inL; this.out[1] = inR; return this.out }
+    // Smooth crossfade toward target
+    const target = this._active ? 1 : 0
+    this._wet += (target - this._wet) * this._fadeRate
+    // Fully bypassed — skip filter math
+    if (this._wet < 0.0005) {
+      this._wet = 0
+      this.out[0] = inL; this.out[1] = inR
+      return this.out
+    }
     // Left
     const yL = this.b0*inL + this.b1*this.x1L + this.b2*this.x2L
                             - this.a1*this.y1L - this.a2*this.y2L
@@ -177,7 +206,10 @@ export class PeakingEQ {
                             - this.a1*this.y1R - this.a2*this.y2R
     this.x2R = this.x1R; this.x1R = inR
     this.y2R = this.y1R; this.y1R = yR
-    this.out[0] = yL; this.out[1] = yR
+    // Crossfade dry ↔ wet
+    const w = this._wet
+    this.out[0] = inL + (yL - inL) * w
+    this.out[1] = inR + (yR - inR) * w
     return this.out
   }
 }
