@@ -2,7 +2,7 @@
   import {
     pattern, chain, playback, getPatternName, NOTE_NAMES,
     chainAppend, chainRemove, chainClear, chainSetPattern,
-    chainStepRepeats, chainCycleKey, chainCyclePerf,
+    chainStepRepeats, chainCycleKey, chainCycleOct, chainCyclePerf,
     chainToggleFx, chainSetFxSend, chainToggle, chainLoadPreset,
     chainCyclePerfLen, chainRewind, chainJump,
     PATTERN_COUNT, CHAIN_PRESETS,
@@ -41,6 +41,12 @@
   function keyLabel(key: number | null): string {
     if (key === null) return '---'
     return NOTE_NAMES[key]
+  }
+
+  function octLabel(oct: number | null): string {
+    if (oct === null) return '---'
+    if (oct > 0) return `+${oct}`
+    return `${oct}`
   }
 </script>
 
@@ -123,6 +129,14 @@
               data-tip="Key transposition. Tap to cycle through keys (C–B). --- = use pattern default."
               data-tip-ja="キー転調。タップで C〜B を順に切替。--- = パターンのデフォルトキー。"
             >{keyLabel(entry.key)}</button>
+
+            <button
+              class="row-oct"
+              class:has-oct={entry.oct !== null}
+              onpointerdown={() => chainCycleOct(i)}
+              data-tip="Octave shift (-2 to +2). Tap to cycle. --- = no override."
+              data-tip-ja="オクターブシフト (-2〜+2)。タップで切替。--- = 変更なし。"
+            >{octLabel(entry.oct)}</button>
 
             <!-- Repeats: ◀ ×N ▶ + progress dots -->
             <span class="rpt-group"
@@ -367,6 +381,21 @@
   .row-key.has-key { color: rgba(237,232,220,0.65); border-color: rgba(237,232,220,0.30); }
   .row-key:active { background: rgba(237,232,220,0.10); }
 
+  .row-oct {
+    border: 1px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.25);
+    padding: 2px 4px;
+    font-size: 9px;
+    font-family: var(--font-data);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+    min-width: 28px;
+    text-align: center;
+  }
+  .row-oct.has-oct { color: rgba(237,232,220,0.65); border-color: rgba(237,232,220,0.30); }
+  .row-oct:active { background: rgba(237,232,220,0.10); }
+
   /* ── Repeats group ── */
   .rpt-group {
     display: flex;
@@ -521,6 +550,7 @@
     .row-sep { font-size: 14px; }
     .rpt-display { font-size: 14px; }
     .row-key { font-size: 8px; min-width: 24px; padding: 2px 3px; }
+    .row-oct { font-size: 8px; min-width: 24px; padding: 2px 3px; }
     .rpt-nav { width: 14px; height: 18px; font-size: 6px; }
     .row-perf { font-size: 7px; min-width: 28px; padding: 2px 4px; }
     .row-perf-len { font-size: 6px; min-width: 18px; padding: 2px 3px; }

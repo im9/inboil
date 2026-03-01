@@ -898,6 +898,7 @@ export interface ChainEntry {
   patternId: number
   repeats: number
   key: number | null  // 0–11 override, null = use pattern's rootNote
+  oct: number | null  // -2 to +2 override, null = use current perf.octave
   perf: number        // 0=NONE, 1=FILL, 2=BRK, 3=REV
   perfLen: number     // steps (1/4/8/16) — perf activates for last N steps of last repeat
   verb: ChainFx
@@ -926,13 +927,13 @@ export function getPatternData(id: number): Pattern {
 // 19=GARAGE 20=AMBIENT
 
 function makeChainEntry(patternId: number, repeats = 2, opts?: {
-  key?: number, perf?: number, perfLen?: number,
+  key?: number, oct?: number, perf?: number, perfLen?: number,
   verb?: boolean, delay?: boolean, glitch?: boolean, granular?: boolean,
   delaySend?: number,
 }): ChainEntry {
   return {
-    patternId, repeats, key: opts?.key ?? null, perf: opts?.perf ?? 0,
-    perfLen: opts?.perfLen ?? 16,
+    patternId, repeats, key: opts?.key ?? null, oct: opts?.oct ?? null,
+    perf: opts?.perf ?? 0, perfLen: opts?.perfLen ?? 16,
     verb:     { on: opts?.verb ?? false,     x: 0.25, y: 0.65 },
     delay:    { on: opts?.delay ?? false,    x: opts?.delaySend ?? 0.70, y: 0.40 },
     glitch:   { on: opts?.glitch ?? false,   x: 0.45, y: 0.15 },
@@ -961,7 +962,7 @@ export function chainLoadPreset(index: number) {
   chain.entries.length = 0
   for (const e of preset.entries) {
     chain.entries.push({
-      patternId: e.patternId, repeats: e.repeats, key: e.key, perf: e.perf, perfLen: e.perfLen,
+      patternId: e.patternId, repeats: e.repeats, key: e.key, oct: e.oct, perf: e.perf, perfLen: e.perfLen,
       verb:     { ...e.verb },
       delay:    { ...e.delay },
       glitch:   { ...e.glitch },
@@ -980,7 +981,7 @@ chainLoadPreset(0)
 export function chainAppend(patternId: number) {
   if (chain.entries.length >= 99) return
   chain.entries.push({
-    patternId, repeats: 1, key: null, perf: 0, perfLen: 16,
+    patternId, repeats: 1, key: null, oct: null, perf: 0, perfLen: 16,
     verb:     { on: false, x: 0.25, y: 0.65 },
     delay:    { on: false, x: 0.70, y: 0.40 },
     glitch:   { on: false, x: 0.45, y: 0.15 },
@@ -1029,6 +1030,14 @@ export function chainSetKey(index: number, key: number | null) {
   chain.entries[index].key = key
 }
 
+export function chainCycleOct(index: number) {
+  const e = chain.entries[index]
+  // null → -2 → -1 → 0 → +1 → +2 → null
+  if (e.oct === null) { e.oct = -2 }
+  else if (e.oct >= 2) { e.oct = null }
+  else { e.oct++ }
+}
+
 export function chainCyclePerf(index: number) {
   chain.entries[index].perf = (chain.entries[index].perf + 1) % 4
 }
@@ -1051,9 +1060,10 @@ export function chainSetFxSend(index: number, fx: ChainFxKey, value: number) {
   chain.entries[index][fx].x = value
 }
 
-/** Apply FX and key for a chain entry (called on entry advance) */
+/** Apply FX and key/oct for a chain entry (called on entry advance) */
 export function applyChainEntry(entry: ChainEntry) {
   if (entry.key !== null) perf.rootNote = entry.key
+  if (entry.oct !== null) perf.octave = entry.oct
   fxPad.verb = entry.verb.on
     ? { on: true, x: entry.verb.x, y: entry.verb.y }
     : { ...fxPad.verb, on: false }
