@@ -58,10 +58,12 @@
       }
     }
     // Mid-bar perf: check every step for sub-bar activation/deactivation
+    // Use reset=false so the worklet continues from current position (pending flags
+    // applied at next step boundary). reset=true would restart the pattern from step 0.
     if (!chainSent && chain.active && chain.entries.length > 0) {
       const changed = updateChainPerf(heads[0])
       if (changed) {
-        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, true)
+        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, false)
       }
     }
   }

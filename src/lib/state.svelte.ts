@@ -1074,7 +1074,9 @@ export function updateChainPerf(step: number): boolean {
   if (!chain.active || chain.entries.length === 0) return false
   const entry = chain.entries[chain.currentIndex]
   const isLast = chain.repeatCount >= entry.repeats - 1
-  const inZone = isLast && step >= (16 - entry.perfLen)
+  // -1 compensates for pending-flag latency: non-reset sendPattern sets pending
+  // flags that apply on the NEXT step boundary, so we detect 1 step earlier.
+  const inZone = isLast && step >= (16 - entry.perfLen - 1)
   const f = entry.perf === 1 && inZone
   const b = entry.perf === 2 && inZone
   const r = entry.perf === 3 && inZone
