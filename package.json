@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && wrangler pages deploy dist --project-name=inboil",
+    "deploy": "vite build && npx wrangler pages deploy dist --project-name=inboil",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
