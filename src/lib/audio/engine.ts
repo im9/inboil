@@ -22,6 +22,7 @@ export class GrooveboxEngine {
   private node: AudioWorkletNode | null = null
   private analyser: AnalyserNode | null = null
   private _onStep: ((playheads: number[]) => void) | null = null
+  private suspendTimer: ReturnType<typeof setTimeout> | null = null
 
   set onStep(cb: (playheads: number[]) => void) { this._onStep = cb }
 
@@ -51,6 +52,7 @@ export class GrooveboxEngine {
   }
 
   play(): void {
+    if (this.suspendTimer) { clearTimeout(this.suspendTimer); this.suspendTimer = null }
     if (this.ctx?.state === 'suspended') void this.ctx.resume()
     this._post({ type: 'play' })
   }
@@ -59,8 +61,9 @@ export class GrooveboxEngine {
     this._post({ type: 'stop' })
     // Suspend context after FX tails have fully decayed
     // (delay feedback up to 0.85 needs ~6s to fall below -60dB)
+    if (this.suspendTimer) { clearTimeout(this.suspendTimer); this.suspendTimer = null }
     if (this.ctx && this.ctx.state === 'running') {
-      setTimeout(() => { if (this.ctx?.state === 'running') void this.ctx.suspend() }, 8000)
+      this.suspendTimer = setTimeout(() => { this.suspendTimer = null; if (this.ctx?.state === 'running') void this.ctx.suspend() }, 8000)
     }
   }
 
