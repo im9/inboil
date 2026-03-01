@@ -236,15 +236,14 @@ See ADR 017 and ADR 018 for details.
 
 Dark zone footer. Shows:
 1. **Track name** (SplitFlap display)
-2. **♪ NOTES button** (melodic tracks only, toggles PianoRoll)
-3. **Synth params** (knobs from `paramDefs.ts`, horizontally scrollable)
-4. **? help button** (right side, Othello-style flip animation matching step/mute buttons)
+2. **Synth params** (knobs from `paramDefs.ts`, horizontally scrollable)
+3. **? help button** (right side, Othello-style flip animation matching step/mute buttons)
 
 Per-track sends (VERB, DLY, GLT, GRN) are in the FxPad sends bar only. PAN and VOL are in the StepGrid track row.
 
 ### PianoRoll — DECIDED
 
-DAW-style note bar editor for melodic tracks (6–7). Positioned between StepGrid and ParamPanel.
+DAW-style note bar editor for melodic tracks (6–7). Always visible for melodic tracks (no toggle). Positioned between StepGrid and ParamPanel.
 24-note range (C3–B4). Click empty cell to place note, drag right to extend duration (note bar).
 Click head to delete, click continuation to delete parent note. Resize handle on head's right edge for post-placement adjustment.
 Connected bars = auto-legato, gaps = retrigger. Playhead column shown when playing.
@@ -278,7 +277,6 @@ Track meta area includes compact VOL + PAN knobs (light theme, 28px) left of the
 | Play / Stop | Spacebar or transport button |
 | Change BPM | Drag BPM display vertically, or double-click to type |
 | Mute track | Click M button on track row |
-| Toggle piano roll | Click ♪ NOTES in ParamPanel |
 | Switch pattern | Click ◄ ► in header |
 | Performance controls | Press-hold buttons (FILL, REV, BRK) |
 | Key change | Click piano key in PerfBar |

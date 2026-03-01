@@ -40,7 +40,6 @@ Track {
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
-  bottomPanel: 'params' | 'piano'   // which panel to show (melodic tracks only)
   reverbSend:  number          // 0.0–1.0 send level to reverb
   delaySend:   number          // 0.0–1.0 send level to delay
   voiceParams: Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)

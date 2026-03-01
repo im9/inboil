@@ -94,8 +94,8 @@
     {
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
-        ? 'メロディトラック (BASS/LEAD) 選択時に「♪ NOTES」を押すとピアノロールが表示されます。グリッドをタップしてノートを配置できます。'
-        : 'Select a melodic track (BASS/LEAD) and press "♪ NOTES" to show the piano roll. Tap the grid to place notes.',
+        ? 'メロディトラック (BASS/LEAD) 選択時にピアノロールが自動表示されます。グリッドをタップしてノートを配置できます。'
+        : 'The piano roll is shown automatically for melodic tracks (BASS/LEAD). Tap the grid to place notes.',
     },
     {
       title: L === 'ja' ? 'パフォーマンス' : 'PERFORMANCE',
@@ -118,8 +118,8 @@
     {
       title: 'GRID',
       body: L === 'ja'
-        ? 'メインのステップシーケンサーです。各トラックのステップをタップしてON/OFFを切り替えます。選択トラックにはベロシティバーとピアノロール (メロディトラックのみ) が表示されます。'
-        : 'The main step sequencer. Tap steps to toggle triggers ON/OFF. The selected track shows velocity bars and a piano roll (melodic tracks only).',
+        ? 'メインのステップシーケンサーです。各トラックのステップをタップしてON/OFFを切り替えます。選択トラックにはベロシティバーが表示され、メロディトラックではピアノロールも常時表示されます。'
+        : 'The main step sequencer. Tap steps to toggle triggers ON/OFF. The selected track shows velocity bars, and melodic tracks always display a piano roll.',
     },
     {
       title: L === 'ja' ? 'FX パッド' : 'FX PAD',

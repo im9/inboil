@@ -262,7 +262,6 @@ The guide footer is always visible at the bottom of the help sidebar:
 | PerfBar | GRID/FX/EQ | View toggle descriptions | 画面切替の説明 |
 | PerfBar | FILL/REV/BRK | Performance button descriptions | パフォーマンスボタンの説明 |
 | ParamPanel | ? button | Show help | ヘルプを表示 |
-| ParamPanel | ♪ NOTES | Toggle piano roll | ピアノロールを表示/非表示 |
 | ParamPanel | Synth knobs | Synth parameters — drag to adjust | シンセパラメータ — ドラッグで調整 |
 | PianoRoll | Keys area | Note reference — shows transposed pitch | 音程リファレンス (移調後のピッチ) |
 | PianoRoll | Note grid | Tap or drag to place/erase notes | タップ/ドラッグでノートを配置/消去 |

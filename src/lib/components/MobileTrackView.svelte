@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, toggleBottomPanel, setVoiceParam, setParamLock, clearAllParamLocks, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, effects, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
@@ -109,24 +109,8 @@
     <button class="nav-btn" onpointerdown={nextTrack}>▶</button>
   </div>
 
-  <!-- View toggle: STEPS / NOTES (melodic tracks only) -->
-  {#if !drum}
-    <div class="view-tabs">
-      <button
-        class="tab"
-        class:active={track.bottomPanel !== 'piano'}
-        onpointerdown={() => { if (track.bottomPanel === 'piano') toggleBottomPanel(ui.selectedTrack) }}
-      >STEPS</button>
-      <button
-        class="tab"
-        class:active={track.bottomPanel === 'piano'}
-        onpointerdown={() => { if (track.bottomPanel !== 'piano') toggleBottomPanel(ui.selectedTrack) }}
-      >NOTES</button>
-    </div>
-  {/if}
-
-  <!-- Main area: step calculator or piano roll -->
-  {#if drum || track.bottomPanel !== 'piano'}
+  <!-- Main area: step calculator (drums) or piano roll (melodic) -->
+  {#if drum}
     <div class="calculator" style="--cols: {calcCols}">
       {#each track.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
@@ -325,28 +309,6 @@
     background: var(--color-fg);
     color: var(--color-bg);
     transform: rotateY(180deg);
-  }
-
-  /* ── View tabs ── */
-  .view-tabs {
-    display: flex;
-    border-bottom: 1px solid rgba(30,32,40,0.1);
-    flex-shrink: 0;
-  }
-  .tab {
-    flex: 1;
-    padding: 7px;
-    border: none;
-    background: transparent;
-    color: var(--color-muted);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    border-bottom: 2px solid transparent;
-  }
-  .tab.active {
-    color: var(--color-fg);
-    border-bottom-color: var(--color-olive);
   }
 
   /* ── Calculator (dynamic columns) ── */

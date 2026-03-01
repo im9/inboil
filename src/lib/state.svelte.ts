@@ -30,7 +30,6 @@ export interface Track {
   muted: boolean
   volume: number
   pan: number
-  bottomPanel: 'params' | 'piano'  // melodic tracks only
   reverbSend: number   // 0.0–1.0
   delaySend: number    // 0.0–1.0
   glitchSend: number   // 0.0–1.0
@@ -79,7 +78,6 @@ function makeTrack(
     muted: false,
     volume: 0.8,
     pan: 0,
-    bottomPanel: drum ? 'params' : 'piano' as 'params' | 'piano',
     reverbSend:  drum ? 0.08 : 0.25,
     delaySend:   drum ? 0.00 : 0.12,
     glitchSend:  0,
@@ -476,7 +474,7 @@ function saveToBank(): void {
     tracks: pattern.tracks.map(t => ({
       id: t.id, name: t.name, synthType: t.synthType,
       steps: t.steps, muted: t.muted, volume: t.volume,
-      pan: t.pan, bottomPanel: t.bottomPanel,
+      pan: t.pan,
       reverbSend: t.reverbSend, delaySend: t.delaySend,
       glitchSend: t.glitchSend, granularSend: t.granularSend,
       voiceParams: { ...t.voiceParams },
@@ -752,12 +750,6 @@ export function clearAllParamLocks(trackId: number, stepIdx: number) {
   pattern.tracks[trackId].trigs[stepIdx].paramLocks = undefined
 }
 
-export function toggleBottomPanel(trackId: number) {
-  const track = pattern.tracks[trackId]
-  if (!isDrum(track)) {
-    track.bottomPanel = track.bottomPanel === 'params' ? 'piano' : 'params'
-  }
-}
 
 // ── Factory reset ────────────────────────────────────────────────────
 

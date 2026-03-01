@@ -246,7 +246,7 @@
         </div>
       </div>
       <!-- Inline piano roll for melodic tracks -->
-      {#if !isDrum(track) && track.bottomPanel === 'piano'}
+      {#if !isDrum(track)}
         <PianoRoll trackId={trackId} />
       {/if}
     {/if}

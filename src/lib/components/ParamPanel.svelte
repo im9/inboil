@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, toggleBottomPanel, setVoiceParam, setParamLock, clearAllParamLocks, toggleSidebar } from '../state.svelte.ts'
+  import { pattern, ui, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, toggleSidebar } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -51,14 +51,6 @@
     <div class="track-info">
       <span class="track-display"><SplitFlap value={track.name} width={5} /></span>
       <div class="track-btns">
-        {#if !drum}
-          <button
-            class="btn-notes"
-            class:active={track.bottomPanel === 'piano'}
-            onpointerdown={() => toggleBottomPanel(ui.selectedTrack)}
-            data-tip="Toggle piano roll" data-tip-ja="ピアノロールを表示/非表示"
-          >♪ NOTES</button>
-        {/if}
         <button
           class="btn-lock"
           class:active={ui.lockMode}
@@ -178,22 +170,6 @@
     gap: 4px;
   }
 
-  .btn-notes {
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.55);
-    font-size: 9px;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
-    white-space: nowrap;
-    text-transform: uppercase;
-  }
-  .btn-notes:active,
-  .btn-notes.active {
-    background: var(--color-blue);
-    border-color: var(--color-blue);
-    color: white;
-  }
 
   .btn-lock {
     border: 1px solid rgba(237,232,220,0.3);
