@@ -3,6 +3,7 @@
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Pattern, Effects } from '../state.svelte.ts'
+import workletUrl from './worklet-processor.ts?worker&url'
 
 type PerfState = {
   rootNote: number; octave: number
@@ -31,7 +32,6 @@ export class GrooveboxEngine {
   async init(): Promise<void> {
     if (this.ctx) return
     this.ctx = new AudioContext()
-    const workletUrl = new URL('./worklet-processor.ts', import.meta.url)
     await this.ctx.audioWorklet.addModule(workletUrl)
     this.node = new AudioWorkletNode(this.ctx, 'groovebox-processor', {
       numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
