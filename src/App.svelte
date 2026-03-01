@@ -6,8 +6,9 @@
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
+  import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
-  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav } from './lib/state.svelte.ts'
+  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, getPatternData } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -24,28 +25,42 @@
   let rafId = 0
   $effect(() => {
     // JSON.stringify traverses all nested props so Svelte tracks them
-    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad))
+    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + chain.active + chain.playingPatternId)
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      engine.sendPattern(pattern, effects, perf, fxPad)
+      const pat = chain.active && chain.playingPatternId > 0
+        ? getPatternData(chain.playingPatternId)
+        : pattern
+      engine.sendPattern(pat, effects, perf, fxPad)
     })
     return () => cancelAnimationFrame(rafId)
   })
 
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
-    playback.playheads = heads  // single reactive notification instead of 8 individual mutations
+    playback.playheads = heads
     if (heads[0] === 0 && prev0 !== 0) {
-      const switching = patternNav.pendingId > 0
-      applyPendingSwitch()
-      if (switching) engine.sendPattern(pattern, effects, perf, fxPad, true)
+      // User-initiated pattern switch (editing pattern only)
+      if (patternNav.pendingId > 0) {
+        applyPendingSwitch()
+        if (!chain.active) engine.sendPattern(pattern, effects, perf, fxPad, true)
+      }
+      // Chain advance (independent of editing pattern)
+      const advanced = advanceChain()
+      if (advanced) {
+        applyChainEntry(chain.entries[chain.currentIndex])
+        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, true)
+      }
     }
   }
 
   async function play() {
     if (playback.playing) return
     await engine.init()
-    engine.sendPattern(pattern, effects, perf, fxPad)
+    const pat = chain.active && chain.playingPatternId > 0
+      ? getPatternData(chain.playingPatternId)
+      : pattern
+    engine.sendPattern(pat, effects, perf, fxPad)
     engine.play()
     playback.playing = true
   }
@@ -78,6 +93,8 @@
         <FxPad />
       {:else if ui.view === 'eq'}
         <FilterView />
+      {:else if ui.view === 'chain'}
+        <ChainView />
       {:else}
         <MobileTrackView />
       {/if}
@@ -93,6 +110,8 @@
         <FxPad />
       {:else if ui.view === 'eq'}
         <FilterView />
+      {:else if ui.view === 'chain'}
+        <ChainView />
       {:else}
         <StepGrid />
       {/if}

@@ -599,7 +599,7 @@ export const playback = $state({
 
 export const ui = $state({
   selectedTrack: 0,
-  view: 'grid' as 'grid' | 'fx' | 'eq',
+  view: 'grid' as 'grid' | 'fx' | 'eq' | 'chain',
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
@@ -858,6 +858,156 @@ const SCALES = [
   [0, 2, 4, 7, 9],         // major pentatonic
   [0, 2, 3, 5, 7, 9, 10],  // dorian
 ]
+
+// ── Pattern Chain ─────────────────────────────────────────────────────
+
+// Perf types: 0=NONE, 1=FILL, 2=BRK, 3=REV
+
+export interface ChainFx {
+  on: boolean
+  x: number
+  y: number
+}
+
+export interface ChainEntry {
+  patternId: number
+  repeats: number
+  key: number | null  // 0–11 override, null = use pattern's rootNote
+  perf: number        // 0=NONE, 1=FILL, 2=BRK, 3=REV
+  verb: ChainFx
+  delay: ChainFx
+  glitch: ChainFx
+  granular: ChainFx
+}
+
+export const chain = $state({
+  entries: [] as ChainEntry[],
+  active: false,
+  currentIndex: 0,
+  repeatCount: 0,
+  playingPatternId: 0,
+})
+
+/** Read pattern data from bank without modifying editing state */
+export function getPatternData(id: number): Pattern {
+  return patternBank[id - 1]
+}
+
+export function chainAppend(patternId: number) {
+  if (chain.entries.length >= 64) return
+  chain.entries.push({
+    patternId, repeats: 1, key: null, perf: 0,
+    verb:     { on: false, x: 0.25, y: 0.65 },
+    delay:    { on: false, x: 0.70, y: 0.40 },
+    glitch:   { on: false, x: 0.45, y: 0.15 },
+    granular: { on: false, x: 0.50, y: 0.30 },
+  })
+}
+
+export function chainRemove(index: number) {
+  chain.entries.splice(index, 1)
+  if (chain.currentIndex >= chain.entries.length) chain.currentIndex = 0
+}
+
+export function chainClear() {
+  if (chain.active) {
+    perf.filling = false; perf.breaking = false; perf.reversing = false
+    fxPad.verb     = { ...fxPad.verb, on: false }
+    fxPad.delay    = { ...fxPad.delay, on: false }
+    fxPad.glitch   = { ...fxPad.glitch, on: false }
+    fxPad.granular = { ...fxPad.granular, on: false }
+  }
+  chain.entries.length = 0
+  chain.currentIndex = 0
+  chain.repeatCount = 0
+  chain.active = false
+  chain.playingPatternId = 0
+}
+
+export function chainSetPattern(index: number, patternId: number) {
+  if (patternId < 1 || patternId > PATTERN_COUNT) return
+  chain.entries[index].patternId = patternId
+}
+
+export function chainStepRepeats(index: number, dir: -1 | 1) {
+  const e = chain.entries[index]
+  e.repeats = Math.max(1, Math.min(8, e.repeats + dir))
+}
+
+export function chainCycleKey(index: number) {
+  const e = chain.entries[index]
+  if (e.key === null) { e.key = 0 }
+  else if (e.key >= 11) { e.key = null }
+  else { e.key++ }
+}
+
+export function chainSetKey(index: number, key: number | null) {
+  chain.entries[index].key = key
+}
+
+export function chainCyclePerf(index: number) {
+  chain.entries[index].perf = (chain.entries[index].perf + 1) % 4
+}
+
+export type ChainFxKey = 'verb' | 'delay' | 'glitch' | 'granular'
+
+export function chainToggleFx(index: number, fx: ChainFxKey) {
+  chain.entries[index][fx].on = !chain.entries[index][fx].on
+}
+
+export function chainSetFxSend(index: number, fx: ChainFxKey, value: number) {
+  chain.entries[index][fx].x = value
+}
+
+export function applyChainEntry(entry: ChainEntry) {
+  if (entry.key !== null) perf.rootNote = entry.key
+  if (entry.perf === 0 && !entry.verb.on && !entry.delay.on && !entry.glitch.on && !entry.granular.on) return
+  perf.filling = entry.perf === 1
+  perf.breaking = entry.perf === 2
+  perf.reversing = entry.perf === 3
+  fxPad.verb = entry.verb.on
+    ? { on: true, x: entry.verb.x, y: entry.verb.y }
+    : { ...fxPad.verb, on: false }
+  fxPad.delay = entry.delay.on
+    ? { on: true, x: entry.delay.x, y: entry.delay.y }
+    : { ...fxPad.delay, on: false }
+  fxPad.glitch = entry.glitch.on
+    ? { on: true, x: entry.glitch.x, y: entry.glitch.y }
+    : { ...fxPad.glitch, on: false }
+  fxPad.granular = entry.granular.on
+    ? { on: true, x: entry.granular.x, y: entry.granular.y }
+    : { ...fxPad.granular, on: false }
+}
+
+/** Chain is fully independent of editing pattern — never calls switchPattern */
+export function chainToggle() {
+  chain.active = !chain.active
+  if (chain.active && chain.entries.length > 0) {
+    chain.currentIndex = 0
+    chain.repeatCount = 0
+    chain.playingPatternId = chain.entries[0].patternId
+  } else if (!chain.active) {
+    perf.filling = false; perf.breaking = false; perf.reversing = false
+    fxPad.verb     = { ...fxPad.verb, on: false }
+    fxPad.delay    = { ...fxPad.delay, on: false }
+    fxPad.glitch   = { ...fxPad.glitch, on: false }
+    fxPad.granular = { ...fxPad.granular, on: false }
+    chain.playingPatternId = 0
+  }
+}
+
+/** Called at beat boundary. Returns true if advanced to a new entry. */
+export function advanceChain(): boolean {
+  if (!chain.active || chain.entries.length === 0) return false
+  chain.repeatCount++
+  if (chain.repeatCount >= chain.entries[chain.currentIndex].repeats) {
+    chain.currentIndex = (chain.currentIndex + 1) % chain.entries.length
+    chain.repeatCount = 0
+    chain.playingPatternId = chain.entries[chain.currentIndex].patternId
+    return true
+  }
+  return false
+}
 
 export function randomizePattern(): void {
   // Pick a random root in the piano-roll range (C3=48 .. C4=60)

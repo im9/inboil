@@ -91,6 +91,12 @@
       onpointerdown={() => { ui.view = 'eq' }}
       data-tip="Filter/EQ view" data-tip-ja="フィルター/EQ画面"
     >EQ</button>
+    <button
+      class="btn-view"
+      class:active={ui.view === 'chain'}
+      onpointerdown={() => { ui.view = 'chain' }}
+      data-tip="Pattern chain editor" data-tip-ja="パターンチェーンエディター"
+    >CHN</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
