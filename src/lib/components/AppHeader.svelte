@@ -516,25 +516,8 @@
 
   /* ── Mobile ── */
   @media (max-width: 639px) {
-    /* Transport in app-header */
-    .transport-center {
-      display: flex;
-      gap: 4px;
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 1;
-    }
-    .transport-center .btn-transport {
-      padding: 3px 10px;
-      font-size: 10px;
-    }
-    .transport-center .btn-rand {
-      padding: 3px 6px;
-      font-size: 8px;
-    }
-    /* Hide original transport in sub-header */
+    /* Transport moved to PerfBar on mobile */
+    .transport-center { display: none; }
     .transport { display: none; }
 
     .sub-header,

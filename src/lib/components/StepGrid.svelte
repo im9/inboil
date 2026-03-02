@@ -6,8 +6,7 @@
   function cycleSteps(trackId: number) {
     const current = pattern.tracks[trackId].steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
-    const next = STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length]
-    setTrackSteps(trackId, next)
+    setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
 
   // ── Velocity drag state ──
@@ -142,6 +141,13 @@
         <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
       </button>
 
+      <!-- Step count -->
+      <button
+        class="btn-steps"
+        onpointerdown={() => cycleSteps(trackId)}
+        data-tip="Change step count" data-tip-ja="ステップ数を変更"
+      >{track.steps}</button>
+
       <!-- Mute -->
       <button
         class="btn-mute"
@@ -197,7 +203,6 @@
       >
         <div class="vel-label">
           <span class="vel-name" data-tip="Velocity — per-step volume" data-tip-ja="ベロシティ (各ステップの音量)">VEL</span>
-          <button class="step-count" onpointerdown={() => cycleSteps(trackId)} data-tip="Change step count" data-tip-ja="ステップ数を変更">{track.steps}</button>
         </div>
         <div class="vel-spacer"></div>
         <div class="vel-bars" style="--steps: {track.steps}" data-tip="Drag up/down to adjust velocity" data-tip-ja="上下ドラッグでベロシティを調整">
@@ -463,25 +468,26 @@
     color: var(--color-muted);
     text-transform: uppercase;
   }
-  .step-count {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--color-olive);
-    background: transparent;
+  .btn-steps {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
     border: 1px solid var(--color-olive);
-    padding: 0 4px;
-    line-height: 14px;
-    width: fit-content;
-    text-align: center;
-    cursor: pointer;
+    background: transparent;
+    color: var(--color-olive);
+    font-size: 8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
   }
-  .step-count:active {
+  .btn-steps:active {
     background: var(--color-olive);
     color: var(--color-bg);
   }
   .vel-spacer {
-    width: 20px;
+    width: 44px;
     flex-shrink: 0;
   }
   .vel-bars {

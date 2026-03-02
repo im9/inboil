@@ -2,6 +2,8 @@
   import { perf, playback, ui, effects, NOTE_NAMES } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
 
+  let { onPlay, onStop, onRandom }: { onPlay?: () => void; onStop?: () => void; onRandom?: () => void } = $props()
+
   const KEYS = NOTE_NAMES.map((note, i) => ({
     note,
     black: [1, 3, 6, 8, 10].includes(i),
@@ -92,6 +94,28 @@
       </div>
     </div>
   </div>
+
+  <!-- Mobile transport (hidden on desktop) -->
+  {#if onPlay}
+    <div class="mobile-transport">
+      <button
+        class="btn-mt"
+        class:active={playback.playing}
+        onpointerdown={onPlay}
+        aria-label="Play"
+      >▶</button>
+      <button
+        class="btn-mt"
+        onpointerdown={onStop}
+        aria-label="Stop"
+      >■</button>
+      <button
+        class="btn-mt btn-rand"
+        onpointerdown={onRandom}
+        aria-label="Randomize"
+      >RND</button>
+    </div>
+  {/if}
 
   <div class="sep" aria-hidden="true"></div>
 
@@ -369,9 +393,10 @@
 
   .gain-wrap { display: contents; }
 
-  /* ── Mobile key-menu (hidden on desktop) ── */
+  /* ── Mobile-only elements (hidden on desktop) ── */
   .key-menu { display: none; }
   .key-arc-overlay { display: none; }
+  .mobile-transport { display: none; }
 
   /* ── Mobile ── */
   @media (max-width: 639px) {
@@ -381,10 +406,71 @@
       padding: 0;
     }
 
-    .sep,
-    .dyn-group,
-    .gain-wrap,
+    .sep { display: none; }
     .group-label { display: none; }
+
+    /* Show MSTR knobs on mobile, scaled down, right-aligned */
+    .dyn-group {
+      display: flex;
+      gap: 2px;
+      order: 10;
+      margin-left: auto;
+      padding-left: 4px;
+      border-left: 1px solid rgba(237,232,220,0.12);
+    }
+    .gain-wrap {
+      display: flex;
+      gap: 2px;
+      order: 10;
+      padding-left: 4px;
+      padding-right: 6px;
+      border-left: 1px solid rgba(237,232,220,0.12);
+    }
+    .dyn-group :global(.knob-wrap),
+    .gain-wrap :global(.knob-wrap) {
+      transform: scale(0.72);
+      margin: -5px -4px;
+    }
+
+    /* Hide perf-btns (moved to PerfBubble) */
+    .perf-btns { display: none; }
+
+    /* Mobile transport */
+    .mobile-transport {
+      display: flex;
+      gap: 3px;
+      order: 10;
+      align-items: center;
+      margin-left: 10px;
+    }
+    .btn-mt {
+      border: 1px solid rgba(237,232,220,0.45);
+      background: transparent;
+      color: var(--color-bg);
+      padding: 0 12px;
+      height: 28px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-mt:active,
+    .btn-mt.active {
+      background: var(--color-bg);
+      color: var(--color-fg);
+    }
+    .btn-mt.btn-rand {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 0 10px;
+      border-color: var(--color-olive);
+      color: var(--color-olive);
+    }
+    .btn-mt.btn-rand:active {
+      background: var(--color-olive);
+      color: var(--color-bg);
+    }
 
     /* Hide desktop keyboard + oct on mobile */
     .keyboard, .oct-block { display: none; }
@@ -458,31 +544,7 @@
       order: 10;
     }
 
-    .perf-btns {
-      order: 10;
-      width: auto;
-      flex: 1;
-      gap: 4px;
-      padding: 6px 8px 6px 0;
-    }
-    .btn-perf {
-      flex: 1;
-      padding: 7px 0;
-      font-size: 10px;
-      text-align: center;
-      border: 1.5px solid var(--color-blue);
-    }
-    .btn-perf.active {
-      background: var(--color-blue);
-      color: var(--color-bg);
-    }
-    .btn-brk {
-      border-color: var(--color-salmon);
-    }
-    .btn-brk.active {
-      background: var(--color-salmon);
-      color: var(--color-bg);
-    }
+    /* perf-btns hidden (display:none above), btn-perf styles not needed on mobile */
 
     /* Row 2: full-width tab bar */
     .view-toggle {

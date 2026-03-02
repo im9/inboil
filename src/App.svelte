@@ -9,6 +9,7 @@
   import MobileParamFooter from './lib/components/MobileParamFooter.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
+  import PerfBubble from './lib/components/PerfBubble.svelte'
   import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, updateChainPerf, getPatternData } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
@@ -99,7 +100,7 @@
 <div class="app">
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
-    <PerfBar />
+    <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
@@ -118,6 +119,7 @@
     {#if ui.view === 'fx' || ui.view === 'eq'}
       <MobileParamFooter />
     {/if}
+    <PerfBubble />
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />

@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, setVoiceParam, setParamLock, setTrackSend, perf, effects } from '../state.svelte.ts'
+  import { pattern, ui, isDrum, setVoiceParam, setParamLock, setTrackSend } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { slide } from 'svelte/transition'
   import Knob from './Knob.svelte'
+
+  let { hideHandle = false }: { hideHandle?: boolean } = $props()
 
   const track = $derived(pattern.tracks[ui.selectedTrack])
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
@@ -20,11 +23,11 @@
       cats[cats.length - 1].params.push(p)
     }
     cats.push({ id: 'fx', label: 'FX', params: [] })
-    cats.push({ id: 'mstr', label: 'MSTR', params: [] })
     return cats
   })
 
   let paramTab = $state('mix')
+  let collapsed = $state(true)
   $effect(() => {
     void ui.selectedTrack
     const cats = paramCategories()
@@ -56,65 +59,93 @@
   }
 </script>
 
-<!-- Param category tabs -->
-<div class="param-tabs">
-  {#each paramCategories() as cat}
-    <button
-      class="param-tab"
-      class:active={paramTab === cat.id}
-      onpointerdown={() => { paramTab = cat.id }}
-    >{cat.label}</button>
-  {/each}
-</div>
+{#if !hideHandle}
+  <!-- Drawer handle (standalone mode, e.g. fx/eq views) -->
+  <button class="drawer-handle" onpointerdown={() => { collapsed = !collapsed }} aria-label="Toggle params">
+    <span class="handle-pill"></span>
+  </button>
+{/if}
 
-<!-- Param knobs for selected category -->
-<div class="params-bar">
-  {#if paramTab === 'mix'}
-    <Knob value={track.volume} label="VOL" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }} />
-    <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
-  {:else if paramTab === 'fx'}
-    <Knob value={track.reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
-    <Knob value={track.delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
-    <Knob value={track.glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
-    <Knob value={track.granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
-  {:else if paramTab === 'mstr'}
-    <Knob value={perf.masterGain} label="GAIN" size={40} onchange={v => { perf.masterGain = v }} />
-    <Knob value={perf.swing} label="SWG" size={40} onchange={v => { perf.swing = v }} />
-    <Knob value={effects.ducker.depth} label="DUC" size={40} onchange={v => { effects.ducker.depth = v }} />
-    <Knob value={(effects.comp.makeup - 1.0) / 2.5} label="CMP" size={40} onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }} />
-  {:else}
-    {@const cat = paramCategories().find(c => c.id === paramTab)}
-    {#if cat}
-      {#each cat.params as p}
-        <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
-        <Knob
-          value={normalizeParam(p, knobValue(p))}
-          label={p.label}
-          size={40}
-          locked={isParamLocked(p.key)}
-          steps={paramSteps(p)}
-          displayValue={displayLabel(p, knobValue(p))}
-          onchange={v => knobChange(p, v)}
-        />
-        </span>
-      {/each}
+{#if hideHandle || !collapsed}
+  <div transition:slide={{ duration: 50 }}>
+  <!-- Param category tabs -->
+  <div class="param-tabs">
+    {#each paramCategories() as cat}
+      <button
+        class="param-tab"
+        class:active={paramTab === cat.id}
+        onpointerdown={() => { paramTab = cat.id }}
+      >{cat.label}</button>
+    {/each}
+  </div>
+
+  <!-- Param knobs for selected category -->
+  <div class="params-bar">
+    {#if paramTab === 'mix'}
+      <Knob value={track.volume} label="VOL" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }} />
+      <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+    {:else if paramTab === 'fx'}
+      <Knob value={track.reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+      <Knob value={track.delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+      <Knob value={track.glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+      <Knob value={track.granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+    {:else}
+      {@const cat = paramCategories().find(c => c.id === paramTab)}
+      {#if cat}
+        {#each cat.params as p}
+          <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
+          <Knob
+            value={normalizeParam(p, knobValue(p))}
+            label={p.label}
+            size={40}
+            locked={isParamLocked(p.key)}
+            steps={paramSteps(p)}
+            displayValue={displayLabel(p, knobValue(p))}
+            onchange={v => knobChange(p, v)}
+          />
+          </span>
+        {/each}
+      {/if}
     {/if}
-  {/if}
-</div>
+  </div>
 
-<!-- Track indicator dots -->
-<div class="track-dots">
-  {#each pattern.tracks as _t, i}
-    <button
-      class="dot"
-      class:active={i === ui.selectedTrack}
-      onpointerdown={() => { ui.selectedTrack = i }}
-      aria-label="Track {i + 1}"
-    ></button>
-  {/each}
-</div>
+  <!-- Track indicator dots -->
+  <div class="track-dots">
+    {#each pattern.tracks as _t, i}
+      <button
+        class="dot"
+        class:active={i === ui.selectedTrack}
+        onpointerdown={() => { ui.selectedTrack = i }}
+        aria-label="Track {i + 1}"
+      ></button>
+    {/each}
+  </div>
+  </div>
+{/if}
 
 <style>
+  /* ── Drawer handle ── */
+  .drawer-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0 4px;
+    background: var(--color-fg);
+    border: none;
+    border-top: 1px solid rgba(237,232,220,0.08);
+    flex-shrink: 0;
+  }
+  .handle-pill {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(237,232,220,0.25);
+    transition: background 120ms;
+  }
+  .drawer-handle:active .handle-pill {
+    background: rgba(237,232,220,0.50);
+  }
+
   /* ── Param category tabs ── */
   .param-tabs {
     display: flex;
@@ -122,7 +153,6 @@
     flex-shrink: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border-top: 1px solid rgba(237,232,220,0.06);
   }
   .param-tab {
     flex-shrink: 0;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, clearAllParamLocks, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
+  import { slide, fade } from 'svelte/transition'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamFooter from './MobileParamFooter.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -9,6 +10,7 @@
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
+  let footerOpen = $state(false)
 
   // Dynamic column count based on step count
   const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
@@ -101,28 +103,37 @@
     </div>
   {/if}
 
-  <!-- Footer toolbar: LOCK + Mute -->
-  <div class="lock-toolbar">
-    <button
-      class="btn-lock"
-      class:active={ui.lockMode}
-      onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
-    >LOCK</button>
-    {#if ui.lockMode && ui.selectedStep !== null}
-      <span class="lock-label">STEP {ui.selectedStep + 1}</span>
-      {#if hasAnyLock}
-        <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
-      {/if}
-    {/if}
-    <span class="toolbar-spacer"></span>
-    <button
-      class="btn-mute-bar"
-      class:muted={track.muted}
-      onpointerdown={() => toggleMute(ui.selectedTrack)}
-    >MUTE</button>
-  </div>
+  <!-- Drawer handle -->
+  <button class="drawer-handle" onpointerdown={() => { footerOpen = !footerOpen }} aria-label="Toggle footer">
+    <span class="handle-pill"></span>
+  </button>
 
-  <MobileParamFooter />
+  {#if footerOpen}
+    <div class="footer-drawer" transition:slide={{ duration: 50 }}>
+      <!-- Footer toolbar: LOCK + Mute -->
+      <div class="lock-toolbar">
+        <button
+          class="btn-lock"
+          class:active={ui.lockMode}
+          onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
+        >LOCK</button>
+        {#if ui.lockMode && ui.selectedStep !== null}
+          <span class="lock-label">STEP {ui.selectedStep + 1}</span>
+          {#if hasAnyLock}
+            <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
+          {/if}
+        {/if}
+        <span class="toolbar-spacer"></span>
+        <button
+          class="btn-mute-bar"
+          class:muted={track.muted}
+          onpointerdown={() => toggleMute(ui.selectedTrack)}
+        >MUTE</button>
+      </div>
+
+      <MobileParamFooter hideHandle />
+    </div>
+  {/if}
 
 </div>
 
@@ -375,6 +386,33 @@
   }
   .piano-wrap :global(.piano-roll) {
     height: 100%;
+  }
+
+  /* ── Footer drawer ── */
+  .footer-drawer {
+    flex-shrink: 0;
+  }
+
+  /* ── Drawer handle ── */
+  .drawer-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0 4px;
+    background: var(--color-fg);
+    border: none;
+    border-top: 1px solid rgba(237,232,220,0.08);
+    flex-shrink: 0;
+  }
+  .handle-pill {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(237,232,220,0.25);
+    transition: background 120ms;
+  }
+  .drawer-handle:active .handle-pill {
+    background: rgba(237,232,220,0.50);
   }
 
   /* ── Lock toolbar ── */
