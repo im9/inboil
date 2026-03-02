@@ -6,6 +6,7 @@
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
+  import MobileParamFooter from './lib/components/MobileParamFooter.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, updateChainPerf, getPatternData } from './lib/state.svelte.ts'
@@ -114,6 +115,9 @@
       {/if}
       <Sidebar />
     </div>
+    {#if ui.view === 'fx' || ui.view === 'eq'}
+      <MobileParamFooter />
+    {/if}
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
-  import Knob from './Knob.svelte'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
@@ -143,29 +142,7 @@
         <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
       </button>
 
-      <!-- Gain, Pan, Mute -->
-      <div class="track-knobs">
-        <span data-tip="Track volume" data-tip-ja="トラック音量">
-        <Knob
-          value={track.volume}
-          label="VOL"
-          size={20}
-          light
-          compact
-          onchange={v => { pattern.tracks[trackId].volume = v }}
-        />
-        </span>
-        <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-        <Knob
-          value={(track.pan + 1) / 2}
-          label="PAN"
-          size={20}
-          light
-          compact
-          onchange={v => { pattern.tracks[trackId].pan = v * 2 - 1 }}
-        />
-        </span>
-      </div>
+      <!-- Mute -->
       <button
         class="btn-mute"
         onpointerdown={() => toggleMute(trackId)}
@@ -361,13 +338,6 @@
     transform: rotateY(180deg);
   }
 
-  .track-knobs {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
   /* ── Steps ── */
   .steps {
     flex: 1;
@@ -511,7 +481,7 @@
     color: var(--color-bg);
   }
   .vel-spacer {
-    width: calc(20px + 2px + 20px + 4px + 20px);
+    width: 20px;
     flex-shrink: 0;
   }
   .vel-bars {

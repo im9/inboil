@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, toggleSidebar } from '../state.svelte.ts'
+  import { pattern, ui, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, setTrackSend, toggleSidebar } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -34,7 +34,7 @@
   }
 </script>
 
-<div class="param-panel">
+<div class="param-panel" class:minimal={ui.view === 'chain'}>
   <button
     class="btn-help"
     onpointerdown={() => toggleSidebar('help')}
@@ -82,6 +82,29 @@
         />
         </span>
       {/each}
+
+      <!-- Sends -->
+      <div class="param-sep" aria-hidden="true"></div>
+      <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
+        <Knob value={track.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+      </span>
+      <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
+        <Knob value={track.delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+      </span>
+      <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
+        <Knob value={track.glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+      </span>
+      <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
+        <Knob value={track.granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+      </span>
+      <!-- Mixer -->
+      <div class="param-sep" aria-hidden="true"></div>
+      <span data-tip="Track volume" data-tip-ja="トラック音量">
+        <Knob value={track.volume} label="VOL" size={32} onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }} />
+      </span>
+      <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
+        <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+      </span>
     </div>
 
   </div>
@@ -97,6 +120,9 @@
     overflow: hidden;
     min-height: 84px;
     border-top: 1px solid rgba(237,232,220,0.08);
+  }
+  .param-panel.minimal .inner {
+    visibility: hidden;
   }
 
   /* ── Help button (Othello flip) ── */

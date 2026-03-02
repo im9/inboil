@@ -1,10 +1,7 @@
 <script lang="ts">
-  import { fxPad, ui, pattern, setTrackSend } from '../state.svelte.ts'
+  import { fxPad, ui, pattern } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
-  import Knob from './Knob.svelte'
-
-  const track = $derived(pattern.tracks[ui.selectedTrack])
 
   const nodes = [
     { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)',  tip: 'Reverb — adds space and depth', tipJa: 'リバーブ — 空間と奥行きを付加' },
@@ -497,61 +494,18 @@
     {/each}
   </div>
 
-  <!-- Per-track send mixer -->
-  <div class="sends-bar">
-    <div class="track-dots" data-tip="Select track for send mix" data-tip-ja="センドミックスのトラックを選択">
-      {#each pattern.tracks as _t, i}
+  <!-- Track selector -->
+  <div class="track-bar">
+    <div class="track-dots" data-tip="Select track" data-tip-ja="トラックを選択">
+      {#each pattern.tracks as t, i}
         <button
           class="dot"
           class:active={i === ui.selectedTrack}
           onpointerdown={() => { ui.selectedTrack = i }}
-          aria-label="Track {i + 1}"
-        ></button>
+          aria-label="Track {t.name}"
+        >{t.name.slice(0, 2)}</button>
       {/each}
     </div>
-    <span class="send-track-name">{track.name}</span>
-    <div class="send-sep" aria-hidden="true"></div>
-    <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-    <Knob
-      value={track.reverbSend}
-      label="VERB"
-      size={28}
-      onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)}
-    />
-    </span>
-    <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-    <Knob
-      value={track.delaySend}
-      label="DLY"
-      size={28}
-      onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)}
-    />
-    </span>
-    <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-    <Knob
-      value={track.glitchSend}
-      label="GLT"
-      size={28}
-      onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)}
-    />
-    </span>
-    <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-    <Knob
-      value={track.granularSend}
-      label="GRN"
-      size={28}
-      onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)}
-    />
-    </span>
-    <div class="send-sep" aria-hidden="true"></div>
-    <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-    <Knob
-      value={(track.pan + 1) / 2}
-      label="PAN"
-      size={28}
-      onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }}
-    />
-    </span>
   </div>
 </div>
 
@@ -626,45 +580,33 @@
     pointer-events: none;
   }
 
-  /* ── Sends bar ── */
-  .sends-bar {
+  /* ── Track selector bar ── */
+  .track-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    padding: 5px 12px;
     background: var(--color-fg);
     border-top: 1px solid rgba(237,232,220,0.08);
     flex-shrink: 0;
   }
   .track-dots {
     display: flex;
-    gap: 5px;
+    gap: 3px;
     flex-shrink: 0;
   }
   .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    border: 1px solid rgba(237,232,220,0.35);
+    height: 18px;
+    padding: 0 5px;
+    border: 1px solid rgba(237,232,220,0.2);
     background: transparent;
-    padding: 0;
+    color: rgba(237,232,220,0.35);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
   .dot.active {
     background: var(--color-olive);
     border-color: var(--color-olive);
-  }
-  .send-track-name {
-    font-size: 9px;
-    font-weight: 700;
-    color: rgba(237,232,220,0.55);
-    letter-spacing: 0.06em;
-    min-width: 36px;
-    flex-shrink: 0;
-  }
-  .send-sep {
-    width: 1px;
-    height: 24px;
-    background: rgba(237,232,220,0.1);
-    flex-shrink: 0;
+    color: var(--color-bg);
   }
 </style>
