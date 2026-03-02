@@ -473,19 +473,10 @@ function makeFactoryPattern(id: number): Pattern {
 export const PATTERN_COUNT = 100
 export const FACTORY_COUNT = 21
 
-// ── Reactive state ───────────────────────────────────────────────────
+// ── Undo ─────────────────────────────────────────────────────────────
 
-export const pattern = $state<Pattern>(makeFactoryPattern(1))
-
-// Pattern bank: slots 0–9 = factory presets, slots 10–99 = user (empty)
-const patternBank: Pattern[] = [
-  ...Array.from({ length: FACTORY_COUNT }, (_, i) => makeFactoryPattern(i + 1)),
-  ...Array.from({ length: PATTERN_COUNT - FACTORY_COUNT }, (_, i) => makeEmptyPattern(i + FACTORY_COUNT + 1)),
-]
-
-function saveToBank(): void {
-  pattern.rootNote = perf.rootNote  // capture live key tweak into pattern
-  patternBank[pattern.id - 1] = {
+function clonePattern(): Pattern {
+  return {
     id: pattern.id,
     name: pattern.name,
     bpm: pattern.bpm,
@@ -507,8 +498,25 @@ function saveToBank(): void {
   }
 }
 
-function loadFromBank(idx: number): void {
-  const src = patternBank[idx]
+interface UndoEntry { snapshot: Pattern; label: string }
+const undoStack: UndoEntry[] = []
+const UNDO_MAX = 50
+let lastPushTime = 0
+let lastPushLabel = ''
+
+function pushUndo(label: string): void {
+  const now = Date.now()
+  if (label === lastPushLabel && now - lastPushTime < 500) {
+    // debounce: replace last entry
+    return
+  }
+  undoStack.push({ snapshot: clonePattern(), label })
+  if (undoStack.length > UNDO_MAX) undoStack.shift()
+  lastPushTime = now
+  lastPushLabel = label
+}
+
+function restorePattern(src: Pattern): void {
   pattern.id = src.id
   pattern.name = src.name
   pattern.bpm = src.bpm
@@ -523,6 +531,33 @@ function loadFromBank(idx: number): void {
     })),
     voiceParams: { ...t.voiceParams },
   }))
+}
+
+export function undo(): boolean {
+  const entry = undoStack.pop()
+  if (!entry) return false
+  restorePattern(entry.snapshot)
+  lastPushLabel = ''
+  return true
+}
+
+// ── Reactive state ───────────────────────────────────────────────────
+
+export const pattern = $state<Pattern>(makeFactoryPattern(1))
+
+// Pattern bank: slots 0–9 = factory presets, slots 10–99 = user (empty)
+const patternBank: Pattern[] = [
+  ...Array.from({ length: FACTORY_COUNT }, (_, i) => makeFactoryPattern(i + 1)),
+  ...Array.from({ length: PATTERN_COUNT - FACTORY_COUNT }, (_, i) => makeEmptyPattern(i + FACTORY_COUNT + 1)),
+]
+
+function saveToBank(): void {
+  pattern.rootNote = perf.rootNote  // capture live key tweak into pattern
+  patternBank[pattern.id - 1] = clonePattern()
+}
+
+function loadFromBank(idx: number): void {
+  restorePattern(patternBank[idx])
   perf.rootNote = pattern.rootNote  // sync KEY selector to loaded pattern
 }
 
@@ -534,31 +569,13 @@ export const clipboard = $state({ hasData: false })
 
 export function copyPattern(): void {
   clipboard.hasData = true
-  clipboardPattern = {
-    id: pattern.id,
-    name: pattern.name,
-    bpm: pattern.bpm,
-    rootNote: pattern.rootNote,
-    tracks: pattern.tracks.map(t => ({
-      id: t.id, name: t.name, synthType: t.synthType,
-      steps: t.steps, muted: t.muted, volume: t.volume,
-      pan: t.pan,
-      reverbSend: t.reverbSend, delaySend: t.delaySend,
-      glitchSend: t.glitchSend, granularSend: t.granularSend,
-      voiceParams: { ...t.voiceParams },
-      trigs: t.trigs.map(tr => ({
-        active: tr.active, note: tr.note, velocity: tr.velocity,
-        duration: tr.duration, slide: tr.slide,
-        ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
-          ? { paramLocks: { ...tr.paramLocks } } : {}),
-      })),
-    })),
-  }
+  clipboardPattern = clonePattern()
 }
 
 export function pastePattern(targetId: number): void {
   if (!clipboardPattern) return
   if (targetId < 1 || targetId > PATTERN_COUNT) return
+  pushUndo('Paste pattern')
   const src = clipboardPattern
   patternBank[targetId - 1] = {
     id: targetId,
@@ -579,6 +596,7 @@ export function pastePattern(targetId: number): void {
 
 export function clearPattern(targetId: number): void {
   if (targetId < 1 || targetId > PATTERN_COUNT) return
+  pushUndo('Clear pattern')
   patternBank[targetId - 1] = makeEmptyPattern(targetId)
   if (targetId === pattern.id) loadFromBank(targetId - 1)
 }
@@ -716,16 +734,19 @@ export const effects = $state<Effects>({
 // ── Actions ─────────────────────────────────────────────────────────
 
 export function toggleTrig(trackId: number, stepIndex: number) {
+  pushUndo('Toggle step')
   pattern.tracks[trackId].trigs[stepIndex].active =
     !pattern.tracks[trackId].trigs[stepIndex].active
 }
 
 export function setTrigVelocity(trackId: number, stepIdx: number, v: number) {
+  pushUndo('Set velocity')
   pattern.tracks[trackId].trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
 }
 
 /** For piano roll: click cell sets note + activates; click same note deactivates */
 export function setTrigNote(trackId: number, stepIndex: number, note: number) {
+  pushUndo('Set note')
   const trig = pattern.tracks[trackId].trigs[stepIndex]
   if (trig.active && trig.note === note) {
     trig.active = false
@@ -736,15 +757,18 @@ export function setTrigNote(trackId: number, stepIndex: number, note: number) {
 }
 
 export function setTrigDuration(trackId: number, stepIdx: number, dur: number) {
+  pushUndo('Set duration')
   pattern.tracks[trackId].trigs[stepIdx].duration = Math.max(1, Math.min(16, Math.round(dur)))
 }
 
 export function setTrigSlide(trackId: number, stepIdx: number, slide: boolean) {
+  pushUndo('Set slide')
   pattern.tracks[trackId].trigs[stepIdx].slide = slide
 }
 
 /** Place a note bar: set head trig + clear covered steps */
 export function placeNoteBar(trackId: number, startStep: number, note: number, duration: number) {
+  pushUndo('Place note')
   const trigs = pattern.tracks[trackId].trigs
   const steps = pattern.tracks[trackId].steps
   const dur = Math.max(1, Math.min(steps - startStep, Math.min(16, duration)))
@@ -774,6 +798,7 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
 }
 
 export function toggleMute(trackId: number) {
+  pushUndo('Toggle mute')
   pattern.tracks[trackId].muted = !pattern.tracks[trackId].muted
 }
 
@@ -784,6 +809,7 @@ export function isDrum(track: Track): boolean {
 export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
 
 export function setTrackSteps(trackId: number, newSteps: number) {
+  pushUndo('Set steps')
   const clamped = Math.max(2, Math.min(64, newSteps))
   const track = pattern.tracks[trackId]
   const old = track.steps
@@ -800,20 +826,24 @@ export function setTrackSteps(trackId: number, newSteps: number) {
 }
 
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
+  pushUndo('Set send')
   pattern.tracks[trackId][send] = Math.min(1, Math.max(0, v))
 }
 
 export function setVoiceParam(trackId: number, key: string, value: number) {
+  pushUndo('Set param')
   pattern.tracks[trackId].voiceParams[key] = value
 }
 
 export function setParamLock(trackId: number, stepIdx: number, key: string, value: number) {
+  pushUndo('Set P-Lock')
   const trig = pattern.tracks[trackId].trigs[stepIdx]
   if (!trig.paramLocks) trig.paramLocks = {}
   trig.paramLocks[key] = value
 }
 
 export function clearParamLock(trackId: number, stepIdx: number, key: string) {
+  pushUndo('Clear P-Lock')
   const trig = pattern.tracks[trackId].trigs[stepIdx]
   if (!trig.paramLocks) return
   delete trig.paramLocks[key]
@@ -821,6 +851,7 @@ export function clearParamLock(trackId: number, stepIdx: number, key: string) {
 }
 
 export function clearAllParamLocks(trackId: number, stepIdx: number) {
+  pushUndo('Clear all P-Locks')
   pattern.tracks[trackId].trigs[stepIdx].paramLocks = undefined
 }
 
@@ -1151,6 +1182,7 @@ export function advanceChain(): boolean {
 }
 
 export function randomizePattern(): void {
+  pushUndo('Randomize')
   // Pick a random root in the piano-roll range (C3=48 .. C4=60)
   const roots = [48, 50, 51, 53, 55, 56, 58, 60]
   const root  = roots[Math.floor(Math.random() * roots.length)]

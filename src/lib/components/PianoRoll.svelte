@@ -230,8 +230,8 @@
 
   /* ── Left spacer: aligns grid with step columns ── */
   .piano-spacer {
-    /* Must match: label(64) + gap(4) + knobs(42) + gap(4) + mute(20) + gap(4) = 138px */
-    width: 138px;
+    /* Must match: label(64) + gap(4) + steps(20) + gap(4) + mute(20) + gap(4) = 116px */
+    width: 116px;
     flex-shrink: 0;
     display: flex;
     align-items: stretch;
