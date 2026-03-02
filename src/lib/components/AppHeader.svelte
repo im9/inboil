@@ -65,6 +65,13 @@
   <!-- Top bar: logo + oscilloscope background -->
   <header class="app-header">
     <Oscilloscope />
+    <svg class="app-logo" viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
+      <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+      <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+      <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
+      <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
+    </svg>
     <span class="app-name">INBOIL</span>
     {#if compact}
       <div class="transport-center">
@@ -185,6 +192,16 @@
     overflow: hidden;
   }
   .compact .app-header { height: 32px; }
+
+  .app-logo {
+    width: 18px;
+    height: 18px;
+    margin-right: 5px;
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+  .compact .app-logo { width: 14px; height: 14px; margin-right: 4px; }
 
   .app-name {
     font-size: 10px;

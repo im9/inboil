@@ -45,6 +45,9 @@ See [adr/](./adr/) for full rationale.
 - **Per-step velocity editing** (PROPOSED) — UI for editing per-step velocity. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
 - **Pattern persistence** (PROPOSED) — localStorage save/load for patterns. → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
 - **Granular enhancements** (PROPOSED) — Pitch shift, reverse grains, freeze mode. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
+- **Audio & MIDI export** (PROPOSED) — Offline bounce, real-time recording, MIDI file export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
+- **Virtual MIDI keyboard** (PROPOSED) — PC keyboard as note input (audition, step record, live record). → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
+- **Song View** (PROPOSED / Discussion) — M8-style Phrase/Chain/Song structure + tracker view. → [adr/032-session-view.md](./adr/032-session-view.md)
 
 ## Threading Model
 
