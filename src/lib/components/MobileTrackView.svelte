@@ -19,12 +19,44 @@
   const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 
-  function stepAction(stepIdx: number) {
+  // ── Step drag-to-paint ──
+  let paintDragging = $state(false)
+  let paintOn = true
+  let paintVisited = new Set<number>()
+  let calcEl: HTMLElement | null = null
+
+  function stepDown_pointer(e: PointerEvent, stepIdx: number) {
     if (ui.lockMode) {
       ui.selectedStep = ui.selectedStep === stepIdx ? null : stepIdx
-    } else {
-      toggleTrig(ui.selectedTrack, stepIdx)
+      return
     }
+    e.preventDefault()
+    const trig = track.trigs[stepIdx]
+    paintOn = !trig.active
+    paintDragging = true
+    paintVisited = new Set([stepIdx])
+    calcEl = (e.currentTarget as HTMLElement).closest('.calculator') as HTMLElement
+    calcEl?.setPointerCapture(e.pointerId)
+    toggleTrig(ui.selectedTrack, stepIdx)
+  }
+
+  function stepMove(e: PointerEvent) {
+    if (!paintDragging || !calcEl) return
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    if (!el) return
+    const btn = el.closest('.calc-btn') as HTMLElement | null
+    if (!btn || !calcEl.contains(btn)) return
+    const idx = Array.from(calcEl.children).indexOf(btn)
+    if (idx < 0 || paintVisited.has(idx)) return
+    paintVisited.add(idx)
+    const trig = track.trigs[idx]
+    if (paintOn && !trig.active) toggleTrig(ui.selectedTrack, idx)
+    else if (!paintOn && trig.active) toggleTrig(ui.selectedTrack, idx)
+  }
+
+  function stepEnd() {
+    paintDragging = false
+    calcEl = null
   }
 
   function stepDown() {
@@ -78,7 +110,13 @@
 
   <!-- Main area -->
   {#if drum || mobileTab === 'steps'}
-    <div class="calculator" style="--cols: {calcCols}">
+    <div
+      class="calculator"
+      style="--cols: {calcCols}"
+      onpointermove={stepMove}
+      onpointerup={stepEnd}
+      onpointercancel={stepEnd}
+    >
       {#each track.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
         {@const isSelected = ui.lockMode && ui.selectedStep === stepIdx}
@@ -87,7 +125,7 @@
           class="calc-btn"
           class:playhead={isPlayhead}
           class:lock-selected={isSelected}
-          onpointerdown={() => stepAction(stepIdx)}
+          onpointerdown={(e) => stepDown_pointer(e, stepIdx)}
         >
           <span class="btn-flip" class:flipped={trig.active}>
             <span class="face off"><span class="step-num">{stepIdx + 1}</span></span>
