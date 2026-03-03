@@ -41,3 +41,4 @@ Steps with chance < 1.0 should have a visual indicator (e.g. dimmed opacity prop
 - Per-track global probability multiplier
 - Conditional trigs (fire on Nth repeat only, e.g. "every 4th cycle")
 - Probability curves (ramp up/down over pattern length)
+- Mobile chance editing: implement alongside ADR 033 (Mobile Velocity Editing) — add VEL/CHNC toggle to the long-press gauge
