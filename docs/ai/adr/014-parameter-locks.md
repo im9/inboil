@@ -1,6 +1,6 @@
 # ADR 014: Parameter Locks
 
-## Status: PROPOSED
+## Status: Implemented
 
 ## Context
 

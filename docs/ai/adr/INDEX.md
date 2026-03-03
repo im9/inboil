@@ -27,7 +27,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 004 | Queued Pattern Switch | Implemented | |
 | 006 | Per-Step Velocity | Implemented | |
 | 013 | Pattern Chain | Implemented | Superseded by 032 when implemented |
-| 014 | Parameter Locks | Proposed | P-Lock system |
+| 014 | Parameter Locks | Implemented | P-Lock system |
 | 021 | Note Duration, Slide, ADSR | Implemented | |
 | 022 | Lead Arpeggiator | Implemented | |
 | 025 | Pattern Copy & Paste | Implemented | |
