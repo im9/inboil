@@ -10,6 +10,8 @@ type PerfState = {
   breaking: boolean; masterGain: number
   filling: boolean; reversing: boolean
   swing: number
+  granularPitch?: number; granularScatter?: number
+  granularFreeze?: boolean
 }
 
 type FxNode = { on: boolean; x: number; y: number }
@@ -112,10 +114,13 @@ function patternToWorklet(
       reversing:  perf?.reversing  ?? false,
       glitchX:    fxPad?.glitch.on ? fxPad.glitch.x : 0.5,
       glitchY:    fxPad?.glitch.on ? fxPad.glitch.y : 0.5,
-      granularOn: fxPad?.granular.on ?? false,
-      granularX:  fxPad?.granular.x  ?? 0.5,
-      granularY:  fxPad?.granular.y  ?? 0.3,
-      swing:      perf?.swing       ?? 0,
+      granularOn:      fxPad?.granular.on ?? false,
+      granularX:       fxPad?.granular.x  ?? 0.5,
+      granularY:       fxPad?.granular.y  ?? 0.3,
+      granularPitch:   perf?.granularPitch   ?? 0.5,
+      granularScatter: perf?.granularScatter ?? 0.67,
+      granularFreeze:  perf?.granularFreeze  ?? false,
+      swing:           perf?.swing       ?? 0,
     },
     tracks: pattern.tracks.map(t => ({
       steps:       t.steps,

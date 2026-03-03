@@ -57,4 +57,7 @@ export const DEFAULT_PERF = {
   filling: false,
   reversing: false,
   swing: 0,
+  granularPitch: 0.5,
+  granularScatter: 0.67,
+  granularFreeze: false,
 }

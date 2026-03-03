@@ -1,6 +1,6 @@
 # ADR 008: Granular Processor Enhancements
 
-## Status: PROPOSED
+## Status: Implemented
 
 ## Context
 

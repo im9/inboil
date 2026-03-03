@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fxPad, ui, pattern } from '../state.svelte.ts'
+  import { fxPad, perf, ui, pattern } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
 
@@ -7,13 +7,15 @@
     { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)',  tip: 'Reverb — adds space and depth', tipJa: 'リバーブ — 空間と奥行きを付加' },
     { key: 'delay'    as const, label: 'DLY',  color: 'var(--color-blue)',   tip: 'Delay — rhythmic echo repeats', tipJa: 'ディレイ — リズミカルなエコー' },
     { key: 'glitch'   as const, label: 'GLT',  color: 'var(--color-salmon)', tip: 'Glitch — stutter and slice effects', tipJa: 'グリッチ — スタッター/スライスエフェクト' },
-    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — texture and grain effects', tipJa: 'グラニュラー — テクスチャ/粒子エフェクト' },
+    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — drag: size/density, hold+drag: pitch/scatter, hold: freeze', tipJa: 'グラニュラー — ドラッグ: サイズ/密度, 長押し+ドラッグ: ピッチ/スキャッタ, 長押し: フリーズ' },
   ]
 
   let padEl: HTMLDivElement
   let dragging: typeof nodes[number]['key'] | null = $state(null)
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
+  let granularMode2 = $state(false)
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
   function startDrag(e: PointerEvent, key: typeof nodes[number]['key']) {
     e.preventDefault()
@@ -21,6 +23,9 @@
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
+    if (key === 'granular' && fxPad.granular.on) {
+      longPressTimer = setTimeout(() => { granularMode2 = true; longPressTimer = null }, 400)
+    }
   }
 
   function toNorm(e: PointerEvent): { x: number; y: number } | null {
@@ -36,21 +41,34 @@
     if (!dragMoved) {
       const dx = Math.abs(e.clientX - startPos.x)
       const dy = Math.abs(e.clientY - startPos.y)
-      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) dragMoved = true
+      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) {
+        dragMoved = true
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+      }
     }
     if (dragMoved) {
       const pos = toNorm(e)
       if (pos) {
-        fxPad[dragging].x = pos.x
-        fxPad[dragging].y = pos.y
+        if (dragging === 'granular' && granularMode2) {
+          perf.granularPitch = pos.x
+          perf.granularScatter = pos.y
+        } else {
+          fxPad[dragging].x = pos.x
+          fxPad[dragging].y = pos.y
+        }
       }
     }
   }
 
   function endDrag() {
     if (!dragging) return
-    // Tap (no drag) → toggle on/off
-    if (!dragMoved) fxPad[dragging].on = !fxPad[dragging].on
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    if (dragging === 'granular' && granularMode2 && !dragMoved) {
+      perf.granularFreeze = !perf.granularFreeze
+    } else if (!dragMoved) {
+      fxPad[dragging].on = !fxPad[dragging].on
+    }
+    granularMode2 = false
     dragging = null
   }
 
@@ -480,6 +498,8 @@
         class="fx-node"
         class:on={state.on}
         class:dragging={dragging === node.key}
+        class:frozen={node.key === 'granular' && perf.granularFreeze}
+        class:mode2={node.key === 'granular' && granularMode2}
         style="
           left: calc({PAD_INSET}px + {state.x} * (100% - {PAD_INSET * 2}px));
           bottom: calc({PAD_INSET}px + {state.y} * (100% - {PAD_INSET * 2}px));
@@ -489,7 +509,7 @@
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
-        <span class="node-label">{node.label}</span>
+        <span class="node-label">{node.key === 'granular' && perf.granularFreeze ? 'FRZ' : node.key === 'granular' && granularMode2 ? 'M2' : node.label}</span>
       </button>
     {/each}
   </div>
@@ -571,6 +591,18 @@
   }
   .fx-node.on.dragging {
     box-shadow: 0 0 28px color-mix(in srgb, var(--node-color) 60%, transparent);
+  }
+
+  .fx-node.frozen {
+    border-style: dashed;
+    animation: freeze-pulse 2s ease-in-out infinite;
+  }
+  @keyframes freeze-pulse {
+    0%, 100% { box-shadow: 0 0 16px color-mix(in srgb, var(--node-color) 40%, transparent); }
+    50% { box-shadow: 0 0 24px color-mix(in srgb, var(--color-blue, #4472b4) 60%, transparent); }
+  }
+  .fx-node.mode2 {
+    border-width: 3px;
   }
 
   .node-label {

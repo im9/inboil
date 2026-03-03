@@ -173,14 +173,21 @@ export class GranularProcessor {
   private writePos = 0
 
   private grainActive:    boolean[]
-  private grainPos:       number[]
+  private grainFracPos:   number[]
   private grainRemaining: number[]
   private grainLength:    number[]
+  private grainRate:      number[]
+  private grainReverse:   boolean[]
 
   private grainSizeSamples = 4410
   private spawnInterval = 4410
   private spawnCounter = 0
   private seed = 77777
+
+  private pitchRate = 1.0
+  private scatterSamples: number
+  private reverseProb = 0.0
+  private frozen = false
 
   private active = false
   private ringingOut = false
@@ -189,11 +196,14 @@ export class GranularProcessor {
     this.bufLen = Math.ceil(sr * 0.75)
     this.bufL = new Float32Array(this.bufLen)
     this.bufR = new Float32Array(this.bufLen)
+    this.scatterSamples = Math.floor(sr * 0.5)
     const N = GranularProcessor.MAX_GRAINS
     this.grainActive    = new Array(N).fill(false)
-    this.grainPos       = new Array(N).fill(0)
+    this.grainFracPos   = new Array(N).fill(0)
     this.grainRemaining = new Array(N).fill(0)
     this.grainLength    = new Array(N).fill(0)
+    this.grainRate      = new Array(N).fill(1)
+    this.grainReverse   = new Array(N).fill(false)
   }
 
   setParams(x: number, y: number) {
@@ -203,6 +213,15 @@ export class GranularProcessor {
     this.spawnInterval = Math.max(1, Math.floor(intervalMs * this.sr / 1000))
   }
 
+  setParams2(pitch: number, scatter: number) {
+    const semitones = (pitch - 0.5) * 24
+    this.pitchRate = Math.pow(2, semitones / 12)
+    this.scatterSamples = Math.max(1, Math.floor(scatter * this.bufLen))
+    this.reverseProb = scatter > 0.5 ? (scatter - 0.5) * 0.8 : 0
+  }
+
+  setFreeze(on: boolean) { this.frozen = on }
+
   setActive(on: boolean) {
     if (on && !this.active) {
       this.active = true
@@ -210,15 +229,25 @@ export class GranularProcessor {
       this.spawnCounter = 0
     } else if (!on && this.active) {
       this.active = false
+      this.frozen = false
       this.ringingOut = true
     }
   }
 
+  private _readInterp(buf: Float32Array, pos: number): number {
+    const i0 = pos | 0
+    const frac = pos - i0
+    const i1 = i0 + 1 >= this.bufLen ? 0 : i0 + 1
+    return buf[i0] + (buf[i1] - buf[i0]) * frac
+  }
+
   private out = new Float64Array(2)
   process(inL: number, inR: number): Float64Array {
-    this.bufL[this.writePos] = inL
-    this.bufR[this.writePos] = inR
-    if (++this.writePos >= this.bufLen) this.writePos = 0
+    if (!this.frozen) {
+      this.bufL[this.writePos] = inL
+      this.bufR[this.writePos] = inR
+      if (++this.writePos >= this.bufLen) this.writePos = 0
+    }
 
     if (!this.active && !this.ringingOut) { this.out[0] = 0; this.out[1] = 0; return this.out }
 
@@ -237,10 +266,14 @@ export class GranularProcessor {
       anyActive = true
       const progress = 1 - this.grainRemaining[i] / this.grainLength[i]
       const env = 0.5 * (1 - Math.cos(2 * Math.PI * progress))
-      const pos = this.grainPos[i]
-      wetL += this.bufL[pos] * env
-      wetR += this.bufR[pos] * env
-      this.grainPos[i] = pos + 1 >= this.bufLen ? 0 : pos + 1
+      const fp = this.grainFracPos[i]
+      wetL += this._readInterp(this.bufL, fp) * env
+      wetR += this._readInterp(this.bufR, fp) * env
+      const step = this.grainRate[i] * (this.grainReverse[i] ? -1 : 1)
+      let newPos = fp + step
+      if (newPos >= this.bufLen) newPos -= this.bufLen
+      if (newPos < 0) newPos += this.bufLen
+      this.grainFracPos[i] = newPos
       this.grainRemaining[i]--
       if (this.grainRemaining[i] <= 0) this.grainActive[i] = false
     }
@@ -255,11 +288,13 @@ export class GranularProcessor {
     for (let i = 0; i < GranularProcessor.MAX_GRAINS; i++) {
       if (this.grainActive[i]) continue
       this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-      const maxOffset = Math.floor(this.sr * 0.5)
-      const randOffset = (this.seed >>> 16) % maxOffset
-      this.grainPos[i] = (this.writePos - randOffset + this.bufLen) % this.bufLen
+      const randOffset = (this.seed >>> 16) % this.scatterSamples
+      this.grainFracPos[i] = (this.writePos - randOffset + this.bufLen) % this.bufLen
       this.grainLength[i] = this.grainSizeSamples
       this.grainRemaining[i] = this.grainSizeSamples
+      this.grainRate[i] = this.pitchRate
+      this.seed = (this.seed * 1664525 + 1013904223) >>> 0
+      this.grainReverse[i] = (this.seed >>> 16) / 65536 < this.reverseProb
       this.grainActive[i] = true
       return
     }
