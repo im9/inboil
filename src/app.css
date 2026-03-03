@@ -49,3 +49,40 @@ button {
   touch-action: manipulation;
   user-select: none;
 }
+
+/* ── Othello flip (shared 3D card-flip structure) ── */
+.flip-host { perspective: 80px; }
+.flip-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 180ms ease-out;
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+.flip-host:active .flip-card { transform: scale(0.85); }
+.flip-host:active .flip-card.flipped { transform: rotateY(180deg) scale(0.85); }
+.flip-card > .flip-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+}
+.flip-card > .flip-face.back {
+  transform: rotateY(180deg);
+}
+
+/* ── Shared keyframes ── */
+@keyframes ph-glow {
+  0%   { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
+}
+@keyframes vel-glow {
+  0%   { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
+}

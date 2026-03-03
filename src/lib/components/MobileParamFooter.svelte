@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { pattern, ui, setVoiceParam, setParamLock, setTrackSend } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { pattern, ui, setTrackSend } from '../state.svelte.ts'
+  import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { slide } from 'svelte/transition'
   import Knob from './Knob.svelte'
 
@@ -33,30 +34,6 @@
     const cats = paramCategories()
     if (!cats.find(c => c.id === paramTab)) paramTab = 'mix'
   })
-
-  // P-Lock state
-  const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
-
-  function knobValue(p: { key: string; default: number }): number {
-    if (ui.lockMode && selTrig) {
-      const lockVal = selTrig.paramLocks?.[p.key]
-      return lockVal !== undefined ? lockVal : (track.voiceParams[p.key] ?? p.default)
-    }
-    return track.voiceParams[p.key] ?? p.default
-  }
-
-  function knobChange(p: { key: string }, v: number) {
-    const actual = denormalizeParam(p as any, v)
-    if (ui.lockMode && ui.selectedStep !== null) {
-      setParamLock(ui.selectedTrack, ui.selectedStep, p.key, actual)
-    } else {
-      setVoiceParam(ui.selectedTrack, p.key, actual)
-    }
-  }
-
-  function isParamLocked(key: string): boolean {
-    return !!(ui.lockMode && selTrig?.paramLocks?.[key] !== undefined)
-  }
 </script>
 
 {#if !hideHandle}

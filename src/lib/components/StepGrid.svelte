@@ -156,13 +156,13 @@
 
       <!-- Mute -->
       <button
-        class="btn-mute"
+        class="btn-mute flip-host"
         onpointerdown={() => toggleMute(trackId)}
         data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
       >
-        <span class="mute-flip" class:flipped={track.muted}>
-          <span class="face off">M</span>
-          <span class="face on">M</span>
+        <span class="flip-card" class:flipped={track.muted}>
+          <span class="flip-face mute-off">M</span>
+          <span class="flip-face back mute-on">M</span>
         </span>
       </button>
 
@@ -181,15 +181,15 @@
           {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
           {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
           <button
-            class="step"
+            class="step flip-host"
             class:playhead={isPlayhead}
             class:lock-selected={isLockSel}
             aria-label="Step {stepIdx + 1}"
             onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
           >
-            <span class="step-flip" class:flipped={trig.active}>
-              <span class="face off"></span>
-              <span class="face on"></span>
+            <span class="flip-card" class:flipped={trig.active}>
+              <span class="flip-face step-off"></span>
+              <span class="flip-face back step-on"></span>
             </span>
             {#if hasLocks}<span class="lock-dot"></span>{/if}
             {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
@@ -314,7 +314,7 @@
     text-transform: uppercase;
   }
 
-  /* ── Mute button (Othello flip) ── */
+  /* ── Mute button ── */
   .btn-mute {
     width: 20px;
     height: 20px;
@@ -324,40 +324,17 @@
     padding: 0;
     perspective: 60px;
   }
-  .mute-flip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 180ms ease-out;
-  }
-  .mute-flip.flipped {
-    transform: rotateY(180deg);
-  }
-  .btn-mute:active .mute-flip { transform: scale(0.85); }
-  .btn-mute:active .mute-flip.flipped { transform: rotateY(180deg) scale(0.85); }
-  .mute-flip > .face {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    backface-visibility: hidden;
-  }
-  .mute-flip > .face.off {
+  .mute-off {
     border: 1px solid var(--color-fg);
     background: transparent;
     color: var(--color-fg);
+    font-size: 9px;
   }
-  .mute-flip > .face.on {
+  .mute-on {
     border: 1px solid var(--color-fg);
     background: var(--color-fg);
     color: var(--color-bg);
-    transform: rotateY(180deg);
+    font-size: 9px;
   }
 
   /* ── Steps ── */
@@ -378,45 +355,30 @@
     position: relative;
     width: 24px;
     height: 24px;
-    perspective: 80px;
     border: none;
     background: transparent;
     padding: 0;
   }
-
-  .step-flip {
+  .step :global(.flip-card) {
     position: absolute;
     inset: 0;
-    transform-style: preserve-3d;
-    transition: transform 180ms ease-out;
   }
-  .step-flip.flipped {
-    transform: rotateY(180deg);
-  }
-  .step:active .step-flip { transform: scale(0.85); }
-  .step:active .step-flip.flipped { transform: rotateY(180deg) scale(0.85); }
 
-  .face {
-    position: absolute;
-    inset: 0;
-    backface-visibility: hidden;
-  }
-  .face.off {
+  .step-off {
     background: var(--color-bg);
     border: 1px solid rgba(30,32,40,0.5);
   }
-  .face.on {
+  .step-on {
     background: var(--color-olive);
     border: 1px solid var(--color-olive);
-    transform: rotateY(180deg);
   }
 
   /* ── P-Lock indicators ── */
-  .step.lock-selected .face.off {
+  .step.lock-selected .step-off {
     border-color: var(--color-olive);
     box-shadow: 0 0 0 1px var(--color-olive);
   }
-  .step.lock-selected .face.on {
+  .step.lock-selected .step-on {
     box-shadow: inset 0 0 0 2px var(--color-bg);
   }
   .lock-dot {
@@ -434,11 +396,6 @@
   /* ── Playhead glow ── */
   .step.playhead {
     animation: ph-glow 180ms ease-out;
-  }
-
-  @keyframes ph-glow {
-    0%   { filter: brightness(1.5); }
-    100% { filter: brightness(1); }
   }
 
   /* ── Inline velocity lane ── */
@@ -563,11 +520,6 @@
   }
   .vel-fill.playhead {
     animation: vel-glow 180ms ease-out;
-  }
-
-  @keyframes vel-glow {
-    0%   { filter: brightness(1.5); }
-    100% { filter: brightness(1); }
   }
 
   /* ── Chance mode (Shift+drag) ── */

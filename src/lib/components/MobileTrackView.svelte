@@ -232,15 +232,15 @@
         {@const isDragging = velDragActive && velDragStep === stepIdx}
         {@const velVal = editMode === 'chance' ? (trig.chance ?? 1.0) : trig.velocity}
         <button
-          class="calc-btn"
+          class="calc-btn flip-host"
           class:playhead={isPlayhead}
           class:lock-selected={isSelected}
           class:vel-dragging={isDragging}
           onpointerdown={(e) => stepDown_pointer(e, stepIdx)}
         >
-          <span class="btn-flip" class:flipped={trig.active}>
-            <span class="face off"><span class="step-num">{stepIdx + 1}</span></span>
-            <span class="face on" style="--vel: {editMode !== 'step' ? velVal : 1}"><span class="step-num">{stepIdx + 1}</span></span>
+          <span class="flip-card" class:flipped={trig.active}>
+            <span class="flip-face calc-off"><span class="step-num">{stepIdx + 1}</span></span>
+            <span class="flip-face back calc-on" style="--vel: {editMode !== 'step' ? velVal : 1}"><span class="step-num">{stepIdx + 1}</span></span>
           </span>
           {#if isDragging}
             <span class="vel-pct {editMode === 'chance' ? 'chance' : ''}">{Math.round(velVal * 100)}%</span>
@@ -492,39 +492,24 @@
     perspective: 120px;
     padding: 0;
   }
-
-  .btn-flip {
+  .calc-btn :global(.flip-card) {
     position: absolute;
     inset: 0;
-    transform-style: preserve-3d;
-    transition: transform 180ms ease-out;
   }
-  .btn-flip.flipped {
-    transform: rotateY(180deg);
-  }
-  .calc-btn:active .btn-flip { transform: scale(0.9); }
-  .calc-btn:active .btn-flip.flipped { transform: rotateY(180deg) scale(0.9); }
+  .calc-btn:active :global(.flip-card) { transform: scale(0.9); }
+  .calc-btn:active :global(.flip-card.flipped) { transform: rotateY(180deg) scale(0.9); }
 
-  .face {
-    position: absolute;
-    inset: 0;
-    backface-visibility: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .face.off {
+  .calc-off {
     background: var(--color-bg);
     border: 1.5px solid rgba(30,32,40,0.5);
   }
-  .face.on {
+  .calc-on {
     background: linear-gradient(
       to top,
       var(--color-olive) calc(var(--vel, 1) * 100%),
       rgba(108,119,68,0.25) calc(var(--vel, 1) * 100%)
     );
     border: 1.5px solid var(--color-olive);
-    transform: rotateY(180deg);
   }
 
   .step-num {
@@ -533,11 +518,11 @@
     line-height: 1;
     pointer-events: none;
   }
-  .face.off .step-num {
+  .calc-off .step-num {
     color: var(--color-fg);
     opacity: 0.3;
   }
-  .face.on .step-num {
+  .calc-on .step-num {
     color: var(--color-bg);
     opacity: 0.5;
   }
@@ -563,17 +548,17 @@
   .calc-btn.vel-dragging {
     z-index: 3;
   }
-  .calc-btn.vel-dragging .face.on {
+  .calc-btn.vel-dragging .calc-on {
     border-color: var(--color-bg);
     box-shadow: 0 0 0 2px var(--color-olive);
   }
 
   /* ── P-Lock indicators ── */
-  .calc-btn.lock-selected .face.off {
+  .calc-btn.lock-selected .calc-off {
     border-color: var(--color-olive);
     box-shadow: 0 0 0 1px var(--color-olive);
   }
-  .calc-btn.lock-selected .face.on {
+  .calc-btn.lock-selected .calc-on {
     box-shadow: inset 0 0 0 2px var(--color-bg);
   }
   .lock-dot {
@@ -591,11 +576,6 @@
   /* ── Playhead glow ── */
   .calc-btn.playhead {
     animation: ph-glow 180ms ease-out;
-  }
-
-  @keyframes ph-glow {
-    0%   { filter: brightness(1.5); }
-    100% { filter: brightness(1); }
   }
 
   /* ── Piano roll ── */

@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { pattern, ui, setVoiceParam, setParamLock, clearAllParamLocks, setTrackSend, toggleSidebar } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { pattern, ui, clearAllParamLocks, setTrackSend, toggleSidebar } from '../state.svelte.ts'
+  import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
@@ -10,39 +11,18 @@
   // P-Lock state
   const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
-
-  function knobValue(p: { key: string; default: number }): number {
-    if (ui.lockMode && selTrig) {
-      const lockVal = selTrig.paramLocks?.[p.key]
-      return lockVal !== undefined ? lockVal : (track.voiceParams[p.key] ?? p.default)
-    }
-    return track.voiceParams[p.key] ?? p.default
-  }
-
-  function knobChange(p: { key: string }, v: number) {
-    const actual = denormalizeParam(p as any, v)
-    if (ui.lockMode && ui.selectedStep !== null) {
-      setParamLock(ui.selectedTrack, ui.selectedStep, p.key, actual)
-    } else {
-      setVoiceParam(ui.selectedTrack, p.key, actual)
-    }
-  }
-
-  function isParamLocked(key: string): boolean {
-    return !!(ui.lockMode && selTrig?.paramLocks?.[key] !== undefined)
-  }
 </script>
 
 <div class="param-panel" class:minimal={ui.view === 'chain'}>
   <button
-    class="btn-help"
+    class="btn-help flip-host"
     onpointerdown={() => toggleSidebar('help')}
     aria-label="Help"
     data-tip="Show help" data-tip-ja="ヘルプを表示"
   >
-    <span class="help-flip" class:flipped={ui.sidebar === 'help'}>
-      <span class="face off">?</span>
-      <span class="face on">?</span>
+    <span class="flip-card" class:flipped={ui.sidebar === 'help'}>
+      <span class="flip-face help-off">?</span>
+      <span class="flip-face back help-on">?</span>
     </span>
   </button>
 
@@ -124,7 +104,7 @@
     visibility: hidden;
   }
 
-  /* ── Help button (Othello flip) ── */
+  /* ── Help button ── */
   .btn-help {
     position: absolute;
     right: 12px;
@@ -136,42 +116,18 @@
     padding: 0;
     width: 28px;
     height: 28px;
-    perspective: 80px;
   }
-  .help-flip {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 180ms ease-out;
-  }
-  .help-flip.flipped {
-    transform: rotateY(180deg);
-  }
-  .btn-help:active .help-flip { transform: scale(0.85); }
-  .btn-help:active .help-flip.flipped { transform: rotateY(180deg) scale(0.85); }
-  .help-flip > .face {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    backface-visibility: hidden;
-  }
-  .help-flip > .face.off {
+  .help-off {
     border: 1px solid rgba(237,232,220,0.3);
     background: transparent;
     color: rgba(237,232,220,0.45);
+    font-size: 14px;
   }
-  .help-flip > .face.on {
+  .help-on {
     border: 1px solid var(--color-blue);
     background: var(--color-blue);
     color: white;
-    transform: rotateY(180deg);
+    font-size: 14px;
   }
 
   /* ── Inner layout ── */

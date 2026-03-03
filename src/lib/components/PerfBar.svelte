@@ -2,6 +2,7 @@
   import { pattern, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
+  import PerfButtons from './PerfButtons.svelte'
 
   let { onPlay, onStop, onRandom }: { onPlay?: () => void; onStop?: () => void; onRandom?: () => void } = $props()
 
@@ -248,30 +249,7 @@
 
   <!-- Performance buttons (momentary press-hold) -->
   <div class="perf-group perf-btns">
-    <button
-      class="btn-perf"
-      class:active={perf.filling}
-      onpointerdown={() => { perf.filling = true }}
-      onpointerup={() => { perf.filling = false }}
-      onpointerleave={() => { perf.filling = false }}
-      data-tip="Hold for drum fill" data-tip-ja="長押しでドラムフィル"
-    >FILL</button>
-    <button
-      class="btn-perf"
-      class:active={perf.reversing}
-      onpointerdown={() => { perf.reversing = true }}
-      onpointerup={() => { perf.reversing = false }}
-      onpointerleave={() => { perf.reversing = false }}
-      data-tip="Hold to reverse playback" data-tip-ja="長押しで逆再生"
-    >REV</button>
-    <button
-      class="btn-perf btn-brk"
-      class:active={perf.breaking}
-      onpointerdown={() => { perf.breaking = true }}
-      onpointerup={() => { perf.breaking = false }}
-      onpointerleave={() => { perf.breaking = false }}
-      data-tip="Hold for rhythmic break" data-tip-ja="長押しでリズムブレイク"
-    >BRK</button>
+    <PerfButtons variant="bar" />
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -455,34 +433,6 @@
     gap: 4px;
   }
 
-  .btn-perf {
-    border: 1.5px solid var(--color-blue);
-    background: transparent;
-    color: var(--color-blue);
-    padding: 5px 10px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    transition: background 40ms linear, color 40ms linear;
-    user-select: none;
-    touch-action: none;
-  }
-  .btn-perf:active,
-  .btn-perf.active {
-    background: var(--color-blue);
-    color: var(--color-bg);
-  }
-
-  .btn-brk {
-    border-color: var(--color-salmon);
-    color: var(--color-salmon);
-  }
-  .btn-brk:active,
-  .btn-brk.active {
-    background: var(--color-salmon);
-    color: var(--color-bg);
-  }
 
   .btn-kbd {
     border-color: var(--color-olive);
