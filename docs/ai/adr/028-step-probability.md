@@ -1,6 +1,6 @@
 # ADR 028: Step Probability (Chance)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

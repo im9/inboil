@@ -18,6 +18,7 @@ export interface Trig {
   velocity: number  // 0.0–1.0
   duration: number  // step count 1-16 (default 1)
   slide: boolean    // slide/glide to next note (default false)
+  chance?: number   // 0.0–1.0, undefined = always fire (100%)
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
@@ -491,6 +492,7 @@ function clonePattern(): Pattern {
       trigs: t.trigs.map(tr => ({
         active: tr.active, note: tr.note, velocity: tr.velocity,
         duration: tr.duration, slide: tr.slide,
+        ...(tr.chance != null ? { chance: tr.chance } : {}),
         ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
           ? { paramLocks: { ...tr.paramLocks } } : {}),
       })),
@@ -776,6 +778,12 @@ export function setTrigDuration(trackId: number, stepIdx: number, dur: number) {
 export function setTrigSlide(trackId: number, stepIdx: number, slide: boolean) {
   pushUndo('Set slide')
   pattern.tracks[trackId].trigs[stepIdx].slide = slide
+}
+
+export function setTrigChance(trackId: number, stepIdx: number, chance: number) {
+  pushUndo('Set chance')
+  const v = Math.max(0, Math.min(1, chance))
+  pattern.tracks[trackId].trigs[stepIdx].chance = v >= 1 ? undefined : v
 }
 
 /** Place a note bar: set head trig + clear covered steps */
@@ -1252,8 +1260,11 @@ export function randomizePattern(): void {
           prob = on8th ? 0.82 : (Math.random() > 0.5 ? 0.55 : 0.20)
         }
 
-        track.trigs[s].active   = Math.random() < prob
+        const active = Math.random() < prob
+        track.trigs[s].active   = active
         track.trigs[s].velocity = 0.55 + Math.random() * 0.45
+        // Add chance to non-primary beats for organic feel
+        track.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
       }
     } else {
       // Melodic: scale-quantized notes, ~30% density

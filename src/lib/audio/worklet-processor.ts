@@ -385,6 +385,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.gateCounters[t] = 1
         }
       } else if (trig?.active) {
+        // Step probability: skip note if chance check fails
+        if (Math.random() >= (trig.chance ?? 1.0)) {
+          this.gateCounters[t] = trig.duration ?? 1
+          continue
+        }
         const note = t >= 6 ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
         if (t === 0) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {

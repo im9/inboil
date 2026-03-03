@@ -31,7 +31,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 021 | Note Duration, Slide, ADSR | Implemented | |
 | 022 | Lead Arpeggiator | Implemented | |
 | 025 | Pattern Copy & Paste | Implemented | |
-| 028 | Step Probability | Proposed | |
+| 028 | Step Probability | Implemented | Shift+drag on velocity bars |
 | 029 | Undo / Redo | Implemented | Desktop only (Ctrl+Z / Ctrl+Shift+Z) |
 | 033 | Mobile Velocity Editing | Proposed | Long-press gauge |
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
@@ -12,10 +12,12 @@
   // ── Velocity drag state ──
   let velContainer: HTMLDivElement | undefined = $state(undefined)
   let velDragging = $state(false)
+  let chanceMode = $state(false)
 
   function velStartDrag(e: PointerEvent, trackId: number, idx: number) {
     e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    if (e.shiftKey) chanceMode = !chanceMode
     velDragging = true
     velApply(e, trackId, idx)
   }
@@ -39,7 +41,11 @@
     if (!cell) return
     const rect = cell.getBoundingClientRect()
     const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
-    setTrigVelocity(trackId, idx, v)
+    if (chanceMode) {
+      setTrigChance(trackId, idx, v)
+    } else {
+      setTrigVelocity(trackId, idx, v)
+    }
   }
 
   function velEndDrag() {
@@ -186,6 +192,7 @@
               <span class="face on"></span>
             </span>
             {#if hasLocks}<span class="lock-dot"></span>{/if}
+            {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
           </button>
         {/each}
       </div>
@@ -202,26 +209,36 @@
         onpointercancel={velEndDrag}
       >
         <div class="vel-label">
-          <span class="vel-name" data-tip="Velocity — per-step volume" data-tip-ja="ベロシティ (各ステップの音量)">VEL</span>
+          <span class="vel-name" class:chance-active={chanceMode}
+            onpointerdown={() => { chanceMode = !chanceMode }}
+            data-tip={chanceMode ? "Chance — tap to switch to VEL" : "Velocity — tap to switch to CHNC"}
+            data-tip-ja={chanceMode ? "チャンス — タップでVELに切替" : "ベロシティ — タップでCHNCに切替"}
+          >{chanceMode ? 'CHNC' : 'VEL'}</span>
         </div>
         <div class="vel-spacer"></div>
-        <div class="vel-bars" style="--steps: {track.steps}" data-tip="Drag up/down to adjust velocity" data-tip-ja="上下ドラッグでベロシティを調整">
+        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {track.steps}"
+          data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
+          data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
+        >
           {#each track.trigs as trig, i}
             {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
+            {@const isActive = trig.active || shrinking.has(`${trackId}-${i}`)}
+            {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}
+            {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
             <div
               class="vel-cell"
               role="slider"
               tabindex="-1"
-              aria-valuenow={trig.velocity}
+              aria-valuenow={chanceMode ? (trig.chance ?? 1) : trig.velocity}
               onpointerdown={e => velStartDrag(e, trackId, i)}
             >
               <div
                 class="vel-fill"
-                class:active={trig.active || shrinking.has(`${trackId}-${i}`)}
+                class:active={isActive}
                 class:growing={growing.has(`${trackId}-${i}`)}
                 class:shrinking={shrinking.has(`${trackId}-${i}`)}
                 class:playhead={isPlayhead}
-                style="height: {trig.velocity * 100}%"
+                style="height: {barHeight}%{!chanceMode && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
               ></div>
             </div>
           {/each}
@@ -458,6 +475,7 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    text-align: center;
     gap: 2px;
     padding: 0 6px;
   }
@@ -467,6 +485,19 @@
     letter-spacing: 0.08em;
     color: var(--color-muted);
     text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid var(--color-muted);
+    padding: 2px 6px;
+    background: transparent;
+    transition: color 150ms, border-color 150ms;
+  }
+  .vel-name:active {
+    opacity: 0.6;
+  }
+  .vel-name.chance-active {
+    color: #5b7dba;
+    border-color: #5b7dba;
   }
   .btn-steps {
     width: 20px;
@@ -507,7 +538,7 @@
     width: 100%;
     background: rgba(237,232,220,0.12);
     border-radius: 1px 1px 0 0;
-    transition: height 40ms;
+    transition: height 180ms ease-out;
     min-height: 2px;
     transform-origin: bottom;
   }
@@ -537,6 +568,22 @@
   @keyframes vel-glow {
     0%   { filter: brightness(1.5); }
     100% { filter: brightness(1); }
+  }
+
+  /* ── Chance mode (Shift+drag) ── */
+  .vel-bars.chance-mode .vel-fill.active {
+    background: #5b7dba;
+  }
+  .chance-dot {
+    position: absolute;
+    bottom: 1px;
+    left: 1px;
+    width: 4px;
+    height: 4px;
+    background: #5b7dba;
+    transform: rotate(45deg);
+    z-index: 1;
+    pointer-events: none;
   }
 
 </style>
