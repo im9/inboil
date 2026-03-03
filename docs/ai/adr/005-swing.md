@@ -25,7 +25,7 @@ The total pair duration (odd + even) remains constant — swing redistributes ti
 
 ### UI
 
-A SWING knob in PerfBar (next to GAIN). Range displayed as percentage (50%–67%).
+A SWG knob in PerfBar. UI displays normalized 0–100% (internally mapped to 0.50–0.67 effective swing ratio in the worklet via `0.5 + value * 0.17`).
 
 ## Consequences
 

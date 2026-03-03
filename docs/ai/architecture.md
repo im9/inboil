@@ -41,13 +41,22 @@ See [adr/](./adr/) for full rationale.
 - **TypeScript AudioWorklet** (IMPLEMENTED) — Rapid iteration; WASM integration deferred. → [adr/002-ts-worklet.md](./adr/002-ts-worklet.md)
 - **BPM-synced delay** (IMPLEMENTED) — Beat fraction → ms at send time. → [adr/003-bpm-synced-delay.md](./adr/003-bpm-synced-delay.md)
 - **Queued pattern switching** (IMPLEMENTED) — Queue during playback, apply at loop boundary. → [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md)
-- **Swing / shuffle** (PROPOSED) — Global swing parameter for groove timing. → [adr/005-swing.md](./adr/005-swing.md)
-- **Per-step velocity editing** (PROPOSED) — UI for editing per-step velocity. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
+- **Swing / shuffle** (IMPLEMENTED) — Global swing parameter for groove timing. → [adr/005-swing.md](./adr/005-swing.md)
+- **Per-step velocity editing** (IMPLEMENTED) — Bar overlay + mobile 3-mode tabs. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
 - **Pattern persistence** (PROPOSED) — localStorage save/load for patterns. → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
-- **Granular enhancements** (PROPOSED) — Pitch shift, reverse grains, freeze mode. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
+- **Granular enhancements** (IMPLEMENTED) — Pitch shift, reverse grains, scatter, freeze. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
+- **Pattern chain** (IMPLEMENTED) — Sequential pattern playback with per-entry FX/perf. → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
+- **Parameter locks** (IMPLEMENTED) — Per-step voice parameter overrides. → [adr/014-parameter-locks.md](./adr/014-parameter-locks.md)
+- **Note duration, slide, ADSR** (IMPLEMENTED) — Gate length, legato, amp envelope. → [adr/021-note-duration-slide-adsr.md](./adr/021-note-duration-slide-adsr.md)
+- **Lead arpeggiator** (IMPLEMENTED) — 5-mode arp with chord/octave range. → [adr/022-lead-arpeggiator.md](./adr/022-lead-arpeggiator.md)
+- **Oscilloscope** (IMPLEMENTED) — Waveform display in header. → [adr/023-oscilloscope.md](./adr/023-oscilloscope.md)
+- **Pattern copy & paste** (IMPLEMENTED) — CPY/PST/CLR operations. → [adr/025-pattern-copy-paste.md](./adr/025-pattern-copy-paste.md)
+- **Step probability** (IMPLEMENTED) — Per-step chance (0–100%). → [adr/028-step-probability.md](./adr/028-step-probability.md)
+- **Undo / redo** (IMPLEMENTED) — Snapshot-based undo (Ctrl+Z / Cmd+Z). → [adr/029-undo-redo.md](./adr/029-undo-redo.md)
 - **Audio & MIDI export** (PROPOSED) — Offline bounce, real-time recording, MIDI file export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
-- **Virtual MIDI keyboard** (PROPOSED) — PC keyboard as note input (audition, step record, live record). → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
-- **Song View** (PROPOSED / Discussion) — M8-style Phrase/Chain/Song structure + tracker view. → [adr/032-session-view.md](./adr/032-session-view.md)
+- **Virtual MIDI keyboard** (IMPLEMENTED, Phase 1) — PC keyboard audition mode. → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
+- **Song View** (PROPOSED) — M8-style Phrase/Chain/Song structure. → [adr/032-session-view.md](./adr/032-session-view.md)
+- **Mobile velocity/chance editing** (IMPLEMENTED) — 3-mode tabs (STEP/VEL/CHNC). → [adr/033-mobile-velocity-editing.md](./adr/033-mobile-velocity-editing.md)
 
 ## Threading Model
 
@@ -59,7 +68,7 @@ Communication:   MessagePort (postMessage) — bidirectional
 
 The AudioWorklet has no access to the DOM.
 All communication crosses the thread boundary via `MessagePort`:
-- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`
+- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`
 - **Worklet → UI:** `step` event with playhead positions array
 
 No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (8 tracks × 64 steps max).
@@ -74,13 +83,20 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── app.css                   ← Global styles (reset, tokens, base)
 │   ├── lib/
 │   │   ├── components/           ← Svelte 5 UI components
-│   │   │   ├── AppHeader.svelte  ← BPM, transport, PAT navigation
+│   │   │   ├── AppHeader.svelte  ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte   ← Desktop step sequencer grid
-│   │   │   ├── ParamPanel.svelte ← Footer: synth knobs, sends, FX
-│   │   │   ├── PianoRoll.svelte  ← Note editor for melodic tracks
-│   │   │   ├── PerfBar.svelte    ← Performance controls (KEY, OCT, EQ, BRK…)
-│   │   │   ├── FxPad.svelte     ← FX XY pad, audio visualizer, per-track sends
-│   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps
+│   │   │   ├── StepLane.svelte   ← Velocity/chance bar lane per track
+│   │   │   ├── ParamPanel.svelte ← Footer: synth knobs, p-lock toggle
+│   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks
+│   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
+│   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
+│   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
+│   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
+│   │   │   ├── ChainView.svelte  ← Pattern chain editor
+│   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
+│   │   │   ├── MobileParamFooter.svelte ← Mobile: param knobs footer
+│   │   │   ├── Oscilloscope.svelte ← Waveform display in header
+│   │   │   ├── Sidebar.svelte    ← Help / System settings panel
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
 │   │   │   └── SplitFlap.svelte  ← パタパタ split-flap display
 │   │   ├── audio/
@@ -92,7 +108,8 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │       ├── effects.ts    ← Reverb, delay, ducker, compressor, limiter, granular
 │   │   │       └── voices.ts     ← Voice interface, all synth voices, makeVoice
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
-│   │   └── paramDefs.ts          ← Synth parameter definitions
+│   │   ├── paramDefs.ts          ← Synth parameter definitions
+│   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt
 │       ├── engine/               ← C++ sequencer + voice manager

@@ -16,18 +16,18 @@ interface Trig {
   active: boolean
   velocity: number
   note: number
-  locks: Record<string, number>  // key → physical-unit value (same as voiceParams)
+  paramLocks?: Record<string, number>  // key → physical-unit value (same as voiceParams)
 }
 ```
 
-`locks` is empty `{}` by default. Only parameters that have been explicitly locked on a step are present. At trigger time, the engine merges `track.voiceParams` with `trig.locks`, where locks win.
+`paramLocks` is `undefined` by default (omitted). Only parameters that have been explicitly locked on a step are present. At trigger time, the engine merges `track.voiceParams` with `trig.paramLocks`, where locks win.
 
 ### Trigger Resolution
 
 ```typescript
 function resolveParams(track: Track, stepIdx: number): Record<string, number> {
   const trig = track.trigs[stepIdx]
-  return { ...track.voiceParams, ...trig.locks }
+  return { ...track.voiceParams, ...(trig.paramLocks ?? {}) }
 }
 ```
 
@@ -35,12 +35,13 @@ This runs on the main thread before sending trigger data to the worklet. The wor
 
 ### UI: Step-Selection Mode
 
-**Approach:** Reuse existing ParamPanel knobs. Add a step-selection interaction:
+**Approach:** Reuse existing ParamPanel knobs. Toggle-button `lockMode` in ParamPanel:
 
-1. **Enter p-lock mode:** Tap-and-hold a step in the grid (or tap a step while the track is already selected). The step becomes "focused" — indicated by a pulsing highlight.
-2. **ParamPanel shows per-step values:** When a step is focused, knobs display the effective value for that step (merged base + locks). Turning a knob writes to `trig.locks[key]` instead of `track.voiceParams[key]`.
-3. **Exit p-lock mode:** Tap elsewhere, tap the focused step again, or tap another step to switch focus.
-4. **Clear a lock:** Double-tap a knob (or long-press) to remove that key from `trig.locks`, reverting to the track default.
+1. **Enter p-lock mode:** Tap the lock toggle button in ParamPanel. `lockMode = true`.
+2. **Select step:** While in lock mode, tap a step in the grid to set `selectedStep`. The step becomes highlighted.
+3. **ParamPanel shows per-step values:** When a step is selected, knobs display the effective value for that step (merged base + locks). Turning a knob writes to `trig.paramLocks[key]` instead of `track.voiceParams[key]`.
+4. **Exit p-lock mode:** Tap the lock toggle again, or tap the selected step again to deselect.
+5. **Clear a lock:** Double-tap a knob (or long-press) to remove that key from `trig.paramLocks`, reverting to the track default.
 
 ### State Extension
 
@@ -48,15 +49,17 @@ This runs on the main thread before sending trigger data to the worklet. The wor
 // In ui state
 export const ui = $state({
   selectedTrack: 0,
-  focusedStep: -1,  // -1 = no step focused (normal mode), 0–15 = p-lock editing
-  view: 'grid' as 'grid' | 'fx',
+  lockMode: false,                      // p-lock editing mode toggle
+  selectedStep: null as number | null,   // null = no step selected, 0–15 = p-lock target
+  view: 'grid' as 'grid' | 'fx' | 'eq' | 'chain',
+  sidebar: null as 'help' | 'system' | null,
 })
 ```
 
 ### Visual Indicators
 
-- **Locked step dot:** Steps with non-empty `locks` show a small dot or diamond below the trig square.
-- **Focused step:** Pulsing border or glow animation on the currently focused step.
+- **Locked step dot:** Steps with non-empty `paramLocks` show a small dot indicator.
+- **Selected step:** Highlighted when `selectedStep` matches the step index in lock mode.
 - **Knob lock indicator:** When editing a locked step, knobs that have overrides show a dot or different accent color (e.g., blue instead of olive).
 
 ### StepGrid Changes
@@ -66,34 +69,36 @@ export const ui = $state({
 <button
   class="step"
   class:playhead={isPlayhead}
-  class:focused={ui.focusedStep === stepIdx}
-  class:has-locks={Object.keys(trig.locks).length > 0}
-  onpointerdown={() => toggleTrig(trackId, stepIdx)}
-  onpointerdown|long={() => { ui.focusedStep = stepIdx }}
+  class:selected={ui.lockMode && ui.selectedStep === stepIdx}
+  class:has-locks={trig.paramLocks && Object.keys(trig.paramLocks).length > 0}
+  onpointerdown={() => {
+    if (ui.lockMode) { ui.selectedStep = stepIdx }
+    else { toggleTrig(trackId, stepIdx) }
+  }}
 >
 ```
 
-Long-press detection (~300ms) differentiates between toggle (short tap) and p-lock focus (hold).
+In lock mode, tapping a step selects it for p-lock editing instead of toggling the trig.
 
 ### ParamPanel Changes
 
 ```typescript
-const focusedTrig = $derived(
-  ui.focusedStep >= 0 ? track.trigs[ui.focusedStep] : null
+const selectedTrig = $derived(
+  ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null
 )
 
 // For each knob: show locked value if present, else track default
 const effectiveValue = $derived.by(() => {
-  if (focusedTrig && focusedTrig.locks[p.key] !== undefined) {
-    return focusedTrig.locks[p.key]
+  if (selectedTrig?.paramLocks?.[p.key] !== undefined) {
+    return selectedTrig.paramLocks[p.key]
   }
   return track.voiceParams[p.key] ?? p.default
 })
 
-// On knob change: write to locks (if step focused) or voiceParams (normal)
+// On knob change: write to paramLocks (if step selected) or voiceParams (normal)
 function onKnobChange(key: string, value: number) {
-  if (ui.focusedStep >= 0) {
-    setTrigLock(ui.selectedTrack, ui.focusedStep, key, value)
+  if (ui.selectedStep !== null) {
+    setParamLock(ui.selectedTrack, ui.selectedStep, key, value)
   } else {
     setVoiceParam(ui.selectedTrack, key, value)
   }
@@ -121,7 +126,7 @@ Option A is simpler (worklet stays unaware of p-locks). Option B saves bandwidth
 
 ### Factory Pattern Compatibility
 
-Factory patterns use `voiceParams` per track. No changes needed — `locks` defaults to `{}` for all trigs, so existing patterns work unchanged.
+Factory patterns use `voiceParams` per track. No changes needed — `paramLocks` defaults to `undefined` for all trigs, so existing patterns work unchanged.
 
 ## Consequences
 
@@ -129,6 +134,6 @@ Factory patterns use `voiceParams` per track. No changes needed — `locks` defa
 - **Positive:** Reuses existing ParamPanel UI — no new knob components needed.
 - **Positive:** Sparse storage — only locked values stored, minimal memory overhead.
 - **Positive:** Worklet stays simple — receives pre-merged params.
-- **Negative:** Long-press detection adds touch interaction complexity (must not interfere with toggle).
+- **Negative:** Lock mode toggle adds an extra UI state to manage.
 - **Negative:** Serialization size increases if many steps are locked (mitigated by sparse storage).
 - **Dependency:** Requires current voice parameter system (already implemented).

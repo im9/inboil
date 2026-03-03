@@ -4,7 +4,7 @@
 
 ## Context
 
-The data model already stores per-step velocity (`WorkletTrig.velocity`), but the UI has no direct way to edit it. Currently velocity is either default (1.0) or set by FILL (random 0.6–1.0). Velocity variation is essential for dynamic, human-feeling patterns.
+The data model already stores per-step velocity (`WorkletTrig.velocity`), but the UI has no direct way to edit it. Currently velocity is either default (1.0) or set by FILL (random 0.55–1.0). Velocity variation is essential for dynamic, human-feeling patterns.
 
 ## Proposed Design
 

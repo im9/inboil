@@ -57,22 +57,16 @@ Mapping (base octave = 4, MIDI 60 = C4):
 ### State
 
 ```typescript
-interface VirtualKeyboard {
-  enabled: boolean       // toggle on/off (avoid conflicts with text input)
-  octave: number         // base octave (default 4, range 1–7)
-  velocity: number       // fixed velocity (0.0–1.0, default 0.8)
-  mode: 'audition' | 'step-record' | 'live-record'
-  heldKeys: Set<string>  // currently pressed keys (for visual feedback)
-}
-
-export const vkbd = $state<VirtualKeyboard>({
-  enabled: false,
-  octave: 4,
-  velocity: 0.8,
-  mode: 'audition',
-  heldKeys: new Set(),
+// Phase 1: audition only — mode field deferred to Phase 2
+export const vkbd = $state({
+  enabled: false,          // toggle on/off (avoid conflicts with text input)
+  octave: 4,               // base octave (default 4, range 1–7)
+  velocity: 0.8,           // fixed velocity (0.0–1.0, default 0.8)
+  heldKeys: new Set<string>(),  // currently pressed keys (for visual feedback)
 })
 ```
+
+Future phases will add `mode: 'audition' | 'step-record' | 'live-record'`.
 
 ### Modes
 
@@ -172,10 +166,11 @@ function handleKeyUp(e: KeyboardEvent) {
 Add a keyboard icon button (`⌨`) in PerfBar, next to the existing KEY button. Tap to toggle `vkbd.enabled`.
 
 ```
-[⌨] [OCT ▼4▲] [VEL 0.8]  [AUD | STEP | LIVE]
+[⌨] C4        (Phase 1: octave display only)
 ```
 
 On mobile: hidden (physical keyboard unlikely). On desktop: visible in PerfBar.
+Velocity is settable via number keys (1–9 = 0.1–0.9, 0 = 1.0) but not yet shown in UI. Mode selector deferred to Phase 2.
 
 #### Visual Feedback
 

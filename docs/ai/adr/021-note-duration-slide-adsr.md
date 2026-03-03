@@ -240,19 +240,18 @@ Add amp ADSR parameters to MoogLead's paramDefs:
 ```typescript
 // paramDefs.ts
 MoogLead: [
-  { key: 'cutoffBase', label: 'CUT',   min: 100,   max: 2000, default: 400   },
-  { key: 'envMod',     label: 'MOD',   min: 1000,  max: 10000,default: 5500  },
-  { key: 'resonance',  label: 'RESO',  min: 0.5,   max: 3.5,  default: 1.8   },
-  { key: 'decay',      label: 'FDCY',  min: 0.1,   max: 1.0,  default: 0.35  },  // filter decay
-  // Amp ADSR (new)
-  { key: 'ampAttack',  label: 'ATCK',  min: 0.001, max: 0.5,  default: 0.012 },
-  { key: 'ampDecay',   label: 'ADCY',  min: 0.05,  max: 1.0,  default: 0.35  },
-  { key: 'ampSustain', label: 'SUST',  min: 0.0,   max: 1.0,  default: 0.45  },
-  { key: 'ampRelease', label: 'RLS',   min: 0.01,  max: 2.0,  default: 0.4   },
+  { key: 'cutoffBase',  label: 'CUT',   group: 'filter', min: 100,   max: 2000, default: 400   },
+  { key: 'envMod',      label: 'MOD',   group: 'filter', min: 1000,  max: 10000,default: 5500  },
+  { key: 'resonance',   label: 'RESO',  group: 'filter', min: 0.5,   max: 3.5,  default: 1.8   },
+  { key: 'filterDecay', label: 'FDCY',  group: 'filter', min: 0.1,   max: 1.0,  default: 0.35  },
+  { key: 'ampAttack',   label: 'ATCK',  group: 'env',    min: 0.001, max: 0.5,  default: 0.005 },
+  { key: 'ampDecay',    label: 'ADCY',  group: 'env',    min: 0.01,  max: 1.0,  default: 0.3   },
+  { key: 'ampSustain',  label: 'SUST',  group: 'env',    min: 0.0,   max: 1.0,  default: 0.8   },
+  { key: 'ampRelease',  label: 'RLS',   group: 'env',    min: 0.01,  max: 2.0,  default: 0.25  },
 ]
 ```
 
-Existing `decay` remains as filter envelope decay (label changed to `FDCY` for distinction).
+`filterDecay` (previously `decay`) is the filter envelope decay (label `FDCY`). `MoogVoice.setParam()` accepts both `decay` and `filterDecay` for backward compatibility.
 
 **8 knobs total** — fits the current ParamPanel 2×4 layout.
 
@@ -270,8 +269,8 @@ constructor(private sr: number) {
   this.filterEnv.attack = 0.002; this.filterEnv.decay = 0.35
   this.filterEnv.sustain = 0.0;  this.filterEnv.release = 0.1
   // amp envelope defaults
-  this.ampEnv.attack = 0.012; this.ampEnv.decay = 0.35
-  this.ampEnv.sustain = 0.45; this.ampEnv.release = 0.4
+  this.ampEnv.attack = 0.005; this.ampEnv.decay = 0.3
+  this.ampEnv.sustain = 0.8; this.ampEnv.release = 0.25
 }
 
 noteOn(note: number, v: number) {
@@ -298,7 +297,8 @@ setParam(key: string, value: number) {
     case 'cutoffBase': this.cutoffBase = value; break
     case 'envMod':     this.envMod     = value; break
     case 'resonance':  this.resonance  = value; break
-    case 'decay':      this.filterEnv.decay = value; break
+    case 'decay':        // backward compat
+    case 'filterDecay': this.filterEnv.decay = value; break
     case 'ampAttack':  this.ampEnv.attack   = value; break
     case 'ampDecay':   this.ampEnv.decay    = value; break
     case 'ampSustain': this.ampEnv.sustain  = value; break

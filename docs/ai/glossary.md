@@ -15,6 +15,12 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Playhead** | The current playing step position, advancing with the clock. One per track. |
 | **BPM** | Beats per minute. Controls the global clock rate. One step = one 16th note. |
 | **Queued switch** | Pattern change scheduled during playback, applied at loop boundary. |
+| **Pattern chain** | Sequential list of pattern entries with per-entry FX/perf overrides. See ADR 013. |
+| **P-Lock** | Parameter Lock. Per-step voice parameter override stored in `trig.paramLocks`. See ADR 014. |
+| **Chance** | Per-step trigger probability (0.0–1.0). `undefined` = 100%. See ADR 028. |
+| **Duration** | Note gate length in steps (1–16). Controls how long a voice sustains before `noteOff()`. |
+| **Slide** | Legato connection between consecutive notes. TB303: 60ms glide. MoogVoice: instant pitch change. |
+| **Undo** | Snapshot-based undo/redo stack (max 50). `pushUndo()` before mutations, debounced 500ms. |
 
 ## Synthesis Terms
 
@@ -47,6 +53,12 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **PianoRoll** | DAW-style note bar editor for melodic tracks. 24-note range (C3–B4). Click+drag to draw note bars, click head/continuation to delete. |
 | **Note Bar** | A trig with duration ≥ 1, visualized as a colored bar spanning multiple steps in the PianoRoll. Head = olive, continuation = semi-transparent. |
 | **Auto-Legato** | Melodic tracks (t≥6) automatically connect consecutive notes with legato (no retrigger). Rest = retrigger. No explicit slide flag needed. |
+| **ChainView** | Pattern chain editor view (`ui.view = 'chain'`). Entry rows with pattern, key, repeats, FX toggles, perf buttons. |
+| **FilterView** | EQ/filter XY pad view (`ui.view = 'eq'`). FILTER + 3-band EQ nodes. |
+| **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
+| **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
+| **StepLane** | Velocity/chance bar lane below each track in desktop StepGrid. |
+| **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 
 ## Performance Terms
 
@@ -59,6 +71,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **GLT** | Glitch effect (downsample + bitcrush). Activatable from PerfBar (press-hold) or FxPad GLT node (XY control). |
 | **BRK** | Press-hold: rhythmic 16th-note gate on master output. |
 | **GRN (Granular)** | FxPad node: captures recent audio into ring buffer, replays as overlapping grains. X=size, Y=density. |
+| **SWG (Swing)** | Global swing knob (0–100%). Even-step timing delayed by up to 17% of step duration (0.50–0.67 ratio). |
+| **Arpeggiator** | Lead track auto-arpeggiation. 5 modes (OFF/UP/DOWN/U-D/RND), chord types, octave range. See ADR 022. |
 
 ## FxPad Terms
 
@@ -66,7 +80,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 |---|---|
 | **FxPad** | XY performance surface for real-time FX control. 4 nodes (VERB, DLY, GLT, GRN) draggable on 2D plane. |
 | **FX node** | A draggable circle on FxPad. Tap to toggle on/off, drag to set XY parameters. |
-| **Sends bar** | Compact per-track mixer at bottom of FxPad. Track dots + VERB/DLY send knobs + PAN. |
+| **Sends bar** | Compact per-track mixer at bottom of FxPad. Track dots + VERB/DLY/GLT/GRN send knobs. |
 | **Audio visualizer** | Canvas 2D wireframe terrain on FxPad background, driven by AnalyserNode FFT data. |
 
 ## Technical Terms

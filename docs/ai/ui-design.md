@@ -161,7 +161,8 @@ Performance controls strip (dark zone). Layout:
 - **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink.
 - **DUC / CMP knobs**: Sidechain ducker depth and compressor makeup gain (36px).
 - **GAIN / SWG knobs**: Master volume and swing amount (36px).
-- **View toggle**: Segmented button group `GRID | FX | EQ` switching between StepGrid, FxPad, and FilterView (`ui.view = 'grid' | 'fx' | 'eq'`). Active button has lighter background + brighter text.
+- **View toggle**: Segmented button group `GRID | FX | EQ | CHN` switching between StepGrid, FxPad, FilterView, and ChainView (`ui.view = 'grid' | 'fx' | 'eq' | 'chain'`). Active button has lighter background + brighter text.
+- **Virtual keyboard toggle** (desktop only): Piano icon button toggles `vkbd.enabled`. When active, shows `C{octave}` label. See ADR 031.
 - **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
   - FILL, REV: `--color-blue` border/active
   - BRK: `--color-salmon` border/active
@@ -309,6 +310,10 @@ On mobile (`compact` mode):
 ### MobileTrackView — DECIDED
 
 Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × N rows). Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop. Melodic tracks can switch between STEPS and NOTES (piano roll) tabs.
+
+**Edit mode tabs (STEP / VEL / CHNC):** Animated tab bar with sliding pill indicator above the calculator grid. STEP mode = tap toggles on/off + paint-drag. VEL mode = drag up/down to edit velocity, tap to reset to 1.0. CHNC mode = drag up/down to edit chance. Active steps show velocity/chance gauge as gradient fill. See ADR 033.
+
+**PerfBubble:** Floating draggable FILL/REV/BRK bubble trigger (position: fixed, bottom-right). Tap to toggle radial menu. Snaps to nearest horizontal edge on release.
 
 **Track header:** Track name (SplitFlap) + synth type label + step count (−/+ buttons with "step" suffix).
 

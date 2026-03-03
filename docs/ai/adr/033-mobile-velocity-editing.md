@@ -1,26 +1,26 @@
-# ADR 033: Mobile Velocity Editing (Long-press Gauge)
+# ADR 033: Mobile Velocity / Chance Editing
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
-Desktop has an inline velocity lane (drag bars per step) below each selected track. On mobile (`MobileTrackView`), there is no way to adjust per-step velocity. The calculator-style step buttons only toggle on/off.
+Desktop has an inline velocity lane (drag bars per step) below each selected track. On mobile (`MobileTrackView`), there is no way to adjust per-step velocity or chance. The calculator-style step buttons only toggle on/off.
 
 ## Decision
 
-### Interaction Model
+### 3-Mode Tab System
 
-Long-press on a calc-btn to enter velocity-edit mode for that step:
+Instead of long-press detection (unreliable on Mac trackpad), use an explicit mode switcher:
 
-1. **Tap** (< 300ms): Toggle trig on/off (existing behavior, unchanged)
-2. **Long-press** (≥ 300ms): Enter velocity-drag mode
-   - Visual feedback: the "on" face color fills proportionally to velocity (e.g. 70% velocity → olive fills 70% from bottom)
-   - While holding, drag **up/down** to adjust velocity (up = louder, down = softer)
-   - Release to confirm
+- **STEP** mode (default): tap toggles trig on/off, paint-drag supported
+- **VEL** mode: drag up/down on active steps to edit velocity, tap to reset to 1.0
+- **CHNC** mode: drag up/down on active steps to edit chance, tap to reset to 1.0
+
+Animated tab bar with sliding pill indicator (CSS `transition: left 200ms`).
 
 ### Visual Design
 
-The active step's `.face.on` becomes a velocity gauge:
+Active steps show a velocity/chance gauge as a gradient fill:
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────┐
@@ -32,32 +32,25 @@ The active step's `.face.on` becomes a velocity gauge:
   inactive        vel = 50%        vel = 100%
 ```
 
-- The filled portion uses `--color-olive` (existing active color)
-- The unfilled portion uses a dimmed variant (e.g. `rgba(108,119,68,0.2)`)
-- During drag, show velocity percentage overlay text (e.g. "72%")
-
-### State Management
-
-- `velDragStep: number | null` — which step is being velocity-edited
-- `velDragActive: boolean` — whether currently in drag mode
-- Use a 300ms timeout on `pointerdown` to distinguish tap vs long-press
-- If the pointer moves significantly before 300ms, cancel long-press detection
+- Gauge visible on ALL active steps in VEL/CHNC mode (not just during drag)
+- Olive fill for velocity, blue fill for chance
+- Percentage overlay shown during active drag
 
 ### Implementation Notes
 
-- Reuse existing `setTrigVelocity()` from state
-- Calculate velocity from vertical drag delta: `v = clamp(startVel + (startY - clientY) / 100, 0.05, 1.0)`
-- The step must be active (trig.active = true) to edit velocity; if tapping an inactive step, toggle it on first
-- Consider haptic feedback via `navigator.vibrate(10)` on entering vel-edit mode (if supported)
+- Uses `mousemove`/`mouseup` for trackpad + `touchmove`/`touchend` for mobile (PointerEvent unreliable on Mac trackpad)
+- Plain JS variables for drag mechanics (not `$state`) to avoid Svelte re-render overhead
+- `setTrigVelocity()`/`setTrigChance()` called once at drag start (for undo snapshot), then direct trig property mutation during drag
+- Sensitivity: `dy / 60` for comfortable drag range
+- Lock mode: long-press selects step (existing behavior), not velocity edit
 
 ### Constraints
 
-- Must not interfere with existing tap-to-toggle behavior
-- Must work with touch (not just pointer) on iOS Safari
+- STEP mode behavior unchanged from before
+- Only active trigs can be edited in VEL/CHNC mode
 - `touch-action: none` already set on calculator area
-- Lock mode interaction: if lock mode is active, long-press should still select the step (existing behavior), not edit velocity
+- iOS Safari compatible via touch event listeners with `{ passive: false }`
 
 ## Future Extensions
 
-- Visual velocity indicators on all steps (not just during editing) — e.g. opacity or fill height always visible
 - Swipe across multiple steps to "paint" velocity curves

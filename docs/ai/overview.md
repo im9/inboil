@@ -21,8 +21,6 @@ The goal is a focused, expressive tool for composing and performing electronic m
 - Collaboration features
 - MIDI controller support (deferred)
 - Sample import / Sampler voice (deferred)
-- Parameter locks / p-locks (deferred)
-- Multi-pattern queue (deferred)
 
 ## Constraints
 
@@ -40,12 +38,19 @@ The goal is a focused, expressive tool for composing and performing electronic m
 The TypeScript AudioWorklet implementation is fully functional with:
 - 8 tracks (6 drum + 2 melodic) with TR-909 / TB-303 / Moog-inspired voices
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
-- Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK)
+- Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
-- Per-track send mixer on FxPad (VERB, DLY, PAN per selected track)
-- Pattern bank (8 patterns), queued pattern switching
-- Desktop + mobile responsive UI
+- Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
+- Pattern bank (8 patterns), queued pattern switching, pattern chain
+- Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
+- Lead arpeggiator (5 modes, chord types, octave range)
+- Note bar editor (PianoRoll) with auto-legato for melodic tracks
+- Virtual MIDI keyboard (PC keyboard audition, Phase 1)
+- Undo/redo (snapshot-based, Ctrl+Z)
+- Pattern copy/paste/clear
+- Oscilloscope waveform display
+- Desktop + mobile responsive UI (with mobile velocity/chance editing tabs)
 
 The C++ DSP core (`src/dsp/`) is being developed in parallel but is not yet integrated into the web build.
 

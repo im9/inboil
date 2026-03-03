@@ -125,7 +125,7 @@ Parameters:
 | resonance | RESO | 0.5–3.5 | 1.8 | Filter Q |
 | filterDecay | FDCY | 0.1–1.0 s | 0.35 | Filter envelope decay time |
 | ampAttack | ATCK | 0.001–0.5 s | 0.005 | Amp envelope attack |
-| ampDecay | ADCY | 0.05–1.0 s | 0.3 | Amp envelope decay |
+| ampDecay | ADCY | 0.01–1.0 s | 0.3 | Amp envelope decay |
 | ampSustain | SUST | 0.0–1.0 | 0.8 | Amp envelope sustain level |
 | ampRelease | RLS | 0.01–2.0 s | 0.25 | Amp envelope release |
 

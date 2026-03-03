@@ -31,11 +31,15 @@ The `AnalyserNode` (fftSize=1024, smoothingTimeConstant=0.8) is inserted between
 ## Commands (UI → Worklet)
 
 ```typescript
-type WorkletCommand =
-  | { type: 'play' }
-  | { type: 'stop' }
-  | { type: 'setBpm'; bpm: number }
-  | { type: 'setPattern'; pattern: WorkletPattern }
+interface WorkletCommand {
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote'
+  bpm?: number
+  pattern?: WorkletPattern
+  reset?: boolean
+  trackId?: number          // for triggerNote / releaseNote
+  note?: number             // for triggerNote
+  velocity?: number         // for triggerNote
+}
 ```
 
 ### WorkletPattern
@@ -51,22 +55,25 @@ interface WorkletPattern {
     delay:   { time: number; feedback: number }    // time in ms (computed from beat fraction × BPM)
     ducker:  { depth: number; release: number }
     comp:    { threshold: number; ratio: number; makeup: number }
+    filter:  { on: boolean; x: number; y: number }  // master filter sweep
+    eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }  // 3-band EQ
   }
   perf: {
     rootNote: number        // 0–11 chromatic key (0=C)
     octave: number          // -2 to +2 octave shift for melodic tracks
-    eqLow: number           // 0=kill, 0.5=unity, 1=boost(×2)
-    eqMid: number
-    eqHigh: number
     breaking: boolean       // rhythmic gate
     masterGain: number      // 0.0–1.0
     filling: boolean        // drum fill mode
     reversing: boolean      // reverse playback
+    swing: number           // 0.0–1.0 (mapped to 0.50–0.67 in worklet)
     glitchX: number         // FxPad: glitch downsample rate (0–1)
     glitchY: number         // FxPad: glitch bit crush depth (0–1)
     granularOn: boolean     // FxPad: granular grain spawning active
     granularX: number       // FxPad: grain size (0–1, maps to 10–200ms)
     granularY: number       // FxPad: grain density (0–1, sparse→dense)
+    granularPitch: number   // 0–1 (0.5 = no shift, ±12 semitones)
+    granularScatter: number // 0–1 (position randomization)
+    granularFreeze: boolean // freeze ring buffer writing
   }
 }
 
@@ -88,6 +95,10 @@ interface WorkletTrig {
   active: boolean
   note: number
   velocity: number
+  duration: number          // step count 1–16 (default 1)
+  slide: boolean            // slide/glide flag (default false)
+  chance?: number           // 0.0–1.0, undefined = always fire
+  paramLocks?: Record<string, number>  // per-step voice param overrides
 }
 ```
 
@@ -118,9 +129,11 @@ Located at `src/lib/audio/engine.ts`.
 ```typescript
 class GrooveboxEngine {
   async init(): Promise<void>                              // Create AudioContext + load worklet + AnalyserNode
-  sendPattern(pattern, fx, perf, fxPad): void              // Serialize & post full state
+  sendPattern(pattern, fx, perf?, fxPad?, reset?): void    // Serialize & post full state
   play(): void                                             // Resume AudioContext + post play
-  stop(): void                                             // Post stop
+  stop(): void                                             // Post stop (suspends context after 8s idle)
+  triggerNote(trackId, note, velocity): void                // Immediate note trigger (VKBD audition)
+  releaseNote(trackId): void                               // Release triggered note
   set onStep(cb: (playheads: number[]) => void)            // Register step callback
   getAnalyser(): AnalyserNode | null                       // FFT data for visualizer
 }

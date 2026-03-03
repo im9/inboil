@@ -34,7 +34,8 @@ Push a snapshot **before** any mutation:
 - `setVoiceParam`, `setParamLock`, `clearParamLock`, `clearAllParamLocks`
 - `setTrackSteps`, `toggleMute`, `setTrackSend`
 - `randomizePattern`, `clearPattern`, `pastePattern`
-- `loadFromBank` (pattern switch)
+
+Note: `loadFromBank` (pattern switch) does NOT push undo — pattern navigation is separate from pattern editing. The current pattern is saved to the bank before switching.
 
 ### Debouncing
 

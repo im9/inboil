@@ -55,10 +55,12 @@ Trig {
   velocity:    number          // 0.0–1.0
   duration:    number          // step count 1–16 (default 1), gate length
   slide:       boolean         // slide/glide flag (default false)
+  chance?:     number          // 0.0–1.0, undefined = always fire (100%)
+  paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 ```
 
-`paramLocks` are deferred. See ADR 021 for duration/slide details.
+See ADR 021 for duration/slide, ADR 028 for chance, ADR 014 for parameter locks.
 
 ## Default Track Layout — DECIDED
 
@@ -125,9 +127,9 @@ On stop, any pending switch is applied immediately.
 
 See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
-## Parameter Lock (p-lock) — DEFERRED
+## Parameter Lock (p-lock) — IMPLEMENTED
 
-Per-trig parameter overrides. The data model is not implemented in v1.
+Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `track.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in ParamPanel. See ADR 014.
 
 ## Scale (per-track time multiplier) — DEFERRED
 
