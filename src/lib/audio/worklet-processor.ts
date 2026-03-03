@@ -235,6 +235,18 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               : this.swing * 2 * this.samplesPerStep
           }
           break
+        case 'triggerNote': {
+          const t = cmd.trackId ?? 0
+          const v = this.voices[t]
+          if (v) v.noteOn(cmd.note ?? 60, cmd.velocity ?? 0.8)
+          break
+        }
+        case 'releaseNote': {
+          const t = cmd.trackId ?? 0
+          const v = this.voices[t]
+          if (v) v.noteOff()
+          break
+        }
         case 'setPattern': {
           if (!cmd.pattern) break
           const p = cmd.pattern
@@ -483,6 +495,21 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           delayIn    += sig * (track?.delaySend    ?? 0)
           glitchIn   += sig * (track?.glitchSend   ?? 0)
           granularIn += sig * (track?.granularSend ?? 0)
+        }
+      } else {
+        // Not playing — still tick voices for triggerNote audition
+        for (let t = 0; t < this.voices.length; t++) {
+          const track = this.tracks[t]
+          const sig = this.voices[t]?.tick()
+          if (!sig) continue
+          const vol = track?.volume ?? 0.8
+          if (t === 0) {
+            kickDry += sig * vol
+          } else {
+            restL += sig * vol * this.panGainsL[t]; restR += sig * vol * this.panGainsR[t]
+          }
+          reverbIn   += sig * vol * (track?.reverbSend   ?? 0)
+          delayIn    += sig * vol * (track?.delaySend    ?? 0)
         }
       }
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, perf, prefs, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
+  import { pattern, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
@@ -10,17 +10,16 @@
   const track = $derived(pattern.tracks[trackId])
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
+  // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
   const RANGE = PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1  // 24 notes
-  const MIN_OFFSET = -2  // lowest: C1–B2
-  const MAX_OFFSET = 3   // highest: C6–B7
-  let octaveOffset = $state(0)
+  const octaveOffset = $derived(vkbd.octave - 4)
   let scrollDir = $state<'up' | 'down' | null>(null)
 
   function shiftOctave(dir: 1 | -1) {
-    if (dir === 1 && octaveOffset >= MAX_OFFSET) return
-    if (dir === -1 && octaveOffset <= MIN_OFFSET) return
+    const next = vkbd.octave + dir
+    if (next < 2 || next > 7) return
     scrollDir = dir === 1 ? 'up' : 'down'
-    octaveOffset += dir
+    vkbd.octave = next
   }
 
   const rollMax = $derived(PIANO_ROLL_MAX + octaveOffset * 12)
@@ -268,7 +267,7 @@
   <div class="piano-spacer">
     <!-- Octave shift buttons + Piano keys -->
     <div class="oct-keys">
-      <button class="oct-btn" disabled={octaveOffset >= MAX_OFFSET} onclick={() => shiftOctave(1)}>▲</button>
+      <button class="oct-btn" disabled={vkbd.octave >= 7} onclick={() => shiftOctave(1)}>▲</button>
       <div class="keys" data-tip="Note reference — shows transposed pitch" data-tip-ja="音程リファレンス (移調後のピッチ)">
         {#each NOTES as note}
           <div class="key" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
@@ -276,7 +275,7 @@
           </div>
         {/each}
       </div>
-      <button class="oct-btn" disabled={octaveOffset <= MIN_OFFSET} onclick={() => shiftOctave(-1)}>▼</button>
+      <button class="oct-btn" disabled={vkbd.octave <= 2} onclick={() => shiftOctave(-1)}>▼</button>
     </div>
   </div>
 

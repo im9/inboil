@@ -59,6 +59,16 @@ export class GrooveboxEngine {
     this._post({ type: 'play' })
   }
 
+  triggerNote(trackId: number, note: number, velocity: number): void {
+    if (this.suspendTimer) { clearTimeout(this.suspendTimer); this.suspendTimer = null }
+    if (this.ctx?.state === 'suspended') void this.ctx.resume()
+    this._post({ type: 'triggerNote', trackId, note, velocity })
+  }
+
+  releaseNote(trackId: number): void {
+    this._post({ type: 'releaseNote', trackId })
+  }
+
   stop(): void {
     this._post({ type: 'stop' })
     // Suspend context after FX tails have fully decayed

@@ -738,6 +738,13 @@ export const fxPad = $state({
   eqHigh:   { ...DEFAULT_FX_PAD.eqHigh },
 })
 
+export const vkbd = $state({
+  enabled: false,
+  octave: 4,
+  velocity: 0.8,
+  heldKeys: new Set<string>(),
+})
+
 export const effects = $state<Effects>({
   reverb: { ...DEFAULT_EFFECTS.reverb },
   delay:  { ...DEFAULT_EFFECTS.delay },

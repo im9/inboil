@@ -1,6 +1,6 @@
 # ADR 031: Virtual MIDI Keyboard (PC Keyboard Input)
 
-## Status: PROPOSED
+## Status: Implemented (Phase 1 — Audition)
 
 ## Context
 
@@ -243,3 +243,24 @@ When ADR 016 is implemented, the virtual keyboard becomes one of multiple input 
 - **Negative:** Desktop-only feature (mobile has no physical keyboard)
 - **Risk:** Text input focus detection must be reliable to avoid phantom notes while typing pattern names etc.
 - **Dependency:** Requires new `triggerNote` message in worklet (minor extension)
+
+## Implementation Notes (Phase 1)
+
+### Changed Files
+
+| File | Changes |
+|------|---------|
+| `src/lib/audio/dsp/types.ts` | Added `triggerNote` and `releaseNote` to `WorkletCommand` type union |
+| `src/lib/audio/worklet-processor.ts` | `triggerNote` handler (voice.noteOn), `releaseNote` handler (voice.noteOff), voice tick in non-playing state |
+| `src/lib/audio/engine.ts` | `triggerNote()` and `releaseNote()` methods |
+| `src/lib/state.svelte.ts` | `vkbd` state (enabled, octave, velocity, heldKeys) |
+| `src/lib/components/PerfBar.svelte` | Toggle button (SVG piano icon), key listener ($effect), ensureEngine() for lazy init |
+| `src/lib/components/PianoRoll.svelte` | Octave linked to `vkbd.octave` (single source of truth) |
+| `src/lib/components/Sidebar.svelte` | Help section for virtual keyboard |
+
+### Key Decisions
+
+- **Octave sync**: `vkbd.octave` is the single source of truth. Piano roll's `octaveOffset` is derived from it. Both ▲▼ buttons and Z/X keys modify the same value.
+- **Lazy engine init**: First keypress calls `engine.init()` + `sendPattern()` if not already running, so the keyboard works without pressing play first.
+- **NoteOff on all-keys-up**: `releaseNote` is sent when `heldKeys` becomes empty (not per-key), so legato transitions between keys work naturally.
+- **Voice tick when stopped**: The worklet's `process()` loop now ticks voices even when `playing === false`, enabling audition without transport.

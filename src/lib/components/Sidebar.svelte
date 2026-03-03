@@ -104,6 +104,12 @@
         : 'FILL: insert fill-in. REV: reverse playback. BRK: rhythmic gate break. KEY changes root note for transposition.',
     },
     {
+      title: L === 'ja' ? 'バーチャルキーボード' : 'VIRTUAL KEYBOARD',
+      body: L === 'ja'
+        ? '🎹 ボタンでバーチャルキーボードを ON/OFF します。A〜; キーで選択トラックの音を演奏できます (2列クロマチック配列)。Z/X でオクターブを上下でき、ピアノロールの表示範囲と連動します。1〜9, 0 でベロシティを設定できます。'
+        : 'Toggle the virtual keyboard with the 🎹 button. Play notes on the selected track with A–; keys (2-row chromatic layout). Z/X shifts octave up/down, synced with the piano roll view. 1–9, 0 sets velocity.',
+    },
+    {
       title: L === 'ja' ? 'パターン' : 'PATTERNS',
       body: L === 'ja'
         ? 'PAT ◀▶ でパターンを切り替えられます。00–19 はファクトリープリセットです。再生中はバーの境界で自動的に切り替わります。CPY で現在のパターンをコピー、別スロットに移動して PST でペースト、CLR でパターンをクリアできます。'

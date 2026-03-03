@@ -68,7 +68,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
 | 026 | Auto-Performance | Proposed | Auto Fill/Break/Reverse |
-| 031 | Virtual MIDI Keyboard | Proposed | |
+| 031 | Virtual MIDI Keyboard | Implemented | Phase 1: audition mode, octave synced with piano roll |
 | 038 | Custom Functions | Proposed | User-defined FX/filter macros, keyboard/bubble triggers |
 
 ## Data / Infrastructure

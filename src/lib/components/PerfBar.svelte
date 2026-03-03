@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { perf, playback, ui, effects, NOTE_NAMES } from '../state.svelte.ts'
+  import { pattern, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
+  import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
 
   let { onPlay, onStop, onRandom }: { onPlay?: () => void; onStop?: () => void; onRandom?: () => void } = $props()
@@ -58,6 +59,78 @@
     prevHead0 = h
   })
   const octDisplay = $derived(perf.octave > 0 ? `+${perf.octave}` : `${perf.octave}`)
+
+  // ── Virtual MIDI Keyboard ──
+  const KEY_MAP: Record<string, number> = {
+    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6,
+    g: 7, y: 8, h: 9, u: 10, j: 11, k: 12,
+    o: 13, l: 14, p: 15, ';': 16,
+  }
+
+  function keyToMidi(key: string): number | null {
+    const offset = KEY_MAP[key.toLowerCase()]
+    if (offset == null) return null
+    return vkbd.octave * 12 + offset  // C at octave * 12
+  }
+
+  function isTextInput(target: EventTarget | null): boolean {
+    if (!target || !(target instanceof HTMLElement)) return false
+    const tag = target.tagName
+    return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable
+  }
+
+  let vkbdReady = false
+
+  async function ensureEngine() {
+    if (vkbdReady) return
+    await engine.init()
+    engine.sendPattern(pattern, effects, perf, fxPad)
+    vkbdReady = true
+  }
+
+  async function handleVkbdKeyDown(e: KeyboardEvent) {
+    if (!vkbd.enabled || isTextInput(e.target) || e.repeat) return
+
+    const midi = keyToMidi(e.key)
+    if (midi !== null) {
+      e.preventDefault()
+      await ensureEngine()
+      vkbd.heldKeys.add(e.key.toLowerCase())
+      engine.triggerNote(ui.selectedTrack, midi, vkbd.velocity)
+      return
+    }
+
+    const k = e.key.toLowerCase()
+    if (k === 'z') { vkbd.octave = Math.max(1, vkbd.octave - 1); e.preventDefault() }
+    if (k === 'x') { vkbd.octave = Math.min(7, vkbd.octave + 1); e.preventDefault() }
+
+    const vNum = parseInt(e.key)
+    if (vNum >= 1 && vNum <= 9) { vkbd.velocity = vNum / 10; e.preventDefault() }
+    if (e.key === '0') { vkbd.velocity = 1.0; e.preventDefault() }
+  }
+
+  function handleVkbdKeyUp(e: KeyboardEvent) {
+    if (!vkbd.enabled) return
+    const k = e.key.toLowerCase()
+    if (vkbd.heldKeys.has(k)) {
+      vkbd.heldKeys.delete(k)
+      // Release voice when no keys remain held for this track
+      if (vkbd.heldKeys.size === 0) {
+        engine.releaseNote(ui.selectedTrack)
+      }
+    }
+  }
+
+  $effect(() => {
+    if (vkbd.enabled) {
+      window.addEventListener('keydown', handleVkbdKeyDown)
+      window.addEventListener('keyup', handleVkbdKeyUp)
+      return () => {
+        window.removeEventListener('keydown', handleVkbdKeyDown)
+        window.removeEventListener('keyup', handleVkbdKeyUp)
+      }
+    }
+  })
 </script>
 
 <div class="perf-bar">
@@ -199,6 +272,26 @@
       onpointerleave={() => { perf.breaking = false }}
       data-tip="Hold for rhythmic break" data-tip-ja="長押しでリズムブレイク"
     >BRK</button>
+  </div>
+
+  <div class="sep" aria-hidden="true"></div>
+
+  <!-- Virtual MIDI keyboard toggle (desktop only) -->
+  <div class="perf-group vkbd-group">
+    <button
+      class="btn-perf btn-kbd"
+      class:active={vkbd.enabled}
+      onpointerdown={() => { vkbd.enabled = !vkbd.enabled }}
+      data-tip="Virtual keyboard — play notes with PC keys (A-;)" data-tip-ja="バーチャルキーボード — PCキーで演奏 (A-;)"
+    ><svg class="kbd-icon" viewBox="0 0 24 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="22" height="14" rx="1.5"/>
+      <line x1="5.5" y1="1" x2="5.5" y2="9"/><line x1="9.5" y1="1" x2="9.5" y2="9"/>
+      <line x1="14.5" y1="1" x2="14.5" y2="9"/><line x1="18.5" y1="1" x2="18.5" y2="9"/>
+      <line x1="12" y1="1" x2="12" y2="15"/>
+    </svg></button>
+    {#if vkbd.enabled}
+      <span class="vkbd-info">C{vkbd.octave}</span>
+    {/if}
   </div>
 </div>
 
@@ -391,6 +484,28 @@
     color: var(--color-bg);
   }
 
+  .btn-kbd {
+    border-color: var(--color-olive);
+    color: var(--color-olive);
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+  }
+  .btn-kbd:active,
+  .btn-kbd.active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .kbd-icon { display: block; }
+
+  .vkbd-info {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--color-olive);
+    white-space: nowrap;
+  }
+
   .gain-wrap { display: contents; }
 
   /* ── Mobile-only elements (hidden on desktop) ── */
@@ -432,8 +547,9 @@
       margin: -5px -4px;
     }
 
-    /* Hide perf-btns (moved to PerfBubble) */
+    /* Hide perf-btns (moved to PerfBubble) and vkbd (no PC keyboard) */
     .perf-btns { display: none; }
+    .vkbd-group { display: none; }
 
     /* Mobile transport */
     .mobile-transport {

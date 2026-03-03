@@ -3,10 +3,13 @@
  */
 
 export interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
+  trackId?: number
+  note?: number
+  velocity?: number
 }
 
 export interface WorkletPattern {
