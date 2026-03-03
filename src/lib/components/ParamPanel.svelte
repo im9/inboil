@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, setVoiceParam, setParamLock, clearAllParamLocks, setTrackSend, toggleSidebar } from '../state.svelte.ts'
+  import { pattern, ui, setVoiceParam, setParamLock, clearAllParamLocks, setTrackSend, toggleSidebar } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import Knob from './Knob.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
   const track  = $derived(pattern.tracks[ui.selectedTrack])
-  const drum   = $derived(isDrum(track))
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
 
   // P-Lock state

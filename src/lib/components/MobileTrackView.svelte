@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, clearAllParamLocks, setTrackSteps, STEP_OPTIONS } from '../state.svelte.ts'
-  import { slide, fade } from 'svelte/transition'
+  import { slide } from 'svelte/transition'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamFooter from './MobileParamFooter.svelte'
   import SplitFlap from './SplitFlap.svelte'

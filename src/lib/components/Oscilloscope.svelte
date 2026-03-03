@@ -4,7 +4,7 @@
 
   let canvasEl: HTMLCanvasElement | undefined = $state(undefined)
   let animId = 0
-  let timeBuf: Uint8Array | null = null
+  let timeBuf: Uint8Array<ArrayBuffer> | null = null
   let opacity = 0        // current draw opacity (0–1)
   const FADE_IN = 0.15   // per-frame rise
   const FADE_OUT = 0.02  // per-frame decay — slow fade

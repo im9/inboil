@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, ui, isDrum, setVoiceParam, setParamLock, setTrackSend } from '../state.svelte.ts'
+  import { pattern, ui, setVoiceParam, setParamLock, setTrackSend } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { slide } from 'svelte/transition'
   import Knob from './Knob.svelte'

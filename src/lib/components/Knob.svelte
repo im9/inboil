@@ -25,17 +25,17 @@
   )
 
   // Arc geometry
-  const r    = size / 2 - 4        // radius
-  const cx   = size / 2
-  const cy   = size / 2
-  const circ = 2 * Math.PI * r
-  const arcFull = circ * 270 / 360  // 270° travel
+  const r    = $derived(size / 2 - 4)        // radius
+  const cx   = $derived(size / 2)
+  const cy   = $derived(size / 2)
+  const circ = $derived(2 * Math.PI * r)
+  const arcFull = $derived(circ * 270 / 360)  // 270° travel
 
   const dash    = $derived(value * arcFull)
   const dashArr = $derived(`${dash} 1000`)
 
   // Drag state
-  let dragging = false
+  let dragging = $state(false)
   let startY   = 0
   let startVal = 0
 
