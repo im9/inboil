@@ -78,6 +78,15 @@
   function isOutOfScale(note: number): boolean {
     return prefs.scaleMode && !SCALE_DEGREES_SET.has(note % 12)
   }
+  /** Snap an out-of-scale note to the nearest in-scale degree */
+  function snapToScale(note: number): number {
+    if (!isOutOfScale(note)) return note
+    for (let d = 1; d <= 6; d++) {
+      if (!isOutOfScale(note - d)) return note - d
+      if (!isOutOfScale(note + d)) return note + d
+    }
+    return note
+  }
 
   /** Returns cell visual state for duration rendering */
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
@@ -101,32 +110,99 @@
   let barNote = -1
   let noteGridEl: HTMLElement | null = null
 
+  // ── Note move drag state (long-press on existing note) ──
+  let moveDragging = $state(false)
+  let moveStep = -1
+  let movePointerId = -1
+  let moveTimer: number | null = null
+  let moveFromHead = false       // true if long-press started on head cell
+  let moveTapNote = -1           // note of the tapped cell (for empty-cell short-tap)
+  let moveStartX = 0             // pointer start position for jitter tolerance
+  let moveStartY = 0
+
+  /** Calculate which note row the pointer Y falls on */
+  function getNoteFromY(relY: number): number {
+    if (!noteGridEl) return -1
+    const rowH = noteGridEl.scrollHeight / RANGE
+    const idx = Math.max(0, Math.min(RANGE - 1, Math.floor(relY / rowH)))
+    return NOTES[idx]
+  }
+
   function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
     e.preventDefault()
     const state = getCellState(stepIdx, note)
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
 
     if (state === 'head') {
-      // Click on head → delete the note
-      track.trigs[stepIdx].active = false
-      barDragging = false
+      // Long-press → move mode; short tap → delete
+      moveStep = stepIdx
+      movePointerId = e.pointerId
+      moveFromHead = true
+      moveTapNote = note
+      moveStartX = e.clientX
+      moveStartY = e.clientY
+      moveTimer = window.setTimeout(() => {
+        moveTimer = null
+        moveDragging = true
+        noteGridEl?.setPointerCapture(movePointerId)
+      }, 180)
     } else if (state === 'continuation') {
       // Click on continuation → delete the parent note
       const headStep = findNoteHead(trackId, stepIdx, note)
       if (headStep >= 0) track.trigs[headStep].active = false
       barDragging = false
     } else {
-      // Click on empty → place a new note and start bar drag
-      placeNoteBar(trackId, stepIdx, note, 1)
-      barDragging = true
-      barStartStep = stepIdx
-      barNote = note
-      noteGridEl?.setPointerCapture(e.pointerId)
+      // Empty cell — check if this step already has an active note
+      const trig = track.trigs[stepIdx]
+      if (trig?.active) {
+        // Step has a note: long-press → move mode, short tap → move note to tapped pitch
+        moveStep = stepIdx
+        movePointerId = e.pointerId
+        moveFromHead = false
+        moveTapNote = note
+        moveStartX = e.clientX
+        moveStartY = e.clientY
+        moveTimer = window.setTimeout(() => {
+          moveTimer = null
+          moveDragging = true
+          noteGridEl?.setPointerCapture(movePointerId)
+        }, 180)
+      } else {
+        // Truly empty step → place a new note and start bar drag
+        placeNoteBar(trackId, stepIdx, note, 1)
+        barDragging = true
+        barStartStep = stepIdx
+        barNote = note
+        noteGridEl?.setPointerCapture(e.pointerId)
+      }
     }
   }
 
   function noteOnMove(e: PointerEvent) {
     if (!noteGridEl) return
+
+    // Cancel long-press timer only if pointer moves beyond tolerance
+    if (moveTimer !== null) {
+      const dx = e.clientX - moveStartX
+      const dy = e.clientY - moveStartY
+      if (dx * dx + dy * dy > 64) {  // ~8px threshold
+        clearTimeout(moveTimer)
+        moveTimer = null
+      }
+      return
+    }
+
+    // Move mode: drag existing note vertically
+    if (moveDragging) {
+      const relY = e.clientY - noteGridEl.getBoundingClientRect().top
+      const newNote = getNoteFromY(relY)
+      const snapped = newNote >= 0 ? snapToScale(newNote) : -1
+      if (snapped >= 0 && snapped !== track.trigs[moveStep].note) {
+        track.trigs[moveStep].note = snapped
+      }
+      return
+    }
+
     if (durationDragging) {
       const rect = noteGridEl.getBoundingClientRect()
       const relX = e.clientX - rect.left + noteGridEl.scrollLeft
@@ -137,14 +213,39 @@
     if (!barDragging) return
     const rect = noteGridEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+    const relY = e.clientY - rect.top
     const endStep = Math.max(barStartStep, Math.min(track.steps - 1, Math.floor(relX / 26)))
     const duration = endStep - barStartStep + 1
+
+    // Vertical: change note pitch during drag (snap to scale)
+    const newNote = getNoteFromY(relY)
+    if (newNote >= 0) {
+      barNote = snapToScale(newNote)
+    }
+
     placeNoteBar(trackId, barStartStep, barNote, duration)
   }
 
   function noteEndDrag() {
+    if (moveTimer !== null) {
+      clearTimeout(moveTimer)
+      moveTimer = null
+      if (moveStep >= 0) {
+        if (moveFromHead) {
+          // Short tap on head → delete
+          track.trigs[moveStep].active = false
+        } else {
+          // Short tap on empty cell in active step → move note to tapped pitch
+          track.trigs[moveStep].note = moveTapNote
+        }
+      }
+    }
     barDragging = false
     durationDragging = false
+    moveDragging = false
+    moveStep = -1
+    moveFromHead = false
+    moveTapNote = -1
     noteGridEl = null
   }
 
@@ -202,7 +303,7 @@
               class:continuation={state === 'continuation'}
               class:playhead={isPlayhead}
               aria-label="Step {stepIdx + 1} note {note}"
-              onpointerdown={(e) => { if (!isOutOfScale(note)) noteStartDrag(e, stepIdx, note) }}
+              onpointerdown={(e) => noteStartDrag(e, stepIdx, snapToScale(note))}
             >
               {#if state === 'head'}
                 <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
@@ -219,7 +320,7 @@
 <style>
   .piano-roll {
     display: flex;
-    height: 196px;
+    height: 244px;
     overflow: hidden;
     background: var(--color-surface);
     border-bottom: 1px solid rgba(30,32,40,0.08);
@@ -277,7 +378,7 @@
     border-right: 1px solid rgba(30,32,40,0.15);
   }
   .key {
-    height: 7px;
+    height: 9px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -318,7 +419,7 @@
     overflow-y: hidden;
   }
   .row {
-    height: 7px;
+    height: 9px;
     box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
@@ -330,10 +431,10 @@
   }
   .row.disabled {
     background: rgba(232,160,144,0.06);
-    pointer-events: none;
   }
   .row.disabled .cell {
-    opacity: 0.12;
+    opacity: 0.2;
+    cursor: pointer;
   }
   .row.disabled .cell.playhead {
     opacity: 1;
@@ -408,11 +509,11 @@
     }
     .oct-keys { width: 26px; }
     .keys { width: 26px; }
-    .key { height: auto; flex: 1; min-height: 10px; }
+    .key { height: auto; flex: 1; min-height: 12px; }
     .key-label { font-size: 6px; }
     .grid { overflow-x: auto; }
     .row {
-      height: auto; flex: 1; min-height: 10px;
+      height: auto; flex: 1; min-height: 12px;
       grid-template-columns: repeat(var(--steps), 18px);
       gap: 1px;
     }
