@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { pattern, playback, ui, toggleTrig, toggleMute, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
@@ -136,35 +136,50 @@
       class="track-row"
       class:selected
       class:muted={track.muted}
+      class:solo-muted={ui.soloTracks.size > 0 && !ui.soloTracks.has(trackId)}
     >
-      <!-- Track label -->
-      <button
-        class="track-label"
-        onpointerdown={() => { ui.selectedTrack = trackId }}
-        data-tip="Select track to edit" data-tip-ja="トラックを選択"
-      >
-        <span class="track-name">{track.name}</span>
-        <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
-      </button>
+      <div class="track-head">
+        <!-- Track label -->
+        <button
+          class="track-label"
+          onpointerdown={() => { ui.selectedTrack = trackId }}
+          data-tip="Select track to edit" data-tip-ja="トラックを選択"
+        >
+          <span class="track-name">{track.name}</span>
+          <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
+        </button>
 
-      <!-- Step count -->
-      <button
-        class="btn-steps"
-        onpointerdown={() => cycleSteps(trackId)}
-        data-tip="Change step count" data-tip-ja="ステップ数を変更"
-      >{track.steps}</button>
+        <!-- Step count -->
+        <button
+          class="btn-steps"
+          onpointerdown={() => cycleSteps(trackId)}
+          data-tip="Change step count" data-tip-ja="ステップ数を変更"
+        >{track.steps}</button>
 
-      <!-- Mute -->
-      <button
-        class="btn-mute flip-host"
-        onpointerdown={() => toggleMute(trackId)}
-        data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
-      >
-        <span class="flip-card" class:flipped={track.muted}>
-          <span class="flip-face mute-off">M</span>
-          <span class="flip-face back mute-on">M</span>
-        </span>
-      </button>
+        <!-- Solo -->
+        <button
+          class="btn-solo flip-host"
+          onpointerdown={() => toggleSolo(trackId)}
+          data-tip="Solo/unsolo track" data-tip-ja="トラックをソロ"
+        >
+          <span class="flip-card" class:flipped={ui.soloTracks.has(trackId)}>
+            <span class="flip-face solo-off">S</span>
+            <span class="flip-face back solo-on">S</span>
+          </span>
+        </button>
+
+        <!-- Mute -->
+        <button
+          class="btn-mute flip-host"
+          onpointerdown={() => toggleMute(trackId)}
+          data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
+        >
+          <span class="flip-card" class:flipped={track.muted}>
+            <span class="flip-face mute-off">M</span>
+            <span class="flip-face back mute-on">M</span>
+          </span>
+        </button>
+      </div>
 
       <!-- Steps -->
       <div
@@ -208,14 +223,15 @@
         onpointerup={velEndDrag}
         onpointercancel={velEndDrag}
       >
-        <div class="vel-label">
-          <span class="vel-name" class:chance-active={chanceMode}
-            onpointerdown={() => { chanceMode = !chanceMode }}
-            data-tip={chanceMode ? "Chance — tap to switch to VEL" : "Velocity — tap to switch to CHNC"}
-            data-tip-ja={chanceMode ? "チャンス — タップでVELに切替" : "ベロシティ — タップでCHNCに切替"}
-          >{chanceMode ? 'CHNC' : 'VEL'}</span>
+        <div class="track-head">
+          <div class="vel-label">
+            <span class="vel-name" class:chance-active={chanceMode}
+              onpointerdown={() => { chanceMode = !chanceMode }}
+              data-tip={chanceMode ? "Chance — tap to switch to VEL" : "Velocity — tap to switch to CHNC"}
+              data-tip-ja={chanceMode ? "チャンス — タップでVELに切替" : "ベロシティ — タップでCHNCに切替"}
+            >{chanceMode ? 'CHNC' : 'VEL'}</span>
+          </div>
         </div>
-        <div class="vel-spacer"></div>
         <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {track.steps}"
           data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
@@ -254,11 +270,22 @@
 
 <style>
   .step-grid {
+    /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
+    --head-w: 136px;
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: none;
     background: var(--color-bg);
     padding: 4px 0;
+  }
+
+  /* ── Track head (label + buttons wrapper) ── */
+  .track-head {
+    width: var(--head-w);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   /* ── Track row ── */
@@ -278,7 +305,8 @@
     border-left: 3px solid var(--color-olive);
     padding-left: 5px;
   }
-  .track-row.muted .steps {
+  .track-row.muted .steps,
+  .track-row.solo-muted .steps {
     opacity: 0.35;
     background-image: repeating-linear-gradient(
       45deg,
@@ -290,7 +318,6 @@
   /* ── Track label ── */
   .track-label {
     width: 64px;
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -312,6 +339,29 @@
     color: var(--color-muted);
     line-height: 1;
     text-transform: uppercase;
+  }
+
+  /* ── Solo button ── */
+  .btn-solo {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+    perspective: 60px;
+  }
+  .solo-off {
+    border: 1px solid var(--color-fg);
+    background: transparent;
+    color: var(--color-fg);
+    font-size: 9px;
+  }
+  .solo-on {
+    border: 1px solid var(--color-olive);
+    background: var(--color-olive);
+    color: var(--color-bg);
+    font-size: 9px;
   }
 
   /* ── Mute button ── */
@@ -427,8 +477,7 @@
     }
   }
   .vel-label {
-    width: 64px;
-    flex-shrink: 0;
+    margin-left: auto;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -473,10 +522,6 @@
   .btn-steps:active {
     background: var(--color-olive);
     color: var(--color-bg);
-  }
-  .vel-spacer {
-    width: 44px;
-    flex-shrink: 0;
   }
   .vel-bars {
     flex: 1;

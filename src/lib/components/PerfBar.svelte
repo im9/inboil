@@ -435,7 +435,8 @@
 
 
   .btn-kbd {
-    border-color: var(--color-olive);
+    border: 1.5px solid var(--color-olive);
+    background: transparent;
     color: var(--color-olive);
     padding: 4px 6px;
     display: flex;

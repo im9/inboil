@@ -3,6 +3,7 @@
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Pattern, Effects } from '../state.svelte.ts'
+import { ui } from '../state.svelte.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 
 type PerfState = {
@@ -132,9 +133,9 @@ function patternToWorklet(
       granularFreeze:  perf?.granularFreeze  ?? false,
       swing:           perf?.swing       ?? 0,
     },
-    tracks: pattern.tracks.map(t => ({
+    tracks: pattern.tracks.map((t, i) => ({
       steps:       t.steps,
-      muted:       t.muted,
+      muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
       synthType:   t.synthType,
       volume:      t.volume,
       pan:         t.pan,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute, isDrum, clearAllParamLocks, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
+  import { pattern, playback, ui, toggleTrig, toggleMute, toggleSolo, isDrum, clearAllParamLocks, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
   import { slide } from 'svelte/transition'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamFooter from './MobileParamFooter.svelte'
@@ -277,6 +277,11 @@
         {/if}
         <span class="toolbar-spacer"></span>
         <button
+          class="btn-solo-bar"
+          class:soloed={ui.soloTracks.has(ui.selectedTrack)}
+          onpointerdown={() => toggleSolo(ui.selectedTrack)}
+        >SOLO</button>
+        <button
           class="btn-mute-bar"
           class:muted={track.muted}
           onpointerdown={() => toggleMute(ui.selectedTrack)}
@@ -394,6 +399,21 @@
     line-height: 1;
   }
   .btn-lock.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .btn-solo-bar {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.4);
+    background: transparent;
+    border: 1px solid rgba(237,232,220,0.25);
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .btn-solo-bar.soloed {
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);

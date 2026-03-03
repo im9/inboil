@@ -27,7 +27,7 @@
   let rafId = 0
   $effect(() => {
     // JSON.stringify traverses all nested props so Svelte tracks them
-    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + chain.active + chain.playingPatternId)
+    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + chain.active + chain.playingPatternId + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
       const pat = chain.active && chain.playingPatternId > 0

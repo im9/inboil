@@ -237,6 +237,7 @@ export const ui = $state({
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
+  soloTracks: new Set<number>(),
 })
 
 // ── Persisted preferences (single localStorage key) ─────────────────
@@ -410,6 +411,15 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
 export function toggleMute(trackId: number) {
   pushUndo('Toggle mute')
   pattern.tracks[trackId].muted = !pattern.tracks[trackId].muted
+}
+
+export function toggleSolo(trackId: number) {
+  if (ui.soloTracks.has(trackId)) {
+    ui.soloTracks.delete(trackId)
+  } else {
+    ui.soloTracks.add(trackId)
+  }
+  ui.soloTracks = new Set(ui.soloTracks)
 }
 
 export function isDrum(track: Track): boolean {
