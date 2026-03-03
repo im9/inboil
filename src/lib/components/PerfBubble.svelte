@@ -6,7 +6,7 @@
 
   // Position state (fixed, bottom-right default)
   let posX = $state(window.innerWidth - 56)
-  let posY = $state(window.innerHeight - 220)
+  let posY = $state(window.innerHeight - 140)
 
   // Drag tracking
   let dragStartX = 0
