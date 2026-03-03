@@ -1,6 +1,6 @@
 # ADR 029: Undo / Redo (Ctrl+Z / Ctrl+Shift+Z)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

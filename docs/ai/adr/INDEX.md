@@ -32,7 +32,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 022 | Lead Arpeggiator | Implemented | |
 | 025 | Pattern Copy & Paste | Implemented | |
 | 028 | Step Probability | Proposed | |
-| 029 | Undo / Redo | Proposed | |
+| 029 | Undo / Redo | Implemented | Desktop only (Ctrl+Z / Ctrl+Shift+Z) |
 | 033 | Mobile Velocity Editing | Proposed | Long-press gauge |
 
 ## Song Structure / Arrangement

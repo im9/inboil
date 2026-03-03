@@ -500,6 +500,7 @@ function clonePattern(): Pattern {
 
 interface UndoEntry { snapshot: Pattern; label: string }
 const undoStack: UndoEntry[] = []
+const redoStack: UndoEntry[] = []
 const UNDO_MAX = 50
 let lastPushTime = 0
 let lastPushLabel = ''
@@ -512,6 +513,7 @@ function pushUndo(label: string): void {
   }
   undoStack.push({ snapshot: clonePattern(), label })
   if (undoStack.length > UNDO_MAX) undoStack.shift()
+  redoStack.length = 0
   lastPushTime = now
   lastPushLabel = label
 }
@@ -536,6 +538,16 @@ function restorePattern(src: Pattern): void {
 export function undo(): boolean {
   const entry = undoStack.pop()
   if (!entry) return false
+  redoStack.push({ snapshot: clonePattern(), label: entry.label })
+  restorePattern(entry.snapshot)
+  lastPushLabel = ''
+  return true
+}
+
+export function redo(): boolean {
+  const entry = redoStack.pop()
+  if (!entry) return false
+  undoStack.push({ snapshot: clonePattern(), label: entry.label })
   restorePattern(entry.snapshot)
   lastPushLabel = ''
   return true
