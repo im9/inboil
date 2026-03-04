@@ -2,7 +2,7 @@
   import { pattern, ui } from '../state.svelte.ts'
 </script>
 
-<div class="track-bar">
+<div class="track-bar" class:hide-desktop={true}>
   <div class="track-dots" data-tip="Select track" data-tip-ja="トラックを選択">
     {#each pattern.tracks as t, i}
       <button
@@ -43,5 +43,8 @@
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);
+  }
+  @media (min-width: 640px) {
+    .track-bar.hide-desktop { display: none; }
   }
 </style>

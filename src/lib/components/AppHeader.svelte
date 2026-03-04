@@ -11,6 +11,22 @@
   }
   let { onPlay, onStop, onRandom, compact = false }: Props = $props()
 
+  function handleHelp() {
+    if (compact) {
+      toggleSidebar('help')
+    } else {
+      ui.dockTab = ui.dockTab === 'help' ? 'param' : 'help'
+    }
+  }
+
+  function handleSystem() {
+    if (compact) {
+      toggleSidebar('system')
+    } else {
+      ui.dockTab = ui.dockTab === 'sys' ? 'param' : 'sys'
+    }
+  }
+
   const displayPatId = $derived(patternNav.pendingId > 0 ? patternNav.pendingId : pattern.id)
   const displayNum = $derived(String(displayPatId - 1).padStart(2, '0'))
   const displayName = $derived(patternNav.pendingId > 0 ? getPatternName(patternNav.pendingId) : pattern.name)
@@ -100,10 +116,19 @@
         data-tip="Show help" data-tip-ja="ヘルプを表示"
       >?</button>
     {/if}
+    {#if !compact}
+      <button
+        class="btn-help-desktop"
+        class:active={ui.dockTab === 'help'}
+        onpointerdown={handleHelp}
+        aria-label="Help"
+        data-tip="Show help" data-tip-ja="ヘルプを表示"
+      >?</button>
+    {/if}
     <button
       class="btn-system"
-      class:active={ui.sidebar === 'system'}
-      onpointerdown={() => toggleSidebar('system')}
+      class:active={compact ? ui.sidebar === 'system' : ui.dockTab === 'sys'}
+      onpointerdown={handleSystem}
       aria-label="System settings"
       data-tip="System settings" data-tip-ja="システム設定"
     >&#x2699;</button>
@@ -232,6 +257,30 @@
   }
   .btn-help-mobile:active,
   .btn-help-mobile.active {
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.85);
+  }
+
+  .btn-help-desktop {
+    position: absolute;
+    right: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.45);
+    font-size: 13px;
+    font-weight: 700;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .btn-help-desktop:active,
+  .btn-help-desktop.active {
     background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.85);
   }

@@ -238,6 +238,9 @@ export const ui = $state({
   lockMode: false,
   selectedStep: null as number | null,
   soloTracks: new Set<number>(),
+  dockTab: 'param' as 'param' | 'help' | 'sys',
+  dockPosition: 'right' as 'right' | 'bottom',
+  mobileOverlay: false,
 })
 
 // ── Persisted preferences (single localStorage key) ─────────────────
@@ -249,10 +252,11 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
+  dockPosition: 'right' | 'bottom'
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockPosition: 'right' }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -278,6 +282,7 @@ function savePrefs(): void {
     lang: lang.value,
     visited: prefs.visited,
     scaleMode: prefs.scaleMode,
+    dockPosition: ui.dockPosition,
   }))
 }
 
@@ -290,9 +295,13 @@ export const prefs = $state({
   scaleMode: initialPrefs.scaleMode,
 })
 
+// Apply persisted dock position
+ui.dockPosition = initialPrefs.dockPosition
+
 // First visit → show help sidebar
 if (!prefs.visited) {
   ui.sidebar = 'help'
+  ui.dockTab = 'help'
   prefs.visited = true
   savePrefs()
 }
@@ -306,6 +315,10 @@ export function toggleSidebar(panel: 'help' | 'system'): void {
 }
 export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode
+  savePrefs()
+}
+export function toggleDockPosition(): void {
+  ui.dockPosition = ui.dockPosition === 'right' ? 'bottom' : 'right'
   savePrefs()
 }
 
@@ -497,6 +510,9 @@ export function factoryReset(): void {
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
+  ui.dockTab = 'param'
+  ui.dockPosition = 'right'
+  ui.mobileOverlay = false
   // Reset effects
   effects.reverb = { ...DEFAULT_EFFECTS.reverb }
   effects.delay = { ...DEFAULT_EFFECTS.delay }

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, toggleMute, toggleSolo, isDrum, clearAllParamLocks, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
-  import { slide } from 'svelte/transition'
+  import { pattern, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
-  import MobileParamFooter from './MobileParamFooter.svelte'
+  import MobileParamOverlay from './MobileParamOverlay.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
   const track = $derived(pattern.tracks[ui.selectedTrack])
@@ -10,14 +9,9 @@
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
-  let footerOpen = $state(false)
 
   // Dynamic column count based on step count
   const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
-
-  // P-Lock: selected step's trig and lock state
-  const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
-  const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 
   // ── Step drag-to-paint ──
   let paintDragging = $state(false)
@@ -179,7 +173,9 @@
     <button class="nav-btn" onpointerdown={prevTrack}>◀</button>
 
     <div class="track-info">
-      <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
+      <button class="track-name-btn" onpointerdown={() => { ui.mobileOverlay = !ui.mobileOverlay }}>
+        <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
+      </button>
       <div class="track-meta">
         <span class="track-type">{track.synthType}</span>
       </div>
@@ -255,41 +251,8 @@
     </div>
   {/if}
 
-  <!-- Drawer handle -->
-  <button class="drawer-handle" onpointerdown={() => { footerOpen = !footerOpen }} aria-label="Toggle footer">
-    <span class="handle-pill"></span>
-  </button>
-
-  {#if footerOpen}
-    <div class="footer-drawer" transition:slide={{ duration: 50 }}>
-      <!-- Footer toolbar: LOCK + Mute -->
-      <div class="lock-toolbar">
-        <button
-          class="btn-lock"
-          class:active={ui.lockMode}
-          onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
-        >LOCK</button>
-        {#if ui.lockMode && ui.selectedStep !== null}
-          <span class="lock-label">STEP {ui.selectedStep + 1}</span>
-          {#if hasAnyLock}
-            <button class="btn-clr" onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
-          {/if}
-        {/if}
-        <span class="toolbar-spacer"></span>
-        <button
-          class="btn-solo-bar"
-          class:soloed={ui.soloTracks.has(ui.selectedTrack)}
-          onpointerdown={() => toggleSolo(ui.selectedTrack)}
-        >SOLO</button>
-        <button
-          class="btn-mute-bar"
-          class:muted={track.muted}
-          onpointerdown={() => toggleMute(ui.selectedTrack)}
-        >MUTE</button>
-      </div>
-
-      <MobileParamFooter hideHandle />
-    </div>
+  {#if ui.mobileOverlay}
+    <MobileParamOverlay />
   {/if}
 
 </div>
@@ -331,6 +294,12 @@
     flex-direction: column;
     gap: 2px;
     align-items: center;
+  }
+  .track-name-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: block;
   }
   .track-name {
     font-family: var(--font-display);
@@ -388,52 +357,6 @@
     text-transform: uppercase;
     opacity: 0.6;
   }
-  .btn-lock {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.4);
-    background: transparent;
-    border: 1px solid rgba(237,232,220,0.25);
-    padding: 4px 8px;
-    line-height: 1;
-  }
-  .btn-lock.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .btn-solo-bar {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.4);
-    background: transparent;
-    border: 1px solid rgba(237,232,220,0.25);
-    padding: 4px 8px;
-    line-height: 1;
-  }
-  .btn-solo-bar.soloed {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .btn-mute-bar {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.4);
-    background: transparent;
-    border: 1px solid rgba(237,232,220,0.25);
-    padding: 4px 8px;
-    line-height: 1;
-  }
-  .btn-mute-bar.muted {
-    background: var(--color-salmon);
-    border-color: var(--color-salmon);
-    color: var(--color-bg);
-  }
-
   /* ── View tabs (melodic only) ── */
   .view-tabs {
     display: flex;
@@ -607,64 +530,5 @@
     height: 100%;
   }
 
-  /* ── Footer drawer ── */
-  .footer-drawer {
-    flex-shrink: 0;
-  }
-
-  /* ── Drawer handle ── */
-  .drawer-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 0 4px;
-    background: var(--color-fg);
-    border: none;
-    border-top: 1px solid rgba(237,232,220,0.08);
-    flex-shrink: 0;
-  }
-  .handle-pill {
-    width: 32px;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(237,232,220,0.25);
-    transition: background 120ms;
-  }
-  .drawer-handle:active .handle-pill {
-    background: rgba(237,232,220,0.50);
-  }
-
-  /* ── Lock toolbar ── */
-  .lock-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    background: var(--color-fg);
-    flex-shrink: 0;
-    border-top: 1px solid rgba(237,232,220,0.08);
-  }
-  .toolbar-spacer { flex: 1; }
-  .lock-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--color-olive);
-    white-space: nowrap;
-  }
-  .btn-clr {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.5);
-    background: transparent;
-    border: 1px solid rgba(237,232,220,0.25);
-    padding: 1px 5px;
-    line-height: 14px;
-  }
-  .btn-clr:active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
-  }
 
 </style>

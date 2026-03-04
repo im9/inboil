@@ -1,12 +1,11 @@
 <script lang="ts">
   import AppHeader from './lib/components/AppHeader.svelte'
   import StepGrid from './lib/components/StepGrid.svelte'
-  import ParamPanel from './lib/components/ParamPanel.svelte'
+  import DockPanel from './lib/components/DockPanel.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import MobileParamFooter from './lib/components/MobileParamFooter.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
@@ -118,9 +117,6 @@
       {/if}
       <Sidebar />
     </div>
-    {#if ui.view === 'fx' || ui.view === 'eq'}
-      <MobileParamFooter />
-    {/if}
     <PerfBubble />
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
@@ -129,18 +125,21 @@
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.view === 'fx'}
-        <FxPad />
-      {:else if ui.view === 'eq'}
-        <FilterView />
-      {:else if ui.view === 'chain'}
-        <ChainView />
-      {:else}
-        <StepGrid />
-      {/if}
-      <Sidebar />
+      <div class="view-content-row" class:bottom={ui.dockPosition === 'bottom'}>
+        <div class="view-main">
+          {#if ui.view === 'fx'}
+            <FxPad />
+          {:else if ui.view === 'eq'}
+            <FilterView />
+          {:else if ui.view === 'chain'}
+            <ChainView />
+          {:else}
+            <StepGrid />
+          {/if}
+        </div>
+        <DockPanel />
+      </div>
     </div>
-    <ParamPanel />
   {/if}
 </div>
 
@@ -156,6 +155,23 @@
   .view-area {
     flex: 1;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .view-content-row {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+  }
+  .view-content-row.bottom {
+    flex-direction: column;
+  }
+
+  .view-main {
+    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
