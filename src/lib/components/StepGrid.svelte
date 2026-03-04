@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { song, activePhrase, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
-    const current = activePhrase(trackId).steps
+    const current = activeCell(trackId).steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
     setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
@@ -29,7 +29,7 @@
     const trackId = ui.selectedTrack
     const rect = barsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left
-    const idx = Math.max(0, Math.min(activePhrase(trackId).steps - 1, Math.floor(relX / 26)))
+    const idx = Math.max(0, Math.min(activeCell(trackId).steps - 1, Math.floor(relX / 26)))
     velApply(e, trackId, idx)
   }
 
@@ -59,7 +59,7 @@
   onDestroy(() => { timers.forEach(id => clearTimeout(id)); timers.clear() })
 
   function handleToggle(trackId: number, stepIdx: number) {
-    const trig = activePhrase(trackId).trigs[stepIdx]
+    const trig = activeCell(trackId).trigs[stepIdx]
     const key = `${trackId}-${stepIdx}`
     // Cancel any pending timer for this step to avoid stacking
     if (timers.has(key)) { clearTimeout(timers.get(key)!); timers.delete(key) }
@@ -98,7 +98,7 @@
       ui.selectedStep = ui.selectedStep === stepIdx && ui.selectedTrack === trackId ? null : stepIdx
       return
     }
-    const trig = activePhrase(trackId).trigs[stepIdx]
+    const trig = activeCell(trackId).trigs[stepIdx]
     stepPaintOn = !trig.active
     stepDragTrack = trackId
     stepDragging = true
@@ -112,7 +112,7 @@
     if (!stepDragging || !stepStepsEl) return
     const rect = stepStepsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + stepStepsEl.scrollLeft
-    const ph = activePhrase(stepDragTrack)
+    const ph = activeCell(stepDragTrack)
     const idx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)
@@ -130,7 +130,7 @@
 <div class="step-grid">
   {#each song.tracks as track, trackId}
     {@const selected = ui.selectedTrack === trackId}
-    {@const ph = activePhrase(trackId)}
+    {@const ph = activeCell(trackId)}
 
     <div
       class="track-row"

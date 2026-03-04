@@ -217,35 +217,26 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- Mode toggle: SONG / PHRASE -->
+  <!-- View toggle: SONG / GRID / TRKR -->
   <div class="view-toggle">
     <button
-      class="btn-mode"
-      class:active={ui.mode === 'song'}
-      onpointerdown={() => { ui.mode = 'song' }}
-      data-tip="Song arrangement mode" data-tip-ja="ソングアレンジメントモード"
+      class="btn-view"
+      class:active={ui.phraseView === 'song'}
+      onpointerdown={() => { ui.phraseView = 'song' }}
+      data-tip="Song arrangement view" data-tip-ja="ソングアレンジ画面"
     >SONG</button>
     <button
-      class="btn-mode"
-      class:active={ui.mode === 'phrase'}
-      onpointerdown={() => { ui.mode = 'phrase' }}
-      data-tip="Phrase editing mode" data-tip-ja="フレーズ編集モード"
-    >PHRASE</button>
-    {#if ui.mode === 'phrase'}
-      <span class="mode-sep" aria-hidden="true"></span>
-      <button
-        class="btn-view"
-        class:active={ui.phraseView === 'grid'}
-        onpointerdown={() => { ui.phraseView = 'grid' }}
-        data-tip="Step sequencer view" data-tip-ja="ステップシーケンサー画面"
-      >GRID</button>
-      <button
-        class="btn-view"
-        class:active={ui.phraseView === 'tracker'}
-        onpointerdown={() => { ui.phraseView = 'tracker' }}
-        data-tip="Tracker step editor" data-tip-ja="トラッカー型エディター"
-      >TRKR</button>
-    {/if}
+      class="btn-view"
+      class:active={ui.phraseView === 'grid'}
+      onpointerdown={() => { ui.phraseView = 'grid' }}
+      data-tip="Step sequencer view" data-tip-ja="ステップシーケンサー画面"
+    >GRID</button>
+    <button
+      class="btn-view"
+      class:active={ui.phraseView === 'tracker'}
+      onpointerdown={() => { ui.phraseView = 'tracker' }}
+      data-tip="Tracker step editor" data-tip-ja="トラッカー型エディター"
+    >TRKR</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -429,31 +420,6 @@
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
     border-color: rgba(237,232,220,0.45);
-  }
-
-  .btn-mode {
-    border: 1.5px solid rgba(237,232,220,0.30);
-    background: transparent;
-    color: rgba(237,232,220,0.40);
-    padding: 4px 10px;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    transition: background 40ms linear, color 40ms linear;
-    user-select: none;
-  }
-  .btn-mode:not(:last-of-type) { border-right: none; }
-  .btn-mode.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .mode-sep {
-    width: 1px;
-    height: 20px;
-    background: rgba(237,232,220,0.18);
-    margin: 0 6px;
   }
 
   /* ── Performance buttons ── */
@@ -648,27 +614,6 @@
       display: flex;
       gap: 0;
       border-top: 1px solid rgba(237,232,220,0.12);
-    }
-    .btn-mode {
-      flex: none;
-      padding: 6px 12px;
-      font-size: 9px;
-      text-align: center;
-      border: none;
-      border-bottom: 2px solid transparent;
-      color: rgba(237,232,220,0.35);
-    }
-    .btn-mode:not(:last-of-type) { border-right: 1px solid rgba(237,232,220,0.08); }
-    .btn-mode.active {
-      color: var(--color-bg);
-      border-bottom-color: var(--color-olive);
-      background: var(--color-olive);
-    }
-    .mode-sep {
-      width: 1px;
-      height: auto;
-      background: rgba(237,232,220,0.12);
-      margin: 0;
     }
     .btn-view {
       flex: 1;

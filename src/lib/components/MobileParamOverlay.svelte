@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { song, activePhrase, ui, setTrackSend, clearAllParamLocks, toggleMute, toggleSolo } from '../state.svelte.ts'
+  import { song, activeCell, ui, setTrackSend, clearAllParamLocks, toggleMute, toggleSolo } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
 
   const track = $derived(song.tracks[ui.selectedTrack])
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
-  const selTrig = $derived(ui.selectedStep !== null ? activePhrase(ui.selectedTrack).trigs[ui.selectedStep] : null)
+  const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 
   // Group params into categories for tab switching
@@ -97,10 +97,10 @@
         <Knob value={track.volume} label="VOL" size={40} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
         <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
       {:else if paramTab === 'fx'}
-        <Knob value={activePhrase(ui.selectedTrack).reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
-        <Knob value={activePhrase(ui.selectedTrack).delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
-        <Knob value={activePhrase(ui.selectedTrack).glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
-        <Knob value={activePhrase(ui.selectedTrack).granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+        <Knob value={activeCell(ui.selectedTrack).reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+        <Knob value={activeCell(ui.selectedTrack).delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+        <Knob value={activeCell(ui.selectedTrack).glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+        <Knob value={activeCell(ui.selectedTrack).granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
       {:else}
         {@const cat = paramCategories().find(c => c.id === paramTab)}
         {#if cat}

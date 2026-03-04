@@ -4,13 +4,11 @@
   import DockPanel from './lib/components/DockPanel.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import ChainEditor from './lib/components/ChainEditor.svelte'
   import SongView from './lib/components/SongView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import Breadcrumb from './lib/components/Breadcrumb.svelte'
-  import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo, songNavBack } from './lib/state.svelte.ts'
+  import { song, playback, ui, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -26,14 +24,10 @@
   // Sync song + effects → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + songPlay.active + songPlay.playingPhraseSet + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      const s = songPlay.active && songPlay.playingPhraseSet >= 0
-        ? songForPlayback(songPlay.playingPhraseSet)
-        : song
-      const phraseIndices = songPlay.active ? undefined : [...ui.activePhrases]
-      engine.sendPattern(s, effects, perf, fxPad, false, phraseIndices)
+      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
     })
     return () => cancelAnimationFrame(rafId)
   })
@@ -41,24 +35,21 @@
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
     playback.playheads = heads
-    let songSent = false
     if (heads[0] === 0 && prev0 !== 0) {
-      const advanced = advanceSong()
-      if (songPlay.active && song.rows.length > 0) {
+      const advanced = advanceSection()
+      if (hasArrangement()) {
         if (advanced) {
-          applySongRow(song.rows[songPlay.currentRow])
+          applySection(song.sections[playback.currentSection])
         }
-        updateSongPerf(heads[0])
-        const s = songForPlayback(songPlay.playingPhraseSet)
-        engine.sendPattern(s, effects, perf, fxPad, true)
-        songSent = true
+        updateSectionPerf(heads[0])
+        engine.sendPattern(song, effects, perf, fxPad, true, playback.currentSection)
+        return
       }
     }
-    if (!songSent && songPlay.active && song.rows.length > 0) {
-      const changed = updateSongPerf(heads[0])
+    if (hasArrangement()) {
+      const changed = updateSectionPerf(heads[0])
       if (changed) {
-        const s = songForPlayback(songPlay.playingPhraseSet)
-        engine.sendPattern(s, effects, perf, fxPad, false)
+        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
       }
     }
   }
@@ -66,11 +57,11 @@
   async function play() {
     if (playback.playing) return
     await engine.init()
-    const s = songPlay.active && songPlay.playingPhraseSet >= 0
-      ? songForPlayback(songPlay.playingPhraseSet)
-      : song
-    const phraseIndices = songPlay.active ? undefined : [...ui.activePhrases]
-    engine.sendPattern(s, effects, perf, fxPad, false, phraseIndices)
+    if (hasArrangement()) {
+      playback.repeatCount = 0
+      applySection(song.sections[playback.currentSection])
+    }
+    engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
     engine.play()
     playback.playing = true
   }
@@ -79,20 +70,12 @@
     engine.stop()
     playback.playing = false
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
-  }
-
-  // ── Swipe-right to go back (mobile) ──
-  let swipeStartX = 0
-  let swipeStartY = 0
-  function onSwipeStart(e: TouchEvent) {
-    swipeStartX = e.touches[0].clientX
-    swipeStartY = e.touches[0].clientY
-  }
-  function onSwipeEnd(e: TouchEvent) {
-    if (ui.mode !== 'song' || ui.songNav.level === 'song') return
-    const dx = e.changedTouches[0].clientX - swipeStartX
-    const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY)
-    if (dx > 60 && dy < 40) songNavBack()
+    // Clear perf & FX
+    perf.filling = false; perf.breaking = false; perf.reversing = false
+    fxPad.verb = { ...fxPad.verb, on: false }
+    fxPad.delay = { ...fxPad.delay, on: false }
+    fxPad.glitch = { ...fxPad.glitch, on: false }
+    fxPad.granular = { ...fxPad.granular, on: false }
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -100,9 +83,6 @@
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
-    if (e.code === 'Escape' && ui.mode === 'song' && ui.songNav.level !== 'song') {
-      e.preventDefault(); songNavBack()
-    }
   }
 
 </script>
@@ -113,20 +93,12 @@
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
     <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
-    <Breadcrumb />
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="view-area" ontouchstart={onSwipeStart} ontouchend={onSwipeEnd}>
+    <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.mode === 'song'}
-        {#if ui.songNav.level === 'song'}
-          <SongView />
-        {:else if ui.songNav.level === 'chain'}
-          <ChainEditor />
-        {:else}
-          <MobileTrackView />
-        {/if}
+      {#if ui.phraseView === 'song'}
+        <SongView />
       {:else if ui.phraseView === 'tracker'}
         <TrackerView />
       {:else}
@@ -138,25 +110,14 @@
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />
-    <Breadcrumb />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <div class="view-content-row" class:bottom={ui.dockPosition === 'bottom'}>
         <div class="view-main">
-          {#if ui.mode === 'song'}
-            {#if ui.songNav.level === 'song'}
-              <SongView />
-            {:else if ui.songNav.level === 'chain'}
-              <ChainEditor />
-            {:else}
-              {#if ui.phraseView === 'tracker'}
-                <TrackerView />
-              {:else}
-                <StepGrid />
-              {/if}
-            {/if}
+          {#if ui.phraseView === 'song'}
+            <SongView />
           {:else if ui.phraseView === 'tracker'}
             <TrackerView />
           {:else}

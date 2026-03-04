@@ -49,9 +49,9 @@ export class GrooveboxEngine {
     }
   }
 
-  sendPattern(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, phraseIndices?: number[]): void {
+  sendPattern(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, sectionIndex = 0): void {
     if (!this.node) return
-    this._post({ type: 'setPattern', pattern: patternToWorklet(song, fx, perf, fxPad, phraseIndices), reset })
+    this._post({ type: 'setPattern', pattern: patternToWorklet(song, fx, perf, fxPad, sectionIndex), reset })
   }
 
   play(): void {
@@ -83,17 +83,32 @@ export class GrooveboxEngine {
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }
 }
 
+function mapTrig(trig: { active: boolean; note: number; velocity: number; duration?: number; slide?: boolean; chance?: number; paramLocks?: Record<string, number> }, transpose = 0) {
+  return {
+    active:   trig.active,
+    note:     trig.note + transpose,
+    velocity: trig.velocity,
+    duration: trig.duration ?? 1,
+    slide:    trig.slide ?? false,
+    ...(trig.chance != null ? { chance: trig.chance } : {}),
+    ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
+      ? { paramLocks: { ...trig.paramLocks } } : {}),
+  }
+}
+
 function patternToWorklet(
   s: Song,
   fx: Effects,
   perf?: PerfState,
   fxPad?: FxPadState,
-  phraseIndices?: number[],
+  sectionIndex = 0,
 ): WorkletPattern {
   const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
   const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
   const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
+
+  const sec = s.sections[sectionIndex]
 
   return {
     bpm: s.bpm,
@@ -133,28 +148,19 @@ function patternToWorklet(
       swing:           perf?.swing       ?? 0,
     },
     tracks: s.tracks.map((t, i) => {
-      const ph = t.phrases[phraseIndices?.[i] ?? 0]
+      const cell = sec.cells[i]
       return {
-        steps:       ph.steps,
+        steps:       cell.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
         synthType:   t.synthType,
         volume:      t.volume,
         pan:         t.pan,
-        reverbSend:    Math.min(1, ph.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),
-        delaySend:     Math.min(1, ph.delaySend    + (fxPad?.delay.on   ? 0.3 : 0)),
-        glitchSend:    Math.min(1, ph.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
-        granularSend:  Math.min(1, ph.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
-        voiceParams: { ...ph.voiceParams },
-        trigs: ph.trigs.map(trig => ({
-          active:   trig.active,
-          note:     trig.note,
-          velocity: trig.velocity,
-          duration: trig.duration ?? 1,
-          slide:    trig.slide ?? false,
-          ...(trig.chance != null ? { chance: trig.chance } : {}),
-          ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
-            ? { paramLocks: { ...trig.paramLocks } } : {}),
-        })),
+        reverbSend:    Math.min(1, cell.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),
+        delaySend:     Math.min(1, cell.delaySend    + (fxPad?.delay.on   ? 0.3 : 0)),
+        glitchSend:    Math.min(1, cell.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
+        granularSend:  Math.min(1, cell.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
+        voiceParams: { ...cell.voiceParams },
+        trigs:       cell.trigs.map(trig => mapTrig(trig)),
       }
     }),
   }

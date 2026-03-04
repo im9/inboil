@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    song, playback, ui, activePhrase, isDrum,
+    song, playback, ui, activeCell, isDrum,
     toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
     setTrigSlide, setTrigChance, toggleMute, toggleSolo,
   } from '../state.svelte.ts'
@@ -13,7 +13,7 @@
 
   const trackId = $derived(ui.selectedTrack)
   const track = $derived(song.tracks[trackId])
-  const ph = $derived(activePhrase(trackId))
+  const ph = $derived(activeCell(trackId))
   const drum = $derived(isDrum(track))
 
   // ── Note display ─────────────────────────────────────────────────
@@ -112,13 +112,13 @@
     if (e.key === '[') {
       e.preventDefault()
       ui.selectedTrack = Math.max(0, trackId - 1)
-      cursorRow = Math.min(cursorRow, activePhrase(ui.selectedTrack).steps - 1)
+      cursorRow = Math.min(cursorRow, activeCell(ui.selectedTrack).steps - 1)
       return
     }
     if (e.key === ']') {
       e.preventDefault()
       ui.selectedTrack = Math.min(7, trackId + 1)
-      cursorRow = Math.min(cursorRow, activePhrase(ui.selectedTrack).steps - 1)
+      cursorRow = Math.min(cursorRow, activeCell(ui.selectedTrack).steps - 1)
       return
     }
 
@@ -258,7 +258,7 @@
         class:muted={t.muted}
         class:soloed={ui.soloTracks.has(i)}
       >
-        <button class="track-label" onpointerdown={() => { ui.selectedTrack = i; cursorRow = Math.min(cursorRow, activePhrase(i).steps - 1) }}>{t.name}</button>
+        <button class="track-label" onpointerdown={() => { ui.selectedTrack = i; cursorRow = Math.min(cursorRow, activeCell(i).steps - 1) }}>{t.name}</button>
         <button class="track-act" onpointerdown={() => toggleMute(i)}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>

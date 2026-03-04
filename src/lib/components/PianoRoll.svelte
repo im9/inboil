@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { activePhrase, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
+  import { activeCell, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
@@ -7,7 +7,7 @@
   }
   let { trackId }: Props = $props()
 
-  const ph = $derived(activePhrase(trackId))
+  const ph = $derived(activeCell(trackId))
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)

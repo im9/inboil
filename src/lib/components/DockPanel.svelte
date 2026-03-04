@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { song, activePhrase, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, toggleDockPosition, factoryReset } from '../state.svelte.ts'
+  import { song, activeCell, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, toggleDockPosition, factoryReset } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
@@ -10,7 +10,7 @@
   const track  = $derived(song.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
-  const selTrig = $derived(ui.selectedStep !== null ? activePhrase(ui.selectedTrack).trigs[ui.selectedStep] : null)
+  const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const L = $derived(lang.value)
 
@@ -258,11 +258,6 @@
   {:else}
     <!-- ── PARAM mode (default) ── -->
     <div class="dock-body">
-      {#if ui.mode === 'song' && ui.songNav.level === 'chain'}
-        <div class="param-minimal">
-          <p class="param-hint">{L === 'ja' ? 'チェーンビューではパラメータ編集不可' : 'Params not available in Chain view'}</p>
-        </div>
-      {:else}
         <div class="param-content">
           <!-- Track selector bar -->
           <div class="track-bar">
@@ -320,16 +315,16 @@
           <div class="section-divider" aria-hidden="true"></div>
           <div class="knob-grid">
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-              <Knob value={activePhrase(ui.selectedTrack).reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+              <Knob value={activeCell(ui.selectedTrack).reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
             </span>
             <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-              <Knob value={activePhrase(ui.selectedTrack).delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+              <Knob value={activeCell(ui.selectedTrack).delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
             </span>
             <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-              <Knob value={activePhrase(ui.selectedTrack).glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+              <Knob value={activeCell(ui.selectedTrack).glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
             </span>
             <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-              <Knob value={activePhrase(ui.selectedTrack).granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+              <Knob value={activeCell(ui.selectedTrack).granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
             </span>
           </div>
 
@@ -344,7 +339,6 @@
             </span>
           </div>
         </div>
-      {/if}
     </div>
   {/if}
 </div>
