@@ -4,20 +4,20 @@
 
 ## Context
 
-step sequencer に Mute ボタン (M) は実装済みだが、Solo 機能がない。Solo は特定トラックだけを試聴・確認するための基本的なミキサー機能であり、サウンドデザインやミックスの作業効率に直結する。
+The step sequencer has a Mute button (M) but no Solo function. Solo is a fundamental mixer feature for auditioning specific tracks in isolation, directly improving sound design and mixing workflow.
 
-### 現状
+### Current State
 
-- `Track.muted: boolean` が pattern に保存され、worklet まで伝播 ([state.svelte.ts:33](src/lib/state.svelte.ts#L33))
-- `toggleMute()` で切り替え、undo 対応 ([state.svelte.ts:410-413](src/lib/state.svelte.ts#L410-L413))
-- worklet 側で `muteGains[]` による click-free fade を実装 ([worklet-processor.ts:484-488](src/lib/audio/worklet-processor.ts#L484-L488))
-- UI: M ボタンが flip-card アニメーションで表示 ([StepGrid.svelte:157-167](src/lib/components/StepGrid.svelte#L157-L167))
+- `Track.muted: boolean` is saved in the pattern and propagated to the worklet ([state.svelte.ts:33](src/lib/state.svelte.ts#L33))
+- `toggleMute()` toggles with undo support ([state.svelte.ts:410-413](src/lib/state.svelte.ts#L410-L413))
+- Worklet implements click-free fade via `muteGains[]` ([worklet-processor.ts:484-488](src/lib/audio/worklet-processor.ts#L484-L488))
+- UI: M button with flip-card animation ([StepGrid.svelte:157-167](src/lib/components/StepGrid.svelte#L157-L167))
 
 ## Decision
 
-### 1. State 設計
+### 1. State Design
 
-Solo は**パフォーマンス用の一時状態**であり、pattern に保存しない。`ui` オブジェクトに `soloTracks` を追加する。
+Solo is a **temporary performance state** and is not saved to the pattern. Add `soloTracks` to the `ui` object.
 
 ```typescript
 // state.svelte.ts
@@ -27,11 +27,11 @@ export const ui = $state({
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
-  soloTracks: new Set<number>(),           // ← 追加
+  soloTracks: new Set<number>(),           // ← added
 })
 ```
 
-### 2. Solo ロジック
+### 2. Solo Logic
 
 ```typescript
 export function toggleSolo(trackId: number) {
@@ -40,35 +40,35 @@ export function toggleSolo(trackId: number) {
   } else {
     ui.soloTracks.add(trackId)
   }
-  // Set を差し替えてリアクティビティを発火
+  // Reassign Set to trigger Svelte reactivity
   ui.soloTracks = new Set(ui.soloTracks)
 }
 ```
 
-- Solo は undo 対象外（一時的なモニタリング操作のため）
-- 複数トラック同時 solo 可能（soloed トラックだけ鳴る）
+- Solo is excluded from undo (temporary monitoring operation)
+- Multiple tracks can be soloed simultaneously (only soloed tracks produce sound)
 
-### 3. Effective Mute 計算
+### 3. Effective Mute Calculation
 
-engine.ts の `patternToWorklet()` で solo を考慮した effective mute を計算する。
+Compute effective mute in `patternToWorklet()` in engine.ts, factoring in solo state.
 
 ```typescript
 // engine.ts  patternToWorklet()
 tracks: pattern.tracks.map((t, i) => ({
   // ...
   muted: ui.soloTracks.size > 0
-    ? !ui.soloTracks.has(i)    // solo active → soloed 以外をミュート
-    : t.muted,                 // solo inactive → 通常の mute
+    ? !ui.soloTracks.has(i)    // solo active → mute non-soloed tracks
+    : t.muted,                 // solo inactive → use normal mute state
   // ...
 }))
 ```
 
-- worklet 側の変更は不要（既存の `muteGains[]` fade がそのまま機能する）
-- solo 解除時は元の mute 状態に自然に戻る
+- No worklet changes needed (existing `muteGains[]` fade works as-is)
+- When solo is released, original mute states naturally restore
 
-### 4. UI レイアウト
+### 4. UI Layout
 
-M ボタンの左に S ボタンを追加する。
+Add an S button to the left of the M button.
 
 ```
 Desktop (StepGrid):
@@ -95,9 +95,9 @@ Desktop (StepGrid):
 </button>
 ```
 
-### 5. スタイリング
+### 5. Styling
 
-既存の M ボタンと同サイズ・同構造。Solo active 時はアクセントカラーで視認性を高める。
+Same size and structure as the existing M button. Accent color when solo is active for visibility.
 
 ```css
 .btn-solo {
@@ -123,7 +123,7 @@ Desktop (StepGrid):
 }
 ```
 
-Solo active 時、他トラックの steps 領域にも muted と同様の dimmed 表示を適用する：
+When solo is active, apply dimmed display to non-soloed tracks' step areas (same as muted):
 
 ```css
 .track-row.solo-muted .steps {
@@ -131,28 +131,28 @@ Solo active 時、他トラックの steps 領域にも muted と同様の dimme
 }
 ```
 
-### 6. Mobile 対応
+### 6. Mobile Support
 
-[MobileTrackView.svelte](src/lib/components/MobileTrackView.svelte) では TrackSelector でトラック切り替えを行うため、solo ボタンの配置は TrackSelector の各トラックボタンに long-press で solo トグルを追加する、あるいはヘッダー部分に S ボタンを配置する。
+In [MobileTrackView.svelte](src/lib/components/MobileTrackView.svelte), tracks are switched via TrackSelector. Solo can be added as a long-press toggle on each track button in the TrackSelector, or as an S button in the header area.
 
-### 7. 実装ステップ
+### 7. Implementation Steps
 
-1. `ui.soloTracks` と `toggleSolo()` を state.svelte.ts に追加
-2. engine.ts の `patternToWorklet()` で effective mute を計算
-3. StepGrid.svelte に S ボタンを追加（M ボタンの左）
-4. CSS スタイリング（solo-on/off, solo-muted dimming）
-5. MobileTrackView に solo 対応を追加
-6. `sendPattern()` の effect 依存に `ui.soloTracks` を追加（solo 変更時に worklet へ再送）
+1. Add `ui.soloTracks` and `toggleSolo()` to state.svelte.ts
+2. Compute effective mute in `patternToWorklet()` in engine.ts
+3. Add S button to StepGrid.svelte (left of M button)
+4. CSS styling (solo-on/off, solo-muted dimming)
+5. Add solo support to MobileTrackView
+6. Add `ui.soloTracks` as a dependency in `sendPattern()` effect (resend to worklet on solo change)
 
 ## Considerations
 
-- **Solo は pattern に保存しない**: mute は楽曲の一部（意図的な消音）だが、solo はモニタリング用の一時操作。pattern 切り替え時に solo 状態をリセットするかどうかは要検討
-- **Undo 対象外**: solo は一時的な操作であり、undo 履歴を汚さない
-- **リアクティビティ**: `Set` は Svelte 5 の `$state` でそのまま追跡されないため、差し替え (`new Set(...)`) でトリガーする
-- **Exclusive solo**: 現状は複数 solo 可能だが、将来的に Shift+click で exclusive solo（他の solo を解除して 1 つだけ solo）を追加可能
+- **Solo is not saved to pattern**: Mute is part of the composition (intentional silencing), but solo is a temporary monitoring operation. Whether to reset solo state on pattern switch is worth considering
+- **Excluded from undo**: Solo is a temporary operation and should not pollute the undo history
+- **Reactivity**: `Set` is not natively tracked by Svelte 5's `$state`, so reassignment (`new Set(...)`) is needed to trigger updates
+- **Exclusive solo**: Currently allows multiple solos; Shift+click exclusive solo (unsolo all others, solo only one) can be added later
 
 ## Future Extensions
 
-- **Exclusive solo**: Shift+S で排他ソロ（そのトラックだけを solo、他を解除）
-- **Solo in chain view**: pattern chain 再生中の solo 対応
-- **Solo indicator in mixer**: 将来の mixer view で solo 状態を表示
+- **Exclusive solo**: Shift+S for exclusive solo (solo only that track, unsolo all others)
+- **Solo in chain view**: Solo support during pattern chain playback
+- **Solo indicator in mixer**: Display solo state in a future mixer view

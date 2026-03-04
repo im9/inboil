@@ -43,6 +43,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 027 | Node Chain Song Builder | Proposed | |
 | 032 | Song View (M8-Style) | Proposed | Major data model restructure. Related: 013, 037 |
 | 037 | ChainView Redesign | Proposed | Incremental UX fix → evolves into Song View. Related: 032 |
+| 040 | Drill-Down Navigation | Proposed | Song→Chain→Phrase hierarchy nav. Related: 032, 037 |
 
 ## UI / Layout
 
