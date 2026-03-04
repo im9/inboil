@@ -8,6 +8,7 @@
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import SongView from './lib/components/SongView.svelte'
+  import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo } from './lib/state.svelte.ts'
@@ -108,6 +109,8 @@
         <ChainView />
       {:else if ui.view === 'song'}
         <SongView />
+      {:else if ui.view === 'tracker'}
+        <TrackerView />
       {:else}
         <MobileTrackView />
       {/if}
@@ -131,6 +134,8 @@
             <ChainView />
           {:else if ui.view === 'song'}
             <SongView />
+          {:else if ui.view === 'tracker'}
+            <TrackerView />
           {:else}
             <StepGrid />
           {/if}

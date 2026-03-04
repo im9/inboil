@@ -227,6 +227,12 @@
     >GRID</button>
     <button
       class="btn-view"
+      class:active={ui.view === 'tracker'}
+      onpointerdown={() => { ui.view = 'tracker' }}
+      data-tip="Tracker step editor" data-tip-ja="トラッカー型エディター"
+    >TRKR</button>
+    <button
+      class="btn-view"
       class:active={ui.view === 'fx'}
       onpointerdown={() => { ui.view = 'fx' }}
       data-tip="Effects pad view" data-tip-ja="エフェクトパッド画面"

@@ -224,7 +224,7 @@ export const playback = $state({
 
 export const ui = $state({
   selectedTrack: 0,
-  view: 'grid' as 'grid' | 'fx' | 'eq' | 'chain' | 'song',
+  view: 'grid' as 'grid' | 'tracker' | 'fx' | 'eq' | 'chain' | 'song',
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
