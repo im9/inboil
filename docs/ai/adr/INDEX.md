@@ -52,7 +52,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 018 | Settings Panel (SYSTEM) | Implemented | Subsumed by 036 |
 | 034 | Help / Guide Redesign | Proposed | Content updates for 036's HELP tab |
 | 035 | Master View | Proposed | XY pad + knobs for master bus |
-| 036 | Remove Footer / Dockable Panel | Proposed | Unifies ParamPanel + Sidebar. Related: 034, 037 |
+| 036 | Remove Footer / Dockable Panel | Implemented | Unifies ParamPanel + Sidebar into DockPanel. Related: 034, 037 |
 
 ## Instruments / Sound Design
 
@@ -70,6 +70,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 026 | Auto-Performance | Proposed | Auto Fill/Break/Reverse |
 | 031 | Virtual MIDI Keyboard | Implemented | Phase 1: audition mode, octave synced with piano roll |
 | 038 | Custom Functions | Proposed | User-defined FX/filter macros, keyboard/bubble triggers |
+| 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 
 ## Data / Infrastructure
 

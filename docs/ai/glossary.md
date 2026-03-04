@@ -7,7 +7,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | Term | Definition |
 |---|---|
 | **Pattern** | The top-level musical unit. Contains 8 tracks and plays as one loop. |
-| **Pattern Bank** | 8 pattern slots stored in memory. Switching saves/loads full state. |
+| **Pattern Bank** | 100 pattern slots (10 factory + 90 user). Switching saves/loads full state. |
 | **Track** | One instrument lane within a pattern. Has a fixed SynthType and its own step count. |
 | **Step** | One time slot in a track's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
@@ -47,7 +47,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Othello flip** | Step trig toggle animation: 3D `rotateY` flip between cream (empty) and olive (active) faces. |
 | **PerfBar** | Performance controls strip: KEY piano, OCT shift, EQ, GAIN, FILL/REV/GLT/BRK buttons, FX view toggle. |
 | **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. |
-| **ParamPanel** | Footer panel showing selected track's synth knobs, sends, and global FX. |
+| **DockPanel** | Unified right/bottom dock panel with PARAM/HELP/SYS modes. Track selector + synth knobs + lock toolbar. |
+| **MobileParamOverlay** | Mobile bottom-sheet overlay for param editing, lock, solo, mute. Opened by tapping track name. |
 | **Zone inversion** | Dark zone (navy bg) vs light zone (cream bg) — compositional tool for visual separation. |
 | **Knob** | SVG rotary control (270° arc). Vertical drag to change value. |
 | **PianoRoll** | DAW-style note bar editor for melodic tracks. 24-note range (C3–B4). Click+drag to draw note bars, click head/continuation to delete. |
@@ -57,7 +58,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **FilterView** | EQ/filter XY pad view (`ui.view = 'eq'`). FILTER + 3-band EQ nodes. |
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
-| **StepLane** | Velocity/chance bar lane below each track in desktop StepGrid. |
+| **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 
 ## Performance Terms

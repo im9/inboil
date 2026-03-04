@@ -13,20 +13,21 @@ Each pattern contains multiple tracks; each track has an independent step count 
 | Track | A single instrument lane. Has its own step count, synth type, and trig list. |
 | Trig | An active step that triggers a note/sound. Inactive steps are "empty". |
 | Step | One position in a track's sequence grid (0-indexed internally, 1-indexed in UI). |
-| Pattern Bank | 8 pattern slots stored in memory. Switching saves/loads full pattern state. |
+| Pattern Bank | 100 pattern slots (10 factory + 90 user). Switching saves/loads full state. |
 
 ## Pattern — DECIDED
 
 ```typescript
 Pattern {
-  id:        number          // 1–8 (maps to patternBank index 0–7)
+  id:        number          // 1–100 (maps to patternBank index 0–99)
   name:      string          // e.g. "PAT 01"
   bpm:       number          // 20–300
+  rootNote:  number          // 0–11 (C=0, C#=1, ..., B=11) — pattern-level key
   tracks:    Track[]         // fixed at 8 tracks
 }
 ```
 
-The app maintains a **pattern bank** of 8 slots. Slot 0 is initialized with a demo pattern; slots 1–7 are empty. Switching patterns saves the current pattern to its bank slot and loads the target.
+The app maintains a **pattern bank** of 100 slots. Slots 0–9 are factory patterns (demo); slots 10–99 are empty user slots. Switching patterns saves the current pattern to its bank slot and loads the target.
 
 ## Track — DECIDED
 
@@ -42,6 +43,8 @@ Track {
   pan:         number          // -1.0 to 1.0
   reverbSend:  number          // 0.0–1.0 send level to reverb
   delaySend:   number          // 0.0–1.0 send level to delay
+  glitchSend:  number          // 0.0–1.0 send level to glitch
+  granularSend: number         // 0.0–1.0 send level to granular
   voiceParams: Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
 }
 ```
@@ -129,7 +132,7 @@ See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
 ## Parameter Lock (p-lock) — IMPLEMENTED
 
-Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `track.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in ParamPanel. See ADR 014.
+Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `track.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in DockPanel (desktop) or MobileParamOverlay (mobile). See ADR 014.
 
 ## Scale (per-track time multiplier) — DEFERRED
 

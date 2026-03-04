@@ -57,6 +57,8 @@ See [adr/](./adr/) for full rationale.
 - **Virtual MIDI keyboard** (IMPLEMENTED, Phase 1) — PC keyboard audition mode. → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
 - **Song View** (PROPOSED) — M8-style Phrase/Chain/Song structure. → [adr/032-session-view.md](./adr/032-session-view.md)
 - **Mobile velocity/chance editing** (IMPLEMENTED) — 3-mode tabs (STEP/VEL/CHNC). → [adr/033-mobile-velocity-editing.md](./adr/033-mobile-velocity-editing.md)
+- **Dockable panel** (IMPLEMENTED) — Unified PARAM/HELP/SYS dock (right or bottom). → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
+- **Solo** (IMPLEMENTED) — Per-track additive solo with indicator. → [adr/039-solo.md](./adr/039-solo.md)
 
 ## Threading Model
 
@@ -85,18 +87,19 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── components/           ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte  ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte   ← Desktop step sequencer grid
-│   │   │   ├── StepLane.svelte   ← Velocity/chance bar lane per track
-│   │   │   ├── ParamPanel.svelte ← Footer: synth knobs, p-lock toggle
+│   │   │   ├── DockPanel.svelte  ← Right/bottom dock: PARAM/HELP/SYS modes
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks
 │   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
 │   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
+│   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
 │   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
 │   │   │   ├── ChainView.svelte  ← Pattern chain editor
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
-│   │   │   ├── MobileParamFooter.svelte ← Mobile: param knobs footer
+│   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
+│   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
-│   │   │   ├── Sidebar.svelte    ← Help / System settings panel
+│   │   │   ├── Sidebar.svelte    ← Help / System settings panel (mobile)
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
 │   │   │   └── SplitFlap.svelte  ← パタパタ split-flap display
 │   │   ├── audio/

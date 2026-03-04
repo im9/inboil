@@ -42,7 +42,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
-- Pattern bank (8 patterns), queued pattern switching, pattern chain
+- Pattern bank (100 patterns: 10 factory + 90 user), queued pattern switching, pattern chain
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Lead arpeggiator (5 modes, chord types, octave range)
 - Note bar editor (PianoRoll) with auto-legato for melodic tracks
@@ -50,6 +50,8 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Undo/redo (snapshot-based, Ctrl+Z)
 - Pattern copy/paste/clear
 - Oscilloscope waveform display
+- Per-track solo (additive, via DockPanel or MobileParamOverlay)
+- Dockable parameter panel (right or bottom, persistent position)
 - Desktop + mobile responsive UI (with mobile velocity/chance editing tabs)
 
 The C++ DSP core (`src/dsp/`) is being developed in parallel but is not yet integrated into the web build.

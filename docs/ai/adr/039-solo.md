@@ -1,6 +1,6 @@
 # ADR 039: Solo Button
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

@@ -69,8 +69,8 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 ├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
 │░ (PianoRoll — shown conditionally for melodic)     ░│  ← PianoRoll (light zone)
 ├█████████████████████████████████████████████████████┤
-│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (dark zone)
-│█  (split-flap)   (synth params)                    █│
+│█ DockPanel (right or bottom): PARAM/HELP/SYS modes  █│  ← DockPanel (dark zone)
+│█  track-bar + knob grid (synth params, sends, lock) █│
 └─────────────────────────────────────────────────────┘
 
 ── FX View (ui.view === 'fx') ──────────────────────────
@@ -86,7 +86,7 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 ├█████████████████████████████████████████████████████┤
 │█ [●●●○●●●●] KICK | VERB DLY GLT GRN [knobs]     █│  ← FxPad sends bar
 ├█████████████████████████████████████████████████████┤
-│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (desktop only)
+│█ DockPanel (right or bottom)                       █│  ← DockPanel (desktop only)
 └─────────────────────────────────────────────────────┘
 
 ── EQ View (ui.view === 'eq') ──────────────────────────
@@ -100,7 +100,7 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 │█                     (MID)                         █│
 │█                              (HIGH)               █│
 ├█████████████████████████████████████████████████████┤
-│█ [KICK] [knob][knob][knob]                     [?] █│  ← ParamPanel (desktop only)
+│█ DockPanel (right or bottom)                       █│  ← DockPanel (desktop only)
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -271,14 +271,17 @@ Right-side overlay panel (280px width, dark zone) sharing a single slot for both
 
 See ADR 017 and ADR 018 for details.
 
-### ParamPanel — DECIDED
+### DockPanel — DECIDED
 
-Dark zone footer. Shows:
-1. **Track name** (SplitFlap display)
-2. **Synth params** (knobs from `paramDefs.ts`, horizontally scrollable)
-3. **? help button** (right side, Othello-style flip animation matching step/mute buttons)
+Unified right-side or bottom dock panel. Three modes switched via track-bar buttons:
 
-Per-track sends (VERB, DLY, GLT, GRN) are in the FxPad sends bar only. PAN and VOL are in the StepGrid track row.
+1. **PARAM mode** (default): Track selector bar (2-letter abbreviations: KK, SN, CP, CH, OH, CY, BS, LD) + synth knob grid from `paramDefs.ts`. Lock toolbar (LOCK/STEP/CLR) + SOLO/MUTE. Dock position toggle (⇩/⇨) persisted in localStorage.
+2. **HELP mode**: Collapsible accordion help content (same as Sidebar help). Triggered by `?` in AppHeader.
+3. **SYS mode**: System settings (scale mode, language, factory reset). Triggered by `⚙` in AppHeader.
+
+HELP/SYS are temporary — switching back to PARAM mode automatically when closing or re-pressing the trigger button.
+
+Right dock: `width: 320px; border-left`. Bottom dock: `width: 100%; max-height: 200px; border-top; flex-direction: row`.
 
 ### PianoRoll — DECIDED
 
@@ -315,12 +318,15 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 
 **PerfBubble:** Floating draggable FILL/REV/BRK bubble trigger (position: fixed, bottom-right). Tap to toggle radial menu. Snaps to nearest horizontal edge on release.
 
-**Track header:** Track name (SplitFlap) + synth type label + step count (−/+ buttons with "step" suffix).
+**Track header:** Track name (button, taps to open overlay) + synth type label + step count (−/+ buttons with "step" suffix).
 
-**Footer toolbar (bottom-up):**
-1. **Lock toolbar:** LOCK button + step label + CLR + MUTE button.
-2. **Param category tabs:** MIX | synth param groups (e.g. PITC, AMP) | FX — switches displayed knobs.
-3. **Params bar:** Knobs for selected category (VOL/PAN in MIX, synth params per group, DUC/CMP in FX).
+**MobileParamOverlay** (bottom-sheet, opened by tapping track name):
+- Fixed backdrop overlay (`position: fixed; inset: 0; z-index: 50`). Tap backdrop or swipe down (dy > 50px) to dismiss.
+- Drag handle pill at top.
+- Lock toolbar: LOCK button + step label + CLR + SOLO + MUTE.
+- Param category tabs: MIX | synth param groups (e.g. PITC, AMP) | FX — switches displayed knobs.
+- Params bar: Knobs for selected category (VOL/PAN in MIX, synth params per group, sends in FX).
+- Track dots selector at bottom.
 
 ## Interaction Model — DECIDED
 
@@ -340,7 +346,7 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 | Toggle FX node | Tap FxPad node (no drag) |
 | Move FX node | Drag FxPad node (pointer capture) |
 | Select track (FxPad) | Click track dot in FxPad sends bar |
-| Open help | Click ? in ParamPanel |
+| Open help | Click ? in AppHeader |
 | Open settings | Click ⚙ in AppHeader |
 | Close sidebar | Click ✕ or re-press trigger button |
 
