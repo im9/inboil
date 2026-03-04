@@ -244,6 +244,43 @@ export const ui = $state({
   songCell: null as { row: number; track: number } | null,
 })
 
+// ── Song mode drill-down navigation ───────────────────────────────
+
+/** Drill from Song → Chain level */
+export function drillToChain(rowIndex: number, trackId: number) {
+  const row = song.rows[rowIndex]
+  if (!row) return
+  ui.mode = 'song'
+  ui.songNav.level = 'chain'
+  ui.songNav.rowIndex = rowIndex
+  ui.songNav.trackId = trackId
+  ui.songNav.chainId = row.chainIds[trackId] ?? 0
+  ui.songCell = { row: rowIndex, track: trackId }
+}
+
+/** Drill from Chain → Phrase level */
+export function drillToPhrase(entryIndex: number) {
+  const chain = song.tracks[ui.songNav.trackId]?.chains[ui.songNav.chainId]
+  if (!chain) return
+  const entry = chain.entries[entryIndex]
+  if (!entry) return
+  ui.songNav.level = 'phrase'
+  ui.songNav.entryIndex = entryIndex
+  // Set activePhrases for this track so StepGrid/Tracker shows the right phrase
+  ui.activePhrases[ui.songNav.trackId] = entry.phraseId
+  ui.selectedTrack = ui.songNav.trackId
+}
+
+/** Navigate back one level in Song mode */
+export function songNavBack() {
+  if (ui.mode !== 'song') return
+  if (ui.songNav.level === 'phrase') {
+    ui.songNav.level = 'chain'
+  } else if (ui.songNav.level === 'chain') {
+    ui.songNav.level = 'song'
+  }
+}
+
 /** Select a phrase set — all tracks switch to the same phrase index */
 export function selectPhraseSet(index: number): void {
   const max = song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)

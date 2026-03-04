@@ -7,6 +7,7 @@
     addChainEntry, removeChainEntry, moveChainEntry,
     setChainEntryTranspose, setChainEntryPhrase,
     SONG_PRESETS, songLoadPreset,
+    drillToChain, drillToPhrase,
   } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
 
@@ -27,6 +28,11 @@
 
   // ── Cell selection ─────────────────────────────────────────────────
   function selectCell(rowIndex: number, trackId: number) {
+    if (isSelected(rowIndex, trackId)) {
+      // Already selected → drill down to chain editor
+      drillToChain(rowIndex, trackId)
+      return
+    }
     ui.songCell = { row: rowIndex, track: trackId }
   }
 
@@ -234,10 +240,12 @@
 
               <!-- Phrase selector -->
               <button class="ce-ph-nav" onpointerdown={() => stepPhrase(trackId, chainId, ei, -1)}>&#9664;</button>
-              <span class="ce-phrase">
+              <button class="ce-phrase" onpointerdown={() => drillToPhrase(ei)}
+                data-tip="Edit this phrase" data-tip-ja="このフレーズを編集"
+              >
                 <span class="ce-ph-id">{String(entry.phraseId).padStart(2, '0')}</span>
                 <span class="ce-ph-name">{selectedTrackPhrases[entry.phraseId]?.name ?? '---'}</span>
-              </span>
+              </button>
               <button class="ce-ph-nav" onpointerdown={() => stepPhrase(trackId, chainId, ei, 1)}>&#9654;</button>
 
               <!-- Transpose -->
@@ -680,6 +688,13 @@
     align-items: center;
     gap: 3px;
     min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 2px 4px;
+    cursor: pointer;
+  }
+  .ce-phrase:hover {
+    background: rgba(237,232,220,0.08);
   }
 
   .ce-ph-id {

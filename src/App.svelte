@@ -9,7 +9,8 @@
   import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo } from './lib/state.svelte.ts'
+  import Breadcrumb from './lib/components/Breadcrumb.svelte'
+  import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo, songNavBack } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -85,6 +86,9 @@
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
+    if (e.code === 'Escape' && ui.mode === 'song' && ui.songNav.level !== 'song') {
+      e.preventDefault(); songNavBack()
+    }
   }
 
 </script>
@@ -95,6 +99,7 @@
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
     <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
+    <Breadcrumb />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
@@ -118,6 +123,7 @@
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />
+    <Breadcrumb />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
