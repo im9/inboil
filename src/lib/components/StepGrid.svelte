@@ -4,7 +4,7 @@
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
-    const current = pattern.tracks[trackId].steps
+    const current = pattern.tracks[trackId].phrases[0].steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
     setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
@@ -30,7 +30,7 @@
     const track = pattern.tracks[trackId]
     const rect = barsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left
-    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    const idx = Math.max(0, Math.min(track.phrases[0].steps - 1, Math.floor(relX / 26)))
     velApply(e, trackId, idx)
   }
 
@@ -60,7 +60,7 @@
   onDestroy(() => { timers.forEach(id => clearTimeout(id)); timers.clear() })
 
   function handleToggle(trackId: number, stepIdx: number) {
-    const trig = pattern.tracks[trackId].trigs[stepIdx]
+    const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
     const key = `${trackId}-${stepIdx}`
     // Cancel any pending timer for this step to avoid stacking
     if (timers.has(key)) { clearTimeout(timers.get(key)!); timers.delete(key) }
@@ -99,7 +99,7 @@
       ui.selectedStep = ui.selectedStep === stepIdx && ui.selectedTrack === trackId ? null : stepIdx
       return
     }
-    const trig = pattern.tracks[trackId].trigs[stepIdx]
+    const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
     stepPaintOn = !trig.active
     stepDragTrack = trackId
     stepDragging = true
@@ -114,10 +114,10 @@
     const rect = stepStepsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + stepStepsEl.scrollLeft
     const track = pattern.tracks[stepDragTrack]
-    const idx = Math.max(0, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    const idx = Math.max(0, Math.min(track.phrases[0].steps - 1, Math.floor(relX / 26)))
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)
-    const trig = track.trigs[idx]
+    const trig = track.phrases[0].trigs[idx]
     if (stepPaintOn && !trig.active) handleToggle(stepDragTrack, idx)
     else if (!stepPaintOn && trig.active) handleToggle(stepDragTrack, idx)
   }
@@ -154,7 +154,7 @@
           class="btn-steps"
           onpointerdown={() => cycleSteps(trackId)}
           data-tip="Change step count" data-tip-ja="ステップ数を変更"
-        >{track.steps}</button>
+        >{track.phrases[0].steps}</button>
 
         <!-- Solo -->
         <button
@@ -185,13 +185,13 @@
       <div
         class="steps"
         role="application"
-        style="--steps: {track.steps}"
+        style="--steps: {track.phrases[0].steps}"
         onpointermove={stepOnMove}
         onpointerup={stepEndDrag}
         onpointercancel={stepEndDrag}
         data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
       >
-        {#each track.trigs as trig, stepIdx}
+        {#each track.phrases[0].trigs as trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
           {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
           {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
@@ -232,11 +232,11 @@
             >{chanceMode ? 'CHNC' : 'VEL'}</span>
           </div>
         </div>
-        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {track.steps}"
+        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {track.phrases[0].steps}"
           data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
         >
-          {#each track.trigs as trig, i}
+          {#each track.phrases[0].trigs as trig, i}
             {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
             {@const isActive = trig.active || shrinking.has(`${trackId}-${i}`)}
             {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}

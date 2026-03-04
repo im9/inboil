@@ -8,7 +8,7 @@
   const track  = $derived(pattern.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
-  const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
+  const selTrig = $derived(ui.selectedStep !== null ? track.phrases[0].trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const L = $derived(lang.value)
 
@@ -287,16 +287,16 @@
           <div class="section-divider" aria-hidden="true"></div>
           <div class="knob-grid">
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-              <Knob value={track.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+              <Knob value={track.phrases[0].reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
             </span>
             <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-              <Knob value={track.delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+              <Knob value={track.phrases[0].delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
             </span>
             <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-              <Knob value={track.glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+              <Knob value={track.phrases[0].glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
             </span>
             <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-              <Knob value={track.granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+              <Knob value={track.phrases[0].granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
             </span>
           </div>
 

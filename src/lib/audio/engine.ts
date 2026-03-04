@@ -133,28 +133,31 @@ function patternToWorklet(
       granularFreeze:  perf?.granularFreeze  ?? false,
       swing:           perf?.swing       ?? 0,
     },
-    tracks: pattern.tracks.map((t, i) => ({
-      steps:       t.steps,
-      muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
-      synthType:   t.synthType,
-      volume:      t.volume,
-      pan:         t.pan,
-      reverbSend:    Math.min(1, t.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),
-      delaySend:     Math.min(1, t.delaySend    + (fxPad?.delay.on   ? 0.3 : 0)),
-      glitchSend:    Math.min(1, t.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
-      granularSend:  Math.min(1, t.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
-      voiceParams: { ...t.voiceParams },
-      trigs: t.trigs.map(trig => ({
-        active:   trig.active,
-        note:     trig.note,
-        velocity: trig.velocity,
-        duration: trig.duration ?? 1,
-        slide:    trig.slide ?? false,
-        ...(trig.chance != null ? { chance: trig.chance } : {}),
-        ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
-          ? { paramLocks: { ...trig.paramLocks } } : {}),
-      })),
-    })),
+    tracks: pattern.tracks.map((t, i) => {
+      const ph = t.phrases[0]
+      return {
+        steps:       ph.steps,
+        muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
+        synthType:   t.synthType,
+        volume:      t.volume,
+        pan:         t.pan,
+        reverbSend:    Math.min(1, ph.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),
+        delaySend:     Math.min(1, ph.delaySend    + (fxPad?.delay.on   ? 0.3 : 0)),
+        glitchSend:    Math.min(1, ph.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
+        granularSend:  Math.min(1, ph.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
+        voiceParams: { ...ph.voiceParams },
+        trigs: ph.trigs.map(trig => ({
+          active:   trig.active,
+          note:     trig.note,
+          velocity: trig.velocity,
+          duration: trig.duration ?? 1,
+          slide:    trig.slide ?? false,
+          ...(trig.chance != null ? { chance: trig.chance } : {}),
+          ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
+            ? { paramLocks: { ...trig.paramLocks } } : {}),
+        })),
+      }
+    }),
   }
 }
 

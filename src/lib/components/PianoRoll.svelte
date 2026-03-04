@@ -8,6 +8,7 @@
   let { trackId }: Props = $props()
 
   const track = $derived(pattern.tracks[trackId])
+  const ph = $derived(track.phrases[0])
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
@@ -89,13 +90,13 @@
 
   /** Returns cell visual state for duration rendering */
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
-    const trig = track.trigs[stepIdx]
+    const trig = ph.trigs[stepIdx]
     if (trig?.active && trig.note === note) return 'head'
     // Look backwards for a head whose duration covers this step
-    const maxLook = Math.min(16, track.steps)
+    const maxLook = Math.min(16, ph.steps)
     for (let d = 1; d < maxLook; d++) {
-      const prevStep = ((stepIdx - d) % track.steps + track.steps) % track.steps
-      const prevTrig = track.trigs[prevStep]
+      const prevStep = ((stepIdx - d) % ph.steps + ph.steps) % ph.steps
+      const prevTrig = ph.trigs[prevStep]
       if (prevTrig?.active && prevTrig.note === note) {
         return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
       }
@@ -148,11 +149,11 @@
     } else if (state === 'continuation') {
       // Click on continuation → delete the parent note
       const headStep = findNoteHead(trackId, stepIdx, note)
-      if (headStep >= 0) track.trigs[headStep].active = false
+      if (headStep >= 0) ph.trigs[headStep].active = false
       barDragging = false
     } else {
       // Empty cell — check if this step already has an active note
-      const trig = track.trigs[stepIdx]
+      const trig = ph.trigs[stepIdx]
       if (trig?.active) {
         // Step has a note: long-press → move mode, short tap → move note to tapped pitch
         moveStep = stepIdx
@@ -196,8 +197,8 @@
       const relY = e.clientY - noteGridEl.getBoundingClientRect().top
       const newNote = getNoteFromY(relY)
       const snapped = newNote >= 0 ? snapToScale(newNote) : -1
-      if (snapped >= 0 && snapped !== track.trigs[moveStep].note) {
-        track.trigs[moveStep].note = snapped
+      if (snapped >= 0 && snapped !== ph.trigs[moveStep].note) {
+        ph.trigs[moveStep].note = snapped
       }
       return
     }
@@ -205,7 +206,7 @@
     if (durationDragging) {
       const rect = noteGridEl.getBoundingClientRect()
       const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-      const dur = Math.max(1, Math.min(track.steps, Math.floor((relX - durationDragStep * 26) / 26) + 1))
+      const dur = Math.max(1, Math.min(ph.steps, Math.floor((relX - durationDragStep * 26) / 26) + 1))
       setTrigDuration(trackId, durationDragStep, dur)
       return
     }
@@ -213,7 +214,7 @@
     const rect = noteGridEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + noteGridEl.scrollLeft
     const relY = e.clientY - rect.top
-    const endStep = Math.max(barStartStep, Math.min(track.steps - 1, Math.floor(relX / 26)))
+    const endStep = Math.max(barStartStep, Math.min(ph.steps - 1, Math.floor(relX / 26)))
     const duration = endStep - barStartStep + 1
 
     // Vertical: change note pitch during drag (snap to scale)
@@ -232,10 +233,10 @@
       if (moveStep >= 0) {
         if (moveFromHead) {
           // Short tap on head → delete
-          track.trigs[moveStep].active = false
+          ph.trigs[moveStep].active = false
         } else {
           // Short tap on empty cell in active step → move note to tapped pitch
-          track.trigs[moveStep].note = moveTapNote
+          ph.trigs[moveStep].note = moveTapNote
         }
       }
     }
@@ -285,7 +286,7 @@
     <div
       class="grid"
       role="application"
-      style="--steps: {track.steps}"
+      style="--steps: {ph.steps}"
       data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
       onpointermove={noteOnMove}
       onpointerup={noteEndDrag}
@@ -293,7 +294,7 @@
     >
       {#each NOTES as note}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
-          {#each track.trigs as _trig, stepIdx}
+          {#each ph.trigs as _trig, stepIdx}
             {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
             {@const state = getCellState(stepIdx, note)}
             <button

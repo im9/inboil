@@ -25,16 +25,20 @@ export function makeTrack(
   const drum = DRUM_SYNTHS.includes(synthType)
   return {
     id, name, synthType,
-    steps,
-    trigs: makeTrigs(steps, activeSteps, note),
     muted: false,
     volume: 0.8,
     pan: 0,
-    reverbSend:  drum ? 0.08 : 0.25,
-    delaySend:   drum ? 0.00 : 0.12,
-    glitchSend:  0,
-    granularSend: 0,
-    voiceParams: defaultVoiceParams(id, synthType),
+    phrases: [{
+      id: 0,
+      name: 'A',
+      steps,
+      trigs: makeTrigs(steps, activeSteps, note),
+      voiceParams: defaultVoiceParams(id, synthType),
+      reverbSend:  drum ? 0.08 : 0.25,
+      delaySend:   drum ? 0.00 : 0.12,
+      glitchSend:  0,
+      granularSend: 0,
+    }],
   }
 }
 
@@ -392,7 +396,8 @@ export function makeFactoryPattern(id: number): Pattern {
     [{ ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1], ts(7)), pan:  0.10 }],
   ]
   const tracks = base.map(([t], i) => {
-    if (f.vp?.[i]) t.voiceParams = { ...t.voiceParams, ...f.vp[i] }
+    const ph = t.phrases[0]
+    if (f.vp?.[i]) ph.voiceParams = { ...ph.voiceParams, ...f.vp[i] }
     return t
   })
   // Apply per-step melodies and durations
@@ -400,7 +405,7 @@ export function makeFactoryPattern(id: number): Pattern {
     for (const [k, notes] of Object.entries(f.mel)) {
       const tIdx = parseInt(k)
       const durs = f.dur?.[tIdx]
-      const trigs = tracks[tIdx].trigs
+      const trigs = tracks[tIdx].phrases[0].trigs
       let ni = 0
       for (let si = 0; si < trigs.length; si++) {
         const trig = trigs[si]

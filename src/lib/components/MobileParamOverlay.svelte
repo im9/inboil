@@ -6,7 +6,7 @@
 
   const track = $derived(pattern.tracks[ui.selectedTrack])
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
-  const selTrig = $derived(ui.selectedStep !== null ? track.trigs[ui.selectedStep] : null)
+  const selTrig = $derived(ui.selectedStep !== null ? track.phrases[0].trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 
   // Group params into categories for tab switching
@@ -97,10 +97,10 @@
         <Knob value={track.volume} label="VOL" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }} />
         <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
       {:else if paramTab === 'fx'}
-        <Knob value={track.reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
-        <Knob value={track.delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
-        <Knob value={track.glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
-        <Knob value={track.granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+        <Knob value={track.phrases[0].reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+        <Knob value={track.phrases[0].delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+        <Knob value={track.phrases[0].glitchSend} label="GLT" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+        <Knob value={track.phrases[0].granularSend} label="GRN" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
       {:else}
         {@const cat = paramCategories().find(c => c.id === paramTab)}
         {#if cat}

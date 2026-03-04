@@ -5,13 +5,14 @@
   import SplitFlap from './SplitFlap.svelte'
 
   const track = $derived(pattern.tracks[ui.selectedTrack])
+  const ph = $derived(track.phrases[0])
   const drum = $derived(isDrum(track))
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
 
   // Dynamic column count based on step count
-  const calcCols = $derived(track.steps <= 8 ? 4 : track.steps <= 16 ? 4 : track.steps <= 32 ? 8 : 8)
+  const calcCols = $derived(ph.steps <= 8 ? 4 : ph.steps <= 16 ? 4 : ph.steps <= 32 ? 8 : 8)
 
   // ── Step drag-to-paint ──
   let paintDragging = $state(false)
@@ -91,7 +92,7 @@
       return
     }
     e.preventDefault()
-    const trig = track.trigs[stepIdx]
+    const trig = ph.trigs[stepIdx]
     calcEl = (e.currentTarget as HTMLElement).closest('.calculator') as HTMLElement
 
     // VEL / CHANCE mode
@@ -137,7 +138,7 @@
     const idx = Array.from(calcEl.children).indexOf(btn)
     if (idx < 0 || paintVisited.has(idx)) return
     paintVisited.add(idx)
-    const trig = track.trigs[idx]
+    const trig = ph.trigs[idx]
     if (paintOn && !trig.active) toggleTrig(ui.selectedTrack, idx)
     else if (!paintOn && trig.active) toggleTrig(ui.selectedTrack, idx)
   }
@@ -148,11 +149,11 @@
   }
 
   function stepDown() {
-    const idx = STEP_OPTIONS.indexOf(track.steps as typeof STEP_OPTIONS[number])
+    const idx = STEP_OPTIONS.indexOf(ph.steps as typeof STEP_OPTIONS[number])
     if (idx > 0) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx - 1])
   }
   function stepUp() {
-    const idx = STEP_OPTIONS.indexOf(track.steps as typeof STEP_OPTIONS[number])
+    const idx = STEP_OPTIONS.indexOf(ph.steps as typeof STEP_OPTIONS[number])
     if (idx < STEP_OPTIONS.length - 1) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx + 1])
   }
 
@@ -181,7 +182,7 @@
       </div>
       <div class="step-row">
         <button class="step-adj" onpointerdown={stepDown}>−</button>
-        <span class="step-value">{track.steps}</span>
+        <span class="step-value">{ph.steps}</span>
         <span class="step-suffix">step</span>
         <button class="step-adj" onpointerdown={stepUp}>+</button>
       </div>
@@ -221,7 +222,7 @@
       onpointerup={stepEnd}
       onpointercancel={stepEnd}
     >
-      {#each track.trigs as trig, stepIdx}
+      {#each ph.trigs as trig, stepIdx}
         {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
         {@const isSelected = ui.lockMode && ui.selectedStep === stepIdx}
         {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}

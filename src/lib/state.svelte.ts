@@ -24,20 +24,27 @@ export interface Trig {
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
+/** Single-track step sequence (ADR 032 Phase 1) */
+export interface Phrase {
+  id: number
+  name: string            // max 6 chars
+  steps: number           // 1–64
+  trigs: Trig[]           // length === steps; index 0 = step 1
+  voiceParams: Record<string, number>  // per-voice tunable parameters
+  reverbSend: number      // 0.0–1.0
+  delaySend: number       // 0.0–1.0
+  glitchSend: number      // 0.0–1.0
+  granularSend: number    // 0.0–1.0
+}
+
 export interface Track {
   id: number
   name: string
   synthType: SynthType
-  steps: number        // 1–64
-  trigs: Trig[]        // length === steps; index 0 = step 1
   muted: boolean
   volume: number
   pan: number
-  reverbSend: number   // 0.0–1.0
-  delaySend: number    // 0.0–1.0
-  glitchSend: number   // 0.0–1.0
-  granularSend: number // 0.0–1.0
-  voiceParams: Record<string, number>  // per-voice tunable parameters
+  phrases: Phrase[]       // Phase 1: always [0] only
 }
 
 export interface Effects {
@@ -59,6 +66,22 @@ export const PATTERN_COUNT = 100
 
 // ── Undo ─────────────────────────────────────────────────────────────
 
+function clonePhrase(ph: Phrase): Phrase {
+  return {
+    id: ph.id, name: ph.name, steps: ph.steps,
+    voiceParams: { ...ph.voiceParams },
+    reverbSend: ph.reverbSend, delaySend: ph.delaySend,
+    glitchSend: ph.glitchSend, granularSend: ph.granularSend,
+    trigs: ph.trigs.map(tr => ({
+      active: tr.active, note: tr.note, velocity: tr.velocity,
+      duration: tr.duration, slide: tr.slide,
+      ...(tr.chance != null ? { chance: tr.chance } : {}),
+      ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
+        ? { paramLocks: { ...tr.paramLocks } } : {}),
+    })),
+  }
+}
+
 function clonePattern(): Pattern {
   return {
     id: pattern.id,
@@ -67,18 +90,8 @@ function clonePattern(): Pattern {
     rootNote: pattern.rootNote,
     tracks: pattern.tracks.map(t => ({
       id: t.id, name: t.name, synthType: t.synthType,
-      steps: t.steps, muted: t.muted, volume: t.volume,
-      pan: t.pan,
-      reverbSend: t.reverbSend, delaySend: t.delaySend,
-      glitchSend: t.glitchSend, granularSend: t.granularSend,
-      voiceParams: { ...t.voiceParams },
-      trigs: t.trigs.map(tr => ({
-        active: tr.active, note: tr.note, velocity: tr.velocity,
-        duration: tr.duration, slide: tr.slide,
-        ...(tr.chance != null ? { chance: tr.chance } : {}),
-        ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
-          ? { paramLocks: { ...tr.paramLocks } } : {}),
-      })),
+      muted: t.muted, volume: t.volume, pan: t.pan,
+      phrases: t.phrases.map(clonePhrase),
     })),
   }
 }
@@ -110,13 +123,16 @@ function restorePattern(src: Pattern): void {
   pattern.rootNote = src.rootNote ?? 0
   pattern.tracks = src.tracks.map(t => ({
     ...t,
-    trigs: t.trigs.map(tr => ({
-      ...tr,
-      duration: tr.duration ?? 1,
-      slide: tr.slide ?? false,
-      ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
+    phrases: (t.phrases ?? []).map(ph => ({
+      ...ph,
+      voiceParams: { ...ph.voiceParams },
+      trigs: ph.trigs.map(tr => ({
+        ...tr,
+        duration: tr.duration ?? 1,
+        slide: tr.slide ?? false,
+        ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
+      })),
     })),
-    voiceParams: { ...t.voiceParams },
   }))
 }
 
@@ -181,11 +197,7 @@ export function pastePattern(targetId: number): void {
     rootNote: src.rootNote,
     tracks: src.tracks.map(t => ({
       ...t,
-      voiceParams: { ...t.voiceParams },
-      trigs: t.trigs.map(tr => ({
-        ...tr,
-        ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
-      })),
+      phrases: t.phrases.map(clonePhrase),
     })),
   }
   if (targetId === pattern.id) loadFromBank(targetId - 1)
@@ -353,19 +365,19 @@ export const effects = $state<Effects>({
 
 export function toggleTrig(trackId: number, stepIndex: number) {
   pushUndo('Toggle step')
-  pattern.tracks[trackId].trigs[stepIndex].active =
-    !pattern.tracks[trackId].trigs[stepIndex].active
+  const ph = pattern.tracks[trackId].phrases[0]
+  ph.trigs[stepIndex].active = !ph.trigs[stepIndex].active
 }
 
 export function setTrigVelocity(trackId: number, stepIdx: number, v: number) {
   pushUndo('Set velocity')
-  pattern.tracks[trackId].trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
+  pattern.tracks[trackId].phrases[0].trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
 }
 
 /** For piano roll: click cell sets note + activates; click same note deactivates */
 export function setTrigNote(trackId: number, stepIndex: number, note: number) {
   pushUndo('Set note')
-  const trig = pattern.tracks[trackId].trigs[stepIndex]
+  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIndex]
   if (trig.active && trig.note === note) {
     trig.active = false
   } else {
@@ -376,38 +388,37 @@ export function setTrigNote(trackId: number, stepIndex: number, note: number) {
 
 export function setTrigDuration(trackId: number, stepIdx: number, dur: number) {
   pushUndo('Set duration')
-  pattern.tracks[trackId].trigs[stepIdx].duration = Math.max(1, Math.min(16, Math.round(dur)))
+  pattern.tracks[trackId].phrases[0].trigs[stepIdx].duration = Math.max(1, Math.min(16, Math.round(dur)))
 }
 
 export function setTrigSlide(trackId: number, stepIdx: number, slide: boolean) {
   pushUndo('Set slide')
-  pattern.tracks[trackId].trigs[stepIdx].slide = slide
+  pattern.tracks[trackId].phrases[0].trigs[stepIdx].slide = slide
 }
 
 export function setTrigChance(trackId: number, stepIdx: number, chance: number) {
   pushUndo('Set chance')
   const v = Math.max(0, Math.min(1, chance))
-  pattern.tracks[trackId].trigs[stepIdx].chance = v >= 1 ? undefined : v
+  pattern.tracks[trackId].phrases[0].trigs[stepIdx].chance = v >= 1 ? undefined : v
 }
 
 /** Place a note bar: set head trig + clear covered steps */
 export function placeNoteBar(trackId: number, startStep: number, note: number, duration: number) {
   pushUndo('Place note')
-  const trigs = pattern.tracks[trackId].trigs
-  const steps = pattern.tracks[trackId].steps
-  const dur = Math.max(1, Math.min(steps - startStep, Math.min(16, duration)))
-  trigs[startStep].active = true
-  trigs[startStep].note = note
-  trigs[startStep].duration = dur
+  const ph = pattern.tracks[trackId].phrases[0]
+  const dur = Math.max(1, Math.min(ph.steps - startStep, Math.min(16, duration)))
+  ph.trigs[startStep].active = true
+  ph.trigs[startStep].note = note
+  ph.trigs[startStep].duration = dur
   for (let d = 1; d < dur; d++) {
     const idx = startStep + d
-    if (idx < steps) trigs[idx].active = false
+    if (idx < ph.steps) ph.trigs[idx].active = false
   }
 }
 
 /** Find the head step of a note bar that covers the given step/note */
 export function findNoteHead(trackId: number, stepIdx: number, note: number): number {
-  const trigs = pattern.tracks[trackId].trigs
+  const trigs = pattern.tracks[trackId].phrases[0].trigs
   for (let d = 0; d < 16; d++) {
     const prev = stepIdx - d
     if (prev < 0) break
@@ -444,40 +455,40 @@ export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
 export function setTrackSteps(trackId: number, newSteps: number) {
   pushUndo('Set steps')
   const clamped = Math.max(2, Math.min(64, newSteps))
-  const track = pattern.tracks[trackId]
-  const old = track.steps
+  const ph = pattern.tracks[trackId].phrases[0]
+  const old = ph.steps
   if (clamped === old) return
   if (clamped > old) {
-    const lastNote = track.trigs[old - 1]?.note ?? 60
+    const lastNote = ph.trigs[old - 1]?.note ?? 60
     for (let i = old; i < clamped; i++) {
-      track.trigs.push(makeTrig(false, lastNote))
+      ph.trigs.push(makeTrig(false, lastNote))
     }
   } else {
-    track.trigs.splice(clamped)
+    ph.trigs.splice(clamped)
   }
-  track.steps = clamped
+  ph.steps = clamped
 }
 
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
   pushUndo('Set send')
-  pattern.tracks[trackId][send] = Math.min(1, Math.max(0, v))
+  pattern.tracks[trackId].phrases[0][send] = Math.min(1, Math.max(0, v))
 }
 
 export function setVoiceParam(trackId: number, key: string, value: number) {
   pushUndo('Set param')
-  pattern.tracks[trackId].voiceParams[key] = value
+  pattern.tracks[trackId].phrases[0].voiceParams[key] = value
 }
 
 export function setParamLock(trackId: number, stepIdx: number, key: string, value: number) {
   pushUndo('Set P-Lock')
-  const trig = pattern.tracks[trackId].trigs[stepIdx]
+  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
   if (!trig.paramLocks) trig.paramLocks = {}
   trig.paramLocks[key] = value
 }
 
 export function clearParamLock(trackId: number, stepIdx: number, key: string) {
   pushUndo('Clear P-Lock')
-  const trig = pattern.tracks[trackId].trigs[stepIdx]
+  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
   if (!trig.paramLocks) return
   delete trig.paramLocks[key]
   if (Object.keys(trig.paramLocks).length === 0) trig.paramLocks = undefined
@@ -485,7 +496,7 @@ export function clearParamLock(trackId: number, stepIdx: number, key: string) {
 
 export function clearAllParamLocks(trackId: number, stepIdx: number) {
   pushUndo('Clear all P-Locks')
-  pattern.tracks[trackId].trigs[stepIdx].paramLocks = undefined
+  pattern.tracks[trackId].phrases[0].trigs[stepIdx].paramLocks = undefined
 }
 
 
@@ -850,7 +861,8 @@ export function randomizePattern(): void {
 
   for (let t = 0; t < pattern.tracks.length; t++) {
     const track = pattern.tracks[t]
-    const steps = track.steps
+    const ph = track.phrases[0]
+    const steps = ph.steps
 
     if (isDrum(track)) {
       // Probability profile per drum track name
@@ -877,10 +889,10 @@ export function randomizePattern(): void {
         }
 
         const active = Math.random() < prob
-        track.trigs[s].active   = active
-        track.trigs[s].velocity = 0.55 + Math.random() * 0.45
+        ph.trigs[s].active   = active
+        ph.trigs[s].velocity = 0.55 + Math.random() * 0.45
         // Add chance to non-primary beats for organic feel
-        track.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
+        ph.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
       }
     } else {
       // Melodic: scale-quantized notes, ~30% density
@@ -891,11 +903,11 @@ export function randomizePattern(): void {
 
       for (let s = 0; s < steps; s++) {
         const active = Math.random() < density
-        track.trigs[s].active   = active
-        track.trigs[s].note     = active
+        ph.trigs[s].active   = active
+        ph.trigs[s].note     = active
           ? pool[Math.floor(Math.random() * pool.length)]
-          : track.trigs[s].note
-        track.trigs[s].velocity = active ? 0.55 + Math.random() * 0.45 : track.trigs[s].velocity
+          : ph.trigs[s].note
+        ph.trigs[s].velocity = active ? 0.55 + Math.random() * 0.45 : ph.trigs[s].velocity
       }
     }
   }
