@@ -1,6 +1,6 @@
 # ADR 040: Drill-Down Navigation (Song → Chain → Phrase)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

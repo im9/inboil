@@ -2,32 +2,63 @@
   import { song, ui, songNavBack } from '../state.svelte.ts'
 
   const trackName = $derived(song.tracks[ui.songNav.trackId]?.name ?? '')
-  const chainLabel = $derived(`Chain ${String(ui.songNav.chainId).padStart(2, '0')}`)
+  const chainLabel = $derived(`CHN ${String(ui.songNav.chainId).padStart(2, '0')}`)
   const phraseLabel = $derived.by(() => {
     const chain = song.tracks[ui.songNav.trackId]?.chains[ui.songNav.chainId]
     if (!chain) return ''
     const entry = chain.entries[ui.songNav.entryIndex]
     if (!entry) return ''
-    return `Phrase ${String(entry.phraseId).padStart(2, '0')}`
+    return `PHR ${String(entry.phraseId).padStart(2, '0')}`
   })
+
+  // ── Swipe-right to go back ──
+  let startX = 0
+  let startY = 0
+
+  function onTouchStart(e: TouchEvent) {
+    startX = e.touches[0].clientX
+    startY = e.touches[0].clientY
+  }
+
+  function onTouchEnd(e: TouchEvent) {
+    const dx = e.changedTouches[0].clientX - startX
+    const dy = Math.abs(e.changedTouches[0].clientY - startY)
+    if (dx > 60 && dy < 40) {
+      songNavBack()
+    }
+  }
 </script>
 
 {#if ui.mode === 'song' && ui.songNav.level !== 'song'}
-  <div class="breadcrumb">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="breadcrumb" ontouchstart={onTouchStart} ontouchend={onTouchEnd}>
     <button class="bc-back" onpointerdown={songNavBack} aria-label="Back">&#9664;</button>
-    <button class="bc-seg" onpointerdown={() => { ui.songNav.level = 'song' }}>SONG</button>
-    {#if ui.songNav.level === 'chain' || ui.songNav.level === 'phrase'}
-      <span class="bc-arrow">&#9654;</span>
-      <button
-        class="bc-seg"
-        class:current={ui.songNav.level === 'chain'}
-        onpointerdown={() => { ui.songNav.level = 'chain' }}
-      >{trackName} &middot; {chainLabel}</button>
-    {/if}
-    {#if ui.songNav.level === 'phrase'}
-      <span class="bc-arrow">&#9654;</span>
-      <span class="bc-seg current">{phraseLabel}</span>
-    {/if}
+
+    <!-- Desktop: full breadcrumb -->
+    <div class="bc-full">
+      <button class="bc-seg" onpointerdown={() => { ui.songNav.level = 'song' }}>SONG</button>
+      {#if ui.songNav.level === 'chain' || ui.songNav.level === 'phrase'}
+        <span class="bc-arrow">&#9654;</span>
+        <button
+          class="bc-seg"
+          class:current={ui.songNav.level === 'chain'}
+          onpointerdown={() => { ui.songNav.level = 'chain' }}
+        >{trackName} &middot; {chainLabel}</button>
+      {/if}
+      {#if ui.songNav.level === 'phrase'}
+        <span class="bc-arrow">&#9654;</span>
+        <span class="bc-seg current">{phraseLabel}</span>
+      {/if}
+    </div>
+
+    <!-- Mobile: compact (current level only) -->
+    <div class="bc-compact">
+      {#if ui.songNav.level === 'chain'}
+        <span class="bc-seg current">{trackName} &middot; {chainLabel}</span>
+      {:else if ui.songNav.level === 'phrase'}
+        <span class="bc-seg current">{chainLabel} &gt; {phraseLabel}</span>
+      {/if}
+    </div>
   </div>
 {/if}
 
@@ -60,6 +91,16 @@
     color: rgba(237,232,220,0.80);
   }
 
+  .bc-full {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .bc-compact {
+    display: none;
+  }
+
   .bc-seg {
     border: none;
     background: transparent;
@@ -81,5 +122,23 @@
   .bc-arrow {
     font-size: 7px;
     color: rgba(237,232,220,0.20);
+  }
+
+  @media (max-width: 639px) {
+    .breadcrumb {
+      padding: 3px 8px;
+    }
+    .bc-full {
+      display: none;
+    }
+    .bc-compact {
+      display: flex;
+      align-items: center;
+    }
+    .bc-back {
+      width: 26px;
+      height: 26px;
+      font-size: 10px;
+    }
   }
 </style>

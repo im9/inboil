@@ -4,7 +4,6 @@
   import DockPanel from './lib/components/DockPanel.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import ChainView from './lib/components/ChainView.svelte'
   import ChainEditor from './lib/components/ChainEditor.svelte'
   import SongView from './lib/components/SongView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
@@ -82,6 +81,20 @@
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
   }
 
+  // ── Swipe-right to go back (mobile) ──
+  let swipeStartX = 0
+  let swipeStartY = 0
+  function onSwipeStart(e: TouchEvent) {
+    swipeStartX = e.touches[0].clientX
+    swipeStartY = e.touches[0].clientY
+  }
+  function onSwipeEnd(e: TouchEvent) {
+    if (ui.mode !== 'song' || ui.songNav.level === 'song') return
+    const dx = e.changedTouches[0].clientX - swipeStartX
+    const dy = Math.abs(e.changedTouches[0].clientY - swipeStartY)
+    if (dx > 60 && dy < 40) songNavBack()
+  }
+
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
@@ -101,7 +114,8 @@
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
     <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <Breadcrumb />
-    <div class="view-area">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="view-area" ontouchstart={onSwipeStart} ontouchend={onSwipeEnd}>
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
@@ -135,7 +149,7 @@
             {#if ui.songNav.level === 'song'}
               <SongView />
             {:else if ui.songNav.level === 'chain'}
-              <ChainView />
+              <ChainEditor />
             {:else}
               {#if ui.phraseView === 'tracker'}
                 <TrackerView />
