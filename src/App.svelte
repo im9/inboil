@@ -5,6 +5,7 @@
   import PerfBar from './lib/components/PerfBar.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import ChainView from './lib/components/ChainView.svelte'
+  import ChainEditor from './lib/components/ChainEditor.svelte'
   import SongView from './lib/components/SongView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
@@ -108,7 +109,7 @@
         {#if ui.songNav.level === 'song'}
           <SongView />
         {:else if ui.songNav.level === 'chain'}
-          <ChainView />
+          <ChainEditor />
         {:else}
           <MobileTrackView />
         {/if}
