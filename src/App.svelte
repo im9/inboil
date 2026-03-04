@@ -3,8 +3,6 @@
   import StepGrid from './lib/components/StepGrid.svelte'
   import DockPanel from './lib/components/DockPanel.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
-  import FxPad from './lib/components/FxPad.svelte'
-  import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import ChainView from './lib/components/ChainView.svelte'
   import SongView from './lib/components/SongView.svelte'
@@ -101,15 +99,15 @@
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.view === 'fx'}
-        <FxPad />
-      {:else if ui.view === 'eq'}
-        <FilterView />
-      {:else if ui.view === 'chain'}
-        <ChainView />
-      {:else if ui.view === 'song'}
-        <SongView />
-      {:else if ui.view === 'tracker'}
+      {#if ui.mode === 'song'}
+        {#if ui.songNav.level === 'song'}
+          <SongView />
+        {:else if ui.songNav.level === 'chain'}
+          <ChainView />
+        {:else}
+          <MobileTrackView />
+        {/if}
+      {:else if ui.phraseView === 'tracker'}
         <TrackerView />
       {:else}
         <MobileTrackView />
@@ -126,15 +124,19 @@
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <div class="view-content-row" class:bottom={ui.dockPosition === 'bottom'}>
         <div class="view-main">
-          {#if ui.view === 'fx'}
-            <FxPad />
-          {:else if ui.view === 'eq'}
-            <FilterView />
-          {:else if ui.view === 'chain'}
-            <ChainView />
-          {:else if ui.view === 'song'}
-            <SongView />
-          {:else if ui.view === 'tracker'}
+          {#if ui.mode === 'song'}
+            {#if ui.songNav.level === 'song'}
+              <SongView />
+            {:else if ui.songNav.level === 'chain'}
+              <ChainView />
+            {:else}
+              {#if ui.phraseView === 'tracker'}
+                <TrackerView />
+              {:else}
+                <StepGrid />
+              {/if}
+            {/if}
+          {:else if ui.phraseView === 'tracker'}
             <TrackerView />
           {:else}
             <StepGrid />

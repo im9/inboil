@@ -473,7 +473,7 @@
   }
 
   $effect(() => {
-    if (ui.view === 'fx') startVis()
+    if (ui.dockTab === 'fx') startVis()
     else stopVis()
     return () => stopVis()
   })

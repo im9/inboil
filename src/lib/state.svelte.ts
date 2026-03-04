@@ -224,12 +224,20 @@ export const playback = $state({
 
 export const ui = $state({
   selectedTrack: 0,
-  view: 'grid' as 'grid' | 'tracker' | 'fx' | 'eq' | 'chain' | 'song',
+  mode: 'phrase' as 'phrase' | 'song',
+  phraseView: 'grid' as 'grid' | 'tracker',
+  songNav: {
+    level: 'song' as 'song' | 'chain' | 'phrase',
+    trackId: 0,
+    rowIndex: 0,
+    chainId: 0,
+    entryIndex: 0,
+  },
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
   soloTracks: new Set<number>(),
-  dockTab: 'param' as 'param' | 'help' | 'sys',
+  dockTab: 'param' as 'param' | 'fx' | 'eq' | 'help' | 'sys',
   dockPosition: 'right' as 'right' | 'bottom',
   mobileOverlay: false,
   activePhrases: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
@@ -508,7 +516,13 @@ export function factoryReset(): void {
   perf.rootNote = song.rootNote
   // Reset UI
   ui.selectedTrack = 0
-  ui.view = 'grid'
+  ui.mode = 'phrase'
+  ui.phraseView = 'grid'
+  ui.songNav.level = 'song'
+  ui.songNav.trackId = 0
+  ui.songNav.rowIndex = 0
+  ui.songNav.chainId = 0
+  ui.songNav.entryIndex = 0
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
