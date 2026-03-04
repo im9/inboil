@@ -241,8 +241,14 @@
       class="btn-view"
       class:active={ui.view === 'chain'}
       onpointerdown={() => { ui.view = 'chain' }}
-      data-tip="Pattern chain editor" data-tip-ja="パターンチェーンエディター"
+      data-tip="Song editor (phrase-set mode)" data-tip-ja="ソングエディター (フレーズセット)"
     >CHN</button>
+    <button
+      class="btn-view"
+      class:active={ui.view === 'song'}
+      onpointerdown={() => { ui.view = 'song' }}
+      data-tip="Song arrangement (per-track)" data-tip-ja="ソングアレンジメント (トラック別)"
+    >SONG</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>

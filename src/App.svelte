@@ -7,6 +7,7 @@
   import FilterView from './lib/components/FilterView.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import ChainView from './lib/components/ChainView.svelte'
+  import SongView from './lib/components/SongView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo } from './lib/state.svelte.ts'
@@ -105,6 +106,8 @@
         <FilterView />
       {:else if ui.view === 'chain'}
         <ChainView />
+      {:else if ui.view === 'song'}
+        <SongView />
       {:else}
         <MobileTrackView />
       {/if}
@@ -126,6 +129,8 @@
             <FilterView />
           {:else if ui.view === 'chain'}
             <ChainView />
+          {:else if ui.view === 'song'}
+            <SongView />
           {:else}
             <StepGrid />
           {/if}

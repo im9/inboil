@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    song, songPlay, playback, NOTE_NAMES, PHRASE_SET_COUNT,
+    song, songPlay, playback, NOTE_NAMES, getPhraseSetCount,
     songAppendRow, songRemoveRow, songClearRows, songSetRowPhraseSet,
     songStepRepeats, songCycleKey, songCycleOct, songCyclePerf,
     songToggleFx, songSetFxSend, songToggle, songLoadPreset,
@@ -34,8 +34,9 @@
     const row = song.rows[index]
     const current = row.chainIds[0] ?? 0
     let next = current + dir
-    if (next < 0) next = PHRASE_SET_COUNT - 1
-    if (next >= PHRASE_SET_COUNT) next = 0
+    const count = getPhraseSetCount()
+    if (next < 0) next = count - 1
+    if (next >= count) next = 0
     songSetRowPhraseSet(index, next)
   }
 

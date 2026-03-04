@@ -224,7 +224,7 @@ export const playback = $state({
 
 export const ui = $state({
   selectedTrack: 0,
-  view: 'grid' as 'grid' | 'fx' | 'eq' | 'chain',
+  view: 'grid' as 'grid' | 'fx' | 'eq' | 'chain' | 'song',
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
@@ -233,6 +233,7 @@ export const ui = $state({
   dockPosition: 'right' as 'right' | 'bottom',
   mobileOverlay: false,
   activePhrases: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
+  songCell: null as { row: number; track: number } | null,
 })
 
 /** Select a phrase set — all tracks switch to the same phrase index */
@@ -247,9 +248,9 @@ export function getActivePhraseSetName(): string {
   return song.tracks[0]?.phrases[ui.activePhrases[0]]?.name ?? ''
 }
 
-export const PHRASE_SET_COUNT = $derived.by(() =>
-  song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)
-)
+export function getPhraseSetCount(): number {
+  return song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)
+}
 
 // ── Persisted preferences (single localStorage key) ─────────────────
 const STORAGE_KEY = 'inboil'
@@ -514,6 +515,7 @@ export function factoryReset(): void {
   ui.dockTab = 'param'
   ui.dockPosition = 'right'
   ui.mobileOverlay = false
+  ui.songCell = null
   // Reset effects
   effects.reverb = { ...DEFAULT_EFFECTS.reverb }
   effects.delay = { ...DEFAULT_EFFECTS.delay }
@@ -805,6 +807,67 @@ export function songForPlayback(phraseSet: number): Song {
     })),
     rows: [],
   }
+}
+
+// ── Per-track chain editing ──────────────────────────────────────────
+
+/** Set a single track's chain ID for a song row */
+export function songSetRowChainId(rowIndex: number, trackId: number, chainId: number | null): void {
+  pushUndo('Set chain ID')
+  const row = song.rows[rowIndex]
+  if (!row) return
+  if (chainId !== null) {
+    const maxChain = song.tracks[trackId].chains.length
+    if (chainId < 0 || chainId >= maxChain) return
+  }
+  row.chainIds[trackId] = chainId
+}
+
+/** Add a phrase reference entry to a chain */
+export function addChainEntry(trackId: number, chainId: number, phraseId: number, transpose = 0): void {
+  pushUndo('Add chain entry')
+  const chain = song.tracks[trackId].chains[chainId]
+  if (!chain || chain.entries.length >= 16) return
+  if (phraseId < 0 || phraseId >= song.tracks[trackId].phrases.length) return
+  chain.entries.push({ phraseId, transpose: Math.max(-24, Math.min(24, transpose)) })
+}
+
+/** Remove a phrase reference entry from a chain */
+export function removeChainEntry(trackId: number, chainId: number, entryIndex: number): void {
+  pushUndo('Remove chain entry')
+  const chain = song.tracks[trackId].chains[chainId]
+  if (!chain || entryIndex < 0 || entryIndex >= chain.entries.length) return
+  if (chain.entries.length <= 1) return
+  chain.entries.splice(entryIndex, 1)
+}
+
+/** Move a chain entry up or down */
+export function moveChainEntry(trackId: number, chainId: number, fromIndex: number, dir: -1 | 1): void {
+  pushUndo('Move chain entry')
+  const chain = song.tracks[trackId].chains[chainId]
+  if (!chain) return
+  const toIndex = fromIndex + dir
+  if (toIndex < 0 || toIndex >= chain.entries.length) return
+  const temp = chain.entries[fromIndex]
+  chain.entries[fromIndex] = chain.entries[toIndex]
+  chain.entries[toIndex] = temp
+}
+
+/** Set the transpose value for a chain entry */
+export function setChainEntryTranspose(trackId: number, chainId: number, entryIndex: number, transpose: number): void {
+  pushUndo('Set transpose')
+  const chain = song.tracks[trackId].chains[chainId]
+  if (!chain || entryIndex < 0 || entryIndex >= chain.entries.length) return
+  chain.entries[entryIndex].transpose = Math.max(-24, Math.min(24, transpose))
+}
+
+/** Set the phraseId for a chain entry */
+export function setChainEntryPhrase(trackId: number, chainId: number, entryIndex: number, phraseId: number): void {
+  pushUndo('Set chain phrase')
+  const chain = song.tracks[trackId].chains[chainId]
+  if (!chain || entryIndex < 0 || entryIndex >= chain.entries.length) return
+  if (phraseId < 0 || phraseId >= song.tracks[trackId].phrases.length) return
+  chain.entries[entryIndex].phraseId = phraseId
 }
 
 export function randomizePattern(): void {
