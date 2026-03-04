@@ -1,6 +1,6 @@
 # ADR 042: Section-Based Arrangement — Flatten Chain/Phrase into Inline Cells
 
-## Status: Proposed
+## Status: Accepted
 
 ## Context
 
