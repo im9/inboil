@@ -4,7 +4,7 @@
   import DockPanel from './lib/components/DockPanel.svelte'
   import PerfBar from './lib/components/PerfBar.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import SongView from './lib/components/SongView.svelte'
+  import SectionNav from './lib/components/SectionNav.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
@@ -93,13 +93,12 @@
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
     <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
+    <SectionNav />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.phraseView === 'song'}
-        <SongView />
-      {:else if ui.phraseView === 'tracker'}
+      {#if ui.phraseView === 'tracker'}
         <TrackerView />
       {:else}
         <MobileTrackView />
@@ -110,15 +109,14 @@
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />
+    <SectionNav />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <div class="view-content-row" class:bottom={ui.dockPosition === 'bottom'}>
         <div class="view-main">
-          {#if ui.phraseView === 'song'}
-            <SongView />
-          {:else if ui.phraseView === 'tracker'}
+          {#if ui.phraseView === 'tracker'}
             <TrackerView />
           {:else}
             <StepGrid />

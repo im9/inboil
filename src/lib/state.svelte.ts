@@ -214,7 +214,7 @@ export const playback = $state({
 export const ui = $state({
   selectedTrack: 0,
   currentSection: 0,
-  phraseView: 'song' as 'song' | 'grid' | 'tracker',
+  phraseView: 'grid' as 'grid' | 'tracker',
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
@@ -240,6 +240,26 @@ export function getActiveSectionName(): string {
 /** Total number of sections */
 export function getSectionCount(): number {
   return SECTION_COUNT
+}
+
+/** Check if a section contains any active trigs */
+export function sectionHasData(index: number): boolean {
+  return song.sections[index].cells.some(c => c.trigs.some(t => t.active))
+}
+
+/** Set loop range (used by SectionNav drag) */
+export function setLoopRange(start: number, end: number): void {
+  let s = Math.max(0, Math.min(start, SECTION_COUNT - 1))
+  let e = Math.max(0, Math.min(end, SECTION_COUNT - 1))
+  if (s > e) { const tmp = s; s = e; e = tmp }
+  playback.loopStart = s
+  playback.loopEnd = e
+}
+
+/** Clear loop range (single section loop) */
+export function clearLoopRange(): void {
+  playback.loopStart = 0
+  playback.loopEnd = 0
 }
 
 // ── Persisted preferences (single localStorage key) ─────────────────
@@ -490,7 +510,7 @@ export function factoryReset(): void {
   // Reset UI
   ui.selectedTrack = 0
   ui.currentSection = 0
-  ui.phraseView = 'song'
+  ui.phraseView = 'grid'
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null

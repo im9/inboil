@@ -217,14 +217,8 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- View toggle: SONG / GRID / TRKR -->
+  <!-- View toggle: GRID / TRKR -->
   <div class="view-toggle">
-    <button
-      class="btn-view"
-      class:active={ui.phraseView === 'song'}
-      onpointerdown={() => { ui.phraseView = 'song' }}
-      data-tip="Song arrangement view" data-tip-ja="ソングアレンジ画面"
-    >SONG</button>
     <button
       class="btn-view"
       class:active={ui.phraseView === 'grid'}
