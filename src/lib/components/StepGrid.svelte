@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { pattern, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activePhrase, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {
-    const current = pattern.tracks[trackId].phrases[0].steps
+    const current = activePhrase(trackId).steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
     setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
@@ -27,10 +27,9 @@
     const barsEl = velContainer.querySelector('.vel-bars') as HTMLElement
     if (!barsEl) return
     const trackId = ui.selectedTrack
-    const track = pattern.tracks[trackId]
     const rect = barsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left
-    const idx = Math.max(0, Math.min(track.phrases[0].steps - 1, Math.floor(relX / 26)))
+    const idx = Math.max(0, Math.min(activePhrase(trackId).steps - 1, Math.floor(relX / 26)))
     velApply(e, trackId, idx)
   }
 
@@ -60,7 +59,7 @@
   onDestroy(() => { timers.forEach(id => clearTimeout(id)); timers.clear() })
 
   function handleToggle(trackId: number, stepIdx: number) {
-    const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
+    const trig = activePhrase(trackId).trigs[stepIdx]
     const key = `${trackId}-${stepIdx}`
     // Cancel any pending timer for this step to avoid stacking
     if (timers.has(key)) { clearTimeout(timers.get(key)!); timers.delete(key) }
@@ -99,7 +98,7 @@
       ui.selectedStep = ui.selectedStep === stepIdx && ui.selectedTrack === trackId ? null : stepIdx
       return
     }
-    const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
+    const trig = activePhrase(trackId).trigs[stepIdx]
     stepPaintOn = !trig.active
     stepDragTrack = trackId
     stepDragging = true
@@ -113,11 +112,11 @@
     if (!stepDragging || !stepStepsEl) return
     const rect = stepStepsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + stepStepsEl.scrollLeft
-    const track = pattern.tracks[stepDragTrack]
-    const idx = Math.max(0, Math.min(track.phrases[0].steps - 1, Math.floor(relX / 26)))
+    const ph = activePhrase(stepDragTrack)
+    const idx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)
-    const trig = track.phrases[0].trigs[idx]
+    const trig = ph.trigs[idx]
     if (stepPaintOn && !trig.active) handleToggle(stepDragTrack, idx)
     else if (!stepPaintOn && trig.active) handleToggle(stepDragTrack, idx)
   }
@@ -129,8 +128,9 @@
 </script>
 
 <div class="step-grid">
-  {#each pattern.tracks as track, trackId}
+  {#each song.tracks as track, trackId}
     {@const selected = ui.selectedTrack === trackId}
+    {@const ph = activePhrase(trackId)}
 
     <div
       class="track-row"
@@ -154,7 +154,7 @@
           class="btn-steps"
           onpointerdown={() => cycleSteps(trackId)}
           data-tip="Change step count" data-tip-ja="ステップ数を変更"
-        >{track.phrases[0].steps}</button>
+        >{ph.steps}</button>
 
         <!-- Solo -->
         <button
@@ -185,13 +185,13 @@
       <div
         class="steps"
         role="application"
-        style="--steps: {track.phrases[0].steps}"
+        style="--steps: {ph.steps}"
         onpointermove={stepOnMove}
         onpointerup={stepEndDrag}
         onpointercancel={stepEndDrag}
         data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
       >
-        {#each track.phrases[0].trigs as trig, stepIdx}
+        {#each ph.trigs as trig, stepIdx}
           {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
           {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
           {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
@@ -232,11 +232,11 @@
             >{chanceMode ? 'CHNC' : 'VEL'}</span>
           </div>
         </div>
-        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {track.phrases[0].steps}"
+        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {ph.steps}"
           data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
         >
-          {#each track.phrases[0].trigs as trig, i}
+          {#each ph.trigs as trig, i}
             {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
             {@const isActive = trig.active || shrinking.has(`${trackId}-${i}`)}
             {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}

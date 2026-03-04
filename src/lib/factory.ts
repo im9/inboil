@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Pattern, SynthType } from './state.svelte.ts'
+import type { Trig, Track, Phrase, Chain, Song, SongRow, SynthType } from './state.svelte.ts'
 
 export const DRUM_SYNTHS: SynthType[] = ['DrumSynth', 'NoiseSynth']
 
@@ -30,7 +30,7 @@ export function makeTrack(
     pan: 0,
     phrases: [{
       id: 0,
-      name: 'A',
+      name: 'INIT',
       steps,
       trigs: makeTrigs(steps, activeSteps, note),
       voiceParams: defaultVoiceParams(id, synthType),
@@ -39,6 +39,7 @@ export function makeTrack(
       glitchSend:  0,
       granularSend: 0,
     }],
+    chains: [],
   }
 }
 
@@ -55,16 +56,18 @@ const TRACK_DEFAULTS: { name: string; synthType: SynthType; note: number; pan: n
   { name: 'LEAD',  synthType: 'AnalogSynth', note: 64, pan:  0.10 },
 ]
 
-export function makeEmptyPattern(id: number): Pattern {
+function makeEmptyPhrase(trackId: number, phraseId: number, synthType: SynthType, note: number, steps = 16): Phrase {
+  const drum = DRUM_SYNTHS.includes(synthType)
   return {
-    id,
+    id: phraseId,
     name: 'INIT',
-    bpm: 120,
-    rootNote: 0,
-    tracks: TRACK_DEFAULTS.map((d, i) => ({
-      ...makeTrack(i, d.name, d.synthType, [], d.note),
-      pan: d.pan,
-    })),
+    steps,
+    trigs: Array.from({ length: steps }, () => makeTrig(false, note)),
+    voiceParams: defaultVoiceParams(trackId, synthType),
+    reverbSend:  drum ? 0.08 : 0.25,
+    delaySend:   drum ? 0.00 : 0.12,
+    glitchSend:  0,
+    granularSend: 0,
   }
 }
 
@@ -381,50 +384,97 @@ const FACTORY: FactoryDef[] = [
     } },
 ]
 
-export function makeFactoryPattern(id: number): Pattern {
-  const f = FACTORY[id - 1]
+/** Build a single factory phrase for a given track from a factory definition */
+function buildFactoryPhrase(
+  phraseId: number, trackIdx: number, f: FactoryDef,
+  synthType: SynthType, defaultNote: number,
+): Phrase {
   const s = f.steps ?? 16
-  const ts = (i: number) => f.ts?.[i] ?? s  // per-track override or global
-  const base: [Track & { pan: number }][] = [
-    [{ ...makeTrack(0, 'KICK',  'DrumSynth',  f.kick, 60, ts(0)),            pan:  0.00 }],
-    [{ ...makeTrack(1, 'SNARE', 'DrumSynth',  f.snare, 60, ts(1)),           pan: -0.10 }],
-    [{ ...makeTrack(2, 'CLAP',  'DrumSynth',  f.clap, 60, ts(2)),            pan:  0.15 }],
-    [{ ...makeTrack(3, 'C.HH',  'NoiseSynth', f.chh, 60, ts(3)),             pan: -0.30 }],
-    [{ ...makeTrack(4, 'O.HH',  'NoiseSynth', f.ohh, 60, ts(4)),             pan:  0.35 }],
-    [{ ...makeTrack(5, 'CYM',   'NoiseSynth', f.cym, 60, ts(5)),             pan:  0.25 }],
-    [{ ...makeTrack(6, 'BASS',  'AnalogSynth', f.bass[0], f.bass[1], ts(6)), pan:  0.00 }],
-    [{ ...makeTrack(7, 'LEAD',  'AnalogSynth', f.lead[0], f.lead[1], ts(7)), pan:  0.10 }],
-  ]
-  const tracks = base.map(([t], i) => {
-    const ph = t.phrases[0]
-    if (f.vp?.[i]) ph.voiceParams = { ...ph.voiceParams, ...f.vp[i] }
-    return t
-  })
+  const steps = f.ts?.[trackIdx] ?? s
+  const activeSteps = [f.kick, f.snare, f.clap, f.chh, f.ohh, f.cym, f.bass[0], f.lead[0]][trackIdx]
+  const baseNote = trackIdx === 6 ? f.bass[1] : trackIdx === 7 ? f.lead[1] : defaultNote
+  const drum = DRUM_SYNTHS.includes(synthType)
+
+  const trigs = makeTrigs(steps, activeSteps, baseNote)
+  let vp = defaultVoiceParams(trackIdx, synthType)
+  if (f.vp?.[trackIdx]) vp = { ...vp, ...f.vp[trackIdx] }
+
   // Apply per-step melodies and durations
-  if (f.mel) {
-    for (const [k, notes] of Object.entries(f.mel)) {
-      const tIdx = parseInt(k)
-      const durs = f.dur?.[tIdx]
-      const trigs = tracks[tIdx].phrases[0].trigs
-      let ni = 0
-      for (let si = 0; si < trigs.length; si++) {
-        const trig = trigs[si]
-        if (trig.active && ni < notes.length) {
-          trig.note = notes[ni]
-          if (durs && ni < durs.length) {
-            const dur = durs[ni]
-            trig.duration = dur
-            // Clear trigs covered by this note bar
-            for (let d = 1; d < dur && si + d < trigs.length; d++) {
-              trigs[si + d].active = false
-            }
+  const notes = f.mel?.[trackIdx]
+  const durs = f.dur?.[trackIdx]
+  if (notes) {
+    let ni = 0
+    for (let si = 0; si < trigs.length; si++) {
+      const trig = trigs[si]
+      if (trig.active && ni < notes.length) {
+        trig.note = notes[ni]
+        if (durs && ni < durs.length) {
+          const dur = durs[ni]
+          trig.duration = dur
+          for (let d = 1; d < dur && si + d < trigs.length; d++) {
+            trigs[si + d].active = false
           }
-          ni++
         }
+        ni++
       }
     }
   }
-  return { id, name: f.name, bpm: f.bpm, rootNote: f.key ?? 0, tracks }
+
+  return {
+    id: phraseId,
+    name: f.name.slice(0, 6),
+    steps,
+    trigs,
+    voiceParams: vp,
+    reverbSend:  drum ? 0.08 : 0.25,
+    delaySend:   drum ? 0.00 : 0.12,
+    glitchSend:  0,
+    granularSend: 0,
+  }
 }
 
 export const FACTORY_COUNT = FACTORY.length
+
+/**
+ * Build the default Song with all factory patterns mapped to phrases.
+ * Each track gets FACTORY_COUNT phrases (one from each factory pattern)
+ * plus a corresponding chain for each (single-entry, pointing to the phrase).
+ * Song rows map 1:1 to factory patterns initially.
+ */
+export function makeDefaultSong(): Song {
+  const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) => {
+    const phrases: Phrase[] = FACTORY.map((f, fi) =>
+      buildFactoryPhrase(fi, trackIdx, f, d.synthType, d.note)
+    )
+    const chains: Chain[] = phrases.map((_, i) => ({
+      id: i,
+      entries: [{ phraseId: i, transpose: 0 }],
+    }))
+    return {
+      id: trackIdx,
+      name: d.name,
+      synthType: d.synthType,
+      muted: false,
+      volume: 0.8,
+      pan: d.pan,
+      phrases,
+      chains,
+    }
+  })
+
+  const rows: SongRow[] = FACTORY.map((_, i) => ({
+    chainIds: [i, i, i, i, i, i, i, i],
+    repeats: 1,
+  }))
+
+  return {
+    name: FACTORY[0].name,
+    bpm: FACTORY[0].bpm,
+    rootNote: FACTORY[0].key ?? 0,
+    tracks,
+    rows,
+  }
+}
+
+/** Create an empty phrase for a track (used by addPhrase mutations) */
+export { makeEmptyPhrase }

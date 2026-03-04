@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
+  import { song, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
   import PerfButtons from './PerfButtons.svelte'
@@ -85,7 +85,7 @@
   async function ensureEngine() {
     if (vkbdReady) return
     await engine.init()
-    engine.sendPattern(pattern, effects, perf, fxPad)
+    engine.sendPattern(song, effects, perf, fxPad)
     vkbdReady = true
   }
 

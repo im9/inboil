@@ -5,8 +5,7 @@ import {
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_PERF,
 } from './constants.ts'
 import {
-  DRUM_SYNTHS, makeTrig, makeEmptyPattern,
-  makeFactoryPattern, FACTORY_COUNT,
+  DRUM_SYNTHS, makeTrig, makeDefaultSong,
 } from './factory.ts'
 
 export { NOTE_NAMES } from './constants.ts'
@@ -24,7 +23,7 @@ export interface Trig {
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
-/** Single-track step sequence (ADR 032 Phase 1) */
+/** Single-track step sequence (ADR 032) */
 export interface Phrase {
   id: number
   name: string            // max 6 chars
@@ -37,6 +36,18 @@ export interface Phrase {
   granularSend: number    // 0.0–1.0
 }
 
+/** Phrase reference within a Chain */
+export interface ChainPhraseRef {
+  phraseId: number        // reference to Phrase.id in same track
+  transpose: number       // semitone offset (-24 to +24)
+}
+
+/** Ordered list of phrase references for one track */
+export interface Chain {
+  id: number              // 0-based, scoped per track
+  entries: ChainPhraseRef[]  // max 16
+}
+
 export interface Track {
   id: number
   name: string
@@ -44,7 +55,8 @@ export interface Track {
   muted: boolean
   volume: number
   pan: number
-  phrases: Phrase[]       // Phase 1: always [0] only
+  phrases: Phrase[]       // pool (max 128 per track)
+  chains: Chain[]         // pool (max 128 per track)
 }
 
 export interface Effects {
@@ -54,15 +66,39 @@ export interface Effects {
   comp:   { threshold: number; ratio: number; makeup: number }
 }
 
-export interface Pattern {
-  id: number
-  name: string
-  bpm: number
-  rootNote: number   // 0–11 (C=0, C#=1, ..., B=11)
-  tracks: Track[]
+export interface ChainFx {
+  on: boolean
+  x: number
+  y: number
 }
 
-export const PATTERN_COUNT = 100
+/** Song row = which chain to play per track at this position */
+export interface SongRow {
+  chainIds: (number | null)[]  // 8 entries, one per track (null = skip)
+  repeats: number              // 1–16
+  key?: number                 // root note override (0–11)
+  oct?: number                 // octave override
+  perf?: number                // 0=NONE, 1=FILL, 2=BRK, 3=REV
+  perfLen?: number             // steps (1/4/8/16)
+  verb?: ChainFx
+  delay?: ChainFx
+  glitch?: ChainFx
+  granular?: ChainFx
+}
+
+/** Song = top-level arrangement (replaces Pattern + PatternBank) */
+export interface Song {
+  name: string
+  bpm: number
+  rootNote: number        // 0–11
+  tracks: Track[]         // 8 tracks
+  rows: SongRow[]         // up to 256 rows
+}
+
+/** Get the active phrase for a track (based on ui.activePhrases) */
+export function activePhrase(trackId: number): Phrase {
+  return song.tracks[trackId].phrases[ui.activePhrases[trackId]]
+}
 
 // ── Undo ─────────────────────────────────────────────────────────────
 
@@ -82,21 +118,44 @@ function clonePhrase(ph: Phrase): Phrase {
   }
 }
 
-function clonePattern(): Pattern {
+function cloneChain(ch: Chain): Chain {
+  return { id: ch.id, entries: ch.entries.map(e => ({ ...e })) }
+}
+
+function cloneTrack(t: Track): Track {
   return {
-    id: pattern.id,
-    name: pattern.name,
-    bpm: pattern.bpm,
-    rootNote: pattern.rootNote,
-    tracks: pattern.tracks.map(t => ({
-      id: t.id, name: t.name, synthType: t.synthType,
-      muted: t.muted, volume: t.volume, pan: t.pan,
-      phrases: t.phrases.map(clonePhrase),
-    })),
+    id: t.id, name: t.name, synthType: t.synthType,
+    muted: t.muted, volume: t.volume, pan: t.pan,
+    phrases: t.phrases.map(clonePhrase),
+    chains: t.chains.map(cloneChain),
   }
 }
 
-interface UndoEntry { snapshot: Pattern; label: string }
+function cloneRow(r: SongRow): SongRow {
+  return {
+    chainIds: [...r.chainIds], repeats: r.repeats,
+    ...(r.key != null ? { key: r.key } : {}),
+    ...(r.oct != null ? { oct: r.oct } : {}),
+    ...(r.perf != null ? { perf: r.perf } : {}),
+    ...(r.perfLen != null ? { perfLen: r.perfLen } : {}),
+    ...(r.verb ? { verb: { ...r.verb } } : {}),
+    ...(r.delay ? { delay: { ...r.delay } } : {}),
+    ...(r.glitch ? { glitch: { ...r.glitch } } : {}),
+    ...(r.granular ? { granular: { ...r.granular } } : {}),
+  }
+}
+
+function cloneSong(): Song {
+  return {
+    name: song.name,
+    bpm: song.bpm,
+    rootNote: song.rootNote,
+    tracks: song.tracks.map(cloneTrack),
+    rows: song.rows.map(cloneRow),
+  }
+}
+
+interface UndoEntry { snapshot: Song; label: string }
 const undoStack: UndoEntry[] = []
 const redoStack: UndoEntry[] = []
 const UNDO_MAX = 50
@@ -106,22 +165,20 @@ let lastPushLabel = ''
 function pushUndo(label: string): void {
   const now = Date.now()
   if (label === lastPushLabel && now - lastPushTime < 500) {
-    // debounce: replace last entry
     return
   }
-  undoStack.push({ snapshot: clonePattern(), label })
+  undoStack.push({ snapshot: cloneSong(), label })
   if (undoStack.length > UNDO_MAX) undoStack.shift()
   redoStack.length = 0
   lastPushTime = now
   lastPushLabel = label
 }
 
-function restorePattern(src: Pattern): void {
-  pattern.id = src.id
-  pattern.name = src.name
-  pattern.bpm = src.bpm
-  pattern.rootNote = src.rootNote ?? 0
-  pattern.tracks = src.tracks.map(t => ({
+function restoreSong(src: Song): void {
+  song.name = src.name
+  song.bpm = src.bpm
+  song.rootNote = src.rootNote ?? 0
+  song.tracks = src.tracks.map(t => ({
     ...t,
     phrases: (t.phrases ?? []).map(ph => ({
       ...ph,
@@ -133,14 +190,16 @@ function restorePattern(src: Pattern): void {
         ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
       })),
     })),
+    chains: (t.chains ?? []).map(ch => ({ ...ch, entries: ch.entries.map(e => ({ ...e })) })),
   }))
+  song.rows = (src.rows ?? []).map(cloneRow)
 }
 
 export function undo(): boolean {
   const entry = undoStack.pop()
   if (!entry) return false
-  redoStack.push({ snapshot: clonePattern(), label: entry.label })
-  restorePattern(entry.snapshot)
+  redoStack.push({ snapshot: cloneSong(), label: entry.label })
+  restoreSong(entry.snapshot)
   lastPushLabel = ''
   return true
 }
@@ -148,95 +207,15 @@ export function undo(): boolean {
 export function redo(): boolean {
   const entry = redoStack.pop()
   if (!entry) return false
-  undoStack.push({ snapshot: clonePattern(), label: entry.label })
-  restorePattern(entry.snapshot)
+  undoStack.push({ snapshot: cloneSong(), label: entry.label })
+  restoreSong(entry.snapshot)
   lastPushLabel = ''
   return true
 }
 
 // ── Reactive state ───────────────────────────────────────────────────
 
-export const pattern = $state<Pattern>(makeFactoryPattern(1))
-
-// Pattern bank: slots 0–9 = factory presets, slots 10–99 = user (empty)
-const patternBank: Pattern[] = [
-  ...Array.from({ length: FACTORY_COUNT }, (_, i) => makeFactoryPattern(i + 1)),
-  ...Array.from({ length: PATTERN_COUNT - FACTORY_COUNT }, (_, i) => makeEmptyPattern(i + FACTORY_COUNT + 1)),
-]
-
-function saveToBank(): void {
-  pattern.rootNote = perf.rootNote  // capture live key tweak into pattern
-  patternBank[pattern.id - 1] = clonePattern()
-}
-
-function loadFromBank(idx: number): void {
-  restorePattern(patternBank[idx])
-  perf.rootNote = pattern.rootNote  // sync KEY selector to loaded pattern
-}
-
-export const patternNav = $state({ pendingId: 0 })
-
-// ── Pattern clipboard (copy / paste / clear) ──────────────────────────
-let clipboardPattern: Pattern | null = null
-export const clipboard = $state({ hasData: false })
-
-export function copyPattern(): void {
-  clipboard.hasData = true
-  clipboardPattern = clonePattern()
-}
-
-export function pastePattern(targetId: number): void {
-  if (!clipboardPattern) return
-  if (targetId < 1 || targetId > PATTERN_COUNT) return
-  pushUndo('Paste pattern')
-  const src = clipboardPattern
-  patternBank[targetId - 1] = {
-    id: targetId,
-    name: src.name,
-    bpm: src.bpm,
-    rootNote: src.rootNote,
-    tracks: src.tracks.map(t => ({
-      ...t,
-      phrases: t.phrases.map(clonePhrase),
-    })),
-  }
-  if (targetId === pattern.id) loadFromBank(targetId - 1)
-}
-
-export function clearPattern(targetId: number): void {
-  if (targetId < 1 || targetId > PATTERN_COUNT) return
-  pushUndo('Clear pattern')
-  patternBank[targetId - 1] = makeEmptyPattern(targetId)
-  if (targetId === pattern.id) loadFromBank(targetId - 1)
-}
-
-export function getPatternName(id: number): string {
-  return patternBank[id - 1]?.name ?? ''
-}
-
-export function switchPattern(id: number): void {
-  if (id < 1 || id > PATTERN_COUNT) return
-  if (id === pattern.id) { patternNav.pendingId = 0; return }
-  if (playback.playing) {
-    patternNav.pendingId = id
-  } else {
-    saveToBank()
-    loadFromBank(id - 1)
-  }
-}
-
-/** Apply any pending pattern switch (called at beat boundary or on stop) */
-export function applyPendingSwitch(): void {
-  if (patternNav.pendingId > 0) {
-    const id = patternNav.pendingId
-    patternNav.pendingId = 0
-    saveToBank()
-    loadFromBank(id - 1)
-  }
-}
-
-/** Alias for applyPendingSwitch — called on stop to apply immediately */
-export const clearPendingSwitch = applyPendingSwitch
+export const song = $state<Song>(makeDefaultSong())
 
 export const playback = $state({
   playing: false,
@@ -253,7 +232,24 @@ export const ui = $state({
   dockTab: 'param' as 'param' | 'help' | 'sys',
   dockPosition: 'right' as 'right' | 'bottom',
   mobileOverlay: false,
+  activePhrases: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
 })
+
+/** Select a phrase set — all tracks switch to the same phrase index */
+export function selectPhraseSet(index: number): void {
+  const max = song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)
+  if (index < 0 || index >= max) return
+  for (let i = 0; i < 8; i++) ui.activePhrases[i] = index
+}
+
+/** Get the name of the currently active phrase set (first track's phrase name) */
+export function getActivePhraseSetName(): string {
+  return song.tracks[0]?.phrases[ui.activePhrases[0]]?.name ?? ''
+}
+
+export const PHRASE_SET_COUNT = $derived.by(() =>
+  song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)
+)
 
 // ── Persisted preferences (single localStorage key) ─────────────────
 const STORAGE_KEY = 'inboil'
@@ -365,19 +361,19 @@ export const effects = $state<Effects>({
 
 export function toggleTrig(trackId: number, stepIndex: number) {
   pushUndo('Toggle step')
-  const ph = pattern.tracks[trackId].phrases[0]
+  const ph = activePhrase(trackId)
   ph.trigs[stepIndex].active = !ph.trigs[stepIndex].active
 }
 
 export function setTrigVelocity(trackId: number, stepIdx: number, v: number) {
   pushUndo('Set velocity')
-  pattern.tracks[trackId].phrases[0].trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
+  activePhrase(trackId).trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
 }
 
 /** For piano roll: click cell sets note + activates; click same note deactivates */
 export function setTrigNote(trackId: number, stepIndex: number, note: number) {
   pushUndo('Set note')
-  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIndex]
+  const trig = activePhrase(trackId).trigs[stepIndex]
   if (trig.active && trig.note === note) {
     trig.active = false
   } else {
@@ -388,24 +384,24 @@ export function setTrigNote(trackId: number, stepIndex: number, note: number) {
 
 export function setTrigDuration(trackId: number, stepIdx: number, dur: number) {
   pushUndo('Set duration')
-  pattern.tracks[trackId].phrases[0].trigs[stepIdx].duration = Math.max(1, Math.min(16, Math.round(dur)))
+  activePhrase(trackId).trigs[stepIdx].duration = Math.max(1, Math.min(16, Math.round(dur)))
 }
 
 export function setTrigSlide(trackId: number, stepIdx: number, slide: boolean) {
   pushUndo('Set slide')
-  pattern.tracks[trackId].phrases[0].trigs[stepIdx].slide = slide
+  activePhrase(trackId).trigs[stepIdx].slide = slide
 }
 
 export function setTrigChance(trackId: number, stepIdx: number, chance: number) {
   pushUndo('Set chance')
   const v = Math.max(0, Math.min(1, chance))
-  pattern.tracks[trackId].phrases[0].trigs[stepIdx].chance = v >= 1 ? undefined : v
+  activePhrase(trackId).trigs[stepIdx].chance = v >= 1 ? undefined : v
 }
 
 /** Place a note bar: set head trig + clear covered steps */
 export function placeNoteBar(trackId: number, startStep: number, note: number, duration: number) {
   pushUndo('Place note')
-  const ph = pattern.tracks[trackId].phrases[0]
+  const ph = activePhrase(trackId)
   const dur = Math.max(1, Math.min(ph.steps - startStep, Math.min(16, duration)))
   ph.trigs[startStep].active = true
   ph.trigs[startStep].note = note
@@ -418,7 +414,7 @@ export function placeNoteBar(trackId: number, startStep: number, note: number, d
 
 /** Find the head step of a note bar that covers the given step/note */
 export function findNoteHead(trackId: number, stepIdx: number, note: number): number {
-  const trigs = pattern.tracks[trackId].phrases[0].trigs
+  const trigs = activePhrase(trackId).trigs
   for (let d = 0; d < 16; d++) {
     const prev = stepIdx - d
     if (prev < 0) break
@@ -434,7 +430,7 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
 
 export function toggleMute(trackId: number) {
   pushUndo('Toggle mute')
-  pattern.tracks[trackId].muted = !pattern.tracks[trackId].muted
+  song.tracks[trackId].muted = !song.tracks[trackId].muted
 }
 
 export function toggleSolo(trackId: number) {
@@ -455,7 +451,7 @@ export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
 export function setTrackSteps(trackId: number, newSteps: number) {
   pushUndo('Set steps')
   const clamped = Math.max(2, Math.min(64, newSteps))
-  const ph = pattern.tracks[trackId].phrases[0]
+  const ph = activePhrase(trackId)
   const old = ph.steps
   if (clamped === old) return
   if (clamped > old) {
@@ -471,24 +467,24 @@ export function setTrackSteps(trackId: number, newSteps: number) {
 
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
   pushUndo('Set send')
-  pattern.tracks[trackId].phrases[0][send] = Math.min(1, Math.max(0, v))
+  activePhrase(trackId)[send] = Math.min(1, Math.max(0, v))
 }
 
 export function setVoiceParam(trackId: number, key: string, value: number) {
   pushUndo('Set param')
-  pattern.tracks[trackId].phrases[0].voiceParams[key] = value
+  activePhrase(trackId).voiceParams[key] = value
 }
 
 export function setParamLock(trackId: number, stepIdx: number, key: string, value: number) {
   pushUndo('Set P-Lock')
-  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
+  const trig = activePhrase(trackId).trigs[stepIdx]
   if (!trig.paramLocks) trig.paramLocks = {}
   trig.paramLocks[key] = value
 }
 
 export function clearParamLock(trackId: number, stepIdx: number, key: string) {
   pushUndo('Clear P-Lock')
-  const trig = pattern.tracks[trackId].phrases[0].trigs[stepIdx]
+  const trig = activePhrase(trackId).trigs[stepIdx]
   if (!trig.paramLocks) return
   delete trig.paramLocks[key]
   if (Object.keys(trig.paramLocks).length === 0) trig.paramLocks = undefined
@@ -496,25 +492,19 @@ export function clearParamLock(trackId: number, stepIdx: number, key: string) {
 
 export function clearAllParamLocks(trackId: number, stepIdx: number) {
   pushUndo('Clear all P-Locks')
-  pattern.tracks[trackId].phrases[0].trigs[stepIdx].paramLocks = undefined
+  activePhrase(trackId).trigs[stepIdx].paramLocks = undefined
 }
-
 
 // ── Factory reset ────────────────────────────────────────────────────
 
 export function factoryReset(): void {
-  // Reset pattern bank
-  for (let i = 0; i < FACTORY_COUNT; i++) {
-    patternBank[i] = makeFactoryPattern(i + 1)
-  }
-  for (let i = FACTORY_COUNT; i < PATTERN_COUNT; i++) {
-    patternBank[i] = makeEmptyPattern(i + 1)
-  }
-  // Reset perf before load (loadFromBank sets perf.rootNote from pattern)
+  // Reset song to default
+  restoreSong(makeDefaultSong())
+  // Reset active phrases
+  for (let i = 0; i < 8; i++) ui.activePhrases[i] = 0
+  // Reset perf
   Object.assign(perf, DEFAULT_PERF)
-  // Load pattern 1
-  loadFromBank(0)
-  patternNav.pendingId = 0
+  perf.rootNote = song.rootNote
   // Reset UI
   ui.selectedTrack = 0
   ui.view = 'grid'
@@ -538,12 +528,11 @@ export function factoryReset(): void {
   fxPad.eqLow = { ...DEFAULT_FX_PAD.eqLow }
   fxPad.eqMid = { ...DEFAULT_FX_PAD.eqMid }
   fxPad.eqHigh = { ...DEFAULT_FX_PAD.eqHigh }
-  // Reset chain
-  chain.entries.length = 0
-  chain.active = false
-  chain.currentIndex = 0
-  chain.repeatCount = 0
-  chain.playingPatternId = 0
+  // Reset song playback
+  songPlay.active = false
+  songPlay.currentRow = 0
+  songPlay.repeatCount = 0
+  songPlay.playingPhraseSet = -1
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -562,280 +551,268 @@ const SCALES = [
   [0, 2, 3, 5, 7, 9, 10],  // dorian
 ]
 
-// ── Pattern Chain ─────────────────────────────────────────────────────
+// ── Song Playback (replaces old Pattern Chain) ───────────────────────
 
-// Perf types: 0=NONE, 1=FILL, 2=BRK, 3=REV
+// Song rows use the same SongRow interface defined above.
+// Each row references chains per-track, plus perf/FX overrides.
+// The songPlay state tracks playback position within the song.
 
-export interface ChainFx {
-  on: boolean
-  x: number
-  y: number
-}
-
-export interface ChainEntry {
-  patternId: number
-  repeats: number
-  key: number | null  // 0–11 override, null = use pattern's rootNote
-  oct: number | null  // -2 to +2 override, null = use current perf.octave
-  perf: number        // 0=NONE, 1=FILL, 2=BRK, 3=REV
-  perfLen: number     // steps (1/4/8/16) — perf activates for last N steps of last repeat
-  verb: ChainFx
-  delay: ChainFx
-  glitch: ChainFx
-  granular: ChainFx
-}
-
-export const chain = $state({
-  entries: [] as ChainEntry[],
+export const songPlay = $state({
   active: false,
-  currentIndex: 0,
+  currentRow: 0,
   repeatCount: 0,
-  playingPatternId: 0,
+  playingPhraseSet: -1 as number,  // which phrase set index is currently playing (-1 = none)
 })
 
-/** Read pattern data from bank without modifying editing state */
-export function getPatternData(id: number): Pattern {
-  return patternBank[id - 1]
+/** Get the phrase set index from a song row (assumes all chainIds are equal for now) */
+function rowToPhraseSet(row: SongRow): number {
+  return row.chainIds[0] ?? 0
 }
 
-// ── Chain presets ──────────────────────────────────────────────────────
-// Pattern IDs are 1-indexed: 1=4FLOOR 2=TRAP 3=BREAK 4=2STEP 5=LOFI
-// 6=TECHNO 7=HOUSE 8=DNB 9=HYPER 10=MINIMAL 11=REGGAETN 12=DISCO
-// 13=ELECTRO 14=DUBSTEP 15=DRILL 16=SYNTHWV 17=AFROBT 18=JERSEY
-// 19=GARAGE 20=AMBIENT
+// ── Song row presets ────────────────────────────────────────────────
 
-function makeChainEntry(patternId: number, repeats = 2, opts?: {
+function makeSongRow(phraseSet: number, repeats = 2, opts?: {
   key?: number, oct?: number, perf?: number, perfLen?: number,
   verb?: boolean, delay?: boolean, glitch?: boolean, granular?: boolean,
   delaySend?: number,
-}): ChainEntry {
+}): SongRow {
   return {
-    patternId, repeats, key: opts?.key ?? null, oct: opts?.oct ?? null,
+    chainIds: Array(8).fill(phraseSet),
+    repeats, key: opts?.key, oct: opts?.oct,
     perf: opts?.perf ?? 0, perfLen: opts?.perfLen ?? 16,
-    verb:     { on: opts?.verb ?? false,     x: 0.25, y: 0.65 },
-    delay:    { on: opts?.delay ?? false,    x: opts?.delaySend ?? 0.70, y: 0.40 },
-    glitch:   { on: opts?.glitch ?? false,   x: 0.45, y: 0.15 },
-    granular: { on: opts?.granular ?? false, x: 0.50, y: 0.30 },
+    ...(opts?.verb     ? { verb:     { on: true,  x: 0.25, y: 0.65 } } : {}),
+    ...(opts?.delay    ? { delay:    { on: true,  x: opts?.delaySend ?? 0.70, y: 0.40 } } : {}),
+    ...(opts?.glitch   ? { glitch:   { on: true,  x: 0.45, y: 0.15 } } : {}),
+    ...(opts?.granular ? { granular: { on: true,  x: 0.50, y: 0.30 } } : {}),
   }
 }
 
-export const CHAIN_PRESETS = [
-  // LOFI(5)+LF.B(21) 85bpm key=G — lo-fi song with A/B sections
+// Phrase set indices (0-based): 0=4FLOOR 1=TRAP 2=BREAK 3=2STEP 4=LOFI
+// 5=TECHNO 6=HOUSE 7=DNB 8=HYPER 9=MINIMAL 10=REGGAETN 11=DISCO
+// 12=ELECTRO 13=DUBSTEP 14=DRILL 15=SYNTHWV 16=AFROBT 17=JERSEY
+// 18=GARAGE 19=AMBIENT 20=LF.B
+
+export const SONG_PRESETS = [
   { name: 'LOFI',
-    entries: [
-      makeChainEntry(5, 2, { key: 0 }),                      // 01 intro: A key=C ×2
-      makeChainEntry(5, 2, { verb: true }),                  // 02 verse 1: A +VRB ×2
-      makeChainEntry(21, 4, { verb: true, delay: true }),    // 03 chorus 1: B +VRB+DLY ×4
-      makeChainEntry(5, 4, { verb: true, glitch: true }),    // 04 verse 2: A +VRB+GLT ×4
-      makeChainEntry(21, 4, { key: 0, verb: true, delay: true, glitch: true }),  // 05 chorus 2: B → C +VRB+DLY+GLT ×4
-      makeChainEntry(5, 4, { key: 4, perf: 2, perfLen: 4, verb: true, glitch: true, delay: true, delaySend: 1.0 }),  // 06 break: A → Em BRK ¼ +VRB+GLT+DLY max ×4
-      makeChainEntry(21, 4, { perf: 1, perfLen: 8, verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),  // 07 climax: B FILL ½ +VRB+GLT+GRN+DLY max ×4
-      makeChainEntry(5, 4, { verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),  // 08 outro: A +VRB+GLT+GRN+DLY max ×4
+    rows: [
+      makeSongRow(4, 2, { key: 0 }),
+      makeSongRow(4, 2, { verb: true }),
+      makeSongRow(20, 4, { verb: true, delay: true }),
+      makeSongRow(4, 4, { verb: true, glitch: true }),
+      makeSongRow(20, 4, { key: 0, verb: true, delay: true, glitch: true }),
+      makeSongRow(4, 4, { key: 4, perf: 2, perfLen: 4, verb: true, glitch: true, delay: true, delaySend: 1.0 }),
+      makeSongRow(20, 4, { perf: 1, perfLen: 8, verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),
+      makeSongRow(4, 4, { verb: true, glitch: true, granular: true, delay: true, delaySend: 1.0 }),
     ] },
-] as const
+]
 
-export function chainLoadPreset(index: number) {
-  const preset = CHAIN_PRESETS[index]
+export function songLoadPreset(index: number) {
+  const preset = SONG_PRESETS[index]
   if (!preset) return
-  chain.entries.length = 0
-  for (const e of preset.entries) {
-    chain.entries.push({
-      patternId: e.patternId, repeats: e.repeats, key: e.key, oct: e.oct, perf: e.perf, perfLen: e.perfLen,
-      verb:     { ...e.verb },
-      delay:    { ...e.delay },
-      glitch:   { ...e.glitch },
-      granular: { ...e.granular },
-    })
-  }
-  chain.currentIndex = 0
-  chain.repeatCount = 0
-  chain.active = false
-  chain.playingPatternId = 0
+  song.rows = preset.rows.map(cloneRow)
+  songPlay.currentRow = 0
+  songPlay.repeatCount = 0
+  songPlay.active = false
+  songPlay.playingPhraseSet = -1
 }
 
-// Pre-populate with LOFI preset
-chainLoadPreset(0)
+// Pre-populate with LOFI preset rows
+songLoadPreset(0)
 
-export function chainAppend(patternId: number) {
-  if (chain.entries.length >= 99) return
-  chain.entries.push({
-    patternId, repeats: 1, key: null, oct: null, perf: 0, perfLen: 16,
-    verb:     { on: false, x: 0.25, y: 0.65 },
-    delay:    { on: false, x: 0.70, y: 0.40 },
-    glitch:   { on: false, x: 0.45, y: 0.15 },
-    granular: { on: false, x: 0.50, y: 0.30 },
+export function songAppendRow(phraseSetIndex: number) {
+  if (song.rows.length >= 256) return
+  song.rows.push({
+    chainIds: Array(8).fill(phraseSetIndex),
+    repeats: 1,
   })
 }
 
-export function chainRemove(index: number) {
-  chain.entries.splice(index, 1)
-  if (chain.currentIndex >= chain.entries.length) chain.currentIndex = 0
+export function songRemoveRow(index: number) {
+  song.rows.splice(index, 1)
+  if (songPlay.currentRow >= song.rows.length) songPlay.currentRow = 0
 }
 
-export function chainClear() {
-  if (chain.active) {
+export function songClearRows() {
+  if (songPlay.active) {
     perf.filling = false; perf.breaking = false; perf.reversing = false
     fxPad.verb     = { ...fxPad.verb, on: false }
     fxPad.delay    = { ...fxPad.delay, on: false }
     fxPad.glitch   = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
   }
-  chain.entries.length = 0
-  chain.currentIndex = 0
-  chain.repeatCount = 0
-  chain.active = false
-  chain.playingPatternId = 0
+  song.rows = []
+  songPlay.currentRow = 0
+  songPlay.repeatCount = 0
+  songPlay.active = false
+  songPlay.playingPhraseSet = -1
 }
 
-export function chainSetPattern(index: number, patternId: number) {
-  if (patternId < 1 || patternId > PATTERN_COUNT) return
-  chain.entries[index].patternId = patternId
+export function songSetRowPhraseSet(index: number, phraseSet: number) {
+  const max = song.tracks.reduce((m, t) => Math.min(m, t.phrases.length), Infinity)
+  if (phraseSet < 0 || phraseSet >= max) return
+  song.rows[index].chainIds = Array(8).fill(phraseSet)
 }
 
-export function chainStepRepeats(index: number, dir: -1 | 1) {
-  const e = chain.entries[index]
-  e.repeats = Math.max(1, Math.min(8, e.repeats + dir))
+export function songStepRepeats(index: number, dir: -1 | 1) {
+  const r = song.rows[index]
+  r.repeats = Math.max(1, Math.min(8, r.repeats + dir))
 }
 
-export function chainCycleKey(index: number) {
-  const e = chain.entries[index]
-  if (e.key === null) { e.key = 0 }
-  else if (e.key >= 11) { e.key = null }
-  else { e.key++ }
+export function songCycleKey(index: number) {
+  const r = song.rows[index]
+  if (r.key == null) { r.key = 0 }
+  else if (r.key >= 11) { r.key = undefined }
+  else { r.key++ }
 }
 
-export function chainSetKey(index: number, key: number | null) {
-  chain.entries[index].key = key
+export function songSetKey(index: number, key: number | undefined) {
+  song.rows[index].key = key
 }
 
-export function chainCycleOct(index: number) {
-  const e = chain.entries[index]
-  // null → -2 → -1 → 0 → +1 → +2 → null
-  if (e.oct === null) { e.oct = -2 }
-  else if (e.oct >= 2) { e.oct = null }
-  else { e.oct++ }
+export function songCycleOct(index: number) {
+  const r = song.rows[index]
+  if (r.oct == null) { r.oct = -2 }
+  else if (r.oct >= 2) { r.oct = undefined }
+  else { r.oct++ }
 }
 
-export function chainCyclePerf(index: number) {
-  chain.entries[index].perf = (chain.entries[index].perf + 1) % 4
+export function songCyclePerf(index: number) {
+  song.rows[index].perf = ((song.rows[index].perf ?? 0) + 1) % 4
 }
 
 const PERF_LEN_OPTIONS = [16, 8, 4, 1] as const
 
-export function chainCyclePerfLen(index: number) {
-  const e = chain.entries[index]
-  const cur = PERF_LEN_OPTIONS.indexOf(e.perfLen as 16 | 8 | 4 | 1)
-  e.perfLen = PERF_LEN_OPTIONS[(cur + 1) % PERF_LEN_OPTIONS.length]
+export function songCyclePerfLen(index: number) {
+  const r = song.rows[index]
+  const cur = PERF_LEN_OPTIONS.indexOf((r.perfLen ?? 16) as 16 | 8 | 4 | 1)
+  r.perfLen = PERF_LEN_OPTIONS[(cur + 1) % PERF_LEN_OPTIONS.length]
 }
 
-export type ChainFxKey = 'verb' | 'delay' | 'glitch' | 'granular'
+export type SongFxKey = 'verb' | 'delay' | 'glitch' | 'granular'
 
-export function chainToggleFx(index: number, fx: ChainFxKey) {
-  chain.entries[index][fx].on = !chain.entries[index][fx].on
+export function songToggleFx(index: number, fx: SongFxKey) {
+  const r = song.rows[index]
+  const current = r[fx]
+  if (current) {
+    current.on = !current.on
+  } else {
+    r[fx] = { on: true, x: 0.5, y: 0.5 }
+  }
 }
 
-export function chainSetFxSend(index: number, fx: ChainFxKey, value: number) {
-  chain.entries[index][fx].x = value
+export function songSetFxSend(index: number, fx: SongFxKey, value: number) {
+  const r = song.rows[index]
+  if (!r[fx]) r[fx] = { on: true, x: value, y: 0.5 }
+  else r[fx]!.x = value
 }
 
-/** Apply FX and key/oct for a chain entry (called on entry advance) */
-export function applyChainEntry(entry: ChainEntry) {
-  if (entry.key !== null) perf.rootNote = entry.key
-  if (entry.oct !== null) perf.octave = entry.oct
-  fxPad.verb = entry.verb.on
-    ? { on: true, x: entry.verb.x, y: entry.verb.y }
+/** Apply FX and key/oct for a song row (called on row advance) */
+export function applySongRow(row: SongRow) {
+  if (row.key != null) perf.rootNote = row.key
+  if (row.oct != null) perf.octave = row.oct
+  fxPad.verb = row.verb?.on
+    ? { on: true, x: row.verb.x, y: row.verb.y }
     : { ...fxPad.verb, on: false }
-  fxPad.delay = entry.delay.on
-    ? { on: true, x: entry.delay.x, y: entry.delay.y }
+  fxPad.delay = row.delay?.on
+    ? { on: true, x: row.delay.x, y: row.delay.y }
     : { ...fxPad.delay, on: false }
-  fxPad.glitch = entry.glitch.on
-    ? { on: true, x: entry.glitch.x, y: entry.glitch.y }
+  fxPad.glitch = row.glitch?.on
+    ? { on: true, x: row.glitch.x, y: row.glitch.y }
     : { ...fxPad.glitch, on: false }
-  fxPad.granular = entry.granular.on
-    ? { on: true, x: entry.granular.x, y: entry.granular.y }
+  fxPad.granular = row.granular?.on
+    ? { on: true, x: row.granular.x, y: row.granular.y }
     : { ...fxPad.granular, on: false }
 }
 
-/** Apply perf on last repeat — activates for last N steps (perfLen) of the last repeat.
- *  Called on every step; returns true if any perf flag changed. */
-export function updateChainPerf(step: number): boolean {
-  if (!chain.active || chain.entries.length === 0) return false
-  const entry = chain.entries[chain.currentIndex]
-  const isLast = chain.repeatCount >= entry.repeats - 1
-  // -1 compensates for pending-flag latency: non-reset sendPattern sets pending
-  // flags that apply on the NEXT step boundary, so we detect 1 step earlier.
-  const inZone = isLast && step >= (16 - entry.perfLen - 1)
-  const f = entry.perf === 1 && inZone
-  const b = entry.perf === 2 && inZone
-  const r = entry.perf === 3 && inZone
+/** Apply perf on last repeat of a song row */
+export function updateSongPerf(step: number): boolean {
+  if (!songPlay.active || song.rows.length === 0) return false
+  const row = song.rows[songPlay.currentRow]
+  const isLast = songPlay.repeatCount >= row.repeats - 1
+  const perfLen = row.perfLen ?? 16
+  const perfType = row.perf ?? 0
+  const inZone = isLast && step >= (16 - perfLen - 1)
+  const f = perfType === 1 && inZone
+  const b = perfType === 2 && inZone
+  const r = perfType === 3 && inZone
   const changed = perf.filling !== f || perf.breaking !== b || perf.reversing !== r
   perf.filling = f; perf.breaking = b; perf.reversing = r
   return changed
 }
 
-/** Chain is fully independent of editing pattern — never calls switchPattern */
-export function chainToggle() {
-  chain.active = !chain.active
-  if (chain.active && chain.entries.length > 0) {
-    // Resume from current position (preserved from last stop)
-    chain.repeatCount = 0
-    const entry = chain.entries[chain.currentIndex]
-    chain.playingPatternId = entry.patternId
-    applyChainEntry(entry)
-  } else if (!chain.active) {
+export function songToggle() {
+  songPlay.active = !songPlay.active
+  if (songPlay.active && song.rows.length > 0) {
+    songPlay.repeatCount = 0
+    const row = song.rows[songPlay.currentRow]
+    songPlay.playingPhraseSet = rowToPhraseSet(row)
+    applySongRow(row)
+  } else if (!songPlay.active) {
     perf.filling = false; perf.breaking = false; perf.reversing = false
     fxPad.verb     = { ...fxPad.verb, on: false }
     fxPad.delay    = { ...fxPad.delay, on: false }
     fxPad.glitch   = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
-    chain.playingPatternId = 0
+    songPlay.playingPhraseSet = -1
   }
 }
 
-/** Rewind chain to first entry */
-export function chainRewind() {
-  chain.currentIndex = 0
-  chain.repeatCount = 0
-  if (chain.active && chain.entries.length > 0) {
-    const entry = chain.entries[0]
-    chain.playingPatternId = entry.patternId
-    applyChainEntry(entry)
+export function songRewind() {
+  songPlay.currentRow = 0
+  songPlay.repeatCount = 0
+  if (songPlay.active && song.rows.length > 0) {
+    const row = song.rows[0]
+    songPlay.playingPhraseSet = rowToPhraseSet(row)
+    applySongRow(row)
   }
 }
 
-/** Jump chain to a specific entry */
-export function chainJump(index: number) {
-  if (index < 0 || index >= chain.entries.length) return
-  chain.currentIndex = index
-  chain.repeatCount = 0
-  if (chain.active) {
-    const entry = chain.entries[index]
-    chain.playingPatternId = entry.patternId
-    applyChainEntry(entry)
+export function songJump(index: number) {
+  if (index < 0 || index >= song.rows.length) return
+  songPlay.currentRow = index
+  songPlay.repeatCount = 0
+  if (songPlay.active) {
+    const row = song.rows[index]
+    songPlay.playingPhraseSet = rowToPhraseSet(row)
+    applySongRow(row)
   }
 }
 
-/** Called at beat boundary. Returns true if advanced to a new entry. */
-export function advanceChain(): boolean {
-  if (!chain.active || chain.entries.length === 0) return false
-  chain.repeatCount++
-  if (chain.repeatCount >= chain.entries[chain.currentIndex].repeats) {
-    chain.currentIndex = (chain.currentIndex + 1) % chain.entries.length
-    chain.repeatCount = 0
-    chain.playingPatternId = chain.entries[chain.currentIndex].patternId
+/** Called at beat boundary. Returns true if advanced to a new row. */
+export function advanceSong(): boolean {
+  if (!songPlay.active || song.rows.length === 0) return false
+  songPlay.repeatCount++
+  if (songPlay.repeatCount >= song.rows[songPlay.currentRow].repeats) {
+    songPlay.currentRow = (songPlay.currentRow + 1) % song.rows.length
+    songPlay.repeatCount = 0
+    const row = song.rows[songPlay.currentRow]
+    songPlay.playingPhraseSet = rowToPhraseSet(row)
     return true
   }
   return false
 }
 
+/** Build a Song-like object for the engine — picks phrases based on phrase set index */
+export function songForPlayback(phraseSet: number): Song {
+  return {
+    name: song.name,
+    bpm: song.bpm,
+    rootNote: song.rootNote,
+    tracks: song.tracks.map(t => ({
+      ...t,
+      phrases: [t.phrases[phraseSet] ?? t.phrases[0]],
+      chains: [],
+    })),
+    rows: [],
+  }
+}
+
 export function randomizePattern(): void {
   pushUndo('Randomize')
-  // Pick a random root in the piano-roll range (C3=48 .. C4=60)
   const roots = [48, 50, 51, 53, 55, 56, 58, 60]
   const root  = roots[Math.floor(Math.random() * roots.length)]
   const scale = SCALES[Math.floor(Math.random() * SCALES.length)]
 
-  // Build note pool spanning the full piano-roll range
   let allNotes: number[] = []
   for (let oct = 0; oct < 3; oct++) {
     for (const interval of scale) {
@@ -844,12 +821,10 @@ export function randomizePattern(): void {
     }
   }
 
-  // When scale mode is on, quantize to grid scale positions
   if (prefs.scaleMode) {
     allNotes = allNotes
       .map(n => {
         if (SCALE_DEGREES_SET.has(n % 12)) return n
-        // Snap to nearest grid-scale position
         const up = n + 1 <= PIANO_ROLL_MAX && SCALE_DEGREES_SET.has((n + 1) % 12) ? n + 1 : n + 2
         const down = n - 1 >= PIANO_ROLL_MIN && SCALE_DEGREES_SET.has((n - 1) % 12) ? n - 1 : n - 2
         return (n - down <= up - n) ? down : up
@@ -859,16 +834,15 @@ export function randomizePattern(): void {
   const lowNotes  = allNotes.filter(n => n < 60)
   const highNotes = allNotes.filter(n => n >= 60)
 
-  for (let t = 0; t < pattern.tracks.length; t++) {
-    const track = pattern.tracks[t]
-    const ph = track.phrases[0]
+  for (let t = 0; t < song.tracks.length; t++) {
+    const track = song.tracks[t]
+    const ph = activePhrase(t)
     const steps = ph.steps
 
     if (isDrum(track)) {
-      // Probability profile per drum track name
       for (let s = 0; s < steps; s++) {
         let prob = 0
-        const beat = s % 8  // position within 8-step group
+        const beat = s % 8
 
         if (track.name === 'KICK') {
           prob = beat === 0 ? 0.92 : beat === 4 ? 0.40 : 0.08
@@ -877,13 +851,10 @@ export function randomizePattern(): void {
         } else if (track.name === 'CLAP') {
           prob = beat === 4 ? 0.70 : 0.03
         } else if (track.name === 'O.HH') {
-          // Open hat on offbeats, sparse
           prob = (beat === 2 || beat === 6) ? 0.50 : 0.05
         } else if (track.name === 'CYM') {
-          // Cymbal crash: very sparse
           prob = beat === 0 ? 0.25 : 0.02
         } else {
-          // C.HH or other: 8th-note grid with swing variation
           const on8th = s % 2 === 0
           prob = on8th ? 0.82 : (Math.random() > 0.5 ? 0.55 : 0.20)
         }
@@ -891,11 +862,9 @@ export function randomizePattern(): void {
         const active = Math.random() < prob
         ph.trigs[s].active   = active
         ph.trigs[s].velocity = 0.55 + Math.random() * 0.45
-        // Add chance to non-primary beats for organic feel
         ph.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
       }
     } else {
-      // Melodic: scale-quantized notes, ~30% density
       const pool    = track.name === 'BASS'
         ? (lowNotes.length  > 0 ? lowNotes  : allNotes)
         : (highNotes.length > 0 ? highNotes : allNotes)

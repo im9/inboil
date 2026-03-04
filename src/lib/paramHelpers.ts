@@ -1,8 +1,8 @@
-import { pattern, ui, setVoiceParam, setParamLock } from './state.svelte.ts'
+import { activePhrase, ui, setVoiceParam, setParamLock } from './state.svelte.ts'
 import { denormalizeParam, type ParamDef } from './paramDefs.ts'
 
 export function knobValue(p: { key: string; default: number }): number {
-  const ph = pattern.tracks[ui.selectedTrack].phrases[0]
+  const ph = activePhrase(ui.selectedTrack)
   const selTrig = ui.selectedStep !== null ? ph.trigs[ui.selectedStep] : null
   if (ui.lockMode && selTrig) {
     const lockVal = selTrig.paramLocks?.[p.key]
@@ -21,7 +21,7 @@ export function knobChange(p: { key: string }, v: number): void {
 }
 
 export function isParamLocked(key: string): boolean {
-  const ph = pattern.tracks[ui.selectedTrack].phrases[0]
+  const ph = activePhrase(ui.selectedTrack)
   const selTrig = ui.selectedStep !== null ? ph.trigs[ui.selectedStep] : null
   return !!(ui.lockMode && selTrig?.paramLocks?.[key] !== undefined)
 }

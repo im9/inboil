@@ -2,7 +2,7 @@
  * engine.ts — main thread audio engine API.
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
-import type { Pattern, Effects } from '../state.svelte.ts'
+import type { Song, Effects } from '../state.svelte.ts'
 import { ui } from '../state.svelte.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 
@@ -49,9 +49,9 @@ export class GrooveboxEngine {
     }
   }
 
-  sendPattern(pattern: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false): void {
+  sendPattern(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, phraseIndices?: number[]): void {
     if (!this.node) return
-    this._post({ type: 'setPattern', pattern: patternToWorklet(pattern, fx, perf, fxPad), reset })
+    this._post({ type: 'setPattern', pattern: patternToWorklet(song, fx, perf, fxPad, phraseIndices), reset })
   }
 
   play(): void {
@@ -84,23 +84,22 @@ export class GrooveboxEngine {
 }
 
 function patternToWorklet(
-  pattern: Pattern,
+  s: Song,
   fx: Effects,
   perf?: PerfState,
   fxPad?: FxPadState,
+  phraseIndices?: number[],
 ): WorkletPattern {
-  // Reverb params: use XY when verb is on, otherwise pattern defaults
   const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
   const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
-  // Delay params: use XY when delay is on
   const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
 
   return {
-    bpm: pattern.bpm,
+    bpm: s.bpm,
     fx:  {
       reverb: { size: reverbSize, damp: reverbDamp },
-      delay:  { time: (60000 / pattern.bpm) * delayTimeFrac, feedback: delayFb },
+      delay:  { time: (60000 / s.bpm) * delayTimeFrac, feedback: delayFb },
       ducker: { ...fx.ducker },
       comp:   { ...fx.comp },
       filter: {
@@ -133,8 +132,8 @@ function patternToWorklet(
       granularFreeze:  perf?.granularFreeze  ?? false,
       swing:           perf?.swing       ?? 0,
     },
-    tracks: pattern.tracks.map((t, i) => {
-      const ph = t.phrases[0]
+    tracks: s.tracks.map((t, i) => {
+      const ph = t.phrases[phraseIndices?.[i] ?? 0]
       return {
         steps:       ph.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,

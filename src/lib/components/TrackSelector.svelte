@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { pattern, ui } from '../state.svelte.ts'
+  import { song, ui } from '../state.svelte.ts'
 </script>
 
 <div class="track-bar" class:hide-desktop={true}>
   <div class="track-dots" data-tip="Select track" data-tip-ja="トラックを選択">
-    {#each pattern.tracks as t, i}
+    {#each song.tracks as t, i}
       <button
         class="dot"
         class:active={i === ui.selectedTrack}

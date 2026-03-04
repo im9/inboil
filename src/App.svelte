@@ -9,7 +9,7 @@
   import ChainView from './lib/components/ChainView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import { pattern, playback, ui, randomizePattern, effects, perf, fxPad, applyPendingSwitch, clearPendingSwitch, patternNav, advanceChain, chain, applyChainEntry, updateChainPerf, getPatternData, undo, redo } from './lib/state.svelte.ts'
+  import { song, playback, ui, randomizePattern, effects, perf, fxPad, songPlay, advanceSong, applySongRow, updateSongPerf, songForPlayback, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -22,17 +22,17 @@
   const isMobile = $derived(windowWidth < 640)
 
   // ── Audio engine ──────────────────────────────────────────────────
-  // Sync pattern + effects → worklet on any state change (rAF-throttled)
+  // Sync song + effects → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    // JSON.stringify traverses all nested props so Svelte tracks them
-    void (JSON.stringify(pattern) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + chain.active + chain.playingPatternId + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + songPlay.active + songPlay.playingPhraseSet + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      const pat = chain.active && chain.playingPatternId > 0
-        ? getPatternData(chain.playingPatternId)
-        : pattern
-      engine.sendPattern(pat, effects, perf, fxPad)
+      const s = songPlay.active && songPlay.playingPhraseSet >= 0
+        ? songForPlayback(songPlay.playingPhraseSet)
+        : song
+      const phraseIndices = songPlay.active ? undefined : [...ui.activePhrases]
+      engine.sendPattern(s, effects, perf, fxPad, false, phraseIndices)
     })
     return () => cancelAnimationFrame(rafId)
   })
@@ -40,31 +40,24 @@
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
     playback.playheads = heads
-    let chainSent = false
+    let songSent = false
     if (heads[0] === 0 && prev0 !== 0) {
-      // User-initiated pattern switch (editing pattern only)
-      if (patternNav.pendingId > 0) {
-        applyPendingSwitch()
-        if (!chain.active) engine.sendPattern(pattern, effects, perf, fxPad, true)
-      }
-      // Chain: advance + FX/key on entry change
-      const advanced = advanceChain()
-      if (chain.active && chain.entries.length > 0) {
+      const advanced = advanceSong()
+      if (songPlay.active && song.rows.length > 0) {
         if (advanced) {
-          applyChainEntry(chain.entries[chain.currentIndex])
+          applySongRow(song.rows[songPlay.currentRow])
         }
-        updateChainPerf(heads[0])
-        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, true)
-        chainSent = true
+        updateSongPerf(heads[0])
+        const s = songForPlayback(songPlay.playingPhraseSet)
+        engine.sendPattern(s, effects, perf, fxPad, true)
+        songSent = true
       }
     }
-    // Mid-bar perf: check every step for sub-bar activation/deactivation
-    // Use reset=false so the worklet continues from current position (pending flags
-    // applied at next step boundary). reset=true would restart the pattern from step 0.
-    if (!chainSent && chain.active && chain.entries.length > 0) {
-      const changed = updateChainPerf(heads[0])
+    if (!songSent && songPlay.active && song.rows.length > 0) {
+      const changed = updateSongPerf(heads[0])
       if (changed) {
-        engine.sendPattern(getPatternData(chain.playingPatternId), effects, perf, fxPad, false)
+        const s = songForPlayback(songPlay.playingPhraseSet)
+        engine.sendPattern(s, effects, perf, fxPad, false)
       }
     }
   }
@@ -72,10 +65,11 @@
   async function play() {
     if (playback.playing) return
     await engine.init()
-    const pat = chain.active && chain.playingPatternId > 0
-      ? getPatternData(chain.playingPatternId)
-      : pattern
-    engine.sendPattern(pat, effects, perf, fxPad)
+    const s = songPlay.active && songPlay.playingPhraseSet >= 0
+      ? songForPlayback(songPlay.playingPhraseSet)
+      : song
+    const phraseIndices = songPlay.active ? undefined : [...ui.activePhrases]
+    engine.sendPattern(s, effects, perf, fxPad, false, phraseIndices)
     engine.play()
     playback.playing = true
   }
@@ -84,7 +78,6 @@
     engine.stop()
     playback.playing = false
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
-    clearPendingSwitch()
   }
 
   function onKeydown(e: KeyboardEvent) {

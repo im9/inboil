@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { pattern, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activePhrase, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
-  const track = $derived(pattern.tracks[ui.selectedTrack])
-  const ph = $derived(track.phrases[0])
+  const track = $derived(song.tracks[ui.selectedTrack])
+  const ph = $derived(activePhrase(ui.selectedTrack))
   const drum = $derived(isDrum(track))
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
@@ -158,11 +158,11 @@
   }
 
   function prevTrack() {
-    ui.selectedTrack = (ui.selectedTrack - 1 + pattern.tracks.length) % pattern.tracks.length
+    ui.selectedTrack = (ui.selectedTrack - 1 + song.tracks.length) % song.tracks.length
     ui.selectedStep = null
   }
   function nextTrack() {
-    ui.selectedTrack = (ui.selectedTrack + 1) % pattern.tracks.length
+    ui.selectedTrack = (ui.selectedTrack + 1) % song.tracks.length
     ui.selectedStep = null
   }
 </script>

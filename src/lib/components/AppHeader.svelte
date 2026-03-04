@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pattern, playback, switchPattern, patternNav, getPatternName, ui, toggleSidebar, copyPattern, pastePattern, clearPattern, clipboard } from '../state.svelte.ts'
+  import { song, playback, ui, toggleSidebar, selectPhraseSet, getActivePhraseSetName } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -27,20 +27,18 @@
     }
   }
 
-  const displayPatId = $derived(patternNav.pendingId > 0 ? patternNav.pendingId : pattern.id)
-  const displayNum = $derived(String(displayPatId - 1).padStart(2, '0'))
-  const displayName = $derived(patternNav.pendingId > 0 ? getPatternName(patternNav.pendingId) : pattern.name)
-  const isPending = $derived(patternNav.pendingId > 0)
+  const displayNum = $derived(String(ui.activePhrases[0]).padStart(2, '0'))
+  const displayName = $derived(getActivePhraseSetName())
 
   // ── Long-press auto-repeat for ◀/▶ buttons ──
   let repeatTimer: ReturnType<typeof setTimeout> | null = null
   let repeatInterval: ReturnType<typeof setInterval> | null = null
 
   function startRepeat(dir: -1 | 1) {
-    switchPattern(displayPatId + dir)
+    selectPhraseSet(ui.activePhrases[0] + dir)
     repeatTimer = setTimeout(() => {
-      repeatInterval = setInterval(() => switchPattern(displayPatId + dir), 100)
-    }, 400) // 400ms initial delay, then 100ms repeat
+      repeatInterval = setInterval(() => selectPhraseSet(ui.activePhrases[0] + dir), 100)
+    }, 400)
   }
 
   function stopRepeat() {
@@ -53,7 +51,7 @@
   let bpmRepeatInterval: ReturnType<typeof setInterval> | null = null
 
   function bpmStep(dir: -1 | 1) {
-    pattern.bpm = Math.max(40, Math.min(240, pattern.bpm + dir))
+    song.bpm = Math.max(40, Math.min(240, song.bpm + dir))
   }
 
   function startBpmRepeat(dir: -1 | 1) {
@@ -66,14 +64,6 @@
   function stopBpmRepeat() {
     if (bpmRepeatTimer) { clearTimeout(bpmRepeatTimer); bpmRepeatTimer = null }
     if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
-  }
-
-  // ── Pat actions bubble menu ──
-  let patMenuOpen = $state(false)
-
-  function patAction(fn: () => void) {
-    fn()
-    patMenuOpen = false
   }
 </script>
 
@@ -138,7 +128,7 @@
   <div class="sub-header">
     <div class="bpm-block">
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(-1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Decrease tempo (hold to scroll)" data-tip-ja="テンポを下げる (長押しでスクロール)">−</button>
-      <span class="bpm-value" data-tip="Current tempo (BPM)" data-tip-ja="現在のテンポ (BPM)"><SplitFlap value={pattern.bpm} /></span>
+      <span class="bpm-value" data-tip="Current tempo (BPM)" data-tip-ja="現在のテンポ (BPM)"><SplitFlap value={song.bpm} /></span>
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Increase tempo (hold to scroll)" data-tip-ja="テンポを上げる (長押しでスクロール)">+</button>
       <span class="bpm-label">BPM</span>
     </div>
@@ -167,30 +157,14 @@
 
     <div class="pat-block">
       <div class="pat-display">
-        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
-        <span class="pat-value" class:pending={isPending} data-tip="Current pattern number" data-tip-ja="現在のパターン番号"><SplitFlap value={displayNum} width={2} /></span>
+        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous phrase set (hold to scroll)" data-tip-ja="前のフレーズセット (長押しでスクロール)">◀</button>
+        <span class="pat-value" data-tip="Current phrase set" data-tip-ja="現在のフレーズセット"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
         <span class="pat-name"><SplitFlap value={displayName} width={8} /></span>
-        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
-        <!-- Pat actions: radial menu on mobile, inline on desktop -->
-        <div class="pat-menu-wrap" class:open={patMenuOpen}>
-          <button class="pat-menu-item" onpointerdown={() => patAction(() => copyPattern())}>CPY</button>
-          <button class="pat-menu-item" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) patAction(() => pastePattern(pattern.id)) }}>PST</button>
-          <button class="pat-menu-item" onpointerdown={() => patAction(() => clearPattern(pattern.id))}>CLR</button>
-          <button class="pat-menu-trigger" onpointerdown={() => { patMenuOpen = !patMenuOpen }}>⋯</button>
-        </div>
-        {#if patMenuOpen}
-          <button class="pat-menu-backdrop" onpointerdown={() => { patMenuOpen = false }}></button>
-        {/if}
+        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next phrase set (hold to scroll)" data-tip-ja="次のフレーズセット (長押しでスクロール)">▶</button>
       </div>
-      <!-- Desktop: inline actions (hidden on mobile) -->
       <div class="pat-bottom">
-        <span class="pat-label">PAT</span>
-        <div class="pat-actions">
-          <button class="pat-act" onpointerdown={() => copyPattern()} data-tip="Copy pattern" data-tip-ja="パターンをコピー">CPY</button>
-          <button class="pat-act" class:disabled={!clipboard.hasData} onpointerdown={() => { if (clipboard.hasData) pastePattern(pattern.id) }} data-tip="Paste pattern to current slot" data-tip-ja="現在のスロットにペースト">PST</button>
-          <button class="pat-act" onpointerdown={() => clearPattern(pattern.id)} data-tip="Clear current pattern" data-tip-ja="現在のパターンをクリア">CLR</button>
-        </div>
+        <span class="pat-label">PHR</span>
       </div>
     </div>
   </div>

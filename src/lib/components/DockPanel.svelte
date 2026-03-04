@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { pattern, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, toggleDockPosition, factoryReset } from '../state.svelte.ts'
+  import { song, activePhrase, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, toggleDockPosition, factoryReset } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
 
-  const track  = $derived(pattern.tracks[ui.selectedTrack])
+  const track  = $derived(song.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
   const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
-  const selTrig = $derived(ui.selectedStep !== null ? track.phrases[0].trigs[ui.selectedStep] : null)
+  const selTrig = $derived(ui.selectedStep !== null ? activePhrase(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const L = $derived(lang.value)
 
@@ -233,7 +233,7 @@
         <div class="param-content">
           <!-- Track selector bar -->
           <div class="track-bar">
-            {#each pattern.tracks as _t, i}
+            {#each song.tracks as _t, i}
               <button
                 class="track-btn"
                 class:active={i === ui.selectedTrack}
@@ -287,16 +287,16 @@
           <div class="section-divider" aria-hidden="true"></div>
           <div class="knob-grid">
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-              <Knob value={track.phrases[0].reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+              <Knob value={activePhrase(ui.selectedTrack).reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
             </span>
             <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-              <Knob value={track.phrases[0].delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+              <Knob value={activePhrase(ui.selectedTrack).delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
             </span>
             <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-              <Knob value={track.phrases[0].glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+              <Knob value={activePhrase(ui.selectedTrack).glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
             </span>
             <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-              <Knob value={track.phrases[0].granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+              <Knob value={activePhrase(ui.selectedTrack).granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
             </span>
           </div>
 
@@ -304,10 +304,10 @@
           <div class="section-divider" aria-hidden="true"></div>
           <div class="knob-grid">
             <span data-tip="Track volume" data-tip-ja="トラック音量">
-              <Knob value={track.volume} label="VOL" size={32} onchange={v => { pattern.tracks[ui.selectedTrack].volume = v }} />
+              <Knob value={track.volume} label="VOL" size={32} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
             </span>
             <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-              <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { pattern.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+              <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
             </span>
           </div>
         </div>

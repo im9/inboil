@@ -1,12 +1,12 @@
 <script lang="ts">
   import {
-    pattern, chain, playback, getPatternName, NOTE_NAMES,
-    chainAppend, chainRemove, chainClear, chainSetPattern,
-    chainStepRepeats, chainCycleKey, chainCycleOct, chainCyclePerf,
-    chainToggleFx, chainSetFxSend, chainToggle, chainLoadPreset,
-    chainCyclePerfLen, chainRewind, chainJump,
-    PATTERN_COUNT, CHAIN_PRESETS,
-    type ChainFxKey,
+    song, songPlay, playback, NOTE_NAMES, PHRASE_SET_COUNT,
+    songAppendRow, songRemoveRow, songClearRows, songSetRowPhraseSet,
+    songStepRepeats, songCycleKey, songCycleOct, songCyclePerf,
+    songToggleFx, songSetFxSend, songToggle, songLoadPreset,
+    songCyclePerfLen, songRewind, songJump,
+    SONG_PRESETS, ui,
+    type SongFxKey,
   } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Knob from './Knob.svelte'
@@ -15,7 +15,7 @@
   const PERF_CLASSES = ['', 'perf-fill', 'perf-brk', 'perf-rev'] as const
   const PERF_LEN_LABELS: Record<number, string> = { 16: 'BAR', 8: '½', 4: '¼', 1: '1S' }
 
-  const FX_DEFS: { key: ChainFxKey, label: string, cls: string }[] = [
+  const FX_DEFS: { key: SongFxKey, label: string, cls: string }[] = [
     { key: 'verb',     label: 'VRB', cls: 'fx-vrb' },
     { key: 'delay',    label: 'DLY', cls: 'fx-dly' },
     { key: 'glitch',   label: 'GLT', cls: 'fx-glt' },
@@ -25,26 +25,31 @@
   let listEl: HTMLDivElement | undefined = $state()
 
   $effect(() => {
-    if (!chain.active || !playback.playing || !listEl) return
+    if (!songPlay.active || !playback.playing || !listEl) return
     const row = listEl.querySelector('.chain-entry.current') as HTMLElement | null
     row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   })
 
-  function stepPattern(index: number, dir: -1 | 1) {
-    const e = chain.entries[index]
-    let next = e.patternId + dir
-    if (next < 1) next = PATTERN_COUNT
-    if (next > PATTERN_COUNT) next = 1
-    chainSetPattern(index, next)
+  function stepPhraseSet(index: number, dir: -1 | 1) {
+    const row = song.rows[index]
+    const current = row.chainIds[0] ?? 0
+    let next = current + dir
+    if (next < 0) next = PHRASE_SET_COUNT - 1
+    if (next >= PHRASE_SET_COUNT) next = 0
+    songSetRowPhraseSet(index, next)
   }
 
-  function keyLabel(key: number | null): string {
-    if (key === null) return '---'
+  function getPhraseSetName(phraseSet: number): string {
+    return song.tracks[0]?.phrases[phraseSet]?.name ?? ''
+  }
+
+  function keyLabel(key: number | undefined): string {
+    if (key == null) return '---'
     return NOTE_NAMES[key]
   }
 
-  function octLabel(oct: number | null): string {
-    if (oct === null) return '---'
+  function octLabel(oct: number | undefined): string {
+    if (oct == null) return '---'
     if (oct > 0) return `+${oct}`
     return `${oct}`
   }
@@ -52,62 +57,63 @@
 
 <div class="chain-view">
   <div class="chain-header">
-    <span class="chain-label">CHAIN</span>
+    <span class="chain-label">SONG</span>
     <button
       class="btn-toggle"
-      class:active={chain.active}
-      onpointerdown={chainToggle}
-      data-tip="Toggle chain playback ON/OFF. Resumes from current position."
-      data-tip-ja="チェーン再生のON/OFF。現在位置から再開します。"
-    >{chain.active ? 'ON' : 'OFF'}</button>
-    {#if chain.entries.length > 0}
-      <button class="btn-rewind" onpointerdown={chainRewind}
-        data-tip="Rewind to the first entry."
-        data-tip-ja="先頭エントリに戻ります。"
+      class:active={songPlay.active}
+      onpointerdown={songToggle}
+      data-tip="Toggle song playback ON/OFF. Resumes from current position."
+      data-tip-ja="ソング再生のON/OFF。現在位置から再開します。"
+    >{songPlay.active ? 'ON' : 'OFF'}</button>
+    {#if song.rows.length > 0}
+      <button class="btn-rewind" onpointerdown={songRewind}
+        data-tip="Rewind to the first row."
+        data-tip-ja="先頭行に戻ります。"
       >&#9198;</button>
     {/if}
     <span class="chain-spacer"></span>
     <span class="chain-pos">
-      {#if chain.entries.length > 0}
-        <SplitFlap value={String(chain.currentIndex + 1).padStart(2, '0')} width={2} />
+      {#if song.rows.length > 0}
+        <SplitFlap value={String(songPlay.currentRow + 1).padStart(2, '0')} width={2} />
         <SplitFlap value="/" width={1} />
-        <SplitFlap value={String(chain.entries.length).padStart(2, '0')} width={2} />
+        <SplitFlap value={String(song.rows.length).padStart(2, '0')} width={2} />
       {/if}
     </span>
-    <button class="btn-add" onpointerdown={() => chainAppend(pattern.id)}
-      data-tip="Append current pattern to the chain."
-      data-tip-ja="現在のパターンをチェーンに追加します。"
+    <button class="btn-add" onpointerdown={() => songAppendRow(ui.activePhrases[0])}
+      data-tip="Append current phrase set to the song."
+      data-tip-ja="現在のフレーズセットをソングに追加します。"
     >+ ADD</button>
-    <button class="btn-clear" onpointerdown={chainClear}
-      data-tip="Clear all chain entries."
-      data-tip-ja="チェーンの全エントリを削除します。"
+    <button class="btn-clear" onpointerdown={songClearRows}
+      data-tip="Clear all song rows."
+      data-tip-ja="ソングの全行を削除します。"
     >CLR</button>
   </div>
 
   <div class="chain-list" bind:this={listEl}>
-    {#if chain.entries.length === 0}
+    {#if song.rows.length === 0}
       <div class="chain-empty">
-        <span class="empty-text">NO ENTRIES</span>
-        <span class="empty-hint">TAP + ADD TO BUILD CHAIN</span>
+        <span class="empty-text">NO ROWS</span>
+        <span class="empty-hint">TAP + ADD TO BUILD SONG</span>
         <div class="preset-list">
-          {#each CHAIN_PRESETS as preset, pi}
-            <button class="btn-preset" onpointerdown={() => chainLoadPreset(pi)}>{preset.name}</button>
+          {#each SONG_PRESETS as preset, pi}
+            <button class="btn-preset" onpointerdown={() => songLoadPreset(pi)}>{preset.name}</button>
           {/each}
         </div>
       </div>
     {:else}
-      {#each chain.entries as entry, i}
-        {@const isCurrent = i === chain.currentIndex}
+      {#each song.rows as row, i}
+        {@const isCurrent = i === songPlay.currentRow}
+        {@const phraseSet = row.chainIds[0] ?? 0}
         <div
           class="chain-entry"
           class:current={isCurrent}
         >
           <div class="chain-row">
-            <button class="row-marker" onpointerdown={() => chainJump(i)}
-              data-tip="Tap to jump playback to this entry."
-              data-tip-ja="タップでこのエントリにジャンプします。"
+            <button class="row-marker" onpointerdown={() => songJump(i)}
+              data-tip="Tap to jump playback to this row."
+              data-tip-ja="タップでこの行にジャンプします。"
             >
-              {#if isCurrent && chain.active}
+              {#if isCurrent && songPlay.active}
                 <span class="marker-arrow">&#9658;</span>
               {:else if isCurrent}
                 <span class="marker-arrow dim">&#9658;</span>
@@ -116,43 +122,43 @@
               {/if}
             </button>
 
-            <button class="row-nav" onpointerdown={() => stepPattern(i, -1)}>&#9664;</button>
-            <span class="row-pat-id"><SplitFlap value={String(entry.patternId - 1).padStart(2, '0')} width={2} /></span>
+            <button class="row-nav" onpointerdown={() => stepPhraseSet(i, -1)}>&#9664;</button>
+            <span class="row-pat-id"><SplitFlap value={String(phraseSet).padStart(2, '0')} width={2} /></span>
             <span class="row-sep">|</span>
-            <span class="row-pat-name"><SplitFlap value={getPatternName(entry.patternId)} width={8} /></span>
-            <button class="row-nav" onpointerdown={() => stepPattern(i, 1)}>&#9654;</button>
+            <span class="row-pat-name"><SplitFlap value={getPhraseSetName(phraseSet)} width={8} /></span>
+            <button class="row-nav" onpointerdown={() => stepPhraseSet(i, 1)}>&#9654;</button>
 
             <button
               class="row-key"
-              class:has-key={entry.key !== null}
-              onpointerdown={() => chainCycleKey(i)}
-              data-tip="Key transposition. Tap to cycle through keys (C–B). --- = use pattern default."
-              data-tip-ja="キー転調。タップで C〜B を順に切替。--- = パターンのデフォルトキー。"
-            >{keyLabel(entry.key)}</button>
+              class:has-key={row.key != null}
+              onpointerdown={() => songCycleKey(i)}
+              data-tip="Key transposition. Tap to cycle through keys (C–B). --- = use default."
+              data-tip-ja="キー転調。タップで C〜B を順に切替。--- = デフォルトキー。"
+            >{keyLabel(row.key)}</button>
 
             <button
               class="row-oct"
-              class:has-oct={entry.oct !== null}
-              onpointerdown={() => chainCycleOct(i)}
+              class:has-oct={row.oct != null}
+              onpointerdown={() => songCycleOct(i)}
               data-tip="Octave shift (-2 to +2). Tap to cycle. --- = no override."
               data-tip-ja="オクターブシフト (-2〜+2)。タップで切替。--- = 変更なし。"
-            >{octLabel(entry.oct)}</button>
+            >{octLabel(row.oct)}</button>
 
             <!-- Repeats: ◀ ×N ▶ + progress dots -->
             <span class="rpt-group"
               data-tip="Repeat count. ◀▶ to adjust (1–8). Dots show progress during playback."
               data-tip-ja="リピート回数。◀▶ で調整 (1〜8)。再生中はドットで進捗を表示。"
             >
-              <button class="rpt-nav" onpointerdown={() => chainStepRepeats(i, -1)}>&#9664;</button>
+              <button class="rpt-nav" onpointerdown={() => songStepRepeats(i, -1)}>&#9664;</button>
               <span class="rpt-display">
                 <span class="rpt-times">&times;</span>
-                <SplitFlap value={entry.repeats} width={1} />
+                <SplitFlap value={row.repeats} width={1} />
               </span>
-              <button class="rpt-nav" onpointerdown={() => chainStepRepeats(i, 1)}>&#9654;</button>
-              {#if isCurrent && playback.playing && entry.repeats > 1}
+              <button class="rpt-nav" onpointerdown={() => songStepRepeats(i, 1)}>&#9654;</button>
+              {#if isCurrent && playback.playing && row.repeats > 1}
                 <span class="rpt-dots">
-                  {#each Array(entry.repeats) as _, d}
-                    <span class="rpt-dot" class:filled={d < chain.repeatCount} class:playing={d === chain.repeatCount}></span>
+                  {#each Array(row.repeats) as _, d}
+                    <span class="rpt-dot" class:filled={d < songPlay.repeatCount} class:playing={d === songPlay.repeatCount}></span>
                   {/each}
                 </span>
               {/if}
@@ -164,37 +170,37 @@
               data-tip-ja="FXセンド。ラベルタップでON/OFF、ノブでセンド量を調整。"
             >
               {#each FX_DEFS as fx}
-                <div class="fx-node {fx.cls}" class:active={entry[fx.key].on}>
+                <div class="fx-node {fx.cls}" class:active={row[fx.key]?.on}>
                   <button
                     class="fx-toggle"
-                    onpointerdown={() => chainToggleFx(i, fx.key)}
+                    onpointerdown={() => songToggleFx(i, fx.key)}
                   >{fx.label}</button>
                   <Knob
-                    value={entry[fx.key].x}
+                    value={row[fx.key]?.x ?? 0.5}
                     label=""
                     size={20}
                     compact={true}
-                    onchange={(v) => chainSetFxSend(i, fx.key, v)}
+                    onchange={(v) => songSetFxSend(i, fx.key, v)}
                   />
                 </div>
               {/each}
             </div>
 
             <button
-              class="row-perf {PERF_CLASSES[entry.perf]}"
-              onpointerdown={() => chainCyclePerf(i)}
+              class="row-perf {PERF_CLASSES[row.perf ?? 0]}"
+              onpointerdown={() => songCyclePerf(i)}
               data-tip="Performance effect. Tap to cycle: NONE → FILL → BRK → REV. Activates on last repeat."
               data-tip-ja="パフォーマンス。タップで切替: NONE → FILL → BRK → REV。ラストリピートで発動。"
-            >{PERF_LABELS[entry.perf]}</button>
+            >{PERF_LABELS[row.perf ?? 0]}</button>
             <button
-              class="row-perf-len {entry.perf > 0 ? PERF_CLASSES[entry.perf] : 'perf-none'}"
-              onpointerdown={() => chainCyclePerfLen(i)}
-              disabled={entry.perf === 0}
+              class="row-perf-len {(row.perf ?? 0) > 0 ? PERF_CLASSES[row.perf ?? 0] : 'perf-none'}"
+              onpointerdown={() => songCyclePerfLen(i)}
+              disabled={(row.perf ?? 0) === 0}
               data-tip="Perf duration. Tap to cycle: BAR (full) → ½ → ¼ → 1S (1 step)."
               data-tip-ja="パフォーマンスの長さ。タップで切替: BAR (全体) → ½ → ¼ → 1S (1ステップ)。"
-            >{entry.perf > 0 ? (PERF_LEN_LABELS[entry.perfLen] ?? entry.perfLen) : '---'}</button>
+            >{(row.perf ?? 0) > 0 ? (PERF_LEN_LABELS[row.perfLen ?? 16] ?? row.perfLen) : '---'}</button>
 
-            <button class="row-del" onpointerdown={() => chainRemove(i)}>&times;</button>
+            <button class="row-del" onpointerdown={() => songRemoveRow(i)}>&times;</button>
           </div>
         </div>
       {/each}
