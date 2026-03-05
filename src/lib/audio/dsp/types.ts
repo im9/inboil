@@ -61,5 +61,5 @@ export interface WorkletTrig {
 }
 
 export interface WorkletEvent {
-  type: 'step'; playheads: number[]
+  type: 'step'; playheads: number[]; cycle: boolean
 }

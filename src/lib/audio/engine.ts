@@ -25,10 +25,10 @@ export class GrooveboxEngine {
   private ctx:  AudioContext | null = null
   private node: AudioWorkletNode | null = null
   private analyser: AnalyserNode | null = null
-  private _onStep: ((playheads: number[]) => void) | null = null
+  private _onStep: ((playheads: number[], cycle: boolean) => void) | null = null
   private suspendTimer: ReturnType<typeof setTimeout> | null = null
 
-  set onStep(cb: (playheads: number[]) => void) { this._onStep = cb }
+  set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
   getAnalyser(): AnalyserNode | null { return this.analyser }
 
@@ -45,7 +45,7 @@ export class GrooveboxEngine {
     this.node.connect(this.analyser)
     this.analyser.connect(this.ctx.destination)
     this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
-      if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads)
+      if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
     }
   }
 

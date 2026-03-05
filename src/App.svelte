@@ -45,15 +45,14 @@
     return () => cancelAnimationFrame(rafId)
   })
 
-  engine.onStep = (heads: number[]) => {
-    const prev0 = playback.playheads[0]
+  engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
     // Solo pattern — just loop, no advancement
     if (playback.soloPattern != null) return
     // Loop mode — just loop current pattern, no advancement
     if (playback.mode !== 'scene') return
-    if (heads[0] === 0 && prev0 !== 0) {
-      // Beat boundary — scene graph takes priority
+    if (cycle) {
+      // Pattern cycle complete (all tracks finished) — scene graph takes priority
       if (hasScenePlayback()) {
         const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
         if (shouldStop) { stop(); return }

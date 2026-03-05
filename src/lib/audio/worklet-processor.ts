@@ -138,6 +138,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private bpm = 120
   private samplesPerStep = 0
   private accumulator = 0
+  private patternLen = 16   // max step count across all tracks
+  private patternPos = 0    // global position within pattern cycle
 
   // FX
   private reverb = new SimpleReverb(sampleRate)
@@ -220,6 +222,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.playheads[t] = steps - 1
           }
           this.gateCounters.fill(0)
+          this.patternPos = 0  // cycle fires after patternLen advances
           this.accumulator = this.currentThreshold  // trigger step 0 immediately
           break
         case 'stop':
@@ -264,6 +267,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             }
           }
           this.tracks = p.tracks
+          const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
+          this.patternLen = newLen
+          // Clamp patternPos if patternLen shrank (prevents premature cycle)
+          if (this.patternPos >= newLen) this.patternPos = this.patternPos % newLen
           for (let i = 0; i < p.tracks.length; i++) {
             const angle = ((p.tracks[i].pan ?? 0) + 1) * 0.25 * Math.PI
             this.panGainsL[i] = Math.cos(angle)
@@ -312,6 +319,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
             if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
             if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+            this.patternPos = 0  // cycle fires after patternLen advances
             this.swingPhase = 0
             this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
             this.accumulator = this.currentThreshold  // trigger step 0 on next sample
@@ -436,7 +444,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (this.playheads[0] === 0 && this.pendingOctave !== null) {
       this.octave = this.pendingOctave; this.pendingOctave = null
     }
-    this.port.postMessage({ type: 'step', playheads: [...this.playheads] } satisfies WorkletEvent)
+    // Advance global pattern position; cycle=true when full pattern completes
+    this.patternPos = (this.patternPos + 1) % this.patternLen
+    const cycle = this.patternPos === 0
+    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle } satisfies WorkletEvent)
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
