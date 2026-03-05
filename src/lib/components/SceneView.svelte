@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
@@ -20,8 +20,23 @@
   let lastTapTime = 0
   let lastTapNode = ''
 
+  // ── Long-press (mobile edge creation) ──
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+
   // ── Add-node picker ──
   let pickerOpen = $state(false)
+
+  // ── Zoom/Pan state ──
+  let zoom = $state(1)      // 0.5 .. 3.0
+  let panX = $state(0)      // pixel offset
+  let panY = $state(0)      // pixel offset
+  let isPanning = false
+  let panPointerStart = { x: 0, y: 0 }
+  let panStartX = 0
+  let panStartY = 0
+  let activePointers = new Map<number, { x: number; y: number }>()
+  let pinchStartDist = 0
+  let pinchStartZoom = 1
 
   /** Patterns with data for the picker */
   const pickerPatterns = $derived.by(() => {
@@ -43,12 +58,14 @@
     return result
   })
 
-  /** Convert pointer event to normalized 0-1 coords */
+  /** Convert pointer event to normalized 0-1 coords (accounting for zoom/pan) */
   function toNorm(e: PointerEvent): { x: number; y: number } | null {
     if (!viewEl) return null
     const rect = viewEl.getBoundingClientRect()
-    const x = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD_INSET) / (rect.width - PAD_INSET * 2)))
-    const y = Math.max(0, Math.min(1, (e.clientY - rect.top - PAD_INSET) / (rect.height - PAD_INSET * 2)))
+    const canvasX = (e.clientX - rect.left - panX) / zoom
+    const canvasY = (e.clientY - rect.top - panY) / zoom
+    const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (rect.width - PAD_INSET * 2)))
+    const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (rect.height - PAD_INSET * 2)))
     return { x, y }
   }
 
@@ -78,7 +95,7 @@
     const py = PAD_INSET + normY * (h - PAD_INSET * 2)
     for (const node of song.scene.nodes) {
       const np = toPixel(node.x, node.y, w, h)
-      if (Math.abs(px - np.x) < 32 && Math.abs(py - np.y) < 18) {
+      if (Math.abs(px - np.x) < 32 / zoom && Math.abs(py - np.y) < 18 / zoom) {
         return node.id
       }
     }
@@ -106,9 +123,39 @@
     dragging = nodeId
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
+
+    // Long-press: switch to edge-draw mode after 500ms (mobile-friendly)
+    if (longPressTimer) clearTimeout(longPressTimer)
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null
+      if (!dragMoved && dragging === nodeId) {
+        dragging = null
+        edgeFrom = nodeId
+        edgeCursor = { x: e.clientX, y: e.clientY }
+        if (navigator.vibrate) navigator.vibrate(30)
+      }
+    }, 500)
   }
 
   function onMove(e: PointerEvent) {
+    // Pan / pinch zoom
+    if (isPanning) {
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (activePointers.size >= 2) {
+        const pts = [...activePointers.values()]
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+        const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+        const newZoom = Math.max(0.5, Math.min(3, pinchStartZoom * (dist / pinchStartDist)))
+        panX = panStartX + (mid.x - panPointerStart.x)
+        panY = panStartY + (mid.y - panPointerStart.y)
+        zoom = newZoom
+      } else {
+        panX = panStartX + (e.clientX - panPointerStart.x)
+        panY = panStartY + (e.clientY - panPointerStart.y)
+      }
+      return
+    }
+
     // Edge drawing mode
     if (edgeFrom) {
       edgeCursor = { x: e.clientX, y: e.clientY }
@@ -124,7 +171,10 @@
     if (!dragMoved) {
       const dx = Math.abs(e.clientX - startPos.x)
       const dy = Math.abs(e.clientY - startPos.y)
-      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) dragMoved = true
+      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) {
+        dragMoved = true
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+      }
     }
     if (dragMoved) {
       const pos = toNorm(e)
@@ -133,6 +183,13 @@
   }
 
   function endDrag(e: PointerEvent) {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    activePointers.delete(e.pointerId)
+    if (isPanning) {
+      if (activePointers.size === 0) isPanning = false
+      return
+    }
+
     // Edge drawing — create edge on drop
     if (edgeFrom) {
       const sourceId = edgeFrom
@@ -176,6 +233,28 @@
   }
 
   function onBgDown(e: PointerEvent) {
+    // Middle mouse or Ctrl+left → start pan
+    if (e.button === 1 || (e.ctrlKey && e.button === 0)) {
+      e.preventDefault()
+      isPanning = true
+      panPointerStart = { x: e.clientX, y: e.clientY }
+      panStartX = panX; panStartY = panY
+      viewEl?.setPointerCapture(e.pointerId)
+      return
+    }
+
+    // Track active pointers for pinch zoom
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (activePointers.size === 2) {
+      const pts = [...activePointers.values()]
+      pinchStartDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
+      pinchStartZoom = zoom
+      panPointerStart = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      panStartX = panX; panStartY = panY
+      isPanning = true
+      return
+    }
+
     // Edge hit-testing on background click
     if (!viewEl || !canvasEl) {
       ui.selectedSceneNode = null
@@ -183,14 +262,15 @@
       return
     }
     const rect = viewEl.getBoundingClientRect()
-    const px = e.clientX - rect.left
-    const py = e.clientY - rect.top
+    // Transform to canvas coords (undo pan/zoom)
+    const px = (e.clientX - rect.left - panX) / zoom
+    const py = (e.clientY - rect.top - panY) / zoom
     const w = rect.width, h = rect.height
 
     // Check each edge for proximity
     const { nodes, edges } = song.scene
     let hitEdge: string | null = null
-    let bestDist = 8 // 8px threshold
+    let bestDist = 8 / zoom
     for (const edge of edges) {
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
@@ -210,6 +290,7 @@
     } else {
       ui.selectedSceneNode = null
       ui.selectedSceneEdge = null
+      onBgDblCheck() // double-click background → reset zoom
     }
   }
 
@@ -232,6 +313,16 @@
       ui.selectedSceneNode = null
       ui.selectedSceneEdge = null
       pickerOpen = false
+    }
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && ui.selectedSceneNode) {
+      e.preventDefault()
+      if (e.shiftKey) sceneCopySubgraph(ui.selectedSceneNode)
+      else sceneCopyNode(ui.selectedSceneNode)
+    }
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard()) {
+      e.preventDefault()
+      const ids = scenePaste(0.4 + Math.random() * 0.2, 0.4 + Math.random() * 0.2)
+      if (ids.length > 0) { ui.selectedSceneNode = ids[0]; ui.selectedSceneEdge = null }
     }
   }
 
@@ -309,6 +400,31 @@
     pickerOpen = false
   }
 
+  // ── Zoom/Pan interactions ──
+
+  function onWheel(e: WheelEvent) {
+    e.preventDefault()
+    if (!viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    const cx = e.clientX - rect.left
+    const cy = e.clientY - rect.top
+    const factor = e.deltaY > 0 ? 0.9 : 1.1
+    const newZoom = Math.max(0.5, Math.min(3, zoom * factor))
+    // Zoom centered on cursor
+    panX = cx - (cx - panX) * (newZoom / zoom)
+    panY = cy - (cy - panY) * (newZoom / zoom)
+    zoom = newZoom
+  }
+
+  let lastBgClickTime = 0
+  function onBgDblCheck() {
+    const now = Date.now()
+    if (now - lastBgClickTime < 300 && zoom !== 1) {
+      zoom = 1; panX = 0; panY = 0
+    }
+    lastBgClickTime = now
+  }
+
   // ── Canvas rendering ──
 
   function draw() {
@@ -327,9 +443,12 @@
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    // Background
+    // Background (draw at full canvas size, before zoom transform)
     ctx.fillStyle = 'rgb(26, 26, 24)'
     ctx.fillRect(0, 0, w, h)
+
+    // Apply zoom/pan transform for all subsequent drawing
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, panX * dpr, panY * dpr)
 
     // Grid lines
     ctx.strokeStyle = 'rgba(237, 232, 220, 0.04)'
@@ -435,8 +554,8 @@
       if (srcNode) {
         const from = toPixel(srcNode.x, srcNode.y, w, h)
         const rect = viewEl.getBoundingClientRect()
-        const toX = edgeCursor.x - rect.left
-        const toY = edgeCursor.y - rect.top
+        const toX = (edgeCursor.x - rect.left - panX) / zoom
+        const toY = (edgeCursor.y - rect.top - panY) / zoom
 
         ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`
         ctx.lineWidth = 1.5
@@ -479,56 +598,68 @@
   bind:this={viewEl}
   onpointermove={onMove}
   onpointerup={endDrag}
-  onpointercancel={() => { dragging = null; edgeFrom = null }}
+  onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false }}
   onpointerdown={onBgDown}
+  onwheel={onWheel}
 >
   <canvas bind:this={canvasEl} class="scene-canvas"></canvas>
 
-  {#each song.scene.nodes as node (node.id)}
-    {@const isFn = node.type !== 'pattern'}
-    {@const isRoot = node.root}
-    {@const isSelected = ui.selectedSceneNode === node.id}
-    {@const isDragging = dragging === node.id}
-    {@const isEdgeSource = edgeFrom === node.id}
-    {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
-    <button
-      class="scene-node"
-      class:fn={isFn}
-      class:root={isRoot}
-      class:selected={isSelected}
-      class:dragging={isDragging}
-      class:edge-source={isEdgeSource}
-      class:playing={isPlaying}
-      style="
-        left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px));
-        top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
-      "
-      onpointerdown={e => startDrag(e, node.id)}
-    >
-      <span class="node-label">{nodeName(node)}</span>
-      <span class="node-port"></span>
-    </button>
-  {/each}
+  <!-- Transform container for nodes (zoom/pan) -->
+  <div class="scene-transform" style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
+    {#each song.scene.nodes as node (node.id)}
+      {@const isFn = node.type !== 'pattern'}
+      {@const isRoot = node.root}
+      {@const isSelected = ui.selectedSceneNode === node.id}
+      {@const isDragging = dragging === node.id}
+      {@const isEdgeSource = edgeFrom === node.id}
+      {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
+      <button
+        class="scene-node"
+        class:fn={isFn}
+        class:root={isRoot}
+        class:selected={isSelected}
+        class:dragging={isDragging}
+        class:edge-source={isEdgeSource}
+        class:playing={isPlaying}
+        style="
+          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px));
+          top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+        "
+        onpointerdown={e => startDrag(e, node.id)}
+      >
+        <span class="node-label">{nodeName(node)}</span>
+        <span class="node-port"></span>
+      </button>
+    {/each}
 
-  <!-- Param popup for selected function node -->
-  {#if selectedFnNode && selectedFnNode.type !== 'probability'}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="param-popup" style="
-      left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
-      top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
-    " onpointerdown={e => e.stopPropagation()}>
-      <button class="param-btn" onpointerdown={decParam}>−</button>
-      <span class="param-val">{paramDisplay}</span>
-      <button class="param-btn" onpointerdown={incParam}>+</button>
-    </div>
-  {/if}
+    <!-- Param popup for selected function node -->
+    {#if selectedFnNode && selectedFnNode.type !== 'probability'}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="param-popup" style="
+        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
+        top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
+      " onpointerdown={e => e.stopPropagation()}>
+        <button class="param-btn" onpointerdown={decParam}>−</button>
+        <span class="param-val">{paramDisplay}</span>
+        <button class="param-btn" onpointerdown={incParam}>+</button>
+      </div>
+    {/if}
+  </div>
 
-  <!-- Add node button -->
+  <!-- UI controls (outside zoom/pan transform) -->
   <button
     class="scene-add-btn"
     data-tip="Add node" data-tip-ja="ノードを追加"
     onpointerdown={openPicker}
   >+</button>
+
+  {#if zoom !== 1}
+    <button
+      class="zoom-reset-btn"
+      data-tip="Reset zoom" data-tip-ja="ズームリセット"
+      onpointerdown={() => { zoom = 1; panX = 0; panY = 0 }}
+    >{Math.round(zoom * 100)}%</button>
+  {/if}
 
   <!-- Node picker -->
   {#if pickerOpen}
@@ -579,6 +710,16 @@
     height: 100%;
     pointer-events: none;
     z-index: 0;
+  }
+
+  .scene-transform {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .scene-transform > :global(*) {
+    pointer-events: auto;
   }
 
   /* ── Nodes ── */
@@ -710,6 +851,29 @@
   .scene-add-btn:hover {
     background: rgba(120, 120, 69, 0.15);
     border-color: var(--color-olive);
+  }
+
+  /* ── Zoom reset ── */
+  .zoom-reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 42px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(237, 232, 220, 0.15);
+    background: rgba(26, 26, 24, 0.9);
+    color: rgba(237, 232, 220, 0.5);
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    z-index: 5;
+  }
+  .zoom-reset-btn:hover {
+    background: rgba(237, 232, 220, 0.08);
+    color: var(--color-cream);
   }
 
   /* ── Picker ── */
@@ -845,5 +1009,28 @@
     font-size: 10px;
     color: rgba(237, 232, 220, 0.15);
     pointer-events: none;
+  }
+
+  /* ── Mobile responsive ── */
+  @media (max-width: 639px) {
+    .scene-node {
+      min-width: 72px;
+      height: 36px;
+      padding: 0 20px 0 10px;
+    }
+    .scene-node.fn {
+      min-width: 52px;
+      height: 32px;
+      padding: 0 18px 0 10px;
+    }
+    .node-label { font-size: 11px; }
+    .node-port { right: 5px; width: 8px; height: 8px; }
+    .scene-add-btn { width: 36px; height: 36px; font-size: 20px; }
+    .zoom-reset-btn { right: 50px; }
+    .param-btn { width: 32px; height: 32px; font-size: 18px; }
+    .param-val { font-size: 13px; min-width: 36px; }
+    .node-picker { width: 180px; max-height: 260px; }
+    .picker-row { height: 32px; padding: 0 12px; }
+    .picker-name { font-size: 10px; }
   }
 </style>

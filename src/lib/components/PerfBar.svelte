@@ -231,6 +231,12 @@
       onpointerdown={() => { ui.phraseView = 'tracker' }}
       data-tip="Tracker step editor" data-tip-ja="トラッカー型エディター"
     >TRKR</button>
+    <button
+      class="btn-view btn-scene"
+      class:active={ui.phraseView === 'scene'}
+      onpointerdown={() => { ui.phraseView = ui.phraseView === 'scene' ? 'grid' : 'scene' }}
+      data-tip="Scene graph view" data-tip-ja="シーングラフ画面"
+    >SCENE</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -414,6 +420,17 @@
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
     border-color: rgba(237,232,220,0.45);
+  }
+  .btn-view.btn-scene {
+    border-color: rgba(120,120,69,0.4);
+    color: rgba(120,120,69,0.6);
+    margin-left: 4px;
+    border-left: 1.5px solid rgba(120,120,69,0.4);
+  }
+  .btn-view.btn-scene.active {
+    background: rgba(120,120,69,0.25);
+    color: var(--color-olive);
+    border-color: var(--color-olive);
   }
 
   /* ── Performance buttons ── */

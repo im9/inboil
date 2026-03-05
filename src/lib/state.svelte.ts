@@ -684,7 +684,20 @@ interface SectionPresetEntry {
   verb?: ChainFx; delay?: ChainFx; glitch?: ChainFx; granular?: ChainFx
 }
 
-export const SONG_PRESETS = [
+interface ScenePresetNode {
+  type: SceneNode['type']
+  patternIndex?: number   // index into entries[] (maps to pattern after cloning)
+  x: number; y: number
+  root?: boolean
+  params?: Record<string, number>
+}
+interface ScenePresetEdge { fromIdx: number; toIdx: number; order: number }
+
+export const SONG_PRESETS: {
+  name: string
+  entries: SectionPresetEntry[]
+  scene?: { nodes: ScenePresetNode[]; edges: ScenePresetEdge[] }
+}[] = [
   { name: 'LOFI',
     entries: [
       { sectionIndex: 4, repeats: 2, key: 0 },
@@ -695,7 +708,30 @@ export const SONG_PRESETS = [
       { sectionIndex: 4, repeats: 4, key: 4, perf: 2, perfLen: 4, verb: { on: true, x: 0.25, y: 0.65 }, glitch: { on: true, x: 0.45, y: 0.15 }, delay: { on: true, x: 1.0, y: 0.40 } },
       { sectionIndex: 20, repeats: 4, perf: 1, perfLen: 8, verb: { on: true, x: 0.25, y: 0.65 }, glitch: { on: true, x: 0.45, y: 0.15 }, granular: { on: true, x: 0.50, y: 0.30 }, delay: { on: true, x: 1.0, y: 0.40 } },
       { sectionIndex: 4, repeats: 4, verb: { on: true, x: 0.25, y: 0.65 }, glitch: { on: true, x: 0.45, y: 0.15 }, granular: { on: true, x: 0.50, y: 0.30 }, delay: { on: true, x: 1.0, y: 0.40 } },
-    ] as SectionPresetEntry[] },
+    ],
+    scene: {
+      nodes: [
+        { type: 'pattern', patternIndex: 0, x: 0.10, y: 0.30, root: true },
+        { type: 'pattern', patternIndex: 1, x: 0.25, y: 0.30 },
+        { type: 'pattern', patternIndex: 2, x: 0.40, y: 0.30 },
+        { type: 'pattern', patternIndex: 3, x: 0.55, y: 0.30 },
+        { type: 'pattern', patternIndex: 4, x: 0.70, y: 0.30 },
+        { type: 'pattern', patternIndex: 5, x: 0.85, y: 0.30 },
+        { type: 'pattern', patternIndex: 6, x: 0.70, y: 0.60 },
+        { type: 'pattern', patternIndex: 7, x: 0.40, y: 0.60 },
+      ],
+      edges: [
+        { fromIdx: 0, toIdx: 1, order: 0 },
+        { fromIdx: 1, toIdx: 2, order: 0 },
+        { fromIdx: 2, toIdx: 3, order: 0 },
+        { fromIdx: 3, toIdx: 4, order: 0 },
+        { fromIdx: 4, toIdx: 5, order: 0 },
+        { fromIdx: 5, toIdx: 6, order: 0 },
+        { fromIdx: 6, toIdx: 7, order: 0 },
+        { fromIdx: 7, toIdx: 0, order: 0 },
+      ],
+    },
+  },
 ]
 
 /** Load a song preset: clones factory pattern data into arrangement slots with metadata overlays */
@@ -726,6 +762,33 @@ export function songLoadPreset(index: number) {
       ...(entry.granular ? { granular: { ...entry.granular } } : {}),
     }
   }
+  // Populate scene graph if preset has one
+  if (preset.scene) {
+    const nodeIds: string[] = []
+    song.scene.nodes = []
+    song.scene.edges = []
+    for (let i = 0; i < preset.scene.nodes.length; i++) {
+      const pn = preset.scene.nodes[i]
+      const id = `sn_${String(i).padStart(2, '0')}`
+      nodeIds.push(id)
+      song.scene.nodes.push({
+        id, type: pn.type, x: pn.x, y: pn.y, root: pn.root ?? false,
+        ...(pn.patternIndex != null ? { patternId: makePatternId(pn.patternIndex) } : {}),
+        ...(pn.params ? { params: { ...pn.params } } : {}),
+      })
+    }
+    for (let i = 0; i < preset.scene.edges.length; i++) {
+      const pe = preset.scene.edges[i]
+      song.scene.edges.push({
+        id: `se_${String(i).padStart(2, '0')}`,
+        from: nodeIds[pe.fromIdx], to: nodeIds[pe.toIdx], order: pe.order,
+      })
+    }
+  } else {
+    song.scene.nodes = []
+    song.scene.edges = []
+  }
+
   playback.currentSection = 0
   playback.repeatCount = 0
   playback.loopStart = 0
@@ -948,6 +1011,78 @@ export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void
   siblings[swapIdx].order = tmp
 }
 
+// ── Scene Copy/Paste (Phase 5) ───────────────────────────────────────
+
+let sceneClipboard: { nodes: SceneNode[]; edges: SceneEdge[] } | null = null
+
+export function hasSceneClipboard(): boolean {
+  return sceneClipboard !== null && sceneClipboard.nodes.length > 0
+}
+
+/** Copy a single node to clipboard */
+export function sceneCopyNode(nodeId: string): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  sceneClipboard = {
+    nodes: [{ ...node, params: node.params ? { ...node.params } : undefined }],
+    edges: [],
+  }
+}
+
+/** Copy node + all reachable downstream nodes & connecting edges */
+export function sceneCopySubgraph(nodeId: string): void {
+  const startNode = song.scene.nodes.find(n => n.id === nodeId)
+  if (!startNode) return
+  const visited = new Set<string>()
+  const queue = [nodeId]
+  const collectedNodes: SceneNode[] = []
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    const node = song.scene.nodes.find(n => n.id === id)
+    if (!node) continue
+    collectedNodes.push({ ...node, params: node.params ? { ...node.params } : undefined })
+    for (const edge of song.scene.edges) {
+      if (edge.from === id && !visited.has(edge.to)) queue.push(edge.to)
+    }
+  }
+  sceneClipboard = {
+    nodes: collectedNodes,
+    edges: song.scene.edges
+      .filter(e => visited.has(e.from) && visited.has(e.to))
+      .map(e => ({ ...e })),
+  }
+}
+
+/** Paste clipboard at position, returns new node IDs */
+export function scenePaste(baseX: number, baseY: number): string[] {
+  if (!sceneClipboard || sceneClipboard.nodes.length === 0) return []
+  pushUndo('Paste scene nodes')
+  const idMap = new Map<string, string>()
+  const pastedIds: string[] = []
+  const ref = sceneClipboard.nodes[0]
+  const dx = baseX - ref.x, dy = baseY - ref.y
+  for (const src of sceneClipboard.nodes) {
+    const newId = nextSceneId('sn')
+    idMap.set(src.id, newId)
+    song.scene.nodes.push({
+      ...src, id: newId, root: false,
+      x: Math.max(0, Math.min(1, src.x + dx)),
+      y: Math.max(0, Math.min(1, src.y + dy)),
+      params: src.params ? { ...src.params } : undefined,
+    })
+    pastedIds.push(newId)
+  }
+  for (const src of sceneClipboard.edges) {
+    const newFrom = idMap.get(src.from), newTo = idMap.get(src.to)
+    if (newFrom && newTo) {
+      song.scene.edges.push({ id: nextSceneId('se'), from: newFrom, to: newTo, order: src.order })
+    }
+  }
+  return pastedIds
+}
+
 // ── Scene Playback (Phase 4) ─────────────────────────────────────────
 
 /** True when scene has a root node → use graph traversal instead of linear sections */
@@ -968,7 +1103,12 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   }
   // Root is a function node — follow its edges
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
-  if (edges.length > 0) return walkToNode(edges[0])
+  if (edges.length > 0) {
+    const pick = node.type === 'probability'
+      ? edges[Math.floor(Math.random() * edges.length)]
+      : edges[0]
+    return walkToNode(pick)
+  }
   return { advanced: false, patternIndex: 0 }
 }
 
@@ -1007,7 +1147,9 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number 
       playback.sceneTranspose = 0
       return startSceneNode(sceneRootNode()!)
     }
-    currentEdge = fnEdges[0]
+    currentEdge = node.type === 'probability'
+      ? fnEdges[Math.floor(Math.random() * fnEdges.length)]
+      : fnEdges[0]
   }
 }
 
