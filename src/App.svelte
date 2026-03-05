@@ -26,10 +26,18 @@
   // Sync song + effects → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + ui.phraseView + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+      if (playback.soloPattern != null) {
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
+      } else if (ui.phraseView === 'scene' && hasScenePlayback()) {
+        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+      } else if (ui.phraseView === 'scene' && hasArrangement()) {
+        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+      } else {
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
+      }
     })
     return () => cancelAnimationFrame(rafId)
   })
@@ -37,6 +45,10 @@
   engine.onStep = (heads: number[]) => {
     const prev0 = playback.playheads[0]
     playback.playheads = heads
+    // Solo pattern — just loop, no advancement
+    if (playback.soloPattern != null) return
+    // GRID/TRKR view — just loop current pattern, no advancement
+    if (ui.phraseView !== 'scene') return
     if (heads[0] === 0 && prev0 !== 0) {
       // Beat boundary — scene graph takes priority
       if (hasScenePlayback()) {
@@ -64,22 +76,35 @@
     }
   }
 
+  // Reactive solo switching: when soloPattern changes during playback, send immediately
+  $effect(() => {
+    if (playback.soloPattern != null && playback.playing) {
+      engine.sendPatternByIndex(song, effects, perf, fxPad, true, playback.soloPattern)
+    }
+  })
+
   async function play() {
     if (playback.playing) return
     await engine.init()
-    if (hasScenePlayback()) {
+    if (playback.soloPattern != null) {
+      engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
+      engine.play()
+      playback.playing = true
+      return
+    }
+    if (ui.phraseView === 'scene' && hasScenePlayback()) {
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
       const { patternIndex } = advanceSceneNode()
       perf.rootNote = song.rootNote + playback.sceneTranspose
       engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
-    } else if (hasArrangement()) {
+    } else if (ui.phraseView === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
       engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
     } else {
-      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+      engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
     }
     engine.play()
     playback.playing = true
@@ -95,7 +120,8 @@
     fxPad.delay = { ...fxPad.delay, on: false }
     fxPad.glitch = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
-    // Clear scene playback
+    // Clear solo & scene playback
+    playback.soloPattern = null
     playback.sceneNodeId = null
     playback.sceneEdgeId = null
     playback.sceneRepeatLeft = 0

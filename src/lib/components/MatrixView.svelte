@@ -1,94 +1,67 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sectionHasData, sceneAddNode } from '../state.svelte.ts'
-  import type { Cell } from '../state.svelte.ts'
-  import { SECTION_COUNT } from '../factory.ts'
+  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene } from '../state.svelte.ts'
 
-  // ── Visible sections (collapse trailing empty) ──
-  const visibleCount = $derived.by(() => {
-    let last = 0
-    for (let i = 0; i < SECTION_COUNT; i++) {
-      if (sectionHasData(i)) last = i
+  // Show all patterns in the pool
+  const visibleCount = $derived(song.patterns.length)
+
+  // Which pattern is currently playing
+  const currentlyPlayingPattern = $derived.by(() => {
+    if (!playback.playing) return -1
+    if (playback.soloPattern != null) return playback.soloPattern
+    if (ui.phraseView === 'scene' && playback.sceneNodeId) {
+      const node = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
+      if (node?.type === 'pattern') {
+        return song.patterns.findIndex(p => p.id === node.patternId)
+      }
     }
-    return Math.max(last + 2, 8, playback.loopEnd + 1)
+    if (ui.phraseView !== 'scene') return ui.currentPattern
+    return song.sections[playback.currentSection]?.patternIndex ?? -1
   })
 
-  function density(cell: Cell): number {
-    if (cell.steps === 0) return 0
-    let count = 0
-    for (let i = 0; i < cell.steps; i++) {
-      if (cell.trigs[i]?.active) count++
-    }
-    return count / cell.steps
-  }
+  const selectedName = $derived(song.patterns[ui.currentPattern]?.name || '------')
 
-  function onCellClick(patternIndex: number, trackId: number) {
-    selectPattern(patternIndex)
-    ui.selectedTrack = trackId
-  }
-
-  function addToScene(patternIndex: number) {
-    const pat = song.patterns[patternIndex]
+  function addToScene(pi: number) {
+    const pat = song.patterns[pi]
     const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
     ui.selectedSceneNode = id
   }
 </script>
 
 <div class="matrix-view">
-  <!-- Track header row -->
-  <div class="matrix-header">
-    <span class="row-head"></span>
-    {#each song.tracks as t, ti}
-      <span
-        class="track-col"
-        class:selected={ui.selectedTrack === ti}
-      >{t.name}</span>
-    {/each}
+  <!-- Header: selected pattern name -->
+  <div class="matrix-head">
+    <span class="head-name">{selectedName}</span>
+    {#if ui.phraseView === 'scene'}
+      <button
+        class="head-scene"
+        onpointerdown={() => addToScene(ui.currentPattern)}
+        data-tip="Add to scene" data-tip-ja="シーンに追加"
+      >→</button>
+    {/if}
   </div>
 
-  <!-- Section rows -->
-  <div class="matrix-body">
-    {#each { length: visibleCount } as _, si}
-      {@const sec = song.sections[si]}
-      {@const pat = song.patterns[sec.patternIndex]}
-      {@const isPlaying = playback.playing && playback.currentSection === si}
-      {@const isEditing = sec.patternIndex === ui.currentPattern}
-      {@const inLoop = playback.loopEnd > playback.loopStart && si >= playback.loopStart && si <= playback.loopEnd}
+  <!-- Grid: square cells -->
+  <div class="matrix-grid">
+    {#each { length: visibleCount } as _, pi}
+      {@const hasData = patternHasData(pi)}
+      {@const d = patternDensity(pi)}
+      {@const isSelected = ui.currentPattern === pi}
+      {@const isPlaying = currentlyPlayingPattern === pi}
+      {@const isSolo = playback.soloPattern === pi}
+      {@const inScene = patternUsedInScene(pi)}
       <div
-        class="matrix-row"
+        class="pat-cell"
+        class:has-data={hasData}
+        class:selected={isSelected}
         class:playing={isPlaying}
-        class:editing={isEditing}
-        class:in-loop={inLoop}
+        class:solo={isSolo}
+        class:in-scene={inScene}
+        style="--d: {d}"
       >
-        <span class="row-head" class:editing={isEditing} class:playing={isPlaying}>
-          {String(si).padStart(2, '0')}
-          {#if ui.phraseView === 'scene'}
-            <button
-              class="row-scene-add"
-              onpointerdown={e => { e.stopPropagation(); addToScene(sec.patternIndex) }}
-              data-tip="Add to scene" data-tip-ja="シーンに追加"
-            >→</button>
-          {/if}
-        </span>
-        {#each pat.cells as cell, ti}
-          {@const d = density(cell)}
-          {@const hasData = d > 0}
-          {@const isSel = isEditing && ui.selectedTrack === ti}
-          <button
-            class="matrix-cell"
-            class:has-data={hasData}
-            class:selected={isSel}
-            style="--density: {d}"
-            onpointerdown={() => onCellClick(sec.patternIndex, ti)}
-          ></button>
-        {/each}
+        <button class="cell-bg" onpointerdown={() => selectPattern(pi)}></button>
       </div>
     {/each}
   </div>
-
-  <!-- Loop range indicator -->
-  {#if playback.loopEnd > playback.loopStart}
-    <div class="loop-bar">LP {playback.loopStart}–{playback.loopEnd}</div>
-  {/if}
 </div>
 
 <style>
@@ -96,141 +69,115 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    width: 120px;
     background: var(--color-fg);
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    border-right: 1px solid rgba(237,232,220,0.08);
   }
 
-  /* ── Header row ── */
-  .matrix-header {
+  /* ── Header ── */
+  .matrix-head {
     display: flex;
     align-items: center;
-    height: 20px;
+    gap: 4px;
+    padding: 6px 6px 4px;
     border-bottom: 1px solid rgba(237,232,220,0.08);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--color-fg);
   }
 
-  .track-col {
+  .head-name {
     flex: 1;
     min-width: 0;
     font-family: var(--font-data);
-    font-size: 7px;
+    font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.25);
-    text-align: center;
+    color: rgba(237,232,220,0.55);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .track-col.selected {
-    color: var(--color-olive);
-  }
 
-  /* ── Body ── */
-  .matrix-body {
-    overflow-y: auto;
-    overflow-x: hidden;
-    max-height: 200px;
-  }
-  .matrix-body::-webkit-scrollbar { width: 0; display: none; }
-
-  /* ── Row ── */
-  .matrix-row {
-    display: flex;
-    align-items: center;
-    height: 18px;
-    border-bottom: 1px solid rgba(237,232,220,0.03);
-  }
-  .matrix-row.in-loop {
-    background: rgba(120,120,69,0.04);
-  }
-  .matrix-row.playing {
-    background: rgba(68,114,180,0.08);
-  }
-  .matrix-row.editing {
-    background: rgba(120,120,69,0.06);
-  }
-
-  /* ── Row header ── */
-  .row-head {
-    position: relative;
-    width: 28px;
+  .head-scene {
+    width: 18px;
+    height: 16px;
     flex-shrink: 0;
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.15);
-    text-align: center;
-    user-select: none;
-  }
-  .row-head.editing { color: var(--color-olive); }
-  .row-head.playing { color: var(--color-blue); }
-
-  .row-scene-add {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    border: none;
-    border-radius: 2px;
+    border: 1px solid rgba(120,120,69,0.3);
     background: transparent;
     color: var(--color-olive);
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-  }
-  .row-head:hover .row-scene-add {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    cursor: pointer;
   }
-  .row-scene-add:hover {
-    background: rgba(120,120,69,0.2);
+  .head-scene:hover {
+    background: rgba(120,120,69,0.15);
   }
 
-  /* ── Cell ── */
-  .matrix-cell {
-    flex: 1;
-    min-width: 0;
-    height: 14px;
-    margin: 1px;
-    padding: 0;
-    border: 1px solid transparent;
-    background: rgba(237,232,220,0.03);
-    cursor: pointer;
+  /* ── Grid ── */
+  .matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 24px);
+    gap: 2px;
+    padding: 6px;
+    overflow-y: auto;
+    align-content: start;
+  }
+  .matrix-grid::-webkit-scrollbar { width: 0; display: none; }
+
+  /* ── Cell wrapper ── */
+  .pat-cell {
+    width: 24px;
+    height: 24px;
+    position: relative;
+    border: 1.5px solid transparent;
+    background: rgba(237,232,220,0.04);
     transition: background 40ms, border-color 40ms;
   }
-  .matrix-cell.has-data {
-    background: rgba(237,232,220, calc(0.06 + var(--density) * 0.22));
+
+  .pat-cell.has-data {
+    background: rgba(237,232,220, calc(0.08 + var(--d) * 0.25));
   }
-  .matrix-cell.selected {
+  .pat-cell.selected {
     border-color: var(--color-olive);
   }
-  .matrix-row.playing .matrix-cell.has-data {
-    background: rgba(68,114,180, calc(0.12 + var(--density) * 0.20));
+  .pat-cell.playing {
+    background: rgba(68,114,180, calc(0.15 + var(--d) * 0.20));
   }
-  .matrix-cell:active {
-    opacity: 0.7;
+  .pat-cell.playing.selected {
+    border-color: var(--color-blue);
+  }
+  .pat-cell.solo {
+    box-shadow: inset 0 0 0 1px var(--color-blue);
   }
 
-  /* ── Loop bar ── */
-  .loop-bar {
-    font-family: var(--font-data);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--color-olive);
-    padding: 2px 8px;
-    text-align: center;
+  /* Scene dot: top-right corner */
+  .pat-cell.in-scene::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--color-olive);
+    opacity: 0.6;
+    z-index: 1;
   }
+
+  /* ── Cell select button (fills cell) ── */
+  .cell-bg {
+    position: absolute;
+    inset: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+  .cell-bg:active {
+    background: rgba(237,232,220,0.08);
+  }
+
 </style>

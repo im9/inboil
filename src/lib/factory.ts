@@ -4,7 +4,7 @@ import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, Scene
 
 export const DRUM_SYNTHS: SynthType[] = ['DrumSynth', 'NoiseSynth']
 
-export const SECTION_COUNT = 64
+export const SECTION_COUNT = 100
 
 // ── helpers ─────────────────────────────────────────────────────────
 

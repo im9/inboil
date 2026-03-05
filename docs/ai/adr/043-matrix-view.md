@@ -1,6 +1,6 @@
 # ADR 043: Matrix View — Pattern Pool Browser
 
-## Status: Proposed (Revision 2 — supersedes original Section × Track Grid design)
+## Status: IMPLEMENTED (Phase 1–3) — Phase 4 (polish: rename, add/delete, auto-scroll) pending
 
 ## Context
 

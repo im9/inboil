@@ -287,6 +287,7 @@ export const playback = $state({
   sceneEdgeId: null as string | null,
   sceneRepeatLeft: 0,
   sceneTranspose: 0,
+  soloPattern: null as number | null,
 })
 
 export const ui = $state({
@@ -335,6 +336,32 @@ export function getSectionCount(): number {
 /** Check if a section's pattern contains any active trigs */
 export function sectionHasData(index: number): boolean {
   return sectionPattern(index).cells.some(c => c.trigs.some(t => t.active))
+}
+
+/** Check if a pattern contains any active trigs */
+export function patternHasData(patternIndex: number): boolean {
+  const pat = song.patterns[patternIndex]
+  if (!pat) return false
+  return pat.cells.some(c => c.trigs.some(t => t.active))
+}
+
+/** Overall density of a pattern (active trigs / total steps across all tracks) */
+export function patternDensity(patternIndex: number): number {
+  const pat = song.patterns[patternIndex]
+  if (!pat) return 0
+  let total = 0, active = 0
+  for (const c of pat.cells) {
+    total += c.steps
+    for (const t of c.trigs) { if (t.active) active++ }
+  }
+  return total > 0 ? active / total : 0
+}
+
+/** Check if a pattern is used by any scene node */
+export function patternUsedInScene(patternIndex: number): boolean {
+  const pat = song.patterns[patternIndex]
+  if (!pat) return false
+  return song.scene.nodes.some(n => n.type === 'pattern' && n.patternId === pat.id)
 }
 
 /** Assign a different pattern to a section (enables N:1 pattern re-use) */
@@ -643,6 +670,7 @@ export function factoryReset(): void {
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
+  playback.soloPattern = null
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -734,23 +762,22 @@ export const SONG_PRESETS: {
   },
 ]
 
-/** Load a song preset: clones factory pattern data into arrangement slots with metadata overlays */
+/** Load a song preset: references factory patterns directly, sections share patterns via patternIndex */
 export function songLoadPreset(index: number) {
   const preset = SONG_PRESETS[index]
   if (!preset) return
+  // Deduplicate: map each unique sectionIndex to a pattern slot
+  const seen = new Map<number, number>()  // sectionIndex → patternIndex in pool
+  for (const entry of preset.entries) {
+    if (!seen.has(entry.sectionIndex)) {
+      seen.set(entry.sectionIndex, entry.sectionIndex)
+    }
+  }
+  // Sections reference the shared pattern by sectionIndex (factory patterns are already in place)
   for (let i = 0; i < preset.entries.length; i++) {
     const entry = preset.entries[i]
-    const srcPattern = song.patterns[entry.sectionIndex]
-    if (!srcPattern) continue
-    // Clone pattern data into this arrangement slot's pattern
-    song.patterns[i] = {
-      id: makePatternId(i),
-      name: srcPattern.name,
-      cells: srcPattern.cells.map(cloneCell),
-    }
-    // Set section metadata with patternIndex
     song.sections[i] = {
-      patternIndex: i,
+      patternIndex: entry.sectionIndex,
       repeats: entry.repeats ?? 1,
       ...(entry.key != null ? { key: entry.key } : {}),
       ...(entry.oct != null ? { oct: entry.oct } : {}),
@@ -771,9 +798,15 @@ export function songLoadPreset(index: number) {
       const pn = preset.scene.nodes[i]
       const id = `sn_${String(i).padStart(2, '0')}`
       nodeIds.push(id)
+      // Resolve patternIndex: scene node references entry index → map to factory sectionIndex
+      let patternId: string | undefined
+      if (pn.patternIndex != null) {
+        const entry = preset.entries[pn.patternIndex]
+        patternId = makePatternId(entry ? entry.sectionIndex : pn.patternIndex)
+      }
       song.scene.nodes.push({
         id, type: pn.type, x: pn.x, y: pn.y, root: pn.root ?? false,
-        ...(pn.patternIndex != null ? { patternId: makePatternId(pn.patternIndex) } : {}),
+        ...(patternId != null ? { patternId } : {}),
         ...(pn.params ? { params: { ...pn.params } } : {}),
       })
     }
@@ -797,6 +830,7 @@ export function songLoadPreset(index: number) {
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
+  playback.soloPattern = null
   ui.currentPattern = 0
   ui.selectedSceneNode = null
   ui.selectedSceneEdge = null
@@ -1099,7 +1133,9 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   playback.sceneEdgeId = null
   if (node.type === 'pattern') {
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
-    return { advanced: true, patternIndex: pi >= 0 ? pi : 0 }
+    const idx = pi >= 0 ? pi : 0
+    ui.currentPattern = idx
+    return { advanced: true, patternIndex: idx }
   }
   // Root is a function node — follow its edges
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
@@ -1129,7 +1165,9 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number 
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
-      return { advanced: true, patternIndex: pi >= 0 ? pi : 0 }
+      const idx = pi >= 0 ? pi : 0
+      ui.currentPattern = idx
+      return { advanced: true, patternIndex: idx }
     }
 
     // Process function node

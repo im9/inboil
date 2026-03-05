@@ -1,6 +1,6 @@
 # ADR 044: Scene Graph — Node-Based Arrangement Canvas
 
-## Status: Done
+## Status: IMPLEMENTED
 
 ## Context
 

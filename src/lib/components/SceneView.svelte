@@ -342,7 +342,24 @@
     return '?'
   }
 
-  // ── Selected function node & param editing ──
+  // ── Selected node helpers ──
+
+  const selectedPatternNode = $derived.by(() => {
+    if (!ui.selectedSceneNode) return null
+    const n = song.scene.nodes.find(n => n.id === ui.selectedSceneNode)
+    return (n && n.type === 'pattern') ? n : null
+  })
+
+  const selectedPatternIndex = $derived.by(() => {
+    if (!selectedPatternNode) return -1
+    return song.patterns.findIndex(p => p.id === selectedPatternNode.patternId)
+  })
+
+  function toggleSolo() {
+    if (selectedPatternIndex < 0) return
+    playback.soloPattern = playback.soloPattern === selectedPatternIndex ? null : selectedPatternIndex
+    selectPattern(selectedPatternIndex)
+  }
 
   const selectedFnNode = $derived.by(() => {
     if (!ui.selectedSceneNode) return null
@@ -632,6 +649,20 @@
       </button>
     {/each}
 
+    <!-- Solo button for selected pattern node -->
+    {#if selectedPatternNode}
+      <button
+        class="solo-btn"
+        class:active={playback.soloPattern === selectedPatternIndex}
+        style="
+          left: calc({PAD_INSET}px + {selectedPatternNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
+          top: calc({PAD_INSET}px + {selectedPatternNode.y} * (100% - {PAD_INSET * 2}px));
+        "
+        onpointerdown={e => { e.stopPropagation(); toggleSolo() }}
+        data-tip="Solo pattern" data-tip-ja="パターンソロ"
+      >▶</button>
+    {/if}
+
     <!-- Param popup for selected function node -->
     {#if selectedFnNode && selectedFnNode.type !== 'probability'}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -825,6 +856,37 @@
   }
   .scene-node.selected .node-port {
     background: rgba(26, 26, 24, 0.4);
+  }
+
+  /* ── Solo button (near selected pattern node) ── */
+  .solo-btn {
+    position: absolute;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(68, 114, 180, 0.4);
+    background: rgba(26, 26, 24, 0.9);
+    color: rgba(68, 114, 180, 0.6);
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 6;
+    transition: background 80ms, border-color 80ms, color 80ms;
+  }
+  .solo-btn:hover {
+    background: rgba(68, 114, 180, 0.12);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+  }
+  .solo-btn.active {
+    background: rgba(68, 114, 180, 0.25);
+    border-color: var(--color-blue);
+    color: var(--color-blue);
+    box-shadow: 0 0 8px rgba(68, 114, 180, 0.3);
   }
 
   /* ── Add button ── */
