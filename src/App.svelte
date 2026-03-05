@@ -8,6 +8,8 @@
   import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import SceneView from './lib/components/SceneView.svelte'
+  import FxPad from './lib/components/FxPad.svelte'
+  import FilterView from './lib/components/FilterView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, undo, redo } from './lib/state.svelte.ts'
@@ -156,6 +158,10 @@
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       {#if ui.phraseView === 'scene'}
         <SceneView />
+      {:else if ui.phraseView === 'fx'}
+        <FxPad />
+      {:else if ui.phraseView === 'eq'}
+        <FilterView />
       {:else if prefs.patternEditor === 'tracker'}
         <TrackerView />
       {:else}
@@ -172,10 +178,16 @@
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <div class="view-content-row">
-        <MatrixView />
+        {#if ui.phraseView === 'pattern' || ui.phraseView === 'scene'}
+          <MatrixView />
+        {/if}
         <div class="view-main">
           {#if ui.phraseView === 'scene'}
             <SceneView />
+          {:else if ui.phraseView === 'fx'}
+            <FxPad />
+          {:else if ui.phraseView === 'eq'}
+            <FilterView />
           {:else if prefs.patternEditor === 'tracker'}
             <TrackerView />
           {:else}

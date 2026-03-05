@@ -473,7 +473,7 @@
   }
 
   $effect(() => {
-    if (ui.dockTab === 'fx') startVis()
+    if (ui.phraseView === 'fx') startVis()
     else stopVis()
     return () => stopVis()
   })

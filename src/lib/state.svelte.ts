@@ -297,14 +297,14 @@ export const ui = $state({
   selectedTrack: 0,
   currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
-  phraseView: 'pattern' as 'pattern' | 'scene',
+  phraseView: 'pattern' as 'pattern' | 'scene' | 'fx' | 'eq',
   selectedSceneNode: null as string | null,
   selectedSceneEdge: null as string | null,
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
   soloTracks: new Set<number>(),
-  dockTab: 'param' as 'param' | 'fx' | 'eq' | 'help' | 'sys',
+  dockTab: 'param' as 'param' | 'help' | 'sys',
   dockPosition: 'right' as 'right' | 'bottom',
   mobileOverlay: false,
 })

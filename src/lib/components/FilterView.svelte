@@ -472,7 +472,7 @@
   }
 
   $effect(() => {
-    if (ui.dockTab === 'eq') startVis()
+    if (ui.phraseView === 'eq') startVis()
     else stopVis()
     return () => { stopVis(); destroyGL() }
   })

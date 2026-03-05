@@ -4,8 +4,6 @@
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
-  import FxPad from './FxPad.svelte'
-  import FilterView from './FilterView.svelte'
 
   const track  = $derived(song.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
@@ -135,7 +133,7 @@
 <div class="dock-panel" class:bottom={ui.dockPosition === 'bottom'}>
   <!-- ── Tab bar ── -->
   <div class="dock-tabs">
-    {#each ['param', 'fx', 'eq', 'help', 'sys'] as tab}
+    {#each ['param', 'help', 'sys'] as tab}
       <button
         class="dock-tab"
         class:active={ui.dockTab === tab}
@@ -243,26 +241,6 @@
           {L === 'ja' ? 'ファクトリーリセット' : 'FACTORY RESET'}
         </button>
       {/if}
-    </div>
-
-  {:else if ui.dockTab === 'fx'}
-    <!-- ── FX mode ── -->
-    <div class="mode-head">
-      <span class="mode-title">FX</span>
-      <button class="btn-close" onpointerdown={closeToParam}>&times;</button>
-    </div>
-    <div class="dock-body dock-fx">
-      <FxPad />
-    </div>
-
-  {:else if ui.dockTab === 'eq'}
-    <!-- ── EQ mode ── -->
-    <div class="mode-head">
-      <span class="mode-title">EQ</span>
-      <button class="btn-close" onpointerdown={closeToParam}>&times;</button>
-    </div>
-    <div class="dock-body dock-fx">
-      <FilterView />
     </div>
 
   {:else}
@@ -480,11 +458,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .dock-fx {
-    display: flex;
-    overflow: hidden;
-  }
-
   /* ── PARAM tab ── */
   .param-content {
     padding: 10px 12px;

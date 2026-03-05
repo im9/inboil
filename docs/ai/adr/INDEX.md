@@ -60,6 +60,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 034 | Help / Guide Redesign | Proposed | Content updates for 036's HELP tab |
 | 035 | Master View | Proposed | XY pad + knobs for master bus |
 | 036 | Remove Footer / Dockable Panel | Implemented | Unifies ParamPanel + Sidebar into DockPanel. Related: 034, 037 |
+| 047 | FX / EQ as Main Views | Implemented | Move FxPad + FilterView from DockPanel tabs to view-main |
 
 ## Instruments / Sound Design
 

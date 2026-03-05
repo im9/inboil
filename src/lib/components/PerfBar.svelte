@@ -217,7 +217,7 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- View toggle: GRID / TRKR -->
+  <!-- View toggle: PAT / SCENE | FX / EQ -->
   <div class="view-toggle">
     <button
       class="btn-view"
@@ -226,7 +226,7 @@
       data-tip="Pattern editor" data-tip-ja="パターンエディター"
     >PAT</button>
     <button
-      class="btn-view btn-scene"
+      class="btn-view"
       class:active={ui.phraseView === 'scene'}
       onpointerdown={() => { ui.phraseView = 'scene' }}
       data-tip="Scene graph view" data-tip-ja="シーングラフ画面"
@@ -240,6 +240,19 @@
         aria-label={playback.mode === 'scene' ? 'Disable scene playback' : 'Enable scene playback'}
       >{playback.mode === 'scene' ? '▶' : '⏸'}</button>
     {/if}
+    <span class="view-sep"></span>
+    <button
+      class="btn-view"
+      class:active={ui.phraseView === 'fx'}
+      onpointerdown={() => { ui.phraseView = 'fx' }}
+      data-tip="FX pad — drag nodes to control effects" data-tip-ja="FXパッド — ノードをドラッグしてエフェクト操作"
+    >FX</button>
+    <button
+      class="btn-view"
+      class:active={ui.phraseView === 'eq'}
+      onpointerdown={() => { ui.phraseView = 'eq' }}
+      data-tip="EQ / Filter view" data-tip-ja="EQ / フィルター画面"
+    >EQ</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -423,16 +436,8 @@
     color: rgba(237,232,220,0.85);
     border-color: rgba(237,232,220,0.45);
   }
-  .btn-view.btn-scene {
-    border-color: rgba(120,120,69,0.4);
-    color: rgba(120,120,69,0.6);
-    margin-left: 4px;
-    border-left: 1.5px solid rgba(120,120,69,0.4);
-  }
-  .btn-view.btn-scene.active {
-    background: rgba(120,120,69,0.25);
-    color: var(--color-olive);
-    border-color: var(--color-olive);
+  .view-sep {
+    width: 8px;
   }
   .btn-scene-mode {
     width: 22px;
@@ -657,6 +662,10 @@
       color: rgba(237,232,220,0.35);
     }
     .btn-view:not(:last-child) { border-right: 1px solid rgba(237,232,220,0.08); }
+    .view-sep {
+      width: 0;
+      border-right: 1px solid rgba(237,232,220,0.15);
+    }
     .btn-view.active {
       color: rgba(237,232,220,0.90);
       border-bottom-color: var(--color-olive);
