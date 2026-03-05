@@ -196,6 +196,7 @@
         </div>
         <DockPanel />
       </div>
+      <Sidebar />
     </div>
   {/if}
 </div>

@@ -12,19 +12,11 @@
   let { onPlay, onStop, onRandom, compact = false }: Props = $props()
 
   function handleHelp() {
-    if (compact) {
-      toggleSidebar('help')
-    } else {
-      ui.dockTab = ui.dockTab === 'help' ? 'param' : 'help'
-    }
+    toggleSidebar('help')
   }
 
   function handleSystem() {
-    if (compact) {
-      toggleSidebar('system')
-    } else {
-      ui.dockTab = ui.dockTab === 'sys' ? 'param' : 'sys'
-    }
+    toggleSidebar('system')
   }
 
   const displayNum = $derived(String(ui.currentPattern).padStart(2, '0'))
@@ -140,7 +132,7 @@
     {#if !compact}
       <button
         class="btn-help-desktop"
-        class:active={ui.dockTab === 'help'}
+        class:active={ui.sidebar === 'help'}
         onpointerdown={handleHelp}
         aria-label="Help"
         data-tip="Show help" data-tip-ja="ヘルプを表示"
@@ -148,7 +140,7 @@
     {/if}
     <button
       class="btn-system"
-      class:active={compact ? ui.sidebar === 'system' : ui.dockTab === 'sys'}
+      class:active={ui.sidebar === 'system'}
       onpointerdown={handleSystem}
       aria-label="System settings"
       data-tip="System settings" data-tip-ja="システム設定"

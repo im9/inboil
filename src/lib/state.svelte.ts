@@ -304,7 +304,6 @@ export const ui = $state({
   lockMode: false,
   selectedStep: null as number | null,
   soloTracks: new Set<number>(),
-  dockTab: 'param' as 'param' | 'help' | 'sys',
   dockPosition: 'right' as 'right' | 'bottom',
   mobileOverlay: false,
 })
@@ -447,7 +446,6 @@ ui.dockPosition = initialPrefs.dockPosition
 
 if (!prefs.visited) {
   ui.sidebar = 'help'
-  ui.dockTab = 'help'
   prefs.visited = true
   savePrefs()
 }
@@ -649,7 +647,6 @@ export function factoryReset(): void {
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
-  ui.dockTab = 'param'
   ui.dockPosition = 'right'
   ui.mobileOverlay = false
   ui.selectedSceneNode = null
