@@ -225,7 +225,7 @@
       >
         <div class="track-head">
           <div class="vel-label">
-            <span class="vel-name" class:chance-active={chanceMode}
+            <span class="vel-name" class:chance-active={chanceMode} role="button" tabindex="0"
               onpointerdown={() => { chanceMode = !chanceMode }}
               data-tip={chanceMode ? "Chance — tap to switch to VEL" : "Velocity — tap to switch to CHNC"}
               data-tip-ja={chanceMode ? "チャンス — タップでVELに切替" : "ベロシティ — タップでCHNCに切替"}

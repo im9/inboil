@@ -293,18 +293,31 @@ export const playback = $state({
   playingPattern: null as number | null,
 })
 
-export const ui = $state({
+export const ui = $state<{
+  selectedTrack: number
+  currentSection: number
+  currentPattern: number
+  phraseView: 'pattern' | 'scene' | 'fx' | 'eq'
+  selectedSceneNode: string | null
+  selectedSceneEdge: string | null
+  sidebar: 'help' | 'system' | null
+  lockMode: boolean
+  selectedStep: number | null
+  soloTracks: Set<number>
+  dockPosition: 'right' | 'bottom'
+  mobileOverlay: boolean
+}>({
   selectedTrack: 0,
   currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
-  phraseView: 'pattern' as 'pattern' | 'scene' | 'fx' | 'eq',
-  selectedSceneNode: null as string | null,
-  selectedSceneEdge: null as string | null,
-  sidebar: null as 'help' | 'system' | null,
+  phraseView: 'pattern',
+  selectedSceneNode: null,
+  selectedSceneEdge: null,
+  sidebar: null,
   lockMode: false,
-  selectedStep: null as number | null,
+  selectedStep: null,
   soloTracks: new Set<number>(),
-  dockPosition: 'right' as 'right' | 'bottom',
+  dockPosition: 'right',
   mobileOverlay: false,
 })
 

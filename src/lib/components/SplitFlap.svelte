@@ -11,9 +11,11 @@
     return typeof v === 'number' ? s.padStart(w, ' ') : s.padEnd(w, ' ')
   }
 
-  let curStr = $state(fmt(value))
-  let prevStr = $state(fmt(value))
-  let flipping = $state<boolean[]>(new Array(curStr.length).fill(false))
+  // svelte-ignore state_referenced_locally
+  const initial = fmt(value)
+  let curStr = $state(initial)
+  let prevStr = $state(initial)
+  let flipping = $state<boolean[]>(new Array(initial.length).fill(false))
 
   const curChars  = $derived(curStr.split(''))
   const prevChars = $derived(prevStr.split(''))

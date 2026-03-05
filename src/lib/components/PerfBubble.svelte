@@ -50,7 +50,7 @@
 
 <!-- Backdrop -->
 {#if open}
-  <button class="bubble-backdrop" onpointerdown={closeMenu}></button>
+  <button class="bubble-backdrop" aria-label="Close menu" onpointerdown={closeMenu}></button>
 {/if}
 
 <!-- Floating trigger -->

@@ -166,16 +166,6 @@
   .param-content {
     padding: 10px 12px;
   }
-  .param-minimal {
-    padding: 24px 12px;
-    text-align: center;
-  }
-  .param-hint {
-    font-size: 10px;
-    color: rgba(237,232,220,0.35);
-    margin: 0;
-  }
-
   /* ── Track selector bar ── */
   .track-bar {
     display: flex;

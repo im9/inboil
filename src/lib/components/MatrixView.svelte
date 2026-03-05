@@ -63,7 +63,7 @@
 
   <!-- Grid: square cells -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="matrix-grid" bind:this={gridEl} tabindex="0" onkeydown={onKeydown}>
+  <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" onkeydown={onKeydown}>
     {#each { length: visibleCount } as _, pi}
       {@const hasData = patternHasData(pi)}
       {@const d = patternDensity(pi)}
@@ -80,7 +80,7 @@
         class:in-scene={inScene}
         style="--d: {d}"
       >
-        <button class="cell-bg" onpointerdown={() => selectAndFocus(pi)}></button>
+        <button class="cell-bg" aria-label="Pattern {pi}" onpointerdown={() => selectAndFocus(pi)}></button>
       </div>
     {/each}
   </div>

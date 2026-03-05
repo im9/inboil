@@ -271,6 +271,7 @@
       class:active={vkbd.enabled}
       onpointerdown={() => { vkbd.enabled = !vkbd.enabled }}
       data-tip="Virtual keyboard — play notes with PC keys (A-;)" data-tip-ja="バーチャルキーボード — PCキーで演奏 (A-;)"
+    aria-label="Virtual keyboard"
     ><svg class="kbd-icon" viewBox="0 0 24 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="1" y="1" width="22" height="14" rx="1.5"/>
       <line x1="5.5" y1="1" x2="5.5" y2="9"/><line x1="9.5" y1="1" x2="9.5" y2="9"/>
@@ -285,7 +286,7 @@
 
 <!-- Mobile: keyboard fan-out overlay -->
 <div class="key-arc-overlay" class:open={keyMenuOpen}>
-  <button class="key-arc-backdrop" onpointerdown={() => { keyMenuOpen = false }}></button>
+  <button class="key-arc-backdrop" aria-label="Close keyboard menu" onpointerdown={() => { keyMenuOpen = false }}></button>
   {#each ARC_DATA as key, i}
     {@const w = key.black ? 14 : 20}
     {@const h = key.black ? 30 : 46}

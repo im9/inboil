@@ -544,8 +544,6 @@
   @media (max-width: 639px) {
     .track-bar { padding: 2px 4px; }
     .track-btn { padding: 3px 6px; font-size: 8px; }
-    .track-actions { display: none; }
-
     .col-h { font-size: 7px; }
     .cell { font-size: 10px; }
     .cell-num { font-size: 8px; }
