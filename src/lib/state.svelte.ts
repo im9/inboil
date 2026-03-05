@@ -84,7 +84,7 @@ export interface Effects {
 /** Node on the scene canvas (ADR 044) */
 export interface SceneNode {
   id: string
-  type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability'
+  type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
   x: number               // canvas position (normalized 0–1)
   y: number
   root: boolean           // true = playback entry point (exactly one)
@@ -1058,11 +1058,12 @@ const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
   tempo: { bpm: 120 },
   repeat: { count: 2 },
   probability: {},
+  fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
 }
 
-/** Add a function node (transpose/tempo/repeat/probability) */
+/** Add a function node */
 export function sceneAddFunctionNode(
-  type: 'transpose' | 'tempo' | 'repeat' | 'probability',
+  type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx',
   x: number, y: number
 ): string {
   pushUndo('Add function node')
@@ -1230,6 +1231,16 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       song.bpm = node.params?.bpm ?? 120
     } else if (node.type === 'repeat') {
       playback.sceneRepeatLeft = (node.params?.count ?? 2) - 1
+    } else if (node.type === 'fx') {
+      const p = node.params ?? {}
+      if (p.verb)     fxPad.verb     = { ...fxPad.verb, on: true }
+      else            fxPad.verb     = { ...fxPad.verb, on: false }
+      if (p.delay)    fxPad.delay    = { ...fxPad.delay, on: true }
+      else            fxPad.delay    = { ...fxPad.delay, on: false }
+      if (p.glitch)   fxPad.glitch   = { ...fxPad.glitch, on: true }
+      else            fxPad.glitch   = { ...fxPad.glitch, on: false }
+      if (p.granular) fxPad.granular = { ...fxPad.granular, on: true }
+      else            fxPad.granular = { ...fxPad.granular, on: false }
     }
 
     // Follow this function node's outgoing edges (random pick)

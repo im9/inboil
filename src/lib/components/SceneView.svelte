@@ -1,7 +1,6 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
-  import { FACTORY_COUNT } from '../factory.ts'
 
   let viewEl: HTMLDivElement
   let canvasEl: HTMLCanvasElement
@@ -23,8 +22,14 @@
   // ── Long-press (mobile edge creation) ──
   let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
-  // ── Add-node picker ──
+  // ── Add-node picker (bubble menu) ──
   let pickerOpen = $state(false)
+  let pickerPos = $state({ x: 0, y: 0 })  // pixel position within .scene-view
+
+  // ── Background long-press (mobile: open bubble menu) ──
+  let bgLongPressTimer: ReturnType<typeof setTimeout> | null = null
+  let bgPointerStart = { x: 0, y: 0 }
+  let bgPointerMoved = false
 
   // ── Drop from MatrixView ──
   let dropActive = $state(false)
@@ -41,25 +46,14 @@
   let pinchStartDist = 0
   let pinchStartZoom = 1
 
-  /** Patterns with data for the picker */
-  const pickerPatterns = $derived.by(() => {
-    const result: { index: number; name: string; density: number }[] = []
-    for (let i = 0; i < song.patterns.length; i++) {
-      const p = song.patterns[i]
-      let total = 0, active = 0
-      for (const c of p.cells) {
-        total += c.steps
-        for (let s = 0; s < c.steps; s++) {
-          if (c.trigs[s]?.active) active++
-        }
-      }
-      // Show factory patterns + any with data
-      if (i < FACTORY_COUNT || active > 0) {
-        result.push({ index: i, name: p.name, density: total > 0 ? active / total : 0 })
-      }
-    }
-    return result
-  })
+  /** Radial menu items for function nodes */
+  const BUBBLE_ITEMS: { type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'; tip: string; tipJa: string }[] = [
+    { type: 'transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
+    { type: 'tempo', tip: 'Tempo', tipJa: 'テンポ' },
+    { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
+    { type: 'probability', tip: 'Probability', tipJa: '確率' },
+    { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
+  ]
 
   /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
   function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
@@ -205,6 +199,16 @@
     // Pan / pinch zoom
     if (isPanning) {
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      // Cancel long-press if pointer moved
+      if (bgLongPressTimer && !bgPointerMoved) {
+        const dx = Math.abs(e.clientX - bgPointerStart.x)
+        const dy = Math.abs(e.clientY - bgPointerStart.y)
+        if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) {
+          bgPointerMoved = true
+          clearTimeout(bgLongPressTimer)
+          bgLongPressTimer = null
+        }
+      }
       if (activePointers.size >= 2) {
         const pts = [...activePointers.values()]
         const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y)
@@ -248,6 +252,7 @@
 
   function endDrag(e: PointerEvent) {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    if (bgLongPressTimer) { clearTimeout(bgLongPressTimer); bgLongPressTimer = null }
     activePointers.delete(e.pointerId)
     if (isPanning) {
       if (activePointers.size === 0) isPanning = false
@@ -297,6 +302,9 @@
   }
 
   function onBgDown(e: PointerEvent) {
+    // Close bubble menu on any background interaction
+    if (pickerOpen) { pickerOpen = false }
+
     // Middle mouse or Ctrl+left → start pan
     if (e.button === 1 || (e.ctrlKey && e.button === 0)) {
       e.preventDefault()
@@ -326,12 +334,10 @@
       return
     }
     const rect = viewEl.getBoundingClientRect()
-    // Transform to canvas coords (undo pan/zoom)
     const px = (e.clientX - rect.left - panX) / zoom
     const py = (e.clientY - rect.top - panY) / zoom
     const w = rect.width, h = rect.height
 
-    // Check each edge for proximity
     const { nodes, edges } = song.scene
     let hitEdge: string | null = null
     let bestDist = 8 / zoom
@@ -354,7 +360,33 @@
     } else {
       ui.selectedSceneNode = null
       ui.selectedSceneEdge = null
-      onBgDblCheck() // double-click background → reset zoom
+
+      // Double-click background → open bubble menu at pointer
+      const now = Date.now()
+      if (lastBgClickTime && now - lastBgClickTime < 300) {
+        openPickerAt(e.clientX, e.clientY)
+        lastBgClickTime = 0
+      } else {
+        lastBgClickTime = now
+        // Start pan on left-click drag of empty space
+        isPanning = true
+        panPointerStart = { x: e.clientX, y: e.clientY }
+        panStartX = panX; panStartY = panY
+        viewEl?.setPointerCapture(e.pointerId)
+
+        // Long-press on empty space → open bubble menu (mobile)
+        bgPointerStart = { x: e.clientX, y: e.clientY }
+        bgPointerMoved = false
+        if (bgLongPressTimer) clearTimeout(bgLongPressTimer)
+        bgLongPressTimer = setTimeout(() => {
+          bgLongPressTimer = null
+          if (!bgPointerMoved && isPanning) {
+            isPanning = false
+            openPickerAt(e.clientX, e.clientY)
+            if (navigator.vibrate) navigator.vibrate(30)
+          }
+        }, 500)
+      }
     }
   }
 
@@ -403,6 +435,15 @@
     if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
     if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
     if (node.type === 'probability') return '?%'
+    if (node.type === 'fx') {
+      const p = node.params ?? {}
+      const tags = []
+      if (p.verb) tags.push('V')
+      if (p.delay) tags.push('D')
+      if (p.glitch) tags.push('G')
+      if (p.granular) tags.push('R')
+      return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
+    }
     return '?'
   }
 
@@ -468,21 +509,30 @@
 
   // ── Picker ──
 
-  function openPicker(e: PointerEvent) {
-    e.stopPropagation()
-    pickerOpen = !pickerOpen
+  /** Open bubble menu at a specific position within the scene view */
+  function openPickerAt(clientX: number, clientY: number) {
+    if (!viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    pickerPos = { x: clientX - rect.left, y: clientY - rect.top }
+    pickerOpen = true
   }
 
-  function pickPattern(patternIndex: number) {
-    const pat = song.patterns[patternIndex]
-    const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
-    ui.selectedSceneNode = id
-    ui.selectedSceneEdge = null
-    pickerOpen = false
+  function toggleFxParam(key: string) {
+    if (!selectedFnNode || selectedFnNode.type !== 'fx') return
+    const p = { ...(selectedFnNode.params || {}) }
+    p[key] = p[key] ? 0 : 1
+    sceneUpdateNodeParams(selectedFnNode.id, p)
   }
 
-  function pickFunctionNode(type: 'transpose' | 'tempo' | 'repeat' | 'probability') {
-    const id = sceneAddFunctionNode(type, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
+  function pickFunctionNode(type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx') {
+    // Convert picker pixel position to normalized coords (accounting for zoom/pan)
+    if (!viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    const canvasX = (pickerPos.x - panX) / zoom
+    const canvasY = (pickerPos.y - panY) / zoom
+    const nx = Math.max(0.05, Math.min(0.95, (canvasX - PAD_INSET) / (rect.width - PAD_INSET * 2)))
+    const ny = Math.max(0.05, Math.min(0.95, (canvasY - PAD_INSET) / (rect.height - PAD_INSET * 2)))
+    const id = sceneAddFunctionNode(type, nx, ny)
     ui.selectedSceneNode = id
     ui.selectedSceneEdge = null
     pickerOpen = false
@@ -505,13 +555,6 @@
   }
 
   let lastBgClickTime = 0
-  function onBgDblCheck() {
-    const now = Date.now()
-    if (now - lastBgClickTime < 300 && zoom !== 1) {
-      zoom = 1; panX = 0; panY = 0
-    }
-    lastBgClickTime = now
-  }
 
   // ── Canvas rendering ──
 
@@ -760,6 +803,11 @@
             <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
             <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
           </svg>
+        {:else if node.type === 'fx'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+            <path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>
+          </svg>
+          <span class="node-label">{nodeName(node)}</span>
         {:else}
           <span class="node-label">{nodeName(node)}</span>
         {/if}
@@ -781,7 +829,7 @@
     {/if}
 
     <!-- Param popup for selected function node -->
-    {#if selectedFnNode && selectedFnNode.type !== 'probability'}
+    {#if selectedFnNode && selectedFnNode.type !== 'probability' && selectedFnNode.type !== 'fx'}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="param-popup" style="
         left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
@@ -792,15 +840,26 @@
         <button class="param-btn" onpointerdown={incParam}>+</button>
       </div>
     {/if}
+
+    <!-- FX toggle popup for selected fx node -->
+    {#if selectedFnNode && selectedFnNode.type === 'fx'}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="param-popup fx-popup" style="
+        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
+        top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
+      " onpointerdown={e => e.stopPropagation()}>
+        {#each [['verb', 'VRB'], ['delay', 'DLY'], ['glitch', 'GLT'], ['granular', 'GRN']] as [key, label]}
+          <button
+            class="fx-toggle"
+            class:active={selectedFnNode.params?.[key]}
+            onpointerdown={e => { e.stopPropagation(); toggleFxParam(key) }}
+          >{label}</button>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <!-- UI controls (outside zoom/pan transform) -->
-  <button
-    class="scene-add-btn"
-    data-tip="Add node" data-tip-ja="ノードを追加"
-    onpointerdown={openPicker}
-  >+</button>
-
   {#if zoom !== 1}
     <button
       class="zoom-reset-btn"
@@ -809,53 +868,60 @@
     >{Math.round(zoom * 100)}%</button>
   {/if}
 
-  <!-- Node picker -->
+  <!-- Radial bubble menu for function nodes (appears at pointer position) -->
   {#if pickerOpen}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); pickerOpen = false }}></div>
-    <div class="node-picker">
-      {#each pickerPatterns as pp}
-        <button class="picker-row" onpointerdown={e => { e.stopPropagation(); pickPattern(pp.index) }}>
-          <span class="picker-name">{pp.name}</span>
-          <span class="picker-density" style="--d: {pp.density}"></span>
-        </button>
-      {/each}
-      <div class="picker-sep"></div>
-      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('transpose') }}>
-        <span class="picker-name">TRANSPOSE</span>
-        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">
-          <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
-          <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
-        </svg>
+    {#each BUBBLE_ITEMS as item, i}
+      {@const angle = -Math.PI / 2 + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.7}
+      {@const radius = 48}
+      {@const bx = pickerPos.x + Math.cos(angle) * radius}
+      {@const by = pickerPos.y + Math.sin(angle) * radius}
+      {@const clampedX = Math.max(20, Math.min(viewEl ? viewEl.clientWidth - 20 : bx, bx))}
+      {@const clampedY = Math.max(20, Math.min(viewEl ? viewEl.clientHeight - 20 : by, by))}
+      <button
+        class="bubble-item"
+        style="
+          left: {clampedX - 16}px;
+          top: {clampedY - 16}px;
+          transition-delay: {i * 30}ms;
+        "
+        data-tip={item.tip} data-tip-ja={item.tipJa}
+        onpointerdown={e => { e.stopPropagation(); pickFunctionNode(item.type) }}
+      >
+        {#if item.type === 'transpose'}
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
+            <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
+          </svg>
+        {:else if item.type === 'tempo'}
+          <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
+            <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
+          </svg>
+        {:else if item.type === 'repeat'}
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+            <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
+            <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
+          </svg>
+        {:else if item.type === 'probability'}
+          <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
+            <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
+          </svg>
+        {:else if item.type === 'fx'}
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+            <path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>
+          </svg>
+        {/if}
       </button>
-      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('tempo') }}>
-        <span class="picker-name">TEMPO</span>
-        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
-          <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
-          <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('repeat') }}>
-        <span class="picker-name">REPEAT</span>
-        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-          <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
-          <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
-        </svg>
-      </button>
-      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('probability') }}>
-        <span class="picker-name">PROBABILITY</span>
-        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
-          <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
-          <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
-        </svg>
-      </button>
-    </div>
+    {/each}
   {/if}
 
   {#if song.scene.nodes.length === 0}
-    <div class="scene-empty">No nodes — press + to add</div>
+    <div class="scene-empty" data-tip="Double-click to add nodes" data-tip-ja="ダブルクリックでノード追加">Double-click to add nodes</div>
   {/if}
 </div>
 
@@ -867,6 +933,10 @@
     overflow: hidden;
     touch-action: none;
     user-select: none;
+    cursor: grab;
+  }
+  .scene-view:active {
+    cursor: grabbing;
   }
   .scene-view.drop-active {
     outline: 2px dashed rgba(30,32,40,0.25);
@@ -1023,37 +1093,11 @@
     box-shadow: 0 0 6px rgba(68, 114, 180, 0.25);
   }
 
-  /* ── Add button ── */
-  .scene-add-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1.5px solid rgba(120, 120, 69, 0.4);
-    background: rgba(255, 255, 255, 0.8);
-    color: var(--color-olive);
-    font-family: var(--font-data);
-    font-size: 16px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-    transition: background 80ms, border-color 80ms;
-  }
-  .scene-add-btn:hover {
-    background: rgba(120, 120, 69, 0.1);
-    border-color: var(--color-olive);
-  }
-
   /* ── Zoom reset ── */
   .zoom-reset-btn {
     position: absolute;
     top: 8px;
-    right: 42px;
+    right: 8px;
     height: 28px;
     padding: 0 8px;
     border-radius: 4px;
@@ -1072,59 +1116,39 @@
     color: var(--color-fg);
   }
 
-  /* ── Picker ── */
+  /* ── Radial bubble menu ── */
   .picker-backdrop {
     position: fixed;
     inset: 0;
     z-index: 9;
   }
-  .node-picker {
+  .bubble-item {
     position: absolute;
-    top: 40px;
-    right: 8px;
-    width: 140px;
-    max-height: 200px;
-    overflow-y: auto;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(30, 32, 40, 0.1);
-    border-radius: 4px;
-    z-index: 10;
-    box-shadow: 0 4px 16px rgba(30, 32, 40, 0.15);
-  }
-  .node-picker::-webkit-scrollbar { width: 0; display: none; }
-
-  .picker-row {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(30, 32, 40, 0.15);
+    background: var(--color-fg);
+    color: rgba(237, 232, 220, 0.8);
     display: flex;
     align-items: center;
-    width: 100%;
-    height: 24px;
-    padding: 0 8px;
-    border: none;
-    background: transparent;
-    color: rgba(30, 32, 40, 0.6);
+    justify-content: center;
     cursor: pointer;
-    transition: background 40ms;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.2);
+    animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
-  .picker-row:hover {
-    background: rgba(120, 120, 69, 0.1);
-    color: var(--color-fg);
+  .bubble-item:hover {
+    background: rgba(30, 32, 40, 0.9);
+    color: white;
+    transform: scale(1.15);
   }
-
-  .picker-name {
-    font-family: var(--font-data);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    flex: 1;
-    text-align: left;
+  .bubble-item:active {
+    transform: scale(0.95);
   }
-
-  .picker-density {
-    width: 24px;
-    height: 4px;
-    background: rgba(120, 120, 69, calc(0.1 + var(--d) * 0.6));
-    border-radius: 1px;
-    flex-shrink: 0;
+  @keyframes bubble-pop {
+    from { opacity: 0; transform: scale(0.3); }
+    to   { opacity: 1; transform: scale(1); }
   }
 
   /* ── Param popup ── */
@@ -1172,26 +1196,30 @@
     letter-spacing: 0.04em;
   }
 
-  /* ── Picker separator & function rows ── */
-  .picker-sep {
-    height: 1px;
-    background: rgba(30, 32, 40, 0.08);
-    margin: 2px 8px;
+  /* ── FX toggle popup ── */
+  .fx-popup {
+    gap: 2px;
   }
-  .picker-row.fn-row {
-    color: rgba(30, 32, 40, 0.4);
+  .fx-toggle {
+    border: none;
+    border-radius: 3px;
+    background: rgba(30, 32, 40, 0.06);
+    color: rgba(30, 32, 40, 0.35);
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 5px;
+    cursor: pointer;
   }
-  .picker-row.fn-row:hover {
-    background: rgba(30, 32, 40, 0.05);
-    color: rgba(30, 32, 40, 0.7);
+  .fx-toggle:hover {
+    background: rgba(30, 32, 40, 0.1);
   }
-  .picker-fn-icon {
-    flex-shrink: 0;
-    color: rgba(30, 32, 40, 0.4);
+  .fx-toggle.active {
+    background: var(--color-fg);
+    color: var(--color-bg);
   }
-  .picker-row.fn-row:hover .picker-fn-icon {
-    color: rgba(30, 32, 40, 0.7);
-  }
+
 
   /* ── Empty state ── */
   .scene-empty {
@@ -1223,12 +1251,9 @@
     .scene-node.fn .node-label { font-size: 9px; }
     .fn-icon { width: 14px; height: 14px; }
     .node-label { font-size: 11px; }
-    .scene-add-btn { width: 36px; height: 36px; font-size: 20px; }
-    .zoom-reset-btn { right: 50px; }
+    .zoom-reset-btn { right: 12px; }
     .param-btn { width: 32px; height: 32px; font-size: 18px; }
     .param-val { font-size: 13px; min-width: 36px; }
-    .node-picker { width: 180px; max-height: 260px; }
-    .picker-row { height: 32px; padding: 0 12px; }
-    .picker-name { font-size: 10px; }
+    .bubble-item { width: 36px; height: 36px; }
   }
 </style>
