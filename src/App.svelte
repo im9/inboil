@@ -10,7 +10,7 @@
   import SceneView from './lib/components/SceneView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import { song, playback, ui, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, undo, redo } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -26,14 +26,14 @@
   // Sync song + effects → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + ui.phraseView + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
       if (playback.soloPattern != null) {
         engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
-      } else if (ui.phraseView === 'scene' && hasScenePlayback()) {
+      } else if (playback.mode === 'scene' && hasScenePlayback()) {
         engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
-      } else if (ui.phraseView === 'scene' && hasArrangement()) {
+      } else if (playback.mode === 'scene' && hasArrangement()) {
         engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
       } else {
         engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
@@ -47,8 +47,8 @@
     playback.playheads = heads
     // Solo pattern — just loop, no advancement
     if (playback.soloPattern != null) return
-    // GRID/TRKR view — just loop current pattern, no advancement
-    if (ui.phraseView !== 'scene') return
+    // Loop mode — just loop current pattern, no advancement
+    if (playback.mode !== 'scene') return
     if (heads[0] === 0 && prev0 !== 0) {
       // Beat boundary — scene graph takes priority
       if (hasScenePlayback()) {
@@ -92,14 +92,18 @@
       playback.playing = true
       return
     }
-    if (ui.phraseView === 'scene' && hasScenePlayback()) {
+    // ADR 045: auto-engage scene mode only when in scene view
+    if (ui.phraseView === 'scene' && (hasScenePlayback() || hasArrangement())) {
+      playback.mode = 'scene'
+    }
+    if (playback.mode === 'scene' && hasScenePlayback()) {
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
       const { patternIndex } = advanceSceneNode()
       perf.rootNote = song.rootNote + playback.sceneTranspose
       engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
-    } else if (ui.phraseView === 'scene' && hasArrangement()) {
+    } else if (playback.mode === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
       engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
@@ -126,6 +130,8 @@
     playback.sceneEdgeId = null
     playback.sceneRepeatLeft = 0
     playback.sceneTranspose = 0
+    playback.mode = 'loop'
+    playback.playingPattern = null
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -148,10 +154,10 @@
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.phraseView === 'tracker'}
-        <TrackerView />
-      {:else if ui.phraseView === 'scene'}
+      {#if ui.phraseView === 'scene'}
         <SceneView />
+      {:else if prefs.patternEditor === 'tracker'}
+        <TrackerView />
       {:else}
         <MobileTrackView />
       {/if}
@@ -168,10 +174,10 @@
       <div class="view-content-row">
         <MatrixView />
         <div class="view-main">
-          {#if ui.phraseView === 'tracker'}
-            <TrackerView />
-          {:else if ui.phraseView === 'scene'}
+          {#if ui.phraseView === 'scene'}
             <SceneView />
+          {:else if prefs.patternEditor === 'tracker'}
+            <TrackerView />
           {:else}
             <StepGrid />
           {/if}

@@ -48,7 +48,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar (Phases 1-3) |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
-| 045 | Decouple Playback from View | Proposed | Separate playback.mode from ui.phraseView |
+| 045 | Decouple Playback from View | Implemented | Separate playback.mode from ui.phraseView |
+| 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 
 ## UI / Layout
 

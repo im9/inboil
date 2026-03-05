@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
+  import { song, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES, hasScenePlayback, hasArrangement } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
   import PerfButtons from './PerfButtons.svelte'
@@ -221,22 +221,25 @@
   <div class="view-toggle">
     <button
       class="btn-view"
-      class:active={ui.phraseView === 'grid'}
-      onpointerdown={() => { ui.phraseView = 'grid' }}
-      data-tip="Step sequencer view" data-tip-ja="ステップシーケンサー画面"
-    >GRID</button>
-    <button
-      class="btn-view"
-      class:active={ui.phraseView === 'tracker'}
-      onpointerdown={() => { ui.phraseView = 'tracker' }}
-      data-tip="Tracker step editor" data-tip-ja="トラッカー型エディター"
-    >TRKR</button>
+      class:active={ui.phraseView === 'pattern'}
+      onpointerdown={() => { ui.phraseView = 'pattern' }}
+      data-tip="Pattern editor" data-tip-ja="パターンエディター"
+    >PAT</button>
     <button
       class="btn-view btn-scene"
       class:active={ui.phraseView === 'scene'}
-      onpointerdown={() => { ui.phraseView = ui.phraseView === 'scene' ? 'grid' : 'scene' }}
+      onpointerdown={() => { ui.phraseView = 'scene' }}
       data-tip="Scene graph view" data-tip-ja="シーングラフ画面"
     >SCENE</button>
+    {#if hasScenePlayback() || hasArrangement()}
+      <button
+        class="btn-scene-mode"
+        class:active={playback.mode === 'scene'}
+        onpointerdown={() => { playback.mode = playback.mode === 'scene' ? 'loop' : 'scene' }}
+        data-tip="Scene playback on/off — keeps arrangement running in any view" data-tip-ja="シーン再生 ON/OFF — どのビューでもアレンジ継続"
+        aria-label={playback.mode === 'scene' ? 'Disable scene playback' : 'Enable scene playback'}
+      >{playback.mode === 'scene' ? '▶' : '⏸'}</button>
+    {/if}
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -415,7 +418,6 @@
     transition: background 40ms linear, color 40ms linear;
     user-select: none;
   }
-  .btn-view:not(:last-child) { border-right: none; }
   .btn-view.active {
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
@@ -430,6 +432,25 @@
   .btn-view.btn-scene.active {
     background: rgba(120,120,69,0.25);
     color: var(--color-olive);
+    border-color: var(--color-olive);
+  }
+  .btn-scene-mode {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid rgba(120,120,69,0.4);
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(120,120,69,0.5);
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
+    transition: background 40ms, color 40ms;
+  }
+  .btn-scene-mode.active {
+    background: var(--color-olive);
+    color: var(--color-bg);
     border-color: var(--color-olive);
   }
 
@@ -640,6 +661,20 @@
       color: rgba(237,232,220,0.90);
       border-bottom-color: var(--color-olive);
       background: rgba(237,232,220,0.06);
+    }
+    .btn-scene-mode {
+      flex: none;
+      width: 28px;
+      height: auto;
+      border: none;
+      border-radius: 0;
+      border-bottom: 2px solid transparent;
+      font-size: 8px;
+      margin-left: 0;
+    }
+    .btn-scene-mode.active {
+      border-bottom-color: var(--color-olive);
+      background: rgba(120,120,69,0.15);
     }
 
     /* ── Key fan-out overlay ── */

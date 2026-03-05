@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { song, activeCell, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, toggleDockPosition, factoryReset } from '../state.svelte.ts'
+  import { song, activeCell, ui, lang, prefs, clearAllParamLocks, setTrackSend, toggleLang, toggleScaleMode, togglePatternEditor, toggleDockPosition, factoryReset } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
@@ -199,6 +199,16 @@
           <p class="setting-desc">{L === 'ja'
             ? 'ON の場合、ピアノロールでスケール外のノートが無効になります。'
             : 'When ON, out-of-scale notes are disabled in the piano roll.'}</p>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">{L === 'ja' ? 'エディター' : 'EDITOR'}</span>
+          <button class="btn-toggle" onpointerdown={togglePatternEditor}>
+            {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
+          </button>
+          <p class="setting-desc">{L === 'ja'
+            ? 'パターンエディターの表示形式を切り替えます。'
+            : 'Switch pattern editor between grid and tracker.'}</p>
         </div>
 
         <div class="setting-group">

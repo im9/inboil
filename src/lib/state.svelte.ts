@@ -288,13 +288,16 @@ export const playback = $state({
   sceneRepeatLeft: 0,
   sceneTranspose: 0,
   soloPattern: null as number | null,
+  // ADR 045: playback mode decoupled from view
+  mode: 'loop' as 'loop' | 'scene',
+  playingPattern: null as number | null,
 })
 
 export const ui = $state({
   selectedTrack: 0,
   currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
-  phraseView: 'grid' as 'grid' | 'tracker' | 'scene',
+  phraseView: 'pattern' as 'pattern' | 'scene',
   selectedSceneNode: null as string | null,
   selectedSceneEdge: null as string | null,
   sidebar: null as 'help' | 'system' | null,
@@ -396,10 +399,11 @@ interface StoredPrefs {
   visited: boolean
   scaleMode: boolean
   dockPosition: 'right' | 'bottom'
+  patternEditor: 'grid' | 'tracker'
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockPosition: 'right' }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockPosition: 'right', patternEditor: 'grid' }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -425,6 +429,7 @@ function savePrefs(): void {
     visited: prefs.visited,
     scaleMode: prefs.scaleMode,
     dockPosition: ui.dockPosition,
+    patternEditor: prefs.patternEditor,
   }))
 }
 
@@ -435,6 +440,7 @@ export const lang = $state({ value: initialPrefs.lang })
 export const prefs = $state({
   visited: initialPrefs.visited,
   scaleMode: initialPrefs.scaleMode,
+  patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
 })
 
 ui.dockPosition = initialPrefs.dockPosition
@@ -455,6 +461,10 @@ export function toggleSidebar(panel: 'help' | 'system'): void {
 }
 export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode
+  savePrefs()
+}
+export function togglePatternEditor(): void {
+  prefs.patternEditor = prefs.patternEditor === 'grid' ? 'tracker' : 'grid'
   savePrefs()
 }
 export function toggleDockPosition(): void {
@@ -635,7 +645,7 @@ export function factoryReset(): void {
   ui.selectedTrack = 0
   ui.currentSection = 0
   ui.currentPattern = 0
-  ui.phraseView = 'grid'
+  ui.phraseView = 'pattern'
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
@@ -1135,6 +1145,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
     ui.currentPattern = idx
+    playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
   // Root is a function node — follow its edges
@@ -1167,6 +1178,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number 
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
       const idx = pi >= 0 ? pi : 0
       ui.currentPattern = idx
+      playback.playingPattern = idx
       return { advanced: true, patternIndex: idx }
     }
 
