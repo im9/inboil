@@ -57,7 +57,7 @@
         const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
         if (shouldStop) { stop(); return }
         if (advanced) {
-          perf.rootNote = song.rootNote + playback.sceneTranspose
+          perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
           engine.sendPatternByIndex(song, effects, perf, fxPad, true, patternIndex)
         }
         return
@@ -103,9 +103,10 @@
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
+      playback.sceneAbsoluteKey = null
       const { patternIndex, stop: shouldStop } = advanceSceneNode()
       if (shouldStop) return
-      perf.rootNote = song.rootNote + playback.sceneTranspose
+      perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
       engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
     } else if (playback.mode === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
@@ -134,6 +135,7 @@
     playback.sceneEdgeId = null
     playback.sceneRepeatLeft = 0
     playback.sceneTranspose = 0
+    playback.sceneAbsoluteKey = null
     playback.mode = 'loop'
     playback.playingPattern = null
   }

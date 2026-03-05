@@ -429,6 +429,10 @@
       return pat?.name || '---'
     }
     if (node.type === 'transpose') {
+      if (node.params?.mode === 1) {
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
+      }
       const s = node.params?.semitones ?? 0
       return `T${s >= 0 ? '+' : ''}${s}`
     }
@@ -479,9 +483,14 @@
     return (n && n.type !== 'pattern') ? n : null
   })
 
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
   const paramDisplay = $derived.by(() => {
     if (!selectedFnNode) return ''
-    if (selectedFnNode.type === 'transpose') return String(selectedFnNode.params?.semitones ?? 0)
+    if (selectedFnNode.type === 'transpose') {
+      if (selectedFnNode.params?.mode === 1) return NOTE_NAMES[selectedFnNode.params?.key ?? 0]
+      return String(selectedFnNode.params?.semitones ?? 0)
+    }
     if (selectedFnNode.type === 'tempo') return String(selectedFnNode.params?.bpm ?? 120)
     if (selectedFnNode.type === 'repeat') return String(selectedFnNode.params?.count ?? 2)
     return ''
@@ -491,7 +500,10 @@
     e.stopPropagation()
     if (!selectedFnNode) return
     const p = { ...(selectedFnNode.params || {}) }
-    if (selectedFnNode.type === 'transpose') p.semitones = Math.min(12, (p.semitones ?? 0) + 1)
+    if (selectedFnNode.type === 'transpose') {
+      if (p.mode === 1) p.key = ((p.key ?? 0) + 1) % 12
+      else p.semitones = Math.min(12, (p.semitones ?? 0) + 1)
+    }
     else if (selectedFnNode.type === 'tempo') p.bpm = Math.min(300, (p.bpm ?? 120) + 5)
     else if (selectedFnNode.type === 'repeat') p.count = Math.min(16, (p.count ?? 2) + 1)
     sceneUpdateNodeParams(selectedFnNode.id, p)
@@ -501,9 +513,20 @@
     e.stopPropagation()
     if (!selectedFnNode) return
     const p = { ...(selectedFnNode.params || {}) }
-    if (selectedFnNode.type === 'transpose') p.semitones = Math.max(-12, (p.semitones ?? 0) - 1)
+    if (selectedFnNode.type === 'transpose') {
+      if (p.mode === 1) p.key = ((p.key ?? 0) + 11) % 12
+      else p.semitones = Math.max(-12, (p.semitones ?? 0) - 1)
+    }
     else if (selectedFnNode.type === 'tempo') p.bpm = Math.max(60, (p.bpm ?? 120) - 5)
     else if (selectedFnNode.type === 'repeat') p.count = Math.max(1, (p.count ?? 2) - 1)
+    sceneUpdateNodeParams(selectedFnNode.id, p)
+  }
+
+  function toggleTransposeMode(e: PointerEvent) {
+    e.stopPropagation()
+    if (!selectedFnNode || selectedFnNode.type !== 'transpose') return
+    const p = { ...(selectedFnNode.params || {}) }
+    p.mode = p.mode === 1 ? 0 : 1
     sceneUpdateNodeParams(selectedFnNode.id, p)
   }
 
@@ -835,6 +858,15 @@
         left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
         top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
       " onpointerdown={e => e.stopPropagation()}>
+        {#if selectedFnNode.type === 'transpose'}
+          <button
+            class="mode-toggle"
+            class:absolute={selectedFnNode.params?.mode === 1}
+            onpointerdown={toggleTransposeMode}
+            data-tip={selectedFnNode.params?.mode === 1 ? 'Switch to relative' : 'Switch to absolute key'}
+            data-tip-ja={selectedFnNode.params?.mode === 1 ? '相対モードに切替' : '絶対キーに切替'}
+          >{selectedFnNode.params?.mode === 1 ? 'ABS' : 'REL'}</button>
+        {/if}
         <button class="param-btn" onpointerdown={decParam}>−</button>
         <span class="param-val">{paramDisplay}</span>
         <button class="param-btn" onpointerdown={incParam}>+</button>
@@ -1194,6 +1226,28 @@
     min-width: 28px;
     text-align: center;
     letter-spacing: 0.04em;
+  }
+
+  /* ── Mode toggle (REL/ABS) ── */
+  .mode-toggle {
+    border: none;
+    border-radius: 3px;
+    background: rgba(30, 32, 40, 0.06);
+    color: rgba(30, 32, 40, 0.45);
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 4px;
+    cursor: pointer;
+    margin-right: 2px;
+  }
+  .mode-toggle:hover {
+    background: rgba(30, 32, 40, 0.1);
+  }
+  .mode-toggle.absolute {
+    background: var(--color-fg);
+    color: var(--color-bg);
   }
 
   /* ── FX toggle popup ── */

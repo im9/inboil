@@ -289,6 +289,7 @@ export const playback = $state({
   sceneEdgeId: null as string | null,
   sceneRepeatLeft: 0,
   sceneTranspose: 0,
+  sceneAbsoluteKey: null as number | null,
   soloPattern: null as number | null,
   // ADR 045: playback mode decoupled from view
   mode: 'loop' as 'loop' | 'scene',
@@ -692,6 +693,7 @@ export function factoryReset(): void {
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
+  playback.sceneAbsoluteKey = null
   playback.soloPattern = null
   // Reset prefs (keep lang)
   prefs.scaleMode = true
@@ -852,6 +854,7 @@ export function songLoadPreset(index: number) {
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
+  playback.sceneAbsoluteKey = null
   playback.soloPattern = null
   ui.currentPattern = 0
   ui.selectedSceneNode = null
@@ -1054,7 +1057,7 @@ export function sceneSetRoot(nodeId: string): void {
 }
 
 const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
-  transpose: { semitones: 0 },
+  transpose: { mode: 0, semitones: 0, key: 0 },
   tempo: { bpm: 120 },
   repeat: { count: 2 },
   probability: {},
@@ -1226,7 +1229,13 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
 
     // Process function node
     if (node.type === 'transpose') {
-      playback.sceneTranspose += (node.params?.semitones ?? 0)
+      if (node.params?.mode === 1) {
+        // Absolute mode: set key directly
+        playback.sceneAbsoluteKey = node.params?.key ?? 0
+      } else {
+        // Relative mode: accumulate semitone offset
+        playback.sceneTranspose += (node.params?.semitones ?? 0)
+      }
     } else if (node.type === 'tempo') {
       song.bpm = node.params?.bpm ?? 120
     } else if (node.type === 'repeat') {
