@@ -312,7 +312,12 @@ interface Song {
 ### Phase 1: Pattern Pool (Complete Separation)
 
 1. Enable pattern re-use: multiple sections can reference the same `patternIndex`
-2. Matrix View shows `song.patterns` (pattern pool) instead of sections
+2. **Matrix View redesign**: repurpose from section timeline to pattern pool browser
+   - Current layout (section × track grid with density) loses its timeline meaning
+   - Layout options to evaluate: pattern name list with mini density bars, name-based grid, or keep track-column grid
+   - Patterns are an unordered collection — vertical axis no longer implies arrangement order
+   - Need: filter/sort (has data, used in scene, empty), scene-usage indicator
+   - Pattern count may grow beyond 64 — layout must scale
 3. Add pattern CRUD: create, duplicate, delete patterns in the pool
 4. `ui.currentPattern` replaces pattern-selection aspect of `ui.currentSection`
 5. Step sequencer edits selected pattern (decoupled from section selection)
@@ -371,6 +376,8 @@ interface Song {
 
 | ADR | Impact |
 |-----|--------|
+| 027 (Node Chain) | Early proposal for node-based song builder. ADR 044 is the refined, production-ready evolution — same core concept (canvas + pattern nodes + connections + branching) with concrete data model, phased implementation, and FX pad canvas reuse. |
+| 037 (ChainView Redesign) | Proposed improvements to the linear chain view (expandable rows, pattern picker, drag-reorder, timeline). The chain view itself is replaced by SectionNav (arrangement slots) + Matrix View (pattern pool) + Scene Canvas (node graph). |
 | 042 (Section-Based Arrangement) | Section model replaced by Pattern + Scene. Inline cells → Pattern pool. Linear loopStart/loopEnd → Scene graph traversal. |
 | 043 (Matrix View) | Matrix View repurposed from arrangement grid to pattern pool browser. |
 

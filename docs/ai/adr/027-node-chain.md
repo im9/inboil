@@ -1,6 +1,6 @@
 # ADR 027: Node Chain — Node-Based Song Builder
 
-## Status: PROPOSED
+## Status: Superseded by ADR 044 (Scene Graph)
 
 ## Context
 

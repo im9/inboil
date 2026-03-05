@@ -114,6 +114,7 @@
   <!-- Row 2: Detail strip for selected section -->
   <div class="detail-row">
     <span class="detail-sec">SEC {String(ui.currentSection).padStart(2, '0')}</span>
+    <span class="detail-pat">PAT {String(sec.patternIndex).padStart(2, '0')}</span>
     <span class="detail-name">{pat.name || '------'}</span>
 
     <!-- Repeats -->
@@ -296,6 +297,16 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-olive);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .detail-pat {
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.30);
     white-space: nowrap;
     flex-shrink: 0;
   }

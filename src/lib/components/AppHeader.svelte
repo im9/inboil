@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, toggleSidebar, selectSection, getActiveSectionName } from '../state.svelte.ts'
+  import { song, playback, ui, toggleSidebar, selectPattern, getActivePatternName } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -27,17 +27,17 @@
     }
   }
 
-  const displayNum = $derived(String(ui.currentSection).padStart(2, '0'))
-  const displayName = $derived(getActiveSectionName())
+  const displayNum = $derived(String(ui.currentPattern).padStart(2, '0'))
+  const displayName = $derived(getActivePatternName())
 
   // ── Long-press auto-repeat for ◀/▶ buttons ──
   let repeatTimer: ReturnType<typeof setTimeout> | null = null
   let repeatInterval: ReturnType<typeof setInterval> | null = null
 
   function startRepeat(dir: -1 | 1) {
-    selectSection(ui.currentSection + dir)
+    selectPattern(ui.currentPattern + dir)
     repeatTimer = setTimeout(() => {
-      repeatInterval = setInterval(() => selectSection(ui.currentSection + dir), 100)
+      repeatInterval = setInterval(() => selectPattern(ui.currentPattern + dir), 100)
     }, 400)
   }
 
@@ -157,14 +157,14 @@
 
     <div class="pat-block">
       <div class="pat-display">
-        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous section (hold to scroll)" data-tip-ja="前のセクション (長押しでスクロール)">◀</button>
-        <span class="pat-value" data-tip="Current section" data-tip-ja="現在のセクション"><SplitFlap value={displayNum} width={2} /></span>
+        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
+        <span class="pat-value" data-tip="Current pattern" data-tip-ja="現在のパターン"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
         <span class="pat-name"><SplitFlap value={displayName} width={8} /></span>
-        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next section (hold to scroll)" data-tip-ja="次のセクション (長押しでスクロール)">▶</button>
+        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
       </div>
       <div class="pat-bottom">
-        <span class="pat-label">SEC</span>
+        <span class="pat-label">PAT</span>
       </div>
     </div>
   </div>

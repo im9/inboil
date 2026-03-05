@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectSection, sectionHasData } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sectionHasData } from '../state.svelte.ts'
   import type { Cell } from '../state.svelte.ts'
   import { SECTION_COUNT } from '../factory.ts'
 
@@ -21,8 +21,8 @@
     return count / cell.steps
   }
 
-  function onCellClick(si: number, trackId: number) {
-    selectSection(si)
+  function onCellClick(patternIndex: number, trackId: number) {
+    selectPattern(patternIndex)
     ui.selectedTrack = trackId
   }
 </script>
@@ -45,7 +45,7 @@
       {@const sec = song.sections[si]}
       {@const pat = song.patterns[sec.patternIndex]}
       {@const isPlaying = playback.playing && playback.currentSection === si}
-      {@const isEditing = ui.currentSection === si}
+      {@const isEditing = sec.patternIndex === ui.currentPattern}
       {@const inLoop = playback.loopEnd > playback.loopStart && si >= playback.loopStart && si <= playback.loopEnd}
       <div
         class="matrix-row"
@@ -65,7 +65,7 @@
             class:has-data={hasData}
             class:selected={isSel}
             style="--density: {d}"
-            onpointerdown={() => onCellClick(si, ti)}
+            onpointerdown={() => onCellClick(sec.patternIndex, ti)}
           ></button>
         {/each}
       </div>

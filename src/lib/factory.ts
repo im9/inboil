@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Section, Song, SynthType } from './state.svelte.ts'
+import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, SynthType } from './state.svelte.ts'
 
 export const DRUM_SYNTHS: SynthType[] = ['DrumSynth', 'NoiseSynth']
 
@@ -431,8 +431,36 @@ function buildFactoryCell(
 
 export const FACTORY_COUNT = FACTORY.length
 
+/** Build a default linear scene from sections that have factory data (ADR 044 Phase 1a) */
+export function makeDefaultScene(patterns: Pattern[]): Scene {
+  const nodes: SceneNode[] = []
+  const edges: SceneEdge[] = []
+  for (let i = 0; i < patterns.length; i++) {
+    if (!patterns[i].cells.some(c => c.trigs.some(t => t.active))) continue
+    const node: SceneNode = {
+      id: `sn_${String(i).padStart(2, '0')}`,
+      type: 'pattern',
+      x: 0.1 + (nodes.length % 6) * 0.14,
+      y: 0.1 + Math.floor(nodes.length / 6) * 0.2,
+      root: nodes.length === 0,
+      patternId: patterns[i].id,
+    }
+    nodes.push(node)
+  }
+  // Connect linearly
+  for (let i = 0; i < nodes.length - 1; i++) {
+    edges.push({
+      id: `se_${String(i).padStart(2, '0')}`,
+      from: nodes[i].id,
+      to: nodes[i + 1].id,
+      order: 0,
+    })
+  }
+  return { name: 'Main', nodes, edges }
+}
+
 /**
- * Build the default Song with pattern pool + arrangement sections (ADR 044 Phase 0).
+ * Build the default Song with pattern pool + arrangement sections + scene (ADR 044).
  * First FACTORY_COUNT patterns come from factory presets, rest are empty.
  * Sections have 1:1 mapping to patterns via patternIndex.
  */
@@ -467,5 +495,6 @@ export function makeDefaultSong(): Song {
     tracks,
     patterns,
     sections,
+    scene: makeDefaultScene(patterns),
   }
 }
