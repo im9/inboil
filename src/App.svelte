@@ -10,7 +10,7 @@
   import SceneView from './lib/components/SceneView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import { song, playback, ui, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, undo, redo } from './lib/state.svelte.ts'
+  import { song, playback, ui, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -38,17 +38,25 @@
     const prev0 = playback.playheads[0]
     playback.playheads = heads
     if (heads[0] === 0 && prev0 !== 0) {
-      const advanced = advanceSection()
-      if (hasArrangement()) {
+      // Beat boundary — scene graph takes priority
+      if (hasScenePlayback()) {
+        const { advanced, patternIndex } = advanceSceneNode()
         if (advanced) {
-          applySection(song.sections[playback.currentSection])
+          perf.rootNote = song.rootNote + playback.sceneTranspose
+          engine.sendPatternByIndex(song, effects, perf, fxPad, true, patternIndex)
         }
+        return
+      }
+      // Fallback: linear section advancement
+      const sectionAdvanced = advanceSection()
+      if (hasArrangement()) {
+        if (sectionAdvanced) applySection(song.sections[playback.currentSection])
         updateSectionPerf(heads[0])
         engine.sendPattern(song, effects, perf, fxPad, true, playback.currentSection)
         return
       }
     }
-    if (hasArrangement()) {
+    if (hasArrangement() && !hasScenePlayback()) {
       const changed = updateSectionPerf(heads[0])
       if (changed) {
         engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
@@ -59,11 +67,20 @@
   async function play() {
     if (playback.playing) return
     await engine.init()
-    if (hasArrangement()) {
+    if (hasScenePlayback()) {
+      playback.sceneNodeId = null
+      playback.sceneRepeatLeft = 0
+      playback.sceneTranspose = 0
+      const { patternIndex } = advanceSceneNode()
+      perf.rootNote = song.rootNote + playback.sceneTranspose
+      engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
+    } else if (hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
+      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+    } else {
+      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
     }
-    engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
     engine.play()
     playback.playing = true
   }
@@ -78,6 +95,11 @@
     fxPad.delay = { ...fxPad.delay, on: false }
     fxPad.glitch = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
+    // Clear scene playback
+    playback.sceneNodeId = null
+    playback.sceneEdgeId = null
+    playback.sceneRepeatLeft = 0
+    playback.sceneTranspose = 0
   }
 
   function onKeydown(e: KeyboardEvent) {

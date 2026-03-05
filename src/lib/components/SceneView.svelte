@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
@@ -409,6 +409,26 @@
       ctx.fillText(String(edge.order), mx, my)
     }
 
+    // Active playback edge highlight
+    if (playback.playing && playback.sceneEdgeId) {
+      const activeEdge = edges.find(e => e.id === playback.sceneEdgeId)
+      if (activeEdge) {
+        const fn = nodes.find(n => n.id === activeEdge.from)
+        const tn = nodes.find(n => n.id === activeEdge.to)
+        if (fn && tn) {
+          const fp = toPixel(fn.x, fn.y, w, h)
+          const tp = toPixel(tn.x, tn.y, w, h)
+          const b = COLORS_RGB.blue
+          ctx.strokeStyle = `rgba(${b.r}, ${b.g}, ${b.b}, 0.6)`
+          ctx.lineWidth = 2.5
+          ctx.beginPath()
+          ctx.moveTo(fp.x, fp.y)
+          ctx.lineTo(tp.x, tp.y)
+          ctx.stroke()
+        }
+      }
+    }
+
     // Temporary edge during edge-draw mode
     if (edgeFrom && dragMoved && viewEl) {
       const srcNode = nodes.find(n => n.id === edgeFrom)
@@ -470,6 +490,7 @@
     {@const isSelected = ui.selectedSceneNode === node.id}
     {@const isDragging = dragging === node.id}
     {@const isEdgeSource = edgeFrom === node.id}
+    {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
     <button
       class="scene-node"
       class:fn={isFn}
@@ -477,6 +498,7 @@
       class:selected={isSelected}
       class:dragging={isDragging}
       class:edge-source={isEdgeSource}
+      class:playing={isPlaying}
       style="
         left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px));
         top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
@@ -612,6 +634,18 @@
     background: rgba(237, 232, 220, 0.15);
     color: var(--color-cream);
     box-shadow: 0 0 8px rgba(237, 232, 220, 0.15);
+  }
+
+  .scene-node.playing {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 12px rgba(68, 114, 180, 0.5);
+  }
+  .scene-node.playing .node-label {
+    color: var(--color-blue);
+  }
+  .scene-node.fn.playing {
+    border-color: var(--color-blue);
+    box-shadow: 0 0 10px rgba(68, 114, 180, 0.4);
   }
 
   .scene-node.edge-source {

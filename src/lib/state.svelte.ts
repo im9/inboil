@@ -282,6 +282,11 @@ export const playback = $state({
   repeatCount: 0,
   loopStart: 0,
   loopEnd: 0,
+  // Scene graph playback (Phase 4)
+  sceneNodeId: null as string | null,
+  sceneEdgeId: null as string | null,
+  sceneRepeatLeft: 0,
+  sceneTranspose: 0,
 })
 
 export const ui = $state({
@@ -634,6 +639,10 @@ export function factoryReset(): void {
   playback.repeatCount = 0
   playback.loopStart = 0
   playback.loopEnd = 0
+  playback.sceneNodeId = null
+  playback.sceneEdgeId = null
+  playback.sceneRepeatLeft = 0
+  playback.sceneTranspose = 0
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -721,6 +730,10 @@ export function songLoadPreset(index: number) {
   playback.repeatCount = 0
   playback.loopStart = 0
   playback.loopEnd = preset.entries.length - 1
+  playback.sceneNodeId = null
+  playback.sceneEdgeId = null
+  playback.sceneRepeatLeft = 0
+  playback.sceneTranspose = 0
   ui.currentPattern = 0
   ui.selectedSceneNode = null
   ui.selectedSceneEdge = null
@@ -933,6 +946,103 @@ export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void
   const tmp = edge.order
   edge.order = siblings[swapIdx].order
   siblings[swapIdx].order = tmp
+}
+
+// ── Scene Playback (Phase 4) ─────────────────────────────────────────
+
+/** True when scene has a root node → use graph traversal instead of linear sections */
+export function hasScenePlayback(): boolean {
+  return song.scene.nodes.some(n => n.root)
+}
+
+function sceneRootNode(): SceneNode | undefined {
+  return song.scene.nodes.find(n => n.root)
+}
+
+function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number } {
+  playback.sceneNodeId = node.id
+  playback.sceneEdgeId = null
+  if (node.type === 'pattern') {
+    const pi = song.patterns.findIndex(p => p.id === node.patternId)
+    return { advanced: true, patternIndex: pi >= 0 ? pi : 0 }
+  }
+  // Root is a function node — follow its edges
+  const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
+  if (edges.length > 0) return walkToNode(edges[0])
+  return { advanced: false, patternIndex: 0 }
+}
+
+function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number } {
+  const visited = new Set<string>()
+  let currentEdge = edge
+
+  while (true) {
+    const node = song.scene.nodes.find(n => n.id === currentEdge.to)
+    if (!node || visited.has(node.id)) {
+      // Missing or cycle in function chain → go to root
+      playback.sceneTranspose = 0
+      return startSceneNode(sceneRootNode()!)
+    }
+    visited.add(node.id)
+
+    if (node.type === 'pattern') {
+      playback.sceneNodeId = node.id
+      playback.sceneEdgeId = currentEdge.id
+      const pi = song.patterns.findIndex(p => p.id === node.patternId)
+      return { advanced: true, patternIndex: pi >= 0 ? pi : 0 }
+    }
+
+    // Process function node
+    if (node.type === 'transpose') {
+      playback.sceneTranspose += (node.params?.semitones ?? 0)
+    } else if (node.type === 'tempo') {
+      song.bpm = node.params?.bpm ?? 120
+    } else if (node.type === 'repeat') {
+      playback.sceneRepeatLeft = (node.params?.count ?? 2) - 1
+    }
+
+    // Follow this function node's outgoing edges
+    const fnEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
+    if (fnEdges.length === 0) {
+      playback.sceneTranspose = 0
+      return startSceneNode(sceneRootNode()!)
+    }
+    currentEdge = fnEdges[0]
+  }
+}
+
+/** Advance graph playback at beat boundary. Called from App.svelte onStep. */
+export function advanceSceneNode(): { advanced: boolean; patternIndex: number } {
+  const root = sceneRootNode()
+  if (!root) return { advanced: false, patternIndex: 0 }
+
+  // First call — start from root
+  if (!playback.sceneNodeId) {
+    return startSceneNode(root)
+  }
+
+  // Check repeat
+  if (playback.sceneRepeatLeft > 0) {
+    playback.sceneRepeatLeft--
+    return { advanced: false, patternIndex: -1 }
+  }
+
+  // Find current node and follow outgoing edges
+  const current = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
+  if (!current) return startSceneNode(root)
+
+  const outEdges = song.scene.edges
+    .filter(e => e.from === current.id)
+    .sort((a, b) => a.order - b.order)
+
+  if (outEdges.length === 0) {
+    // Dead end — loop to root
+    playback.sceneTranspose = 0
+    return startSceneNode(root)
+  }
+
+  // Follow first edge (Phase 5 adds probability branching)
+  return walkToNode(outEdges[0])
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */

@@ -54,6 +54,13 @@ export class GrooveboxEngine {
     this._post({ type: 'setPattern', pattern: patternToWorklet(song, fx, perf, fxPad, sectionIndex), reset })
   }
 
+  sendPatternByIndex(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, patternIndex = 0): void {
+    if (!this.node) return
+    const pat = song.patterns[patternIndex]
+    if (!pat) return
+    this._post({ type: 'setPattern', pattern: buildWorkletPattern(song, pat, fx, perf, fxPad), reset })
+  }
+
   play(): void {
     if (this.suspendTimer) { clearTimeout(this.suspendTimer); this.suspendTimer = null }
     if (this.ctx?.state === 'suspended') void this.ctx.resume()
@@ -97,19 +104,21 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
 }
 
 function patternToWorklet(
-  s: Song,
-  fx: Effects,
-  perf?: PerfState,
-  fxPad?: FxPadState,
-  sectionIndex = 0,
+  s: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, sectionIndex = 0,
+): WorkletPattern {
+  const sec = s.sections[sectionIndex]
+  return buildWorkletPattern(s, s.patterns[sec.patternIndex], fx, perf, fxPad)
+}
+
+import type { Pattern } from '../state.svelte.ts'
+
+function buildWorkletPattern(
+  s: Song, pat: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState,
 ): WorkletPattern {
   const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
   const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
   const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
-
-  const sec = s.sections[sectionIndex]
-  const pat = s.patterns[sec.patternIndex]
 
   return {
     bpm: s.bpm,
