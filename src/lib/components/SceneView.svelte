@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, patternDensity } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
@@ -531,15 +531,15 @@
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-    // Background (draw at full canvas size, before zoom transform)
-    ctx.fillStyle = 'rgb(26, 26, 24)'
+    // Background (warm cream, matching pattern view)
+    ctx.fillStyle = '#EDE8DC'
     ctx.fillRect(0, 0, w, h)
 
     // Apply zoom/pan transform for all subsequent drawing
     ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, panX * dpr, panY * dpr)
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(237, 232, 220, 0.04)'
+    ctx.strokeStyle = 'rgba(30, 32, 40, 0.06)'
     ctx.lineWidth = 1
     const gridStep = 40
     for (let x = PAD_INSET; x <= w - PAD_INSET; x += gridStep) {
@@ -557,7 +557,7 @@
 
     // Edges (bezier curves)
     const { nodes, edges } = song.scene
-    const c = COLORS_RGB.cream
+    const fg = { r: 30, g: 32, b: 40 } // --color-fg navy
     for (const edge of edges) {
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
@@ -569,8 +569,8 @@
       const b = bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern')
 
       drawBezier(ctx, b,
-        isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`,
-        isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`,
+        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
+        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.6)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.22)`,
         isSel ? 2.5 : 1.5,
       )
     }
@@ -589,12 +589,12 @@
       // Badge at bezier midpoint
       const mid = bezierAt(b, 0.5)
       const mx = mid.x, my = mid.y
-      ctx.fillStyle = 'rgba(26, 26, 24, 0.85)'
+      ctx.fillStyle = 'rgba(237, 232, 220, 0.85)'
       ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2); ctx.fill()
       const isSel = ui.selectedSceneEdge === edge.id
       ctx.fillStyle = isSel
-        ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.9)`
-        : `rgba(${c.r}, ${c.g}, ${c.b}, 0.5)`
+        ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.9)`
+        : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)`
       ctx.font = '700 8px monospace'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
       ctx.fillText(String(edge.order), mx, my)
@@ -632,8 +632,8 @@
 
         ctx.setLineDash([4, 4])
         drawBezier(ctx, tb,
-          `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
-          `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
+          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
+          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
           1.5,
         )
         ctx.setLineDash([])
@@ -715,8 +715,6 @@
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
       {@const nc = nodeColor(node)}
-      {@const pi = !isFn ? song.patterns.findIndex(p => p.id === node.patternId) : -1}
-      {@const density = pi >= 0 ? patternDensity(pi) : 0}
       <button
         class="scene-node"
         class:fn={isFn}
@@ -733,8 +731,6 @@
         onpointerdown={e => startDrag(e, node.id)}
       >
         <span class="node-label">{nodeName(node)}</span>
-        {#if !isFn}<span class="node-density" style="--d: {density}"></span>{/if}
-        <span class="node-port"></span>
       </button>
     {/each}
 
@@ -817,13 +813,13 @@
   .scene-view {
     flex: 1;
     position: relative;
-    background: rgb(26, 26, 24);
+    background: var(--color-bg);
     overflow: hidden;
     touch-action: none;
     user-select: none;
   }
   .scene-view.drop-active {
-    outline: 2px dashed rgba(237,232,220,0.3);
+    outline: 2px dashed rgba(30,32,40,0.25);
     outline-offset: -2px;
   }
 
@@ -846,88 +842,72 @@
     pointer-events: auto;
   }
 
-  /* ── Pattern nodes (rich cards) ── */
+  /* ── Pattern nodes (flat color labels) ── */
   .scene-node {
     --nc: #787845; /* fallback */
     position: absolute;
     min-width: 72px;
-    height: 34px;
-    border-radius: 5px;
+    height: 32px;
+    border-radius: 0;
     transform: translate(-50%, -50%);
-    border: 1.5px solid color-mix(in srgb, var(--nc) 50%, transparent);
-    border-left: 4px solid var(--nc);
-    background: color-mix(in srgb, var(--nc) 25%, #1a1a18);
-    color: rgba(237, 232, 220, 0.6);
+    border: 1px solid rgba(30, 32, 40, 0.1);
+    background: var(--nc);
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 16px 0 8px;
+    padding: 0 12px;
     cursor: grab;
-    transition: background 80ms, border-color 80ms, box-shadow 80ms;
+    transition: border-color 80ms;
     z-index: 2;
   }
 
   .scene-node.root {
-    border-color: var(--nc);
-    border-left-color: var(--nc);
-    background: color-mix(in srgb, var(--nc) 35%, #1a1a18);
-    color: var(--nc);
+    border: 1px solid var(--color-fg);
   }
 
   .scene-node.selected {
-    border-color: rgba(237, 232, 220, 0.75);
-    border-left-color: var(--nc);
-    background: color-mix(in srgb, var(--nc) 35%, #1a1a18);
-    color: rgba(237, 232, 220, 0.9);
-    box-shadow: 0 0 8px rgba(237, 232, 220, 0.2);
+    border: 1px solid var(--color-fg);
   }
 
   .scene-node.dragging {
     cursor: grabbing;
     z-index: 3;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
-    transform: translate(-50%, -50%) scale(1.08);
+    transform: translate(-50%, -50%) scale(1.04);
   }
 
-  /* ── Function nodes (pill badges) ── */
+  /* ── Function nodes (small dark shapes) ── */
   .scene-node.fn {
     min-width: 36px;
-    height: 20px;
-    border-radius: 10px;
-    border: 1px solid rgba(237, 232, 220, 0.18);
-    border-left: 1px solid rgba(237, 232, 220, 0.18);
-    background: rgba(26, 26, 24, 0.92);
-    color: rgba(237, 232, 220, 0.35);
+    height: 22px;
+    border-radius: 0;
+    background: var(--color-fg);
+    color: rgba(237, 232, 220, 0.7);
     padding: 0 8px;
   }
   .scene-node.fn .node-label {
     font-size: 7px;
   }
-  .scene-node.fn .node-port {
-    display: none;
-  }
   .scene-node.fn.selected {
-    border-color: rgba(237, 232, 220, 0.5);
-    background: rgba(237, 232, 220, 0.12);
-    color: var(--color-cream);
-    box-shadow: 0 0 6px rgba(237, 232, 220, 0.12);
+    color: var(--color-bg);
+    border: 1px solid var(--color-fg);
   }
 
   .scene-node.playing {
-    border-color: var(--color-blue);
-    box-shadow: 0 0 12px rgba(68, 114, 180, 0.5);
+    border: 1px solid var(--color-blue);
   }
   .scene-node.playing .node-label {
-    color: var(--color-blue);
+    color: white;
   }
   .scene-node.fn.playing {
-    border-color: var(--color-blue);
-    box-shadow: 0 0 8px rgba(68, 114, 180, 0.3);
+    border: 1px solid var(--color-blue);
+  }
+  .scene-node.fn.playing .node-label {
+    color: var(--color-blue);
   }
 
   .scene-node.edge-source {
-    border-color: var(--color-cream);
-    box-shadow: 0 0 8px rgba(237, 232, 220, 0.2);
+    border: 1px solid var(--color-fg);
   }
 
   .scene-node:active {
@@ -943,37 +923,7 @@
     pointer-events: none;
   }
 
-  /* Density bar inside pattern nodes */
-  .node-density {
-    position: absolute;
-    bottom: 3px;
-    left: 6px;
-    right: 6px;
-    height: 3px;
-    border-radius: 1px;
-    background: color-mix(in srgb, var(--nc) calc(20% + var(--d) * 50%), transparent);
-    pointer-events: none;
-  }
 
-  /* Output port indicator (right side of node) */
-  .node-port {
-    position: absolute;
-    right: 3px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(237, 232, 220, 0.15);
-    pointer-events: none;
-    transition: background 80ms;
-  }
-  .scene-node:hover .node-port {
-    background: rgba(237, 232, 220, 0.4);
-  }
-  .scene-node.selected .node-port {
-    background: rgba(237, 232, 220, 0.4);
-  }
 
   /* ── Solo button (near selected pattern node) ── */
   .solo-btn {
@@ -983,8 +933,8 @@
     height: 26px;
     border-radius: 4px;
     border: 1.5px solid rgba(68, 114, 180, 0.4);
-    background: rgba(26, 26, 24, 0.9);
-    color: rgba(68, 114, 180, 0.6);
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(68, 114, 180, 0.7);
     font-size: 10px;
     font-weight: 700;
     display: flex;
@@ -1000,10 +950,10 @@
     color: var(--color-blue);
   }
   .solo-btn.active {
-    background: rgba(68, 114, 180, 0.25);
+    background: rgba(68, 114, 180, 0.2);
     border-color: var(--color-blue);
     color: var(--color-blue);
-    box-shadow: 0 0 8px rgba(68, 114, 180, 0.3);
+    box-shadow: 0 0 6px rgba(68, 114, 180, 0.25);
   }
 
   /* ── Add button ── */
@@ -1014,8 +964,8 @@
     width: 28px;
     height: 28px;
     border-radius: 4px;
-    border: 1.5px solid rgba(120, 120, 69, 0.5);
-    background: rgba(26, 26, 24, 0.9);
+    border: 1.5px solid rgba(120, 120, 69, 0.4);
+    background: rgba(255, 255, 255, 0.8);
     color: var(--color-olive);
     font-family: var(--font-data);
     font-size: 16px;
@@ -1028,7 +978,7 @@
     transition: background 80ms, border-color 80ms;
   }
   .scene-add-btn:hover {
-    background: rgba(120, 120, 69, 0.15);
+    background: rgba(120, 120, 69, 0.1);
     border-color: var(--color-olive);
   }
 
@@ -1040,9 +990,9 @@
     height: 28px;
     padding: 0 8px;
     border-radius: 4px;
-    border: 1.5px solid rgba(237, 232, 220, 0.15);
-    background: rgba(26, 26, 24, 0.9);
-    color: rgba(237, 232, 220, 0.5);
+    border: 1.5px solid rgba(30, 32, 40, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: rgba(30, 32, 40, 0.5);
     font-family: var(--font-data);
     font-size: 9px;
     font-weight: 700;
@@ -1051,8 +1001,8 @@
     z-index: 5;
   }
   .zoom-reset-btn:hover {
-    background: rgba(237, 232, 220, 0.08);
-    color: var(--color-cream);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-fg);
   }
 
   /* ── Picker ── */
@@ -1068,11 +1018,11 @@
     width: 140px;
     max-height: 200px;
     overflow-y: auto;
-    background: var(--color-fg);
-    border: 1px solid rgba(237, 232, 220, 0.12);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(30, 32, 40, 0.1);
     border-radius: 4px;
     z-index: 10;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(30, 32, 40, 0.15);
   }
   .node-picker::-webkit-scrollbar { width: 0; display: none; }
 
@@ -1084,13 +1034,13 @@
     padding: 0 8px;
     border: none;
     background: transparent;
-    color: rgba(237, 232, 220, 0.5);
+    color: rgba(30, 32, 40, 0.6);
     cursor: pointer;
     transition: background 40ms;
   }
   .picker-row:hover {
-    background: rgba(120, 120, 69, 0.12);
-    color: var(--color-cream);
+    background: rgba(120, 120, 69, 0.1);
+    color: var(--color-fg);
   }
 
   .picker-name {
@@ -1117,12 +1067,12 @@
     display: flex;
     align-items: center;
     gap: 2px;
-    background: var(--color-fg);
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(30, 32, 40, 0.12);
     border-radius: 4px;
     padding: 2px;
     z-index: 6;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
   }
   .param-btn {
     width: 22px;
@@ -1130,7 +1080,7 @@
     border: none;
     border-radius: 3px;
     background: transparent;
-    color: var(--color-cream);
+    color: var(--color-fg);
     font-family: var(--font-data);
     font-size: 14px;
     font-weight: 700;
@@ -1140,16 +1090,16 @@
     justify-content: center;
   }
   .param-btn:hover {
-    background: rgba(237, 232, 220, 0.08);
+    background: rgba(30, 32, 40, 0.06);
   }
   .param-btn:active {
-    background: rgba(237, 232, 220, 0.15);
+    background: rgba(30, 32, 40, 0.12);
   }
   .param-val {
     font-family: var(--font-data);
     font-size: 10px;
     font-weight: 700;
-    color: var(--color-cream);
+    color: var(--color-fg);
     min-width: 28px;
     text-align: center;
     letter-spacing: 0.04em;
@@ -1158,21 +1108,21 @@
   /* ── Picker separator & function rows ── */
   .picker-sep {
     height: 1px;
-    background: rgba(237, 232, 220, 0.08);
+    background: rgba(30, 32, 40, 0.08);
     margin: 2px 8px;
   }
   .picker-row.fn-row {
-    color: rgba(237, 232, 220, 0.35);
+    color: rgba(30, 32, 40, 0.4);
   }
   .picker-row.fn-row:hover {
-    background: rgba(237, 232, 220, 0.06);
-    color: rgba(237, 232, 220, 0.7);
+    background: rgba(30, 32, 40, 0.05);
+    color: rgba(30, 32, 40, 0.7);
   }
   .picker-fn-tag {
     font-family: var(--font-data);
     font-size: 7px;
     font-weight: 700;
-    color: rgba(237, 232, 220, 0.25);
+    color: rgba(30, 32, 40, 0.3);
     letter-spacing: 0.04em;
     flex-shrink: 0;
   }
@@ -1186,7 +1136,7 @@
     justify-content: center;
     font-family: var(--font-data);
     font-size: 10px;
-    color: rgba(237, 232, 220, 0.15);
+    color: rgba(30, 32, 40, 0.2);
     pointer-events: none;
   }
 
@@ -1204,7 +1154,6 @@
     }
     .scene-node.fn .node-label { font-size: 9px; }
     .node-label { font-size: 11px; }
-    .node-port { right: 5px; width: 8px; height: 8px; }
     .scene-add-btn { width: 36px; height: 36px; font-size: 20px; }
     .zoom-reset-btn { right: 50px; }
     .param-btn { width: 32px; height: 32px; font-size: 18px; }
