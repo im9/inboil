@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot } from '../state.svelte.ts'
+  import { song, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
@@ -224,6 +224,10 @@
         sceneDeleteNode(ui.selectedSceneNode)
       }
     }
+    if (ui.selectedSceneEdge && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault()
+      sceneReorderEdge(ui.selectedSceneEdge, e.key === 'ArrowUp' ? 'up' : 'down')
+    }
     if (e.key === 'Escape') {
       ui.selectedSceneNode = null
       ui.selectedSceneEdge = null
@@ -231,11 +235,56 @@
     }
   }
 
-  /** Get pattern name for a node */
+  /** Get display label for a node */
   function nodeName(node: typeof song.scene.nodes[0]): string {
-    if (node.type !== 'pattern') return node.type.toUpperCase()
-    const pat = song.patterns.find(p => p.id === node.patternId)
-    return pat?.name || '---'
+    if (node.type === 'pattern') {
+      const pat = song.patterns.find(p => p.id === node.patternId)
+      return pat?.name || '---'
+    }
+    if (node.type === 'transpose') {
+      const s = node.params?.semitones ?? 0
+      return `T${s >= 0 ? '+' : ''}${s}`
+    }
+    if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
+    if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
+    if (node.type === 'probability') return '?%'
+    return '?'
+  }
+
+  // ── Selected function node & param editing ──
+
+  const selectedFnNode = $derived.by(() => {
+    if (!ui.selectedSceneNode) return null
+    const n = song.scene.nodes.find(n => n.id === ui.selectedSceneNode)
+    return (n && n.type !== 'pattern') ? n : null
+  })
+
+  const paramDisplay = $derived.by(() => {
+    if (!selectedFnNode) return ''
+    if (selectedFnNode.type === 'transpose') return String(selectedFnNode.params?.semitones ?? 0)
+    if (selectedFnNode.type === 'tempo') return String(selectedFnNode.params?.bpm ?? 120)
+    if (selectedFnNode.type === 'repeat') return String(selectedFnNode.params?.count ?? 2)
+    return ''
+  })
+
+  function incParam(e: PointerEvent) {
+    e.stopPropagation()
+    if (!selectedFnNode) return
+    const p = { ...(selectedFnNode.params || {}) }
+    if (selectedFnNode.type === 'transpose') p.semitones = Math.min(12, (p.semitones ?? 0) + 1)
+    else if (selectedFnNode.type === 'tempo') p.bpm = Math.min(300, (p.bpm ?? 120) + 5)
+    else if (selectedFnNode.type === 'repeat') p.count = Math.min(16, (p.count ?? 2) + 1)
+    sceneUpdateNodeParams(selectedFnNode.id, p)
+  }
+
+  function decParam(e: PointerEvent) {
+    e.stopPropagation()
+    if (!selectedFnNode) return
+    const p = { ...(selectedFnNode.params || {}) }
+    if (selectedFnNode.type === 'transpose') p.semitones = Math.max(-12, (p.semitones ?? 0) - 1)
+    else if (selectedFnNode.type === 'tempo') p.bpm = Math.max(60, (p.bpm ?? 120) - 5)
+    else if (selectedFnNode.type === 'repeat') p.count = Math.max(1, (p.count ?? 2) - 1)
+    sceneUpdateNodeParams(selectedFnNode.id, p)
   }
 
   // ── Picker ──
@@ -248,6 +297,13 @@
   function pickPattern(patternIndex: number) {
     const pat = song.patterns[patternIndex]
     const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
+    ui.selectedSceneNode = id
+    ui.selectedSceneEdge = null
+    pickerOpen = false
+  }
+
+  function pickFunctionNode(type: 'transpose' | 'tempo' | 'repeat' | 'probability') {
+    const id = sceneAddFunctionNode(type, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
     ui.selectedSceneNode = id
     ui.selectedSceneEdge = null
     pickerOpen = false
@@ -331,6 +387,28 @@
       ctx.fill()
     }
 
+    // Edge order badges (only when source has >1 outgoing)
+    const edgeCounts = new Map<string, number>()
+    for (const e of edges) edgeCounts.set(e.from, (edgeCounts.get(e.from) || 0) + 1)
+    for (const edge of edges) {
+      if ((edgeCounts.get(edge.from) || 0) <= 1) continue
+      const fn = nodes.find(n => n.id === edge.from)
+      const tn = nodes.find(n => n.id === edge.to)
+      if (!fn || !tn) continue
+      const fp = toPixel(fn.x, fn.y, w, h)
+      const tp = toPixel(tn.x, tn.y, w, h)
+      const mx = (fp.x + tp.x) / 2, my = (fp.y + tp.y) / 2
+      ctx.fillStyle = 'rgba(26, 26, 24, 0.85)'
+      ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2); ctx.fill()
+      const isSel = ui.selectedSceneEdge === edge.id
+      ctx.fillStyle = isSel
+        ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.9)`
+        : `rgba(${c.r}, ${c.g}, ${c.b}, 0.5)`
+      ctx.font = '700 8px monospace'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(String(edge.order), mx, my)
+    }
+
     // Temporary edge during edge-draw mode
     if (edgeFrom && dragMoved && viewEl) {
       const srcNode = nodes.find(n => n.id === edgeFrom)
@@ -387,12 +465,14 @@
   <canvas bind:this={canvasEl} class="scene-canvas"></canvas>
 
   {#each song.scene.nodes as node (node.id)}
+    {@const isFn = node.type !== 'pattern'}
     {@const isRoot = node.root}
     {@const isSelected = ui.selectedSceneNode === node.id}
     {@const isDragging = dragging === node.id}
     {@const isEdgeSource = edgeFrom === node.id}
     <button
       class="scene-node"
+      class:fn={isFn}
       class:root={isRoot}
       class:selected={isSelected}
       class:dragging={isDragging}
@@ -408,14 +488,27 @@
     </button>
   {/each}
 
+  <!-- Param popup for selected function node -->
+  {#if selectedFnNode && selectedFnNode.type !== 'probability'}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="param-popup" style="
+      left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
+      top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
+    " onpointerdown={e => e.stopPropagation()}>
+      <button class="param-btn" onpointerdown={decParam}>−</button>
+      <span class="param-val">{paramDisplay}</span>
+      <button class="param-btn" onpointerdown={incParam}>+</button>
+    </div>
+  {/if}
+
   <!-- Add node button -->
   <button
     class="scene-add-btn"
-    data-tip="Add pattern node" data-tip-ja="パターンノードを追加"
+    data-tip="Add node" data-tip-ja="ノードを追加"
     onpointerdown={openPicker}
   >+</button>
 
-  <!-- Pattern picker -->
+  <!-- Node picker -->
   {#if pickerOpen}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); pickerOpen = false }}></div>
@@ -426,6 +519,19 @@
           <span class="picker-density" style="--d: {pp.density}"></span>
         </button>
       {/each}
+      <div class="picker-sep"></div>
+      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('transpose') }}>
+        <span class="picker-name">TRANSPOSE</span><span class="picker-fn-tag">T±</span>
+      </button>
+      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('tempo') }}>
+        <span class="picker-name">TEMPO</span><span class="picker-fn-tag">BPM</span>
+      </button>
+      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('repeat') }}>
+        <span class="picker-name">REPEAT</span><span class="picker-fn-tag">RPT</span>
+      </button>
+      <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('probability') }}>
+        <span class="picker-name">PROBABILITY</span><span class="picker-fn-tag">?%</span>
+      </button>
     </div>
   {/if}
 
@@ -490,6 +596,22 @@
     z-index: 3;
     box-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
     transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  .scene-node.fn {
+    min-width: 40px;
+    height: 24px;
+    border-radius: 12px;
+    border-color: rgba(237, 232, 220, 0.25);
+    background: rgba(26, 26, 24, 0.95);
+    color: rgba(237, 232, 220, 0.4);
+    padding: 0 14px 0 8px;
+  }
+  .scene-node.fn.selected {
+    border-color: rgba(237, 232, 220, 0.6);
+    background: rgba(237, 232, 220, 0.15);
+    color: var(--color-cream);
+    box-shadow: 0 0 8px rgba(237, 232, 220, 0.15);
   }
 
   .scene-node.edge-source {
@@ -608,6 +730,73 @@
     height: 4px;
     background: rgba(120, 120, 69, calc(0.1 + var(--d) * 0.6));
     border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  /* ── Param popup ── */
+  .param-popup {
+    position: absolute;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--color-fg);
+    border: 1px solid rgba(237, 232, 220, 0.15);
+    border-radius: 4px;
+    padding: 2px;
+    z-index: 6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+  .param-btn {
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--color-cream);
+    font-family: var(--font-data);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .param-btn:hover {
+    background: rgba(237, 232, 220, 0.08);
+  }
+  .param-btn:active {
+    background: rgba(237, 232, 220, 0.15);
+  }
+  .param-val {
+    font-family: var(--font-data);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--color-cream);
+    min-width: 28px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Picker separator & function rows ── */
+  .picker-sep {
+    height: 1px;
+    background: rgba(237, 232, 220, 0.08);
+    margin: 2px 8px;
+  }
+  .picker-row.fn-row {
+    color: rgba(237, 232, 220, 0.35);
+  }
+  .picker-row.fn-row:hover {
+    background: rgba(237, 232, 220, 0.06);
+    color: rgba(237, 232, 220, 0.7);
+  }
+  .picker-fn-tag {
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    color: rgba(237, 232, 220, 0.25);
+    letter-spacing: 0.04em;
     flex-shrink: 0;
   }
 

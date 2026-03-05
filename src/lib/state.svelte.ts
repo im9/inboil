@@ -889,6 +889,52 @@ export function sceneSetRoot(nodeId: string): void {
   for (const n of song.scene.nodes) n.root = n.id === nodeId
 }
 
+const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
+  transpose: { semitones: 0 },
+  tempo: { bpm: 120 },
+  repeat: { count: 2 },
+  probability: {},
+}
+
+/** Add a function node (transpose/tempo/repeat/probability) */
+export function sceneAddFunctionNode(
+  type: 'transpose' | 'tempo' | 'repeat' | 'probability',
+  x: number, y: number
+): string {
+  pushUndo('Add function node')
+  const id = nextSceneId('sn')
+  song.scene.nodes.push({
+    id, type, x, y,
+    root: false,
+    params: { ...FUNCTION_DEFAULTS[type] },
+  })
+  return id
+}
+
+/** Update a function node's params */
+export function sceneUpdateNodeParams(nodeId: string, params: Record<string, number>): void {
+  pushUndo('Update node params')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  node.params = { ...params }
+}
+
+/** Swap edge order with its neighbor */
+export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void {
+  const edge = song.scene.edges.find(e => e.id === edgeId)
+  if (!edge) return
+  const siblings = song.scene.edges
+    .filter(e => e.from === edge.from)
+    .sort((a, b) => a.order - b.order)
+  const idx = siblings.findIndex(e => e.id === edgeId)
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+  if (swapIdx < 0 || swapIdx >= siblings.length) return
+  pushUndo('Reorder edge')
+  const tmp = edge.order
+  edge.order = siblings[swapIdx].order
+  siblings[swapIdx].order = tmp
+}
+
 /** Apply FX and key/oct for a section (called on section advance) */
 export function applySection(sec: Section) {
   if (sec.key != null) perf.rootNote = sec.key

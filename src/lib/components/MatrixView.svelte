@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sectionHasData } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sectionHasData, sceneAddNode } from '../state.svelte.ts'
   import type { Cell } from '../state.svelte.ts'
   import { SECTION_COUNT } from '../factory.ts'
 
@@ -24,6 +24,12 @@
   function onCellClick(patternIndex: number, trackId: number) {
     selectPattern(patternIndex)
     ui.selectedTrack = trackId
+  }
+
+  function addToScene(patternIndex: number) {
+    const pat = song.patterns[patternIndex]
+    const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
+    ui.selectedSceneNode = id
   }
 </script>
 
@@ -55,6 +61,13 @@
       >
         <span class="row-head" class:editing={isEditing} class:playing={isPlaying}>
           {String(si).padStart(2, '0')}
+          {#if ui.phraseView === 'scene'}
+            <button
+              class="row-scene-add"
+              onpointerdown={e => { e.stopPropagation(); addToScene(sec.patternIndex) }}
+              data-tip="Add to scene" data-tip-ja="シーンに追加"
+            >→</button>
+          {/if}
         </span>
         {#each pat.cells as cell, ti}
           {@const d = density(cell)}
@@ -143,6 +156,7 @@
 
   /* ── Row header ── */
   .row-head {
+    position: relative;
     width: 28px;
     flex-shrink: 0;
     font-family: var(--font-data);
@@ -155,6 +169,34 @@
   }
   .row-head.editing { color: var(--color-olive); }
   .row-head.playing { color: var(--color-blue); }
+
+  .row-scene-add {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    color: var(--color-olive);
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  .row-head:hover .row-scene-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .row-scene-add:hover {
+    background: rgba(120,120,69,0.2);
+  }
 
   /* ── Cell ── */
   .matrix-cell {
