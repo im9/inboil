@@ -8,6 +8,7 @@
   let dragging: 'filter' | 'eqLow' | 'eqMid' | 'eqHigh' | null = $state(null)
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
+  let dragRect: DOMRect | null = null
 
   // ── Node definitions ───────────────────────────────────────────
   const nodes = [
@@ -24,8 +25,8 @@
   )
 
   function toNorm(e: PointerEvent): { x: number; y: number } | null {
-    if (!padEl) return null
-    const rect = padEl.getBoundingClientRect()
+    const rect = dragRect
+    if (!rect) return null
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD_INSET) / (rect.width  - PAD_INSET * 2)))
     const y = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top - PAD_INSET) / (rect.height - PAD_INSET * 2)))
     return { x, y }
@@ -37,6 +38,7 @@
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
+    dragRect = padEl?.getBoundingClientRect() ?? null
   }
 
   function onMove(e: PointerEvent) {
@@ -59,6 +61,7 @@
     if (!dragging) return
     if (!dragMoved) fxPad[dragging].on = !fxPad[dragging].on
     dragging = null
+    dragRect = null
   }
 
   // ── EQ curve computation (biquad frequency response) ───────────

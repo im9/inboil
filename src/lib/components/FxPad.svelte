@@ -15,6 +15,7 @@
   let dragging: typeof nodes[number]['key'] | null = $state(null)
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
+  let dragRect: DOMRect | null = null
   let granularMode2 = $state(false)
   let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -24,14 +25,15 @@
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
+    dragRect = padEl?.getBoundingClientRect() ?? null
     if (key === 'granular' && fxPad.granular.on) {
       longPressTimer = setTimeout(() => { granularMode2 = true; longPressTimer = null }, 400)
     }
   }
 
   function toNorm(e: PointerEvent): { x: number; y: number } | null {
-    if (!padEl) return null
-    const rect = padEl.getBoundingClientRect()
+    const rect = dragRect
+    if (!rect) return null
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD_INSET) / (rect.width  - PAD_INSET * 2)))
     const y = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top - PAD_INSET) / (rect.height - PAD_INSET * 2)))
     return { x, y }
@@ -71,6 +73,7 @@
     }
     granularMode2 = false
     dragging = null
+    dragRect = null
   }
 
   // ── Audio Visualizer ──────────────────────────────────────────────
