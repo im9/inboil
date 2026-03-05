@@ -288,7 +288,8 @@ export const ui = $state({
   selectedTrack: 0,
   currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
-  phraseView: 'grid' as 'grid' | 'tracker',
+  phraseView: 'grid' as 'grid' | 'tracker' | 'scene',
+  selectedSceneNode: null as string | null,
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
@@ -608,6 +609,7 @@ export function factoryReset(): void {
   ui.dockTab = 'param'
   ui.dockPosition = 'right'
   ui.mobileOverlay = false
+  ui.selectedSceneNode = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
@@ -718,6 +720,7 @@ export function songLoadPreset(index: number) {
   playback.loopStart = 0
   playback.loopEnd = preset.entries.length - 1
   ui.currentPattern = 0
+  ui.selectedSceneNode = null
 }
 
 // Pre-populate with LOFI preset
@@ -808,6 +811,16 @@ export function duplicatePattern(srcIndex: number): number {
   }
   ui.currentPattern = emptyIdx
   return emptyIdx
+}
+
+// ── Scene graph helpers ─────────────────────────────────────────────
+
+/** Update a scene node's position (no undo — cosmetic, high frequency) */
+export function sceneUpdateNode(nodeId: string, x: number, y: number): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  node.x = x
+  node.y = y
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */

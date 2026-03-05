@@ -7,6 +7,7 @@
   import SectionNav from './lib/components/SectionNav.svelte'
   import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
+  import SceneView from './lib/components/SceneView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, undo, redo } from './lib/state.svelte.ts'
@@ -101,6 +102,8 @@
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       {#if ui.phraseView === 'tracker'}
         <TrackerView />
+      {:else if ui.phraseView === 'scene'}
+        <SceneView />
       {:else}
         <MobileTrackView />
       {/if}
@@ -119,6 +122,8 @@
         <div class="view-main">
           {#if ui.phraseView === 'tracker'}
             <TrackerView />
+          {:else if ui.phraseView === 'scene'}
+            <SceneView />
           {:else}
             <StepGrid />
           {/if}
