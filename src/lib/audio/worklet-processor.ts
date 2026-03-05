@@ -338,13 +338,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
     if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
 
-    // Cycle step: all note-steps have played — signal end of pattern.
-    // This extra step gives the last note a full step-duration to ring out
-    // before the main thread sends a reset for the next pattern.
+    // Wrap patternPos when pattern cycle completes — no extra empty step.
+    // cycle flag signals the main thread (scene advance, arrangement, etc.)
+    let isCycle = false
     if (this.patternPos >= this.patternLen) {
       this.patternPos = 0
-      this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: true } satisfies WorkletEvent)
-      return
+      isCycle = true
     }
 
     for (let t = 0; t < this.tracks.length; t++) {
@@ -454,7 +453,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       this.octave = this.pendingOctave; this.pendingOctave = null
     }
     this.patternPos++
-    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: false } satisfies WorkletEvent)
+    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: isCycle } satisfies WorkletEvent)
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
