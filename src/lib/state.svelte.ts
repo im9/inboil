@@ -42,10 +42,11 @@ export interface ChainFx {
   y: number
 }
 
-/** Reusable pattern — name + 8 tracks of step data (ADR 044) */
+/** Reusable pattern — name + color + 8 tracks of step data (ADR 044, 049) */
 export interface Pattern {
   id: string              // e.g. 'pat_00'
   name: string            // max 8 chars
+  color: number           // index into PATTERN_COLORS (0–7)
   cells: Cell[]           // 8 fixed (one per track)
 }
 
@@ -150,7 +151,7 @@ function cloneCell(c: Cell): Cell {
 }
 
 function clonePattern(p: Pattern): Pattern {
-  return { id: p.id, name: p.name, cells: p.cells.map(cloneCell) }
+  return { id: p.id, name: p.name, color: p.color, cells: p.cells.map(cloneCell) }
 }
 
 function cloneSection(s: Section): Section {
@@ -230,6 +231,7 @@ function restoreSong(src: Song): void {
   song.patterns = src.patterns.map(p => ({
     id: p.id,
     name: p.name,
+    color: p.color ?? 0,
     cells: p.cells.map(restoreCell),
   }))
   song.sections = src.sections.map(s => ({
@@ -924,6 +926,12 @@ export function patternRename(patternIndex: number, name: string): void {
   song.patterns[patternIndex].name = name.slice(0, 8).toUpperCase()
 }
 
+/** Set pattern color (index into PATTERN_COLORS) */
+export function patternSetColor(patternIndex: number, color: number): void {
+  pushUndo('Set pattern color')
+  song.patterns[patternIndex].color = color
+}
+
 /** Clear a section's pattern cells to empty (preserves section metadata) */
 export function sectionClear(index: number) {
   patternClear(song.sections[index].patternIndex)
@@ -940,6 +948,7 @@ export function duplicatePattern(srcIndex: number): number {
   song.patterns[emptyIdx] = {
     id: makePatternId(emptyIdx),
     name: src.name,
+    color: src.color,
     cells: src.cells.map(cloneCell),
   }
   ui.currentPattern = emptyIdx
@@ -961,6 +970,7 @@ export function patternPaste(index: number): void {
   song.patterns[index] = {
     id: song.patterns[index].id,
     name: patternClipboard.name,
+    color: patternClipboard.color,
     cells: patternClipboard.cells.map(cloneCell),
   }
 }
@@ -1172,7 +1182,7 @@ function sceneRootNode(): SceneNode | undefined {
   return song.scene.nodes.find(n => n.root)
 }
 
-function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number } {
+function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
   if (node.type === 'pattern') {
@@ -1185,24 +1195,21 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   // Root is a function node — follow its edges
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
-    const pick = node.type === 'probability'
-      ? edges[Math.floor(Math.random() * edges.length)]
-      : edges[0]
+    const pick = edges[Math.floor(Math.random() * edges.length)]
     return walkToNode(pick)
   }
-  return { advanced: false, patternIndex: 0 }
+  return { advanced: false, patternIndex: -1, stop: true }
 }
 
-function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number } {
+function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number; stop?: boolean } {
   const visited = new Set<string>()
   let currentEdge = edge
 
   while (true) {
     const node = song.scene.nodes.find(n => n.id === currentEdge.to)
     if (!node || visited.has(node.id)) {
-      // Missing or cycle in function chain → go to root
-      playback.sceneTranspose = 0
-      return startSceneNode(sceneRootNode()!)
+      // Missing or cycle — stop playback
+      return { advanced: false, patternIndex: -1, stop: true }
     }
     visited.add(node.id)
 
@@ -1225,20 +1232,18 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number 
       playback.sceneRepeatLeft = (node.params?.count ?? 2) - 1
     }
 
-    // Follow this function node's outgoing edges
+    // Follow this function node's outgoing edges (random pick)
     const fnEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
     if (fnEdges.length === 0) {
-      playback.sceneTranspose = 0
-      return startSceneNode(sceneRootNode()!)
+      // Dead end in function chain — stop playback
+      return { advanced: false, patternIndex: -1, stop: true }
     }
-    currentEdge = node.type === 'probability'
-      ? fnEdges[Math.floor(Math.random() * fnEdges.length)]
-      : fnEdges[0]
+    currentEdge = fnEdges[Math.floor(Math.random() * fnEdges.length)]
   }
 }
 
 /** Advance graph playback at beat boundary. Called from App.svelte onStep. */
-export function advanceSceneNode(): { advanced: boolean; patternIndex: number } {
+export function advanceSceneNode(): { advanced: boolean; patternIndex: number; stop?: boolean } {
   const root = sceneRootNode()
   if (!root) return { advanced: false, patternIndex: 0 }
 
@@ -1262,13 +1267,12 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number } 
     .sort((a, b) => a.order - b.order)
 
   if (outEdges.length === 0) {
-    // Dead end — loop to root
-    playback.sceneTranspose = 0
-    return startSceneNode(root)
+    // Terminal node — stop playback
+    return { advanced: false, patternIndex: -1, stop: true }
   }
 
-  // Follow first edge (Phase 5 adds probability branching)
-  return walkToNode(outEdges[0])
+  // Random pick among outgoing edges
+  return walkToNode(outEdges[Math.floor(Math.random() * outEdges.length)])
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */

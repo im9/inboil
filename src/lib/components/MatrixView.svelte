@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear, patternRename, patternSetColor } from '../state.svelte.ts'
+  import { PATTERN_COLORS } from '../constants.ts'
 
   // Show all patterns in the pool
   const visibleCount = $derived(song.patterns.length)
@@ -8,19 +9,56 @@
   const currentlyPlayingPattern = $derived.by(() => {
     if (!playback.playing) return -1
     if (playback.soloPattern != null) return playback.soloPattern
-    if (ui.phraseView === 'scene' && playback.sceneNodeId) {
-      const node = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
-      if (node?.type === 'pattern') {
-        return song.patterns.findIndex(p => p.id === node.patternId)
-      }
+    if (playback.mode === 'scene') {
+      if (playback.playingPattern != null) return playback.playingPattern
+      return song.sections[playback.currentSection]?.patternIndex ?? -1
     }
-    if (ui.phraseView !== 'scene') return ui.currentPattern
-    return song.sections[playback.currentSection]?.patternIndex ?? -1
+    return ui.currentPattern
   })
 
   const selectedName = $derived(song.patterns[ui.currentPattern]?.name || '------')
+  const selectedColor = $derived(song.patterns[ui.currentPattern]?.color ?? 0)
 
   let gridEl: HTMLDivElement | undefined = $state()
+
+  // ── Inline rename ──
+  let editing = $state(false)
+  let editValue = $state('')
+  let inputEl: HTMLInputElement | undefined = $state()
+
+  function startEdit() {
+    editValue = selectedName
+    editing = true
+    // Focus after Svelte renders the input
+    requestAnimationFrame(() => inputEl?.select())
+  }
+
+  function commitEdit() {
+    editing = false
+    patternRename(ui.currentPattern, editValue)
+  }
+
+  function cancelEdit() {
+    editing = false
+  }
+
+  function onEditKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); commitEdit() }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+  }
+
+  // ── Color picker ──
+  let colorPickerOpen = $state(false)
+
+  function toggleColorPicker(e: PointerEvent) {
+    e.stopPropagation()
+    colorPickerOpen = !colorPickerOpen
+  }
+
+  function pickColor(ci: number) {
+    patternSetColor(ui.currentPattern, ci)
+    colorPickerOpen = false
+  }
 
   function addToScene(pi: number) {
     const pat = song.patterns[pi]
@@ -34,6 +72,7 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    if (e.target instanceof HTMLInputElement) return
     const mod = e.metaKey || e.ctrlKey
     if (mod && e.code === 'KeyC') {
       e.preventDefault()
@@ -48,10 +87,31 @@
   }
 </script>
 
-<div class="matrix-view">
-  <!-- Header: selected pattern name -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="matrix-view" onpointerdown={() => { colorPickerOpen = false }}>
+  <!-- Header: color dot + pattern name (editable) -->
   <div class="matrix-head">
-    <span class="head-name">{selectedName}</span>
+    <!-- svelte-ignore a11y_consider_explicit_label -->
+    <button
+      class="head-color"
+      style="background: {PATTERN_COLORS[selectedColor]}"
+      onpointerdown={toggleColorPicker}
+      data-tip="Pattern color" data-tip-ja="パターンカラー"
+    ></button>
+    {#if editing}
+      <input
+        bind:this={inputEl}
+        class="head-input"
+        type="text"
+        maxlength="8"
+        bind:value={editValue}
+        onblur={commitEdit}
+        onkeydown={onEditKeydown}
+      />
+    {:else}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <span class="head-name" ondblclick={startEdit}>{selectedName}</span>
+    {/if}
     {#if ui.phraseView === 'scene'}
       <button
         class="head-scene"
@@ -61,12 +121,28 @@
     {/if}
   </div>
 
+  <!-- Color picker popup -->
+  {#if colorPickerOpen}
+    <div class="color-picker">
+      {#each PATTERN_COLORS as hex, ci}
+        <!-- svelte-ignore a11y_consider_explicit_label -->
+        <button
+          class="color-swatch"
+          class:active={ci === selectedColor}
+          style="background: {hex}"
+          onpointerdown={e => { e.stopPropagation(); pickColor(ci) }}
+        ></button>
+      {/each}
+    </div>
+  {/if}
+
   <!-- Grid: square cells -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" onkeydown={onKeydown}>
     {#each { length: visibleCount } as _, pi}
       {@const hasData = patternHasData(pi)}
       {@const d = patternDensity(pi)}
+      {@const pc = song.patterns[pi]?.color ?? 0}
       {@const isSelected = ui.currentPattern === pi}
       {@const isPlaying = currentlyPlayingPattern === pi}
       {@const isSolo = playback.soloPattern === pi}
@@ -78,7 +154,7 @@
         class:playing={isPlaying}
         class:solo={isSolo}
         class:in-scene={inScene}
-        style="--d: {d}"
+        style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}"
       >
         <button class="cell-bg" aria-label="Pattern {pi}" onpointerdown={() => selectAndFocus(pi)}></button>
       </div>
@@ -94,6 +170,7 @@
     width: 120px;
     background: var(--color-fg);
     border-right: 1px solid rgba(237,232,220,0.08);
+    position: relative;
   }
 
   /* ── Header ── */
@@ -103,6 +180,20 @@
     gap: 4px;
     padding: 6px 6px 4px;
     border-bottom: 1px solid rgba(237,232,220,0.08);
+  }
+
+  .head-color {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(237,232,220,0.15);
+    padding: 0;
+    cursor: pointer;
+    transition: border-color 80ms;
+  }
+  .head-color:hover {
+    border-color: rgba(237,232,220,0.5);
   }
 
   .head-name {
@@ -116,6 +207,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: text;
+  }
+
+  .head-input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(237,232,220,0.85);
+    background: rgba(237,232,220,0.08);
+    border: 1px solid rgba(237,232,220,0.2);
+    border-radius: 2px;
+    padding: 1px 3px;
+    outline: none;
+    text-transform: uppercase;
   }
 
   .head-scene {
@@ -136,6 +244,37 @@
   }
   .head-scene:hover {
     background: rgba(120,120,69,0.15);
+  }
+
+  /* ── Color picker ── */
+  .color-picker {
+    position: absolute;
+    top: 24px;
+    left: 4px;
+    display: flex;
+    gap: 3px;
+    padding: 4px;
+    background: var(--color-fg);
+    border: 1px solid rgba(237,232,220,0.12);
+    border-radius: 4px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .color-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: border-color 60ms, transform 60ms;
+  }
+  .color-swatch:hover {
+    transform: scale(1.2);
+  }
+  .color-swatch.active {
+    border-color: rgba(237,232,220,0.7);
   }
 
   /* ── Grid ── */
@@ -161,16 +300,22 @@
   }
 
   .pat-cell.has-data {
-    background: rgba(237,232,220, calc(0.08 + var(--d) * 0.25));
+    background: var(--pat-hex);
   }
   .pat-cell.selected {
-    border-color: var(--color-olive);
+    border-color: rgba(237,232,220,0.7);
   }
   .pat-cell.playing {
-    background: rgba(68,114,180, calc(0.15 + var(--d) * 0.20));
+    border-color: rgba(237,232,220,0.85);
+    animation: pat-pulse 0.8s ease-in-out infinite alternate;
   }
   .pat-cell.playing.selected {
-    border-color: var(--color-blue);
+    border-color: rgba(237,232,220,0.85);
+  }
+
+  @keyframes pat-pulse {
+    from { box-shadow: 0 0 3px rgba(237,232,220,0.2); }
+    to   { box-shadow: 0 0 7px rgba(237,232,220,0.5); }
   }
   .pat-cell.solo {
     box-shadow: inset 0 0 0 1px var(--color-blue);

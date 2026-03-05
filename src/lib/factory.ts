@@ -59,6 +59,7 @@ export function makeEmptyPattern(index: number, name = ''): Pattern {
   return {
     id: makePatternId(index),
     name,
+    color: 0,
     cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.synthType, d.note)),
   }
 }
@@ -435,18 +436,42 @@ export const FACTORY_COUNT = FACTORY.length
 export function makeDefaultScene(patterns: Pattern[]): Scene {
   const nodes: SceneNode[] = []
   const edges: SceneEdge[] = []
+
+  // Collect active pattern indices (with factory bpm/key)
+  const active: { pi: number; bpm: number; key: number }[] = []
   for (let i = 0; i < patterns.length; i++) {
     if (!patterns[i].cells.some(c => c.trigs.some(t => t.active))) continue
-    const node: SceneNode = {
-      id: `sn_${String(i).padStart(2, '0')}`,
-      type: 'pattern',
-      x: 0.1 + (nodes.length % 6) * 0.14,
-      y: 0.1 + Math.floor(nodes.length / 6) * 0.2,
-      root: nodes.length === 0,
-      patternId: patterns[i].id,
-    }
-    nodes.push(node)
+    const f = i < FACTORY.length ? FACTORY[i] : null
+    active.push({ pi: i, bpm: f?.bpm ?? FACTORY[0].bpm, key: f?.key ?? 0 })
   }
+
+  let nid = 0
+  const mkId = () => `sn_${String(nid++).padStart(2, '0')}`
+  const pos = () => ({
+    x: 0.1 + (nodes.length % 6) * 0.14,
+    y: 0.1 + Math.floor(nodes.length / 6) * 0.2,
+  })
+
+  let curBpm = FACTORY[0].bpm
+  let curKey = FACTORY[0].key ?? 0
+
+  for (let ai = 0; ai < active.length; ai++) {
+    const { pi, bpm, key } = active[ai]
+
+    // Insert tempo node when bpm changes
+    if (bpm !== curBpm) {
+      nodes.push({ id: mkId(), type: 'tempo', ...pos(), root: false, params: { bpm } })
+      curBpm = bpm
+    }
+    // Insert transpose node when key changes (delta semitones)
+    if (key !== curKey) {
+      nodes.push({ id: mkId(), type: 'transpose', ...pos(), root: false, params: { semitones: key - curKey } })
+      curKey = key
+    }
+    // Pattern node
+    nodes.push({ id: mkId(), type: 'pattern', ...pos(), root: nodes.length === 0, patternId: patterns[pi].id })
+  }
+
   // Connect linearly
   for (let i = 0; i < nodes.length - 1; i++) {
     edges.push({
@@ -477,6 +502,7 @@ export function makeDefaultSong(): Song {
     patterns.push({
       id: makePatternId(i),
       name: f.name.slice(0, 8),
+      color: 0,
       cells: TRACK_DEFAULTS.map((d, trackIdx) =>
         buildFactoryCell(trackIdx, f, d.synthType, d.note)
       ),

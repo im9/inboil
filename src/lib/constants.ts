@@ -22,6 +22,18 @@ export const PIANO_ROLL_MAX = 71  // B4
 export const TAP_THRESHOLD = 5   // px — drag distance before a pointerdown counts as drag vs. tap
 export const PAD_INSET = 32      // px — inset so nodes don't clip pad edges
 
+// ── Pattern colors (8-color palette, index 0 = default) ─────────────────────
+export const PATTERN_COLORS = [
+  '#787845',  // 0: olive (default)
+  '#4472B4',  // 1: blue
+  '#E8A090',  // 2: salmon
+  '#9B6BA0',  // 3: purple
+  '#4A9B9B',  // 4: teal
+  '#B8860B',  // 5: gold
+  '#6B8E6B',  // 6: sage
+  '#CD5C5C',  // 7: brick
+] as const
+
 // ── RGB colors for canvas rendering ─────────────────────────────────────────
 export const COLORS_RGB = {
   olive:  { r: 120, g: 120, b:  69 },

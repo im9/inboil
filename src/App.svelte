@@ -28,13 +28,14 @@
   // Sync song + effects → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
       if (playback.soloPattern != null) {
         engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
       } else if (playback.mode === 'scene' && hasScenePlayback()) {
-        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+        const pi = playback.playingPattern ?? ui.currentPattern
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, pi)
       } else if (playback.mode === 'scene' && hasArrangement()) {
         engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
       } else {
@@ -54,7 +55,8 @@
     if (heads[0] === 0 && prev0 !== 0) {
       // Beat boundary — scene graph takes priority
       if (hasScenePlayback()) {
-        const { advanced, patternIndex } = advanceSceneNode()
+        const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
+        if (shouldStop) { stop(); return }
         if (advanced) {
           perf.rootNote = song.rootNote + playback.sceneTranspose
           engine.sendPatternByIndex(song, effects, perf, fxPad, true, patternIndex)
@@ -102,7 +104,8 @@
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
-      const { patternIndex } = advanceSceneNode()
+      const { patternIndex, stop: shouldStop } = advanceSceneNode()
+      if (shouldStop) return
       perf.rootNote = song.rootNote + playback.sceneTranspose
       engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
     } else if (playback.mode === 'scene' && hasArrangement()) {

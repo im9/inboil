@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
-  import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB } from '../constants.ts'
+  import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
   let viewEl: HTMLDivElement
@@ -342,6 +342,13 @@
     return '?'
   }
 
+  /** Get color hex for a pattern node (function nodes return null) */
+  function nodeColor(node: typeof song.scene.nodes[0]): string | null {
+    if (node.type !== 'pattern') return null
+    const pat = song.patterns.find(p => p.id === node.patternId)
+    return PATTERN_COLORS[pat?.color ?? 0]
+  }
+
   // ── Selected node helpers ──
 
   const selectedPatternNode = $derived.by(() => {
@@ -630,6 +637,7 @@
       {@const isDragging = dragging === node.id}
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
+      {@const nc = nodeColor(node)}
       <button
         class="scene-node"
         class:fn={isFn}
@@ -641,6 +649,7 @@
         style="
           left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px));
           top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+          {nc ? `--nc: ${nc}` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
       >
@@ -755,12 +764,13 @@
 
   /* ── Nodes ── */
   .scene-node {
+    --nc: #787845; /* fallback for function nodes */
     position: absolute;
     min-width: 56px;
     height: 28px;
     border-radius: 4px;
     transform: translate(-50%, -50%);
-    border: 1.5px solid rgba(120, 120, 69, 0.6);
+    border: 1.5px solid color-mix(in srgb, var(--nc) 60%, transparent);
     background: rgba(26, 26, 24, 0.9);
     color: rgba(237, 232, 220, 0.55);
     display: flex;
@@ -773,16 +783,16 @@
   }
 
   .scene-node.root {
-    border-color: var(--color-olive);
-    background: rgba(120, 120, 69, 0.2);
-    color: var(--color-olive);
+    border-color: var(--nc);
+    background: color-mix(in srgb, var(--nc) 20%, transparent);
+    color: var(--nc);
   }
 
   .scene-node.selected {
-    border-color: var(--color-olive);
-    background: var(--color-olive);
-    color: var(--color-bg);
-    box-shadow: 0 0 12px rgba(120, 120, 69, 0.4);
+    border-color: rgba(237, 232, 220, 0.75);
+    background: color-mix(in srgb, var(--nc) 30%, #1a1a18);
+    color: rgba(237, 232, 220, 0.9);
+    box-shadow: 0 0 8px rgba(237, 232, 220, 0.2);
   }
 
   .scene-node.dragging {
@@ -855,7 +865,7 @@
     background: rgba(237, 232, 220, 0.4);
   }
   .scene-node.selected .node-port {
-    background: rgba(26, 26, 24, 0.4);
+    background: rgba(237, 232, 220, 0.4);
   }
 
   /* ── Solo button (near selected pattern node) ── */
