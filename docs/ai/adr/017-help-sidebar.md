@@ -1,6 +1,6 @@
 # ADR 017: Help Sidebar
 
-## Status: IMPLEMENTED (mobile overlay pending)
+## Status: Superseded by ADR 036
 
 ## Context
 

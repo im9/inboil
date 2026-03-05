@@ -44,7 +44,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 032 | Song View (M8-Style) | Superseded | Replaced by 042 (Section-Based Arrangement) |
 | 037 | ChainView Redesign | Superseded | Replaced by 042+044 |
 | 040 | Drill-Down Navigation | Superseded | Replaced by 041+044 |
-| 041 | Unified Navigation | Proposed | Merge SONG/PHRASE modes |
+| 041 | Unified Navigation | Superseded | Replaced by 045+046 (decouple playback + simplify toggle) |
 | 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar (Phases 1-3) |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
@@ -55,8 +55,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 017 | Help Sidebar | Implemented | Mobile overlay pending. Subsumed by 036 |
-| 018 | Settings Panel (SYSTEM) | Implemented | Subsumed by 036 |
+| 017 | Help Sidebar | Superseded | Replaced by 036 (DockPanel HELP tab) |
+| 018 | Settings Panel (SYSTEM) | Superseded | Replaced by 036 (DockPanel SYS tab) |
 | 034 | Help / Guide Redesign | Proposed | Content updates for 036's HELP tab |
 | 035 | Master View | Proposed | XY pad + knobs for master bus |
 | 036 | Remove Footer / Dockable Panel | Implemented | Unifies ParamPanel + Sidebar into DockPanel. Related: 034, 037 |
