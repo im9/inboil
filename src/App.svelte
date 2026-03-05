@@ -5,6 +5,7 @@
   import PerfBar from './lib/components/PerfBar.svelte'
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import SectionNav from './lib/components/SectionNav.svelte'
+  import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
@@ -109,12 +110,12 @@
   {:else}
     <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
     <PerfBar />
-    <SectionNav />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      <div class="view-content-row" class:bottom={ui.dockPosition === 'bottom'}>
+      <div class="view-content-row">
+        <MatrixView />
         <div class="view-main">
           {#if ui.phraseView === 'tracker'}
             <TrackerView />
@@ -150,9 +151,6 @@
     display: flex;
     flex-direction: row;
     overflow: hidden;
-  }
-  .view-content-row.bottom {
-    flex-direction: column;
   }
 
   .view-main {

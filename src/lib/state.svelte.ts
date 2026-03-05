@@ -6,6 +6,7 @@ import {
 } from './constants.ts'
 import {
   DRUM_SYNTHS, makeTrig, makeDefaultSong, makeEmptyCell,
+  makePatternId,
   TRACK_DEFAULTS, SECTION_COUNT,
 } from './factory.ts'
 
@@ -41,10 +42,16 @@ export interface ChainFx {
   y: number
 }
 
-/** One arrangement section (ADR 042, replaces SongRow + Chain) */
-export interface Section {
-  name: string            // max 6 chars
+/** Reusable pattern — name + 8 tracks of step data (ADR 044) */
+export interface Pattern {
+  id: string              // e.g. 'pat_00'
+  name: string            // max 8 chars
   cells: Cell[]           // 8 fixed (one per track)
+}
+
+/** Arrangement slot referencing a Pattern (ADR 044) */
+export interface Section {
+  patternIndex: number    // index into Song.patterns
   repeats: number         // 1–16
   key?: number            // root note override (0–11)
   oct?: number            // octave override
@@ -73,18 +80,24 @@ export interface Effects {
   comp:   { threshold: number; ratio: number; makeup: number }
 }
 
-/** Song = flat arrangement of sections (ADR 042) */
+/** Song = pattern pool + arrangement sections (ADR 044 Phase 0) */
 export interface Song {
   name: string
   bpm: number
   rootNote: number        // 0–11
   tracks: Track[]         // 8 fixed
-  sections: Section[]     // SECTION_COUNT (64) fixed
+  patterns: Pattern[]     // pattern pool (ADR 044)
+  sections: Section[]     // arrangement slots referencing patterns
+}
+
+/** Resolve the Pattern referenced by a section index */
+export function sectionPattern(sectionIndex: number): Pattern {
+  return song.patterns[song.sections[sectionIndex].patternIndex]
 }
 
 /** Get the active cell for a track in the current section */
 export function activeCell(trackId: number): Cell {
-  return song.sections[ui.currentSection].cells[trackId]
+  return sectionPattern(ui.currentSection).cells[trackId]
 }
 
 // ── Undo ─────────────────────────────────────────────────────────────
@@ -109,10 +122,13 @@ function cloneCell(c: Cell): Cell {
   }
 }
 
+function clonePattern(p: Pattern): Pattern {
+  return { id: p.id, name: p.name, cells: p.cells.map(cloneCell) }
+}
+
 function cloneSection(s: Section): Section {
   return {
-    name: s.name,
-    cells: s.cells.map(cloneCell),
+    patternIndex: s.patternIndex,
     repeats: s.repeats,
     ...(s.key != null ? { key: s.key } : {}),
     ...(s.oct != null ? { oct: s.oct } : {}),
@@ -133,6 +149,7 @@ function cloneSong(): Song {
   return {
     name: song.name, bpm: song.bpm, rootNote: song.rootNote,
     tracks: song.tracks.map(cloneTrack),
+    patterns: song.patterns.map(clonePattern),
     sections: song.sections.map(cloneSection),
   }
 }
@@ -156,23 +173,36 @@ function pushUndo(label: string): void {
   lastPushLabel = label
 }
 
+function restoreCell(c: Cell): Cell {
+  return {
+    ...c,
+    voiceParams: { ...c.voiceParams },
+    trigs: c.trigs.map(tr => ({
+      ...tr,
+      duration: tr.duration ?? 1,
+      slide: tr.slide ?? false,
+      ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
+    })),
+  }
+}
+
 function restoreSong(src: Song): void {
   song.name = src.name
   song.bpm = src.bpm
   song.rootNote = src.rootNote ?? 0
   song.tracks = src.tracks.map(t => ({ ...t }))
+  song.patterns = src.patterns.map(p => ({
+    id: p.id,
+    name: p.name,
+    cells: p.cells.map(restoreCell),
+  }))
   song.sections = src.sections.map(s => ({
-    ...s,
-    cells: s.cells.map(c => ({
-      ...c,
-      voiceParams: { ...c.voiceParams },
-      trigs: c.trigs.map(tr => ({
-        ...tr,
-        duration: tr.duration ?? 1,
-        slide: tr.slide ?? false,
-        ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
-      })),
-    })),
+    patternIndex: s.patternIndex,
+    repeats: s.repeats,
+    ...(s.key != null ? { key: s.key } : {}),
+    ...(s.oct != null ? { oct: s.oct } : {}),
+    ...(s.perf != null ? { perf: s.perf } : {}),
+    ...(s.perfLen != null ? { perfLen: s.perfLen } : {}),
     ...(s.verb ? { verb: { ...s.verb } } : {}),
     ...(s.delay ? { delay: { ...s.delay } } : {}),
     ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
@@ -232,9 +262,9 @@ export function selectSection(index: number): void {
   ui.currentSection = index
 }
 
-/** Get name of the currently active section */
+/** Get name of the currently active section's pattern */
 export function getActiveSectionName(): string {
-  return song.sections[ui.currentSection]?.name ?? ''
+  return sectionPattern(ui.currentSection)?.name ?? ''
 }
 
 /** Total number of sections */
@@ -242,9 +272,9 @@ export function getSectionCount(): number {
   return SECTION_COUNT
 }
 
-/** Check if a section contains any active trigs */
+/** Check if a section's pattern contains any active trigs */
 export function sectionHasData(index: number): boolean {
-  return song.sections[index].cells.some(c => c.trigs.some(t => t.active))
+  return sectionPattern(index).cells.some(c => c.trigs.some(t => t.active))
 }
 
 /** Set loop range (used by SectionNav drag) */
@@ -594,18 +624,23 @@ export const SONG_PRESETS = [
     ] as SectionPresetEntry[] },
 ]
 
-/** Load a song preset: copies factory section data into arrangement sections with metadata overlays */
+/** Load a song preset: clones factory pattern data into arrangement slots with metadata overlays */
 export function songLoadPreset(index: number) {
   const preset = SONG_PRESETS[index]
   if (!preset) return
   for (let i = 0; i < preset.entries.length; i++) {
     const entry = preset.entries[i]
-    const src = song.sections[entry.sectionIndex]
-    if (!src) continue
-    // Copy cells from the source factory section
+    const srcPattern = song.patterns[entry.sectionIndex]
+    if (!srcPattern) continue
+    // Clone pattern data into this arrangement slot's pattern
+    song.patterns[i] = {
+      id: makePatternId(i),
+      name: srcPattern.name,
+      cells: srcPattern.cells.map(cloneCell),
+    }
+    // Set section metadata with patternIndex
     song.sections[i] = {
-      name: src.name,
-      cells: src.cells.map(cloneCell),
+      patternIndex: i,
       repeats: entry.repeats ?? 1,
       ...(entry.key != null ? { key: entry.key } : {}),
       ...(entry.oct != null ? { oct: entry.oct } : {}),
@@ -677,11 +712,11 @@ export function sectionSetFxSend(index: number, fx: SongFxKey, value: number) {
   else s[fx]!.x = value
 }
 
-/** Clear a section's cells to empty (preserves metadata) */
+/** Clear a section's pattern cells to empty (preserves section metadata) */
 export function sectionClear(index: number) {
   pushUndo('Clear section')
-  const s = song.sections[index]
-  s.cells = TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.synthType, d.note))
+  const pat = sectionPattern(index)
+  pat.cells = TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.synthType, d.note))
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */

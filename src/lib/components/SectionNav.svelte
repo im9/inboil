@@ -24,6 +24,7 @@
   })
 
   const sec = $derived(song.sections[ui.currentSection])
+  const pat = $derived(song.patterns[sec.patternIndex])
 
   // ── Drag state for loop range ──
   let dragStartSlot: number | null = $state(null)
@@ -113,7 +114,7 @@
   <!-- Row 2: Detail strip for selected section -->
   <div class="detail-row">
     <span class="detail-sec">SEC {String(ui.currentSection).padStart(2, '0')}</span>
-    <span class="detail-name">{sec.name || '------'}</span>
+    <span class="detail-name">{pat.name || '------'}</span>
 
     <!-- Repeats -->
     <span class="detail-rpt">

@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Section, Song, SynthType } from './state.svelte.ts'
+import type { Trig, Track, Cell, Pattern, Section, Song, SynthType } from './state.svelte.ts'
 
 export const DRUM_SYNTHS: SynthType[] = ['DrumSynth', 'NoiseSynth']
 
@@ -51,10 +51,21 @@ export function makeEmptyCell(trackId: number, synthType: SynthType, note: numbe
   }
 }
 
-export function makeEmptySection(name = ''): Section {
+export function makePatternId(index: number): string {
+  return `pat_${String(index).padStart(2, '0')}`
+}
+
+export function makeEmptyPattern(index: number, name = ''): Pattern {
   return {
+    id: makePatternId(index),
     name,
     cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.synthType, d.note)),
+  }
+}
+
+export function makeEmptySection(patternIndex: number): Section {
+  return {
+    patternIndex,
     repeats: 1,
   }
 }
@@ -421,27 +432,32 @@ function buildFactoryCell(
 export const FACTORY_COUNT = FACTORY.length
 
 /**
- * Build the default Song with all factory patterns as sections.
- * First FACTORY_COUNT sections come from factory presets, rest are empty.
+ * Build the default Song with pattern pool + arrangement sections (ADR 044 Phase 0).
+ * First FACTORY_COUNT patterns come from factory presets, rest are empty.
+ * Sections have 1:1 mapping to patterns via patternIndex.
  */
 export function makeDefaultSong(): Song {
   const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) =>
     makeTrack(trackIdx, d.name, d.synthType, d.pan)
   )
 
+  const patterns: Pattern[] = []
   const sections: Section[] = []
+
   for (let i = 0; i < FACTORY.length; i++) {
     const f = FACTORY[i]
-    sections.push({
-      name: f.name.slice(0, 6),
+    patterns.push({
+      id: makePatternId(i),
+      name: f.name.slice(0, 8),
       cells: TRACK_DEFAULTS.map((d, trackIdx) =>
         buildFactoryCell(trackIdx, f, d.synthType, d.note)
       ),
-      repeats: 1,
     })
+    sections.push(makeEmptySection(i))
   }
   for (let i = FACTORY.length; i < SECTION_COUNT; i++) {
-    sections.push(makeEmptySection())
+    patterns.push(makeEmptyPattern(i))
+    sections.push(makeEmptySection(i))
   }
 
   return {
@@ -449,6 +465,7 @@ export function makeDefaultSong(): Song {
     bpm: FACTORY[0].bpm,
     rootNote: FACTORY[0].key ?? 0,
     tracks,
+    patterns,
     sections,
   }
 }

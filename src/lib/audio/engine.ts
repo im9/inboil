@@ -109,6 +109,7 @@ function patternToWorklet(
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
 
   const sec = s.sections[sectionIndex]
+  const pat = s.patterns[sec.patternIndex]
 
   return {
     bpm: s.bpm,
@@ -148,7 +149,7 @@ function patternToWorklet(
       swing:           perf?.swing       ?? 0,
     },
     tracks: s.tracks.map((t, i) => {
-      const cell = sec.cells[i]
+      const cell = pat.cells[i]
       return {
         steps:       cell.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
