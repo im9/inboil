@@ -416,6 +416,7 @@
   /* ── View toggle ── */
   .view-toggle {
     display: flex;
+    align-items: center;
     gap: 0;
   }
 
@@ -437,7 +438,11 @@
     border-color: rgba(237,232,220,0.45);
   }
   .view-sep {
-    width: 8px;
+    width: 1px;
+    height: 28px;
+    background: rgba(237,232,220,0.12);
+    flex-shrink: 0;
+    margin: 0 16px;
   }
   .btn-scene-mode {
     width: 22px;
@@ -450,7 +455,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 2px;
+    margin-left: 6px;
     transition: background 40ms, color 40ms;
   }
   .btn-scene-mode.active {
