@@ -933,6 +933,30 @@ export function duplicatePattern(srcIndex: number): number {
   return emptyIdx
 }
 
+// ── Pattern clipboard ────────────────────────────────────────────────
+let patternClipboard: Pattern | null = null
+
+/** Copy pattern to internal clipboard */
+export function patternCopy(index: number): void {
+  patternClipboard = clonePattern(song.patterns[index])
+}
+
+/** Paste clipboard into pattern slot (overwrites) */
+export function patternPaste(index: number): void {
+  if (!patternClipboard) return
+  pushUndo('Paste pattern')
+  song.patterns[index] = {
+    id: song.patterns[index].id,
+    name: patternClipboard.name,
+    cells: patternClipboard.cells.map(cloneCell),
+  }
+}
+
+/** Returns true if the pattern clipboard has content */
+export function hasPatternClipboard(): boolean {
+  return patternClipboard !== null
+}
+
 // ── Scene graph helpers ─────────────────────────────────────────────
 
 /** Update a scene node's position (no undo — cosmetic, high frequency) */

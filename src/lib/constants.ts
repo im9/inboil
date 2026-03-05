@@ -3,6 +3,9 @@
 // NOTE: worklet-processor.ts runs in AudioWorklet scope and cannot import this
 // file — it maintains its own copies of scale/transposition constants.
 
+// ── Project ─────────────────────────────────────────────────────────────────
+export const PROJECT_NAME = 'UNTITLED'
+
 // ── Note names ──────────────────────────────────────────────────────────────
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
 

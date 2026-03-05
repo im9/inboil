@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, toggleSidebar, selectPattern, getActivePatternName, duplicatePattern, patternClear, patternRename } from '../state.svelte.ts'
+  import { song, playback, ui, toggleSidebar } from '../state.svelte.ts'
+  import { PROJECT_NAME } from '../constants.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -17,25 +18,6 @@
 
   function handleSystem() {
     toggleSidebar('system')
-  }
-
-  const displayNum = $derived(String(ui.currentPattern).padStart(2, '0'))
-  const displayName = $derived(getActivePatternName())
-
-  // ── Long-press auto-repeat for ◀/▶ buttons ──
-  let repeatTimer: ReturnType<typeof setTimeout> | null = null
-  let repeatInterval: ReturnType<typeof setInterval> | null = null
-
-  function startRepeat(dir: -1 | 1) {
-    selectPattern(ui.currentPattern + dir)
-    repeatTimer = setTimeout(() => {
-      repeatInterval = setInterval(() => selectPattern(ui.currentPattern + dir), 100)
-    }, 400)
-  }
-
-  function stopRepeat() {
-    if (repeatTimer) { clearTimeout(repeatTimer); repeatTimer = null }
-    if (repeatInterval) { clearInterval(repeatInterval); repeatInterval = null }
   }
 
   // ── Long-press auto-repeat for BPM ±buttons ──
@@ -58,36 +40,6 @@
     if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
   }
 
-  // ── Inline pattern rename ──
-  let renaming = $state(false)
-  let renameValue = $state('')
-  let renameInput: HTMLInputElement | undefined = $state()
-
-  function startRename() {
-    renameValue = getActivePatternName()
-    renaming = true
-    requestAnimationFrame(() => {
-      renameInput?.focus()
-      renameInput?.select()
-    })
-  }
-
-  function commitRename() {
-    if (!renaming) return
-    const trimmed = renameValue.trim()
-    if (trimmed.length > 0) patternRename(ui.currentPattern, trimmed)
-    renaming = false
-  }
-
-  function cancelRename() { renaming = false }
-
-  function onRenameKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') { e.preventDefault(); commitRename() }
-    else if (e.key === 'Escape') { e.preventDefault(); cancelRename() }
-  }
-
-  // ── Mobile radial menu ──
-  let patMenuOpen = $state(false)
 </script>
 
 <div class="header-wrap" class:compact>
@@ -180,54 +132,7 @@
 
     <div class="pat-block">
       <div class="pat-display">
-        <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
-        <span class="pat-value" data-tip="Current pattern" data-tip-ja="現在のパターン"><SplitFlap value={displayNum} width={2} /></span>
-        <span class="pat-sep" aria-hidden="true">|</span>
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <span class="pat-name" ondblclick={startRename}>
-          {#if renaming}
-            <input
-              class="pat-rename-input"
-              bind:this={renameInput}
-              bind:value={renameValue}
-              maxlength={8}
-              onblur={commitRename}
-              onkeydown={onRenameKeydown}
-            />
-          {:else}
-            <SplitFlap value={displayName} width={8} />
-          {/if}
-        </span>
-        <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
-      </div>
-      <div class="pat-bottom">
-        <div class="pat-actions">
-          <button class="pat-act"
-            onpointerdown={() => duplicatePattern(ui.currentPattern)}
-            data-tip="Duplicate pattern to empty slot" data-tip-ja="パターンを空きスロットに複製"
-          >DUP</button>
-          <button class="pat-act"
-            onpointerdown={() => patternClear(ui.currentPattern)}
-            data-tip="Clear all cells in pattern" data-tip-ja="パターンのセルをすべてクリア"
-          >CLR</button>
-        </div>
-        <span class="pat-label">PAT</span>
-      </div>
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="pat-menu-wrap" class:open={patMenuOpen}>
-        <button class="pat-menu-trigger"
-          onpointerdown={() => { patMenuOpen = !patMenuOpen }}
-          aria-label="Pattern actions" data-tip="Pattern actions" data-tip-ja="パターン操作"
-        >&#x22EE;</button>
-        {#if patMenuOpen}
-          <button class="pat-menu-backdrop" aria-label="Close menu" onpointerdown={() => { patMenuOpen = false }}></button>
-          <button class="pat-menu-item"
-            onpointerdown={() => { duplicatePattern(ui.currentPattern); patMenuOpen = false }}
-          >DUP</button>
-          <button class="pat-menu-item"
-            onpointerdown={() => { patternClear(ui.currentPattern); patMenuOpen = false }}
-          >CLR</button>
-        {/if}
+        <span class="pat-name"><SplitFlap value={PROJECT_NAME} width={8} /></span>
       </div>
     </div>
   </div>
@@ -435,73 +340,9 @@
     align-items: flex-end;
     margin-left: auto;
   }
-  .pat-bottom {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .pat-label {
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    color: rgba(237,232,220,0.35);
-    text-transform: uppercase;
-  }
-  .pat-actions {
-    display: flex;
-    gap: 2px;
-  }
-  .pat-act {
-    border: 1px solid rgba(237,232,220,0.2);
-    background: transparent;
-    color: rgba(237,232,220,0.4);
-    font-size: 8px;
-    letter-spacing: 0.06em;
-    padding: 1px 4px;
-    line-height: 1.2;
-  }
-  .pat-act:active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.8);
-  }
-  .pat-act.disabled {
-    opacity: 0.25;
-    pointer-events: none;
-  }
   .pat-display {
     display: flex;
     align-items: center;
-    gap: 4px;
-  }
-  .pat-adj {
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.6);
-    width: 22px;
-    height: 22px;
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  .pat-adj:active { background: rgba(237,232,220,0.15); }
-  .pat-sep {
-    font-size: 20px;
-    color: rgba(237,232,220,0.15);
-    line-height: 1;
-    margin: 0 2px;
-  }
-  .compact .pat-sep { font-size: 16px; }
-  .pat-value {
-    font-family: var(--font-display);
-    font-size: 24px;
-    line-height: 1;
-    color: var(--color-bg);
-    transform: translateY(2px);
-  }
-  .compact .pat-value { font-size: 20px; }
-  .pat-value.pending {
-    animation: pat-blink 400ms ease-in-out infinite;
   }
   .pat-name {
     font-size: 24px;
@@ -510,102 +351,6 @@
     transform: translateY(2px);
   }
   .compact .pat-name { font-size: 18px; }
-  .pat-rename-input {
-    font-family: var(--font-data);
-    font-size: inherit;
-    line-height: 1;
-    color: var(--color-bg);
-    background: rgba(237,232,220,0.12);
-    border: 1px solid var(--color-olive);
-    padding: 0 2px;
-    width: 7em;
-    text-transform: uppercase;
-    outline: none;
-  }
-
-  /* ── Pat radial menu ── */
-  .pat-menu-wrap {
-    position: relative;
-    display: none; /* shown on mobile only */
-  }
-  .pat-menu-trigger {
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.5);
-    font-size: 14px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    position: relative;
-    z-index: 52;
-    transition: background 150ms, color 150ms;
-  }
-  .pat-menu-wrap.open .pat-menu-trigger {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.9);
-  }
-  .pat-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.25);
-    z-index: 50;
-    border: none;
-  }
-  .pat-menu-item {
-    position: absolute;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.85);
-    background: var(--color-fg);
-    border: 1px solid rgba(237,232,220,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 51;
-    /* Closed: collapsed to trigger center */
-    top: -6px;
-    left: -6px;
-    transform: scale(0);
-    opacity: 0;
-    transition: all 150ms cubic-bezier(0.2, 0, 0.4, 1.3);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  }
-  .pat-menu-item:active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .pat-menu-item.disabled {
-    opacity: 0.2;
-    pointer-events: none;
-  }
-  /* Fan out down-left from trigger */
-  .pat-menu-wrap.open .pat-menu-item {
-    transform: scale(1);
-    opacity: 1;
-  }
-  .pat-menu-wrap.open .pat-menu-item:nth-child(1) {
-    top: -20px;
-    left: -48px;
-    transition-delay: 0ms;
-  }
-  .pat-menu-wrap.open .pat-menu-item:nth-child(2) {
-    top: 16px;
-    left: -52px;
-    transition-delay: 30ms;
-  }
-  .pat-menu-wrap.open .pat-menu-item:nth-child(3) {
-    top: 48px;
-    left: -38px;
-    transition-delay: 60ms;
-  }
 
   /* ── Transport center (mobile app-header) ── */
   .transport-center {
@@ -633,24 +378,6 @@
       align-items: flex-end;
       gap: 2px;
     }
-    .pat-display {
-      gap: 3px;
-    }
-    .pat-adj { width: 20px; height: 20px; font-size: 10px; }
-    .pat-value { font-size: 16px; }
     .pat-name { font-size: 14px; }
-    .pat-sep { font-size: 14px; }
-    /* Hide inline actions on mobile, use bubble menu instead */
-    .pat-bottom { display: none; }
-    .pat-menu-wrap { display: block; }
-    .pat-act {
-      font-size: 8px;
-      padding: 2px 6px;
-    }
-  }
-
-  @keyframes pat-blink {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.3; }
   }
 </style>

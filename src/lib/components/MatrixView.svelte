@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear } from '../state.svelte.ts'
 
   // Show all patterns in the pool
   const visibleCount = $derived(song.patterns.length)
@@ -20,10 +20,31 @@
 
   const selectedName = $derived(song.patterns[ui.currentPattern]?.name || '------')
 
+  let gridEl: HTMLDivElement | undefined = $state()
+
   function addToScene(pi: number) {
     const pat = song.patterns[pi]
     const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
     ui.selectedSceneNode = id
+  }
+
+  function selectAndFocus(pi: number) {
+    selectPattern(pi)
+    gridEl?.focus()
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    const mod = e.metaKey || e.ctrlKey
+    if (mod && e.code === 'KeyC') {
+      e.preventDefault()
+      patternCopy(ui.currentPattern)
+    } else if (mod && e.code === 'KeyV') {
+      e.preventDefault()
+      patternPaste(ui.currentPattern)
+    } else if (e.code === 'Backspace' || e.code === 'Delete') {
+      e.preventDefault()
+      patternClear(ui.currentPattern)
+    }
   }
 </script>
 
@@ -41,7 +62,8 @@
   </div>
 
   <!-- Grid: square cells -->
-  <div class="matrix-grid">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="matrix-grid" bind:this={gridEl} tabindex="0" onkeydown={onKeydown}>
     {#each { length: visibleCount } as _, pi}
       {@const hasData = patternHasData(pi)}
       {@const d = patternDensity(pi)}
@@ -58,7 +80,7 @@
         class:in-scene={inScene}
         style="--d: {d}"
       >
-        <button class="cell-bg" onpointerdown={() => selectPattern(pi)}></button>
+        <button class="cell-bg" onpointerdown={() => selectAndFocus(pi)}></button>
       </div>
     {/each}
   </div>
@@ -126,6 +148,7 @@
     align-content: start;
   }
   .matrix-grid::-webkit-scrollbar { width: 0; display: none; }
+  .matrix-grid:focus { outline: none; }
 
   /* ── Cell wrapper ── */
   .pat-cell {
