@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, toggleSidebar, selectPattern, getActivePatternName } from '../state.svelte.ts'
+  import { song, playback, ui, toggleSidebar, selectPattern, getActivePatternName, duplicatePattern, patternClear, patternRename } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -65,6 +65,37 @@
     if (bpmRepeatTimer) { clearTimeout(bpmRepeatTimer); bpmRepeatTimer = null }
     if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
   }
+
+  // ── Inline pattern rename ──
+  let renaming = $state(false)
+  let renameValue = $state('')
+  let renameInput: HTMLInputElement | undefined = $state()
+
+  function startRename() {
+    renameValue = getActivePatternName()
+    renaming = true
+    requestAnimationFrame(() => {
+      renameInput?.focus()
+      renameInput?.select()
+    })
+  }
+
+  function commitRename() {
+    if (!renaming) return
+    const trimmed = renameValue.trim()
+    if (trimmed.length > 0) patternRename(ui.currentPattern, trimmed)
+    renaming = false
+  }
+
+  function cancelRename() { renaming = false }
+
+  function onRenameKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelRename() }
+  }
+
+  // ── Mobile radial menu ──
+  let patMenuOpen = $state(false)
 </script>
 
 <div class="header-wrap" class:compact>
@@ -160,11 +191,51 @@
         <button class="pat-adj" onpointerdown={() => startRepeat(-1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Previous pattern (hold to scroll)" data-tip-ja="前のパターン (長押しでスクロール)">◀</button>
         <span class="pat-value" data-tip="Current pattern" data-tip-ja="現在のパターン"><SplitFlap value={displayNum} width={2} /></span>
         <span class="pat-sep" aria-hidden="true">|</span>
-        <span class="pat-name"><SplitFlap value={displayName} width={8} /></span>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span class="pat-name" ondblclick={startRename}>
+          {#if renaming}
+            <input
+              class="pat-rename-input"
+              bind:this={renameInput}
+              bind:value={renameValue}
+              maxlength={8}
+              onblur={commitRename}
+              onkeydown={onRenameKeydown}
+            />
+          {:else}
+            <SplitFlap value={displayName} width={8} />
+          {/if}
+        </span>
         <button class="pat-adj" onpointerdown={() => startRepeat(1)} onpointerup={stopRepeat} onpointerleave={stopRepeat} data-tip="Next pattern (hold to scroll)" data-tip-ja="次のパターン (長押しでスクロール)">▶</button>
       </div>
       <div class="pat-bottom">
+        <div class="pat-actions">
+          <button class="pat-act"
+            onpointerdown={() => duplicatePattern(ui.currentPattern)}
+            data-tip="Duplicate pattern to empty slot" data-tip-ja="パターンを空きスロットに複製"
+          >DUP</button>
+          <button class="pat-act"
+            onpointerdown={() => patternClear(ui.currentPattern)}
+            data-tip="Clear all cells in pattern" data-tip-ja="パターンのセルをすべてクリア"
+          >CLR</button>
+        </div>
         <span class="pat-label">PAT</span>
+      </div>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="pat-menu-wrap" class:open={patMenuOpen}>
+        <button class="pat-menu-trigger"
+          onpointerdown={() => { patMenuOpen = !patMenuOpen }}
+          aria-label="Pattern actions" data-tip="Pattern actions" data-tip-ja="パターン操作"
+        >&#x22EE;</button>
+        {#if patMenuOpen}
+          <button class="pat-menu-backdrop" aria-label="Close menu" onpointerdown={() => { patMenuOpen = false }}></button>
+          <button class="pat-menu-item"
+            onpointerdown={() => { duplicatePattern(ui.currentPattern); patMenuOpen = false }}
+          >DUP</button>
+          <button class="pat-menu-item"
+            onpointerdown={() => { patternClear(ui.currentPattern); patMenuOpen = false }}
+          >CLR</button>
+        {/if}
       </div>
     </div>
   </div>
@@ -447,6 +518,18 @@
     transform: translateY(2px);
   }
   .compact .pat-name { font-size: 18px; }
+  .pat-rename-input {
+    font-family: var(--font-data);
+    font-size: inherit;
+    line-height: 1;
+    color: var(--color-bg);
+    background: rgba(237,232,220,0.12);
+    border: 1px solid var(--color-olive);
+    padding: 0 2px;
+    width: 7em;
+    text-transform: uppercase;
+    outline: none;
+  }
 
   /* ── Pat radial menu ── */
   .pat-menu-wrap {

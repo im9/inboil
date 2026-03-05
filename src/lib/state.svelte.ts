@@ -782,6 +782,12 @@ export function patternClear(patternIndex: number): void {
   )
 }
 
+/** Rename a pattern (max 8 chars, uppercase) */
+export function patternRename(patternIndex: number, name: string): void {
+  pushUndo('Rename pattern')
+  song.patterns[patternIndex].name = name.slice(0, 8).toUpperCase()
+}
+
 /** Clear a section's pattern cells to empty (preserves section metadata) */
 export function sectionClear(index: number) {
   patternClear(song.sections[index].patternIndex)

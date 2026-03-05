@@ -4,11 +4,11 @@
     selectSection, sectionJump, sectionRewind,
     sectionStepRepeats, sectionCycleKey, sectionCycleOct,
     sectionCyclePerf, sectionToggleFx, sectionClear,
-    sectionHasData, setLoopRange,
+    sectionHasData, setLoopRange, sectionSetPattern,
     SONG_PRESETS, songLoadPreset, NOTE_NAMES,
   } from '../state.svelte.ts'
   import type { SongFxKey } from '../state.svelte.ts'
-  import { SECTION_COUNT } from '../factory.ts'
+  import { SECTION_COUNT, FACTORY_COUNT } from '../factory.ts'
 
   const PERF_LABELS = ['---', 'FILL', 'BRK', 'REV']
   const FX_KEYS: SongFxKey[] = ['verb', 'delay', 'glitch', 'granular']
@@ -70,6 +70,40 @@
   function onSlotDblClick(si: number) {
     sectionJump(si)
   }
+
+  // ── Pattern picker ──
+  let pickerOpen = $state(false)
+  let pickerEl: HTMLDivElement | undefined = $state()
+
+  const pickerVisibleCount = $derived.by(() => {
+    let last = 0
+    for (let i = 0; i < song.patterns.length; i++) {
+      if (song.patterns[i].cells.some(c => c.trigs.some(t => t.active))) last = i
+    }
+    return Math.max(last + 2, FACTORY_COUNT)
+  })
+
+  function patternDensity(pi: number): number {
+    const p = song.patterns[pi]
+    let total = 0, active = 0
+    for (const c of p.cells) {
+      total += c.steps
+      for (const t of c.trigs) { if (t.active) active++ }
+    }
+    return total > 0 ? active / total : 0
+  }
+
+  function pickPattern(pi: number) {
+    sectionSetPattern(ui.currentSection, pi)
+    pickerOpen = false
+  }
+
+  $effect(() => {
+    if (pickerOpen && pickerEl) {
+      const cur = pickerEl.querySelector('.picker-row.current')
+      cur?.scrollIntoView({ block: 'center' })
+    }
+  })
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -114,8 +148,31 @@
   <!-- Row 2: Detail strip for selected section -->
   <div class="detail-row">
     <span class="detail-sec">SEC {String(ui.currentSection).padStart(2, '0')}</span>
-    <span class="detail-pat">PAT {String(sec.patternIndex).padStart(2, '0')}</span>
-    <span class="detail-name">{pat.name || '------'}</span>
+    <button class="detail-pat picker-trigger" onpointerdown={() => { pickerOpen = !pickerOpen }}
+      data-tip="Click to change pattern" data-tip-ja="クリックでパターンを変更"
+    >PAT {String(sec.patternIndex).padStart(2, '0')} {pat.name || '------'} &#9662;</button>
+
+    {#if pickerOpen}
+      <button class="picker-backdrop" aria-label="Close picker" onpointerdown={() => { pickerOpen = false }}></button>
+      <div class="pat-picker" bind:this={pickerEl}>
+        {#each { length: pickerVisibleCount } as _, pi}
+          {@const p = song.patterns[pi]}
+          {@const hasData = p.cells.some(c => c.trigs.some(t => t.active))}
+          {@const isCurrent = pi === sec.patternIndex}
+          {@const density = patternDensity(pi)}
+          <button
+            class="picker-row"
+            class:current={isCurrent}
+            class:has-data={hasData}
+            onpointerdown={() => pickPattern(pi)}
+          >
+            <span class="picker-num">{String(pi).padStart(2, '0')}</span>
+            <span class="picker-name">{p.name || '------'}</span>
+            <span class="picker-density" style="--d: {density}"></span>
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     <!-- Repeats -->
     <span class="detail-rpt">
@@ -282,6 +339,7 @@
 
   /* ── Row 2: Detail strip ── */
   .detail-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -309,15 +367,14 @@
     color: rgba(237,232,220,0.30);
     white-space: nowrap;
     flex-shrink: 0;
+    border: 1px solid rgba(237,232,220,0.10);
+    background: transparent;
+    padding: 2px 5px;
+    cursor: pointer;
   }
-
-  .detail-name {
-    font-family: var(--font-data);
-    font-size: 9px;
-    color: rgba(237,232,220,0.50);
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: 40px;
+  .detail-pat:active {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.70);
   }
 
   /* ── Repeats ── */
@@ -427,6 +484,85 @@
     margin-left: auto;
   }
   .detail-clr:active { background: rgba(237,232,220,0.10); color: rgba(237,232,220,0.60); }
+
+  /* ── Pattern picker ── */
+  .picker-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: transparent;
+    border: none;
+  }
+  .pat-picker {
+    position: absolute;
+    top: 100%;
+    left: 40px;
+    z-index: 21;
+    background: var(--color-fg);
+    border: 1px solid rgba(237,232,220,0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    max-height: 240px;
+    overflow-y: auto;
+    min-width: 160px;
+  }
+  .pat-picker::-webkit-scrollbar { width: 0; display: none; }
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 3px 8px;
+    border: none;
+    background: transparent;
+    color: rgba(237,232,220,0.35);
+    font-family: var(--font-data);
+    font-size: 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .picker-row:active {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.70);
+  }
+  .picker-row.current {
+    color: var(--color-olive);
+    background: rgba(120,120,69,0.1);
+  }
+  .picker-row.has-data {
+    color: rgba(237,232,220,0.55);
+  }
+  .picker-num {
+    font-weight: 700;
+    width: 18px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .picker-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .picker-density {
+    width: 24px;
+    height: 6px;
+    flex-shrink: 0;
+    background: rgba(237,232,220,0.06);
+    position: relative;
+  }
+  .picker-density::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: calc(var(--d) * 100%);
+    background: rgba(237,232,220,0.25);
+  }
+  .picker-row.current .picker-density::after {
+    background: var(--color-olive);
+  }
 
   /* ── Mobile ── */
   @media (max-width: 639px) {
