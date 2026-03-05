@@ -71,6 +71,12 @@
     gridEl?.focus()
   }
 
+  function onCellDragStart(e: DragEvent, pi: number) {
+    if (!e.dataTransfer) return
+    e.dataTransfer.setData('application/x-inboil-pattern', String(pi))
+    e.dataTransfer.effectAllowed = 'copy'
+  }
+
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
     const mod = e.metaKey || e.ctrlKey
@@ -156,7 +162,7 @@
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}"
       >
-        <button class="cell-bg" aria-label="Pattern {pi}" onpointerdown={() => selectAndFocus(pi)}></button>
+        <button class="cell-bg" aria-label="Pattern {pi}" draggable={ui.phraseView === 'scene'} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)}></button>
       </div>
     {/each}
   </div>

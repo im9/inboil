@@ -26,6 +26,9 @@
   // ── Add-node picker ──
   let pickerOpen = $state(false)
 
+  // ── Drop from MatrixView ──
+  let dropActive = $state(false)
+
   // ── Zoom/Pan state ──
   let zoom = $state(1)      // 0.5 .. 3.0
   let panX = $state(0)      // pixel offset
@@ -58,16 +61,18 @@
     return result
   })
 
-  /** Convert pointer event to normalized 0-1 coords (accounting for zoom/pan) */
-  function toNorm(e: PointerEvent): { x: number; y: number } | null {
+  /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
+  function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
     if (!viewEl) return null
     const rect = viewEl.getBoundingClientRect()
-    const canvasX = (e.clientX - rect.left - panX) / zoom
-    const canvasY = (e.clientY - rect.top - panY) / zoom
+    const canvasX = (cx - rect.left - panX) / zoom
+    const canvasY = (cy - rect.top - panY) / zoom
     const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (rect.width - PAD_INSET * 2)))
     const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (rect.height - PAD_INSET * 2)))
     return { x, y }
   }
+
+  function toNorm(e: PointerEvent) { return toNormXY(e.clientX, e.clientY) }
 
   /** Convert normalized coords to pixel position for canvas drawing */
   function toPixel(nx: number, ny: number, w: number, h: number) {
@@ -612,6 +617,31 @@
     else stopVis()
     return () => stopVis()
   })
+
+  // ── Drop handlers (MatrixView → SceneView) ──
+  function onDragOver(e: DragEvent) {
+    if (!e.dataTransfer?.types.includes('application/x-inboil-pattern')) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+    dropActive = true
+  }
+
+  function onDrop(e: DragEvent) {
+    e.preventDefault()
+    dropActive = false
+    const pi = Number(e.dataTransfer?.getData('application/x-inboil-pattern'))
+    if (isNaN(pi)) return
+    const pat = song.patterns[pi]
+    if (!pat) return
+    const norm = toNormXY(e.clientX, e.clientY)
+    if (!norm) return
+    const id = sceneAddNode(pat.id, norm.x, norm.y)
+    ui.selectedSceneNode = id
+  }
+
+  function onDragLeave() {
+    dropActive = false
+  }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -619,12 +649,16 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="scene-view"
+  class:drop-active={dropActive}
   bind:this={viewEl}
   onpointermove={onMove}
   onpointerup={endDrag}
   onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false }}
   onpointerdown={onBgDown}
   onwheel={onWheel}
+  ondragover={onDragOver}
+  ondrop={onDrop}
+  ondragleave={onDragLeave}
 >
   <canvas bind:this={canvasEl} class="scene-canvas"></canvas>
 
@@ -741,6 +775,10 @@
     overflow: hidden;
     touch-action: none;
     user-select: none;
+  }
+  .scene-view.drop-active {
+    outline: 2px dashed rgba(237,232,220,0.3);
+    outline-offset: -2px;
   }
 
   .scene-canvas {
