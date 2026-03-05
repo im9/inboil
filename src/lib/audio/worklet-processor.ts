@@ -269,8 +269,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.tracks = p.tracks
           const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
           this.patternLen = newLen
-          // Clamp patternPos if patternLen shrank (prevents premature cycle)
-          if (this.patternPos >= newLen) this.patternPos = this.patternPos % newLen
+          // Clamp patternPos if patternLen shrank (valid range: 0..patternLen)
+          if (this.patternPos > newLen) this.patternPos = 0
           for (let i = 0; i < p.tracks.length; i++) {
             const angle = ((p.tracks[i].pan ?? 0) + 1) * 0.25 * Math.PI
             this.panGainsL[i] = Math.cos(angle)
@@ -337,6 +337,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
     if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
     if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+
+    // Cycle step: all note-steps have played — signal end of pattern.
+    // This extra step gives the last note a full step-duration to ring out
+    // before the main thread sends a reset for the next pattern.
+    if (this.patternPos >= this.patternLen) {
+      this.patternPos = 0
+      this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: true } satisfies WorkletEvent)
+      return
+    }
 
     for (let t = 0; t < this.tracks.length; t++) {
       const track = this.tracks[t]
@@ -444,10 +453,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (this.playheads[0] === 0 && this.pendingOctave !== null) {
       this.octave = this.pendingOctave; this.pendingOctave = null
     }
-    // Advance global pattern position; cycle=true when full pattern completes
-    this.patternPos = (this.patternPos + 1) % this.patternLen
-    const cycle = this.patternPos === 0
-    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle } satisfies WorkletEvent)
+    this.patternPos++
+    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: false } satisfies WorkletEvent)
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {

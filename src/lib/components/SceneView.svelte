@@ -91,6 +91,63 @@
     return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
   }
 
+  /** Manhattan path: 4 waypoints with adaptive direction.
+   *  Exits/enters from the side closest to the target. */
+  const NODE_HALF_W = 28
+  const NODE_HALF_H = 14
+  type Pt = { x: number; y: number }
+  function manhattanPath(from: Pt, to: Pt): [Pt, Pt, Pt, Pt] {
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal primary: exit right/left → horizontal → vertical → enter left/right
+      const sx = dx > 0 ? 1 : -1
+      const p0: Pt = { x: from.x + sx * NODE_HALF_W, y: from.y }
+      const p3: Pt = { x: to.x - sx * NODE_HALF_W, y: to.y }
+      const midX = (p0.x + p3.x) / 2
+      return [p0, { x: midX, y: p0.y }, { x: midX, y: p3.y }, p3]
+    } else {
+      // Vertical primary: exit bottom/top → vertical → horizontal → enter top/bottom
+      const sy = dy > 0 ? 1 : -1
+      const p0: Pt = { x: from.x, y: from.y + sy * NODE_HALF_H }
+      const p3: Pt = { x: to.x, y: to.y - sy * NODE_HALF_H }
+      const midY = (p0.y + p3.y) / 2
+      return [p0, { x: p0.x, y: midY }, { x: p3.x, y: midY }, p3]
+    }
+  }
+
+  /** Draw a Manhattan edge with arrowhead */
+  function drawManhattan(ctx: CanvasRenderingContext2D, path: [Pt, Pt, Pt, Pt], strokeStyle: string, fillStyle: string, lineWidth: number) {
+    ctx.strokeStyle = strokeStyle
+    ctx.lineWidth = lineWidth
+    ctx.beginPath()
+    ctx.moveTo(path[0].x, path[0].y)
+    ctx.lineTo(path[1].x, path[1].y)
+    ctx.lineTo(path[2].x, path[2].y)
+    ctx.lineTo(path[3].x, path[3].y)
+    ctx.stroke()
+    // Arrowhead pointing along final segment (works for any direction)
+    const angle = Math.atan2(path[3].y - path[2].y, path[3].x - path[2].x)
+    const arrowLen = 7
+    const ax = path[3].x, ay = path[3].y
+    ctx.fillStyle = fillStyle
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(ax - arrowLen * Math.cos(angle - 0.4), ay - arrowLen * Math.sin(angle - 0.4))
+    ctx.lineTo(ax - arrowLen * Math.cos(angle + 0.4), ay - arrowLen * Math.sin(angle + 0.4))
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  /** Min distance from point to a Manhattan path (3 segments) */
+  function manhattanDist(px: number, py: number, path: [Pt, Pt, Pt, Pt]): number {
+    return Math.min(
+      ptSegDist(px, py, path[0].x, path[0].y, path[1].x, path[1].y),
+      ptSegDist(px, py, path[1].x, path[1].y, path[2].x, path[2].y),
+      ptSegDist(px, py, path[2].x, path[2].y, path[3].x, path[3].y),
+    )
+  }
+
   /** Find node under pointer (normalized coords, 28px radius in pixels) */
   function hitTestNode(normX: number, normY: number): string | null {
     if (!viewEl) return null
@@ -282,7 +339,7 @@
       if (!fromNode || !toNode) continue
       const from = toPixel(fromNode.x, fromNode.y, w, h)
       const to = toPixel(toNode.x, toNode.y, w, h)
-      const d = ptSegDist(px, py, from.x, from.y, to.x, to.y)
+      const d = manhattanDist(px, py, manhattanPath(from, to))
       if (d < bestDist) {
         bestDist = d
         hitEdge = edge.id
@@ -496,7 +553,7 @@
       ctx.stroke()
     }
 
-    // Edges
+    // Edges (Manhattan routing)
     const { nodes, edges } = song.scene
     const c = COLORS_RGB.cream
     for (const edge of edges) {
@@ -507,32 +564,13 @@
       const from = toPixel(fromNode.x, fromNode.y, w, h)
       const to = toPixel(toNode.x, toNode.y, w, h)
       const isSel = ui.selectedSceneEdge === edge.id
+      const path = manhattanPath(from, to)
 
-      // Edge line
-      ctx.strokeStyle = isSel
-        ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`
-        : `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`
-      ctx.lineWidth = isSel ? 2.5 : 1.5
-      ctx.beginPath()
-      ctx.moveTo(from.x, from.y)
-      ctx.lineTo(to.x, to.y)
-      ctx.stroke()
-
-      // Arrowhead
-      const angle = Math.atan2(to.y - from.y, to.x - from.x)
-      const arrowLen = 8
-      const arrowOff = 20
-      const ax = to.x - Math.cos(angle) * arrowOff
-      const ay = to.y - Math.sin(angle) * arrowOff
-      ctx.fillStyle = isSel
-        ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)`
-        : `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`
-      ctx.beginPath()
-      ctx.moveTo(ax, ay)
-      ctx.lineTo(ax - arrowLen * Math.cos(angle - 0.4), ay - arrowLen * Math.sin(angle - 0.4))
-      ctx.lineTo(ax - arrowLen * Math.cos(angle + 0.4), ay - arrowLen * Math.sin(angle + 0.4))
-      ctx.closePath()
-      ctx.fill()
+      drawManhattan(ctx, path,
+        isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`,
+        isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`,
+        isSel ? 2.5 : 1.5,
+      )
     }
 
     // Edge order badges (only when source has >1 outgoing)
@@ -545,7 +583,9 @@
       if (!fn || !tn) continue
       const fp = toPixel(fn.x, fn.y, w, h)
       const tp = toPixel(tn.x, tn.y, w, h)
-      const mx = (fp.x + tp.x) / 2, my = (fp.y + tp.y) / 2
+      const path = manhattanPath(fp, tp)
+      // Badge at center of horizontal segment
+      const mx = (path[1].x + path[2].x) / 2, my = path[1].y
       ctx.fillStyle = 'rgba(26, 26, 24, 0.85)'
       ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2); ctx.fill()
       const isSel = ui.selectedSceneEdge === edge.id
@@ -567,12 +607,12 @@
           const fp = toPixel(fn.x, fn.y, w, h)
           const tp = toPixel(tn.x, tn.y, w, h)
           const b = COLORS_RGB.blue
-          ctx.strokeStyle = `rgba(${b.r}, ${b.g}, ${b.b}, 0.6)`
-          ctx.lineWidth = 2.5
-          ctx.beginPath()
-          ctx.moveTo(fp.x, fp.y)
-          ctx.lineTo(tp.x, tp.y)
-          ctx.stroke()
+          const path = manhattanPath(fp, tp)
+          drawManhattan(ctx, path,
+            `rgba(${b.r}, ${b.g}, ${b.b}, 0.6)`,
+            `rgba(${b.r}, ${b.g}, ${b.b}, 0.7)`,
+            2.5,
+          )
         }
       }
     }
@@ -585,14 +625,14 @@
         const rect = viewEl.getBoundingClientRect()
         const toX = (edgeCursor.x - rect.left - panX) / zoom
         const toY = (edgeCursor.y - rect.top - panY) / zoom
+        const path = manhattanPath(from, { x: toX, y: toY })
 
-        ctx.strokeStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`
-        ctx.lineWidth = 1.5
         ctx.setLineDash([4, 4])
-        ctx.beginPath()
-        ctx.moveTo(from.x, from.y)
-        ctx.lineTo(toX, toY)
-        ctx.stroke()
+        drawManhattan(ctx, path,
+          `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
+          `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
+          1.5,
+        )
         ctx.setLineDash([])
       }
     }
