@@ -84,7 +84,7 @@
 
   /** Bezier edge endpoints: offset from node center by half-size toward direction */
   const PAT_HALF_W = 36, PAT_HALF_H = 17
-  const FN_HALF_W = 18, FN_HALF_H = 10
+  const FN_HALF_W = 24, FN_HALF_H = 12
   type Pt = { x: number; y: number }
   type BezierEdge = { p0: Pt; cp: Pt; p1: Pt }
 
@@ -730,7 +730,39 @@
         "
         onpointerdown={e => startDrag(e, node.id)}
       >
-        <span class="node-label">{nodeName(node)}</span>
+        {#if isRoot}
+          <svg class="root-marker" viewBox="0 0 10 12" width="8" height="10" fill="currentColor" aria-hidden="true">
+            <polygon points="1,1 9,6 1,11"/>
+          </svg>
+        {/if}
+        {#if node.type === 'transpose'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">
+            <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
+            <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
+          </svg>
+          <span class="node-label">{nodeName(node)}</span>
+        {:else if node.type === 'tempo'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
+            <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
+          </svg>
+          <span class="node-label">{nodeName(node)}</span>
+        {:else if node.type === 'repeat'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+            <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
+            <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
+          </svg>
+          <span class="node-label">{nodeName(node)}</span>
+        {:else if node.type === 'probability'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
+            <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
+          </svg>
+        {:else}
+          <span class="node-label">{nodeName(node)}</span>
+        {/if}
       </button>
     {/each}
 
@@ -752,7 +784,7 @@
     {#if selectedFnNode && selectedFnNode.type !== 'probability'}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="param-popup" style="
-        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
+        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
         top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
       " onpointerdown={e => e.stopPropagation()}>
         <button class="param-btn" onpointerdown={decParam}>−</button>
@@ -790,16 +822,34 @@
       {/each}
       <div class="picker-sep"></div>
       <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('transpose') }}>
-        <span class="picker-name">TRANSPOSE</span><span class="picker-fn-tag">T±</span>
+        <span class="picker-name">TRANSPOSE</span>
+        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">
+          <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
+          <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
+        </svg>
       </button>
       <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('tempo') }}>
-        <span class="picker-name">TEMPO</span><span class="picker-fn-tag">BPM</span>
+        <span class="picker-name">TEMPO</span>
+        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
+          <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
+        </svg>
       </button>
       <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('repeat') }}>
-        <span class="picker-name">REPEAT</span><span class="picker-fn-tag">RPT</span>
+        <span class="picker-name">REPEAT</span>
+        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+          <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
+          <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
+        </svg>
       </button>
       <button class="picker-row fn-row" onpointerdown={e => { e.stopPropagation(); pickFunctionNode('probability') }}>
-        <span class="picker-name">PROBABILITY</span><span class="picker-fn-tag">?%</span>
+        <span class="picker-name">PROBABILITY</span>
+        <svg class="picker-fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">
+          <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
+        </svg>
       </button>
     </div>
   {/if}
@@ -863,7 +913,18 @@
   }
 
   .scene-node.root {
-    border: 1px solid var(--color-fg);
+    border: 2px solid var(--color-fg);
+  }
+  .root-marker {
+    position: absolute;
+    left: -11px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--color-fg);
+  }
+  .scene-node.fn .root-marker {
+    left: -10px;
   }
 
   .scene-node.selected {
@@ -876,17 +937,23 @@
     transform: translate(-50%, -50%) scale(1.04);
   }
 
-  /* ── Function nodes (small dark shapes) ── */
+  /* ── Function nodes (pill-shaped with SVG icons) ── */
   .scene-node.fn {
-    min-width: 36px;
-    height: 22px;
-    border-radius: 0;
+    min-width: 48px;
+    height: 24px;
+    border-radius: 12px;
     background: var(--color-fg);
     color: rgba(237, 232, 220, 0.7);
-    padding: 0 8px;
+    padding: 0 6px;
+    gap: 3px;
   }
   .scene-node.fn .node-label {
-    font-size: 7px;
+    font-size: 8px;
+  }
+  .fn-icon {
+    flex-shrink: 0;
+    pointer-events: none;
+    opacity: 0.85;
   }
   .scene-node.fn.selected {
     color: var(--color-bg);
@@ -1118,13 +1185,12 @@
     background: rgba(30, 32, 40, 0.05);
     color: rgba(30, 32, 40, 0.7);
   }
-  .picker-fn-tag {
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    color: rgba(30, 32, 40, 0.3);
-    letter-spacing: 0.04em;
+  .picker-fn-icon {
     flex-shrink: 0;
+    color: rgba(30, 32, 40, 0.4);
+  }
+  .picker-row.fn-row:hover .picker-fn-icon {
+    color: rgba(30, 32, 40, 0.7);
   }
 
   /* ── Empty state ── */
@@ -1148,11 +1214,14 @@
       padding: 0 20px 0 10px;
     }
     .scene-node.fn {
-      min-width: 44px;
-      height: 24px;
-      padding: 0 10px;
+      min-width: 56px;
+      height: 28px;
+      border-radius: 14px;
+      padding: 0 8px;
+      gap: 4px;
     }
     .scene-node.fn .node-label { font-size: 9px; }
+    .fn-icon { width: 14px; height: 14px; }
     .node-label { font-size: 11px; }
     .scene-add-btn { width: 36px; height: 36px; font-size: 20px; }
     .zoom-reset-btn { right: 50px; }
