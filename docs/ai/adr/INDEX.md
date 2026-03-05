@@ -52,6 +52,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 045 | Decouple Playback from View | Implemented | Separate playback.mode from ui.phraseView |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
+| 050 | Scene Function Nodes | Proposed | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 
 ## UI / Layout
 
