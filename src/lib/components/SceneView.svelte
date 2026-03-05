@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, patternDensity } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
   import { FACTORY_COUNT } from '../factory.ts'
 
@@ -82,70 +82,72 @@
     }
   }
 
-  /** Point-to-line-segment distance for edge hit-testing */
-  function ptSegDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-    const dx = bx - ax, dy = by - ay
-    const len2 = dx * dx + dy * dy
-    if (len2 === 0) return Math.hypot(px - ax, py - ay)
-    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2))
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy))
-  }
-
-  /** Manhattan path: 4 waypoints with adaptive direction.
-   *  Exits/enters from the side closest to the target. */
-  const NODE_HALF_W = 28
-  const NODE_HALF_H = 14
+  /** Bezier edge endpoints: offset from node center by half-size toward direction */
+  const PAT_HALF_W = 36, PAT_HALF_H = 17
+  const FN_HALF_W = 18, FN_HALF_H = 10
   type Pt = { x: number; y: number }
-  function manhattanPath(from: Pt, to: Pt): [Pt, Pt, Pt, Pt] {
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // Horizontal primary: exit right/left → horizontal → vertical → enter left/right
-      const sx = dx > 0 ? 1 : -1
-      const p0: Pt = { x: from.x + sx * NODE_HALF_W, y: from.y }
-      const p3: Pt = { x: to.x - sx * NODE_HALF_W, y: to.y }
-      const midX = (p0.x + p3.x) / 2
-      return [p0, { x: midX, y: p0.y }, { x: midX, y: p3.y }, p3]
-    } else {
-      // Vertical primary: exit bottom/top → vertical → horizontal → enter top/bottom
-      const sy = dy > 0 ? 1 : -1
-      const p0: Pt = { x: from.x, y: from.y + sy * NODE_HALF_H }
-      const p3: Pt = { x: to.x, y: to.y - sy * NODE_HALF_H }
-      const midY = (p0.y + p3.y) / 2
-      return [p0, { x: p0.x, y: midY }, { x: p3.x, y: midY }, p3]
-    }
+  type BezierEdge = { p0: Pt; cp: Pt; p1: Pt }
+
+  function bezierEdge(from: Pt, to: Pt, fromFn = false, toFn = false): BezierEdge {
+    const dx = to.x - from.x, dy = to.y - from.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 1) return { p0: from, cp: from, p1: to }
+    const nx = dx / dist, ny = dy / dist
+    const hw0 = fromFn ? FN_HALF_W : PAT_HALF_W
+    const hh0 = fromFn ? FN_HALF_H : PAT_HALF_H
+    const hw1 = toFn ? FN_HALF_W : PAT_HALF_W
+    const hh1 = toFn ? FN_HALF_H : PAT_HALF_H
+    // Exit/enter at node edge along the line direction
+    const r0 = Math.min(hw0 / Math.max(Math.abs(nx), 0.01), hh0 / Math.max(Math.abs(ny), 0.01))
+    const r1 = Math.min(hw1 / Math.max(Math.abs(nx), 0.01), hh1 / Math.max(Math.abs(ny), 0.01))
+    const p0: Pt = { x: from.x + nx * r0, y: from.y + ny * r0 }
+    const p1: Pt = { x: to.x - nx * r1, y: to.y - ny * r1 }
+    // Control point: offset perpendicular to the line
+    const cx = (p0.x + p1.x) / 2 + dy * 0.15
+    const cy = (p0.y + p1.y) / 2 - dx * 0.15
+    return { p0, cp: { x: cx, y: cy }, p1 }
   }
 
-  /** Draw a Manhattan edge with arrowhead */
-  function drawManhattan(ctx: CanvasRenderingContext2D, path: [Pt, Pt, Pt, Pt], strokeStyle: string, fillStyle: string, lineWidth: number) {
+  /** Draw a quadratic bezier edge with arrowhead */
+  function drawBezier(ctx: CanvasRenderingContext2D, b: BezierEdge, strokeStyle: string, fillStyle: string, lineWidth: number) {
     ctx.strokeStyle = strokeStyle
     ctx.lineWidth = lineWidth
     ctx.beginPath()
-    ctx.moveTo(path[0].x, path[0].y)
-    ctx.lineTo(path[1].x, path[1].y)
-    ctx.lineTo(path[2].x, path[2].y)
-    ctx.lineTo(path[3].x, path[3].y)
+    ctx.moveTo(b.p0.x, b.p0.y)
+    ctx.quadraticCurveTo(b.cp.x, b.cp.y, b.p1.x, b.p1.y)
     ctx.stroke()
-    // Arrowhead pointing along final segment (works for any direction)
-    const angle = Math.atan2(path[3].y - path[2].y, path[3].x - path[2].x)
-    const arrowLen = 7
-    const ax = path[3].x, ay = path[3].y
+    // Arrowhead: direction at t=1 of quadratic bezier is (p1 - cp)
+    const angle = Math.atan2(b.p1.y - b.cp.y, b.p1.x - b.cp.x)
+    const al = 7
     ctx.fillStyle = fillStyle
     ctx.beginPath()
-    ctx.moveTo(ax, ay)
-    ctx.lineTo(ax - arrowLen * Math.cos(angle - 0.4), ay - arrowLen * Math.sin(angle - 0.4))
-    ctx.lineTo(ax - arrowLen * Math.cos(angle + 0.4), ay - arrowLen * Math.sin(angle + 0.4))
-    ctx.closePath()
-    ctx.fill()
+    ctx.moveTo(b.p1.x, b.p1.y)
+    ctx.lineTo(b.p1.x - al * Math.cos(angle - 0.4), b.p1.y - al * Math.sin(angle - 0.4))
+    ctx.lineTo(b.p1.x - al * Math.cos(angle + 0.4), b.p1.y - al * Math.sin(angle + 0.4))
+    ctx.closePath(); ctx.fill()
   }
 
-  /** Min distance from point to a Manhattan path (3 segments) */
-  function manhattanDist(px: number, py: number, path: [Pt, Pt, Pt, Pt]): number {
-    return Math.min(
-      ptSegDist(px, py, path[0].x, path[0].y, path[1].x, path[1].y),
-      ptSegDist(px, py, path[1].x, path[1].y, path[2].x, path[2].y),
-      ptSegDist(px, py, path[2].x, path[2].y, path[3].x, path[3].y),
-    )
+  /** Min distance from point to a quadratic bezier (sample 12 points) */
+  function bezierDist(px: number, py: number, b: BezierEdge): number {
+    let min = Infinity
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12
+      const u = 1 - t
+      const x = u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x
+      const y = u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y
+      const d = Math.hypot(px - x, py - y)
+      if (d < min) min = d
+    }
+    return min
+  }
+
+  /** Point at t on quadratic bezier */
+  function bezierAt(b: BezierEdge, t: number): Pt {
+    const u = 1 - t
+    return {
+      x: u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x,
+      y: u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y,
+    }
   }
 
   /** Find node under pointer (normalized coords, 28px radius in pixels) */
@@ -339,7 +341,7 @@
       if (!fromNode || !toNode) continue
       const from = toPixel(fromNode.x, fromNode.y, w, h)
       const to = toPixel(toNode.x, toNode.y, w, h)
-      const d = manhattanDist(px, py, manhattanPath(from, to))
+      const d = bezierDist(px, py, bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern'))
       if (d < bestDist) {
         bestDist = d
         hitEdge = edge.id
@@ -553,7 +555,7 @@
       ctx.stroke()
     }
 
-    // Edges (Manhattan routing)
+    // Edges (bezier curves)
     const { nodes, edges } = song.scene
     const c = COLORS_RGB.cream
     for (const edge of edges) {
@@ -564,9 +566,9 @@
       const from = toPixel(fromNode.x, fromNode.y, w, h)
       const to = toPixel(toNode.x, toNode.y, w, h)
       const isSel = ui.selectedSceneEdge === edge.id
-      const path = manhattanPath(from, to)
+      const b = bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern')
 
-      drawManhattan(ctx, path,
+      drawBezier(ctx, b,
         isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.2)`,
         isSel ? `rgba(${c.r}, ${c.g}, ${c.b}, 0.7)` : `rgba(${c.r}, ${c.g}, ${c.b}, 0.25)`,
         isSel ? 2.5 : 1.5,
@@ -583,9 +585,10 @@
       if (!fn || !tn) continue
       const fp = toPixel(fn.x, fn.y, w, h)
       const tp = toPixel(tn.x, tn.y, w, h)
-      const path = manhattanPath(fp, tp)
-      // Badge at center of horizontal segment
-      const mx = (path[1].x + path[2].x) / 2, my = path[1].y
+      const b = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
+      // Badge at bezier midpoint
+      const mid = bezierAt(b, 0.5)
+      const mx = mid.x, my = mid.y
       ctx.fillStyle = 'rgba(26, 26, 24, 0.85)'
       ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2); ctx.fill()
       const isSel = ui.selectedSceneEdge === edge.id
@@ -606,11 +609,11 @@
         if (fn && tn) {
           const fp = toPixel(fn.x, fn.y, w, h)
           const tp = toPixel(tn.x, tn.y, w, h)
-          const b = COLORS_RGB.blue
-          const path = manhattanPath(fp, tp)
-          drawManhattan(ctx, path,
-            `rgba(${b.r}, ${b.g}, ${b.b}, 0.6)`,
-            `rgba(${b.r}, ${b.g}, ${b.b}, 0.7)`,
+          const bl = COLORS_RGB.blue
+          const be = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
+          drawBezier(ctx, be,
+            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`,
+            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.7)`,
             2.5,
           )
         }
@@ -625,10 +628,10 @@
         const rect = viewEl.getBoundingClientRect()
         const toX = (edgeCursor.x - rect.left - panX) / zoom
         const toY = (edgeCursor.y - rect.top - panY) / zoom
-        const path = manhattanPath(from, { x: toX, y: toY })
+        const tb = bezierEdge(from, { x: toX, y: toY }, srcNode.type !== 'pattern', false)
 
         ctx.setLineDash([4, 4])
-        drawManhattan(ctx, path,
+        drawBezier(ctx, tb,
           `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
           `rgba(${c.r}, ${c.g}, ${c.b}, 0.4)`,
           1.5,
@@ -712,6 +715,8 @@
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
       {@const nc = nodeColor(node)}
+      {@const pi = !isFn ? song.patterns.findIndex(p => p.id === node.patternId) : -1}
+      {@const density = pi >= 0 ? patternDensity(pi) : 0}
       <button
         class="scene-node"
         class:fn={isFn}
@@ -728,6 +733,7 @@
         onpointerdown={e => startDrag(e, node.id)}
       >
         <span class="node-label">{nodeName(node)}</span>
+        {#if !isFn}<span class="node-density" style="--d: {density}"></span>{/if}
         <span class="node-port"></span>
       </button>
     {/each}
@@ -840,17 +846,18 @@
     pointer-events: auto;
   }
 
-  /* ── Nodes ── */
+  /* ── Pattern nodes (rich cards) ── */
   .scene-node {
-    --nc: #787845; /* fallback for function nodes */
+    --nc: #787845; /* fallback */
     position: absolute;
-    min-width: 56px;
-    height: 28px;
-    border-radius: 4px;
+    min-width: 72px;
+    height: 34px;
+    border-radius: 5px;
     transform: translate(-50%, -50%);
-    border: 1.5px solid color-mix(in srgb, var(--nc) 60%, transparent);
-    background: rgba(26, 26, 24, 0.9);
-    color: rgba(237, 232, 220, 0.55);
+    border: 1.5px solid color-mix(in srgb, var(--nc) 50%, transparent);
+    border-left: 4px solid var(--nc);
+    background: color-mix(in srgb, var(--nc) 25%, #1a1a18);
+    color: rgba(237, 232, 220, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -862,13 +869,15 @@
 
   .scene-node.root {
     border-color: var(--nc);
-    background: color-mix(in srgb, var(--nc) 20%, transparent);
+    border-left-color: var(--nc);
+    background: color-mix(in srgb, var(--nc) 35%, #1a1a18);
     color: var(--nc);
   }
 
   .scene-node.selected {
     border-color: rgba(237, 232, 220, 0.75);
-    background: color-mix(in srgb, var(--nc) 30%, #1a1a18);
+    border-left-color: var(--nc);
+    background: color-mix(in srgb, var(--nc) 35%, #1a1a18);
     color: rgba(237, 232, 220, 0.9);
     box-shadow: 0 0 8px rgba(237, 232, 220, 0.2);
   }
@@ -880,20 +889,28 @@
     transform: translate(-50%, -50%) scale(1.08);
   }
 
+  /* ── Function nodes (pill badges) ── */
   .scene-node.fn {
-    min-width: 40px;
-    height: 24px;
-    border-radius: 12px;
-    border-color: rgba(237, 232, 220, 0.25);
-    background: rgba(26, 26, 24, 0.95);
-    color: rgba(237, 232, 220, 0.4);
-    padding: 0 14px 0 8px;
+    min-width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(237, 232, 220, 0.18);
+    border-left: 1px solid rgba(237, 232, 220, 0.18);
+    background: rgba(26, 26, 24, 0.92);
+    color: rgba(237, 232, 220, 0.35);
+    padding: 0 8px;
+  }
+  .scene-node.fn .node-label {
+    font-size: 7px;
+  }
+  .scene-node.fn .node-port {
+    display: none;
   }
   .scene-node.fn.selected {
-    border-color: rgba(237, 232, 220, 0.6);
-    background: rgba(237, 232, 220, 0.15);
+    border-color: rgba(237, 232, 220, 0.5);
+    background: rgba(237, 232, 220, 0.12);
     color: var(--color-cream);
-    box-shadow: 0 0 8px rgba(237, 232, 220, 0.15);
+    box-shadow: 0 0 6px rgba(237, 232, 220, 0.12);
   }
 
   .scene-node.playing {
@@ -905,7 +922,7 @@
   }
   .scene-node.fn.playing {
     border-color: var(--color-blue);
-    box-shadow: 0 0 10px rgba(68, 114, 180, 0.4);
+    box-shadow: 0 0 8px rgba(68, 114, 180, 0.3);
   }
 
   .scene-node.edge-source {
@@ -923,6 +940,18 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Density bar inside pattern nodes */
+  .node-density {
+    position: absolute;
+    bottom: 3px;
+    left: 6px;
+    right: 6px;
+    height: 3px;
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--nc) calc(20% + var(--d) * 50%), transparent);
     pointer-events: none;
   }
 
@@ -1164,15 +1193,16 @@
   /* ── Mobile responsive ── */
   @media (max-width: 639px) {
     .scene-node {
-      min-width: 72px;
-      height: 36px;
+      min-width: 84px;
+      height: 40px;
       padding: 0 20px 0 10px;
     }
     .scene-node.fn {
-      min-width: 52px;
-      height: 32px;
-      padding: 0 18px 0 10px;
+      min-width: 44px;
+      height: 24px;
+      padding: 0 10px;
     }
+    .scene-node.fn .node-label { font-size: 9px; }
     .node-label { font-size: 11px; }
     .node-port { right: 5px; width: 8px; height: 8px; }
     .scene-add-btn { width: 36px; height: 36px; font-size: 20px; }
