@@ -290,6 +290,7 @@ export const ui = $state({
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
   phraseView: 'grid' as 'grid' | 'tracker' | 'scene',
   selectedSceneNode: null as string | null,
+  selectedSceneEdge: null as string | null,
   sidebar: null as 'help' | 'system' | null,
   lockMode: false,
   selectedStep: null as number | null,
@@ -610,6 +611,7 @@ export function factoryReset(): void {
   ui.dockPosition = 'right'
   ui.mobileOverlay = false
   ui.selectedSceneNode = null
+  ui.selectedSceneEdge = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
@@ -721,6 +723,7 @@ export function songLoadPreset(index: number) {
   playback.loopEnd = preset.entries.length - 1
   ui.currentPattern = 0
   ui.selectedSceneNode = null
+  ui.selectedSceneEdge = null
 }
 
 // Pre-populate with LOFI preset
@@ -821,6 +824,69 @@ export function sceneUpdateNode(nodeId: string, x: number, y: number): void {
   if (!node) return
   node.x = x
   node.y = y
+}
+
+function nextSceneId(prefix: 'sn' | 'se'): string {
+  const items = prefix === 'sn' ? song.scene.nodes : song.scene.edges
+  const max = items.reduce((m, item) => {
+    const num = parseInt(item.id.replace(`${prefix}_`, ''))
+    return isNaN(num) ? m : Math.max(m, num)
+  }, -1)
+  return `${prefix}_${String(max + 1).padStart(2, '0')}`
+}
+
+/** Add a pattern node at position */
+export function sceneAddNode(patternId: string, x: number, y: number): string {
+  pushUndo('Add scene node')
+  const id = nextSceneId('sn')
+  const isFirst = song.scene.nodes.length === 0
+  song.scene.nodes.push({
+    id, type: 'pattern', x, y,
+    root: isFirst,
+    patternId,
+  })
+  return id
+}
+
+/** Delete a node and its connected edges */
+export function sceneDeleteNode(nodeId: string): void {
+  pushUndo('Delete scene node')
+  const wasRoot = song.scene.nodes.find(n => n.id === nodeId)?.root
+  song.scene.edges = song.scene.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
+  song.scene.nodes = song.scene.nodes.filter(n => n.id !== nodeId)
+  if (wasRoot && song.scene.nodes.length > 0) {
+    song.scene.nodes[0].root = true
+  }
+  if (ui.selectedSceneNode === nodeId) ui.selectedSceneNode = null
+  if (ui.selectedSceneEdge && !song.scene.edges.some(e => e.id === ui.selectedSceneEdge)) {
+    ui.selectedSceneEdge = null
+  }
+}
+
+/** Create a directed edge (prevents duplicates and self-loops) */
+export function sceneAddEdge(from: string, to: string): string | null {
+  if (from === to) return null
+  if (song.scene.edges.some(e => e.from === from && e.to === to)) return null
+  pushUndo('Add scene edge')
+  const id = nextSceneId('se')
+  const maxOrder = song.scene.edges
+    .filter(e => e.from === from)
+    .reduce((m, e) => Math.max(m, e.order), -1)
+  song.scene.edges.push({ id, from, to, order: maxOrder + 1 })
+  return id
+}
+
+/** Delete an edge */
+export function sceneDeleteEdge(edgeId: string): void {
+  pushUndo('Delete scene edge')
+  song.scene.edges = song.scene.edges.filter(e => e.id !== edgeId)
+  if (ui.selectedSceneEdge === edgeId) ui.selectedSceneEdge = null
+}
+
+/** Set a node as root (exactly one root) */
+export function sceneSetRoot(nodeId: string): void {
+  pushUndo('Set root node')
+  for (const n of song.scene.nodes) n.root = n.id === nodeId
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */
