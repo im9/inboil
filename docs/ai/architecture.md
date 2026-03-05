@@ -45,7 +45,7 @@ See [adr/](./adr/) for full rationale.
 - **Per-step velocity editing** (IMPLEMENTED) — Bar overlay + mobile 3-mode tabs. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
 - **Pattern persistence** (PROPOSED) — localStorage save/load for patterns. → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
 - **Granular enhancements** (IMPLEMENTED) — Pitch shift, reverse grains, scatter, freeze. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
-- **Pattern chain** (IMPLEMENTED) — Sequential pattern playback with per-entry FX/perf. → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
+- **Pattern chain** (SUPERSEDED) — Replaced by scene graph (ADR 044). → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
 - **Parameter locks** (IMPLEMENTED) — Per-step voice parameter overrides. → [adr/014-parameter-locks.md](./adr/014-parameter-locks.md)
 - **Note duration, slide, ADSR** (IMPLEMENTED) — Gate length, legato, amp envelope. → [adr/021-note-duration-slide-adsr.md](./adr/021-note-duration-slide-adsr.md)
 - **Lead arpeggiator** (IMPLEMENTED) — 5-mode arp with chord/octave range. → [adr/022-lead-arpeggiator.md](./adr/022-lead-arpeggiator.md)
@@ -55,10 +55,13 @@ See [adr/](./adr/) for full rationale.
 - **Undo / redo** (IMPLEMENTED) — Snapshot-based undo (Ctrl+Z / Cmd+Z). → [adr/029-undo-redo.md](./adr/029-undo-redo.md)
 - **Audio & MIDI export** (PROPOSED) — Offline bounce, real-time recording, MIDI file export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
 - **Virtual MIDI keyboard** (IMPLEMENTED, Phase 1) — PC keyboard audition mode. → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
-- **Song View** (PROPOSED) — M8-style Phrase/Chain/Song structure. → [adr/032-session-view.md](./adr/032-session-view.md)
 - **Mobile velocity/chance editing** (IMPLEMENTED) — 3-mode tabs (STEP/VEL/CHNC). → [adr/033-mobile-velocity-editing.md](./adr/033-mobile-velocity-editing.md)
-- **Dockable panel** (IMPLEMENTED) — Unified PARAM/HELP/SYS dock (right or bottom). → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
+- **Dockable panel** (IMPLEMENTED) — Unified PARAM/FX/EQ/HELP/SYS dock (right or bottom). → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
 - **Solo** (IMPLEMENTED) — Per-track additive solo with indicator. → [adr/039-solo.md](./adr/039-solo.md)
+- **Section-based arrangement** (IMPLEMENTED) — Song → Section → Cell flat model. → [adr/042-section-based-arrangement.md](./adr/042-section-based-arrangement.md)
+- **Matrix view** (IMPLEMENTED) — Pattern pool browser sidebar. → [adr/043-matrix-view.md](./adr/043-matrix-view.md)
+- **Scene graph** (IMPLEMENTED) — Node-based directed graph for arrangement. → [adr/044-scene-graph.md](./adr/044-scene-graph.md)
+- **Decouple playback from view** (PROPOSED) — Separate playback mode from UI view. → [adr/045-decouple-playback-from-view.md](./adr/045-decouple-playback-from-view.md)
 
 ## Threading Model
 
@@ -87,14 +90,17 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── components/           ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte  ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte   ← Desktop step sequencer grid
-│   │   │   ├── DockPanel.svelte  ← Right/bottom dock: PARAM/HELP/SYS modes
+│   │   │   ├── TrackerView.svelte ← M8-style vertical tracker editor
+│   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
+│   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
+│   │   │   ├── SectionNav.svelte ← Section strip + metadata editor
+│   │   │   ├── DockPanel.svelte  ← Right/bottom dock: PARAM/FX/EQ/HELP/SYS tabs
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks
 │   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
 │   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
 │   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
 │   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
-│   │   │   ├── ChainView.svelte  ← Pattern chain editor
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
@@ -107,9 +113,10 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── worklet-processor.ts ← AudioWorklet entry point + sequencer
 │   │   │   └── dsp/              ← DSP modules (imported by worklet)
 │   │   │       ├── types.ts      ← Message types (WorkletPattern, etc.)
-│   │   │       ├── filters.ts    ← ResonantLP, BiquadHP, ADSR
+│   │   │       ├── filters.ts    ← ResonantLP, BiquadHP, DJFilter, PeakingEQ, ADSR
 │   │   │       ├── effects.ts    ← Reverb, delay, ducker, compressor, limiter, granular
 │   │   │       └── voices.ts     ← Voice interface, all synth voices, makeVoice
+│   │   ├── factory.ts            ← Factory patterns, track defaults, song builder
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
@@ -130,7 +137,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 User action (click/drag)
   → Svelte $state mutation (state.svelte.ts)
     → $effect in App.svelte detects change via JSON.stringify
-      → engine.sendPattern(pattern, effects, perf, fxPad)
+      → engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
         → MessagePort.postMessage({ type: 'setPattern', pattern: {...} })
           → AudioWorklet applies new state on next process() cycle
 

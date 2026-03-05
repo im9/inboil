@@ -142,6 +142,18 @@ Parameters:
 | carrierIndex | CIDX | 1.0–8.0 | 3.5 | Carrier modulation index |
 | decay | DCY | 0.1–0.8 s | 0.30 | Carrier ADSR decay time |
 
+### AnalogVoice (generic analog synth)
+
+Single sawtooth oscillator → tanh saturation → resonant LP filter with envelope sweep. Used as fallback voice for non-default synth assignments.
+
+Parameters:
+| Key | Label | Range | Default | Description |
+|---|---|---|---|---|
+| cutoffBase | CUT | 200–4000 Hz | 800 | Filter base cutoff |
+| envMod | MOD | 500–8000 Hz | 4500 | Envelope modulation depth |
+| resonance | RESO | 0.5–6.0 | 3.5 | Filter Q |
+| decay | DCY | 0.1–0.5 s | 0.25 | Amplitude decay |
+
 ## DSP Building Blocks
 
 Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ porting.
@@ -150,6 +162,8 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 |---|---|---|
 | filters.ts | ResonantLP | 2-pole resonant low-pass biquad (12 dB/oct). Used for 303 filter, snare noise, clap. |
 | filters.ts | BiquadHP | 2-pole high-pass biquad (12 dB/oct). Used for metallic percussion. |
+| filters.ts | DJFilter | Combined LP/HP sweep filter. X = LP←0.5→HP, Y = resonance. Used for master filter. |
+| filters.ts | PeakingEQ | Parametric peaking EQ band. Used for 3-band master EQ. |
 | filters.ts | ADSR | 4-stage envelope generator (attack/decay/sustain/release). |
 | effects.ts | SimpleReverb | Freeverb-style: 4 comb filters + 2 allpass, stereo spread. |
 | effects.ts | PingPongDelay | Stereo ping-pong with cross-feedback. |
@@ -174,7 +188,9 @@ voices ──┬─────────────────────�
                                                     │
                                               BusCompressor
                                                     │
-                                                3-band EQ
+                                            PeakingEQ ×3
+                                                    │
+                                              DJ Filter
                                                     │
                                               Break gate
                                                     │
@@ -303,7 +319,7 @@ Canvas 2D 3D wireframe terrain rendered behind the FxPad nodes:
 - 18 rows × 32 points per row, displaced vertically by AnalyserNode FFT frequency data
 - Perspective projection: back rows compressed horizontally + faded, front rows full width + bright
 - Colors by depth/frequency: olive (low) → blue (mid) → salmon (high) → purple (very high)
-- Runs only when `ui.view === 'fx'` (RAF paused otherwise)
+- Runs only when FxPad is visible in DockPanel (RAF paused otherwise)
 - DPR-aware for crisp rendering on high-density displays
 
 ## Performance Features — DECIDED

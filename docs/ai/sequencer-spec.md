@@ -3,31 +3,60 @@
 ## Overview
 
 A step sequencer modeled after Elektron-style trig-based sequencing.
-Each pattern contains multiple tracks; each track has an independent step count and a list of trigs.
+The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pattern contains 8 Cells (one per track), and each Cell has an independent step count and trig list.
 
 ## Core Concepts
 
 | Term | Definition |
 |---|---|
-| Pattern | A collection of tracks played simultaneously. One pattern plays at a time. |
-| Track | A single instrument lane. Has its own step count, synth type, and trig list. |
+| Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
+| Pattern | A reusable unit of music: id + name + 8 cells. One pattern plays at a time. |
+| Cell | Step data for one track in one pattern: steps, trigs, voiceParams, FX sends. |
+| Track | Instrument configuration only: id, name, synthType, muted, volume, pan. |
+| Section | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, FX). |
+| Scene | Node-based directed graph for arrangement. Nodes reference patterns or apply functions. |
 | Trig | An active step that triggers a note/sound. Inactive steps are "empty". |
-| Step | One position in a track's sequence grid (0-indexed internally, 1-indexed in UI). |
-| Pattern Bank | 100 pattern slots (10 factory + 90 user). Switching saves/loads full state. |
+| Step | One position in a cell's sequence grid (0-indexed internally, 1-indexed in UI). |
+
+## Song — DECIDED
+
+```typescript
+Song {
+  name:      string
+  bpm:       number            // 20–300
+  rootNote:  number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
+  tracks:    Track[]           // 8 fixed (instrument config only)
+  patterns:  Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)
+  sections:  Section[]         // arrangement slots referencing patterns
+  scene:     Scene             // arrangement graph (ADR 044)
+}
+```
 
 ## Pattern — DECIDED
 
 ```typescript
 Pattern {
-  id:        number          // 1–100 (maps to patternBank index 0–99)
-  name:      string          // e.g. "PAT 01"
-  bpm:       number          // 20–300
-  rootNote:  number          // 0–11 (C=0, C#=1, ..., B=11) — pattern-level key
-  tracks:    Track[]         // fixed at 8 tracks
+  id:        string            // e.g. 'pat_00'
+  name:      string            // max 8 chars
+  cells:     Cell[]            // 8 fixed (one per track)
 }
 ```
 
-The app maintains a **pattern bank** of 100 slots. Slots 0–9 are factory patterns (demo); slots 10–99 are empty user slots. Switching patterns saves the current pattern to its bank slot and loads the target.
+The song maintains a pool of 100 pattern slots. Slots 0–20 are factory patterns (demo); slots 21–99 are empty user slots. Patterns are referenced by index.
+
+## Cell — DECIDED
+
+```typescript
+Cell {
+  steps:        number         // 1–64
+  trigs:        Trig[]         // length === steps
+  voiceParams:  Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
+  reverbSend:   number         // 0.0–1.0 send level to reverb
+  delaySend:    number         // 0.0–1.0 send level to delay
+  glitchSend:   number         // 0.0–1.0 send level to glitch
+  granularSend: number         // 0.0–1.0 send level to granular
+}
+```
 
 ## Track — DECIDED
 
@@ -36,18 +65,59 @@ Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
   synthType:   SynthType       // 'DrumSynth' | 'NoiseSynth' | 'AnalogSynth' | 'FMSynth' | 'Sampler' | 'ChordSynth'
-  steps:       number          // 1–64 (default 16)
-  trigs:       Trig[]          // length === steps; index 0 = step 1
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
-  reverbSend:  number          // 0.0–1.0 send level to reverb
-  delaySend:   number          // 0.0–1.0 send level to delay
-  glitchSend:  number          // 0.0–1.0 send level to glitch
-  granularSend: number         // 0.0–1.0 send level to granular
-  voiceParams: Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
 }
 ```
+
+Track is instrument config only. Step data (trigs, voiceParams, sends) lives in Cell.
+
+## Section — DECIDED
+
+```typescript
+Section {
+  patternIndex: number         // index into Song.patterns
+  repeats:      number         // 1–16
+  key?:         number         // root note override (0–11)
+  oct?:         number         // octave override
+  perf?:        number         // 0=NONE, 1=FILL, 2=BRK, 3=REV
+  perfLen?:     number         // steps (1/4/8/16)
+  verb?:        ChainFx
+  delay?:       ChainFx
+  glitch?:      ChainFx
+  granular?:    ChainFx
+}
+```
+
+## Scene — DECIDED
+
+```typescript
+Scene {
+  name:   string
+  nodes:  SceneNode[]
+  edges:  SceneEdge[]
+}
+
+SceneNode {
+  id:         string
+  type:       'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability'
+  x:          number           // canvas position (normalized 0–1)
+  y:          number
+  root:       boolean          // true = playback entry point (exactly one)
+  patternId?: string           // for type === 'pattern'
+  params?:    Record<string, number>
+}
+
+SceneEdge {
+  id:    string
+  from:  string                // source node id
+  to:    string                // target node id
+  order: number                // playback order when multiple edges from same source
+}
+```
+
+See ADR 044 for scene graph design and playback traversal.
 
 ## Trig — DECIDED
 
@@ -83,14 +153,14 @@ Tracks 6–7 are melodic (note from trigs, transposable by KEY).
 
 ## Variable Step Count — DECIDED
 
-- Each track has an independent step count from **1 to 64**.
+- Each cell has an independent step count from **1 to 64**.
 - Default is 16 steps.
-- When tracks have different step counts, they cycle independently (polymetric sequencing).
-- Example: Track 1 = 16 steps, Track 2 = 12 steps → creates a phasing rhythm.
+- When cells have different step counts, they cycle independently (polymetric sequencing).
+- Example: Cell 1 = 16 steps, Cell 2 = 12 steps → creates a phasing rhythm.
 
 ## Playback Engine — DECIDED
 
-- Global BPM stored in Pattern.
+- Global BPM stored in Song.
 - The sequencer clock runs in TypeScript on the AudioWorklet thread.
 - One step = `(60 / bpm / 4) * sampleRate` samples (16th note resolution).
 - The UI receives playhead positions via MessagePort `step` events.
@@ -109,30 +179,20 @@ No PAUSED state is implemented.
 
 ## Pattern Switching — DECIDED
 
-### During stopped state
-Switching pattern immediately saves the current pattern to its bank slot and loads the target.
+### Manual selection
+Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and sends the new pattern to the engine immediately.
 
-### During playback (queued switch)
-When the user selects a new pattern during playback, the switch is **queued** and applies at the **end of the current loop** (when track 0's playhead wraps to step 0).
+### Scene graph playback
+When the scene graph is active (has a root node) and `ui.phraseView === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
 
-```
-State: playing PAT:01
-User selects PAT:02
-→ patternNav.pendingId = 2
-→ AppHeader shows PAT:02 with blinking animation
-→ PAT:01 plays to the end of its cycle
-→ onStep detects track 0 wraps → applyPendingSwitch()
-→ PAT:02 starts from step 0
-```
-
-If the user selects a different pattern before the switch happens, the pending target is replaced.
-On stop, any pending switch is applied immediately.
+### Solo pattern
+`playback.soloPattern` overrides all other playback modes — the engine loops the solo'd pattern exclusively.
 
 See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
 ## Parameter Lock (p-lock) — IMPLEMENTED
 
-Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `track.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in DockPanel (desktop) or MobileParamOverlay (mobile). See ADR 014.
+Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `cell.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in DockPanel (desktop) or MobileParamOverlay (mobile). See ADR 014.
 
 ## Scale (per-track time multiplier) — DEFERRED
 

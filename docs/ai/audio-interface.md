@@ -11,14 +11,14 @@ Communication is via **MessagePort** only. No SharedArrayBuffer is used.
 ```
 Main Thread (Svelte)                        AudioWorklet Thread (TypeScript)
 ─────────────────────                       ──────────────────────────────
-engine.sendPattern(pattern, fx, perf, fxPad) → postMessage({ type: 'setPattern', pattern: {...} })
+engine.sendPatternByIndex(song, fx, perf, fxPad, false, idx) → postMessage({ type: 'setPattern', pattern: {...} })
 engine.play()                                → postMessage({ type: 'play' })
 engine.stop()                                → postMessage({ type: 'stop' })
 
                                         ◄──  postMessage({ type: 'step', playheads: [...] })
 ```
 
-The UI sends the **entire pattern + effects + performance + fxPad state** as a serialized object on every reactive change. This is simple and correct for the current scale (8 tracks × 64 steps).
+The UI sends the **entire song + effects + performance + fxPad state** as a serialized object on every reactive change. The engine extracts the active pattern and builds a `WorkletPattern` snapshot. This is simple and correct for the current scale (8 tracks × 64 steps).
 
 ## Audio Graph
 
@@ -128,23 +128,29 @@ Located at `src/lib/audio/engine.ts`.
 
 ```typescript
 class GrooveboxEngine {
-  async init(): Promise<void>                              // Create AudioContext + load worklet + AnalyserNode
-  sendPattern(pattern, fx, perf?, fxPad?, reset?): void    // Serialize & post full state
-  play(): void                                             // Resume AudioContext + post play
-  stop(): void                                             // Post stop (suspends context after 8s idle)
-  triggerNote(trackId, note, velocity): void                // Immediate note trigger (VKBD audition)
-  releaseNote(trackId): void                               // Release triggered note
-  set onStep(cb: (playheads: number[]) => void)            // Register step callback
-  getAnalyser(): AnalyserNode | null                       // FFT data for visualizer
+  async init(): Promise<void>                                                    // Create AudioContext + load worklet + AnalyserNode
+  sendPattern(song, fx, perf?, fxPad?, reset?, sectionIndex?): void              // Serialize section's pattern & post
+  sendPatternByIndex(song, fx, perf?, fxPad?, reset?, patternIndex?): void       // Serialize pattern by index & post
+  play(): void                                                                   // Resume AudioContext + post play
+  stop(): void                                                                   // Post stop (suspends context after 8s idle)
+  triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD audition)
+  releaseNote(trackId): void                                                     // Release triggered note
+  set onStep(cb: (playheads: number[]) => void)                                  // Register step callback
+  getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
 }
 ```
 
+`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode.
+
 ## State Serialization
 
-`patternToWorklet()` in `engine.ts` converts UI state to the wire format:
+`buildWorkletPattern()` in `engine.ts` converts UI state to the wire format:
+- Takes Song + Pattern + Effects + Perf + FxPad, returns `WorkletPattern`
+- Merges Track (instrument config) with Cell (step data) for each of 8 tracks
 - Clones all objects (no shared references across threads)
 - Computes delay time from beat fraction: `(60000 / bpm) * fraction`
 - Maps FxPad XY positions to effect parameters (e.g., verb.x → reverb size, verb.y → reverb damp)
+- Boosts send levels by +0.3 when corresponding FxPad node is active
 - Provides defaults for perf and fxPad if not supplied
 
 ## Initialization Sequence
@@ -157,7 +163,7 @@ class GrooveboxEngine {
 5. AnalyserNode created (fftSize=1024, smoothingTimeConstant=0.8)
 6. Node → AnalyserNode → AudioContext.destination
 7. MessagePort onmessage handler wired for 'step' events
-8. $effect in App.svelte calls sendPattern() on every reactive state change
+8. $effect in App.svelte calls sendPatternByIndex() on every reactive state change
 9. engine.play() resumes AudioContext + posts 'play' command
 ```
 

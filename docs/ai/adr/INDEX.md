@@ -26,7 +26,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 |---|-------|--------|-------|
 | 004 | Queued Pattern Switch | Implemented | |
 | 006 | Per-Step Velocity | Implemented | |
-| 013 | Pattern Chain | Implemented | Superseded by 032 when implemented |
+| 013 | Pattern Chain | Superseded | Replaced by scene graph (044) |
 | 014 | Parameter Locks | Implemented | P-Lock system |
 | 021 | Note Duration, Slide, ADSR | Implemented | |
 | 022 | Lead Arpeggiator | Implemented | |
@@ -39,11 +39,16 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 024 | Project & Scene Hierarchy | Proposed | |
-| 027 | Node Chain Song Builder | Proposed | |
-| 032 | Song View (M8-Style) | Proposed | Major data model restructure. Related: 013, 037 |
-| 037 | ChainView Redesign | Proposed | Incremental UX fix → evolves into Song View. Related: 032 |
-| 040 | Drill-Down Navigation | Proposed | Song→Chain→Phrase hierarchy nav. Related: 032, 037 |
+| 024 | Project & Scene Hierarchy | Superseded | Concept evolved into 042+044 |
+| 027 | Node Chain Song Builder | Superseded | Concept evolved into 044 |
+| 032 | Song View (M8-Style) | Superseded | Replaced by 042 (Section-Based Arrangement) |
+| 037 | ChainView Redesign | Superseded | Replaced by 042+044 |
+| 040 | Drill-Down Navigation | Superseded | Replaced by 041+044 |
+| 041 | Unified Navigation | Proposed | Merge SONG/PHRASE modes |
+| 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
+| 043 | Matrix View | Implemented | Pattern pool browser sidebar (Phases 1-3) |
+| 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
+| 045 | Decouple Playback from View | Proposed | Separate playback.mode from ui.phraseView |
 
 ## UI / Layout
 

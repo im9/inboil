@@ -6,16 +6,19 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 
 | Term | Definition |
 |---|---|
-| **Pattern** | The top-level musical unit. Contains 8 tracks and plays as one loop. |
-| **Pattern Bank** | 100 pattern slots (10 factory + 90 user). Switching saves/loads full state. |
-| **Track** | One instrument lane within a pattern. Has a fixed SynthType and its own step count. |
-| **Step** | One time slot in a track's grid. 0-indexed internally, 1-indexed in UI. |
+| **Song** | Top-level container. Holds BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
+| **Pattern** | A reusable unit of music: string id + name + 8 cells (one per track). Stored in Song.patterns pool. |
+| **Cell** | Step data for one track in one pattern: steps, trigs, voiceParams, FX send levels. |
+| **Track** | Instrument configuration only: id, name, synthType, muted, volume, pan. No step data — that's in Cell. |
+| **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
+| **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
+| **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, or probability type. |
+| **SceneEdge** | Directed connection between scene nodes with playback order. |
+| **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
-| **Polymetric** | Tracks running with different step counts, causing their loops to phase against each other. |
+| **Polymetric** | Cells running with different step counts, causing their loops to phase against each other. |
 | **Playhead** | The current playing step position, advancing with the clock. One per track. |
-| **BPM** | Beats per minute. Controls the global clock rate. One step = one 16th note. |
-| **Queued switch** | Pattern change scheduled during playback, applied at loop boundary. |
-| **Pattern chain** | Sequential list of pattern entries with per-entry FX/perf overrides. See ADR 013. |
+| **BPM** | Beats per minute. Controls the global clock rate (stored in Song). One step = one 16th note. |
 | **P-Lock** | Parameter Lock. Per-step voice parameter override stored in `trig.paramLocks`. See ADR 014. |
 | **Chance** | Per-step trigger probability (0.0–1.0). `undefined` = 100%. See ADR 028. |
 | **Duration** | Note gate length in steps (1–16). Controls how long a voice sustains before `noteOff()`. |
@@ -45,17 +48,20 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 |---|---|
 | **SplitFlap** | パタパタ split-flap mechanical display. Per-character 3D CSS flip animation. Used for BPM, PAT, track names, octave. |
 | **Othello flip** | Step trig toggle animation: 3D `rotateY` flip between cream (empty) and olive (active) faces. |
-| **PerfBar** | Performance controls strip: KEY piano, OCT shift, EQ, GAIN, FILL/REV/GLT/BRK buttons, FX view toggle. |
-| **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. |
-| **DockPanel** | Unified right/bottom dock panel with PARAM/HELP/SYS modes. Track selector + synth knobs + lock toolbar. |
+| **PerfBar** | Performance controls strip: KEY piano, OCT shift, DUC/CMP/GAIN/SWG knobs, GRID/TRKR/SCENE view toggle, FILL/REV/BRK buttons. |
+| **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. Rendered in DockPanel FX tab. |
+| **DockPanel** | Unified right/bottom dock panel with PARAM/FX/EQ/HELP/SYS tabs. Track selector + synth knobs + lock toolbar. |
 | **MobileParamOverlay** | Mobile bottom-sheet overlay for param editing, lock, solo, mute. Opened by tapping track name. |
 | **Zone inversion** | Dark zone (navy bg) vs light zone (cream bg) — compositional tool for visual separation. |
 | **Knob** | SVG rotary control (270° arc). Vertical drag to change value. |
 | **PianoRoll** | DAW-style note bar editor for melodic tracks. 24-note range (C3–B4). Click+drag to draw note bars, click head/continuation to delete. |
 | **Note Bar** | A trig with duration ≥ 1, visualized as a colored bar spanning multiple steps in the PianoRoll. Head = olive, continuation = semi-transparent. |
 | **Auto-Legato** | Melodic tracks (t≥6) automatically connect consecutive notes with legato (no retrigger). Rest = retrigger. No explicit slide flag needed. |
-| **ChainView** | Pattern chain editor view (`ui.view = 'chain'`). Entry rows with pattern, key, repeats, FX toggles, perf buttons. |
-| **FilterView** | EQ/filter XY pad view (`ui.view = 'eq'`). FILTER + 3-band EQ nodes. |
+| **TrackerView** | M8-style vertical single-track step editor (`ui.phraseView = 'tracker'`). NOTE/VEL/DUR/SLD/CHN columns. |
+| **SceneView** | Node-based scene graph canvas (`ui.phraseView = 'scene'`). Arrangement editor with pattern and function nodes. |
+| **MatrixView** | Pattern pool browser sidebar (desktop). Grid of 24×24px cells showing pattern density and selection. |
+| **SectionNav** | Section strip + metadata editor. Two-row navigator for section selection and parameter editing. |
+| **FilterView** | EQ/filter XY pad in DockPanel EQ tab. FILTER + 3-band EQ nodes. |
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |

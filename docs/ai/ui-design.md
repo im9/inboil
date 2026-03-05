@@ -60,48 +60,15 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 │█ ●  INBOIL   120   [▶][■][RND]      PAT ◀ 00 ▶ [⚙]█│  ← AppHeader (dark zone)
 │█  (split-flap)                    (split-flap)     █│
 ├█████████████████████████████████████████████████████┤
-│█ [KEY] [OCT▼▲] | [DUC][CMP] | [GAIN][SWG] | GRID FX EQ | [FILL][REV][BRK] █│ ← PerfBar
-├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ KICK [V][P] M [■][ ][ ][■][ ][ ][■][ ][ ]...   ░│  ← StepGrid (light zone)
-│░ SNARE[V][P] M [ ][ ][ ][ ][■][ ][ ][ ][ ]...   ░│     VOL + PAN knobs per track
-│░ C.HH [V][P] M [■][■][ ][■][■][■][ ][■][ ]...   ░│
-│░ ...                                               ░│
-├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ (PianoRoll — shown conditionally for melodic)     ░│  ← PianoRoll (light zone)
-├█████████████████████████████████████████████████████┤
-│█ DockPanel (right or bottom): PARAM/HELP/SYS modes  █│  ← DockPanel (dark zone)
-│█  track-bar + knob grid (synth params, sends, lock) █│
-└─────────────────────────────────────────────────────┘
-
-── FX View (ui.view === 'fx') ──────────────────────────
-
-┌█████████████████████████████████████████████████████┐
-│█        AppHeader + PerfBar (same as above)        █│
-├█████████████████████████████████████████████████████┤
-│█                                                   █│  ← FxPad (dark zone)
-│█     (VERB)         ~~~3D wireframe terrain~~~     █│     XY pad + audio visualizer
-│█              (DLY)                                █│     tap=toggle, drag=move
-│█   (GLT)                          (GRN)           █│
-│█                                                   █│
-├█████████████████████████████████████████████████████┤
-│█ [●●●○●●●●] KICK | VERB DLY GLT GRN [knobs]     █│  ← FxPad sends bar
-├█████████████████████████████████████████████████████┤
-│█ DockPanel (right or bottom)                       █│  ← DockPanel (desktop only)
-└─────────────────────────────────────────────────────┘
-
-── EQ View (ui.view === 'eq') ──────────────────────────
-
-┌█████████████████████████████████████████████████████┐
-│█        AppHeader + PerfBar (same as above)        █│
-├█████████████████████████████████████████████████████┤
-│█                                                   █│  ← FilterView (dark zone)
-│█  (FILTER)                                         █│     XY pad, tap=toggle, drag=move
-│█           (LOW)                                   █│     Filter + 3-band EQ nodes
-│█                     (MID)                         █│
-│█                              (HIGH)               █│
-├█████████████████████████████████████████████████████┤
-│█ DockPanel (right or bottom)                       █│  ← DockPanel (desktop only)
-└─────────────────────────────────────────────────────┘
+│█ [KEY] [OCT▼▲] | [DUC][CMP] | [GAIN][SWG] | GRID TRKR SCENE | [FILL][REV][BRK] █│ ← PerfBar
+├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
+│░ MatrixView │░ StepGrid / TrackerView / SceneView       ░│█ DockPanel █│
+│░ (pattern   │░ (center view, switches via PerfBar)      ░│█ (PARAM/  █│
+│░  pool      │░ KICK [V][P] M [■][ ][ ][■][ ]...        ░│█  FX/EQ/  █│
+│░  browser)  │░ SNARE[V][P] M [ ][ ][ ][ ][■]...        ░│█  HELP/   █│
+│░            │░ ...                                       ░│█  SYS)    █│
+│░            │░ (PianoRoll — shown for melodic in Grid)   ░│█          █│
+└░░░░░░░░░░░░┴░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┴████████████┘
 ```
 
 ## Components
@@ -154,14 +121,14 @@ Props:
 Performance controls strip (dark zone). Layout:
 
 ```
-[KEY piano] | [OCT ▼ 0 ▲] | [DUC] [CMP] | [GAIN] [SWG] | GRID FX EQ | [FILL] [REV] [BRK]
+[KEY piano] | [OCT ▼ 0 ▲] | [DUC] [CMP] | [GAIN] [SWG] | GRID TRKR SCENE | [FILL] [REV] [BRK]
 ```
 
 - **KEY**: 12-key piano keyboard. Active key shown in olive.
 - **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink.
 - **DUC / CMP knobs**: Sidechain ducker depth and compressor makeup gain (36px).
 - **GAIN / SWG knobs**: Master volume and swing amount (36px).
-- **View toggle**: Segmented button group `GRID | FX | EQ | CHN` switching between StepGrid, FxPad, FilterView, and ChainView (`ui.view = 'grid' | 'fx' | 'eq' | 'chain'`). Active button has lighter background + brighter text.
+- **View toggle**: Segmented button group `GRID | TRKR | SCENE` switching between StepGrid, TrackerView, and SceneView (`ui.phraseView = 'grid' | 'tracker' | 'scene'`). Active button has lighter background + brighter text. Clicking SCENE again toggles back to GRID.
 - **Virtual keyboard toggle** (desktop only): Piano icon button toggles `vkbd.enabled`. When active, shows `C{octave}` label. See ADR 031.
 - **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
   - FILL, REV: `--color-blue` border/active
@@ -171,11 +138,11 @@ On mobile (`< 640px`):
 - DUC, CMP, GAIN, SWG, separators, and labels hidden.
 - **Keyboard → Fan-out bubble menu**: Full piano keyboard replaced by a circular trigger button (shows current root note, e.g. "C") + compact stacked octave ▲/▼. Tapping the trigger opens a **fan-arc keyboard overlay**: 12 rectangular piano keys arranged in a quarter-circle arc (0°–90°). White keys on outer ring (R=130), black keys on inner ring (R=78). Keys are rotated radially with counter-rotated labels. Semi-transparent backdrop (rgba(0,0,0,0.25)) dims the background. Animation: 150ms scale+rotate with 15ms stagger per key.
 - Key trigger + octave share a row with FILL/REV/BRK (3 rows → 2 rows, saving vertical space).
-- View toggle (GRID/FX/EQ/CHN) is a full-width tab bar with bottom border indicator.
+- View toggle (GRID/TRKR/SCENE) is a full-width tab bar with bottom border indicator.
 
 ### FxPad — DECIDED
 
-XY performance surface (dark zone). Switches with StepGrid via PerfBar view toggle (`ui.view = 'fx'`).
+XY performance surface (dark zone). Rendered inside DockPanel when `ui.dockTab === 'fx'`.
 
 **Structure:**
 - `fx-view` outer container (`flex: 1`, column layout)
@@ -192,7 +159,7 @@ XY performance surface (dark zone). Switches with StepGrid via PerfBar view togg
 - 3D wireframe terrain: 18 rows × 32 columns, frequency-displaced
 - Colors: olive → blue → salmon → purple by depth
 - Perspective projection, DPR-aware
-- RAF loop only when `ui.view === 'fx'`
+- RAF loop only when `ui.dockTab === 'fx'`
 
 **Sends bar** (compact dark footer):
 - Track dots (8, olive active), track name label
@@ -201,7 +168,7 @@ XY performance surface (dark zone). Switches with StepGrid via PerfBar view togg
 
 ### FilterView — DECIDED
 
-XY filter/EQ surface (dark zone). Switches with StepGrid via PerfBar view toggle (`ui.view = 'eq'`).
+XY filter/EQ surface (dark zone). Rendered inside DockPanel when `ui.dockTab === 'eq'`.
 
 **Structure:**
 - `.filt-pad` inner area: touch/drag surface with 4 nodes
@@ -216,39 +183,32 @@ XY filter/EQ surface (dark zone). Switches with StepGrid via PerfBar view toggle
 
 **Node positioning:** X/Y mapped to 0–1 range within padded area (20px inset). Nodes clamped to pad bounds. Drag with pointer capture.
 
-### ChainView — DECIDED
+### TrackerView — DECIDED
 
-Full-screen chain editor view (`ui.view = 'chain'`). Arranges patterns into a song structure.
+M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Shows columns: NOTE/VEL/DUR/SLD/CHN. Keyboard-navigable with arrow keys. Uses `activeCell(trackId)` — edits the same data as StepGrid. Track selector bar at the top.
 
-**Header:**
-- CHAIN label + ON/OFF toggle (olive when active)
-- ⏮ rewind button (when entries exist)
-- Position display: SplitFlap `01/08` (current/total)
-- + ADD button (appends current pattern)
-- CLR button (clears all entries)
+### SceneView — DECIDED
 
-**Entry row (single-line, 40px height):**
-```
-► ◀04|LOFI▶ C ◀×4▶ ●●○○ [VRB🎛][DLY🎛][GLT🎛][GRN🎛] [BRK][¼] [×]
-```
-- Row marker: number (tap to jump) or ► arrow (current entry)
-- Pattern: ◀▶ nav + SplitFlap ID|NAME
-- KEY: tap to cycle C–B, --- = pattern default
-- Repeats: ◀×N▶ (1–8) + progress dots during playback
-- FX nodes: 4× toggle + compact Knob (20px) — VRB(olive), DLY(blue), GLT(salmon), GRN(purple)
-- PERF: cycles NONE→FILL→BRK→REV, color-coded (fixed `min-width: 38px` to prevent layout shift between 3/4-char labels)
-- PERF LEN: cycles BAR→½→¼→1S (16/8/4/1 steps), disabled when PERF=NONE
-- Delete (×)
+Node-based directed graph canvas (`ui.phraseView === 'scene'`). Full arrangement editor.
 
-**Empty state:** "NO ENTRIES" + preset buttons (LOFI).
+- Canvas rendering with `requestAnimationFrame` for edges, arrowheads, edge order badges, playback highlights
+- HTML overlay for nodes (positioned absolutely via CSS `calc()`)
+- Zoom/pan (pinch, scroll wheel, middle-click/Ctrl+click pan)
+- Node drag to reposition
+- Edge creation: drag from right side of node (port area) to another node
+- Node click: selects pattern and syncs `ui.currentPattern` to Grid/Tracker
+- Double-click node: set as root (playback entry point)
+- Delete/Backspace: delete selected node or edge
+- `+` button opens picker: all patterns + function node types (transpose, tempo, repeat, probability)
+- Copy/paste (Ctrl+C, Ctrl+Shift+C for subgraph, Ctrl+V)
 
-**Interaction:**
-- Row number tap → jump to entry
-- ON/OFF preserves position (stop/resume)
-- ⏮ → rewind to entry 01
-- All elements have `data-tip` / `data-tip-ja` for hover guide
+### MatrixView — DECIDED
 
-See ADR 013 for data model and playback behavior.
+Compact left sidebar (desktop only) showing the pattern pool as a grid of 24×24px square cells. Shows density via opacity, selection (olive border), playing state (blue), solo (blue inset shadow), and scene usage (small olive dot). Clicking a cell calls `selectPattern()`. In scene mode, shows an arrow button to add selected pattern to the scene.
+
+### SectionNav — DECIDED
+
+Two-row navigator strip. Row 1: horizontally scrollable section slot strip (sections 00–N) with drag-to-set loop range, plus SCENE toggle button. Row 2: detail strip showing selected section's metadata (SEC number, PAT dropdown picker, repeats, key, oct, perf mode, FX toggles, clear button).
 
 ### Sidebar — DECIDED
 
@@ -273,11 +233,13 @@ See ADR 017 and ADR 018 for details.
 
 ### DockPanel — DECIDED
 
-Unified right-side or bottom dock panel. Three modes switched via track-bar buttons:
+Unified right-side or bottom dock panel. Five tabs switched via tab bar (`ui.dockTab`):
 
-1. **PARAM mode** (default): Track selector bar (2-letter abbreviations: KK, SN, CP, CH, OH, CY, BS, LD) + synth knob grid from `paramDefs.ts`. Lock toolbar (LOCK/STEP/CLR) + SOLO/MUTE. Dock position toggle (⇩/⇨) persisted in localStorage.
-2. **HELP mode**: Collapsible accordion help content (same as Sidebar help). Triggered by `?` in AppHeader.
-3. **SYS mode**: System settings (scale mode, language, factory reset). Triggered by `⚙` in AppHeader.
+1. **PARAM** (default): Track selector bar (2-letter abbreviations: KK, SN, CP, CH, OH, CY, BS, LD) + synth knob grid from `paramDefs.ts`. Lock toolbar (LOCK/STEP/CLR) + SOLO/MUTE. Dock position toggle (⇩/⇨) persisted in localStorage.
+2. **FX**: FxPad XY surface with 4 FX nodes, audio visualizer, and sends bar.
+3. **EQ**: FilterView XY surface with FILTER + 3-band EQ nodes.
+4. **HELP**: Collapsible accordion help content. Triggered by `?` in AppHeader.
+5. **SYS**: System settings (scale mode, language, factory reset). Triggered by `⚙` in AppHeader.
 
 HELP/SYS are temporary — switching back to PARAM mode automatically when closing or re-pressing the trigger button.
 
@@ -342,7 +304,7 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 | Performance controls | Press-hold buttons (FILL, REV, BRK) |
 | Key change | Click piano key in PerfBar |
 | Octave shift | Click −/+ in PerfBar OCT controls |
-| Switch view | Click GRID/FX/EQ in PerfBar view toggle |
+| Switch view | Click GRID/TRKR/SCENE in PerfBar view toggle |
 | Toggle FX node | Tap FxPad node (no drag) |
 | Move FX node | Drag FxPad node (pointer capture) |
 | Select track (FxPad) | Click track dot in FxPad sends bar |
@@ -434,7 +396,7 @@ Always instant, no transition:
 - Opening/closing PianoRoll
 - Pattern switch application
 - Mute toggle (visual — audio uses smooth fade)
-- View switching (GRID/FX/EQ)
+- View switching (GRID/TRKR/SCENE)
 
 ## Responsive Behavior — DECIDED
 
