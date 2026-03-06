@@ -1103,6 +1103,75 @@ export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void
   siblings[swapIdx].order = tmp
 }
 
+/** Auto-layout scene nodes left→right using BFS layers from root */
+export function sceneFormatNodes(): void {
+  const { nodes, edges } = song.scene
+  if (nodes.length === 0) return
+  pushUndo('Format nodes')
+
+  // Build adjacency list
+  const children = new Map<string, string[]>()
+  for (const e of edges) {
+    const list = children.get(e.from) || []
+    list.push(e.to)
+    children.set(e.from, list)
+  }
+
+  // BFS from root to assign layers
+  const root = nodes.find(n => n.root) || nodes[0]
+  const layer = new Map<string, number>()
+  const queue: string[] = [root.id]
+  layer.set(root.id, 0)
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    const d = layer.get(id)!
+    for (const child of children.get(id) || []) {
+      if (!layer.has(child)) {
+        layer.set(child, d + 1)
+        queue.push(child)
+      }
+    }
+  }
+
+  // Assign orphan nodes (not reached by BFS) to a final column
+  const maxLayer = Math.max(0, ...layer.values())
+  for (const n of nodes) {
+    if (!layer.has(n.id)) layer.set(n.id, maxLayer + 1)
+  }
+
+  // Group nodes by layer
+  const layers = new Map<number, string[]>()
+  for (const [id, d] of layer) {
+    const list = layers.get(d) || []
+    list.push(id)
+    layers.set(d, list)
+  }
+
+  // Sort nodes within each layer by edge order for deterministic layout
+  for (const [, ids] of layers) {
+    ids.sort((a, b) => {
+      const aEdge = edges.find(e => e.to === a)
+      const bEdge = edges.find(e => e.to === b)
+      return (aEdge?.order ?? 0) - (bEdge?.order ?? 0)
+    })
+  }
+
+  // Assign normalized positions: x = layer (left→right), y = spread within layer
+  const totalLayers = Math.max(1, ...layers.keys()) + 1
+  const margin = 0.08
+  for (const [d, ids] of layers) {
+    const nx = totalLayers === 1 ? 0.5 : margin + (d / Math.max(1, totalLayers - 1)) * (1 - margin * 2)
+    for (let i = 0; i < ids.length; i++) {
+      const ny = ids.length === 1 ? 0.5 : margin + (i / (ids.length - 1)) * (1 - margin * 2)
+      const node = nodes.find(n => n.id === ids[i])
+      if (node) {
+        node.x = nx
+        node.y = ny
+      }
+    }
+  }
+}
+
 // ── Scene Copy/Paste (Phase 5) ───────────────────────────────────────
 
 let sceneClipboard: { nodes: SceneNode[]; edges: SceneEdge[] } | null = null

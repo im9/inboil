@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
   import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -723,6 +723,18 @@
   </div>
 
   <!-- UI controls (outside zoom/pan transform) -->
+  {#if song.scene.nodes.length > 1}
+    <button
+      class="scene-format-btn"
+      aria-label="Auto-layout"
+      data-tip="Auto-layout" data-tip-ja="自動整列"
+      onpointerdown={sceneFormatNodes}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+        <path d="M2 4h12M2 8h8M2 12h10"/>
+      </svg>
+    </button>
+  {/if}
   {#if zoom !== 1}
     <button
       class="zoom-reset-btn"
@@ -972,10 +984,31 @@
   }
 
   /* ── Zoom reset ── */
-  .zoom-reset-btn {
+  .scene-format-btn {
     position: absolute;
     top: 8px;
     right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(30, 32, 40, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: rgba(30, 32, 40, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+  }
+  .scene-format-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-fg);
+  }
+
+  .zoom-reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 42px;
     height: 28px;
     padding: 0 8px;
     border-radius: 4px;
