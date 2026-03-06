@@ -106,10 +106,10 @@ interface WorkletTrig {
 
 ```typescript
 type WorkletEvent =
-  | { type: 'step'; playheads: number[] }   // current step position per track
+  | { type: 'step'; playheads: number[]; cycle: boolean }   // current step position per track; cycle=true on pattern loop
 ```
 
-The `step` event fires on every step advance and carries the current playhead position for all 8 tracks.
+The `step` event fires on every step advance and carries the current playhead position for all 8 tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching).
 
 ## Parameter Application Timing
 
@@ -135,7 +135,7 @@ class GrooveboxEngine {
   stop(): void                                                                   // Post stop (suspends context after 8s idle)
   triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD audition)
   releaseNote(trackId): void                                                     // Release triggered note
-  set onStep(cb: (playheads: number[]) => void)                                  // Register step callback
+  set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback
   getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
 }
 ```

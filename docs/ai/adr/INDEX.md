@@ -52,8 +52,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 045 | Decouple Playback from View | Implemented | Separate playback.mode from ui.phraseView |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
-| 050 | Scene Function Nodes | Proposed | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
-| 051 | Scene View Polish | Proposed | Playback button on root, solo repeat icon, animated edges, hourglass gauge |
+| 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
+| 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
 
 ## UI / Layout
 

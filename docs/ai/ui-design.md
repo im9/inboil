@@ -195,7 +195,7 @@ Node-based directed graph canvas (`ui.phraseView === 'scene'`). Full arrangement
 - HTML overlay for nodes (positioned absolutely via CSS `calc()`)
 - Zoom/pan (pinch, scroll wheel, middle-click/Ctrl+click pan)
 - Node drag to reposition
-- Edge creation: drag from right side of node (port area) to another node
+- Edge creation: drag from blue connection handle (dot) on node to another node
 - Node click: selects pattern and syncs `ui.currentPattern` to Grid/Tracker
 - Double-click node: set as root (playback entry point)
 - Delete/Backspace: delete selected node or edge
@@ -247,7 +247,7 @@ Right dock: `width: 320px; border-left`. Bottom dock: `width: 100%; max-height: 
 
 ### PianoRoll — DECIDED
 
-DAW-style note bar editor for melodic tracks (6–7). Always visible for melodic tracks (no toggle). Positioned between StepGrid and ParamPanel.
+DAW-style note bar editor for melodic tracks (6–7). Always visible for melodic tracks (no toggle). Positioned between StepGrid and DockPanel.
 24-note range (C3–B4). Click empty cell to place note, drag right to extend duration (note bar).
 Click head to delete, click continuation to delete parent note. Resize handle on head's right edge for post-placement adjustment.
 Connected bars = auto-legato, gaps = retrigger. Playhead column shown when playing.

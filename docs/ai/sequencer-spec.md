@@ -186,7 +186,7 @@ Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and se
 When the scene graph is active (has a root node) and `ui.phraseView === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
 
 ### Solo pattern
-`playback.soloPattern` overrides all other playback modes — the engine loops the solo'd pattern exclusively.
+`playback.soloNodeId` targets a scene node for solo repeat. When the scene reaches that node, the engine loops its pattern exclusively. If the node is not yet playing, solo enters an "armed" state until the scene reaches it. Solo switches happen at cycle boundaries.
 
 See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
