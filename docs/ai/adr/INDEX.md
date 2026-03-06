@@ -71,7 +71,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 017 | Help Sidebar | Implemented | Sidebar as app-level fixed drawer (ADR 055) |
 | 018 | Settings Panel (SYSTEM) | Implemented | Part of Sidebar (ADR 055) |
 | 034 | Help / Guide Redesign | Proposed | Content updates for 036's HELP tab |
-| 035 | Master View | Proposed | XY pad + knobs for master bus |
+| 035 | Master View | Implemented | XY pad + faders + VU meter for master bus |
 | 036 | Remove Footer / Dockable Panel | Implemented | Right-side param dock with minimize toggle (ADR 055) |
 | 047 | FX / EQ as Main Views | Superseded | Replaced by 054 (overlay sheets) |
 
