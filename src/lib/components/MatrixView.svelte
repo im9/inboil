@@ -174,7 +174,7 @@
         class:playing={isPlaying}
         class:solo={isSolo}
         class:in-scene={inScene}
-        style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}"
+        style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}; --beat: {30 / song.bpm}s"
       >
         <button class="cell-bg" aria-label="Pattern {pi}" draggable={true} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)} data-tip="Pattern {String(pi).padStart(2,'0')}{song.patterns[pi]?.name ? ' — ' + song.patterns[pi].name : ''} · Tap to select, double-tap to edit" data-tip-ja="パターン {String(pi).padStart(2,'0')}{song.patterns[pi]?.name ? ' — ' + song.patterns[pi].name : ''} · タップで選択、ダブルタップで編集"></button>
       </div>
@@ -323,19 +323,20 @@
     background: var(--pat-hex);
   }
   .pat-cell.selected {
-    border-color: var(--color-fg);
+    border: 2px solid var(--color-fg);
   }
   .pat-cell.playing {
-    border-color: var(--color-fg);
-    animation: pat-pulse 0.8s ease-in-out infinite alternate;
+    border-color: var(--color-olive);
+    animation: pat-pulse var(--beat, 0.25s) ease-in-out infinite alternate;
   }
   .pat-cell.playing.selected {
-    border-color: var(--color-fg);
+    border-width: 2px;
+    border-color: var(--color-olive);
   }
 
   @keyframes pat-pulse {
-    from { box-shadow: 0 0 3px rgba(30,32,40,0.15); }
-    to   { box-shadow: 0 0 7px rgba(30,32,40,0.3); }
+    from { opacity: 1; }
+    to   { opacity: 0.4; }
   }
   .pat-cell.solo {
     box-shadow: inset 0 0 0 1px var(--color-blue);

@@ -1,6 +1,6 @@
 # ADR 057: Pattern Toolbar — Move RAND, KEY, VKBD into Pattern Sheet
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
