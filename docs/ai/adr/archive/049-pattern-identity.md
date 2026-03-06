@@ -2,7 +2,7 @@
 
 | field   | value                              |
 | ------- | ---------------------------------- |
-| status  | proposed                           |
+| status  | implemented                        |
 | date    | 2026-03-05                         |
 | parent  | ADR 043 (Matrix View), ADR 044 (Scene Graph) |
 

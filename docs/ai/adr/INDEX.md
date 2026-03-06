@@ -52,11 +52,11 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 041 | Unified Navigation | Superseded | Replaced by 045+046 (decouple playback + simplify toggle) |
 | 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar |
-| 049 | Pattern Identity | Proposed | Rename UI + color picker, reflected in Matrix & Scene |
+| 049 | Pattern Identity | Implemented | Rename UI + color picker, reflected in Matrix & Scene |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
 | 045 | Decouple Playback from View | Implemented | Separate `playback.mode` from `ui.phraseView` |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
-| 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
+| 048 | Scene Playback | Implemented | Random branching at forks + terminal stop |
 | 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
 | 052 | Scene Free-Floating Labels | Implemented | Canvas text labels independent of nodes |
