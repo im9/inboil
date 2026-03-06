@@ -416,14 +416,6 @@
     color: rgba(237,232,220,0.85);
     border-color: rgba(237,232,220,0.45);
   }
-  .view-sep {
-    width: 1px;
-    height: 28px;
-    background: rgba(237,232,220,0.12);
-    flex-shrink: 0;
-    margin: 0 16px;
-  }
-
   /* ── Performance buttons ── */
   .perf-btns {
     gap: 4px;
@@ -627,10 +619,6 @@
       color: rgba(237,232,220,0.35);
     }
     .btn-view:not(:last-child) { border-right: 1px solid rgba(237,232,220,0.08); }
-    .view-sep {
-      width: 0;
-      border-right: 1px solid rgba(237,232,220,0.15);
-    }
     .btn-view.active {
       color: rgba(237,232,220,0.90);
       border-bottom-color: var(--color-olive);

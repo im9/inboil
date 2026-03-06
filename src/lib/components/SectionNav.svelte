@@ -337,27 +337,6 @@
     color: rgba(237,232,220,0.70);
   }
 
-  .btn-scene {
-    border: 1px solid rgba(120,120,69,0.4);
-    background: transparent;
-    color: rgba(120,120,69,0.6);
-    padding: 2px 6px;
-    font-size: 7px;
-    font-weight: 700;
-    font-family: var(--font-data);
-    letter-spacing: 0.06em;
-    flex-shrink: 0;
-  }
-  .btn-scene.active {
-    background: rgba(120,120,69,0.25);
-    color: var(--color-olive);
-    border-color: var(--color-olive);
-  }
-  .btn-scene:active {
-    background: rgba(120,120,69,0.15);
-    color: var(--color-olive);
-  }
-
   /* ── Row 2: Detail strip ── */
   .detail-row {
     position: relative;

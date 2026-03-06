@@ -187,6 +187,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
           {#if ui.phraseView === 'fx'}
             <FxPad />
@@ -218,7 +219,8 @@
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
               {#if ui.phraseView === 'fx'}
                 <FxPad />
               {:else if ui.phraseView === 'eq'}
