@@ -132,7 +132,7 @@
       />
     {:else}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="head-name" ondblclick={startEdit}>{selectedName}</span>
+      <span class="head-name" ondblclick={startEdit} data-tip="Double-click to rename pattern" data-tip-ja="ダブルクリックでパターン名を変更">{selectedName}</span>
     {/if}
     <button
       class="head-scene"
@@ -158,7 +158,7 @@
 
   <!-- Grid: square cells -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" onkeydown={onKeydown}>
+  <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" onkeydown={onKeydown} data-tip="Pattern pool — colored cells have data, dot = used in scene" data-tip-ja="パターンプール — 色付きセル = データあり、ドット = シーンで使用中">
     {#each { length: visibleCount } as _, pi}
       {@const hasData = patternHasData(pi)}
       {@const d = patternDensity(pi)}
@@ -176,7 +176,7 @@
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}"
       >
-        <button class="cell-bg" aria-label="Pattern {pi}" draggable={true} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)}></button>
+        <button class="cell-bg" aria-label="Pattern {pi}" draggable={true} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)} data-tip="Pattern {String(pi).padStart(2,'0')}{song.patterns[pi]?.name ? ' — ' + song.patterns[pi].name : ''} · Tap to select, double-tap to edit" data-tip-ja="パターン {String(pi).padStart(2,'0')}{song.patterns[pi]?.name ? ' — ' + song.patterns[pi].name : ''} · タップで選択、ダブルタップで編集"></button>
       </div>
     {/each}
   </div>

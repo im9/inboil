@@ -1,6 +1,6 @@
 # ADR 034: Help / Guide Redesign
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

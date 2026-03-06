@@ -435,10 +435,11 @@ interface StoredPrefs {
   scaleMode: boolean
   dockMinimized: boolean
   patternEditor: 'grid' | 'tracker'
+  showGuide: boolean
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid' }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -465,6 +466,7 @@ function savePrefs(): void {
     scaleMode: prefs.scaleMode,
     dockMinimized: ui.dockMinimized,
     patternEditor: prefs.patternEditor,
+    showGuide: prefs.showGuide,
   }))
 }
 
@@ -476,6 +478,7 @@ export const prefs = $state({
   visited: initialPrefs.visited,
   scaleMode: initialPrefs.scaleMode,
   patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
+  showGuide: initialPrefs.showGuide,
 })
 
 ui.dockMinimized = initialPrefs.dockMinimized
@@ -503,6 +506,10 @@ export function togglePatternEditor(): void {
 }
 export function toggleDockMinimized(): void {
   ui.dockMinimized = !ui.dockMinimized
+  savePrefs()
+}
+export function toggleShowGuide(): void {
+  prefs.showGuide = !prefs.showGuide
   savePrefs()
 }
 

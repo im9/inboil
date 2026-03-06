@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, toggleLang, toggleScaleMode, togglePatternEditor, factoryReset } from '../state.svelte.ts'
+  import { ui, lang, prefs, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset } from '../state.svelte.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -36,12 +36,26 @@
 
   let openSections = $state(new Set<number>([0]))
 
+  // ── Search filter ──
+  let searchQuery = $state('')
+  const filteredIndices = $derived.by(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return null
+    const results: number[] = []
+    for (let i = 0; i < helpSections.length; i++) {
+      const s = helpSections[i]
+      if (s.title.toLowerCase().includes(q) || s.body.toLowerCase().includes(q)) {
+        results.push(i)
+      }
+    }
+    return results
+  })
+
   // ── Hover guide ──
   let guideText = $state('')
 
   onMount(() => {
     function onOver(e: Event) {
-      if (ui.sidebar !== 'help') return
       const el = (e.target as Element)?.closest?.('[data-tip]')
       if (!el) { guideText = ''; return }
       const tip = L === 'ja'
@@ -51,10 +65,6 @@
     }
     document.addEventListener('mouseover', onOver)
     return () => document.removeEventListener('mouseover', onOver)
-  })
-
-  $effect(() => {
-    if (ui.sidebar !== 'help') guideText = ''
   })
 
   function toggleSection(idx: number) {
@@ -76,74 +86,98 @@
     {
       title: L === 'ja' ? '基本操作' : 'BASICS',
       body: L === 'ja'
-        ? 'SPACEキーで再生/停止を切り替えられます。グリッドをタップしてステップのON/OFFを切り替えられます。RANDボタンでランダムパターンを生成できます。'
-        : 'SPACE to play/stop. Tap the grid to toggle steps ON/OFF. RAND generates a random pattern.',
+        ? 'SPACEキーで再生/停止。グリッドをタップしてステップのON/OFFを切り替え。RANDでランダムパターン生成。Ctrl+Z で元に戻す、Ctrl+Shift+Z でやり直し。'
+        : 'SPACE to play/stop. Tap the grid to toggle steps ON/OFF. RAND generates a random pattern. Ctrl+Z to undo, Ctrl+Shift+Z to redo.',
     },
     {
       title: L === 'ja' ? 'トラック' : 'TRACKS',
       body: L === 'ja'
-        ? '8トラック構成です: KICK, SNARE, CLAP, C.HH, O.HH, CYM (ドラム) + BASS, LEAD (メロディ)。トラック名をタップして選択できます。VOL/PANノブで音量とパンを調整できます。Mボタンでミュートできます。'
-        : '8 tracks: KICK, SNARE, CLAP, C.HH, O.HH, CYM (drums) + BASS, LEAD (melodic). Tap track name to select. VOL/PAN knobs adjust volume and panning. M button to mute.',
+        ? '8トラック構成: KICK, SNARE, CLAP, C.HH, O.HH, CYM (ドラム) + BASS, LEAD (メロディ)。トラック名タップで選択。VOL/PANノブで音量とパンを調整。Mボタンでミュート、Sボタンでソロ (複数トラック同時ソロ可)。'
+        : '8 tracks: KICK, SNARE, CLAP, C.HH, O.HH, CYM (drums) + BASS, LEAD (melodic). Tap track name to select. VOL/PAN knobs for volume and panning. M to mute, S to solo (additive — multiple tracks can be soloed).',
     },
     {
-      title: L === 'ja' ? 'ベロシティ & ステップ数' : 'VELOCITY & STEPS',
+      title: L === 'ja' ? 'ベロシティ & チャンス' : 'VELOCITY & CHANCE',
       body: L === 'ja'
-        ? '選択トラックの下にベロシティバーが表示されます。上下ドラッグで各ステップの音量を調整できます。VEL下の数字をタップしてステップ数を変更できます (2〜64)。'
-        : 'Velocity bars appear below the selected track. Drag up/down to adjust per-step volume. Tap the number below VEL to cycle step count (2–64).',
+        ? '選択トラックの下にバーが表示されます。3つのモード: STEP (トリガー ON/OFF)、VEL (上下ドラッグで各ステップの音量)、CHNC (各ステップの発音確率 0–100%)。ステップ数はVEL下の数字タップで変更 (2〜64)。'
+        : 'Bars appear below the selected track. Three modes: STEP (toggle triggers), VEL (drag up/down for per-step volume), CHNC (per-step trigger probability 0–100%). Tap the step count number to cycle (2–64).',
     },
     {
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
-        ? 'メロディトラック (BASS/LEAD) 選択時にピアノロールが自動表示されます。グリッドをタップしてノートを配置できます。'
-        : 'The piano roll is shown automatically for melodic tracks (BASS/LEAD). Tap the grid to place notes.',
+        ? 'メロディトラック (BASS/LEAD) 選択時に自動表示。グリッドタップでノートを配置。ノートの長さはドラッグで調整可。スライドノートはSLDトグルで設定 (ポルタメント効果)。スケールモード ON 時はスケール外のノートが無効化されます。'
+        : 'Shown automatically for melodic tracks (BASS/LEAD). Tap to place notes. Drag note edges to adjust duration. SLD toggle enables slide (portamento). With scale mode ON, out-of-scale notes are disabled.',
     },
     {
       title: L === 'ja' ? 'パフォーマンス' : 'PERFORMANCE',
       body: L === 'ja'
-        ? 'FILL でフィルインを挿入します。REV で逆再生します。BRK でブレイク (リズムゲート) をかけます。KEY でルートノートを変更してキーを移調できます。'
+        ? 'FILL でフィルインを挿入。REV で逆再生。BRK でブレイク (リズムゲート)。KEY でルートノートを変更してキーを移調。'
         : 'FILL: insert fill-in. REV: reverse playback. BRK: rhythmic gate break. KEY changes root note for transposition.',
     },
     {
       title: L === 'ja' ? 'バーチャルキーボード' : 'VIRTUAL KEYBOARD',
       body: L === 'ja'
-        ? '🎹 ボタンでバーチャルキーボードを ON/OFF します。A〜; キーで選択トラックの音を演奏できます (2列クロマチック配列)。Z/X でオクターブを上下でき、ピアノロールの表示範囲と連動します。1〜9, 0 でベロシティを設定できます。'
-        : 'Toggle the virtual keyboard with the 🎹 button. Play notes on the selected track with A–; keys (2-row chromatic layout). Z/X shifts octave up/down, synced with the piano roll view. 1–9, 0 sets velocity.',
+        ? '🎹 ボタンで ON/OFF。A〜; キーで演奏 (2列クロマチック配列)。Z/X でオクターブ上下 (ピアノロールと連動)。1〜9, 0 でベロシティ設定。'
+        : 'Toggle with 🎹 button. Play notes with A–; keys (2-row chromatic layout). Z/X shifts octave (synced with piano roll). 1–9, 0 sets velocity.',
     },
     {
       title: L === 'ja' ? 'パターン' : 'PATTERNS',
       body: L === 'ja'
-        ? 'PAT ◀▶ でパターンを切り替えられます。00–19 はファクトリープリセットです。再生中はバーの境界で自動的に切り替わります。CPY で現在のパターンをコピー、別スロットに移動して PST でペースト、CLR でパターンをクリアできます。'
-        : 'PAT ◀▶ to switch patterns. 00–19: factory presets. During playback, switch happens at the bar boundary. CPY copies the current pattern, navigate to another slot and PST to paste, CLR clears the pattern.',
+        ? 'PAT ◀▶ でパターン切り替え。00–19 はファクトリープリセット。再生中はバー境界で自動切り替え。CPY/PST でコピー&ペースト、CLR でクリア。パターン名クリックでリネーム (最大8文字)。カラードットで8色から色を設定でき、MatrixとSceneに反映されます。'
+        : 'PAT ◀▶ to switch patterns. 00–19: factory presets. Switch at bar boundary during playback. CPY/PST to copy & paste, CLR to clear. Click pattern name to rename (max 8 chars). Color dot assigns one of 8 colors, reflected in Matrix and Scene views.',
     },
     {
-      title: L === 'ja' ? 'シンセパラメータ' : 'SYNTH PARAMS',
+      title: L === 'ja' ? 'シンセパラメータ & P-Lock' : 'SYNTH PARAMS & P-LOCK',
       body: L === 'ja'
-        ? '下部パネルのノブをドラッグして音色を調整できます。パラメータは機能ごとにセパレーターで区切られています。例: LEAD = FILTER (CUT/MOD/RESO/FDCY) | ENV (ATCK/ADCY/SUST/RLS) | ARP (ARP/RATE/CHRD/AOCT)。アルペジエーターは1ノートから自動的にアルペジオパターンを生成し、KEYのスケールに沿ったコードが鳴ります。'
-        : 'Drag knobs in the bottom panel to shape the sound. Parameters are grouped by function with visual separators. Example: LEAD = FILTER (CUT/MOD/RESO/FDCY) | ENV (ATCK/ADCY/SUST/RLS) | ARP (ARP/RATE/CHRD/AOCT). The arpeggiator generates patterns from a single note, using scale-aware chords that follow the KEY setting.',
+        ? 'ドックパネルのノブをドラッグして音色を調整。パラメータは機能ごとにグループ化: 例 LEAD = FILTER | ENV | ARP。P-Lock (パラメーターロック): LOCKモードで特定ステップのパラメータを個別に設定可能。ステップを選択 → LOCKをON → ノブを回すとそのステップだけに適用。CLR でステップのロックを解除。'
+        : 'Drag knobs in the dock panel to shape the sound. Parameters grouped by function: e.g. LEAD = FILTER | ENV | ARP. P-Lock (parameter lock): In LOCK mode, knob changes apply only to the selected step. Select a step → enable LOCK → turn knobs to set per-step values. CLR removes locks for that step.',
     },
     {
       title: 'GRID',
       body: L === 'ja'
-        ? 'メインのステップシーケンサーです。各トラックのステップをタップしてON/OFFを切り替えます。選択トラックにはベロシティバーが表示され、メロディトラックではピアノロールも常時表示されます。'
-        : 'The main step sequencer. Tap steps to toggle triggers ON/OFF. The selected track shows velocity bars, and melodic tracks always display a piano roll.',
+        ? 'メインのステップシーケンサー。ステップをタップしてON/OFF。選択トラックにベロシティバー表示。メロディトラックではピアノロールも常時表示。'
+        : 'The main step sequencer. Tap steps to toggle triggers. The selected track shows velocity bars, and melodic tracks display a piano roll.',
     },
     {
       title: L === 'ja' ? 'FX パッド' : 'FX PAD',
       body: L === 'ja'
-        ? 'エフェクトノード (VERB, DLY, GLT, GRN) をドラッグしてパラメータを調整します。タップでON/OFFを切り替えます。下部のセンドバーで各トラックのセンド量とパンを設定できます。'
-        : 'Drag effect nodes (VERB, DLY, GLT, GRN) to adjust parameters. Tap to toggle ON/OFF. The send bar at the bottom sets per-track send levels and panning.',
+        ? 'エフェクトノード (VERB, DLY, GLT, GRN) をドラッグしてパラメータ調整。タップでON/OFF。下部のセンドバーで各トラックのセンド量を設定。PerfBar の FX ボタンでオーバーレイシートとしても開けます。'
+        : 'Drag effect nodes (VERB, DLY, GLT, GRN) to adjust parameters. Tap to toggle ON/OFF. Send bar at the bottom sets per-track send levels. Also accessible as an overlay sheet via the FX button in PerfBar.',
     },
     {
       title: 'EQ',
       body: L === 'ja'
-        ? '3バンドEQ (LOW, MID, HIGH) とフィルターのノードをドラッグして音質を調整します。フィルターは左でローパス、右でハイパスに変化します。各ノードをタップでON/OFFできます。'
-        : 'Drag 3-band EQ nodes (LOW, MID, HIGH) and a filter node to shape the tone. Filter sweeps from low-pass (left) to high-pass (right). Tap nodes to toggle ON/OFF.',
+        ? '3バンドEQ (LOW, MID, HIGH) とフィルターノードをドラッグして音質調整。フィルターは左=ローパス、右=ハイパス。ノードタップでON/OFF。PerfBar の EQ ボタンでオーバーレイシートとしても開けます。'
+        : 'Drag 3-band EQ nodes (LOW, MID, HIGH) and filter node to shape tone. Filter sweeps LP (left) to HP (right). Tap nodes to toggle. Also accessible as an overlay sheet via EQ button in PerfBar.',
     },
     {
-      title: L === 'ja' ? 'チェーン' : 'CHAIN',
+      title: L === 'ja' ? 'マスター' : 'MASTER',
       body: L === 'ja'
-        ? 'パターンを順番に並べて曲構成をつくります。+ ADD で現在のパターンを追加。◀▶ でパターンを変更、×N でリピート回数を設定します。FX (VRB/DLY/GLT/GRN) はトグル＋ノブでセンド量を調整できます。PERF (FILL/BRK/REV) はラストリピートで発動し、長さ (BAR/½/¼/1S) も設定可能です。KEY で転調、行番号タップでジャンプ、⏮ で先頭に戻ります。ON/OFF で途中再開もできます。'
-        : 'Arrange patterns into a song structure. + ADD appends the current pattern. ◀▶ changes pattern, ×N sets repeat count. FX (VRB/DLY/GLT/GRN) toggle + knob for send amount. PERF (FILL/BRK/REV) triggers on the last repeat with adjustable length (BAR/½/¼/1S). KEY for transposition, tap row number to jump, ⏮ to rewind. ON/OFF resumes from current position.',
+        ? '3つのXYパッド: COMP (コンプレッサー: X=スレッショルド, Y=レシオ)、DUCK (サイドチェイン: X=深さ, Y=リリース)、RET (FXリターン: X=リバーブ量, Y=ディレイ量)。タップでON/OFF、ドラッグで調整。右側にフェーダー: GAIN (マスター音量), MKP (メイクアップゲイン), SWG (スウィング)。VUメーターでL/Rピークを確認。'
+        : 'Three XY pads: COMP (compressor: X=threshold, Y=ratio), DUCK (sidechain: X=depth, Y=release), RET (FX returns: X=reverb, Y=delay). Tap to toggle, drag to adjust. Right-side faders: GAIN (master volume), MKP (makeup gain), SWG (swing). VU meter shows L/R stereo peaks.',
+    },
+    {
+      title: L === 'ja' ? 'マトリクスビュー' : 'MATRIX VIEW',
+      body: L === 'ja'
+        ? 'パターンプールをグリッド表示。各セルはパターンの密度を明るさで表現し、色はパターンカラーに対応。タップでパターン選択。ダブルタップでパターンシートを開く。シーンで使用中のパターンにはマーカーが表示されます。'
+        : 'Grid overview of the pattern pool. Each cell shows pattern density as brightness, tinted with pattern color. Tap to select. Double-tap to open pattern sheet. Patterns used in the scene are marked.',
+    },
+    {
+      title: L === 'ja' ? 'シーンビュー' : 'SCENE VIEW',
+      body: L === 'ja'
+        ? 'ノードベースのグラフで曲構成を作成。パターンノードをエッジで繋いで再生順を定義します。ルートノードから再生開始、分岐はランダムに選択、接続のないノードで停止。\n\nノードタイプ: パターン (楽曲データ), Transpose (移調), Tempo (BPM変更), Repeat (繰り返し), Probability (確率), FX (エフェクト切替)。\n\n操作: ノードをドラッグで移動。エッジポートからドラッグで接続。背景を長押しでバブルメニュー (ノード/ラベル追加)。パターンノードをダブルタップでパターンシート表示。Delete で選択中のノード/エッジを削除。ピンチでズーム。'
+        : 'Node-based graph for song arrangement. Connect pattern nodes with edges to define playback order. Starts from root node, random pick at forks, stops at terminal nodes.\n\nNode types: Pattern (music data), Transpose, Tempo, Repeat, Probability, FX (effect toggle).\n\nInteractions: Drag nodes to reposition. Drag from edge ports to connect. Long-press background for bubble menu (add nodes/labels). Double-tap pattern node to open pattern sheet. Delete/Backspace removes selected node/edge. Pinch to zoom.',
+    },
+    {
+      title: L === 'ja' ? 'KEY / スケール' : 'KEY / SCALE',
+      body: L === 'ja'
+        ? 'KEYはチャーチモード (教会旋法) に基づいています。ルートノートごとにモードが固定されており、スケールモード ON 時はそのモードの音階のみ使用できます。\n\nC — Ionian (メジャー)\nD — Dorian (マイナー系、明るめ)\nE — Phrygian (マイナー系、暗め)\nF — Lydian (メジャー系、浮遊感)\nG — Mixolydian (メジャー系、ブルージー)\nA — Aeolian (ナチュラルマイナー)\nB — Locrian (ディミニッシュ)\nC#/Eb/F#/Ab/Bb — Major'
+        : 'KEY uses church modes (modal scales). Each root note has a fixed mode. With scale mode ON, only notes in that mode are available.\n\nC — Ionian (major)\nD — Dorian (minor, bright)\nE — Phrygian (minor, dark)\nF — Lydian (major, dreamy)\nG — Mixolydian (major, bluesy)\nA — Aeolian (natural minor)\nB — Locrian (diminished)\nC#/Eb/F#/Ab/Bb — Major',
+    },
+    {
+      title: L === 'ja' ? 'キーボードショートカット' : 'KEYBOARD SHORTCUTS',
+      body: L === 'ja'
+        ? 'Space — 再生/停止\nCtrl+Z — 元に戻す\nCtrl+Shift+Z — やり直し\nEscape — シートを閉じる / 選択解除\nDelete — 選択したノード/エッジを削除\n↑↓ — エッジの並べ替え (エッジ選択時)\nCtrl+C — コピー (ノード/パターン)\nCtrl+Shift+C — サブグラフコピー\nCtrl+V — ペースト'
+        : 'Space — Play/Stop\nCtrl+Z — Undo\nCtrl+Shift+Z — Redo\nEscape — Close sheet / deselect\nDelete — Remove selected node/edge\n↑↓ — Reorder edges (edge selected)\nCtrl+C — Copy (node/pattern)\nCtrl+Shift+C — Copy subgraph\nCtrl+V — Paste',
     },
   ])
 </script>
@@ -172,20 +206,33 @@
     {#if !collapsed}
       <div class="sidebar-body">
         {#if visibleMode === 'help'}
+          <div class="search-bar">
+            <input
+              class="search-input"
+              type="text"
+              placeholder={L === 'ja' ? '検索...' : 'Search...'}
+              bind:value={searchQuery}
+            />
+            {#if searchQuery}
+              <button class="search-clear" onpointerdown={() => { searchQuery = '' }}>&times;</button>
+            {/if}
+          </div>
           {#each helpSections as section, i}
+            {#if !filteredIndices || filteredIndices.includes(i)}
             <div class="help-section">
               <button
                 class="section-head"
-                class:open={openSections.has(i)}
+                class:open={filteredIndices ? true : openSections.has(i)}
                 onpointerdown={() => toggleSection(i)}
               >
-                <span class="section-arrow">{openSections.has(i) ? '▾' : '▸'}</span>
+                <span class="section-arrow">{(filteredIndices || openSections.has(i)) ? '▾' : '▸'}</span>
                 {section.title}
               </button>
-              {#if openSections.has(i)}
+              {#if filteredIndices || openSections.has(i)}
                 <div class="section-body">{section.body}</div>
               {/if}
             </div>
+            {/if}
           {/each}
         {:else}
           <div class="setting-group">
@@ -213,6 +260,20 @@
           </div>
 
           <div class="setting-group">
+            <span class="setting-label">{L === 'ja' ? 'ホバーガイド' : 'HOVER GUIDE'}</span>
+            <button
+              class="btn-toggle"
+              class:on={prefs.showGuide}
+              onpointerdown={toggleShowGuide}
+            >
+              {prefs.showGuide ? 'ON' : 'OFF'}
+            </button>
+            <p class="setting-desc">{L === 'ja'
+              ? 'UI要素にカーソルを合わせた時にガイドを表示します。'
+              : 'Show floating guide when hovering over UI elements.'}</p>
+          </div>
+
+          <div class="setting-group">
             <span class="setting-label">{L === 'ja' ? '言語' : 'LANGUAGE'}</span>
             <button
               class="btn-toggle"
@@ -228,13 +289,6 @@
           </div>
 
         {/if}
-      </div>
-    {/if}
-
-    {#if visibleMode === 'help'}
-      <div class="guide-footer" class:active={guideText}>
-        <span class="guide-label">GUIDE</span>
-        <p class="guide-text">{guideText || (L === 'ja' ? 'UI要素にカーソルを合わせると説明が表示されます' : 'Hover over any element to see its description')}</p>
       </div>
     {/if}
 
@@ -260,6 +314,13 @@
         {/if}
       </div>
     {/if}
+  </div>
+{/if}
+
+{#if guideText && prefs.showGuide}
+  <div class="guide-float" class:shifted={visibleMode && !collapsed}>
+    <span class="guide-label">GUIDE</span>
+    <p class="guide-text">{guideText}</p>
   </div>
 {/if}
 
@@ -367,30 +428,48 @@
     padding: 8px 0;
   }
 
-  .guide-footer {
-    flex-shrink: 0;
-    padding: 10px 12px;
-    border-top: 1px solid rgba(237,232,220,0.08);
-    min-height: 52px;
+  /* ── Floating guide bar ── */
+  :global(.guide-float) {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 480px;
+    width: calc(100% - 32px);
+    background: rgba(30,32,40,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(237,232,220,0.1);
+    border-radius: 6px;
+    padding: 6px 12px;
+    z-index: 120;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    animation: guide-in 80ms ease-out;
+    pointer-events: none;
+    transition: right 100ms;
   }
-  .guide-label {
-    font-size: 8px;
+  :global(.guide-float.shifted) {
+    left: auto;
+    right: 296px;
+    transform: none;
+  }
+  @keyframes guide-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  :global(.guide-float) .guide-label {
+    font-size: 7px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.25);
-    text-transform: uppercase;
-  }
-  .guide-footer.active .guide-label {
     color: var(--color-olive);
+    text-transform: uppercase;
+    flex-shrink: 0;
   }
-  .guide-text {
-    font-size: 11px;
-    line-height: 1.5;
-    color: rgba(237,232,220,0.35);
-    margin: 4px 0 0;
-    transition: color 120ms;
-  }
-  .guide-footer.active .guide-text {
+  :global(.guide-float) .guide-text {
+    font-size: 10px;
+    line-height: 1.4;
     color: rgba(237,232,220,0.7);
+    margin: 0;
   }
 
   .sidebar-footer {
@@ -398,6 +477,41 @@
     padding: 12px 16px;
     border-top: 1px solid rgba(237,232,220,0.08);
     margin-top: auto;
+  }
+
+  /* ── Search ── */
+  .search-bar {
+    position: relative;
+    padding: 6px 12px 4px;
+  }
+  .search-input {
+    width: 100%;
+    background: rgba(237,232,220,0.06);
+    border: 1px solid rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.8);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    padding: 6px 28px 6px 8px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .search-input::placeholder {
+    color: rgba(237,232,220,0.25);
+  }
+  .search-input:focus {
+    border-color: rgba(237,232,220,0.3);
+  }
+  .search-clear {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(237,232,220,0.4);
+    font-size: 14px;
+    padding: 0 4px;
+    cursor: pointer;
   }
 
   /* ── Collapsible sections ── */
@@ -528,8 +642,14 @@
     .sidebar.collapsed {
       top: auto;
     }
-    .guide-footer {
-      display: none;
+    :global(.guide-float) {
+      max-width: calc(100% - 16px);
+      width: auto;
+    }
+    :global(.guide-float.shifted) {
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
     }
   }
 </style>
