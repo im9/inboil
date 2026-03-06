@@ -53,6 +53,12 @@ export const DEFAULT_EFFECTS = {
   comp:   { threshold: 0.30, ratio: 6, makeup: 2.2 },
 }
 
+export const DEFAULT_MASTER_PAD = {
+  comp: { on: true, x: 0.22, y: 0.26 },   // x=threshold(0.1–1.0), y=ratio(1–20)
+  duck: { on: true, x: 0.85, y: 0.21 },   // x=depth(0–1), y=release(20–500ms)
+  ret:  { on: true, x: 0.50, y: 0.50 },   // x=verbReturn(0–2), y=dlyReturn(0–2)
+}
+
 export const DEFAULT_FX_PAD = {
   verb:     { on: false, x: 0.25, y: 0.65 },
   delay:    { on: false, x: 0.70, y: 0.40 },

@@ -10,6 +10,7 @@
   import SceneView from './lib/components/SceneView.svelte'
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
+  import MasterView from './lib/components/MasterView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo } from './lib/state.svelte.ts'
@@ -158,7 +159,7 @@
     ui.phraseView = 'pattern'
   }
 
-  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq')
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
 
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
@@ -183,7 +184,7 @@
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <SceneView onplay={play} onstop={stop} />
       <!-- Overlay sheets (mobile) -->
-      {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq'}
+      {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
@@ -193,6 +194,8 @@
             <FxPad />
           {:else if ui.phraseView === 'eq'}
             <FilterView />
+          {:else if ui.phraseView === 'master'}
+            <MasterView />
           {:else if prefs.patternEditor === 'tracker'}
             <TrackerView />
           {:else}
@@ -214,7 +217,7 @@
         <div class="view-main">
           <SceneView onplay={play} onstop={stop} />
           <!-- Overlay sheets (desktop) -->
-          {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq'}
+          {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
@@ -224,6 +227,8 @@
                 <FxPad />
               {:else if ui.phraseView === 'eq'}
                 <FilterView />
+              {:else if ui.phraseView === 'master'}
+                <MasterView />
               {:else if prefs.patternEditor === 'tracker'}
                 <TrackerView />
               {:else}

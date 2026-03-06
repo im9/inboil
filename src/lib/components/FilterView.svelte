@@ -171,20 +171,20 @@
 
       float lit = step(rowNorm, amplitude);
       float peakDist = amplitude - rowNorm;
-      float brightness = lit * (0.4 + 0.6 * smoothstep(0.0, 0.15, peakDist));
+      float brightness = lit * (0.25 + 0.35 * smoothstep(0.0, 0.15, peakDist));
 
       float baseRadius = DOT_SPACING * 0.35;
-      float radius = baseRadius + lit * baseRadius * 0.5 * smoothstep(0.0, 0.1, peakDist);
+      float radius = baseRadius + lit * baseRadius * 0.4 * smoothstep(0.0, 0.1, peakDist);
 
       float dist = length(cellFrac);
       float dot = 1.0 - smoothstep(radius - 0.04, radius + 0.04, dist);
 
-      float dimDot = (1.0 - lit) * 0.06 * (1.0 - smoothstep(baseRadius - 0.02, baseRadius + 0.02, dist));
+      float dimDot = (1.0 - lit) * 0.04 * (1.0 - smoothstep(baseRadius - 0.02, baseRadius + 0.02, dist));
 
       vec3 color = freqCol(colNorm);
 
       float glowRadius = radius * 2.5;
-      float glow = lit * 0.15 * smoothstep(0.0, 0.1, peakDist)
+      float glow = lit * 0.08 * smoothstep(0.0, 0.1, peakDist)
                  * (1.0 - smoothstep(radius, glowRadius, dist));
 
       fragColor = vec4(COL_BG + color * brightness * dot + color * dimDot + color * glow, 1.0);

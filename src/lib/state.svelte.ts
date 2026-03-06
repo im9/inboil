@@ -2,7 +2,7 @@
 import {
   SCALE_DEGREES_SET,
   PIANO_ROLL_MIN, PIANO_ROLL_MAX,
-  DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_PERF,
+  DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
 } from './constants.ts'
 import {
   DRUM_SYNTHS, makeTrig, makeDefaultSong, makeEmptyCell,
@@ -312,7 +312,7 @@ export const ui = $state<{
   selectedTrack: number
   currentSection: number
   currentPattern: number
-  phraseView: 'pattern' | 'scene' | 'fx' | 'eq'
+  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master'
   viewFocus: 'pattern' | 'scene'
   patternSheet: boolean
   patternSheetOrigin: { x: number; y: number } | null
@@ -519,6 +519,14 @@ export const fxPad = $state({
   eqHigh:   { ...DEFAULT_FX_PAD.eqHigh },
 })
 
+export const masterPad = $state({
+  comp: { ...DEFAULT_MASTER_PAD.comp },
+  duck: { ...DEFAULT_MASTER_PAD.duck },
+  ret:  { ...DEFAULT_MASTER_PAD.ret },
+})
+
+export const masterLevels = $state({ peakL: 0, peakR: 0 })
+
 export const vkbd = $state({
   enabled: false,
   octave: 4,
@@ -707,6 +715,10 @@ export function factoryReset(): void {
   fxPad.eqLow = { ...DEFAULT_FX_PAD.eqLow }
   fxPad.eqMid = { ...DEFAULT_FX_PAD.eqMid }
   fxPad.eqHigh = { ...DEFAULT_FX_PAD.eqHigh }
+  // Reset master pad
+  masterPad.comp = { ...DEFAULT_MASTER_PAD.comp }
+  masterPad.duck = { ...DEFAULT_MASTER_PAD.duck }
+  masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret }
   // Reset playback
   playback.currentSection = 0
   playback.repeatCount = 0

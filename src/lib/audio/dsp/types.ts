@@ -20,6 +20,8 @@ export interface WorkletPattern {
     delay:   { time: number; feedback: number }
     ducker:  { depth: number; release: number }
     comp:    { threshold: number; ratio: number; makeup: number }
+    verbReturn: number
+    dlyReturn:  number
     filter:  { on: boolean; x: number; y: number }
     eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }
   }
@@ -60,6 +62,6 @@ export interface WorkletTrig {
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
-export interface WorkletEvent {
-  type: 'step'; playheads: number[]; cycle: boolean
-}
+export type WorkletEvent =
+  | { type: 'step'; playheads: number[]; cycle: boolean }
+  | { type: 'levels'; peakL: number; peakR: number }

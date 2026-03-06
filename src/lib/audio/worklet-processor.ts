@@ -155,6 +155,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private compThreshold  = 0.30
   private compRatio      = 6
   private compMakeup     = 2.2
+  private verbReturn     = 1.0
+  private dlyReturn      = 1.0
 
   // Performance
   private rootNote       = 0
@@ -198,6 +200,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private granular       = new GranularProcessor(sampleRate)
   // DJ Filter (XY pad sweep)
   private djFilter       = new DJFilter(sampleRate)
+  // Peak metering (~60fps)
+  private meterPeakL     = 0
+  private meterPeakR     = 0
+  private meterCount     = 0
+  private meterInterval  = Math.round(sampleRate / 60)
 
   constructor(opts?: AudioWorkletNodeOptions) {
     super(opts)
@@ -285,6 +292,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.compThreshold = p.fx.comp.threshold
           this.compRatio     = p.fx.comp.ratio
           this.compMakeup    = p.fx.comp.makeup
+          this.verbReturn    = p.fx.verbReturn ?? 1.0
+          this.dlyReturn     = p.fx.dlyReturn  ?? 1.0
           this.pendingRootNote  = p.perf.rootNote
           this.pendingOctave    = p.perf.octave
           this.pendingBreaking  = p.perf.breaking
@@ -553,8 +562,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // Sidechain: duck rest + FX returns; kick punches through untouched
       const duck = this.ducker.tick()
-      const mixL = kickDry + (restL + rev[0] + del[0] + grn[0] + gltL) * duck
-      const mixR = kickDry + (restR + rev[1] + del[1] + grn[1] + gltR) * duck
+      const mixL = kickDry + (restL + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
+      const mixR = kickDry + (restR + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
 
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
@@ -584,6 +593,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       const lim = this.limiter.process(fL, fR)
       outL[s] = lim[0]
       if (outR) outR[s] = lim[1]
+
+      // Peak metering
+      const absL = Math.abs(lim[0])
+      const absR = Math.abs(lim[1])
+      if (absL > this.meterPeakL) this.meterPeakL = absL
+      if (absR > this.meterPeakR) this.meterPeakR = absR
+    }
+
+    this.meterCount += outL.length
+    if (this.meterCount >= this.meterInterval) {
+      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR })
+      this.meterPeakL = 0
+      this.meterPeakR = 0
+      this.meterCount -= this.meterInterval
     }
 
     return true

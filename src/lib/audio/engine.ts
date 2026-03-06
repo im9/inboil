@@ -3,7 +3,7 @@
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Song, Effects } from '../state.svelte.ts'
-import { ui } from '../state.svelte.ts'
+import { ui, masterPad, masterLevels } from '../state.svelte.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 
 type PerfState = {
@@ -46,6 +46,7 @@ export class GrooveboxEngine {
     this.analyser.connect(this.ctx.destination)
     this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
       if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
+      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR }
     }
   }
 
@@ -120,13 +121,20 @@ function buildWorkletPattern(
   const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
 
+  // Master pad → comp/ducker/return (denormalize from 0–1)
+  const mc = masterPad.comp
+  const md = masterPad.duck
+  const mr = masterPad.ret
+
   return {
     bpm: s.bpm,
     fx:  {
       reverb: { size: reverbSize, damp: reverbDamp },
       delay:  { time: (60000 / s.bpm) * delayTimeFrac, feedback: delayFb },
-      ducker: { ...fx.ducker },
-      comp:   { ...fx.comp },
+      ducker: md.on ? { depth: md.x, release: 20 + md.y * 480 } : fx.ducker,
+      comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup } : fx.comp,
+      verbReturn: mr.on ? mr.x * 2.0 : 1.0,
+      dlyReturn:  mr.on ? mr.y * 2.0 : 1.0,
       filter: {
         on: fxPad?.filter.on ?? false,
         x:  fxPad?.filter.x  ?? 0.5,

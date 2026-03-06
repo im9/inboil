@@ -193,18 +193,6 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- Ducker + Comp -->
-  <div class="perf-group dyn-group">
-    <span data-tip="Sidechain ducker depth" data-tip-ja="サイドチェインダッカーの深さ">
-    <Knob value={effects.ducker.depth} label="DUC" size={36} onchange={v => { effects.ducker.depth = v }} />
-    </span>
-    <span data-tip="Compressor makeup gain" data-tip-ja="コンプレッサーのメイクアップゲイン">
-    <Knob value={(effects.comp.makeup - 1.0) / 2.5} label="CMP" size={36} onchange={v => { effects.comp.makeup = 1.0 + v * 2.5 }} />
-    </span>
-  </div>
-
-  <div class="sep" aria-hidden="true"></div>
-
   <!-- Master gain + Swing -->
   <span class="gain-wrap">
     <span data-tip="Master output volume" data-tip-ja="マスター出力音量">
@@ -231,6 +219,12 @@
       onpointerdown={() => { ui.phraseView = ui.phraseView === 'eq' ? 'pattern' : 'eq'; ui.patternSheet = false }}
       data-tip="EQ / Filter view" data-tip-ja="EQ / フィルター画面"
     >EQ</button>
+    <button
+      class="btn-view"
+      class:active={ui.phraseView === 'master'}
+      onpointerdown={() => { ui.phraseView = ui.phraseView === 'master' ? 'pattern' : 'master'; ui.patternSheet = false }}
+      data-tip="Master bus — compressor, ducker, FX returns" data-tip-ja="マスターバス — コンプ、ダッカー、FXリターン"
+    >MST</button>
   </div>
 
   <div class="sep" aria-hidden="true"></div>
@@ -379,11 +373,6 @@
     50%      { opacity: 0.3; }
   }
 
-  /* ── Dynamics (ducker + comp) ── */
-  .dyn-group {
-    gap: 10px;
-  }
-
   /* ── Separator ── */
   .sep {
     width: 1px;
@@ -396,7 +385,7 @@
   .view-toggle {
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: 4px;
   }
 
   .btn-view {
@@ -464,14 +453,6 @@
     .group-label { display: none; }
 
     /* Show MSTR knobs on mobile, scaled down, right-aligned */
-    .dyn-group {
-      display: flex;
-      gap: 2px;
-      order: 10;
-      margin-left: auto;
-      padding-left: 4px;
-      border-left: 1px solid rgba(237,232,220,0.12);
-    }
     .gain-wrap {
       display: flex;
       gap: 2px;
@@ -480,7 +461,6 @@
       padding-right: 6px;
       border-left: 1px solid rgba(237,232,220,0.12);
     }
-    .dyn-group :global(.knob-wrap),
     .gain-wrap :global(.knob-wrap) {
       transform: scale(0.72);
       margin: -5px -4px;
