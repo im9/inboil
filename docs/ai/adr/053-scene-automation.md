@@ -8,53 +8,53 @@
 
 ## Context
 
-DAW では「オートメーション」が標準機能として存在する。パラメータ（ボリューム、フィルターカットオフ、エフェクト量など）を時間経過に沿って動的に変化させることで、静的なパターンの繰り返しに表現力を与える。
+Automation is a standard DAW feature. It adds expressiveness to static pattern loops by dynamically changing parameters (volume, filter cutoff, effect amounts, etc.) over time.
 
-現在の inboil のシーングラフでは、function ノード（transpose, tempo, repeat, probability, fx）はパターン再生の *前* にパラメータを一度だけセットする。パターン再生 *中* にパラメータを連続的に変化させる手段がない。
+In the current inboil scene graph, function nodes (transpose, tempo, repeat, probability, fx) set parameters once *before* a pattern plays. There is no way to continuously vary parameters *during* pattern playback.
 
-### ユースケース
+### Use Cases
 
-- パターンの再生中にテンポを徐々に上げる（accelerando）
-- フィルターカットオフを 4 小節かけて開く
-- リバーブの wet 量をフェードイン
-- パターンの音量をフェードアウト
+- Gradually increase tempo during a pattern (accelerando)
+- Open a filter cutoff over 4 bars
+- Fade in reverb wet amount
+- Fade out pattern volume
 
 ## Decision
 
-### 1. 新しい function node タイプ: `automation`
+### 1. New Function Node Type: `automation`
 
 ```typescript
 type: 'automation'
 params: {
   target: number    // 0=tempo, 1=volume, 2=filterCutoff, 3=reverbWet, 4=delayWet
-  startVal: number  // 正規化値 0.0–1.0
-  endVal: number    // 正規化値 0.0–1.0
+  startVal: number  // normalized 0.0–1.0
+  endVal: number    // normalized 0.0–1.0
   curve: number     // 0=linear, 1=ease-in, 2=ease-out, 3=s-curve
 }
 ```
 
-`SceneNode.type` union に `'automation'` を追加:
+Add `'automation'` to the `SceneNode.type` union:
 
 ```typescript
 type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
 ```
 
-### 2. 動作モデル
+### 2. Behavior Model
 
-Automation ノードは function ノードと同じくエッジでグラフに接続する。**接続先のパターンノードの再生中に**パラメータを連続変化させる:
+Automation nodes connect to the graph via edges, like other function nodes. They **continuously vary a parameter during the connected pattern's playback**:
 
 ```
 [INTRO] ──→ [automation: tempo 80→120] ──→ [BUILDUP]
-                                             ↑ この再生中に tempo が 80→120 に変化
+                                             ↑ tempo changes 80→120 during this pattern's playback
 ```
 
-- Automation ノードから出るエッジの先がパターンノードの場合、そのパターンの再生ステップに同期して値を補間
-- 複数の automation ノードが同じパターンに接続可能（異なる target）
-- 同じ target の automation が複数ある場合は最後に接続されたものが優先
+- When an automation node's outgoing edge leads to a pattern node, values are interpolated in sync with that pattern's playback steps
+- Multiple automation nodes can connect to the same pattern (different targets)
+- If multiple automations target the same parameter, the last connected one takes priority
 
-### 3. 補間
+### 3. Interpolation
 
-パターンの再生進行率 `t = currentStep / totalSteps` (0.0–1.0) を使って補間:
+Interpolate using the pattern's playback progress `t = currentStep / totalSteps` (0.0–1.0):
 
 ```typescript
 function interpolate(t: number, start: number, end: number, curve: number): number {
@@ -69,15 +69,15 @@ function interpolate(t: number, start: number, end: number, curve: number): numb
 }
 ```
 
-### 4. シーングラフ走査への統合
+### 4. Scene Graph Traversal Integration
 
-`walkToNode()` の走査時:
-1. 次のパターンノードに到達する前に、経路上の automation ノードを収集
-2. パターン再生開始時に、収集した automation 情報を `playback` state に格納
-3. AudioWorklet の playhead 進行に合わせて、メインスレッドで補間値を計算し DSP パラメータを更新
+During `walkToNode()` traversal:
+1. Collect automation nodes along the path before reaching the next pattern node
+2. Store collected automation info in `playback` state when pattern playback starts
+3. As the AudioWorklet playhead advances, compute interpolated values on the main thread and update DSP parameters
 
 ```typescript
-// playback state に追加
+// Addition to playback state
 activeAutomations: Array<{
   target: number
   startVal: number
@@ -88,20 +88,20 @@ activeAutomations: Array<{
 
 ### 5. UI
 
-#### ノード表示
+#### Node Display
 
 ```
 ┌────────┐
-│ ⤯ A→B  │  ← automation icon + start→end 表記
+│ ⤯ A→B  │  ← automation icon + start→end notation
 └────────┘
  tempo 80→120  ← label (target name + denormalized values)
 ```
 
-- アイコン: 右上がりの曲線（⤯ 的な SVG）
-- ノード形状: 他の function ノードと同じ rounded rect
-- BubbleMenu に追加
+- Icon: Rising curve SVG (similar to ⤯)
+- Node shape: Same rounded rect as other function nodes
+- Added to BubbleMenu
 
-#### パラメータ編集（DockPanel）
+#### Parameter Editing (DockPanel)
 
 ```
 ┌──────────────────────────┐
@@ -121,18 +121,18 @@ activeAutomations: Array<{
 └──────────────────────────┘
 ```
 
-#### Canvas 描画（再生中）
+#### Canvas Drawing (During Playback)
 
-再生中のパターンに接続された automation がある場合、ノード下部にミニカーブを描画し、現在位置をドットで示す:
+When an active pattern has connected automation nodes, draw a mini-curve below the node with a dot indicating the current position:
 
 ```
 ┌──────────┐
 │ BUILDUP  │
 └──────────┘
- ╱‾‾● ← 現在位置
+ ╱‾‾● ← current position
 ```
 
-### 6. Target パラメータ一覧
+### 6. Target Parameters
 
 | target | Name | Range (denormalized) | DSP parameter |
 |--------|------|---------------------|---------------|
@@ -145,45 +145,45 @@ activeAutomations: Array<{
 ## Implementation Phases
 
 ### Phase 1: Data model + node type
-1. `SceneNode.type` に `'automation'` 追加
-2. `sceneAddFunctionNode` で automation 対応
-3. BubbleMenu に automation アイコン追加
-4. ノード表示（SVG アイコン + ラベル）
+1. Add `'automation'` to `SceneNode.type`
+2. Support automation in `sceneAddFunctionNode`
+3. Add automation icon to BubbleMenu
+4. Node display (SVG icon + label)
 
 ### Phase 2: Param editing UI
-1. DockPanel に automation パラメータ編集 UI
-2. Target セレクター、start/end スライダー、curve セレクター
-3. カーブプレビュー描画
+1. Automation parameter editing UI in DockPanel
+2. Target selector, start/end sliders, curve selector
+3. Curve preview drawing
 
 ### Phase 3: Playback integration
-1. `walkToNode()` で automation ノードを収集
-2. `playback` state に `activeAutomations` 追加
-3. 再生ループ内で補間値を計算・適用
-4. AudioWorklet への tempo 変更通知
+1. Collect automation nodes in `walkToNode()`
+2. Add `activeAutomations` to `playback` state
+3. Compute and apply interpolated values in the playback loop
+4. Notify AudioWorklet of tempo changes
 
 ### Phase 4: Visual feedback
-1. 再生中のミニカーブ + 現在位置ドット（Canvas 描画）
-2. Automation エッジのアニメーション
+1. Mini-curve + current position dot during playback (canvas drawing)
+2. Automation edge animation
 
 ## Considerations
 
-- **スコープの大きさ**: この機能は 4 フェーズに分かれており、特に Phase 3（再生統合）は AudioWorklet との連携が必要。段階的に進めること
-- **Tempo 変更のリアルタイム性**: BPM を再生中に変更する場合、AudioWorklet の `interval` を動的に更新する必要がある。現状の `setTempo()` メッセージで対応可能
-- **パラメータの正規化**: すべての automation 値は 0.0–1.0 で保持し、target ごとにデノーマライズ。これは既存のパラメータ設計方針（CLAUDE.md）と一致
-- **サイクル検出**: Automation ノードが自身を含むサイクルに接続された場合の挙動。既存のグラフ走査がサイクルを検出するのでそのまま利用
-- **将来の拡張**: LFO（周期的変調）やステップオートメーション（離散値変化）は別の node type として追加可能
+- **Scope**: This feature spans 4 phases. Phase 3 (playback integration) requires AudioWorklet coordination. Implement incrementally
+- **Real-time tempo changes**: Changing BPM during playback requires dynamically updating the AudioWorklet's `interval`. The existing `setTempo()` message handles this
+- **Parameter normalization**: All automation values are stored as 0.0–1.0 and denormalized per target. This aligns with the existing parameter design convention (CLAUDE.md)
+- **Cycle detection**: If an automation node is connected in a cycle, the existing graph traversal cycle detection handles it
+- **Future extensions**: LFO (periodic modulation) and step automation (discrete value changes) can be added as separate node types
 
 ## Future Extensions
 
-- **LFO node**: 周期的にパラメータを変調（sine, triangle, square, random）
-- **Envelope node**: ADSR エンベロープでパラメータを制御
-- **Custom curve editor**: ベジエカーブで任意のオートメーション形状を描く
-- **Per-track automation**: トラック（instrument）ごとに個別のパラメータを自動化
+- **LFO node**: Periodic parameter modulation (sine, triangle, square, random)
+- **Envelope node**: ADSR envelope for parameter control
+- **Custom curve editor**: Draw arbitrary automation shapes with bezier curves
+- **Per-track automation**: Automate parameters independently per track (instrument)
 
 ## Extends
 
 | ADR | Impact |
 |-----|--------|
-| 044 (Scene Graph) | `SceneNode.type` に `'automation'` 追加 |
-| 050 (Scene Function Nodes) | 6番目の function node。BubbleMenu + DockPanel 拡張 |
-| 048 (Scene Playback) | `walkToNode()` 拡張、`playback` state に automation 情報追加 |
+| 044 (Scene Graph) | Add `'automation'` to `SceneNode.type` |
+| 050 (Scene Function Nodes) | 6th function node. BubbleMenu + DockPanel extension |
+| 048 (Scene Playback) | Extend `walkToNode()`, add automation info to `playback` state |

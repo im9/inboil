@@ -8,18 +8,18 @@
 
 ## Context
 
-シーングラフが複雑になると、ノードの集合が何を意味するのかが分かりづらくなる。例えば「intro / verse / chorus」のようなセクション構造のメモや、設計意図をキャンバスに書き残したい。
+As scene graphs grow complex, it becomes hard to understand what groups of nodes represent. Users want to annotate sections (e.g. "intro / verse / chorus") or leave design notes directly on the canvas.
 
-### 検討した代替案
+### Alternatives Considered
 
-- **A: ノード紐付きラベル** — `SceneNode.label` フィールドを追加し、各ノードの下にテキスト表示
-  - デメリット: パターンノードのダブルタップ（パターン遷移）と編集 UI が競合
-- **B: フリーラベル（採用）** — ノードとは独立したテキスト要素をキャンバス上の任意の位置に配置
-  - メリット: ノードに依存せず自由に配置・リサイズ可能、付箋感覚で使える
+- **A: Node-attached labels** — Add a `SceneNode.label` field and display text below each node
+  - Downside: Conflicts with pattern node double-tap (pattern transition) and editing UI
+- **B: Free-floating labels (adopted)** — Independent text elements placed at arbitrary positions on the canvas
+  - Upside: No node dependency, freely positionable/resizable, sticky-note feel
 
 ## Decision
 
-### 1. `SceneLabel` インターフェース
+### 1. `SceneLabel` Interface
 
 ```typescript
 export interface SceneLabel {
@@ -37,24 +37,24 @@ export interface Scene {
 }
 ```
 
-### 2. State functions
+### 2. State Functions
 
-- `sceneAddLabel(x, y, text?)` — ラベル追加（spread 代入で Svelte 5 反応性を確保）
-- `sceneUpdateLabel(id, text)` — テキスト更新
-- `sceneDeleteLabel(id)` — 削除
-- `sceneMoveLabel(id, x, y)` — ドラッグ移動
-- `sceneResizeLabel(id, delta)` — サイズ変更
+- `sceneAddLabel(x, y, text?)` — Add label (spread assignment for Svelte 5 reactivity)
+- `sceneUpdateLabel(id, text)` — Update text
+- `sceneDeleteLabel(id)` — Delete
+- `sceneMoveLabel(id, x, y)` — Drag move
+- `sceneResizeLabel(id, delta)` — Resize
 
 ### 3. UI
 
-- **作成**: バブルメニューの「T」アイコンから。作成直後に入力モード（`requestAnimationFrame` で遅延セット）
-- **表示**: DOM `<span>` 要素、`position: absolute` + `transform: translate(-50%, -50%)`
-- **編集**: ダブルタップでインライン `<input>` に切替。Enter/blur で確定、Escape でキャンセル
-- **移動**: ドラッグ（pointer capture）
-- **リサイズ**: 選択時に右上のハンドルを上下ドラッグ
-- **削除**: 選択して Delete キー、または空テキストで blur 時に自動削除しない（明示削除のみ）
+- **Creation**: Via "T" icon in bubble menu. Enters input mode immediately after creation (`requestAnimationFrame` deferred set)
+- **Display**: DOM `<span>` element, `position: absolute` + `transform: translate(-50%, -50%)`
+- **Editing**: Double-tap switches to inline `<input>`. Enter/blur to confirm, Escape to cancel
+- **Moving**: Drag (pointer capture)
+- **Resizing**: Drag the top-right handle up/down when selected
+- **Deletion**: Delete key when selected, or explicit delete only (empty text does NOT auto-delete on blur)
 
-### 4. 表示スタイル
+### 4. Display Style
 
 ```
   ┌──────────┐
@@ -64,17 +64,17 @@ export interface Scene {
 ```
 
 - Font: `var(--font-data)`, `10px * size`
-- Color: `rgba(30, 32, 40, 0.35)`, hover で 0.6、selected で 0.7 + outline
-- 空テキストは `…` を表示
+- Color: `rgba(30, 32, 40, 0.35)`, hover 0.6, selected 0.7 + outline
+- Empty text displays `…`
 
 ## Considerations
 
-- **Svelte 5 反応性**: `labels` 配列は `.push()` ではなくスプレッド代入 `[...arr, item]` で更新。ロード時に `labels` が存在しない場合に備えて `?? []` でガード
-- **バブルメニュー閉じとフォーカス競合**: `editingLabelId` を `requestAnimationFrame` で遅延セットすることで、バブルメニュー閉じ時の blur → 即削除を回避
+- **Svelte 5 reactivity**: The `labels` array is updated via spread assignment `[...arr, item]`, not `.push()`. Guard with `?? []` for scenes loaded without `labels`
+- **Bubble menu close vs focus conflict**: `editingLabelId` is set via `requestAnimationFrame` to prevent blur → immediate deletion race when the bubble menu closes
 
 ## Extends
 
 | ADR | Impact |
 |-----|--------|
-| 044 (Scene Graph) | `Scene` に `labels` 配列追加。グラフ走査・再生には影響なし |
-| 050 (Scene Function Nodes) | バブルメニューに label 項目追加 |
+| 044 (Scene Graph) | Adds `labels` array to `Scene`. No impact on graph traversal or playback |
+| 050 (Scene Function Nodes) | Adds label item to bubble menu |
