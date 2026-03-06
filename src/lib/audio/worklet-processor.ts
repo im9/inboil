@@ -265,8 +265,17 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.currentThreshold = this.swingPhase === 0
             ? (1 - this.swing) * 2 * this.samplesPerStep
             : this.swing * 2 * this.samplesPerStep
-          if (this.voices.length !== p.tracks.length)
+          if (this.voices.length !== p.tracks.length) {
             this.voices = p.tracks.map((t, i) => makeVoice(i, t.voiceId, sampleRate))
+          } else {
+            // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
+            for (let i = 0; i < p.tracks.length; i++) {
+              const prev = this.tracks[i]
+              if (prev && prev.voiceId !== p.tracks[i].voiceId) {
+                this.voices[i] = makeVoice(i, p.tracks[i].voiceId, sampleRate)
+              }
+            }
+          }
           for (let i = 0; i < p.tracks.length; i++) {
             const vp = p.tracks[i].voiceParams
             if (vp && this.voices[i]) {
