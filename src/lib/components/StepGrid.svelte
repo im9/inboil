@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
+  import { onDestroy, tick } from 'svelte'
+  import { slide } from 'svelte/transition'
   import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
 
@@ -50,6 +51,14 @@
   function velEndDrag() {
     velDragging = false
   }
+
+  // ── Vel-bar mount animation (one-shot) ──
+  let velMounting = $state(true)
+  $effect(() => {
+    velMounting = true
+    void ui.selectedTrack  // re-trigger on track change
+    tick().then(() => { velMounting = false })
+  })
 
   // ── Vel-fill grow/shrink animation on trig toggle ──
   let growing: Set<string> = $state(new Set())
@@ -222,6 +231,7 @@
         onpointermove={velOnMove}
         onpointerup={velEndDrag}
         onpointercancel={velEndDrag}
+        transition:slide={{ duration: 120 }}
       >
         <div class="track-head">
           <div class="vel-label">
@@ -232,7 +242,7 @@
             >{chanceMode ? 'CHNC' : 'VEL'}</span>
           </div>
         </div>
-        <div class="vel-bars" class:chance-mode={chanceMode} style="--steps: {ph.steps}"
+        <div class="vel-bars" class:chance-mode={chanceMode} class:mounting={velMounting} style="--steps: {ph.steps}"
           data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
         >
@@ -262,7 +272,9 @@
       </div>
       <!-- Inline piano roll for melodic tracks -->
       {#if !isDrum(track)}
-        <PianoRoll trackId={trackId} />
+        <div transition:slide={{ duration: 120 }}>
+          <PianoRoll trackId={trackId} />
+        </div>
       {/if}
     {/if}
   {/each}
@@ -461,20 +473,7 @@
     user-select: none;
     border-left: 3px solid var(--color-olive);
     padding-left: 5px;
-    animation: vel-expand 180ms ease-out;
-    transform-origin: bottom;
     overflow: hidden;
-  }
-
-  @keyframes vel-expand {
-    from {
-      height: 0;
-      opacity: 0;
-    }
-    to {
-      height: 40px;
-      opacity: 1;
-    }
   }
   .vel-label {
     margin-left: auto;
@@ -547,6 +546,9 @@
   .vel-fill.active {
     background: var(--color-olive);
     opacity: 0.7;
+  }
+  .vel-bars.mounting .vel-fill.active {
+    animation: vel-bar-grow 180ms ease-out;
   }
   .vel-fill.growing {
     animation: vel-bar-grow 180ms ease-out;

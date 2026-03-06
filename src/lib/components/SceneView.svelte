@@ -228,8 +228,17 @@
       // Double-click detection
       const now = Date.now()
       if (lastTapNode === nodeId && now - lastTapTime < 300) {
-        // Double-click → set root
-        sceneSetRoot(nodeId)
+        // Double-click on pattern node → open pattern sheet
+        const dblNode = song.scene.nodes.find(n => n.id === nodeId)
+        if (dblNode?.type === 'pattern' && dblNode.patternId) {
+          const pi = song.patterns.findIndex(p => p.id === dblNode.patternId)
+          if (pi >= 0) selectPattern(pi)
+          ui.patternSheetOrigin = { x: e.clientX, y: e.clientY }
+          ui.patternSheet = true
+        } else {
+          // Double-click on function node → set root
+          sceneSetRoot(nodeId)
+        }
         lastTapTime = 0
         lastTapNode = ''
       } else {
@@ -339,7 +348,7 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if (ui.phraseView !== 'scene') return
+    if (ui.patternSheet) return
     if (e.target instanceof HTMLInputElement) return
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()

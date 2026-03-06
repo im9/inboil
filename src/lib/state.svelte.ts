@@ -313,6 +313,9 @@ export const ui = $state<{
   currentSection: number
   currentPattern: number
   phraseView: 'pattern' | 'scene' | 'fx' | 'eq'
+  viewFocus: 'pattern' | 'scene'
+  patternSheet: boolean
+  patternSheetOrigin: { x: number; y: number } | null
   selectedSceneNode: string | null
   selectedSceneEdge: string | null
   selectedSceneLabel: string | null
@@ -327,6 +330,9 @@ export const ui = $state<{
   currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
   phraseView: 'pattern',
+  viewFocus: 'pattern',
+  patternSheet: false,
+  patternSheetOrigin: null,
   selectedSceneNode: null,
   selectedSceneEdge: null,
   selectedSceneLabel: null,
@@ -674,6 +680,9 @@ export function factoryReset(): void {
   ui.currentSection = 0
   ui.currentPattern = 0
   ui.phraseView = 'pattern'
+  ui.viewFocus = 'pattern'
+  ui.patternSheet = false
+  ui.patternSheetOrigin = null
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null

@@ -14,6 +14,7 @@
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
+  import { fade, fly } from 'svelte/transition'
 
   // ── Responsive ────────────────────────────────────────────────────
   let windowWidth = $state(window.innerWidth)
@@ -107,8 +108,8 @@
       playback.playing = true
       return
     }
-    // ADR 045: auto-engage scene mode only when in scene view
-    if (ui.phraseView === 'scene' && (hasScenePlayback() || hasArrangement())) {
+    // ADR 045: auto-engage scene mode — only when no sheet is covering the scene
+    if (!hasSheet && (hasScenePlayback() || hasArrangement())) {
       playback.mode = 'scene'
     }
     if (playback.mode === 'scene' && hasScenePlayback()) {
@@ -152,8 +153,16 @@
     playback.playingPattern = null
   }
 
+  function closeAllSheets() {
+    ui.patternSheet = false
+    ui.phraseView = 'pattern'
+  }
+
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq')
+
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
+    if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return }
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
@@ -172,16 +181,23 @@
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      {#if ui.phraseView === 'scene'}
-        <SceneView onplay={play} onstop={stop} />
-      {:else if ui.phraseView === 'fx'}
-        <FxPad />
-      {:else if ui.phraseView === 'eq'}
-        <FilterView />
-      {:else if prefs.patternEditor === 'tracker'}
-        <TrackerView />
-      {:else}
-        <MobileTrackView />
+      <SceneView onplay={play} onstop={stop} />
+      <!-- Overlay sheets (mobile) -->
+      {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq'}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+        <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
+          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
+          {#if ui.phraseView === 'fx'}
+            <FxPad />
+          {:else if ui.phraseView === 'eq'}
+            <FilterView />
+          {:else if prefs.patternEditor === 'tracker'}
+            <TrackerView />
+          {:else}
+            <MobileTrackView />
+          {/if}
+        </div>
       {/if}
       <Sidebar />
     </div>
@@ -194,20 +210,25 @@
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <div class="view-content-row">
-        {#if ui.phraseView === 'pattern' || ui.phraseView === 'scene'}
-          <MatrixView />
-        {/if}
+        <MatrixView />
         <div class="view-main">
-          {#if ui.phraseView === 'scene'}
-            <SceneView onplay={play} onstop={stop} />
-          {:else if ui.phraseView === 'fx'}
-            <FxPad />
-          {:else if ui.phraseView === 'eq'}
-            <FilterView />
-          {:else if prefs.patternEditor === 'tracker'}
-            <TrackerView />
-          {:else}
-            <StepGrid />
+          <SceneView onplay={play} onstop={stop} />
+          <!-- Overlay sheets (desktop) -->
+          {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+              <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
+              {#if ui.phraseView === 'fx'}
+                <FxPad />
+              {:else if ui.phraseView === 'eq'}
+                <FilterView />
+              {:else if prefs.patternEditor === 'tracker'}
+                <TrackerView />
+              {:else}
+                <StepGrid />
+              {/if}
+            </div>
           {/if}
         </div>
         <DockPanel />
@@ -243,10 +264,54 @@
 
   .view-main {
     flex: 1;
+    position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
+
+  /* ── Pattern sheet overlay (ADR 054) ── */
+  .sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 50;
+  }
+
+  .pattern-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 20%;
+    z-index: 51;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg);
+    border-top: 1px solid rgba(237, 232, 220, 0.10);
+    overflow: hidden;
+  }
+
+  .pattern-sheet.mobile {
+    top: 25%;
+  }
+
+  .sheet-handle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  .handle-bar {
+    width: 28px;
+    height: 3px;
+    border-radius: 1.5px;
+    background: rgba(237, 232, 220, 0.12);
+  }
+
 
   /* ── Perf flash ── */
   .perf-flash {

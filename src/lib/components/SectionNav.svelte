@@ -142,10 +142,6 @@
           data-tip="Load {preset.name} preset" data-tip-ja="{preset.name}プリセットを読み込み"
         >{preset.name}</button>
       {/each}
-      <button class="btn-scene" class:active={ui.phraseView === 'scene'}
-        onpointerdown={() => { ui.phraseView = ui.phraseView === 'scene' ? 'pattern' : 'scene' }}
-        data-tip="Toggle scene view" data-tip-ja="シーンビューを切替"
-      >SCENE</button>
     </div>
   </div>
 

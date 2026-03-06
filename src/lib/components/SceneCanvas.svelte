@@ -195,7 +195,7 @@
   }
 
   $effect(() => {
-    if (ui.phraseView === 'scene') startVis()
+    if (ui.phraseView === 'pattern' || ui.phraseView === 'scene') startVis()
     else stopVis()
     return () => stopVis()
   })

@@ -86,3 +86,24 @@ button {
   0%   { filter: brightness(1.5); }
   100% { filter: brightness(1); }
 }
+
+/* ── Tap pulse (ADR 054 split view) ── */
+.tap-pulse {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--color-blue);
+  pointer-events: none;
+  z-index: 9999;
+  animation: tap-pulse 0.2s ease-out forwards;
+}
+@keyframes tap-pulse {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2) translateY(8px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-pulse { animation: none; display: none; }
+}

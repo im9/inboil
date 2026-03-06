@@ -217,31 +217,18 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- View toggle: PAT / SCENE | FX / EQ -->
+  <!-- View toggle: FX / EQ -->
   <div class="view-toggle">
     <button
       class="btn-view"
-      class:active={ui.phraseView === 'pattern'}
-      onpointerdown={() => { ui.phraseView = 'pattern' }}
-      data-tip="Pattern editor" data-tip-ja="パターンエディター"
-    >PAT</button>
-    <button
-      class="btn-view"
-      class:active={ui.phraseView === 'scene'}
-      onpointerdown={() => { ui.phraseView = 'scene' }}
-      data-tip="Scene graph view" data-tip-ja="シーングラフ画面"
-    >SCENE</button>
-    <span class="view-sep"></span>
-    <button
-      class="btn-view"
       class:active={ui.phraseView === 'fx'}
-      onpointerdown={() => { ui.phraseView = 'fx' }}
+      onpointerdown={() => { ui.phraseView = ui.phraseView === 'fx' ? 'pattern' : 'fx'; ui.patternSheet = false }}
       data-tip="FX pad — drag nodes to control effects" data-tip-ja="FXパッド — ノードをドラッグしてエフェクト操作"
     >FX</button>
     <button
       class="btn-view"
       class:active={ui.phraseView === 'eq'}
-      onpointerdown={() => { ui.phraseView = 'eq' }}
+      onpointerdown={() => { ui.phraseView = ui.phraseView === 'eq' ? 'pattern' : 'eq'; ui.patternSheet = false }}
       data-tip="EQ / Filter view" data-tip-ja="EQ / フィルター画面"
     >EQ</button>
   </div>

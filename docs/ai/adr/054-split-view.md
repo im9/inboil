@@ -176,19 +176,38 @@ All animations respect `prefers-reduced-motion: reduce` — swap to instant tran
 2. Gesture support (swipe/pinch to swap focus)
 3. Remember last focus per session
 
+## Implementation Update: Overlay Sheet Model
+
+The split view approach was prototyped but felt like "jumping to another screen" — the exact problem it aimed to solve. The design was revised to an **overlay sheet model**:
+
+### Current Design (Desktop)
+
+- **SceneView is always the main view** — never hidden or replaced
+- **Pattern editor, FX pad, EQ** appear as overlay sheets on top of the scene
+- **MatrixView** is always visible on the left as the pattern selector
+- PAT/SCENE toggle buttons removed; FX/EQ toggle buttons remain in PerfBar
+- Sheet triggers: MatrixView cell double-tap, SceneView pattern node double-tap
+- Sheet dismiss: Escape, backdrop tap, handle bar tap
+- Playback auto-engages scene mode only when no sheet is open (`!hasSheet`)
+- Animations: `fade 100ms` backdrop, `fly y:12px 100ms` sheet, `slide 120ms` vel-row/piano-roll
+
+### TODO: Mobile
+
+- Mobile currently lacks MatrixView, so the only way to open the pattern sheet is SceneView pattern node double-tap
+- Need a trigger for the initial state when no scene nodes exist yet (e.g. button in SectionNav/PerfBar, or tap empty scene area)
+- Consider whether mobile needs a persistent mini pattern selector
+
 ## Considerations
 
-- **Mobile screen real estate**: The compact view must be very thin (~40px) to avoid stealing space from the main view. Test on small screens (375px width)
-- **Rendering cost**: Both views render simultaneously. The compact view should be lightweight — simplified rendering, no unnecessary redraws. Scene ribbon can skip canvas entirely and use DOM-only
-- **Existing component reuse**: SceneView and MatrixView stay as-is internally. The split container wraps them and controls sizing. Compact variants may be separate lightweight components or CSS-driven modes of the existing ones
-- **DockPanel interaction**: DockPanel (PARAM/FX/EQ tabs) remains alongside the split view. On mobile, DockPanel already uses bottom sheet — no conflict
-- **Backward compatibility**: The `ui.phraseView` state can map to `ui.viewFocus`. Playback mode (`playback.mode`) remains decoupled per ADR 045
+- **Rendering cost**: SceneView canvas runs continuously. Sheet overlay does not interfere with scene rendering
+- **DockPanel interaction**: DockPanel (PARAM/FX/EQ tabs) remains accessible alongside the sheet overlay — not blocked
+- **Playback context**: When pattern sheet is open, play loops the selected pattern. When closed, scene mode auto-engages if scene has playback data
 
 ## Extends
 
 | ADR | Impact |
 |-----|--------|
-| 046 (Simplify View Toggle) | Replaces PAT/SCENE toggle with split focus control |
-| 045 (Decouple Playback from View) | Unchanged — playback mode stays independent of view focus |
-| 044 (Scene Graph) | Scene data model unchanged. New compact renderer for ribbon mode |
-| 043 (Matrix View) | MatrixView unchanged. New compact renderer for mini sequencer |
+| 046 (Simplify View Toggle) | PAT/SCENE toggle removed. FX/EQ remain as sheet toggles |
+| 045 (Decouple Playback from View) | Auto-engage conditioned on `!hasSheet` instead of view focus |
+| 044 (Scene Graph) | Scene data model unchanged. SceneView always mounted |
+| 043 (Matrix View) | MatrixView always visible (desktop). Double-tap opens pattern sheet |

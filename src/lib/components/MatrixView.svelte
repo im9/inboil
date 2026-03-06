@@ -67,7 +67,21 @@
     ui.selectedSceneNode = id
   }
 
+  let lastTapPat = -1
+  let lastTapTime = 0
+
   function selectAndFocus(pi: number) {
+    const now = Date.now()
+    if (lastTapPat === pi && now - lastTapTime < 300) {
+      // Double-tap → open pattern sheet
+      ui.patternSheet = true
+      ui.phraseView = 'pattern'
+      lastTapPat = -1
+      lastTapTime = 0
+    } else {
+      lastTapPat = pi
+      lastTapTime = now
+    }
     selectPattern(pi)
     gridEl?.focus()
   }
@@ -80,7 +94,7 @@
 
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
-    if (ui.phraseView === 'scene') return // scene view handles its own keys
+    if (ui.patternSheet) return // pattern sheet handles its own keys
     const mod = e.metaKey || e.ctrlKey
     if (mod && e.code === 'KeyC') {
       e.preventDefault()
@@ -120,13 +134,11 @@
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <span class="head-name" ondblclick={startEdit}>{selectedName}</span>
     {/if}
-    {#if ui.phraseView === 'scene'}
-      <button
-        class="head-scene"
-        onpointerdown={() => addToScene(ui.currentPattern)}
-        data-tip="Add to scene" data-tip-ja="シーンに追加"
-      >→</button>
-    {/if}
+    <button
+      class="head-scene"
+      onpointerdown={() => addToScene(ui.currentPattern)}
+      data-tip="Add to scene" data-tip-ja="シーンに追加"
+    >→</button>
   </div>
 
   <!-- Color picker popup -->
@@ -164,7 +176,7 @@
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}"
       >
-        <button class="cell-bg" aria-label="Pattern {pi}" draggable={ui.phraseView === 'scene'} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)}></button>
+        <button class="cell-bg" aria-label="Pattern {pi}" draggable={true} onpointerdown={() => selectAndFocus(pi)} ondragstart={e => onCellDragStart(e, pi)}></button>
       </div>
     {/each}
   </div>
