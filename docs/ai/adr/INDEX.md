@@ -54,6 +54,9 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
 | 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
+| 052 | Scene Free-Floating Labels | Done | Canvas text labels independent of nodes |
+| 053 | Scene Automation Node | Proposed | Continuous parameter change during pattern playback |
+| 054 | Split View | Proposed | Scene + Pattern co-display with flexible focus |
 
 ## UI / Layout
 
