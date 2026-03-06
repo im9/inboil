@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
   import { PAD_INSET, COLORS_RGB } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, toPixel, bezierEdge, drawBezier, bezierAt } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -43,20 +43,20 @@
     // Apply zoom/pan transform for all subsequent drawing
     ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, panX * dpr, panY * dpr)
 
-    // Grid lines
+    // Grid lines (drawn in world space)
     ctx.strokeStyle = 'rgba(30, 32, 40, 0.06)'
     ctx.lineWidth = 1
     const gridStep = 40
-    for (let x = PAD_INSET; x <= w - PAD_INSET; x += gridStep) {
+    for (let x = PAD_INSET; x <= WORLD_W - PAD_INSET; x += gridStep) {
       ctx.beginPath()
       ctx.moveTo(x, PAD_INSET)
-      ctx.lineTo(x, h - PAD_INSET)
+      ctx.lineTo(x, WORLD_H - PAD_INSET)
       ctx.stroke()
     }
-    for (let y = PAD_INSET; y <= h - PAD_INSET; y += gridStep) {
+    for (let y = PAD_INSET; y <= WORLD_H - PAD_INSET; y += gridStep) {
       ctx.beginPath()
       ctx.moveTo(PAD_INSET, y)
-      ctx.lineTo(w - PAD_INSET, y)
+      ctx.lineTo(WORLD_W - PAD_INSET, y)
       ctx.stroke()
     }
 
@@ -68,8 +68,8 @@
       const toNode = nodes.find(n => n.id === edge.to)
       if (!fromNode || !toNode) continue
 
-      const from = toPixel(fromNode.x, fromNode.y, w, h)
-      const to = toPixel(toNode.x, toNode.y, w, h)
+      const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
+      const to = toPixel(toNode.x, toNode.y, WORLD_W, WORLD_H)
       const isSel = ui.selectedSceneEdge === edge.id
       const b = bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern')
 
@@ -88,8 +88,8 @@
       const fn = nodes.find(n => n.id === edge.from)
       const tn = nodes.find(n => n.id === edge.to)
       if (!fn || !tn) continue
-      const fp = toPixel(fn.x, fn.y, w, h)
-      const tp = toPixel(tn.x, tn.y, w, h)
+      const fp = toPixel(fn.x, fn.y, WORLD_W, WORLD_H)
+      const tp = toPixel(tn.x, tn.y, WORLD_W, WORLD_H)
       const b = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
       // Badge at bezier midpoint
       const mid = bezierAt(b, 0.5)
@@ -112,8 +112,8 @@
         const fn = nodes.find(n => n.id === activeEdge.from)
         const tn = nodes.find(n => n.id === activeEdge.to)
         if (fn && tn) {
-          const fp = toPixel(fn.x, fn.y, w, h)
-          const tp = toPixel(tn.x, tn.y, w, h)
+          const fp = toPixel(fn.x, fn.y, WORLD_W, WORLD_H)
+          const tp = toPixel(tn.x, tn.y, WORLD_W, WORLD_H)
           const bl = COLORS_RGB.blue
           const be = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
           drawBezier(ctx, be,
@@ -129,7 +129,7 @@
     if (edgeFrom && dragMoved && viewEl) {
       const srcNode = nodes.find(n => n.id === edgeFrom)
       if (srcNode) {
-        const from = toPixel(srcNode.x, srcNode.y, w, h)
+        const from = toPixel(srcNode.x, srcNode.y, WORLD_W, WORLD_H)
         const rect = viewEl.getBoundingClientRect()
         const toX = (edgeCursor.x - rect.left - panX) / zoom
         const toY = (edgeCursor.y - rect.top - panY) / zoom
@@ -158,7 +158,7 @@
           const maxSteps = Math.max(...pat.cells.map(c => c.steps))
           const maxHead = Math.max(...playback.playheads)
           const progress = maxSteps > 0 ? Math.min(1, maxHead / maxSteps) : 0
-          const pos = toPixel(activeNode.x, activeNode.y, w, h)
+          const pos = toPixel(activeNode.x, activeNode.y, WORLD_W, WORLD_H)
           const barW = PAT_HALF_W * 2 - 4
           const barH = 2.5
           const bx = pos.x - PAT_HALF_W + 2

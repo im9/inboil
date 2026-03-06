@@ -6,6 +6,9 @@ import { PAD_INSET } from './constants.ts'
 export const PAT_HALF_W = 36, PAT_HALF_H = 17
 export const FN_HALF_W = 24, FN_HALF_H = 12
 
+/** Fixed scene world size (independent of viewport) */
+export const WORLD_W = 1600, WORLD_H = 1000
+
 /** Convert normalized coords to pixel position for canvas drawing */
 export function toPixel(nx: number, ny: number, w: number, h: number) {
   return {

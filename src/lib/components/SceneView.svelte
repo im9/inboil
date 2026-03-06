@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
   import SceneCanvas from './SceneCanvas.svelte'
   import SceneBubbleMenu from './SceneBubbleMenu.svelte'
   import type { FnNodeType } from './SceneBubbleMenu.svelte'
@@ -42,6 +42,7 @@
   let zoom = $state(1)      // 0.5 .. 3.0
   let panX = $state(0)      // pixel offset
   let panY = $state(0)      // pixel offset
+  let panInitialized = false
   let isPanning = false
   let panPointerStart = { x: 0, y: 0 }
   let panStartX = 0
@@ -50,14 +51,29 @@
   let pinchStartDist = 0
   let pinchStartZoom = 1
 
+  /** Center the world in the viewport */
+  function centerPan() {
+    if (!viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    panX = (rect.width - WORLD_W) / 2
+    panY = (rect.height - WORLD_H) / 2
+  }
+
+  $effect(() => {
+    if (viewEl && !panInitialized) {
+      panInitialized = true
+      centerPan()
+    }
+  })
+
   /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
   function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
     if (!viewEl) return null
     const rect = viewEl.getBoundingClientRect()
     const canvasX = (cx - rect.left - panX) / zoom
     const canvasY = (cy - rect.top - panY) / zoom
-    const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (rect.width - PAD_INSET * 2)))
-    const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (rect.height - PAD_INSET * 2)))
+    const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
+    const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
     return { x, y }
   }
 
@@ -65,13 +81,10 @@
 
   /** Find node under pointer (normalized coords, 28px radius in pixels) */
   function hitTestNode(normX: number, normY: number): string | null {
-    if (!viewEl) return null
-    const rect = viewEl.getBoundingClientRect()
-    const w = rect.width, h = rect.height
-    const px = PAD_INSET + normX * (w - PAD_INSET * 2)
-    const py = PAD_INSET + normY * (h - PAD_INSET * 2)
+    const px = PAD_INSET + normX * (WORLD_W - PAD_INSET * 2)
+    const py = PAD_INSET + normY * (WORLD_H - PAD_INSET * 2)
     for (const node of song.scene.nodes) {
-      const np = toPixel(node.x, node.y, w, h)
+      const np = toPixel(node.x, node.y, WORLD_W, WORLD_H)
       if (Math.abs(px - np.x) < 32 / zoom && Math.abs(py - np.y) < 18 / zoom) {
         return node.id
       }
@@ -253,8 +266,6 @@
     const rect = viewEl.getBoundingClientRect()
     const px = (e.clientX - rect.left - panX) / zoom
     const py = (e.clientY - rect.top - panY) / zoom
-    const w = rect.width, h = rect.height
-
     const { nodes, edges } = song.scene
     let hitEdge: string | null = null
     let bestDist = 8 / zoom
@@ -262,8 +273,8 @@
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
       if (!fromNode || !toNode) continue
-      const from = toPixel(fromNode.x, fromNode.y, w, h)
-      const to = toPixel(toNode.x, toNode.y, w, h)
+      const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
+      const to = toPixel(toNode.x, toNode.y, WORLD_W, WORLD_H)
       const d = bezierDist(px, py, bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern'))
       if (d < bestDist) {
         bestDist = d
@@ -452,12 +463,10 @@
 
   function pickFunctionNode(type: FnNodeType) {
     // Convert picker pixel position to normalized coords (accounting for zoom/pan)
-    if (!viewEl) return
-    const rect = viewEl.getBoundingClientRect()
     const canvasX = (pickerPos.x - panX) / zoom
     const canvasY = (pickerPos.y - panY) / zoom
-    const nx = Math.max(0.05, Math.min(0.95, (canvasX - PAD_INSET) / (rect.width - PAD_INSET * 2)))
-    const ny = Math.max(0.05, Math.min(0.95, (canvasY - PAD_INSET) / (rect.height - PAD_INSET * 2)))
+    const nx = Math.max(0.05, Math.min(0.95, (canvasX - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
+    const ny = Math.max(0.05, Math.min(0.95, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
     const id = sceneAddFunctionNode(type, nx, ny)
     ui.selectedSceneNode = id
     ui.selectedSceneEdge = null
@@ -527,7 +536,7 @@
   <SceneCanvas {zoom} {panX} {panY} {edgeFrom} {dragMoved} {edgeCursor} {viewEl} />
 
   <!-- Transform container for nodes (zoom/pan) -->
-  <div class="scene-transform" style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
+  <div class="scene-transform" style="width: {WORLD_W}px; height: {WORLD_H}px; transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
     {#each song.scene.nodes as node (node.id)}
       {@const isFn = node.type !== 'pattern'}
       {@const isRoot = node.root}
@@ -545,8 +554,8 @@
         class:edge-source={isEdgeSource}
         class:playing={isPlaying}
         style="
-          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px));
-          top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+          left: {PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)}px;
+          top: {PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)}px;
           {nc ? `--nc: ${nc}` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
@@ -718,7 +727,7 @@
     <button
       class="zoom-reset-btn"
       data-tip="Reset zoom" data-tip-ja="ズームリセット"
-      onpointerdown={() => { zoom = 1; panX = 0; panY = 0 }}
+      onpointerdown={() => { zoom = 1; centerPan() }}
     >{Math.round(zoom * 100)}%</button>
   {/if}
 
@@ -758,7 +767,8 @@
 
   .scene-transform {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
     pointer-events: none;
     z-index: 1;
   }

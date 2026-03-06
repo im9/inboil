@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toPixel, bezierEdge, bezierDist, bezierAt, PAT_HALF_W, PAT_HALF_H, FN_HALF_W, FN_HALF_H } from './sceneGeometry.ts'
+import { toPixel, bezierEdge, bezierDist, bezierAt, PAT_HALF_W, FN_HALF_W } from './sceneGeometry.ts'
 
 describe('toPixel', () => {
   // PAD_INSET = 32
