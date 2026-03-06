@@ -46,7 +46,7 @@ export interface WorkletPattern {
 
 export interface WorkletTrack {
   steps: number; trigs: WorkletTrig[]
-  muted: boolean; synthType: string
+  muted: boolean; voiceId: string
   volume: number
   pan: number
   reverbSend: number; delaySend: number

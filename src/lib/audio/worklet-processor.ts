@@ -266,7 +266,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             ? (1 - this.swing) * 2 * this.samplesPerStep
             : this.swing * 2 * this.samplesPerStep
           if (this.voices.length !== p.tracks.length)
-            this.voices = p.tracks.map((t, i) => makeVoice(i, t.synthType, sampleRate))
+            this.voices = p.tracks.map((t, i) => makeVoice(i, t.voiceId, sampleRate))
           for (let i = 0; i < p.tracks.length; i++) {
             const vp = p.tracks[i].voiceParams
             if (vp && this.voices[i]) {

@@ -155,7 +155,7 @@
           data-tip="Select track to edit" data-tip-ja="トラックを選択"
         >
           <span class="track-name">{track.name}</span>
-          <span class="track-type">{track.synthType.replace('Synth', '').replace('Analog', 'ANA')}</span>
+          <span class="track-type">{track.voiceId}</span>
         </button>
 
         <!-- Step count -->

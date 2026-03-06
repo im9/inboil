@@ -1,8 +1,9 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, SynthType } from './state.svelte.ts'
+import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, VoiceId } from './state.svelte.ts'
+import { DRUM_VOICES } from './audio/dsp/voices.ts'
 
-export const DRUM_SYNTHS: SynthType[] = ['DrumSynth', 'NoiseSynth']
+export { DRUM_VOICES }
 
 export const SECTION_COUNT = 100
 
@@ -19,31 +20,31 @@ function makeTrigs(steps: number, activeSteps: number[], note = 60): Trig[] {
 export function makeTrack(
   id: number,
   name: string,
-  synthType: SynthType,
+  voiceId: VoiceId,
   pan = 0,
 ): Track {
-  return { id, name, synthType, muted: false, volume: 0.8, pan }
+  return { id, name, voiceId, muted: false, volume: 0.8, pan }
 }
 
 // ── Track layout defaults ────────────────────────────────────────────
 
-export const TRACK_DEFAULTS: { name: string; synthType: SynthType; note: number; pan: number }[] = [
-  { name: 'KICK',  synthType: 'DrumSynth',  note: 60, pan:  0.00 },
-  { name: 'SNARE', synthType: 'DrumSynth',  note: 60, pan: -0.10 },
-  { name: 'CLAP',  synthType: 'DrumSynth',  note: 60, pan:  0.15 },
-  { name: 'C.HH',  synthType: 'NoiseSynth', note: 60, pan: -0.30 },
-  { name: 'O.HH',  synthType: 'NoiseSynth', note: 60, pan:  0.35 },
-  { name: 'CYM',   synthType: 'NoiseSynth', note: 60, pan:  0.25 },
-  { name: 'BASS',  synthType: 'AnalogSynth', note: 48, pan:  0.00 },
-  { name: 'LEAD',  synthType: 'AnalogSynth', note: 64, pan:  0.10 },
+export const TRACK_DEFAULTS: { name: string; voiceId: VoiceId; note: number; pan: number }[] = [
+  { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+  { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+  { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
+  { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+  { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
+  { name: 'CYM',   voiceId: 'Cymbal',   note: 60, pan:  0.25 },
+  { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+  { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
 ]
 
-export function makeEmptyCell(trackId: number, synthType: SynthType, note: number, steps = 16): Cell {
-  const drum = DRUM_SYNTHS.includes(synthType)
+export function makeEmptyCell(_trackId: number, voiceId: VoiceId, note: number, steps = 16): Cell {
+  const drum = DRUM_VOICES.has(voiceId)
   return {
     steps,
     trigs: Array.from({ length: steps }, () => makeTrig(false, note)),
-    voiceParams: defaultVoiceParams(trackId, synthType),
+    voiceParams: defaultVoiceParams(voiceId),
     reverbSend:  drum ? 0.08 : 0.25,
     delaySend:   drum ? 0.00 : 0.12,
     glitchSend:  0,
@@ -60,7 +61,7 @@ export function makeEmptyPattern(index: number, name = ''): Pattern {
     id: makePatternId(index),
     name,
     color: 0,
-    cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.synthType, d.note)),
+    cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.voiceId, d.note)),
   }
 }
 
@@ -386,16 +387,16 @@ const FACTORY: FactoryDef[] = [
 /** Build a cell from a factory definition for a given track */
 function buildFactoryCell(
   trackIdx: number, f: FactoryDef,
-  synthType: SynthType, defaultNote: number,
+  voiceId: VoiceId, defaultNote: number,
 ): Cell {
   const s = f.steps ?? 16
   const steps = f.ts?.[trackIdx] ?? s
   const activeSteps = [f.kick, f.snare, f.clap, f.chh, f.ohh, f.cym, f.bass[0], f.lead[0]][trackIdx]
   const baseNote = trackIdx === 6 ? f.bass[1] : trackIdx === 7 ? f.lead[1] : defaultNote
-  const drum = DRUM_SYNTHS.includes(synthType)
+  const drum = DRUM_VOICES.has(voiceId)
 
   const trigs = makeTrigs(steps, activeSteps, baseNote)
-  let vp = defaultVoiceParams(trackIdx, synthType)
+  let vp = defaultVoiceParams(voiceId)
   if (f.vp?.[trackIdx]) vp = { ...vp, ...f.vp[trackIdx] }
 
   // Apply per-step melodies and durations
@@ -491,7 +492,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
  */
 export function makeDefaultSong(): Song {
   const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) =>
-    makeTrack(trackIdx, d.name, d.synthType, d.pan)
+    makeTrack(trackIdx, d.name, d.voiceId, d.pan)
   )
 
   const patterns: Pattern[] = []
@@ -504,7 +505,7 @@ export function makeDefaultSong(): Song {
       name: f.name.slice(0, 8),
       color: 0,
       cells: TRACK_DEFAULTS.map((d, trackIdx) =>
-        buildFactoryCell(trackIdx, f, d.synthType, d.note)
+        buildFactoryCell(trackIdx, f, d.voiceId, d.note)
       ),
     })
     sections.push(makeEmptySection(i))

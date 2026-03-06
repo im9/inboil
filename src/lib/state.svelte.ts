@@ -5,7 +5,7 @@ import {
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
 } from './constants.ts'
 import {
-  DRUM_SYNTHS, makeTrig, makeDefaultSong, makeEmptyCell,
+  DRUM_VOICES, makeTrig, makeDefaultSong, makeEmptyCell,
   makePatternId,
   TRACK_DEFAULTS, SECTION_COUNT, FACTORY_COUNT,
 } from './factory.ts'
@@ -13,7 +13,8 @@ import {
 export { NOTE_NAMES } from './constants.ts'
 export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
 
-export type SynthType = 'DrumSynth' | 'NoiseSynth' | 'AnalogSynth' | 'FMSynth' | 'Sampler' | 'ChordSynth'
+export type { VoiceId } from './audio/dsp/voices.ts'
+import type { VoiceId } from './audio/dsp/voices.ts'
 
 export interface Trig {
   active: boolean
@@ -68,7 +69,7 @@ export interface Section {
 export interface Track {
   id: number
   name: string
-  synthType: SynthType
+  voiceId: VoiceId
   muted: boolean
   volume: number
   pan: number
@@ -180,7 +181,7 @@ function cloneSection(s: Section): Section {
 }
 
 function cloneTrack(t: Track): Track {
-  return { id: t.id, name: t.name, synthType: t.synthType, muted: t.muted, volume: t.volume, pan: t.pan }
+  return { id: t.id, name: t.name, voiceId: t.voiceId, muted: t.muted, volume: t.volume, pan: t.pan }
 }
 
 function cloneScene(sc: Scene): Scene {
@@ -634,7 +635,7 @@ export function toggleSolo(trackId: number) {
 }
 
 export function isDrum(track: Track): boolean {
-  return DRUM_SYNTHS.includes(track.synthType)
+  return DRUM_VOICES.has(track.voiceId)
 }
 
 export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
@@ -963,7 +964,7 @@ export function sectionSetFxSend(index: number, fx: SongFxKey, value: number) {
 export function patternClear(patternIndex: number): void {
   pushUndo('Clear pattern')
   song.patterns[patternIndex].cells = TRACK_DEFAULTS.map((d, i) =>
-    makeEmptyCell(i, d.synthType, d.note)
+    makeEmptyCell(i, d.voiceId, d.note)
   )
 }
 

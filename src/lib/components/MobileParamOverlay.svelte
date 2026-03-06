@@ -5,7 +5,7 @@
   import Knob from './Knob.svelte'
 
   const track = $derived(song.tracks[ui.selectedTrack])
-  const params = $derived(getParamDefs(ui.selectedTrack, track.synthType))
+  const params = $derived(getParamDefs(track.voiceId))
   const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 

@@ -521,21 +521,30 @@ export class FMVoice implements Voice {
   }
 }
 
-// ── Voice factory ───────────────────────────────────────────────────
+// ── Voice registry (ADR 009) ────────────────────────────────────────
 
-export function makeVoice(trackIdx: number, synthType: string, sr: number): Voice {
-  if (trackIdx === 0) return new KickVoice(sr)
-  if (trackIdx === 1) return new SnareVoice(sr)
-  if (trackIdx === 2) return new ClapVoice(sr)
-  if (trackIdx === 3) return new HatVoice(sr)
-  if (trackIdx === 4) return new OpenHatVoice(sr)
-  if (trackIdx === 5) return new CymbalVoice(sr)
-  if (trackIdx === 6) return new TB303Voice(sr)
-  if (trackIdx === 7) return new MoogVoice(sr)
-  switch (synthType) {
-    case 'NoiseSynth':  return new HatVoice(sr)
-    case 'AnalogSynth': return new AnalogVoice(sr)
-    case 'FMSynth':     return new FMVoice(sr)
-    default:            return new AnalogVoice(sr)
-  }
+export type VoiceId =
+  | 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
+  | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
+
+const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
+  Kick:     sr => new KickVoice(sr),
+  Snare:    sr => new SnareVoice(sr),
+  Clap:     sr => new ClapVoice(sr),
+  Hat:      sr => new HatVoice(sr),
+  OpenHat:  sr => new OpenHatVoice(sr),
+  Cymbal:   sr => new CymbalVoice(sr),
+  Bass303:  sr => new TB303Voice(sr),
+  MoogLead: sr => new MoogVoice(sr),
+  Analog:   sr => new AnalogVoice(sr),
+  FM:       sr => new FMVoice(sr),
+}
+
+export const DRUM_VOICES: ReadonlySet<string> = new Set([
+  'Kick', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
+])
+
+export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice {
+  const factory = VOICE_REGISTRY[voiceId]
+  return factory ? factory(sr) : new AnalogVoice(sr)
 }

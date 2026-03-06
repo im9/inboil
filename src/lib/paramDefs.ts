@@ -1,4 +1,4 @@
-import type { SynthType } from './state.svelte.ts'
+import type { VoiceId } from './state.svelte.ts'
 
 export interface ParamDef {
   key: string
@@ -10,22 +10,6 @@ export interface ParamDef {
   max: number
   step?: number   // discrete step size (e.g. 1 for integer params) — snaps knob
   default: number // physical units: Hz, seconds, dimensionless
-}
-
-// ── Voice type key from track index + synth type ───────────────────────────
-// Must mirror makeVoice() in worklet-processor.ts
-export function voiceKey(trackIdx: number, synthType: SynthType): string {
-  if (trackIdx === 0) return 'Kick'
-  if (trackIdx === 1) return 'Snare'
-  if (trackIdx === 2) return 'Clap'
-  if (trackIdx === 3) return 'Hat'
-  if (trackIdx === 4) return 'OpenHat'
-  if (trackIdx === 5) return 'Cymbal'
-  if (trackIdx === 6) return 'Bass303'
-  if (trackIdx === 7) return 'MoogLead'
-  if (synthType === 'NoiseSynth') return 'Hat'
-  if (synthType === 'FMSynth')    return 'FM'
-  return 'Analog'
 }
 
 // ── Param definitions per voice type ──────────────────────────────────────
@@ -103,12 +87,12 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
   ],
 }
 
-export function getParamDefs(trackIdx: number, synthType: SynthType): ParamDef[] {
-  return VOICE_PARAMS[voiceKey(trackIdx, synthType)] ?? []
+export function getParamDefs(voiceId: VoiceId): ParamDef[] {
+  return VOICE_PARAMS[voiceId] ?? []
 }
 
-export function defaultVoiceParams(trackIdx: number, synthType: SynthType): Record<string, number> {
-  const defs = getParamDefs(trackIdx, synthType)
+export function defaultVoiceParams(voiceId: VoiceId): Record<string, number> {
+  const defs = getParamDefs(voiceId)
   return Object.fromEntries(defs.map(d => [d.key, d.default]))
 }
 

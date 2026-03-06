@@ -1,6 +1,6 @@
 # ADR 009: Instrument Selection
 
-## Status: Proposed
+## Status: Phase 1 Done (VoiceId registry + makeVoice rewrite), Phase 2–3 Pending (UI picker)
 
 ## Context
 

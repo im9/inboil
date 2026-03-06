@@ -178,7 +178,7 @@
         <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
       </button>
       <div class="track-meta">
-        <span class="track-type">{track.synthType}</span>
+        <span class="track-type">{track.voiceId}</span>
       </div>
       <div class="step-row">
         <button class="step-adj" onpointerdown={stepDown}>−</button>
