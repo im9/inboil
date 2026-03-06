@@ -83,6 +83,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 009 | Instrument Selection | Implemented | VoiceId registry, bubble picker, worklet voice swap |
 | 010 | Drum Synth Expansion | Proposed | |
 | 015 | Named Instrument Presets | Proposed | |
+| 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |
 
 ## Performance / Live
 
