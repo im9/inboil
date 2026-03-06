@@ -265,12 +265,12 @@
 
 <style>
   .sidebar {
-    position: absolute;
+    position: fixed;
     right: 0;
     bottom: 0;
     top: 0;
     width: 280px;
-    z-index: 20;
+    z-index: 110;
     background: var(--color-fg);
     color: var(--color-bg);
     display: flex;
@@ -521,10 +521,9 @@
   /* ── Mobile: fullscreen overlay ── */
   @media (max-width: 639px) {
     .sidebar {
-      position: fixed;
       inset: 0;
       width: 100%;
-      z-index: 100;
+      z-index: 110;
     }
     .sidebar.collapsed {
       top: auto;

@@ -200,7 +200,6 @@
           {/if}
         </div>
       {/if}
-      <Sidebar />
     </div>
     <PerfBubble />
   {:else}
@@ -235,9 +234,9 @@
         </div>
         <DockPanel />
       </div>
-      <Sidebar />
     </div>
   {/if}
+  <Sidebar />
 </div>
 
 <style>

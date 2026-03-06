@@ -323,7 +323,7 @@ export const ui = $state<{
   lockMode: boolean
   selectedStep: number | null
   soloTracks: Set<number>
-  dockPosition: 'right' | 'bottom'
+  dockMinimized: boolean
   mobileOverlay: boolean
 }>({
   selectedTrack: 0,
@@ -340,7 +340,7 @@ export const ui = $state<{
   lockMode: false,
   selectedStep: null,
   soloTracks: new Set<number>(),
-  dockPosition: 'right',
+  dockMinimized: false,
   mobileOverlay: false,
 })
 
@@ -433,12 +433,12 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
-  dockPosition: 'right' | 'bottom'
+  dockMinimized: boolean
   patternEditor: 'grid' | 'tracker'
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockPosition: 'right', patternEditor: 'grid' }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid' }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -463,7 +463,7 @@ function savePrefs(): void {
     lang: lang.value,
     visited: prefs.visited,
     scaleMode: prefs.scaleMode,
-    dockPosition: ui.dockPosition,
+    dockMinimized: ui.dockMinimized,
     patternEditor: prefs.patternEditor,
   }))
 }
@@ -478,7 +478,7 @@ export const prefs = $state({
   patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
 })
 
-ui.dockPosition = initialPrefs.dockPosition
+ui.dockMinimized = initialPrefs.dockMinimized
 
 if (!prefs.visited) {
   ui.sidebar = 'help'
@@ -501,8 +501,8 @@ export function togglePatternEditor(): void {
   prefs.patternEditor = prefs.patternEditor === 'grid' ? 'tracker' : 'grid'
   savePrefs()
 }
-export function toggleDockPosition(): void {
-  ui.dockPosition = ui.dockPosition === 'right' ? 'bottom' : 'right'
+export function toggleDockMinimized(): void {
+  ui.dockMinimized = !ui.dockMinimized
   savePrefs()
 }
 
@@ -686,7 +686,7 @@ export function factoryReset(): void {
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
-  ui.dockPosition = 'right'
+  ui.dockMinimized = false
   ui.mobileOverlay = false
   ui.selectedSceneNode = null
   ui.selectedSceneEdge = null

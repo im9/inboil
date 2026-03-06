@@ -2,7 +2,7 @@
 
 | field   | value                              |
 | ------- | ---------------------------------- |
-| status  | proposed                           |
+| status  | accepted                           |
 | date    | 2026-03-06                         |
 | parent  | ADR 017 (Help Sidebar), ADR 054 (Overlay Sheet) |
 

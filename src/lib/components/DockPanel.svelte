@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, toggleDockPosition } from '../state.svelte.ts'
+  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, toggleDockMinimized } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'
@@ -11,7 +11,15 @@
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 </script>
 
-<div class="dock-panel" class:bottom={ui.dockPosition === 'bottom'}>
+<div class="dock-panel" class:minimized={ui.dockMinimized}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="dock-handle"
+    onpointerdown={toggleDockMinimized}
+    data-tip={ui.dockMinimized ? 'Expand dock' : 'Minimize dock'}
+    data-tip-ja={ui.dockMinimized ? 'ドックを展開' : 'ドックを最小化'}
+  ><span class="handle-bar"></span></div>
+  {#if !ui.dockMinimized}
   <div class="dock-body">
         <div class="param-content">
           <!-- Track selector bar -->
@@ -25,12 +33,6 @@
                 data-tip={_t.name} data-tip-ja={_t.name}
               >{TRACK_ABBR[i] ?? _t.name.slice(0, 2)}</button>
             {/each}
-            <button
-              class="btn-dock-pos"
-              onpointerdown={toggleDockPosition}
-              data-tip={ui.dockPosition === 'right' ? 'Move dock to bottom' : 'Move dock to right'}
-              data-tip-ja={ui.dockPosition === 'right' ? 'ドックを下に移動' : 'ドックを右に移動'}
-            >{ui.dockPosition === 'right' ? '⇩' : '⇨'}</button>
           </div>
 
           <div class="lock-row">
@@ -95,10 +97,12 @@
           </div>
         </div>
     </div>
+  {/if}
 </div>
 
 <style>
   .dock-panel {
+    position: relative;
     width: 280px;
     flex-shrink: 0;
     background: var(--color-fg);
@@ -107,53 +111,39 @@
     flex-direction: column;
     border-left: 1px solid rgba(237,232,220,0.08);
     overflow: hidden;
+    transition: width 120ms ease-out;
   }
 
-  /* ── Bottom dock overrides ── */
-  .dock-panel.bottom {
-    width: 100%;
-    height: auto;
-    max-height: 200px;
-    border-left: none;
-    border-top: 1px solid rgba(237,232,220,0.08);
-    flex-direction: row;
+  /* ── Minimized dock ── */
+  .dock-panel.minimized {
+    width: 16px;
   }
-  .dock-panel.bottom .dock-body {
-    flex: 1;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-  .dock-panel.bottom .param-content {
+
+  /* ── Left-edge handle (border-line grip) ── */
+  .dock-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 12px;
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding: 8px 12px;
-    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1;
   }
-  .dock-panel.bottom .track-bar {
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 0;
-    width: auto;
-    flex-shrink: 0;
+  .dock-handle:hover .handle-bar {
+    background: rgba(237,232,220,0.35);
   }
-  .dock-panel.bottom .track-btn {
-    padding: 2px 6px;
+  .handle-bar {
+    width: 3px;
+    height: 28px;
+    border-radius: 1.5px;
+    background: rgba(237,232,220,0.12);
+    transition: background 80ms;
   }
-  .dock-panel.bottom .lock-row {
-    flex-direction: column;
-    margin-bottom: 0;
-    flex-shrink: 0;
-  }
-  .dock-panel.bottom .knob-grid {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-  .dock-panel.bottom .section-divider {
-    width: 1px;
-    height: auto;
-    align-self: stretch;
-    margin: 0 4px;
+  .dock-panel.minimized .handle-bar {
+    background: rgba(237,232,220,0.25);
   }
 
   /* ── Body ── */
@@ -164,7 +154,7 @@
   }
   /* ── PARAM tab ── */
   .param-content {
-    padding: 10px 12px;
+    padding: 10px 12px 10px 16px;
   }
   /* ── Track selector bar ── */
   .track-bar {
@@ -190,22 +180,6 @@
   }
   .track-btn.muted:not(.active) {
     opacity: 0.35;
-  }
-  .btn-dock-pos {
-    flex-shrink: 0;
-    width: 22px;
-    border: 1px solid rgba(237,232,220,0.15);
-    background: transparent;
-    color: rgba(237,232,220,0.35);
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .btn-dock-pos:active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.7);
   }
 
   .lock-row {
