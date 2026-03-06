@@ -12,7 +12,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 001 | DSP Core in C++ / WASM | Decided | C++ code exists in `src/dsp/`, not yet integrated |
+| 001 | DSP Core in C++ / WASM | Proposed | C++ code exists in `src/dsp/`, not yet integrated |
 | 002 | TypeScript AudioWorklet | Implemented | Current DSP runtime |
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |
@@ -49,25 +49,26 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar (Phases 1-3) |
 | 049 | Pattern Identity | Proposed | Rename UI + color picker, reflected in Matrix & Scene |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
-| 045 | Decouple Playback from View | Implemented | Separate playback.mode from ui.phraseView |
+| 045 | Decouple Playback from View | Implemented | Separate `playback.mode` from `ui.phraseView` |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
 | 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
-| 052 | Scene Free-Floating Labels | Done | Canvas text labels independent of nodes |
+| 052 | Scene Free-Floating Labels | Implemented | Canvas text labels independent of nodes |
 | 053 | Scene Automation Node | Proposed | Continuous parameter change during pattern playback |
-| 054 | Split View | Proposed | Scene + Pattern co-display with flexible focus |
+| 054 | Overlay Sheet Model | Implemented | Pattern/FX/EQ as overlay sheets over SceneView |
+| 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
 
 ## UI / Layout
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 017 | Help Sidebar | Superseded | Replaced by 036 (DockPanel HELP tab) |
-| 018 | Settings Panel (SYSTEM) | Superseded | Replaced by 036 (DockPanel SYS tab) |
+| 017 | Help Sidebar | Implemented | Sidebar as app-level fixed drawer (ADR 055) |
+| 018 | Settings Panel (SYSTEM) | Implemented | Part of Sidebar (ADR 055) |
 | 034 | Help / Guide Redesign | Proposed | Content updates for 036's HELP tab |
 | 035 | Master View | Proposed | XY pad + knobs for master bus |
-| 036 | Remove Footer / Dockable Panel | Implemented | Unifies ParamPanel + Sidebar into DockPanel. Related: 034, 037 |
-| 047 | FX / EQ as Main Views | Implemented | Move FxPad + FilterView from DockPanel tabs to view-main |
+| 036 | Remove Footer / Dockable Panel | Implemented | Right-side param dock with minimize toggle (ADR 055) |
+| 047 | FX / EQ as Main Views | Superseded | Replaced by 054 (overlay sheets) |
 
 ## Instruments / Sound Design
 

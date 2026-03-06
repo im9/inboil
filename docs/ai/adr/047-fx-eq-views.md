@@ -2,7 +2,7 @@
 
 | field   | value                              |
 | ------- | ---------------------------------- |
-| status  | implemented                        |
+| status  | superseded                         |
 | date    | 2026-03-05                         |
 | parent  | ADR 046 (Simplify View Toggle)     |
 

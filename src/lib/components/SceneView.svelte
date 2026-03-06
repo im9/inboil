@@ -350,6 +350,8 @@
   function onKeydown(e: KeyboardEvent) {
     if (ui.patternSheet) return
     if (e.target instanceof HTMLInputElement) return
+    // Let MatrixView handle its own keyboard shortcuts when focused
+    if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
       if (ui.selectedSceneLabel) {

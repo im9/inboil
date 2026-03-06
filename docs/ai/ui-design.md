@@ -62,12 +62,12 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 ├█████████████████████████████████████████████████████┤
 │█ [KEY] [OCT▼▲] | [DUC][CMP] | [GAIN][SWG] | GRID TRKR SCENE | [FILL][REV][BRK] █│ ← PerfBar
 ├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
-│░ MatrixView │░ StepGrid / TrackerView / SceneView       ░│█ DockPanel █│
-│░ (pattern   │░ (center view, switches via PerfBar)      ░│█ (PARAM/  █│
-│░  pool      │░ KICK [V][P] M [■][ ][ ][■][ ]...        ░│█  FX/EQ/  █│
-│░  browser)  │░ SNARE[V][P] M [ ][ ][ ][ ][■]...        ░│█  HELP/   █│
-│░            │░ ...                                       ░│█  SYS)    █│
-│░            │░ (PianoRoll — shown for melodic in Grid)   ░│█          █│
+│░ MatrixView │░ SceneView (always main)                  ░│█ DockPanel █│
+│░ (pattern   │░ ┌─ overlay sheets (pattern/FX/EQ) ─┐    ░│█ (PARAM   █│
+│░  pool      │░ │  StepGrid / TrackerView           │    ░│█  knobs,  █│
+│░  browser)  │░ │  FxPad / FilterView               │    ░│█  minimi- █│
+│░            │░ └───────────────────────────────────┘    ░│█  zable)  █│
+│░            │░                                          ░│█          █│
 └░░░░░░░░░░░░┴░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┴████████████┘
 ```
 
@@ -128,7 +128,7 @@ Performance controls strip (dark zone). Layout:
 - **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink.
 - **DUC / CMP knobs**: Sidechain ducker depth and compressor makeup gain (36px).
 - **GAIN / SWG knobs**: Master volume and swing amount (36px).
-- **View toggle**: Segmented button group `GRID | TRKR | SCENE` switching between StepGrid, TrackerView, and SceneView (`ui.phraseView = 'grid' | 'tracker' | 'scene'`). Active button has lighter background + brighter text. Clicking SCENE again toggles back to GRID.
+- **FX/EQ toggle**: Two buttons `FX | EQ` open overlay sheets (`ui.phraseView = 'fx' | 'eq'`). SceneView is always the main view (ADR 054). Pattern sheet opened via MatrixView/SceneView double-tap.
 - **Virtual keyboard toggle** (desktop only): Piano icon button toggles `vkbd.enabled`. When active, shows `C{octave}` label. See ADR 031.
 - **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
   - FILL, REV: `--color-blue` border/active
@@ -138,11 +138,11 @@ On mobile (`< 640px`):
 - DUC, CMP, GAIN, SWG, separators, and labels hidden.
 - **Keyboard → Fan-out bubble menu**: Full piano keyboard replaced by a circular trigger button (shows current root note, e.g. "C") + compact stacked octave ▲/▼. Tapping the trigger opens a **fan-arc keyboard overlay**: 12 rectangular piano keys arranged in a quarter-circle arc (0°–90°). White keys on outer ring (R=130), black keys on inner ring (R=78). Keys are rotated radially with counter-rotated labels. Semi-transparent backdrop (rgba(0,0,0,0.25)) dims the background. Animation: 150ms scale+rotate with 15ms stagger per key.
 - Key trigger + octave share a row with FILL/REV/BRK (3 rows → 2 rows, saving vertical space).
-- View toggle (GRID/TRKR/SCENE) is a full-width tab bar with bottom border indicator.
+- FX/EQ toggle buttons for opening overlay sheets.
 
 ### FxPad — DECIDED
 
-XY performance surface (dark zone). Rendered inside DockPanel when `ui.dockTab === 'fx'`.
+XY performance surface (dark zone). Rendered as an overlay sheet over SceneView (ADR 054).
 
 **Structure:**
 - `fx-view` outer container (`flex: 1`, column layout)
@@ -159,7 +159,7 @@ XY performance surface (dark zone). Rendered inside DockPanel when `ui.dockTab =
 - 3D wireframe terrain: 18 rows × 32 columns, frequency-displaced
 - Colors: olive → blue → salmon → purple by depth
 - Perspective projection, DPR-aware
-- RAF loop only when `ui.dockTab === 'fx'`
+- RAF loop only when FxPad sheet is open (`ui.phraseView === 'fx'`)
 
 **Sends bar** (compact dark footer):
 - Track dots (8, olive active), track name label
@@ -168,7 +168,7 @@ XY performance surface (dark zone). Rendered inside DockPanel when `ui.dockTab =
 
 ### FilterView — DECIDED
 
-XY filter/EQ surface (dark zone). Rendered inside DockPanel when `ui.dockTab === 'eq'`.
+XY filter/EQ surface (dark zone). Rendered as an overlay sheet over SceneView (ADR 054).
 
 **Structure:**
 - `.filt-pad` inner area: touch/drag surface with 4 nodes
@@ -189,7 +189,7 @@ M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Show
 
 ### SceneView — DECIDED
 
-Node-based directed graph canvas (`ui.phraseView === 'scene'`). Full arrangement editor.
+Node-based directed graph canvas. Always the main view (ADR 054). Full arrangement editor.
 
 - Canvas rendering with `requestAnimationFrame` for edges, arrowheads, edge order badges, playback highlights
 - HTML overlay for nodes (positioned absolutely via CSS `calc()`)
@@ -212,7 +212,7 @@ Two-row navigator strip. Row 1: horizontally scrollable section slot strip (sect
 
 ### Sidebar — DECIDED
 
-Right-side overlay panel (280px width, dark zone) sharing a single slot for both help and settings content. Positioned absolutely inside `.view-area`.
+App-level fixed right drawer (280px width, dark zone, z-index 110) for help and settings content. Independent of DockPanel and view area (ADR 055).
 
 **Structure:**
 - Header: title (HELP / SYSTEM), language toggle (help only), close button
@@ -233,17 +233,16 @@ See ADR 017 and ADR 018 for details.
 
 ### DockPanel — DECIDED
 
-Unified right-side or bottom dock panel. Five tabs switched via tab bar (`ui.dockTab`):
+Right-side param dock (280px, dark zone). Minimizable to 16px thin strip via left-edge handle grip (ADR 055). State persisted as `ui.dockMinimized` in localStorage.
 
-1. **PARAM** (default): Track selector bar (2-letter abbreviations: KK, SN, CP, CH, OH, CY, BS, LD) + synth knob grid from `paramDefs.ts`. Lock toolbar (LOCK/STEP/CLR) + SOLO/MUTE. Dock position toggle (⇩/⇨) persisted in localStorage.
-2. **FX**: FxPad XY surface with 4 FX nodes, audio visualizer, and sends bar.
-3. **EQ**: FilterView XY surface with FILTER + 3-band EQ nodes.
-4. **HELP**: Collapsible accordion help content. Triggered by `?` in AppHeader.
-5. **SYS**: System settings (scale mode, language, factory reset). Triggered by `⚙` in AppHeader.
+Contents:
+- **Track selector bar**: 2-letter abbreviations (KK, SN, CP, CH, OH, CY, BS, LD)
+- **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
+- **Synth knob grid**: Voice parameters from `paramDefs.ts`
+- **Send knobs**: VERB, DLY, GLT, GRN per selected track
+- **Mixer knobs**: VOL, PAN per selected track
 
-HELP/SYS are temporary — switching back to PARAM mode automatically when closing or re-pressing the trigger button.
-
-Right dock: `width: 320px; border-left`. Bottom dock: `width: 100%; max-height: 200px; border-top; flex-direction: row`.
+FX/EQ are rendered as overlay sheets (ADR 054). Help/System are in the Sidebar (ADR 055).
 
 ### PianoRoll — DECIDED
 
@@ -304,7 +303,7 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 | Performance controls | Press-hold buttons (FILL, REV, BRK) |
 | Key change | Click piano key in PerfBar |
 | Octave shift | Click −/+ in PerfBar OCT controls |
-| Switch view | Click GRID/TRKR/SCENE in PerfBar view toggle |
+| Open FX/EQ sheet | Click FX/EQ in PerfBar |
 | Toggle FX node | Tap FxPad node (no drag) |
 | Move FX node | Drag FxPad node (pointer capture) |
 | Select track (FxPad) | Click track dot in FxPad sends bar |

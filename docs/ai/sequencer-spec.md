@@ -101,7 +101,7 @@ Scene {
 
 SceneNode {
   id:         string
-  type:       'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability'
+  type:       'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
   x:          number           // canvas position (normalized 0–1)
   y:          number
   root:       boolean          // true = playback entry point (exactly one)
@@ -183,7 +183,7 @@ No PAUSED state is implemented.
 Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and sends the new pattern to the engine immediately.
 
 ### Scene graph playback
-When the scene graph is active (has a root node) and `ui.phraseView === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
+When the scene graph is active (has a root node) and `playback.mode === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
 
 ### Solo pattern
 `playback.soloNodeId` targets a scene node for solo repeat. When the scene reaches that node, the engine loops its pattern exclusively. If the node is not yet playing, solo enters an "armed" state until the scene reaches it. Solo switches happen at cycle boundaries.

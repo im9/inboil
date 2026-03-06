@@ -319,7 +319,7 @@ Canvas 2D 3D wireframe terrain rendered behind the FxPad nodes:
 - 18 rows × 32 points per row, displaced vertically by AnalyserNode FFT frequency data
 - Perspective projection: back rows compressed horizontally + faded, front rows full width + bright
 - Colors by depth/frequency: olive (low) → blue (mid) → salmon (high) → purple (very high)
-- Runs only when FxPad is visible in DockPanel (RAF paused otherwise)
+- Runs only when FxPad overlay sheet is open (RAF paused otherwise)
 - DPR-aware for crisp rendering on high-density displays
 
 ## Performance Features — DECIDED

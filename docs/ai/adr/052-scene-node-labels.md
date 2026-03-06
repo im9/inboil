@@ -2,7 +2,7 @@
 
 | field   | value                              |
 | ------- | ---------------------------------- |
-| status  | done                               |
+| status  | implemented                        |
 | date    | 2026-03-06                         |
 | parent  | ADR 044 (Scene Graph)              |
 

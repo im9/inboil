@@ -56,12 +56,14 @@ See [adr/](./adr/) for full rationale.
 - **Audio & MIDI export** (PROPOSED) — Offline bounce, real-time recording, MIDI file export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
 - **Virtual MIDI keyboard** (IMPLEMENTED, Phase 1) — PC keyboard audition mode. → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
 - **Mobile velocity/chance editing** (IMPLEMENTED) — 3-mode tabs (STEP/VEL/CHNC). → [adr/033-mobile-velocity-editing.md](./adr/033-mobile-velocity-editing.md)
-- **Dockable panel** (IMPLEMENTED) — Unified PARAM/FX/EQ/HELP/SYS dock (right or bottom). → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
+- **Dockable panel** (IMPLEMENTED) — Right-side param dock with minimize toggle. → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
 - **Solo** (IMPLEMENTED) — Per-track additive solo with indicator. → [adr/039-solo.md](./adr/039-solo.md)
 - **Section-based arrangement** (IMPLEMENTED) — Song → Section → Cell flat model. → [adr/042-section-based-arrangement.md](./adr/042-section-based-arrangement.md)
 - **Matrix view** (IMPLEMENTED) — Pattern pool browser sidebar. → [adr/043-matrix-view.md](./adr/043-matrix-view.md)
 - **Scene graph** (IMPLEMENTED) — Node-based directed graph for arrangement. → [adr/044-scene-graph.md](./adr/044-scene-graph.md)
-- **Decouple playback from view** (PROPOSED) — Separate playback mode from UI view. → [adr/045-decouple-playback-from-view.md](./adr/045-decouple-playback-from-view.md)
+- **Decouple playback from view** (IMPLEMENTED) — Separate `playback.mode` from `ui.phraseView`. → [adr/045-decouple-playback-from-view.md](./adr/045-decouple-playback-from-view.md)
+- **Overlay sheet model** (IMPLEMENTED) — Pattern/FX/EQ as overlay sheets over SceneView. → [adr/054-split-view.md](./adr/054-split-view.md)
+- **Dock minimize & sidebar separation** (IMPLEMENTED) — DockPanel minimize toggle, sidebar as fixed drawer. → [adr/055-dock-sidebar-separation.md](./adr/055-dock-sidebar-separation.md)
 
 ## Threading Model
 
@@ -94,7 +96,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
 │   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
 │   │   │   ├── SectionNav.svelte ← Section strip + metadata editor
-│   │   │   ├── DockPanel.svelte  ← Right/bottom dock: PARAM/FX/EQ/HELP/SYS tabs
+│   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, minimizable
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks
 │   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
 │   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
@@ -105,7 +107,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
-│   │   │   ├── Sidebar.svelte    ← Help / System settings panel (mobile)
+│   │   │   ├── Sidebar.svelte    ← Help / System settings panel (fixed right drawer)
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
 │   │   │   └── SplitFlap.svelte  ← パタパタ split-flap display
 │   │   ├── audio/

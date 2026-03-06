@@ -12,7 +12,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Track** | Instrument configuration only: id, name, synthType, muted, volume, pan. No step data — that's in Cell. |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
-| **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, or probability type. |
+| **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, probability, or fx type. |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
@@ -48,20 +48,20 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 |---|---|
 | **SplitFlap** | パタパタ split-flap mechanical display. Per-character 3D CSS flip animation. Used for BPM, PAT, track names, octave. |
 | **Othello flip** | Step trig toggle animation: 3D `rotateY` flip between cream (empty) and olive (active) faces. |
-| **PerfBar** | Performance controls strip: KEY piano, OCT shift, DUC/CMP/GAIN/SWG knobs, GRID/TRKR/SCENE view toggle, FILL/REV/BRK buttons. |
-| **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. Rendered in DockPanel FX tab. |
-| **DockPanel** | Unified right/bottom dock panel with PARAM/FX/EQ/HELP/SYS tabs. Track selector + synth knobs + lock toolbar. |
+| **PerfBar** | Performance controls strip: KEY piano, OCT shift, DUC/CMP/GAIN/SWG knobs, FX/EQ sheet toggles, FILL/REV/BRK buttons. |
+| **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. Rendered as overlay sheet (ADR 054). |
+| **DockPanel** | Right-side param dock (minimizable to 16px via edge handle). Track selector + synth knobs + lock toolbar + send/mixer knobs. |
 | **MobileParamOverlay** | Mobile bottom-sheet overlay for param editing, lock, solo, mute. Opened by tapping track name. |
 | **Zone inversion** | Dark zone (navy bg) vs light zone (cream bg) — compositional tool for visual separation. |
 | **Knob** | SVG rotary control (270° arc). Vertical drag to change value. |
 | **PianoRoll** | DAW-style note bar editor for melodic tracks. 24-note range (C3–B4). Click+drag to draw note bars, click head/continuation to delete. |
 | **Note Bar** | A trig with duration ≥ 1, visualized as a colored bar spanning multiple steps in the PianoRoll. Head = olive, continuation = semi-transparent. |
 | **Auto-Legato** | Melodic tracks (t≥6) automatically connect consecutive notes with legato (no retrigger). Rest = retrigger. No explicit slide flag needed. |
-| **TrackerView** | M8-style vertical single-track step editor (`ui.phraseView = 'tracker'`). NOTE/VEL/DUR/SLD/CHN columns. |
-| **SceneView** | Node-based scene graph canvas (`ui.phraseView = 'scene'`). Arrangement editor with pattern and function nodes. |
+| **TrackerView** | M8-style vertical single-track step editor. NOTE/VEL/DUR/SLD/CHN columns. Rendered in pattern overlay sheet. |
+| **SceneView** | Node-based scene graph canvas. Always the main view (ADR 054). Arrangement editor with pattern and function nodes. |
 | **MatrixView** | Pattern pool browser sidebar (desktop). Grid of 24×24px cells showing pattern density and selection. |
 | **SectionNav** | Section strip + metadata editor. Two-row navigator for section selection and parameter editing. |
-| **FilterView** | EQ/filter XY pad in DockPanel EQ tab. FILTER + 3-band EQ nodes. |
+| **FilterView** | EQ/filter XY pad rendered as overlay sheet (ADR 054). FILTER + 3-band EQ nodes. |
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |

@@ -44,7 +44,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
 - Song model: pattern pool (100 patterns: 21 factory + 79 user), sections, scene graph
 - Scene graph: node-based directed graph for arrangement (pattern/transpose/tempo/repeat/probability nodes)
-- Three editor views: StepGrid (desktop), TrackerView (M8-style vertical), SceneView (node canvas)
+- SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
 - SectionNav: section strip with metadata (repeats, key, oct, FX)
 - Queued pattern switching
@@ -56,7 +56,8 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Pattern copy/paste/clear
 - Oscilloscope waveform display
 - Per-track solo (additive, via DockPanel or MobileParamOverlay)
-- Dockable panel (right or bottom): PARAM/FX/EQ/HELP/SYS tabs
+- DockPanel (right, minimizable): synth param knobs, send/mixer knobs
+- Sidebar (fixed right drawer): Help/System settings (ADR 055)
 - Desktop + mobile responsive UI (with mobile velocity/chance editing tabs)
 
 The C++ DSP core (`src/dsp/`) is being developed in parallel but is not yet integrated into the web build.
