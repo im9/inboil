@@ -8,6 +8,11 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 - **Proposed**: Not yet implemented. Read before working on related features.
 - **Superseded**: Replaced by a newer ADR. Generally skip.
 
+## File Organization
+
+- **Top-level** (`docs/ai/adr/`): Proposed ADRs only — active design decisions awaiting implementation.
+- **Archive** (`docs/ai/adr/archive/`): Implemented + Superseded ADRs — historical record, not actively maintained.
+
 ## Audio / DSP
 
 | # | Title | Status | Notes |
