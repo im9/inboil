@@ -1,6 +1,6 @@
 # ADR 037: ChainView Redesign
 
-## Status: Superseded by ADR 044 (Scene Graph)
+## Status: Superseded
 
 ## Context
 

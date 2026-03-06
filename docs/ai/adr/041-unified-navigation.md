@@ -1,6 +1,6 @@
 # ADR 041: Unified Navigation — Merge SONG/PHRASE Modes
 
-## Status: Superseded by ADR 045 + 046
+## Status: Superseded
 
 ## Context
 

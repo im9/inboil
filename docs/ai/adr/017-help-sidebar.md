@@ -1,6 +1,6 @@
 # ADR 017: Help Sidebar
 
-## Status: Superseded by ADR 036
+## Status: Implemented
 
 ## Context
 

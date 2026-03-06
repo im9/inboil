@@ -1,6 +1,6 @@
 # ADR 019: Multi-Device Collaboration
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 016: VST Plugin Integration & MIDI
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

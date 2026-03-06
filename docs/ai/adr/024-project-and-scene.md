@@ -1,6 +1,6 @@
 # ADR 024: Project & Scene Hierarchy
 
-## Status: PROPOSED
+## Status: Superseded
 
 ## Context
 

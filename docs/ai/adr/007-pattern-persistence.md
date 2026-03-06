@@ -1,6 +1,6 @@
 # ADR 007: Pattern Persistence (Save / Load)
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

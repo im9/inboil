@@ -1,6 +1,6 @@
 # ADR 009: Instrument Selection
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

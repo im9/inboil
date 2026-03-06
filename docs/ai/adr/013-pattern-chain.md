@@ -1,6 +1,6 @@
 # ADR 013: Pattern Chain
 
-## Status: IMPLEMENTED
+## Status: Superseded
 
 ## Context
 

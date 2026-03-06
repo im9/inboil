@@ -46,7 +46,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 040 | Drill-Down Navigation | Superseded | Replaced by 041+044 |
 | 041 | Unified Navigation | Superseded | Replaced by 045+046 (decouple playback + simplify toggle) |
 | 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
-| 043 | Matrix View | Implemented | Pattern pool browser sidebar (Phases 1-3) |
+| 043 | Matrix View | Implemented | Pattern pool browser sidebar |
 | 049 | Pattern Identity | Proposed | Rename UI + color picker, reflected in Matrix & Scene |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
 | 045 | Decouple Playback from View | Implemented | Separate `playback.mode` from `ui.phraseView` |

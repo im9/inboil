@@ -1,6 +1,6 @@
 # ADR 005: Swing / Shuffle
 
-## Status: IMPLEMENTED
+## Status: Implemented
 
 ## Context
 

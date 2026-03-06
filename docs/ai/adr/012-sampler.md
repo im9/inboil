@@ -1,6 +1,6 @@
 # ADR 012: Sampler Implementation
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

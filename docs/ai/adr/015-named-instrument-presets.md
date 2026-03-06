@@ -1,6 +1,6 @@
 # ADR 015: Named Instruments — Drum Kits & Synth Presets
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

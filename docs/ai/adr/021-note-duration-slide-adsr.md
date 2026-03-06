@@ -1,6 +1,6 @@
 # ADR 021: Note Duration, Slide & Lead ADSR
 
-## Status: DECIDED (Implemented)
+## Status: Implemented
 
 ## Context
 

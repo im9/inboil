@@ -1,6 +1,6 @@
 # ADR 006: Per-Step Velocity Editing
 
-## Status: IMPLEMENTED
+## Status: Implemented
 
 ## Context
 

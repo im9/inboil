@@ -1,6 +1,6 @@
 # ADR 018: Settings Panel (SYSTEM)
 
-## Status: Superseded by ADR 036
+## Status: Implemented
 
 ## Context
 

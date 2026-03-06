@@ -1,6 +1,6 @@
 # ADR 020: Data Persistence & Storage Design
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 036: Remove Footer / Relocate Parameter Panel
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

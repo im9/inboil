@@ -1,6 +1,6 @@
 # ADR 010: Drum Synth Expansion
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

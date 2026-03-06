@@ -1,6 +1,6 @@
 # ADR 001: DSP Core in C++ compiled to WebAssembly
 
-## Status: DECIDED (C++ code exists in `src/dsp/`, not yet integrated into web build)
+## Status: Proposed
 
 ## Context
 

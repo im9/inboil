@@ -1,6 +1,6 @@
 # ADR 011: Full Synth Engine Implementations
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 

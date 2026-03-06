@@ -1,6 +1,6 @@
 # ADR 032: Phrase/Chain/Song — M8-Style Data Model Restructure
 
-## Status: PROPOSED
+## Status: Superseded
 
 ## Context
 

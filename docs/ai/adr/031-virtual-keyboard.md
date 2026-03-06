@@ -1,6 +1,6 @@
 # ADR 031: Virtual MIDI Keyboard (PC Keyboard Input)
 
-## Status: Implemented (Phase 1 — Audition)
+## Status: Implemented
 
 ## Context
 

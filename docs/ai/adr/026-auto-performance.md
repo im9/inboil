@@ -1,6 +1,6 @@
 # ADR 026: Auto-Performance (Auto Fill / Break / Reverse)
 
-## Status: PROPOSED
+## Status: Proposed
 
 ## Context
 
