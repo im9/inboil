@@ -290,7 +290,7 @@ export const playback = $state({
   sceneRepeatLeft: 0,
   sceneTranspose: 0,
   sceneAbsoluteKey: null as number | null,
-  soloPattern: null as number | null,
+  soloNodeId: null as string | null,
   // ADR 045: playback mode decoupled from view
   mode: 'loop' as 'loop' | 'scene',
   playingPattern: null as number | null,
@@ -694,7 +694,7 @@ export function factoryReset(): void {
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
   playback.sceneAbsoluteKey = null
-  playback.soloPattern = null
+  playback.soloNodeId = null
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -855,7 +855,7 @@ export function songLoadPreset(index: number) {
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
   playback.sceneAbsoluteKey = null
-  playback.soloPattern = null
+  playback.soloNodeId = null
   ui.currentPattern = 0
   ui.selectedSceneNode = null
   ui.selectedSceneEdge = null
@@ -1184,6 +1184,15 @@ export function hasScenePlayback(): boolean {
 
 function sceneRootNode(): SceneNode | undefined {
   return song.scene.nodes.find(n => n.root)
+}
+
+/** Resolve soloNodeId to a pattern index, or null if invalid */
+export function soloPatternIndex(): number | null {
+  if (!playback.soloNodeId) return null
+  const node = song.scene.nodes.find(n => n.id === playback.soloNodeId)
+  if (!node || node.type !== 'pattern') return null
+  const idx = song.patterns.findIndex(p => p.id === node.patternId)
+  return idx >= 0 ? idx : null
 }
 
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {

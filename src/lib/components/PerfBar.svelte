@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES, hasScenePlayback, hasArrangement } from '../state.svelte.ts'
+  import { song, perf, playback, ui, effects, fxPad, vkbd, NOTE_NAMES } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
   import PerfButtons from './PerfButtons.svelte'
@@ -231,15 +231,6 @@
       onpointerdown={() => { ui.phraseView = 'scene' }}
       data-tip="Scene graph view" data-tip-ja="シーングラフ画面"
     >SCENE</button>
-    {#if hasScenePlayback() || hasArrangement()}
-      <button
-        class="btn-scene-mode"
-        class:active={playback.mode === 'scene'}
-        onpointerdown={() => { playback.mode = playback.mode === 'scene' ? 'loop' : 'scene' }}
-        data-tip="Scene playback on/off — keeps arrangement running in any view" data-tip-ja="シーン再生 ON/OFF — どのビューでもアレンジ継続"
-        aria-label={playback.mode === 'scene' ? 'Disable scene playback' : 'Enable scene playback'}
-      >{playback.mode === 'scene' ? '▶' : '⏸'}</button>
-    {/if}
     <span class="view-sep"></span>
     <button
       class="btn-view"
@@ -444,25 +435,6 @@
     background: rgba(237,232,220,0.12);
     flex-shrink: 0;
     margin: 0 16px;
-  }
-  .btn-scene-mode {
-    width: 22px;
-    height: 22px;
-    border: 1.5px solid rgba(120,120,69,0.4);
-    border-radius: 50%;
-    background: transparent;
-    color: rgba(120,120,69,0.5);
-    font-size: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 6px;
-    transition: background 40ms, color 40ms;
-  }
-  .btn-scene-mode.active {
-    background: var(--color-olive);
-    color: var(--color-bg);
-    border-color: var(--color-olive);
   }
 
   /* ── Performance buttons ── */
@@ -677,21 +649,6 @@
       border-bottom-color: var(--color-olive);
       background: rgba(237,232,220,0.06);
     }
-    .btn-scene-mode {
-      flex: none;
-      width: 28px;
-      height: auto;
-      border: none;
-      border-radius: 0;
-      border-bottom: 2px solid transparent;
-      font-size: 8px;
-      margin-left: 0;
-    }
-    .btn-scene-mode.active {
-      border-bottom-color: var(--color-olive);
-      background: rgba(120,120,69,0.15);
-    }
-
     /* ── Key fan-out overlay ── */
     .key-arc-overlay {
       display: block;

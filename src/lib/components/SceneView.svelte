@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback } from '../state.svelte.ts'
   import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
+
+  const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
   let viewEl: HTMLDivElement
   let canvasEl: HTMLCanvasElement
@@ -165,19 +167,6 @@
     e.stopPropagation()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 
-    // Check if pointer is in right zone of node (edge-draw mode)
-    const btn = e.currentTarget as HTMLElement
-    const btnRect = btn.getBoundingClientRect()
-    const relX = e.clientX - btnRect.left
-    if (relX > btnRect.width * 0.67) {
-      // Start edge drawing
-      edgeFrom = nodeId
-      edgeCursor = { x: e.clientX, y: e.clientY }
-      dragMoved = false
-      startPos = { x: e.clientX, y: e.clientY }
-      return
-    }
-
     dragging = nodeId
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
@@ -193,6 +182,17 @@
         if (navigator.vibrate) navigator.vibrate(30)
       }
     }, 500)
+  }
+
+  function startEdgeDraw(e: PointerEvent, nodeId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    // Capture on root element so onMove/endDrag fire correctly
+    viewEl?.setPointerCapture(e.pointerId)
+    edgeFrom = nodeId
+    edgeCursor = { x: e.clientX, y: e.clientY }
+    dragMoved = false
+    startPos = { x: e.clientX, y: e.clientY }
   }
 
   function onMove(e: PointerEvent) {
@@ -458,6 +458,9 @@
     return PATTERN_COLORS[pat?.color ?? 0]
   }
 
+  // ── Root node helper ──
+  const rootNode = $derived(song.scene.nodes.find(n => n.root) ?? null)
+
   // ── Selected node helpers ──
 
   const selectedPatternNode = $derived.by(() => {
@@ -471,11 +474,6 @@
     return song.patterns.findIndex(p => p.id === selectedPatternNode.patternId)
   })
 
-  function toggleSolo() {
-    if (selectedPatternIndex < 0) return
-    playback.soloPattern = playback.soloPattern === selectedPatternIndex ? null : selectedPatternIndex
-    selectPattern(selectedPatternIndex)
-  }
 
   const selectedFnNode = $derived.by(() => {
     if (!ui.selectedSceneNode) return null
@@ -666,7 +664,7 @@
       ctx.fillText(String(edge.order), mx, my)
     }
 
-    // Active playback edge highlight
+    // Active playback edge highlight (solid accent line)
     if (playback.playing && playback.sceneEdgeId) {
       const activeEdge = edges.find(e => e.id === playback.sceneEdgeId)
       if (activeEdge) {
@@ -678,8 +676,8 @@
           const bl = COLORS_RGB.blue
           const be = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
           drawBezier(ctx, be,
+            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.5)`,
             `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`,
-            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.7)`,
             2.5,
           )
         }
@@ -703,6 +701,40 @@
           1.5,
         )
         ctx.setLineDash([])
+      }
+    }
+
+    // Progress bar under active pattern node
+    if (playback.playing) {
+      const patIndex = playback.playingPattern ?? ui.currentPattern
+      const playingPatId = song.patterns[patIndex]?.id
+      const activeNode = playback.sceneNodeId
+        ? nodes.find(n => n.id === playback.sceneNodeId && n.type === 'pattern')
+        : playingPatId ? nodes.find(n => n.type === 'pattern' && n.patternId === playingPatId) : null
+      if (activeNode) {
+        const pat = song.patterns[patIndex]
+        if (pat) {
+          const maxSteps = Math.max(...pat.cells.map(c => c.steps))
+          const maxHead = Math.max(...playback.playheads)
+          const progress = maxSteps > 0 ? Math.min(1, maxHead / maxSteps) : 0
+          const pos = toPixel(activeNode.x, activeNode.y, w, h)
+          const barW = PAT_HALF_W * 2 - 4
+          const barH = 2.5
+          const bx = pos.x - PAT_HALF_W + 2
+          const by = pos.y + PAT_HALF_H + 3
+
+          // Background
+          ctx.fillStyle = 'rgba(30, 32, 40, 0.1)'
+          ctx.beginPath()
+          ctx.roundRect(bx, by, barW, barH, 1)
+          ctx.fill()
+          // Fill
+          const bl = COLORS_RGB.blue
+          ctx.fillStyle = `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`
+          ctx.beginPath()
+          ctx.roundRect(bx, by, barW * progress, barH, 1)
+          ctx.fill()
+        }
       }
     }
 
@@ -796,11 +828,6 @@
         "
         onpointerdown={e => startDrag(e, node.id)}
       >
-        {#if isRoot}
-          <svg class="root-marker" viewBox="0 0 10 12" width="8" height="10" fill="currentColor" aria-hidden="true">
-            <polygon points="1,1 9,6 1,11"/>
-          </svg>
-        {/if}
         {#if node.type === 'transpose'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">
             <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
@@ -835,21 +862,93 @@
           <span class="node-label">{nodeName(node)}</span>
         {/if}
       </button>
+      <!-- Output handle for edge creation -->
+      <div
+        class="edge-handle"
+        class:fn={isFn}
+        style="
+          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + {isFn ? FN_HALF_W : PAT_HALF_W}px);
+          top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+        "
+        onpointerdown={e => startEdgeDraw(e, node.id)}
+        role="button"
+        tabindex="-1"
+      ></div>
     {/each}
 
-    <!-- Solo button for selected pattern node -->
-    {#if selectedPatternNode}
+    <!-- Scene play/stop button next to root node -->
+    {#if rootNode && hasScenePlayback()}
       <button
-        class="solo-btn"
-        class:active={playback.soloPattern === selectedPatternIndex}
+        class="scene-play-btn"
+        class:playing={playback.mode === 'scene' && playback.playing}
+        class:active={playback.mode === 'scene'}
         style="
-          left: calc({PAD_INSET}px + {selectedPatternNode.x} * (100% - {PAD_INSET * 2}px) + 36px);
-          top: calc({PAD_INSET}px + {selectedPatternNode.y} * (100% - {PAD_INSET * 2}px));
+          left: calc({PAD_INSET}px + {rootNode.x} * (100% - {PAD_INSET * 2}px) - {rootNode.type === 'pattern' ? 52 : 40}px);
+          top: calc({PAD_INSET}px + {rootNode.y} * (100% - {PAD_INSET * 2}px));
         "
-        onpointerdown={e => { e.stopPropagation(); toggleSolo() }}
-        data-tip="Solo pattern" data-tip-ja="パターンソロ"
-      >▶</button>
+        onpointerdown={e => {
+          e.stopPropagation()
+          if (playback.playing && playback.mode === 'scene') {
+            onstop?.()
+          } else if (playback.playing) {
+            playback.mode = 'scene'
+          } else {
+            playback.mode = 'scene'
+            onplay?.()
+          }
+        }}
+        data-tip="Scene play/stop" data-tip-ja="シーン再生/停止"
+      >
+        <svg viewBox="0 0 12 14" width="10" height="12" fill="currentColor" aria-hidden="true">
+          {#if playback.playing && playback.mode === 'scene'}
+            <rect x="1" y="1" width="3.5" height="12" rx="0.8"/>
+            <rect x="7.5" y="1" width="3.5" height="12" rx="0.8"/>
+          {:else}
+            <polygon points="1,1 11,7 1,13"/>
+          {/if}
+        </svg>
+      </button>
     {/if}
+
+    <!-- Solo button: show on soloed node or selected pattern node -->
+    {#each song.scene.nodes as node (node.id)}
+      {#if node.type === 'pattern'}
+        {@const isSoloing = playback.soloNodeId === node.id}
+        {@const isLooping = isSoloing && playback.sceneNodeId === node.id}
+        {@const isArmed = isSoloing && !isLooping}
+        {@const isSelected = node.id === ui.selectedSceneNode}
+        {#if isSoloing || isSelected}
+          <button
+            class="solo-btn"
+            class:active={isLooping}
+            class:armed={isArmed}
+            style="
+              left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + 36px);
+              top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+            "
+            onpointerdown={e => {
+              e.stopPropagation()
+              if (isSoloing) {
+                playback.soloNodeId = null
+              } else {
+                playback.soloNodeId = node.id
+                const patIdx = song.patterns.findIndex(p => p.id === node.patternId)
+                if (patIdx >= 0) selectPattern(patIdx)
+              }
+            }}
+            data-tip="Solo pattern" data-tip-ja="パターンソロ"
+            aria-label="Solo pattern"
+          >
+            <svg class="solo-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+              <path d="M12.5 6A4.5 4.5 0 0 0 4.5 4.5"/>
+              <path d="M3.5 10A4.5 4.5 0 0 0 11.5 11.5"/>
+              <polyline points="4.5,2 4.5,5 7.5,5"/>
+              <polyline points="11.5,14 11.5,11 8.5,11"/>
+            </svg>
+          </button>
+        {/if}
+      {/if}
+    {/each}
 
     <!-- Param popup for selected function node -->
     {#if selectedFnNode && selectedFnNode.type !== 'probability' && selectedFnNode.type !== 'fx'}
@@ -1017,16 +1116,45 @@
   .scene-node.root {
     border: 2px solid var(--color-fg);
   }
-  .root-marker {
+
+  /* ── Scene play/stop button (next to root node) ── */
+  .scene-play-btn {
     position: absolute;
-    left: -11px;
-    top: 50%;
     transform: translateY(-50%);
-    pointer-events: none;
-    color: var(--color-fg);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(30, 32, 40, 0.3);
+    background: rgba(255, 255, 255, 0.95);
+    color: rgba(30, 32, 40, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 6;
+    transition: background 80ms, border-color 80ms, color 80ms, box-shadow 80ms;
+    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15);
   }
-  .scene-node.fn .root-marker {
-    left: -10px;
+  .scene-play-btn:hover {
+    border-color: var(--color-fg);
+    color: var(--color-fg);
+    background: white;
+  }
+  .scene-play-btn.active {
+    border-color: var(--color-fg);
+    background: white;
+    color: var(--color-fg);
+    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.2);
+  }
+  .scene-play-btn.playing {
+    border-color: var(--color-fg);
+    background: white;
+    color: var(--color-fg);
+    animation: scene-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes scene-pulse {
+    0%, 100% { box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15); }
+    50% { box-shadow: 0 0 0 5px rgba(30, 32, 40, 0.1); }
   }
 
   .scene-node.selected {
@@ -1083,6 +1211,25 @@
     opacity: 0.85;
   }
 
+  /* ── Edge connection handle ── */
+  .edge-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(68, 114, 180, 0.3);
+    border: 1.5px solid rgba(68, 114, 180, 0.5);
+    transform: translate(-50%, -50%);
+    cursor: crosshair;
+    z-index: 4;
+    transition: background 80ms, transform 80ms;
+  }
+  .edge-handle:hover {
+    background: rgba(68, 114, 180, 0.6);
+    border-color: var(--color-blue);
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+
   .node-label {
     font-family: var(--font-data);
     font-size: 9px;
@@ -1118,11 +1265,27 @@
     border-color: var(--color-blue);
     color: var(--color-blue);
   }
+  .solo-btn.armed {
+    background: rgba(68, 114, 180, 0.08);
+    border-color: rgba(68, 114, 180, 0.5);
+    color: rgba(68, 114, 180, 0.5);
+    border-style: dashed;
+  }
   .solo-btn.active {
     background: rgba(68, 114, 180, 0.2);
     border-color: var(--color-blue);
     color: var(--color-blue);
     box-shadow: 0 0 6px rgba(68, 114, 180, 0.25);
+  }
+  .solo-btn.active .solo-icon {
+    animation: solo-spin 1.5s linear infinite;
+  }
+  @keyframes solo-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .solo-icon {
+    pointer-events: none;
   }
 
   /* ── Zoom reset ── */
@@ -1309,5 +1472,6 @@
     .param-btn { width: 32px; height: 32px; font-size: 18px; }
     .param-val { font-size: 13px; min-width: 36px; }
     .bubble-item { width: 36px; height: 36px; }
+    .scene-play-btn { width: 34px; height: 34px; }
   }
 </style>

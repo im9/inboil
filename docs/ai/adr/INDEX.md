@@ -53,6 +53,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Proposed | Random branching at forks + terminal stop |
 | 050 | Scene Function Nodes | Proposed | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
+| 051 | Scene View Polish | Proposed | Playback button on root, solo repeat icon, animated edges, hourglass gauge |
 
 ## UI / Layout
 

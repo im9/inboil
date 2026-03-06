@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear, patternRename, patternSetColor } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear, patternRename, patternSetColor, soloPatternIndex } from '../state.svelte.ts'
   import { PATTERN_COLORS } from '../constants.ts'
 
   // Show all patterns in the pool
@@ -8,7 +8,8 @@
   // Which pattern is currently playing
   const currentlyPlayingPattern = $derived.by(() => {
     if (!playback.playing) return -1
-    if (playback.soloPattern != null) return playback.soloPattern
+    const soloIdx = soloPatternIndex()
+    if (soloIdx != null) return soloIdx
     if (playback.mode === 'scene') {
       if (playback.playingPattern != null) return playback.playingPattern
       return song.sections[playback.currentSection]?.patternIndex ?? -1
@@ -79,6 +80,7 @@
 
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
+    if (ui.phraseView === 'scene') return // scene view handles its own keys
     const mod = e.metaKey || e.ctrlKey
     if (mod && e.code === 'KeyC') {
       e.preventDefault()
@@ -151,7 +153,7 @@
       {@const pc = song.patterns[pi]?.color ?? 0}
       {@const isSelected = ui.currentPattern === pi}
       {@const isPlaying = currentlyPlayingPattern === pi}
-      {@const isSolo = playback.soloPattern === pi}
+      {@const isSolo = soloPatternIndex() === pi}
       {@const inScene = patternUsedInScene(pi)}
       <div
         class="pat-cell"

@@ -12,7 +12,7 @@
   import FilterView from './lib/components/FilterView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
-  import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, undo, redo } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
 
   // ── Responsive ────────────────────────────────────────────────────
@@ -31,8 +31,9 @@
     void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      if (playback.soloPattern != null) {
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
+      const soloIdx = soloPatternIndex()
+      if (soloIdx != null) {
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, soloIdx)
       } else if (playback.mode === 'scene' && hasScenePlayback()) {
         const pi = playback.playingPattern ?? ui.currentPattern
         engine.sendPatternByIndex(song, effects, perf, fxPad, false, pi)
@@ -45,10 +46,20 @@
     return () => cancelAnimationFrame(rafId)
   })
 
+  let soloSent: string | null = null // tracks which solo node was last sent to engine
+
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
-    // Solo pattern — just loop, no advancement
-    if (playback.soloPattern != null) return
+    // Solo node — only loop when scene has reached the target node
+    if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
+      if (cycle && playback.soloNodeId !== soloSent) {
+        soloSent = playback.soloNodeId
+        const idx = soloPatternIndex()
+        if (idx != null) engine.sendPatternByIndex(song, effects, perf, fxPad, true, idx)
+      }
+      return
+    }
+    if (playback.soloNodeId == null) soloSent = null
     // Loop mode — just loop current pattern, no advancement
     if (playback.mode !== 'scene') return
     if (cycle) {
@@ -59,6 +70,10 @@
         if (advanced) {
           perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
           engine.sendPatternByIndex(song, effects, perf, fxPad, true, patternIndex)
+          // Check if we just arrived at the solo target
+          if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
+            soloSent = playback.soloNodeId
+          }
         }
         return
       }
@@ -79,18 +94,15 @@
     }
   }
 
-  // Reactive solo switching: when soloPattern changes during playback, send immediately
-  $effect(() => {
-    if (playback.soloPattern != null && playback.playing) {
-      engine.sendPatternByIndex(song, effects, perf, fxPad, true, playback.soloPattern)
-    }
-  })
+  // Solo switching is handled in onStep at cycle boundary
 
   async function play() {
     if (playback.playing) return
     await engine.init()
-    if (playback.soloPattern != null) {
-      engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.soloPattern)
+    const soloIdx2 = soloPatternIndex()
+    if (soloIdx2 != null) {
+      soloSent = playback.soloNodeId
+      engine.sendPatternByIndex(song, effects, perf, fxPad, false, soloIdx2)
       engine.play()
       playback.playing = true
       return
@@ -130,7 +142,7 @@
     fxPad.glitch = { ...fxPad.glitch, on: false }
     fxPad.granular = { ...fxPad.granular, on: false }
     // Clear solo & scene playback
-    playback.soloPattern = null
+    playback.soloNodeId = null
     playback.sceneNodeId = null
     playback.sceneEdgeId = null
     playback.sceneRepeatLeft = 0
@@ -161,7 +173,7 @@
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       {#if ui.phraseView === 'scene'}
-        <SceneView />
+        <SceneView onplay={play} onstop={stop} />
       {:else if ui.phraseView === 'fx'}
         <FxPad />
       {:else if ui.phraseView === 'eq'}
@@ -187,7 +199,7 @@
         {/if}
         <div class="view-main">
           {#if ui.phraseView === 'scene'}
-            <SceneView />
+            <SceneView onplay={play} onstop={stop} />
           {:else if ui.phraseView === 'fx'}
             <FxPad />
           {:else if ui.phraseView === 'eq'}
