@@ -4,8 +4,8 @@
 
   const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
-  let viewEl: HTMLDivElement
-  let canvasEl: HTMLCanvasElement
+  let viewEl = $state<HTMLDivElement>() as HTMLDivElement
+  let canvasEl = $state<HTMLCanvasElement>() as HTMLCanvasElement
   let animFrameId: number | null = null
 
   // ── Drag state ──
@@ -462,18 +462,6 @@
   const rootNode = $derived(song.scene.nodes.find(n => n.root) ?? null)
 
   // ── Selected node helpers ──
-
-  const selectedPatternNode = $derived.by(() => {
-    if (!ui.selectedSceneNode) return null
-    const n = song.scene.nodes.find(n => n.id === ui.selectedSceneNode)
-    return (n && n.type === 'pattern') ? n : null
-  })
-
-  const selectedPatternIndex = $derived.by(() => {
-    if (!selectedPatternNode) return -1
-    return song.patterns.findIndex(p => p.id === selectedPatternNode.patternId)
-  })
-
 
   const selectedFnNode = $derived.by(() => {
     if (!ui.selectedSceneNode) return null
