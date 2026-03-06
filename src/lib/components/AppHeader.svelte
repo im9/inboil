@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { song, playback, ui, toggleSidebar } from '../state.svelte.ts'
+  import { song, playback, ui, perf, toggleSidebar } from '../state.svelte.ts'
   import { PROJECT_NAME } from '../constants.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
+  import Knob from './Knob.svelte'
+  import PerfButtons from './PerfButtons.svelte'
 
   interface Props {
     onPlay: () => void
     onStop: () => void
-    onRandom: () => void
     compact?: boolean
   }
-  let { onPlay, onStop, onRandom, compact = false }: Props = $props()
+  let { onPlay, onStop, compact = false }: Props = $props()
 
   function handleHelp() {
     toggleSidebar('help')
@@ -55,24 +56,6 @@
     </svg>
     <span class="app-name">INBOIL</span>
     {#if compact}
-      <div class="transport-center">
-        <button
-          class="btn-transport"
-          class:active={playback.playing}
-          onpointerdown={onPlay}
-          aria-label="Play"
-        >▶</button>
-        <button
-          class="btn-transport"
-          onpointerdown={onStop}
-          aria-label="Stop"
-        >■</button>
-        <button
-          class="btn-rand"
-          onpointerdown={onRandom}
-          aria-label="Randomize"
-        >RAND</button>
-      </div>
       <button
         class="btn-help-mobile"
         class:active={ui.sidebar === 'help'}
@@ -99,7 +82,7 @@
     >&#x2699;</button>
   </header>
 
-  <!-- Sub header: BPM, transport, pattern -->
+  <!-- Sub header: BPM, transport, perf controls, pattern -->
   <div class="sub-header">
     <div class="bpm-block">
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(-1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Decrease tempo (hold to scroll)" data-tip-ja="テンポを下げる (長押しでスクロール)">−</button>
@@ -122,12 +105,49 @@
         aria-label="Stop"
         data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>
+    </div>
+
+    <div class="sep" aria-hidden="true"></div>
+
+    <!-- Master gain + Swing -->
+    <span class="gain-wrap">
+      <span data-tip="Master output volume" data-tip-ja="マスター出力音量">
+      <Knob value={perf.masterGain} label="GAIN" size={36} onchange={v => { perf.masterGain = v }} />
+      </span>
+      <span data-tip="Swing amount (shuffle feel)" data-tip-ja="スウィング量 (シャッフル感)">
+      <Knob value={perf.swing} label="SWG" size={36} onchange={v => { perf.swing = v }} />
+      </span>
+    </span>
+
+    <div class="sep" aria-hidden="true"></div>
+
+    <!-- View toggle: FX / EQ / MST -->
+    <div class="view-toggle">
       <button
-        class="btn-rand"
-        onpointerdown={onRandom}
-        aria-label="Randomize"
-        data-tip="Randomize pattern" data-tip-ja="パターンをランダム生成"
-      >RAND</button>
+        class="btn-view"
+        class:active={ui.phraseView === 'fx'}
+        onpointerdown={() => { ui.phraseView = ui.phraseView === 'fx' ? 'pattern' : 'fx'; ui.patternSheet = false }}
+        data-tip="FX pad — drag nodes to control effects" data-tip-ja="FXパッド — ノードをドラッグしてエフェクト操作"
+      >FX</button>
+      <button
+        class="btn-view"
+        class:active={ui.phraseView === 'eq'}
+        onpointerdown={() => { ui.phraseView = ui.phraseView === 'eq' ? 'pattern' : 'eq'; ui.patternSheet = false }}
+        data-tip="EQ / Filter view" data-tip-ja="EQ / フィルター画面"
+      >EQ</button>
+      <button
+        class="btn-view"
+        class:active={ui.phraseView === 'master'}
+        onpointerdown={() => { ui.phraseView = ui.phraseView === 'master' ? 'pattern' : 'master'; ui.patternSheet = false }}
+        data-tip="Master bus — compressor, ducker, FX returns" data-tip-ja="マスターバス — コンプ、ダッカー、FXリターン"
+      >MST</button>
+    </div>
+
+    <div class="sep" aria-hidden="true"></div>
+
+    <!-- Performance buttons (momentary press-hold) -->
+    <div class="perf-btns">
+      <PerfButtons variant="bar" />
     </div>
 
     <div class="pat-block">
@@ -319,18 +339,47 @@
     color: var(--color-fg);
   }
 
-  .btn-rand {
-    border: 1px solid var(--color-olive);
-    background: transparent;
-    color: var(--color-olive);
-    padding: 4px 8px;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    transition: background 60ms linear, color 60ms linear;
+  /* ── Separator ── */
+  .sep {
+    width: 1px;
+    height: 28px;
+    background: rgba(237,232,220,0.12);
+    flex-shrink: 0;
   }
-  .btn-rand:active {
-    background: var(--color-olive);
-    color: var(--color-bg);
+
+  /* ── Gain/Swing knobs ── */
+  .gain-wrap { display: contents; }
+
+  /* ── View toggle ── */
+  .view-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-view {
+    border: 1.5px solid rgba(237,232,220,0.30);
+    background: transparent;
+    color: rgba(237,232,220,0.40);
+    padding: 4px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 40ms linear, color 40ms linear;
+    user-select: none;
+  }
+  .btn-view.active {
+    background: rgba(237,232,220,0.12);
+    color: rgba(237,232,220,0.85);
+    border-color: rgba(237,232,220,0.45);
+  }
+
+  /* ── Performance buttons ── */
+  .perf-btns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   /* ── Pattern block ── */
@@ -352,32 +401,99 @@
   }
   .compact .pat-name { font-size: 18px; }
 
-  /* ── Transport center (mobile app-header) ── */
-  .transport-center {
-    display: none;
-  }
-
   /* ── Mobile ── */
   @media (max-width: 639px) {
-    /* Transport moved to PerfBar on mobile */
-    .transport-center { display: none; }
-    .transport { display: none; }
-
     .sub-header,
     .compact .sub-header {
       height: auto;
-      padding: 4px 8px;
-      gap: 4px;
+      padding: 0;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+
+    /* Row 1: BPM + transport + knobs + pat */
+    .bpm-block {
+      padding: 4px 0 4px 8px;
     }
     .bpm-value { font-size: 22px; }
     .bpm-adj { width: 20px; height: 20px; font-size: 12px; }
     .bpm-label { display: none; }
+
+    .sep { display: none; }
+
+    /* Show GAIN/SWG knobs on mobile, scaled down */
+    .gain-wrap {
+      display: flex;
+      gap: 2px;
+      order: 10;
+      padding-left: 4px;
+      padding-right: 6px;
+      border-left: 1px solid rgba(237,232,220,0.12);
+    }
+    .gain-wrap :global(.knob-wrap) {
+      transform: scale(0.72);
+      margin: -5px -4px;
+    }
+
+    /* Hide perf-btns on mobile (moved to PerfBubble) */
+    .perf-btns { display: none; }
+
+    /* Mobile transport */
+    .transport {
+      display: flex;
+      gap: 3px;
+      order: 10;
+      align-items: center;
+      margin-left: 10px;
+    }
+    .btn-transport {
+      border: 1px solid rgba(237,232,220,0.45);
+      background: transparent;
+      color: var(--color-bg);
+      padding: 0 12px;
+      height: 28px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-transport:active,
+    .btn-transport.active {
+      background: var(--color-bg);
+      color: var(--color-fg);
+    }
+
     /* BPM + pat side by side */
     .pat-block {
       margin-left: auto;
       align-items: flex-end;
       gap: 2px;
+      padding-right: 8px;
     }
     .pat-name { font-size: 14px; }
+
+    /* Row 2: full-width tab bar */
+    .view-toggle {
+      order: 20;
+      width: 100%;
+      display: flex;
+      gap: 0;
+      border-top: 1px solid rgba(237,232,220,0.12);
+    }
+    .btn-view {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 9px;
+      text-align: center;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: rgba(237,232,220,0.35);
+    }
+    .btn-view:not(:last-child) { border-right: 1px solid rgba(237,232,220,0.08); }
+    .btn-view.active {
+      color: rgba(237,232,220,0.90);
+      border-bottom-color: var(--color-olive);
+      background: rgba(237,232,220,0.06);
+    }
   }
 </style>

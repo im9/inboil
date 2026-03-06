@@ -381,20 +381,22 @@
     text-transform: uppercase;
   }
   .voice-btn {
-    padding: 0;
-    border: none;
+    padding: 1px 4px;
+    border: 1px solid rgba(30,32,40,0.12);
     background: transparent;
-    font-size: 9px;
+    font-size: 8px;
     color: var(--color-muted);
     line-height: 1;
     text-transform: uppercase;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
-    border-radius: 2px;
-    transition: color 100ms;
+    border-radius: 3px;
+    transition: color 100ms, border-color 100ms, background 100ms;
   }
   .voice-btn:hover {
     color: var(--color-fg);
+    border-color: rgba(30,32,40,0.25);
+    background: rgba(30,32,40,0.04);
   }
 
   /* ── Solo button ── */

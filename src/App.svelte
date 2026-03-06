@@ -2,7 +2,7 @@
   import AppHeader from './lib/components/AppHeader.svelte'
   import StepGrid from './lib/components/StepGrid.svelte'
   import DockPanel from './lib/components/DockPanel.svelte'
-  import PerfBar from './lib/components/PerfBar.svelte'
+
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
   import SectionNav from './lib/components/SectionNav.svelte'
   import MatrixView from './lib/components/MatrixView.svelte'
@@ -13,6 +13,7 @@
   import MasterView from './lib/components/MasterView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
+  import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
   import { fade, fly } from 'svelte/transition'
@@ -175,8 +176,7 @@
 
 <div class="app">
   {#if isMobile}
-    <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} compact={true} />
-    <PerfBar onPlay={play} onStop={stop} onRandom={randomizePattern} />
+    <AppHeader onPlay={play} onStop={stop} compact={true} />
     <SectionNav />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
@@ -188,26 +188,32 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
           {#if ui.phraseView === 'fx'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <FxPad />
           {:else if ui.phraseView === 'eq'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <FilterView />
           {:else if ui.phraseView === 'master'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <MasterView />
-          {:else if prefs.patternEditor === 'tracker'}
-            <TrackerView />
           {:else}
-            <MobileTrackView />
+            <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} />
+            {#if prefs.patternEditor === 'tracker'}
+              <TrackerView />
+            {:else}
+              <MobileTrackView />
+            {/if}
           {/if}
         </div>
       {/if}
     </div>
     <PerfBubble />
   {:else}
-    <AppHeader onPlay={play} onStop={stop} onRandom={randomizePattern} />
-    <PerfBar />
+    <AppHeader onPlay={play} onStop={stop} />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
@@ -221,18 +227,19 @@
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
               {#if ui.phraseView === 'fx'}
                 <FxPad />
               {:else if ui.phraseView === 'eq'}
                 <FilterView />
               {:else if ui.phraseView === 'master'}
                 <MasterView />
-              {:else if prefs.patternEditor === 'tracker'}
-                <TrackerView />
               {:else}
-                <StepGrid />
+                <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} />
+                {#if prefs.patternEditor === 'tracker'}
+                  <TrackerView />
+                {:else}
+                  <StepGrid />
+                {/if}
               {/if}
             </div>
           {/if}
