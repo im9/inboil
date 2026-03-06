@@ -544,6 +544,27 @@ export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Kick', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
 ])
 
+export type VoiceCategory = 'drum' | 'bass' | 'lead'
+
+export interface VoiceMeta {
+  id: VoiceId
+  label: string
+  category: VoiceCategory
+}
+
+export const VOICE_LIST: VoiceMeta[] = [
+  { id: 'Kick',     label: 'KICK',  category: 'drum' },
+  { id: 'Snare',    label: 'SNARE', category: 'drum' },
+  { id: 'Clap',     label: 'CLAP',  category: 'drum' },
+  { id: 'Hat',      label: 'C.HH',  category: 'drum' },
+  { id: 'OpenHat',  label: 'O.HH',  category: 'drum' },
+  { id: 'Cymbal',   label: 'CYM',   category: 'drum' },
+  { id: 'Bass303',  label: '303',   category: 'bass' },
+  { id: 'Analog',   label: 'ANA',   category: 'bass' },
+  { id: 'MoogLead', label: 'MOOG',  category: 'lead' },
+  { id: 'FM',       label: 'FM',    category: 'lead' },
+]
+
 export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice {
   const factory = VOICE_REGISTRY[voiceId]
   return factory ? factory(sr) : new AnalogVoice(sr)

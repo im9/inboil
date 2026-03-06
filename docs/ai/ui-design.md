@@ -187,6 +187,15 @@ XY filter/EQ surface (dark zone). Rendered as an overlay sheet over SceneView (A
 
 M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Shows columns: NOTE/VEL/DUR/SLD/CHN. Keyboard-navigable with arrow keys. Uses `activeCell(trackId)` — edits the same data as StepGrid. Track selector bar at the top.
 
+### VoicePicker — DECIDED
+
+Radial bubble menu for changing a track's instrument. Triggered by clicking the voice button (instrument abbreviation) in StepGrid's track label area. Props: `pos`, `currentVoiceId`, `onpick`, `onclose`.
+
+- **Category tabs**: DRUM / BASS / LEAD filter buttons (top row)
+- **Radial layout**: Voice buttons arranged in an arc around the trigger point, with staggered pop-in animation (180ms, 25ms delay per item)
+- **Backdrop dismiss**: Full-screen transparent backdrop closes on tap
+- Calls `changeVoice(trackIdx, voiceId)` on selection (resets cell voiceParams to new voice defaults)
+
 ### SceneView — DECIDED
 
 Node-based directed graph canvas. Always the main view (ADR 054). Full arrangement editor.

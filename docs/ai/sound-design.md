@@ -2,22 +2,24 @@
 
 ## Overview
 
-8 tracks, each permanently assigned a voice type.
+8 tracks with configurable voice assignment via VoiceId registry (ADR 009).
 All synthesis is implemented in **TypeScript** and runs inside the AudioWorklet processor.
 A parallel C++ DSP core exists in `src/dsp/` (compiled via Emscripten) but is not yet integrated.
 
-## Track Assignment — DECIDED
+## Default Track Assignment — DECIDED
 
-| Track | Name | SynthType | Voice Class | Description |
+Tracks can be reassigned to any voice via VoicePicker (ADR 009). These are the factory defaults:
+
+| Track | Name | VoiceId | Voice Class | Description |
 |---|---|---|---|---|
-| 0 | KICK | DrumSynth | KickVoice | TR-909 style bass drum |
-| 1 | SNARE | DrumSynth | SnareVoice | TR-909 style snare |
-| 2 | CLAP | DrumSynth | ClapVoice | TR-909 style hand clap |
-| 3 | C.HH | NoiseSynth | HatVoice | TR-909 closed hi-hat |
-| 4 | O.HH | NoiseSynth | OpenHatVoice | TR-909 open hi-hat |
-| 5 | CYM | NoiseSynth | CymbalVoice | TR-909 crash cymbal |
-| 6 | BASS | AnalogSynth | TB303Voice | TB-303 acid bass |
-| 7 | LEAD | AnalogSynth | MoogVoice | Moog-style 4-pole lead |
+| 0 | KICK | Kick | KickVoice | TR-909 style bass drum |
+| 1 | SNARE | Snare | SnareVoice | TR-909 style snare |
+| 2 | CLAP | Clap | ClapVoice | TR-909 style hand clap |
+| 3 | C.HH | Hat | HatVoice | TR-909 closed hi-hat |
+| 4 | O.HH | OpenHat | OpenHatVoice | TR-909 open hi-hat |
+| 5 | CYM | Cymbal | CymbalVoice | TR-909 crash cymbal |
+| 6 | BASS | Bass303 | TB303Voice | TB-303 acid bass |
+| 7 | LEAD | MoogLead | MoogVoice | Moog-style 4-pole lead |
 
 ## Synth Voices
 
@@ -173,7 +175,10 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | KickVoice, SnareVoice, … | All synth voice implementations. |
-| voices.ts | makeVoice(type) | Factory function for voice instantiation. |
+| voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |
+| voices.ts | VOICE_REGISTRY | Maps VoiceId string → voice constructor. |
+| voices.ts | DRUM_VOICES | ReadonlySet of drum VoiceIds for isDrum() check. |
+| voices.ts | VOICE_LIST | VoiceMeta array with id, label, category for UI picker. |
 
 ## Effects Chain — DECIDED
 

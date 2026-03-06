@@ -15,6 +15,7 @@ export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
 
 export type { VoiceId } from './audio/dsp/voices.ts'
 import type { VoiceId } from './audio/dsp/voices.ts'
+import { defaultVoiceParams } from './paramDefs.ts'
 
 export interface Trig {
   active: boolean
@@ -636,6 +637,14 @@ export function toggleSolo(trackId: number) {
 
 export function isDrum(track: Track): boolean {
   return DRUM_VOICES.has(track.voiceId)
+}
+
+/** Change a track's instrument voice (ADR 009 Phase 3) */
+export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
+  pushUndo('Change instrument')
+  song.tracks[trackIdx].voiceId = newVoiceId
+  const c = activeCell(trackIdx)
+  c.voiceParams = defaultVoiceParams(newVoiceId)
 }
 
 export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const

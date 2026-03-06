@@ -1,13 +1,29 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte'
   import { slide } from 'svelte/transition'
-  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, changeVoice, STEP_OPTIONS } from '../state.svelte.ts'
+  import type { VoiceId } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
+  import VoicePicker from './VoicePicker.svelte'
 
   function cycleSteps(trackId: number) {
     const current = activeCell(trackId).steps
     const idx = STEP_OPTIONS.indexOf(current as typeof STEP_OPTIONS[number])
     setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
+  }
+
+  // ── Voice picker state ──
+  let pickerOpen = $state<{ trackIdx: number; x: number; y: number } | null>(null)
+
+  function openVoicePicker(e: PointerEvent, trackIdx: number) {
+    e.stopPropagation()
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    pickerOpen = { trackIdx, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  }
+
+  function pickVoice(id: VoiceId) {
+    if (pickerOpen) changeVoice(pickerOpen.trackIdx, id)
+    pickerOpen = null
   }
 
   // ── Velocity drag state ──
@@ -149,14 +165,20 @@
     >
       <div class="track-head">
         <!-- Track label -->
-        <button
-          class="track-label"
-          onpointerdown={() => { ui.selectedTrack = trackId }}
-          data-tip="Select track to edit" data-tip-ja="トラックを選択"
-        >
-          <span class="track-name">{track.name}</span>
-          <span class="track-type">{track.voiceId}</span>
-        </button>
+        <div class="track-label-group">
+          <button
+            class="track-label"
+            onpointerdown={() => { ui.selectedTrack = trackId }}
+            data-tip="Select track to edit" data-tip-ja="トラックを選択"
+          >
+            <span class="track-name">{track.name}</span>
+          </button>
+          <button
+            class="voice-btn"
+            onpointerdown={e => openVoicePicker(e, trackId)}
+            data-tip="Change instrument" data-tip-ja="楽器を変更"
+          >{track.voiceId}</button>
+        </div>
 
         <!-- Step count -->
         <button
@@ -280,6 +302,15 @@
   {/each}
 </div>
 
+{#if pickerOpen}
+  <VoicePicker
+    pos={{ x: pickerOpen.x, y: pickerOpen.y }}
+    currentVoiceId={song.tracks[pickerOpen.trackIdx].voiceId}
+    onpick={pickVoice}
+    onclose={() => { pickerOpen = null }}
+  />
+{/if}
+
 <style>
   .step-grid {
     /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
@@ -327,16 +358,19 @@
     );
   }
 
-  /* ── Track label ── */
-  .track-label {
+  /* ── Track label group (name + voice btn, 64px total) ── */
+  .track-label-group {
     width: 64px;
     display: flex;
     flex-direction: column;
     gap: 1px;
     padding: 4px 6px;
+  }
+  .track-label {
     border: none;
     background: transparent;
     text-align: left;
+    padding: 0;
   }
   .track-name {
     font-size: 11px;
@@ -346,11 +380,21 @@
     line-height: 1;
     text-transform: uppercase;
   }
-  .track-type {
+  .voice-btn {
+    padding: 0;
+    border: none;
+    background: transparent;
     font-size: 9px;
     color: var(--color-muted);
     line-height: 1;
     text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: color 100ms;
+  }
+  .voice-btn:hover {
+    color: var(--color-fg);
   }
 
   /* ── Solo button ── */

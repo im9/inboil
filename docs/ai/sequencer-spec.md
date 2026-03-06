@@ -12,7 +12,7 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 | Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
 | Pattern | A reusable unit of music: id + name + 8 cells. One pattern plays at a time. |
 | Cell | Step data for one track in one pattern: steps, trigs, voiceParams, FX sends. |
-| Track | Instrument configuration only: id, name, synthType, muted, volume, pan. |
+| Track | Instrument configuration only: id, name, voiceId, muted, volume, pan. |
 | Section | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, FX). |
 | Scene | Node-based directed graph for arrangement. Nodes reference patterns or apply functions. |
 | Trig | An active step that triggers a note/sound. Inactive steps are "empty". |
@@ -38,6 +38,7 @@ Song {
 Pattern {
   id:        string            // e.g. 'pat_00'
   name:      string            // max 8 chars
+  color:     number            // 0–7 index into PATTERN_COLORS
   cells:     Cell[]            // 8 fixed (one per track)
 }
 ```
@@ -64,7 +65,7 @@ Cell {
 Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  synthType:   SynthType       // 'DrumSynth' | 'NoiseSynth' | 'AnalogSynth' | 'FMSynth' | 'Sampler' | 'ChordSynth'
+  voiceId:     VoiceId         // 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
@@ -72,6 +73,7 @@ Track {
 ```
 
 Track is instrument config only. Step data (trigs, voiceParams, sends) lives in Cell.
+Voice can be changed per-track via VoicePicker bubble menu (ADR 009).
 
 ## Section — DECIDED
 
@@ -97,6 +99,7 @@ Scene {
   name:   string
   nodes:  SceneNode[]
   edges:  SceneEdge[]
+  labels: SceneLabel[]        // free-floating canvas text labels (ADR 052)
 }
 
 SceneNode {
@@ -137,16 +140,16 @@ See ADR 021 for duration/slide, ADR 028 for chance, ADR 014 for parameter locks.
 
 ## Default Track Layout — DECIDED
 
-| Track | Name | SynthType | Voice Class | Default Note | Default Pan |
+| Track | Name | VoiceId | Voice Class | Default Note | Default Pan |
 |---|---|---|---|---|---|
-| 0 | KICK | DrumSynth | KickVoice | 60 | 0.00 |
-| 1 | SNARE | DrumSynth | SnareVoice | 60 | -0.10 |
-| 2 | CLAP | DrumSynth | ClapVoice | 60 | 0.15 |
-| 3 | C.HH | NoiseSynth | HatVoice | 60 | -0.30 |
-| 4 | O.HH | NoiseSynth | OpenHatVoice | 60 | 0.35 |
-| 5 | CYM | NoiseSynth | CymbalVoice | 60 | 0.25 |
-| 6 | BASS | AnalogSynth | TB303Voice | 48 | 0.00 |
-| 7 | LEAD | AnalogSynth | MoogVoice | 64 | 0.10 |
+| 0 | KICK | Kick | KickVoice | 60 | 0.00 |
+| 1 | SNARE | Snare | SnareVoice | 60 | -0.10 |
+| 2 | CLAP | Clap | ClapVoice | 60 | 0.15 |
+| 3 | C.HH | Hat | HatVoice | 60 | -0.30 |
+| 4 | O.HH | OpenHat | OpenHatVoice | 60 | 0.35 |
+| 5 | CYM | Cymbal | CymbalVoice | 60 | 0.25 |
+| 6 | BASS | Bass303 | TB303Voice | 48 | 0.00 |
+| 7 | LEAD | MoogLead | MoogVoice | 64 | 0.10 |
 
 Tracks 0–5 are drums (note is ignored; fixed pitch set by voice params).
 Tracks 6–7 are melodic (note from trigs, transposable by KEY).

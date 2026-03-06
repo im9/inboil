@@ -9,7 +9,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Song** | Top-level container. Holds BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
 | **Pattern** | A reusable unit of music: string id + name + 8 cells (one per track). Stored in Song.patterns pool. |
 | **Cell** | Step data for one track in one pattern: steps, trigs, voiceParams, FX send levels. |
-| **Track** | Instrument configuration only: id, name, synthType, muted, volume, pan. No step data — that's in Cell. |
+| **Track** | Instrument configuration only: id, name, voiceId, muted, volume, pan. No step data — that's in Cell. |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
 | **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, probability, or fx type. |
@@ -65,6 +65,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
+| **VoicePicker** | Bubble menu for changing a track's instrument. Category tabs (DRUM/BASS/LEAD) + radial voice buttons. Triggered from StepGrid track label. |
+| **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 
 ## Performance Terms

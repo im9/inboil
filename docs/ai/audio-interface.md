@@ -81,7 +81,7 @@ interface WorkletTrack {
   steps: number
   trigs: WorkletTrig[]
   muted: boolean
-  synthType: string
+  voiceId: string            // VoiceId — determines which synth voice to instantiate
   volume: number            // 0.0–1.0 (default 0.8)
   pan: number               // -1.0 to 1.0
   reverbSend: number        // 0.0–1.0

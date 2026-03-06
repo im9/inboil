@@ -80,7 +80,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
 | 008 | Granular Enhancements | Implemented | Pitch shift, reverse, scatter, freeze |
-| 009 | Instrument Selection | Proposed | |
+| 009 | Instrument Selection | Implemented | VoiceId registry, bubble picker, worklet voice swap |
 | 010 | Drum Synth Expansion | Proposed | |
 | 015 | Named Instrument Presets | Proposed | |
 
