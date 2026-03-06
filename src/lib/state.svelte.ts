@@ -1332,7 +1332,6 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   if (node.type === 'pattern') {
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
-    ui.currentPattern = idx
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
@@ -1362,7 +1361,6 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
       const idx = pi >= 0 ? pi : 0
-      ui.currentPattern = idx
       playback.playingPattern = idx
       return { advanced: true, patternIndex: idx }
     }

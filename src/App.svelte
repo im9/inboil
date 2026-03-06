@@ -36,8 +36,8 @@
       if (soloIdx != null) {
         engine.sendPatternByIndex(song, effects, perf, fxPad, false, soloIdx)
       } else if (playback.mode === 'scene' && hasScenePlayback()) {
-        const pi = playback.playingPattern ?? ui.currentPattern
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, pi)
+        if (playback.playingPattern == null) return
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.playingPattern)
       } else if (playback.mode === 'scene' && hasArrangement()) {
         engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
       } else {

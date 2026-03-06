@@ -197,11 +197,31 @@ The split view approach was prototyped but felt like "jumping to another screen"
 - Need a trigger for the initial state when no scene nodes exist yet (e.g. button in SectionNav/PerfBar, or tap empty scene area)
 - Consider whether mobile needs a persistent mini pattern selector
 
+### Playback Rules
+
+Two independent cursors:
+
+- `ui.currentPattern` — user's selection for viewing/editing (controlled by MatrixView taps, never by scene playback)
+- `playback.playingPattern` — what the engine is actually playing (controlled by scene graph during scene mode)
+
+Playback mode is decided at **play() time**, not during playback:
+
+| State when play() is called | Result |
+|-----|--------|
+| Sheet open (pattern/FX/EQ) | Loop `ui.currentPattern` |
+| Sheet closed + scene has nodes | Scene mode — graph controls playback |
+| Sheet closed + no scene | Loop `ui.currentPattern` |
+
+During scene playback:
+- Scene graph advances `playback.playingPattern` — does NOT touch `ui.currentPattern`
+- User can freely browse/select patterns in MatrixView without affecting playback
+- Opening a sheet does NOT interrupt scene playback mid-song
+- To switch to pattern loop: stop → open sheet → play
+
 ## Considerations
 
 - **Rendering cost**: SceneView canvas runs continuously. Sheet overlay does not interfere with scene rendering
 - **DockPanel interaction**: DockPanel (PARAM/FX/EQ tabs) remains accessible alongside the sheet overlay — not blocked
-- **Playback context**: When pattern sheet is open, play loops the selected pattern. When closed, scene mode auto-engages if scene has playback data
 
 ## Extends
 
