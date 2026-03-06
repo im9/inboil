@@ -481,7 +481,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
       order: 0,
     })
   }
-  return { name: 'Main', nodes, edges }
+  return { name: 'Main', nodes, edges, labels: [] }
 }
 
 /**

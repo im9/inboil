@@ -1,12 +1,14 @@
 <script lang="ts">
   export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
+  export type BubblePickType = FnNodeType | 'label'
 
-  const BUBBLE_ITEMS: { type: FnNodeType; tip: string; tipJa: string }[] = [
+  const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
     { type: 'transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
     { type: 'tempo', tip: 'Tempo', tipJa: 'テンポ' },
     { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'probability', tip: 'Probability', tipJa: '確率' },
     { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
   const {
@@ -19,7 +21,7 @@
     pos: { x: number; y: number }
     containerWidth: number
     containerHeight: number
-    onpick: (type: FnNodeType) => void
+    onpick: (type: BubblePickType) => void
     onclose: () => void
   } = $props()
 </script>
@@ -68,6 +70,10 @@
     {:else if item.type === 'fx'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
         <path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>
+      </svg>
+    {:else if item.type === 'label'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <text x="7" y="11" text-anchor="middle" font-family="serif" font-size="12" font-weight="700">T</text>
       </svg>
     {/if}
   </button>

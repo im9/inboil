@@ -100,11 +100,21 @@ export interface SceneEdge {
   order: number           // playback order when multiple edges from same source
 }
 
+/** Free-floating text label on the scene canvas (ADR 052) */
+export interface SceneLabel {
+  id: string
+  text: string
+  x: number               // normalized 0–1
+  y: number
+  size?: number            // font scale factor (default 1.0 = 10px)
+}
+
 /** Scene = the arrangement graph (ADR 044) */
 export interface Scene {
   name: string
   nodes: SceneNode[]
   edges: SceneEdge[]
+  labels: SceneLabel[]
 }
 
 /** Song = pattern pool + arrangement sections + scene graph (ADR 044) */
@@ -178,6 +188,7 @@ function cloneScene(sc: Scene): Scene {
     name: sc.name,
     nodes: sc.nodes.map(n => ({ ...n, ...(n.params ? { params: { ...n.params } } : {}) })),
     edges: sc.edges.map(e => ({ ...e })),
+    labels: (sc.labels ?? []).map(l => ({ ...l })),
   }
 }
 
@@ -251,8 +262,9 @@ function restoreSong(src: Song): void {
         name: src.scene.name,
         nodes: src.scene.nodes.map(n => ({ ...n, ...(n.params ? { params: { ...n.params } } : {}) })),
         edges: src.scene.edges.map(e => ({ ...e })),
+        labels: (src.scene.labels ?? []).map(l => ({ ...l })),
       }
-    : { name: 'Main', nodes: [], edges: [] }
+    : { name: 'Main', nodes: [], edges: [], labels: [] }
 }
 
 export function undo(): boolean {
@@ -303,6 +315,7 @@ export const ui = $state<{
   phraseView: 'pattern' | 'scene' | 'fx' | 'eq'
   selectedSceneNode: string | null
   selectedSceneEdge: string | null
+  selectedSceneLabel: string | null
   sidebar: 'help' | 'system' | null
   lockMode: boolean
   selectedStep: number | null
@@ -316,6 +329,7 @@ export const ui = $state<{
   phraseView: 'pattern',
   selectedSceneNode: null,
   selectedSceneEdge: null,
+  selectedSceneLabel: null,
   sidebar: null,
   lockMode: false,
   selectedStep: null,
@@ -818,6 +832,7 @@ export function songLoadPreset(index: number) {
     const nodeIds: string[] = []
     song.scene.nodes = []
     song.scene.edges = []
+    song.scene.labels = []
     for (let i = 0; i < preset.scene.nodes.length; i++) {
       const pn = preset.scene.nodes[i]
       const id = `sn_${String(i).padStart(2, '0')}`
@@ -844,6 +859,7 @@ export function songLoadPreset(index: number) {
   } else {
     song.scene.nodes = []
     song.scene.edges = []
+    song.scene.labels = []
   }
 
   playback.currentSection = 0
@@ -1057,6 +1073,40 @@ export function sceneSetRoot(nodeId: string): void {
   if (!node || node.type !== 'pattern') return
   pushUndo('Set root node')
   for (const n of song.scene.nodes) n.root = n.id === nodeId
+}
+
+// ── Free-floating labels (ADR 052) ──
+
+export function sceneAddLabel(x: number, y: number, text = ''): string {
+  pushUndo('Add label')
+  const id = crypto.randomUUID().slice(0, 8)
+  song.scene.labels = [...(song.scene.labels ?? []), { id, text, x, y }]
+  return id
+}
+
+export function sceneUpdateLabel(labelId: string, text: string): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  pushUndo('Update label')
+  label.text = text
+}
+
+export function sceneDeleteLabel(labelId: string): void {
+  pushUndo('Delete label')
+  song.scene.labels = song.scene.labels.filter(l => l.id !== labelId)
+}
+
+export function sceneMoveLabel(labelId: string, x: number, y: number): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  label.x = x
+  label.y = y
+}
+
+export function sceneResizeLabel(labelId: string, delta: number): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  label.size = Math.max(0.5, Math.min(4, (label.size ?? 1) + delta))
 }
 
 const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
