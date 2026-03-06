@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { ICON } from '../icons.ts'
+
   export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
   export type BubblePickType = FnNodeType | 'label'
 
@@ -46,35 +48,17 @@
     onpointerdown={e => { e.stopPropagation(); onpick(item.type) }}
   >
     {#if item.type === 'transpose'}
-      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
-        <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
-        <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
     {:else if item.type === 'tempo'}
-      <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
-        <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
-        <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">{@html ICON.tempo}</svg>
     {:else if item.type === 'repeat'}
-      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-        <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
-        <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.repeat}</svg>
     {:else if item.type === 'probability'}
-      <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
-        <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
-        <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">{@html ICON.probability}</svg>
     {:else if item.type === 'fx'}
-      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-        <path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
     {:else if item.type === 'label'}
-      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
-        <text x="7" y="11" text-anchor="middle" font-family="serif" font-size="12" font-weight="700">T</text>
-      </svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
     {/if}
   </button>
 {/each}

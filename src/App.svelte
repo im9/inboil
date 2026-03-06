@@ -160,6 +160,22 @@
     ui.phraseView = 'pattern'
   }
 
+  function toggleLoop() {
+    if (playback.mode === 'loop') {
+      // Exit loop → re-engage scene if available
+      if (hasScenePlayback() || hasArrangement()) {
+        playback.mode = 'scene'
+      }
+    } else {
+      playback.mode = 'loop'
+      playback.soloNodeId = null
+      playback.playingPattern = null
+      if (playback.playing) {
+        engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
+      }
+    }
+  }
+
   const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
 
   function onKeydown(e: KeyboardEvent) {
@@ -201,7 +217,7 @@
             <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <MasterView />
           {:else}
-            <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} />
+            <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
             {#if prefs.patternEditor === 'tracker'}
               <TrackerView />
             {:else}
@@ -234,7 +250,7 @@
               {:else if ui.phraseView === 'master'}
                 <MasterView />
               {:else}
-                <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} />
+                <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
                 {#if prefs.patternEditor === 'tracker'}
                   <TrackerView />
                 {:else}

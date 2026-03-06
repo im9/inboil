@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    song, playback, ui, activeCell, isDrum,
+    song, playback, ui, activeCell, isDrum, isViewingPlayingPattern,
     toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
     setTrigSlide, setTrigChance, toggleMute, toggleSolo,
   } from '../state.svelte.ts'
@@ -282,7 +282,7 @@
   <!-- Step rows -->
   <div class="tracker-grid" bind:this={gridEl}>
     {#each ph.trigs as trig, si}
-      {@const isPlayhead = playback.playheads[trackId] === si}
+      {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === si}
       {@const isCursor = cursorRow === si}
       {@const cont = !trig.active && isContinuation(si)}
       <div

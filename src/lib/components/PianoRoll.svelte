@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { activeCell, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead } from '../state.svelte.ts'
+  import { activeCell, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead, isViewingPlayingPattern } from '../state.svelte.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
@@ -294,7 +294,7 @@
       {#each NOTES as note}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
           {#each ph.trigs as _trig, stepIdx}
-            {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
+            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
             {@const state = getCellState(stepIdx, note)}
             <button
               class="cell"

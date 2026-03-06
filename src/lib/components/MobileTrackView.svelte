@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, activeCell, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, isViewingPlayingPattern, STEP_OPTIONS } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
   import SplitFlap from './SplitFlap.svelte'
@@ -224,7 +224,7 @@
       onpointercancel={stepEnd}
     >
       {#each ph.trigs as trig, stepIdx}
-        {@const isPlayhead = playback.playing && playback.playheads[ui.selectedTrack] === stepIdx}
+        {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[ui.selectedTrack] === stepIdx}
         {@const isSelected = ui.lockMode && ui.selectedStep === stepIdx}
         {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
         {@const isDragging = velDragActive && velDragStep === stepIdx}

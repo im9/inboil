@@ -1346,6 +1346,23 @@ function sceneRootNode(): SceneNode | undefined {
   return song.scene.nodes.find(n => n.root)
 }
 
+/** Returns the pattern index currently being played by the engine */
+export function currentlyPlayingIndex(): number {
+  if (!playback.playing) return -1
+  const soloIdx = soloPatternIndex()
+  if (soloIdx != null) return soloIdx
+  if (playback.mode === 'scene') {
+    if (playback.playingPattern != null) return playback.playingPattern
+    return song.sections[playback.currentSection]?.patternIndex ?? -1
+  }
+  return ui.currentPattern
+}
+
+/** True when the viewed pattern is the one the engine is actually playing */
+export function isViewingPlayingPattern(): boolean {
+  return playback.playing && ui.currentPattern === currentlyPlayingIndex()
+}
+
 /** Resolve soloNodeId to a pattern index, or null if invalid */
 export function soloPatternIndex(): number | null {
   if (!playback.soloNodeId) return null

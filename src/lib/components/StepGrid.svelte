@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte'
   import { slide } from 'svelte/transition'
-  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, changeVoice, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, changeVoice, isViewingPlayingPattern, STEP_OPTIONS } from '../state.svelte.ts'
   import type { VoiceId } from '../state.svelte.ts'
   import PianoRoll from './PianoRoll.svelte'
   import VoicePicker from './VoicePicker.svelte'
@@ -223,7 +223,7 @@
         data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
       >
         {#each ph.trigs as trig, stepIdx}
-          {@const isPlayhead = playback.playing && playback.playheads[trackId] === stepIdx}
+          {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
           {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
           {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
           <button
@@ -269,7 +269,7 @@
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
         >
           {#each ph.trigs as trig, i}
-            {@const isPlayhead = playback.playing && playback.playheads[trackId] === i}
+            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === i}
             {@const isActive = trig.active || shrinking.has(`${trackId}-${i}`)}
             {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}
             {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}

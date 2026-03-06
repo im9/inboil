@@ -1,8 +1,12 @@
 <script lang="ts">
-  import { perf, playback, vkbd, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, isViewingPlayingPattern, song, effects, fxPad, NOTE_NAMES } from '../state.svelte.ts'
+  import { ICON } from '../icons.ts'
   import { engine } from '../audio/engine.ts'
 
-  let { onRandom, onClose }: { onRandom: () => void; onClose: () => void } = $props()
+  let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
+
+  const isLooping = $derived(playback.playing && playback.mode === 'loop')
+  const isViewingPlaying = $derived(isViewingPlayingPattern())
 
   const KEYS = NOTE_NAMES.map((note, i) => ({
     note,
@@ -56,7 +60,6 @@
   }
 
   // ── Virtual MIDI Keyboard ──
-  import { song, effects, fxPad, ui } from '../state.svelte.ts'
 
   const KEY_MAP: Record<string, number> = {
     a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6,
@@ -183,18 +186,26 @@
       onpointerdown={() => { vkbd.enabled = !vkbd.enabled }}
       data-tip="Virtual keyboard — play notes with PC keys (A-;)" data-tip-ja="バーチャルキーボード — PCキーで演奏 (A-;)"
       aria-label="Virtual keyboard"
-    ><svg class="kbd-icon" viewBox="0 0 24 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="1" y="1" width="22" height="14" rx="1.5"/>
-      <line x1="5.5" y1="1" x2="5.5" y2="9"/><line x1="9.5" y1="1" x2="9.5" y2="9"/>
-      <line x1="14.5" y1="1" x2="14.5" y2="9"/><line x1="18.5" y1="1" x2="18.5" y2="9"/>
-      <line x1="12" y1="1" x2="12" y2="15"/>
-    </svg></button>
+    ><svg class="kbd-icon" viewBox="0 0 24 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="1.5">{@html ICON.keyboard}</svg></button>
     {#if vkbd.enabled}
       <span class="vkbd-info">C{vkbd.octave}</span>
     {/if}
   </div>
 
-  <!-- Close button (right-aligned) -->
+  <!-- Loop button (right-aligned) -->
+  <button
+    class="btn-loop"
+    class:active={isLooping}
+    class:spinning={isLooping && isViewingPlaying}
+    class:mismatch={playback.playing && !isViewingPlaying}
+    onpointerdown={onLoop}
+    aria-label="Loop this pattern"
+    data-tip="Loop this pattern (exit scene mode)" data-tip-ja="このパターンをループ再生 (シーンモード解除)"
+  >
+    <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">{@html ICON.repeat}</svg>
+  </button>
+
+  <!-- Close button -->
   <button
     class="btn-close"
     onpointerdown={onClose}
@@ -230,8 +241,41 @@
     flex-shrink: 0;
   }
 
-  .btn-close {
+  /* ── Loop button ── */
+  .btn-loop {
     margin-left: auto;
+    border: 1px solid rgba(30,32,40,0.20);
+    background: transparent;
+    color: rgba(30,32,40,0.35);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 60ms, background 60ms, border-color 60ms;
+  }
+  .btn-loop:active {
+    background: rgba(30,32,40,0.08);
+  }
+  .btn-loop.active {
+    color: var(--color-olive);
+    border-color: var(--color-olive);
+    background: rgba(120,120,69,0.08);
+  }
+  .btn-loop.mismatch {
+    color: rgba(30,32,40,0.20);
+    border-color: rgba(30,32,40,0.10);
+  }
+  .btn-loop.spinning :global(svg) {
+    animation: loop-spin 1.2s linear infinite;
+  }
+  @keyframes loop-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  .btn-close {
     border: 1px solid rgba(30,32,40,0.20);
     background: transparent;
     color: rgba(30,32,40,0.40);
