@@ -1022,7 +1022,8 @@ export function sceneDeleteNode(nodeId: string): void {
   song.scene.edges = song.scene.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
   song.scene.nodes = song.scene.nodes.filter(n => n.id !== nodeId)
   if (wasRoot && song.scene.nodes.length > 0) {
-    song.scene.nodes[0].root = true
+    const nextRoot = song.scene.nodes.find(n => n.type === 'pattern') || song.scene.nodes[0]
+    nextRoot.root = true
   }
   if (ui.selectedSceneNode === nodeId) ui.selectedSceneNode = null
   if (ui.selectedSceneEdge && !song.scene.edges.some(e => e.id === ui.selectedSceneEdge)) {
@@ -1050,8 +1051,10 @@ export function sceneDeleteEdge(edgeId: string): void {
   if (ui.selectedSceneEdge === edgeId) ui.selectedSceneEdge = null
 }
 
-/** Set a node as root (exactly one root) */
+/** Set a node as root (only pattern nodes can be root) */
 export function sceneSetRoot(nodeId: string): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node || node.type !== 'pattern') return
   pushUndo('Set root node')
   for (const n of song.scene.nodes) n.root = n.id === nodeId
 }

@@ -59,6 +59,16 @@
     panY = (rect.height - WORLD_H) / 2
   }
 
+  /** Pan to center the root node in the viewport */
+  function focusRoot() {
+    const root = song.scene.nodes.find(n => n.root)
+    if (!root || !viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    const pos = toPixel(root.x, root.y, WORLD_W, WORLD_H)
+    panX = rect.width / 2 - pos.x * zoom
+    panY = rect.height / 2 - pos.y * zoom
+  }
+
   $effect(() => {
     if (viewEl && !panInitialized) {
       panInitialized = true
@@ -734,6 +744,21 @@
         <path d="M2 4h12M2 8h8M2 12h10"/>
       </svg>
     </button>
+    <button
+      class="scene-focus-root-btn"
+      aria-label="Focus root node"
+      data-tip="Focus root" data-tip-ja="ルートにフォーカス"
+      onpointerdown={focusRoot}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="8" cy="8" r="6"/>
+        <circle cx="8" cy="8" r="2.5"/>
+        <line x1="8" y1="0.5" x2="8" y2="3"/>
+        <line x1="8" y1="13" x2="8" y2="15.5"/>
+        <line x1="0.5" y1="8" x2="3" y2="8"/>
+        <line x1="13" y1="8" x2="15.5" y2="8"/>
+      </svg>
+    </button>
   {/if}
   {#if zoom !== 1}
     <button
@@ -983,7 +1008,7 @@
     pointer-events: none;
   }
 
-  /* ── Zoom reset ── */
+  /* ── Toolbar buttons ── */
   .scene-format-btn {
     position: absolute;
     top: 8px;
@@ -1005,10 +1030,31 @@
     color: var(--color-fg);
   }
 
-  .zoom-reset-btn {
+  .scene-focus-root-btn {
     position: absolute;
     top: 8px;
     right: 42px;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(30, 32, 40, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: rgba(30, 32, 40, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+  }
+  .scene-focus-root-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-fg);
+  }
+
+  .zoom-reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 76px;
     height: 28px;
     padding: 0 8px;
     border-radius: 4px;
