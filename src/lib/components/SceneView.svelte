@@ -1,21 +1,23 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback } from '../state.svelte.ts'
-  import { TAP_THRESHOLD, PAD_INSET, COLORS_RGB, PATTERN_COLORS } from '../constants.ts'
+  import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
+  import { PAT_HALF_W, FN_HALF_W, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
+  import SceneCanvas from './SceneCanvas.svelte'
+  import SceneBubbleMenu from './SceneBubbleMenu.svelte'
+  import type { FnNodeType } from './SceneBubbleMenu.svelte'
 
   const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
   let viewEl = $state<HTMLDivElement>() as HTMLDivElement
-  let canvasEl = $state<HTMLCanvasElement>() as HTMLCanvasElement
-  let animFrameId: number | null = null
 
   // ── Drag state ──
   let dragging: string | null = $state(null)  // node id being dragged
-  let dragMoved = false
+  let dragMoved = $state(false)
   let startPos = { x: 0, y: 0 }
 
   // ── Edge creation state ──
   let edgeFrom: string | null = $state(null)  // source node id during edge draw
-  let edgeCursor = { x: 0, y: 0 }            // cursor pixel position during edge draw
+  let edgeCursor = $state({ x: 0, y: 0 })     // cursor pixel position during edge draw
 
   // ── Double-click tracking ──
   let lastTapTime = 0
@@ -48,15 +50,6 @@
   let pinchStartDist = 0
   let pinchStartZoom = 1
 
-  /** Radial menu items for function nodes */
-  const BUBBLE_ITEMS: { type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'; tip: string; tipJa: string }[] = [
-    { type: 'transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
-    { type: 'tempo', tip: 'Tempo', tipJa: 'テンポ' },
-    { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
-    { type: 'probability', tip: 'Probability', tipJa: '確率' },
-    { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
-  ]
-
   /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
   function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
     if (!viewEl) return null
@@ -69,82 +62,6 @@
   }
 
   function toNorm(e: PointerEvent) { return toNormXY(e.clientX, e.clientY) }
-
-  /** Convert normalized coords to pixel position for canvas drawing */
-  function toPixel(nx: number, ny: number, w: number, h: number) {
-    return {
-      x: PAD_INSET + nx * (w - PAD_INSET * 2),
-      y: PAD_INSET + ny * (h - PAD_INSET * 2),
-    }
-  }
-
-  /** Bezier edge endpoints: offset from node center by half-size toward direction */
-  const PAT_HALF_W = 36, PAT_HALF_H = 17
-  const FN_HALF_W = 24, FN_HALF_H = 12
-  type Pt = { x: number; y: number }
-  type BezierEdge = { p0: Pt; cp: Pt; p1: Pt }
-
-  function bezierEdge(from: Pt, to: Pt, fromFn = false, toFn = false): BezierEdge {
-    const dx = to.x - from.x, dy = to.y - from.y
-    const dist = Math.hypot(dx, dy)
-    if (dist < 1) return { p0: from, cp: from, p1: to }
-    const nx = dx / dist, ny = dy / dist
-    const hw0 = fromFn ? FN_HALF_W : PAT_HALF_W
-    const hh0 = fromFn ? FN_HALF_H : PAT_HALF_H
-    const hw1 = toFn ? FN_HALF_W : PAT_HALF_W
-    const hh1 = toFn ? FN_HALF_H : PAT_HALF_H
-    // Exit/enter at node edge along the line direction
-    const r0 = Math.min(hw0 / Math.max(Math.abs(nx), 0.01), hh0 / Math.max(Math.abs(ny), 0.01))
-    const r1 = Math.min(hw1 / Math.max(Math.abs(nx), 0.01), hh1 / Math.max(Math.abs(ny), 0.01))
-    const p0: Pt = { x: from.x + nx * r0, y: from.y + ny * r0 }
-    const p1: Pt = { x: to.x - nx * r1, y: to.y - ny * r1 }
-    // Control point: offset perpendicular to the line
-    const cx = (p0.x + p1.x) / 2 + dy * 0.15
-    const cy = (p0.y + p1.y) / 2 - dx * 0.15
-    return { p0, cp: { x: cx, y: cy }, p1 }
-  }
-
-  /** Draw a quadratic bezier edge with arrowhead */
-  function drawBezier(ctx: CanvasRenderingContext2D, b: BezierEdge, strokeStyle: string, fillStyle: string, lineWidth: number) {
-    ctx.strokeStyle = strokeStyle
-    ctx.lineWidth = lineWidth
-    ctx.beginPath()
-    ctx.moveTo(b.p0.x, b.p0.y)
-    ctx.quadraticCurveTo(b.cp.x, b.cp.y, b.p1.x, b.p1.y)
-    ctx.stroke()
-    // Arrowhead: direction at t=1 of quadratic bezier is (p1 - cp)
-    const angle = Math.atan2(b.p1.y - b.cp.y, b.p1.x - b.cp.x)
-    const al = 7
-    ctx.fillStyle = fillStyle
-    ctx.beginPath()
-    ctx.moveTo(b.p1.x, b.p1.y)
-    ctx.lineTo(b.p1.x - al * Math.cos(angle - 0.4), b.p1.y - al * Math.sin(angle - 0.4))
-    ctx.lineTo(b.p1.x - al * Math.cos(angle + 0.4), b.p1.y - al * Math.sin(angle + 0.4))
-    ctx.closePath(); ctx.fill()
-  }
-
-  /** Min distance from point to a quadratic bezier (sample 12 points) */
-  function bezierDist(px: number, py: number, b: BezierEdge): number {
-    let min = Infinity
-    for (let i = 0; i <= 12; i++) {
-      const t = i / 12
-      const u = 1 - t
-      const x = u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x
-      const y = u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y
-      const d = Math.hypot(px - x, py - y)
-      if (d < min) min = d
-    }
-    return min
-  }
-
-  /** Point at t on quadratic bezier */
-  function bezierAt(b: BezierEdge, t: number): Pt {
-    const u = 1 - t
-    return {
-      x: u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x,
-      y: u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y,
-    }
-  }
 
   /** Find node under pointer (normalized coords, 28px radius in pixels) */
   function hitTestNode(normX: number, normY: number): string | null {
@@ -328,7 +245,7 @@
     }
 
     // Edge hit-testing on background click
-    if (!viewEl || !canvasEl) {
+    if (!viewEl) {
       ui.selectedSceneNode = null
       ui.selectedSceneEdge = null
       return
@@ -533,7 +450,7 @@
     sceneUpdateNodeParams(selectedFnNode.id, p)
   }
 
-  function pickFunctionNode(type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx') {
+  function pickFunctionNode(type: FnNodeType) {
     // Convert picker pixel position to normalized coords (accounting for zoom/pan)
     if (!viewEl) return
     const rect = viewEl.getBoundingClientRect()
@@ -564,188 +481,6 @@
   }
 
   let lastBgClickTime = 0
-
-  // ── Canvas rendering ──
-
-  function draw() {
-    if (!canvasEl) { animFrameId = requestAnimationFrame(draw); return }
-
-    const ctx = canvasEl.getContext('2d')!
-    const w = canvasEl.clientWidth
-    const h = canvasEl.clientHeight
-    if (w === 0 || h === 0) { animFrameId = requestAnimationFrame(draw); return }
-
-    // DPR scaling
-    const dpr = window.devicePixelRatio || 1
-    if (canvasEl.width !== w * dpr || canvasEl.height !== h * dpr) {
-      canvasEl.width = w * dpr
-      canvasEl.height = h * dpr
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-    // Background (warm cream, matching pattern view)
-    ctx.fillStyle = '#EDE8DC'
-    ctx.fillRect(0, 0, w, h)
-
-    // Apply zoom/pan transform for all subsequent drawing
-    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, panX * dpr, panY * dpr)
-
-    // Grid lines
-    ctx.strokeStyle = 'rgba(30, 32, 40, 0.06)'
-    ctx.lineWidth = 1
-    const gridStep = 40
-    for (let x = PAD_INSET; x <= w - PAD_INSET; x += gridStep) {
-      ctx.beginPath()
-      ctx.moveTo(x, PAD_INSET)
-      ctx.lineTo(x, h - PAD_INSET)
-      ctx.stroke()
-    }
-    for (let y = PAD_INSET; y <= h - PAD_INSET; y += gridStep) {
-      ctx.beginPath()
-      ctx.moveTo(PAD_INSET, y)
-      ctx.lineTo(w - PAD_INSET, y)
-      ctx.stroke()
-    }
-
-    // Edges (bezier curves)
-    const { nodes, edges } = song.scene
-    const fg = { r: 30, g: 32, b: 40 } // --color-fg navy
-    for (const edge of edges) {
-      const fromNode = nodes.find(n => n.id === edge.from)
-      const toNode = nodes.find(n => n.id === edge.to)
-      if (!fromNode || !toNode) continue
-
-      const from = toPixel(fromNode.x, fromNode.y, w, h)
-      const to = toPixel(toNode.x, toNode.y, w, h)
-      const isSel = ui.selectedSceneEdge === edge.id
-      const b = bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern')
-
-      drawBezier(ctx, b,
-        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
-        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.6)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.22)`,
-        isSel ? 2.5 : 1.5,
-      )
-    }
-
-    // Edge order badges (only when source has >1 outgoing)
-    const edgeCounts = new Map<string, number>()
-    for (const e of edges) edgeCounts.set(e.from, (edgeCounts.get(e.from) || 0) + 1)
-    for (const edge of edges) {
-      if ((edgeCounts.get(edge.from) || 0) <= 1) continue
-      const fn = nodes.find(n => n.id === edge.from)
-      const tn = nodes.find(n => n.id === edge.to)
-      if (!fn || !tn) continue
-      const fp = toPixel(fn.x, fn.y, w, h)
-      const tp = toPixel(tn.x, tn.y, w, h)
-      const b = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
-      // Badge at bezier midpoint
-      const mid = bezierAt(b, 0.5)
-      const mx = mid.x, my = mid.y
-      ctx.fillStyle = 'rgba(237, 232, 220, 0.85)'
-      ctx.beginPath(); ctx.arc(mx, my, 8, 0, Math.PI * 2); ctx.fill()
-      const isSel = ui.selectedSceneEdge === edge.id
-      ctx.fillStyle = isSel
-        ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.9)`
-        : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)`
-      ctx.font = '700 8px monospace'
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-      ctx.fillText(String(edge.order), mx, my)
-    }
-
-    // Active playback edge highlight (solid accent line)
-    if (playback.playing && playback.sceneEdgeId) {
-      const activeEdge = edges.find(e => e.id === playback.sceneEdgeId)
-      if (activeEdge) {
-        const fn = nodes.find(n => n.id === activeEdge.from)
-        const tn = nodes.find(n => n.id === activeEdge.to)
-        if (fn && tn) {
-          const fp = toPixel(fn.x, fn.y, w, h)
-          const tp = toPixel(tn.x, tn.y, w, h)
-          const bl = COLORS_RGB.blue
-          const be = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
-          drawBezier(ctx, be,
-            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.5)`,
-            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`,
-            2.5,
-          )
-        }
-      }
-    }
-
-    // Temporary edge during edge-draw mode
-    if (edgeFrom && dragMoved && viewEl) {
-      const srcNode = nodes.find(n => n.id === edgeFrom)
-      if (srcNode) {
-        const from = toPixel(srcNode.x, srcNode.y, w, h)
-        const rect = viewEl.getBoundingClientRect()
-        const toX = (edgeCursor.x - rect.left - panX) / zoom
-        const toY = (edgeCursor.y - rect.top - panY) / zoom
-        const tb = bezierEdge(from, { x: toX, y: toY }, srcNode.type !== 'pattern', false)
-
-        ctx.setLineDash([4, 4])
-        drawBezier(ctx, tb,
-          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
-          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
-          1.5,
-        )
-        ctx.setLineDash([])
-      }
-    }
-
-    // Progress bar under active pattern node
-    if (playback.playing) {
-      const patIndex = playback.playingPattern ?? ui.currentPattern
-      const playingPatId = song.patterns[patIndex]?.id
-      const activeNode = playback.sceneNodeId
-        ? nodes.find(n => n.id === playback.sceneNodeId && n.type === 'pattern')
-        : playingPatId ? nodes.find(n => n.type === 'pattern' && n.patternId === playingPatId) : null
-      if (activeNode) {
-        const pat = song.patterns[patIndex]
-        if (pat) {
-          const maxSteps = Math.max(...pat.cells.map(c => c.steps))
-          const maxHead = Math.max(...playback.playheads)
-          const progress = maxSteps > 0 ? Math.min(1, maxHead / maxSteps) : 0
-          const pos = toPixel(activeNode.x, activeNode.y, w, h)
-          const barW = PAT_HALF_W * 2 - 4
-          const barH = 2.5
-          const bx = pos.x - PAT_HALF_W + 2
-          const by = pos.y + PAT_HALF_H + 3
-
-          // Background
-          ctx.fillStyle = 'rgba(30, 32, 40, 0.1)'
-          ctx.beginPath()
-          ctx.roundRect(bx, by, barW, barH, 1)
-          ctx.fill()
-          // Fill
-          const bl = COLORS_RGB.blue
-          ctx.fillStyle = `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`
-          ctx.beginPath()
-          ctx.roundRect(bx, by, barW * progress, barH, 1)
-          ctx.fill()
-        }
-      }
-    }
-
-    animFrameId = requestAnimationFrame(draw)
-  }
-
-  function startVis() {
-    if (animFrameId !== null) return
-    draw()
-  }
-
-  function stopVis() {
-    if (animFrameId !== null) {
-      cancelAnimationFrame(animFrameId)
-      animFrameId = null
-    }
-  }
-
-  $effect(() => {
-    if (ui.phraseView === 'scene') startVis()
-    else stopVis()
-    return () => stopVis()
-  })
 
   // ── Drop handlers (MatrixView → SceneView) ──
   function onDragOver(e: DragEvent) {
@@ -789,7 +524,7 @@
   ondrop={onDrop}
   ondragleave={onDragLeave}
 >
-  <canvas bind:this={canvasEl} class="scene-canvas"></canvas>
+  <SceneCanvas {zoom} {panX} {panY} {edgeFrom} {dragMoved} {edgeCursor} {viewEl} />
 
   <!-- Transform container for nodes (zoom/pan) -->
   <div class="scene-transform" style="transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
@@ -989,54 +724,13 @@
 
   <!-- Radial bubble menu for function nodes (appears at pointer position) -->
   {#if pickerOpen}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); pickerOpen = false }}></div>
-    {#each BUBBLE_ITEMS as item, i}
-      {@const angle = -Math.PI / 2 + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.7}
-      {@const radius = 48}
-      {@const bx = pickerPos.x + Math.cos(angle) * radius}
-      {@const by = pickerPos.y + Math.sin(angle) * radius}
-      {@const clampedX = Math.max(20, Math.min(viewEl ? viewEl.clientWidth - 20 : bx, bx))}
-      {@const clampedY = Math.max(20, Math.min(viewEl ? viewEl.clientHeight - 20 : by, by))}
-      <button
-        class="bubble-item"
-        style="
-          left: {clampedX - 16}px;
-          top: {clampedY - 16}px;
-          transition-delay: {i * 30}ms;
-        "
-        data-tip={item.tip} data-tip-ja={item.tipJa}
-        onpointerdown={e => { e.stopPropagation(); pickFunctionNode(item.type) }}
-      >
-        {#if item.type === 'transpose'}
-          <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>
-            <circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>
-          </svg>
-        {:else if item.type === 'tempo'}
-          <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
-            <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
-            <line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-            <line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-            <circle cx="7" cy="7" r="0.7" fill="currentColor"/>
-          </svg>
-        {:else if item.type === 'repeat'}
-          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-            <path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>
-            <polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>
-          </svg>
-        {:else if item.type === 'probability'}
-          <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">
-            <rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
-            <circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>
-          </svg>
-        {:else if item.type === 'fx'}
-          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-            <path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>
-          </svg>
-        {/if}
-      </button>
-    {/each}
+    <SceneBubbleMenu
+      pos={pickerPos}
+      containerWidth={viewEl?.clientWidth ?? 0}
+      containerHeight={viewEl?.clientHeight ?? 0}
+      onpick={pickFunctionNode}
+      onclose={() => { pickerOpen = false }}
+    />
   {/if}
 
   {#if song.scene.nodes.length === 0}
@@ -1060,15 +754,6 @@
   .scene-view.drop-active {
     outline: 2px dashed rgba(30,32,40,0.25);
     outline-offset: -2px;
-  }
-
-  .scene-canvas {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
   }
 
   .scene-transform {
@@ -1300,40 +985,6 @@
   }
 
   /* ── Radial bubble menu ── */
-  .picker-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 9;
-  }
-  .bubble-item {
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(30, 32, 40, 0.15);
-    background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.2);
-    animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-  .bubble-item:hover {
-    background: rgba(30, 32, 40, 0.9);
-    color: white;
-    transform: scale(1.15);
-  }
-  .bubble-item:active {
-    transform: scale(0.95);
-  }
-  @keyframes bubble-pop {
-    from { opacity: 0; transform: scale(0.3); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-
   /* ── Param popup ── */
   .param-popup {
     position: absolute;
@@ -1459,7 +1110,6 @@
     .zoom-reset-btn { right: 12px; }
     .param-btn { width: 32px; height: 32px; font-size: 18px; }
     .param-val { font-size: 13px; min-width: 36px; }
-    .bubble-item { width: 36px; height: 36px; }
     .scene-play-btn { width: 34px; height: 34px; }
   }
 </style>

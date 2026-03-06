@@ -1,0 +1,78 @@
+export type Pt = { x: number; y: number }
+export type BezierEdge = { p0: Pt; cp: Pt; p1: Pt }
+
+import { PAD_INSET } from './constants.ts'
+
+export const PAT_HALF_W = 36, PAT_HALF_H = 17
+export const FN_HALF_W = 24, FN_HALF_H = 12
+
+/** Convert normalized coords to pixel position for canvas drawing */
+export function toPixel(nx: number, ny: number, w: number, h: number) {
+  return {
+    x: PAD_INSET + nx * (w - PAD_INSET * 2),
+    y: PAD_INSET + ny * (h - PAD_INSET * 2),
+  }
+}
+
+/** Compute bezier edge endpoints offset from node centers by half-size toward direction */
+export function bezierEdge(from: Pt, to: Pt, fromFn = false, toFn = false): BezierEdge {
+  const dx = to.x - from.x, dy = to.y - from.y
+  const dist = Math.hypot(dx, dy)
+  if (dist < 1) return { p0: from, cp: from, p1: to }
+  const nx = dx / dist, ny = dy / dist
+  const hw0 = fromFn ? FN_HALF_W : PAT_HALF_W
+  const hh0 = fromFn ? FN_HALF_H : PAT_HALF_H
+  const hw1 = toFn ? FN_HALF_W : PAT_HALF_W
+  const hh1 = toFn ? FN_HALF_H : PAT_HALF_H
+  // Exit/enter at node edge along the line direction
+  const r0 = Math.min(hw0 / Math.max(Math.abs(nx), 0.01), hh0 / Math.max(Math.abs(ny), 0.01))
+  const r1 = Math.min(hw1 / Math.max(Math.abs(nx), 0.01), hh1 / Math.max(Math.abs(ny), 0.01))
+  const p0: Pt = { x: from.x + nx * r0, y: from.y + ny * r0 }
+  const p1: Pt = { x: to.x - nx * r1, y: to.y - ny * r1 }
+  // Control point: offset perpendicular to the line
+  const cx = (p0.x + p1.x) / 2 + dy * 0.15
+  const cy = (p0.y + p1.y) / 2 - dx * 0.15
+  return { p0, cp: { x: cx, y: cy }, p1 }
+}
+
+/** Draw a quadratic bezier edge with arrowhead */
+export function drawBezier(ctx: CanvasRenderingContext2D, b: BezierEdge, strokeStyle: string, fillStyle: string, lineWidth: number) {
+  ctx.strokeStyle = strokeStyle
+  ctx.lineWidth = lineWidth
+  ctx.beginPath()
+  ctx.moveTo(b.p0.x, b.p0.y)
+  ctx.quadraticCurveTo(b.cp.x, b.cp.y, b.p1.x, b.p1.y)
+  ctx.stroke()
+  // Arrowhead: direction at t=1 of quadratic bezier is (p1 - cp)
+  const angle = Math.atan2(b.p1.y - b.cp.y, b.p1.x - b.cp.x)
+  const al = 7
+  ctx.fillStyle = fillStyle
+  ctx.beginPath()
+  ctx.moveTo(b.p1.x, b.p1.y)
+  ctx.lineTo(b.p1.x - al * Math.cos(angle - 0.4), b.p1.y - al * Math.sin(angle - 0.4))
+  ctx.lineTo(b.p1.x - al * Math.cos(angle + 0.4), b.p1.y - al * Math.sin(angle + 0.4))
+  ctx.closePath(); ctx.fill()
+}
+
+/** Min distance from point to a quadratic bezier (sample 12 points) */
+export function bezierDist(px: number, py: number, b: BezierEdge): number {
+  let min = Infinity
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12
+    const u = 1 - t
+    const x = u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x
+    const y = u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y
+    const d = Math.hypot(px - x, py - y)
+    if (d < min) min = d
+  }
+  return min
+}
+
+/** Point at t on quadratic bezier */
+export function bezierAt(b: BezierEdge, t: number): Pt {
+  const u = 1 - t
+  return {
+    x: u * u * b.p0.x + 2 * u * t * b.cp.x + t * t * b.p1.x,
+    y: u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y,
+  }
+}
