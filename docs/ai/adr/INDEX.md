@@ -85,7 +85,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 009 | Instrument Selection | Implemented | VoiceId registry, bubble picker, worklet voice swap |
 | 058 | Cross-Category Voice Assignment | Implemented | Any voice on any track, drill-down picker, voiceId-based melodic detection |
 | 062 | Per-Pattern Voice Assignment | Implemented | voiceId + name moved from Track to Cell; per-pattern instruments and track names |
-| 010 | Unified Drum Machine Voice | Proposed | Single DrumMachine class with tone/noise/metal sections, factory presets for all drum types |
+| 010 | Unified Drum Machine Voice | Implemented | Single DrumMachine class with tone/noise/metal sections, 11 factory presets |
 | 015 | Named Instrument Presets | Proposed | |
 | 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |
 | 063 | iDEATH Synth Engine | Implemented | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, drive, wobble bass presets |

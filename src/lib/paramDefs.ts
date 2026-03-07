@@ -1,4 +1,5 @@
 import type { VoiceId } from './state.svelte.ts'
+import { DRUM_PRESETS } from './audio/dsp/voices.ts'
 
 export interface ParamDef {
   key: string
@@ -14,42 +15,24 @@ export interface ParamDef {
 
 // ── Param definitions per voice type ──────────────────────────────────────
 const VOICE_PARAMS: Record<string, ParamDef[]> = {
-  Kick: [
-    { key: 'pitchStart', label: 'PSTRT', group: 'pitch', tip: 'Pitch start frequency',       tipJa: 'ピッチ開始周波数',       min: 100,   max: 600,  default: 340   },
-    { key: 'pitchEnd',   label: 'PEND',  group: 'pitch', tip: 'Pitch end frequency',         tipJa: 'ピッチ終了周波数',       min: 30,    max: 120,  default: 55    },
-    { key: 'pitchDecay', label: 'PDCY',  group: 'pitch', tip: 'Pitch sweep speed',           tipJa: 'ピッチスイープ速度',     min: 0.01,  max: 0.10, default: 0.035 },
-    { key: 'ampDecay',   label: 'DCY',   group: 'amp',   tip: 'Amplitude decay time',        tipJa: '音量ディケイ',           min: 0.1,   max: 1.0,  default: 0.35  },
-    { key: 'drive',      label: 'DRIV',  group: 'amp',   tip: 'Distortion amount',           tipJa: 'ディストーション量',     min: 0.5,   max: 2.5,  default: 1.4   },
-  ],
-  Snare: [
-    { key: 'toneDecay',  label: 'TDCY',  group: 'tone',  tip: 'Tone body decay',             tipJa: 'トーンディケイ',         min: 0.03,  max: 0.3,  default: 0.08  },
-    { key: 'toneAmt',    label: 'TONE',  group: 'tone',  tip: 'Tone body level',             tipJa: 'トーンレベル',           min: 0.0,   max: 0.6,  default: 0.20  },
-    { key: 'noiseDecay', label: 'NDCY',  group: 'noise', tip: 'Noise decay time',            tipJa: 'ノイズディケイ',         min: 0.02,  max: 0.25, default: 0.07  },
-    { key: 'noiseAmt',   label: 'NOIS',  group: 'noise', tip: 'Noise level',                 tipJa: 'ノイズレベル',           min: 0.3,   max: 1.2,  default: 0.85  },
-    { key: 'noiseFc',    label: 'SNAP',  group: 'noise', tip: 'Noise filter (snappiness)',    tipJa: 'ノイズフィルター (スナップ感)', min: 1000,  max: 6000, default: 3000  },
-  ],
-  Clap: [
-    { key: 'decay',      label: 'DCY',   tip: 'Decay time',           tipJa: 'ディケイ',     min: 0.05,  max: 0.5,  default: 0.18  },
-    { key: 'filterFc',   label: 'TONE',  tip: 'Tone brightness',      tipJa: '明るさ',       min: 600,   max: 3000, default: 1200  },
-    { key: 'burstGap',   label: 'SPRD',  tip: 'Burst spread',         tipJa: 'バースト間隔', min: 0.008, max: 0.025,default: 0.015 },
-  ],
-  Hat: [
-    { key: 'decay',      label: 'DCY',   tip: 'Decay time',           tipJa: 'ディケイ',     min: 0.01,  max: 0.15, default: 0.04  },
-    { key: 'baseFreq',   label: 'FREQ',  tip: 'Base frequency',       tipJa: 'ベース周波数', min: 400,   max: 1200, default: 800   },
-    { key: 'hpCutoff',   label: 'HP',    tip: 'Highpass cutoff',      tipJa: 'ハイパスカットオフ', min: 3000,  max: 9000, default: 5000  },
-    { key: 'volume',     label: 'VOL',   tip: 'Volume',               tipJa: '音量',         min: 0.1,   max: 1.0,  default: 0.65  },
-  ],
-  OpenHat: [
-    { key: 'decay',      label: 'DCY',   tip: 'Decay time',           tipJa: 'ディケイ',     min: 0.05,  max: 0.5,  default: 0.18  },
-    { key: 'baseFreq',   label: 'FREQ',  tip: 'Base frequency',       tipJa: 'ベース周波数', min: 400,   max: 1200, default: 800   },
-    { key: 'hpCutoff',   label: 'HP',    tip: 'Highpass cutoff',      tipJa: 'ハイパスカットオフ', min: 3000,  max: 9000, default: 4500  },
-    { key: 'volume',     label: 'VOL',   tip: 'Volume',               tipJa: '音量',         min: 0.1,   max: 1.0,  default: 0.60  },
-  ],
-  Cymbal: [
-    { key: 'decay',      label: 'DCY',   tip: 'Decay time',           tipJa: 'ディケイ',     min: 0.15,  max: 1.5,  default: 0.35  },
-    { key: 'baseFreq',   label: 'TONE',  tip: 'Bandpass center freq', tipJa: 'バンドパス中心周波数', min: 4000,  max: 12000, default: 7500  },
-    { key: 'hpCutoff',   label: 'HP',    tip: 'Highpass cutoff',      tipJa: 'ハイパスカットオフ', min: 1500,  max: 5000, default: 2500  },
-    { key: 'volume',     label: 'VOL',   tip: 'Volume',               tipJa: '音量',         min: 0.1,   max: 1.0,  default: 0.55  },
+  // Unified DrumMachine params (ADR 010) — shared by all drum presets
+  DrumMachine: [
+    { key: 'toneLevel',       label: 'TONE',  group: 'tone',  tip: 'Tone oscillator level',          tipJa: 'トーンオシレータレベル',       min: 0,     max: 1.0,   default: 1.0   },
+    { key: 'pitchStart',      label: 'PSTRT', group: 'tone',  tip: 'Pitch start frequency',          tipJa: 'ピッチ開始周波数',             min: 30,    max: 800,   default: 340   },
+    { key: 'pitchEnd',        label: 'PEND',  group: 'tone',  tip: 'Pitch end frequency',            tipJa: 'ピッチ終了周波数',             min: 30,    max: 800,   default: 55    },
+    { key: 'pitchDecay',      label: 'PDCY',  group: 'tone',  tip: 'Pitch sweep speed',              tipJa: 'ピッチスイープ速度',           min: 0.003, max: 0.2,   default: 0.035 },
+    { key: 'noiseLevel',      label: 'NOIS',  group: 'noise', tip: 'Noise level',                    tipJa: 'ノイズレベル',                 min: 0,     max: 1.2,   default: 0     },
+    { key: 'noiseFilterFreq', label: 'FREQ',  group: 'noise', tip: 'Noise filter frequency',         tipJa: 'ノイズフィルター周波数',       min: 500,   max: 12000, default: 3000  },
+    { key: 'noiseFilterQ',    label: 'Q',     group: 'noise', tip: 'Noise filter resonance',         tipJa: 'ノイズフィルターQ',             min: 0.5,   max: 5.0,   default: 1.0   },
+    { key: 'noiseFilterMode', label: 'FTYP',  group: 'noise', tip: 'Filter: LP → HP → BP',          tipJa: 'フィルター: LP → HP → BP',     min: 0,     max: 2,     step: 1, default: 0 },
+    { key: 'metalLevel',      label: 'METL',  group: 'metal', tip: 'Metallic oscillator level',      tipJa: 'メタリックオシレータレベル',   min: 0,     max: 1.0,   default: 0     },
+    { key: 'metalFreq',       label: 'MFRQ',  group: 'metal', tip: 'Metal base frequency',           tipJa: 'メタルベース周波数',           min: 200,   max: 1200,  default: 800   },
+    { key: 'decay',           label: 'DCY',   group: 'amp',   tip: 'Amplitude decay time',           tipJa: '音量ディケイ',                 min: 0.01,  max: 2.0,   default: 0.35  },
+    { key: 'drive',           label: 'DRIV',  group: 'amp',   tip: 'Distortion amount',              tipJa: 'ディストーション量',           min: 0,     max: 2.5,   default: 1.4   },
+    { key: 'hpFreq',          label: 'HP',    group: 'amp',   tip: 'Output highpass frequency',      tipJa: '出力ハイパス周波数',           min: 20,    max: 8000,  default: 20    },
+    { key: 'click',           label: 'CLCK',  group: 'amp',   tip: 'Transient click amount',         tipJa: 'クリックトランジェント量',     min: 0,     max: 1.0,   default: 0.6   },
+    { key: 'burstCount',      label: 'BRST',  group: 'amp',   tip: 'Burst count (1=normal, 4=clap)', tipJa: 'バースト回数 (1=通常, 4=クラップ)', min: 1, max: 6, step: 1, default: 1 },
+    { key: 'burstGap',        label: 'GAP',   group: 'amp',   tip: 'Burst gap time',                 tipJa: 'バースト間隔',                 min: 0.005, max: 0.03,  default: 0.015 },
   ],
   Bass303: [
     { key: 'cutoffBase', label: 'CUT',   group: 'filter', tip: 'Filter cutoff',              tipJa: 'フィルターカットオフ',   min: 50,    max: 500,  default: 200   },
@@ -116,12 +99,21 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
 }
 
 
+// VoiceIds that share DrumMachine params (ADR 010)
+const DRUM_MACHINE_IDS = new Set(['Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal', 'Tom', 'Rimshot', 'Cowbell', 'Shaker'])
+
 export function getParamDefs(voiceId: VoiceId): ParamDef[] {
+  if (DRUM_MACHINE_IDS.has(voiceId)) return VOICE_PARAMS.DrumMachine ?? []
   return VOICE_PARAMS[voiceId] ?? []
 }
 
 export function defaultVoiceParams(voiceId: VoiceId): Record<string, number> {
   const defs = getParamDefs(voiceId)
+  const preset = DRUM_PRESETS[voiceId]
+  if (preset) {
+    const p = preset as unknown as Record<string, number>
+    return Object.fromEntries(defs.map(d => [d.key, p[d.key] ?? d.default]))
+  }
   return Object.fromEntries(defs.map(d => [d.key, d.default]))
 }
 
@@ -131,6 +123,7 @@ const DISPLAY_LABELS: Record<string, string[]> = {
   arpChord:   ['OCT', '5TH', 'TRD', 'SUS', '7TH'],
   combine:    ['MIX', 'FM', 'RING'],
   filterMode: ['LP', 'HP', 'BP', 'NTCH'],
+  noiseFilterMode: ['LP', 'HP', 'BP'],
   lfo1Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
   lfo2Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
 }

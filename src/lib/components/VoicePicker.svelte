@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { VoiceId } from '../state.svelte.ts'
-  import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
+  import { VOICE_LIST, DRUM_VOICES, type VoiceCategory } from '../audio/dsp/voices.ts'
 
   const {
     pos,
@@ -27,6 +27,11 @@
 
   function selectCategory(e: PointerEvent, cat: VoiceCategory) {
     e.stopPropagation()
+    if (cat === 'drum') {
+      // Drum preset selection handled in DockPanel — pick Kick (or keep current drum voice)
+      onpick(DRUM_VOICES.has(currentVoiceId) ? currentVoiceId : 'Kick')
+      return
+    }
     selectedCat = cat
   }
 

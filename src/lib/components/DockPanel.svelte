@@ -1,13 +1,16 @@
 <script lang="ts">
-  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, toggleDockMinimized } from '../state.svelte.ts'
+  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, changeVoice, toggleDockMinimized } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
+  import { DRUM_VOICES, VOICE_LIST } from '../audio/dsp/voices.ts'
   import Knob from './Knob.svelte'
 
   const track  = $derived(song.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
   const cell   = $derived(activeCell(ui.selectedTrack))
+  const isDrum = $derived(DRUM_VOICES.has(cell.voiceId))
+  const drumVoices = VOICE_LIST.filter(v => v.category === 'drum')
   const params = $derived(getParamDefs(cell.voiceId))
   const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
@@ -63,6 +66,20 @@
               <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
             {/if}
           </div>
+
+          <!-- Drum preset selector (ADR 010) -->
+          {#if isDrum}
+            <div class="drum-presets">
+              {#each drumVoices as dv}
+                <button
+                  class="drum-preset-btn"
+                  class:active={cell.voiceId === dv.id}
+                  onpointerdown={() => changeVoice(ui.selectedTrack, dv.id)}
+                  data-tip={dv.id} data-tip-ja={dv.id}
+                >{dv.label}</button>
+              {/each}
+            </div>
+          {/if}
 
           <!-- Preset browser (Synth/Poly only) -->
           {#if showPresets}
@@ -390,6 +407,34 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* ── Drum preset selector ── */
+  .drum-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 8px;
+  }
+  .drum-preset-btn {
+    border: 1px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.4);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 5px;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .drum-preset-btn.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .drum-preset-btn:hover:not(.active) {
+    color: rgba(237,232,220,0.7);
+    border-color: rgba(237,232,220,0.3);
   }
 
   .knob-grid {

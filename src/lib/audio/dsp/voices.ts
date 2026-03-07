@@ -17,304 +17,198 @@ export interface Voice {
   setParam(key: string, value: number): void
 }
 
-// ── Drum voices ─────────────────────────────────────────────────────
+// ── Unified Drum Machine (ADR 010) ──────────────────────────────────
 
-/** Kick: TR-909 style — bridged-T oscillator circuit. */
-export class KickVoice implements Voice {
-  private phase = 0; private t = 0; private vel = 1; private playing = false
-  private seed = 12345
-  private pitchStart = 340; private pitchEnd = 55; private pitchDecay = 0.035
-  private ampDecay = 0.35; private drive = 1.4
-  constructor(private sr: number) {}
-  noteOn(_n: number, v: number) { this.vel = v; this.phase = 0; this.t = 0; this.playing = true }
-  noteOff() {}
-  slideNote(n: number, v: number) { this.noteOn(n, v) }
-  reset() { this.phase = 0; this.t = 0; this.playing = false }
-  tick(): number {
-    if (!this.playing) return 0
-    const ts = this.t / this.sr
-    const amp = Math.exp(-ts / this.ampDecay)
-    if (amp < 0.001) { this.playing = false; return 0 }
-    const freq = this.pitchEnd + (this.pitchStart - this.pitchEnd) * Math.exp(-ts / this.pitchDecay)
-    this.phase += freq / this.sr
-    if (this.phase >= 1) this.phase -= 1
-    const sine = Math.sin(this.phase * 2 * Math.PI)
-    let click = 0
-    if (ts < 0.003) {
-      this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-      click = ((this.seed >>> 16) / 32768 - 1) * Math.exp(-ts / 0.0006) * 0.6
-    }
-    this.t++
-    return Math.tanh((sine + click) * this.drive) * amp * this.vel * 1.35
-  }
-  setParam(key: string, value: number) {
-    switch (key) {
-      case 'pitchStart': this.pitchStart = value; break
-      case 'pitchEnd':   this.pitchEnd   = value; break
-      case 'pitchDecay': this.pitchDecay = value; break
-      case 'ampDecay':   this.ampDecay   = value; break
-      case 'drive':      this.drive      = value; break
-    }
-  }
+interface DrumPreset {
+  toneLevel: number; pitchStart: number; pitchEnd: number; pitchDecay: number
+  noiseLevel: number; noiseFilterFreq: number; noiseFilterQ: number; noiseFilterMode: number // 0=LP 1=HP 2=BP
+  metalLevel: number; metalFreq: number
+  decay: number; drive: number; hpFreq: number; click: number
+  burstCount: number; burstGap: number
 }
 
-/** Snare: TR-909 style — separate tone/noise VCAs. */
-export class SnareVoice implements Voice {
-  private phase = 0; private t = 0; private vel = 1; private playing = false
-  private seed = 99991
-  private noiseLp = new ResonantLP()
-  private toneDecay = 0.08; private noiseDecay = 0.07
-  private toneAmt = 0.20; private noiseAmt = 0.85; private noiseFc = 3000
-  constructor(private sr: number) {
-    this.noiseLp.setParams(this.noiseFc, 3.5, sr)
-  }
-  noteOn(_n: number, v: number) {
-    this.vel = v; this.phase = 0; this.t = 0; this.playing = true; this.noiseLp.reset()
-  }
-  noteOff() {}
-  slideNote(n: number, v: number) { this.noteOn(n, v) }
-  reset() { this.phase = 0; this.t = 0; this.playing = false; this.noiseLp.reset() }
-  tick(): number {
-    if (!this.playing) return 0
-    const ts = this.t / this.sr
-    const toneAmp  = Math.exp(-ts / this.toneDecay)
-    const noiseAmp = Math.exp(-ts / this.noiseDecay)
-    if (toneAmp < 0.001 && noiseAmp < 0.001) { this.playing = false; return 0 }
-    const freq = 185 + 40 * Math.exp(-ts / 0.008)
-    this.phase += freq / this.sr
-    if (this.phase >= 1) this.phase -= 1
-    const tone = Math.sin(this.phase * 2 * Math.PI) * toneAmp * this.toneAmt
-    this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    const raw = (this.seed >>> 16) / 32768 - 1
-    const noise = this.noiseLp.process(raw) * noiseAmp * this.noiseAmt
-    this.t++
-    return (tone + noise) * this.vel
-  }
-  setParam(key: string, value: number) {
-    switch (key) {
-      case 'toneDecay':  this.toneDecay  = value; break
-      case 'noiseDecay': this.noiseDecay = value; break
-      case 'toneAmt':    this.toneAmt    = value; break
-      case 'noiseAmt':   this.noiseAmt   = value; break
-      case 'noiseFc':
-        this.noiseFc = value
-        this.noiseLp.setParams(value, 3.5, this.sr)
-        break
-    }
-  }
+export const DRUM_PRESETS: Record<string, DrumPreset> = {
+  Kick:    { toneLevel: 1.0, pitchStart: 340, pitchEnd: 55,  pitchDecay: 0.035, noiseLevel: 0,    noiseFilterFreq: 3000, noiseFilterQ: 1.0, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.35, drive: 1.4,  hpFreq: 20,   click: 0.6,  burstCount: 1, burstGap: 0.015 },
+  Kick808: { toneLevel: 1.0, pitchStart: 120, pitchEnd: 45,  pitchDecay: 0.06,  noiseLevel: 0,    noiseFilterFreq: 3000, noiseFilterQ: 1.0, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.8,  drive: 0.6,  hpFreq: 20,   click: 0.3,  burstCount: 1, burstGap: 0.015 },
+  Snare:   { toneLevel: 0.2, pitchStart: 185, pitchEnd: 185, pitchDecay: 0.008, noiseLevel: 0.85, noiseFilterFreq: 3000, noiseFilterQ: 3.5, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.08, drive: 0,    hpFreq: 20,   click: 0,    burstCount: 1, burstGap: 0.015 },
+  Clap:    { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 1.0,  noiseFilterFreq: 1200, noiseFilterQ: 2.0, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.18, drive: 0,    hpFreq: 20,   click: 0,    burstCount: 4, burstGap: 0.015 },
+  Hat:     { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 0.25, noiseFilterFreq: 8000, noiseFilterQ: 1.0, noiseFilterMode: 1, metalLevel: 0.8, metalFreq: 800, decay: 0.04, drive: 0,    hpFreq: 5000, click: 0,    burstCount: 1, burstGap: 0.015 },
+  OpenHat: { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 0.25, noiseFilterFreq: 8000, noiseFilterQ: 1.0, noiseFilterMode: 1, metalLevel: 0.8, metalFreq: 800, decay: 0.18, drive: 0,    hpFreq: 4500, click: 0,    burstCount: 1, burstGap: 0.015 },
+  Cymbal:  { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 0.7,  noiseFilterFreq: 7500, noiseFilterQ: 2.0, noiseFilterMode: 2, metalLevel: 0.3, metalFreq: 800, decay: 0.35, drive: 0,    hpFreq: 2500, click: 0,    burstCount: 1, burstGap: 0.015 },
+  Cowbell: { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 0,    noiseFilterFreq: 3000, noiseFilterQ: 1.0, noiseFilterMode: 0, metalLevel: 1.0, metalFreq: 587, decay: 0.08, drive: 0.3,  hpFreq: 500,  click: 0,    burstCount: 1, burstGap: 0.015 },
+  Tom:     { toneLevel: 1.0, pitchStart: 300, pitchEnd: 120, pitchDecay: 0.04,  noiseLevel: 0,    noiseFilterFreq: 3000, noiseFilterQ: 1.0, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.15, drive: 0.5,  hpFreq: 20,   click: 0.2,  burstCount: 1, burstGap: 0.015 },
+  Rimshot: { toneLevel: 0.7, pitchStart: 800, pitchEnd: 800, pitchDecay: 0.003, noiseLevel: 0.5,  noiseFilterFreq: 4000, noiseFilterQ: 1.5, noiseFilterMode: 0, metalLevel: 0,   metalFreq: 800, decay: 0.03, drive: 0.8,  hpFreq: 200,  click: 0.8,  burstCount: 1, burstGap: 0.015 },
+  Shaker:  { toneLevel: 0,   pitchStart: 200, pitchEnd: 200, pitchDecay: 0.01,  noiseLevel: 1.0,  noiseFilterFreq: 5000, noiseFilterQ: 2.5, noiseFilterMode: 2, metalLevel: 0,   metalFreq: 800, decay: 0.06, drive: 0,    hpFreq: 2000, click: 0,    burstCount: 1, burstGap: 0.015 },
 }
 
-/** Hand clap: TR-909 style — 4 rapid noise bursts + decay tail. */
-export class ClapVoice implements Voice {
+export class DrumMachine implements Voice {
   private t = 0; private vel = 1; private playing = false
-  private seed = 54321
-  private filter = new ResonantLP()
-  private decay = 0.18; private filterFc = 1200; private burstGap = 0.015
-  constructor(private sr: number) {
-    this.filter.setParams(this.filterFc, 2.0, sr)
-  }
-  noteOn(_n: number, v: number) {
-    this.vel = v; this.t = 0; this.playing = true; this.filter.reset()
-  }
-  noteOff() {}
-  slideNote(n: number, v: number) { this.noteOn(n, v) }
-  reset() { this.t = 0; this.playing = false; this.filter.reset() }
-  tick(): number {
-    if (!this.playing) return 0
-    const ts = this.t / this.sr
-    let amp = 0
-    const burstEnd = this.burstGap * 4
-    if (ts < burstEnd) {
-      const local = ts % this.burstGap
-      if (local < 0.002) {
-        const attack = Math.min(local / 0.0003, 1.0)
-        amp = (1.0 - local / 0.002) * attack
-      }
-    }
-    const tailStart = burstEnd * 0.7
-    if (ts > tailStart) {
-      const tail = Math.exp(-(ts - tailStart) / this.decay)
-      amp = Math.max(amp, tail * 0.8)
-    }
-    if (amp < 0.001 && ts > burstEnd) { this.playing = false; return 0 }
-    this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    const raw = (this.seed >>> 16) / 32768 - 1
-    const sig = this.filter.process(raw)
-    this.t++
-    return sig * amp * this.vel * 0.9
-  }
-  setParam(key: string, value: number) {
-    switch (key) {
-      case 'decay':    this.decay    = value; break
-      case 'filterFc':
-        this.filterFc = value
-        this.filter.setParams(value, 2.0, this.sr)
-        break
-      case 'burstGap': this.burstGap = value; break
-    }
-  }
-}
-
-/** Closed hi-hat: TR-909 style — 6 square-wave metallic oscillators. */
-export class HatVoice implements Voice {
-  private vel = 1; private t = 0; private playing = false
-  private seed = 77777
-  private hp = new BiquadHP()
-  private phases = [0, 0, 0, 0, 0, 0]
-  private readonly ratios = [1.0, 1.283, 1.800, 2.104, 2.587, 2.870]
-  private baseFreq = 800; private hpCutoff = 5000
-  private volume = 0.65; private decay = 0.04
-  constructor(private sr: number) {
-    this.hp.setParams(this.hpCutoff, 0.7, sr)
-  }
-  noteOn(_n: number, v: number) {
-    this.vel = v; this.t = 0; this.playing = true; this.hp.reset()
-  }
-  noteOff() {}
-  slideNote(n: number, v: number) { this.noteOn(n, v) }
-  reset() { this.t = 0; this.playing = false; this.hp.reset(); this.phases.fill(0) }
-  tick(): number {
-    if (!this.playing) return 0
-    const ts = this.t / this.sr
-    const amp = Math.exp(-ts / this.decay)
-    if (amp < 0.001) { this.playing = false; return 0 }
-    let sig = 0
-    for (let i = 0; i < 6; i++) {
-      this.phases[i] += (this.baseFreq * this.ratios[i]) / this.sr
-      if (this.phases[i] >= 1) this.phases[i] -= 1
-      sig += this.phases[i] < 0.5 ? 1 : -1
-    }
-    sig /= 6
-    this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    sig += ((this.seed >>> 16) / 32768 - 1) * 0.25
-    const out = this.hp.process(sig)
-    this.t++
-    return out * amp * this.vel * this.volume
-  }
-  setParam(key: string, value: number) {
-    switch (key) {
-      case 'decay':    this.decay    = value; break
-      case 'baseFreq': this.baseFreq = value; break
-      case 'hpCutoff':
-        this.hpCutoff = value
-        this.hp.setParams(value, 0.7, this.sr)
-        break
-      case 'volume':   this.volume   = value; break
-    }
-  }
-}
-
-/** Open hi-hat: TR-909 style — same oscillator bank, longer decay. */
-export class OpenHatVoice implements Voice {
-  private vel = 1; private t = 0; private playing = false
-  private seed = 88888
-  private hp = new BiquadHP()
-  private phases = [0, 0, 0, 0, 0, 0]
-  private readonly ratios = [1.0, 1.283, 1.800, 2.104, 2.587, 2.870]
-  private baseFreq = 800; private hpCutoff = 4500
-  private volume = 0.60; private decay = 0.18
-  constructor(private sr: number) {
-    this.hp.setParams(this.hpCutoff, 0.7, sr)
-  }
-  noteOn(_n: number, v: number) {
-    this.vel = v; this.t = 0; this.playing = true; this.hp.reset()
-  }
-  noteOff() {}
-  slideNote(n: number, v: number) { this.noteOn(n, v) }
-  reset() { this.t = 0; this.playing = false; this.hp.reset(); this.phases.fill(0) }
-  tick(): number {
-    if (!this.playing) return 0
-    const ts = this.t / this.sr
-    const amp = Math.exp(-ts / this.decay)
-    if (amp < 0.001) { this.playing = false; return 0 }
-    let sig = 0
-    for (let i = 0; i < 6; i++) {
-      this.phases[i] += (this.baseFreq * this.ratios[i]) / this.sr
-      if (this.phases[i] >= 1) this.phases[i] -= 1
-      sig += this.phases[i] < 0.5 ? 1 : -1
-    }
-    sig /= 6
-    this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    sig += ((this.seed >>> 16) / 32768 - 1) * 0.25
-    const out = this.hp.process(sig)
-    this.t++
-    return out * amp * this.vel * this.volume
-  }
-  setParam(key: string, value: number) {
-    switch (key) {
-      case 'decay':    this.decay    = value; break
-      case 'baseFreq': this.baseFreq = value; break
-      case 'hpCutoff':
-        this.hpCutoff = value
-        this.hp.setParams(value, 0.7, this.sr)
-        break
-      case 'volume':   this.volume   = value; break
-    }
-  }
-}
-
-/** Crash cymbal: TR-606 style — noise + metallic sine through resonant BP filter.
- *  Noise provides the wash, a high sine adds metallic ping/shimmer. */
-export class CymbalVoice implements Voice {
-  private vel = 1; private t = 0; private playing = false
-  private seed = 66666
-  private bp: SVFilter
-  private hp = new BiquadHP()
+  private seed = 31337
   private tonePhase = 0
-  private baseFreq = 7500; private hpCutoff = 2500
-  private volume = 0.55; private decay = 0.35
-  constructor(private sr: number) {
-    this.bp = new SVFilter(sr)
-    this.bp.mode = SVFMode.BP
-    this.bp.setParams(this.baseFreq, 2.0)
-    this.hp.setParams(this.hpCutoff, 0.5, sr)
+  private noiseLp = new ResonantLP()
+  private noiseHp = new BiquadHP()
+  private noiseBp: SVFilter
+  private outHp = new BiquadHP()
+
+  // Metal section: 6 detuned square-wave oscillators (TR-909 hat topology)
+  private metalPhases = [0, 0, 0, 0, 0, 0]
+  private readonly metalRatios = [1.0, 1.283, 1.800, 2.104, 2.587, 2.870]
+
+  // Params (set from preset, tweakable via setParam)
+  private toneLevel: number
+  private pitchStart: number; private pitchEnd: number; private pitchDecay: number
+  private noiseLevel: number; private noiseFilterFreq: number
+  private noiseFilterQ: number; private noiseFilterMode: number
+  private metalLevel: number; private metalFreq: number
+  private decay: number; private drive: number; private hpFreq: number
+  private click: number; private burstCount: number; private burstGap: number
+
+  constructor(private sr: number, preset: string) {
+    this.noiseBp = new SVFilter(sr)
+    this.noiseBp.mode = SVFMode.BP
+    const p = DRUM_PRESETS[preset] ?? DRUM_PRESETS.Kick!
+    this.toneLevel = p.toneLevel; this.pitchStart = p.pitchStart
+    this.pitchEnd = p.pitchEnd; this.pitchDecay = p.pitchDecay
+    this.noiseLevel = p.noiseLevel; this.noiseFilterFreq = p.noiseFilterFreq
+    this.noiseFilterQ = p.noiseFilterQ; this.noiseFilterMode = p.noiseFilterMode
+    this.metalLevel = p.metalLevel; this.metalFreq = p.metalFreq
+    this.decay = p.decay; this.drive = p.drive; this.hpFreq = p.hpFreq
+    this.click = p.click; this.burstCount = p.burstCount; this.burstGap = p.burstGap
+    this._updateFilters()
   }
+
+  private _updateFilters() {
+    this.noiseLp.setParams(this.noiseFilterFreq, this.noiseFilterQ, this.sr)
+    this.noiseHp.setParams(this.noiseFilterFreq, Math.min(this.noiseFilterQ, 2.0), this.sr)
+    this.noiseBp.setParams(this.noiseFilterFreq, this.noiseFilterQ)
+    this.outHp.setParams(this.hpFreq, 0.7, this.sr)
+  }
+
   noteOn(_n: number, v: number) {
-    this.vel = v; this.t = 0; this.playing = true
-    this.tonePhase = 0; this.bp.reset(); this.hp.reset()
+    this.vel = v; this.t = 0; this.tonePhase = 0; this.playing = true
+    this.metalPhases.fill(0)
+    this.noiseLp.reset(); this.noiseHp.reset(); this.noiseBp.reset(); this.outHp.reset()
   }
   noteOff() {}
   slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() {
-    this.t = 0; this.playing = false; this.tonePhase = 0
-    this.bp.reset(); this.hp.reset()
+    this.t = 0; this.tonePhase = 0; this.playing = false
+    this.metalPhases.fill(0)
+    this.noiseLp.reset(); this.noiseHp.reset(); this.noiseBp.reset(); this.outHp.reset()
   }
+
   tick(): number {
     if (!this.playing) return 0
     const ts = this.t / this.sr
-    // Two-stage envelope: sharp attack transient + longer tail
-    const attack = Math.exp(-ts / 0.012)
-    const tail = Math.exp(-ts / this.decay)
-    const amp = attack * 0.35 + tail * 0.65
+
+    // ── Amplitude envelope ──
+    const amp = Math.exp(-ts / this.decay)
     if (amp < 0.001) { this.playing = false; return 0 }
-    // White noise — the wash
-    this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    const noise = (this.seed >>> 16) / 32768 - 1
-    // Metallic sine tone — adds shimmer/ping that noise alone lacks
-    this.tonePhase += this.baseFreq / this.sr
-    if (this.tonePhase >= 1) this.tonePhase -= 1
-    const tone = Math.sin(this.tonePhase * 2 * Math.PI) * 0.3
-    // Mix noise + tone, then through resonant BP
-    const bpFreq = this.baseFreq + 3000 * attack
-    this.bp.setParams(bpFreq, 2.0)
-    let sig = this.bp.process(noise + tone)
-    // HP to remove low-end rumble
-    sig = this.hp.process(sig)
+
+    // ── Burst gate (for clap-style sounds) ──
+    let burstGate = 1.0
+    if (this.burstCount > 1) {
+      const burstEnd = this.burstGap * this.burstCount
+      if (ts < burstEnd) {
+        const local = ts % this.burstGap
+        if (local < 0.002) {
+          const attack = Math.min(local / 0.0003, 1.0)
+          burstGate = (1.0 - local / 0.002) * attack
+        } else {
+          burstGate = 0
+        }
+      } else {
+        // After bursts: tail only
+        const tailStart = burstEnd * 0.7
+        burstGate = ts > tailStart ? Math.exp(-(ts - tailStart) / this.decay) * 0.8 : 0
+      }
+    }
+
+    // ── Tone section (sine osc + pitch sweep) ──
+    let tone = 0
+    if (this.toneLevel > 0) {
+      const freq = this.pitchEnd + (this.pitchStart - this.pitchEnd) * Math.exp(-ts / this.pitchDecay)
+      this.tonePhase += freq / this.sr
+      if (this.tonePhase >= 1) this.tonePhase -= 1
+      tone = Math.sin(this.tonePhase * 2 * Math.PI) * this.toneLevel
+    }
+
+    // ── Click transient ──
+    let clickSig = 0
+    if (this.click > 0 && ts < 0.003) {
+      this.seed = (this.seed * 1664525 + 1013904223) >>> 0
+      clickSig = ((this.seed >>> 16) / 32768 - 1) * Math.exp(-ts / 0.0006) * this.click
+    }
+
+    // ── Noise section ──
+    let noise = 0
+    if (this.noiseLevel > 0 || this.click > 0) {
+      this.seed = (this.seed * 1664525 + 1013904223) >>> 0
+      const raw = (this.seed >>> 16) / 32768 - 1
+      let filtered: number
+      if (this.noiseFilterMode === 1) {
+        filtered = this.noiseHp.process(raw)
+      } else if (this.noiseFilterMode === 2) {
+        filtered = this.noiseBp.process(raw)
+      } else {
+        filtered = this.noiseLp.process(raw)
+      }
+      noise = filtered * this.noiseLevel
+    }
+
+    // ── Metal section (6 detuned square-wave oscillators) ──
+    let metal = 0
+    if (this.metalLevel > 0) {
+      for (let i = 0; i < 6; i++) {
+        this.metalPhases[i] += (this.metalFreq * this.metalRatios[i]) / this.sr
+        if (this.metalPhases[i] >= 1) this.metalPhases[i] -= 1
+        metal += this.metalPhases[i] < 0.5 ? 1 : -1
+      }
+      metal = metal / 6 * this.metalLevel
+    }
+
+    // ── Mix + output processing ──
+    let sig = (tone + clickSig + noise + metal) * (this.burstCount > 1 ? burstGate : amp)
+
+    // Snare-style dual VCA: tone has separate faster decay for body punch
+    if (this.toneLevel > 0 && this.noiseLevel > 0 && this.burstCount <= 1) {
+      const toneAmp = Math.exp(-ts / Math.min(this.decay, 0.08))
+      const noiseAmp = amp
+      sig = tone * toneAmp + clickSig * amp + (noise + metal) * noiseAmp
+    }
+
+    // Output HP (removes low-end for hats/cymbals)
+    if (this.hpFreq > 30) sig = this.outHp.process(sig)
+
+    // Drive
+    if (this.drive > 0) sig = Math.tanh(sig * (1 + this.drive * 2))
+
     this.t++
-    return sig * amp * this.vel * this.volume * 2.0
+    return sig * this.vel * 1.2
   }
+
   setParam(key: string, value: number) {
     switch (key) {
-      case 'decay':    this.decay    = value; break
-      case 'baseFreq':
-        this.baseFreq = value
-        this.bp.setParams(value, 2.0)
-        break
-      case 'hpCutoff':
-        this.hpCutoff = value
-        this.hp.setParams(value, 0.5, this.sr)
-        break
-      case 'volume':   this.volume   = value; break
+      case 'toneLevel':       this.toneLevel       = value; break
+      case 'pitchStart':      this.pitchStart      = value; break
+      case 'pitchEnd':        this.pitchEnd        = value; break
+      case 'pitchDecay':      this.pitchDecay      = value; break
+      case 'noiseLevel':      this.noiseLevel      = value; break
+      case 'noiseFilterFreq':
+        this.noiseFilterFreq = value; this._updateFilters(); break
+      case 'noiseFilterQ':
+        this.noiseFilterQ = value; this._updateFilters(); break
+      case 'noiseFilterMode':
+        this.noiseFilterMode = Math.round(value); this._updateFilters(); break
+      case 'metalLevel':      this.metalLevel      = value; break
+      case 'metalFreq':       this.metalFreq       = value; break
+      case 'decay':           this.decay           = value; break
+      case 'drive':           this.drive           = value; break
+      case 'hpFreq':
+        this.hpFreq = value; this.outHp.setParams(value, 0.7, this.sr); break
+      case 'click':           this.click           = value; break
+      case 'burstCount':      this.burstCount      = Math.round(value); break
+      case 'burstGap':        this.burstGap        = value; break
     }
   }
 }
@@ -1138,17 +1032,23 @@ export class IdeathSynth implements Voice {
 // ── Voice registry (ADR 009) ────────────────────────────────────────
 
 export type VoiceId =
-  | 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
+  | 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
+  | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
   | 'iDEATH'
 
 const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
-  Kick:     sr => new KickVoice(sr),
-  Snare:    sr => new SnareVoice(sr),
-  Clap:     sr => new ClapVoice(sr),
-  Hat:      sr => new HatVoice(sr),
-  OpenHat:  sr => new OpenHatVoice(sr),
-  Cymbal:   sr => new CymbalVoice(sr),
+  Kick:     sr => new DrumMachine(sr, 'Kick'),
+  Kick808:  sr => new DrumMachine(sr, 'Kick808'),
+  Snare:    sr => new DrumMachine(sr, 'Snare'),
+  Clap:     sr => new DrumMachine(sr, 'Clap'),
+  Tom:      sr => new DrumMachine(sr, 'Tom'),
+  Rimshot:  sr => new DrumMachine(sr, 'Rimshot'),
+  Shaker:   sr => new DrumMachine(sr, 'Shaker'),
+  Hat:      sr => new DrumMachine(sr, 'Hat'),
+  OpenHat:  sr => new DrumMachine(sr, 'OpenHat'),
+  Cymbal:   sr => new DrumMachine(sr, 'Cymbal'),
+  Cowbell:  sr => new DrumMachine(sr, 'Cowbell'),
   Bass303:  sr => new TB303Voice(sr),
   MoogLead: sr => new MoogVoice(sr),
   Analog:   sr => new AnalogVoice(sr),
@@ -1157,7 +1057,8 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
 }
 
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
-  'Kick', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
+  'Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
+  'Tom', 'Rimshot', 'Cowbell', 'Shaker',
 ])
 
 export type VoiceCategory = 'drum' | 'bass' | 'lead'
@@ -1171,11 +1072,16 @@ export interface VoiceMeta {
 
 export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Kick',     label: 'KICK',  category: 'drum', sidechainSource: true },
+  { id: 'Kick808',  label: '808K',  category: 'drum', sidechainSource: true },
   { id: 'Snare',    label: 'SNARE', category: 'drum' },
   { id: 'Clap',     label: 'CLAP',  category: 'drum' },
   { id: 'Hat',      label: 'C.HH',  category: 'drum' },
   { id: 'OpenHat',  label: 'O.HH',  category: 'drum' },
   { id: 'Cymbal',   label: 'CYM',   category: 'drum' },
+  { id: 'Tom',      label: 'TOM',   category: 'drum' },
+  { id: 'Rimshot',  label: 'RIM',   category: 'drum' },
+  { id: 'Cowbell',  label: 'BELL',  category: 'drum' },
+  { id: 'Shaker',   label: 'SHKR',  category: 'drum' },
   { id: 'Bass303',  label: '303',   category: 'bass' },
   { id: 'Analog',   label: 'ANA',   category: 'bass' },
   { id: 'MoogLead', label: 'MOOG',  category: 'lead' },

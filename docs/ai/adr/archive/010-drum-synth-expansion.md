@@ -1,6 +1,6 @@
 # ADR 010: Unified Drum Machine Voice
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
