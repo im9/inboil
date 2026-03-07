@@ -1,93 +1,243 @@
-# ADR 011: Full Synth Engine Implementations
+# ADR 011: Synth Engine Architecture — Wavetable + Modulation Matrix
 
-## Status: Proposed
+## Status: Proposed (revised)
 
 ## Context
 
-The current melodic voices (TB303Voice, AnalogVoice, MoogVoice, FMVoice) are monophonic single-oscillator designs. They sound good for leads and bass but lack the depth needed for pads, chords, and modern production textures. `ChordSynth` is declared in `SynthType` but unimplemented.
+The current melodic voices (AnalogSynth, FMSynth) are monophonic single-oscillator designs. They sound good for leads and bass but lack the depth needed for pads, chords, and modern production textures. To reach production-quality sound design (Serum / Pigments level) in the browser, we need:
 
-### Current Melodic Voices
+1. **Wavetable oscillators** — richer timbres than basic waveforms
+2. **Modulation matrix** — flexible routing (LFO/Env → any param)
+3. **Polyphony** — chords and pads
+4. **Per-voice effects** — filter types, distortion, chorus
+
+### Current Melodic Voices (C++ WASM)
 
 | Voice | Architecture | Limitations |
 |-------|-------------|-------------|
-| TB303Voice | Saw → resonant LP → drive | Mono, no waveform choice, fixed character |
-| AnalogVoice | Saw → LP → drive | Mono, single oscillator, basic envelope |
-| MoogVoice | 2 detuned saws → 2× LP | Mono, dual-osc but fixed detune |
-| FMVoice | 3-op FM + feedback | Mono, fixed algorithm |
+| AnalogSynth | Saw → tanh → 1-pole LP → ADSR | Mono, single osc, fixed waveform |
+| FMSynth | 2-op FM (carrier + modulator) | Mono, fixed algorithm, 2-op only |
 
-### Goals
+### Current Infrastructure
 
-- **AnalogSynth v2**: Multi-oscillator subtractive with waveform selection, unison, PWM
-- **PolySynth**: 4–6 voice polyphony for chords and pads
-- **FM Synth v2**: Full 4-operator FM with algorithm selection (DX7-lite)
-- **ChordSynth**: Stacked chord voicing from a single trig (detect/quantize to chord)
+- `SynthBase` abstract class: `noteOn()`, `tick()`, `reset()`
+- `ADSR` envelope, `OnePole` filter, `fastTanh`/`fastExp` helpers
+- All DSP runs in C++ WASM AudioWorklet at sample rate
+- JS-side `voices.ts` mirrors C++ voices (used for non-WASM fallback)
 
 ## Proposed Design
 
-### A. AnalogSynth v2
+### A. Wavetable Oscillator
 
-Upgrade AnalogVoice to a full subtractive synth:
+Core building block replacing simple waveform generators.
 
-- **2 oscillators** with selectable waveform (saw, square, triangle, pulse)
-- **PWM** on pulse waveform (LFO-modulated pulse width)
-- **Unison** mode: 2–4 detuned copies with stereo spread
-- **Multi-mode filter**: LP / HP / BP selectable, 2-pole or 4-pole
-- **2 envelopes**: amp ADSR + filter ADSR (independent)
-- **LFO** → pitch / filter / amplitude (selectable destination)
+```cpp
+class WavetableOsc {
+    // Table: 2048 samples × N frames (e.g., 256 frames per table)
+    // Frame morphing: linear interpolation between adjacent frames
+    // Position parameter (0.0–1.0) selects morph position
+    float* _table;       // interleaved frames
+    int    _frameSize;   // 2048
+    int    _numFrames;   // 1–256
+    float  _position;    // 0.0–1.0, modulatable
+    float  _phase;
 
-Params: `osc1Wave`, `osc2Wave`, `osc2Semi`, `osc2Detune`, `filterType`, `cutoff`, `resonance`, `envMod`, `attack`, `decay`, `sustain`, `release`, `lfoRate`, `lfoDepth`, `lfoTarget`
+    float tick(float freq, float sr);  // cubic interpolation + frame lerp
+};
+```
 
-### B. PolySynth
+**Built-in wavetables** (generated at startup, no file loading needed):
+- Basic: Sine, Triangle, Saw, Square, PWM
+- Spectral: Additive harmonic series (1–64 partials, variable rolloff)
+- Digital: Formant vowels (A/E/I/O/U), Sync sweep, Hard sync
+- Noise: Spectral noise bands
 
-A voice allocator wrapping AnalogSynth v2:
+**Future**: User wavetable import (WAV → table extraction).
 
-- **4–6 voice polyphony** with voice stealing (oldest-note priority)
-- Each voice is an independent AnalogSynth v2 instance
-- **Voice allocator** in the sequencer: when a step triggers, assign to next free voice
-- Monophonic vs polyphonic mode toggle
-- **Unison mode**: all voices play same note with detune + spread
+### B. Modulation Matrix
 
-Implementation approach:
-- `PolyVoice` class holds N sub-voices
-- `noteOn()` allocates a sub-voice, `tick()` sums all active sub-voices
-- Voice count limited to 4 for CPU budget in AudioWorklet
+Flexible source → destination routing, evaluated per sample.
 
-### C. FM Synth v2
+```cpp
+struct ModSlot {
+    ModSource source;   // LFO1, LFO2, Env1, Env2, Velocity, Note, Random
+    ModDest   dest;     // Pitch, WTPos, Cutoff, Resonance, Volume, Pan, FMIndex, ...
+    float     amount;   // -1.0 to 1.0 (bipolar)
+};
 
-Upgrade FMVoice to 4-operator with algorithms:
+class ModMatrix {
+    static constexpr int MAX_SLOTS = 8;
+    ModSlot _slots[MAX_SLOTS];
 
-- **4 operators** (each: sine oscillator + ADSR envelope + level)
-- **8 algorithms** (preset operator routing topologies, DX7-subset)
-- **Operator ratios**: coarse (1–16) + fine (0.0–1.0)
-- **Feedback** on any single operator
-- Per-operator envelope: rate-based (DX7-style) or ADSR
+    // Per-sample: compute all source values, apply to dest params
+    void process(float* params, const ModSources& sources);
+};
+```
 
-Params: `algorithm`, `op1Ratio`, `op1Level`, `op2Ratio`, `op2Level`, `op3Ratio`, `op3Level`, `op4Ratio`, `op4Level`, `fbOp`, `fbAmt`, `decay`
+**Mod Sources:**
+| Source | Type | Notes |
+|--------|------|-------|
+| LFO 1/2 | Free-running or tempo-synced | Sine, Tri, Saw, Square, S&H |
+| Env 1 (Amp) | ADSR | Always routed to amplitude |
+| Env 2 (Mod) | ADSR | Free assignment |
+| Velocity | Per-note | 0.0–1.0 |
+| Note | Per-note | Normalized MIDI note |
+| Random | Per-note | New random value each trigger |
 
-### D. ChordSynth
+**Mod Destinations:**
+Pitch, WT Position, Filter Cutoff, Filter Resonance, FM Index, FM Ratio, Volume, Pan, LFO Rate, Env Mod Depth
 
-Chord voicing from single trigs:
+### C. Voice Architecture
 
-- Input: single MIDI note from trig
-- **Chord mode**: selects interval stack (minor, major, 7th, sus2, sus4, power)
-- Internally triggers 3–4 notes (root + intervals) using PolySynth engine
-- **Strum** parameter: slight time offset between chord notes (0–30ms)
-- **Spread**: detune between chord voices
+Single unified synth engine that subsumes current AnalogSynth and FMSynth:
 
-Params: `chordType`, `strum`, `spread`, `cutoff`, `decay`
+```
+┌─────────────────────────────────────────────────────┐
+│  InboilSynth (per voice)                            │
+│                                                     │
+│  ┌──────────┐   ┌──────────┐                       │
+│  │  OSC A   │   │  OSC B   │   Wavetable or        │
+│  │ (WT/Ana) │   │ (WT/Ana) │   classic waveform    │
+│  └────┬─────┘   └────┬─────┘                       │
+│       │    mix/FM/RM  │                             │
+│       └──────┬────────┘                             │
+│              │                                      │
+│       ┌──────▼──────┐                               │
+│       │   FILTER    │   LP/HP/BP/Notch, 2/4-pole   │
+│       │  (SVF)      │   Cutoff + Reso modulatable  │
+│       └──────┬──────┘                               │
+│              │                                      │
+│       ┌──────▼──────┐                               │
+│       │    AMP      │   Env1 (ADSR) + velocity      │
+│       └──────┬──────┘                               │
+│              │                                      │
+│  ┌───────────▼───────────┐                          │
+│  │   MOD MATRIX (8 slots)│                          │
+│  │   LFO1, LFO2, Env2   │                          │
+│  └───────────────────────┘                          │
+└─────────────────────────────────────────────────────┘
+```
+
+**Osc Combine Modes:**
+- Mix (crossfade A/B)
+- FM (A modulated by B)
+- Ring Mod (A × B)
+- Unison (A+B detuned, stereo spread)
+
+### D. Polyphony
+
+Voice allocator wrapping InboilSynth:
+
+```cpp
+class PolySynth {
+    static constexpr int MAX_VOICES = 4;  // CPU budget
+    InboilSynth _voices[MAX_VOICES];
+    int _nextVoice = 0;  // round-robin allocation
+
+    void noteOn(uint8_t note, float vel);  // allocate voice
+    void tick(float& outL, float& outR);   // sum all active voices
+};
+```
+
+- **4 voices max** — AudioWorklet CPU budget constraint
+- **Voice stealing:** oldest-note priority
+- **Mono mode:** single voice with legato/portamento option
+
+### E. Filter Upgrade
+
+Replace `OnePole` (6dB/oct) with State Variable Filter (SVF):
+
+```cpp
+struct SVFilter {
+    float cutoff, reso;
+    enum Mode { LP, HP, BP, Notch } mode;
+
+    // 2-pole (12dB/oct) or cascaded 4-pole (24dB/oct)
+    float process(float in);
+};
+```
+
+### F. Backward Compatibility
+
+Existing voice types map to InboilSynth presets:
+
+| Current Voice | InboilSynth Config |
+|---------------|-------------------|
+| AnalogSynth | OscA=Saw (classic), Filter=LP 1-pole, no mod matrix |
+| FMSynth | OscA=Sine, OscB=Sine, Combine=FM, ratio+index params |
+
+Factory presets recreate all current sounds, so no existing patterns break.
+
+### G. Parameter Count & UI
+
+InboilSynth exposes many parameters. UI strategy:
+
+| Layer | What | Where |
+|-------|------|-------|
+| Macro | 4–6 macro knobs (mapped via mod matrix) | Track knob row (existing) |
+| Detail | Full parameter page | Overlay sheet (ADR 054) |
+| Presets | Named presets per synth config | ADR 015 |
+
+Macro knobs (e.g., "Brightness", "Movement", "Body", "Space") abstract complexity for quick tweaking. Power users access the full detail page.
+
+### H. Implementation Strategy — JS First, WASM Later
+
+**Start in JS (AudioWorkletProcessor)**, migrate hot paths to C++ WASM only if profiling shows need.
+
+| Phase | Runtime | Rationale |
+|-------|---------|-----------|
+| Phase 1 | JS (AudioWorklet) | Fast iteration, zero build overhead, easy debugging |
+| Phase 2 | Profile | Measure CPU per voice with Chrome DevTools + `performance.now()` in process() |
+| Phase 3 | Selective WASM | Move only bottlenecks (wavetable interpolation, SVF, mod matrix inner loop) |
+
+**Why JS first:**
+- Current voices already run fine in JS AudioWorklet
+- Wavetable lookup + lerp is simple math — JS JIT handles it well for mono/low-poly
+- WASM adds build complexity (Emscripten), increases bundle size, and complicates debugging
+- Bundle size priority: keep WASM minimal, only pay for what's proven necessary
+
+**WASM migration criteria** (move to C++ only when):
+- CPU usage > 30% of AudioWorklet budget (128 samples @ 44.1kHz ≈ 2.9ms)
+- Measured across 4-voice poly + mod matrix + SVF filter
+- JS profiling shows specific hot functions, not general overhead
+
+**C++ WASM scope if needed:**
+- `SynthBase` infrastructure already exists in `src/dsp/synth/`
+- Add `WavetableOsc`, `SVFilter`, `ModMatrix` as new C++ classes
+- Keep JS versions as reference/fallback
+- Estimated WASM addition: ~15–20KB gzipped (synth engine only, no wavetable data)
+
+**Wavetable data budget:**
+- Built-in tables generated at startup (math, not stored data) — zero bundle cost
+- 8 basic tables × 256 frames × 2048 samples × 4 bytes = ~16MB if naive
+- Optimization: generate on `AudioWorklet` init, keep only active tables in memory (~512KB typical)
 
 ## Implementation Order
 
-1. AnalogSynth v2 (foundation for PolySynth)
-2. PolySynth (wraps AnalogSynth v2)
-3. FM Synth v2 (independent, can be parallel)
-4. ChordSynth (uses PolySynth internally)
+1. **SVFilter** (JS) — replace OnePole, used by everything after
+2. **WavetableOsc** (JS) — table generation + morphing oscillator
+3. **InboilSynth** (JS) — unified voice (2 osc + filter + 2 env)
+4. **CPU profiling** — measure budget with realistic patches
+5. **ModMatrix** (JS) — source/dest routing, per-sample evaluation
+6. **PolySynth** (JS) — voice allocator (4-voice)
+7. **LFO** — tempo-synced + free-running, multiple shapes
+8. **WASM migration** — if profiling shows need, move hot paths to C++
+9. **Factory presets** — recreate current sounds + new patches
+10. **Detail UI** — full parameter overlay sheet
+
+Steps 1–3 can ship as a first release (already a big upgrade). Step 4 determines if WASM is needed. Steps 5–7 add the "Serum-like" modulation depth.
 
 ## Consequences
 
-- **Positive:** Production-quality sound design capability; covers pads, leads, bass, chords.
-- **Positive:** PolySynth enables chord progressions — massive musical upgrade.
-- **Negative:** Poly voices multiply CPU cost ×4–6. Must profile AudioWorklet budget.
-- **Negative:** Many parameters per synth — needs thoughtful UI (macro knobs + detail page).
-- **Risk:** 4-op FM parameter space is vast. Preset system would help discoverability.
-- **Dependency:** Requires ADR 009 (instrument selection) for assigning synth types to tracks.
+- **Positive:** Production-quality sound design in the browser — wavetable + mod matrix covers 80% of Serum/Pigments workflows
+- **Positive:** Single engine replaces AnalogSynth + FMSynth — less code to maintain long-term
+- **Positive:** Polyphony enables chord progressions — massive musical upgrade
+- **Positive:** Mod matrix makes sounds evolve over time — pads, textures, movement
+- **Positive:** JS-first approach keeps bundle small and iteration fast
+- **Negative:** Wavetable + mod matrix per sample is CPU-heavy. Must profile before scaling up
+- **Negative:** 4-voice poly × full synth engine may push AudioWorklet budget
+- **Negative:** Large parameter space needs careful UI (macro knobs + detail page)
+- **Risk:** JS may not be fast enough for 4-voice poly + full mod matrix — WASM fallback path exists
+- **Risk:** Wavetable memory (~512KB active) — generate on init, don't store in bundle
+- **Dependency:** ADR 015 (Presets) — essential for managing complex patches
+- **Dependency:** ADR 054 (Overlay Sheets) — detail parameter page UI
