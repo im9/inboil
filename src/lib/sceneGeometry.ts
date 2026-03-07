@@ -79,3 +79,45 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
     y: u * u * b.p0.y + 2 * u * t * b.cp.y + t * t * b.p1.y,
   }
 }
+
+// ── Node display helpers ──
+
+import type { SceneNode, Pattern } from './state.svelte.ts'
+import { PATTERN_COLORS } from './constants.ts'
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+/** Get display label for a scene node */
+export function nodeName(node: SceneNode, patterns: Pattern[]): string {
+  if (node.type === 'pattern') {
+    const pat = patterns.find(p => p.id === node.patternId)
+    return pat?.name || '---'
+  }
+  if (node.type === 'transpose') {
+    if (node.params?.mode === 1) {
+      return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
+    }
+    const s = node.params?.semitones ?? 0
+    return `T${s >= 0 ? '+' : ''}${s}`
+  }
+  if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
+  if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
+  if (node.type === 'probability') return '?%'
+  if (node.type === 'fx') {
+    const p = node.params ?? {}
+    const tags = []
+    if (p.verb) tags.push('V')
+    if (p.delay) tags.push('D')
+    if (p.glitch) tags.push('G')
+    if (p.granular) tags.push('R')
+    return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
+  }
+  return '?'
+}
+
+/** Get color hex for a pattern node (function nodes return null) */
+export function nodeColor(node: SceneNode, patterns: Pattern[]): string | null {
+  if (node.type !== 'pattern') return null
+  const pat = patterns.find(p => p.id === node.patternId)
+  return PATTERN_COLORS[pat?.color ?? 0]
+}

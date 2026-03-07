@@ -1,29 +1,10 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern } from '../state.svelte.ts'
   import { PATTERN_COLORS } from '../constants.ts'
+  import { nodeName } from '../sceneGeometry.ts'
 
   function patternIndex(patternId: string): number {
     return song.patterns.findIndex(p => p.id === patternId)
-  }
-
-  function nodeName(node: typeof song.scene.nodes[0]): string {
-    if (node.type === 'pattern') {
-      const pat = song.patterns.find(p => p.id === node.patternId)
-      return pat?.name || '---'
-    }
-    if (node.type === 'transpose') {
-      if (node.params?.mode === 1) {
-        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-        return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
-      }
-      const s = node.params?.semitones ?? 0
-      return `T${s >= 0 ? '+' : ''}${s}`
-    }
-    if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
-    if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
-    if (node.type === 'probability') return '?%'
-    if (node.type === 'fx') return 'FX'
-    return '?'
   }
 
   function onNodeTap(node: typeof song.scene.nodes[0], e: PointerEvent) {
@@ -93,7 +74,7 @@
       style="--i: {i}; {isPattern ? `--nc: ${PATTERN_COLORS[pc]}` : ''}"
       onpointerdown={e => { e.stopPropagation(); onNodeTap(node, e) }}
     >
-      {nodeName(node)}
+      {nodeName(node, song.patterns)}
     </button>
     {#if i < orderedNodes.length - 1}
       <span class="ribbon-arrow">›</span>

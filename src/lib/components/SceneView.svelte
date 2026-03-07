@@ -1,12 +1,15 @@
 <script lang="ts">
-  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes, sceneAlignNodes, sceneAddLabel, sceneUpdateLabel, sceneDeleteLabel, sceneMoveLabel, sceneResizeLabel, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, pushUndo } from '../state.svelte.ts'
   import type { AlignMode } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
-  import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
+  import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
+  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor } from '../sceneGeometry.ts'
   import SceneCanvas from './SceneCanvas.svelte'
   import SceneBubbleMenu from './SceneBubbleMenu.svelte'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
+  import SceneLabels from './SceneLabels.svelte'
+  import SceneToolbar from './SceneToolbar.svelte'
+  import SceneNodePopup from './SceneNodePopup.svelte'
 
   const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
@@ -31,12 +34,8 @@
   // ── Long-press (mobile edge creation) ──
   let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
-  // ── Free label editing ──
-  let editingLabelId: string | null = $state(null)
-  let draggingLabel: string | null = $state(null)
-  let resizingLabel: string | null = $state(null)
-  let resizeStartY = 0
-  let resizeStartSize = 1
+  // ── Free label editing (delegated to SceneLabels) ──
+  let sceneLabelsRef: ReturnType<typeof SceneLabels> | undefined = $state()
 
   // ── Add-node picker (bubble menu) ──
   let pickerOpen = $state(false)
@@ -77,26 +76,6 @@
     panY = (rect.height - WORLD_H) / 2
   }
 
-  /** Pan to center the root node in the viewport */
-  function focusRoot() {
-    const root = song.scene.nodes.find(n => n.root)
-    if (!root || !viewEl) return
-    const rect = viewEl.getBoundingClientRect()
-    const pos = toPixel(root.x, root.y, WORLD_W, WORLD_H)
-    panX = rect.width / 2 - pos.x * zoom
-    panY = rect.height / 2 - pos.y * zoom
-  }
-
-  /** Pan to center the currently playing node */
-  function focusPlaying() {
-    if (!playback.sceneNodeId || !viewEl) return
-    const node = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
-    if (!node) return
-    const rect = viewEl.getBoundingClientRect()
-    const pos = toPixel(node.x, node.y, WORLD_W, WORLD_H)
-    panX = rect.width / 2 - pos.x * zoom
-    panY = rect.height / 2 - pos.y * zoom
-  }
 
   $effect(() => {
     if (viewEl && !panInitialized) {
@@ -487,7 +466,7 @@
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabel = null
-      editingLabelId = null
+      sceneLabelsRef?.clearEditing()
       pickerOpen = false
     }
     const selectedCount = Object.keys(ui.selectedSceneNodes).length
@@ -526,100 +505,8 @@
     }
   }
 
-  /** Get display label for a node */
-  function nodeName(node: typeof song.scene.nodes[0]): string {
-    if (node.type === 'pattern') {
-      const pat = song.patterns.find(p => p.id === node.patternId)
-      return pat?.name || '---'
-    }
-    if (node.type === 'transpose') {
-      if (node.params?.mode === 1) {
-        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-        return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
-      }
-      const s = node.params?.semitones ?? 0
-      return `T${s >= 0 ? '+' : ''}${s}`
-    }
-    if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
-    if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
-    if (node.type === 'probability') return '?%'
-    if (node.type === 'fx') {
-      const p = node.params ?? {}
-      const tags = []
-      if (p.verb) tags.push('V')
-      if (p.delay) tags.push('D')
-      if (p.glitch) tags.push('G')
-      if (p.granular) tags.push('R')
-      return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
-    }
-    return '?'
-  }
-
-  /** Get color hex for a pattern node (function nodes return null) */
-  function nodeColor(node: typeof song.scene.nodes[0]): string | null {
-    if (node.type !== 'pattern') return null
-    const pat = song.patterns.find(p => p.id === node.patternId)
-    return PATTERN_COLORS[pat?.color ?? 0]
-  }
-
   // ── Root node helper ──
   const rootNode = $derived(song.scene.nodes.find(n => n.root) ?? null)
-
-  // ── Selected node helpers ──
-
-  const selectedFnNode = $derived.by(() => {
-    const primary = primarySelectedNode()
-    if (!primary || Object.keys(ui.selectedSceneNodes).length !== 1) return null
-    const n = song.scene.nodes.find(n => n.id === primary)
-    return (n && n.type !== 'pattern') ? n : null
-  })
-
-  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
-  const paramDisplay = $derived.by(() => {
-    if (!selectedFnNode) return ''
-    if (selectedFnNode.type === 'transpose') {
-      if (selectedFnNode.params?.mode === 1) return NOTE_NAMES[selectedFnNode.params?.key ?? 0]
-      return String(selectedFnNode.params?.semitones ?? 0)
-    }
-    if (selectedFnNode.type === 'tempo') return String(selectedFnNode.params?.bpm ?? 120)
-    if (selectedFnNode.type === 'repeat') return String(selectedFnNode.params?.count ?? 2)
-    return ''
-  })
-
-  function incParam(e: PointerEvent) {
-    e.stopPropagation()
-    if (!selectedFnNode) return
-    const p = { ...(selectedFnNode.params || {}) }
-    if (selectedFnNode.type === 'transpose') {
-      if (p.mode === 1) p.key = ((p.key ?? 0) + 1) % 12
-      else p.semitones = Math.min(12, (p.semitones ?? 0) + 1)
-    }
-    else if (selectedFnNode.type === 'tempo') p.bpm = Math.min(300, (p.bpm ?? 120) + 5)
-    else if (selectedFnNode.type === 'repeat') p.count = Math.min(16, (p.count ?? 2) + 1)
-    sceneUpdateNodeParams(selectedFnNode.id, p)
-  }
-
-  function decParam(e: PointerEvent) {
-    e.stopPropagation()
-    if (!selectedFnNode) return
-    const p = { ...(selectedFnNode.params || {}) }
-    if (selectedFnNode.type === 'transpose') {
-      if (p.mode === 1) p.key = ((p.key ?? 0) + 11) % 12
-      else p.semitones = Math.max(-12, (p.semitones ?? 0) - 1)
-    }
-    else if (selectedFnNode.type === 'tempo') p.bpm = Math.max(60, (p.bpm ?? 120) - 5)
-    else if (selectedFnNode.type === 'repeat') p.count = Math.max(1, (p.count ?? 2) - 1)
-    sceneUpdateNodeParams(selectedFnNode.id, p)
-  }
-
-  function toggleTransposeMode(e: PointerEvent) {
-    e.stopPropagation()
-    if (!selectedFnNode || selectedFnNode.type !== 'transpose') return
-    const p = { ...(selectedFnNode.params || {}) }
-    p.mode = p.mode === 1 ? 0 : 1
-    sceneUpdateNodeParams(selectedFnNode.id, p)
-  }
 
   // ── Picker ──
 
@@ -631,13 +518,6 @@
     pickerOpen = true
   }
 
-  function toggleFxParam(key: string) {
-    if (!selectedFnNode || selectedFnNode.type !== 'fx') return
-    const p = { ...(selectedFnNode.params || {}) }
-    p[key] = p[key] ? 0 : 1
-    sceneUpdateNodeParams(selectedFnNode.id, p)
-  }
-
   function pickBubbleItem(type: BubblePickType) {
     // Convert picker pixel position to normalized coords (accounting for zoom/pan)
     const canvasX = (pickerPos.x - panX) / zoom
@@ -647,8 +527,7 @@
     if (type === 'label') {
       const id = sceneAddLabel(nx, ny)
       ui.selectedSceneNodes = {}
-      // Defer editing mode so the label renders first
-      requestAnimationFrame(() => { editingLabelId = id })
+      requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
     } else {
       const id = sceneAddFunctionNode(type, nx, ny)
       ui.selectedSceneNodes = {}
@@ -750,7 +629,7 @@
       {@const isDragging = dragging === node.id}
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
-      {@const nc = nodeColor(node)}
+      {@const nc = nodeColor(node, song.patterns)}
       <button
         class="scene-node"
         class:fn={isFn}
@@ -769,20 +648,20 @@
       >
         {#if node.type === 'transpose'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
-          <span class="node-label">{nodeName(node)}</span>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else if node.type === 'tempo'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.tempo}</svg>
-          <span class="node-label">{nodeName(node)}</span>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else if node.type === 'repeat'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.repeat}</svg>
-          <span class="node-label">{nodeName(node)}</span>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else if node.type === 'probability'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.probability}</svg>
         {:else if node.type === 'fx'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
-          <span class="node-label">{nodeName(node)}</span>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else}
-          <span class="node-label">{nodeName(node)}</span>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
       </button>
       <!-- Output handle for edge creation -->
@@ -868,184 +747,16 @@
       {/if}
     {/each}
 
-    <!-- Param popup for selected function node -->
-    {#if selectedFnNode && selectedFnNode.type !== 'probability' && selectedFnNode.type !== 'fx'}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="param-popup" style="
-        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
-        top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
-      " onpointerdown={e => e.stopPropagation()}>
-        {#if selectedFnNode.type === 'transpose'}
-          <button
-            class="mode-toggle"
-            class:absolute={selectedFnNode.params?.mode === 1}
-            onpointerdown={toggleTransposeMode}
-            data-tip={selectedFnNode.params?.mode === 1 ? 'Switch to relative' : 'Switch to absolute key'}
-            data-tip-ja={selectedFnNode.params?.mode === 1 ? '相対モードに切替' : '絶対キーに切替'}
-          >{selectedFnNode.params?.mode === 1 ? 'ABS' : 'REL'}</button>
-        {/if}
-        <button class="param-btn" onpointerdown={decParam}>−</button>
-        <span class="param-val">{paramDisplay}</span>
-        <button class="param-btn" onpointerdown={incParam}>+</button>
-      </div>
-    {/if}
+    <SceneNodePopup />
 
-    <!-- FX toggle popup for selected fx node -->
-    {#if selectedFnNode && selectedFnNode.type === 'fx'}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="param-popup fx-popup" style="
-        left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
-        top: calc({PAD_INSET}px + {selectedFnNode.y} * (100% - {PAD_INSET * 2}px));
-      " onpointerdown={e => e.stopPropagation()}>
-        {#each [['verb', 'VRB'], ['delay', 'DLY'], ['glitch', 'GLT'], ['granular', 'GRN']] as [key, label]}
-          <button
-            class="fx-toggle"
-            class:active={selectedFnNode.params?.[key]}
-            onpointerdown={e => { e.stopPropagation(); toggleFxParam(key) }}
-          >{label}</button>
-        {/each}
-      </div>
-    {/if}
-
-    <!-- Free-floating labels -->
-    {#each (song.scene.labels ?? []) as label (label.id)}
-      {@const fontSize = 10 * (label.size ?? 1)}
-      {#if editingLabelId === label.id}
-        <!-- svelte-ignore a11y_autofocus -->
-        <input
-          class="scene-label-edit"
-          style="
-            left: {PAD_INSET + label.x * (WORLD_W - PAD_INSET * 2)}px;
-            top: {PAD_INSET + label.y * (WORLD_H - PAD_INSET * 2)}px;
-            font-size: {fontSize}px;
-          "
-          type="text"
-          value={label.text}
-          maxlength={32}
-          autofocus
-          onpointerdown={(e: PointerEvent) => e.stopPropagation()}
-          onkeydown={(e: KeyboardEvent) => {
-            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
-            if (e.key === 'Escape') { editingLabelId = null }
-          }}
-          onblur={(e: FocusEvent) => {
-            sceneUpdateLabel(label.id, (e.currentTarget as HTMLInputElement).value)
-            editingLabelId = null
-          }}
-        />
-      {:else}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <span
-          class="scene-label"
-          class:selected={ui.selectedSceneLabel === label.id}
-          style="
-            left: {PAD_INSET + label.x * (WORLD_W - PAD_INSET * 2)}px;
-            top: {PAD_INSET + label.y * (WORLD_H - PAD_INSET * 2)}px;
-            font-size: {fontSize}px;
-          "
-          onpointerdown={(e: PointerEvent) => {
-            e.stopPropagation()
-            ui.selectedSceneNodes = {}
-            ui.selectedSceneEdge = null
-            ui.selectedSceneLabel = label.id
-            draggingLabel = label.id
-            dragMoved = false
-            startPos = { x: e.clientX, y: e.clientY }
-            ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-          }}
-          onpointermove={(e: PointerEvent) => {
-            if (draggingLabel !== label.id) return
-            if (!dragMoved) {
-              const dx = Math.abs(e.clientX - startPos.x)
-              const dy = Math.abs(e.clientY - startPos.y)
-              if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) dragMoved = true
-            }
-            if (dragMoved) {
-              const pos = toNorm(e)
-              if (pos) sceneMoveLabel(label.id, pos.x, pos.y)
-            }
-          }}
-          onpointerup={() => {
-            if (draggingLabel === label.id && !dragMoved) {
-              // Single tap — check for double-tap to edit
-              const now = Date.now()
-              if (lastTapNode === label.id && now - lastTapTime < 300) {
-                editingLabelId = label.id
-                lastTapTime = 0
-                lastTapNode = ''
-              } else {
-                lastTapTime = now
-                lastTapNode = label.id
-              }
-            }
-            draggingLabel = null
-          }}
-        >{label.text || '…'}{#if ui.selectedSceneLabel === label.id}<!-- svelte-ignore a11y_no_static_element_interactions --><span
-              class="label-resize-handle"
-              onpointerdown={(e: PointerEvent) => {
-                e.stopPropagation()
-                resizingLabel = label.id
-                resizeStartY = e.clientY
-                resizeStartSize = label.size ?? 1
-                ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-              }}
-              onpointermove={(e: PointerEvent) => {
-                if (resizingLabel !== label.id) return
-                const dy = resizeStartY - e.clientY
-                const newSize = Math.max(0.5, Math.min(4, resizeStartSize + dy / 50))
-                sceneResizeLabel(label.id, newSize - (label.size ?? 1))
-              }}
-              onpointerup={() => { resizingLabel = null }}
-            ></span>{/if}</span>
-      {/if}
-    {/each}
+    <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} />
   </div>
 
   <!-- UI controls (outside zoom/pan transform) -->
-  {#if song.scene.nodes.length > 1}
-    <button
-      class="scene-format-btn"
-      aria-label="Auto-layout horizontal"
-      data-tip="Auto-layout →" data-tip-ja="自動整列 →"
-      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined, 'horizontal')}
-    >
-      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.autoLayout}</svg>
-    </button>
-    <button
-      class="scene-format-btn scene-format-btn-v"
-      aria-label="Auto-layout vertical"
-      data-tip="Auto-layout ↓" data-tip-ja="自動整列 ↓"
-      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined, 'vertical')}
-    >
-      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true" style="transform: rotate(90deg)">{@html ICON.autoLayout}</svg>
-    </button>
-    <button
-      class="scene-focus-root-btn"
-      aria-label="Focus root node"
-      data-tip="Focus root" data-tip-ja="ルートにフォーカス"
-      onpointerdown={focusRoot}
-    >
-      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html ICON.focusRoot}</svg>
-    </button>
-    {#if playback.playing && playback.mode === 'scene' && playback.sceneNodeId}
-      <button
-        class="scene-focus-playing-btn"
-        aria-label="Focus playing node"
-        data-tip="Focus playing" data-tip-ja="再生中にフォーカス"
-        style="--beat: {30 / song.bpm}s"
-        onpointerdown={focusPlaying}
-      >
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="4"/></svg>
-      </button>
-    {/if}
-  {/if}
-  {#if zoom !== 1}
-    <button
-      class="zoom-reset-btn"
-      data-tip="Reset zoom" data-tip-ja="ズームリセット"
-      onpointerdown={() => { zoom = 1; centerPan() }}
-    >{Math.round(zoom * 100)}%</button>
-  {/if}
+  <SceneToolbar {zoom} {viewEl}
+    onpan={(x, y) => { panX = x; panY = y }}
+    onreset={(x, y) => { zoom = 1; panX = x; panY = y }}
+  />
 
   <!-- Radial bubble menu for function nodes (appears at pointer position) -->
   {#if pickerOpen}
@@ -1258,60 +969,6 @@
     pointer-events: none;
   }
 
-  /* ── Free-floating labels ── */
-  .scene-label {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    font-family: var(--font-data);
-    color: rgba(30, 32, 40, 0.35);
-    white-space: nowrap;
-    cursor: grab;
-    z-index: 1;
-    padding: 2px 6px;
-    border-radius: 3px;
-    user-select: none;
-    transition: color 80ms, background 80ms;
-  }
-  .scene-label:hover {
-    color: rgba(30, 32, 40, 0.6);
-    background: rgba(30, 32, 40, 0.04);
-  }
-  .scene-label.selected {
-    color: rgba(30, 32, 40, 0.7);
-    background: rgba(30, 32, 40, 0.06);
-    outline: 1px solid rgba(30, 32, 40, 0.15);
-  }
-  .label-resize-handle {
-    position: absolute;
-    right: -5px;
-    top: -5px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(30, 32, 40, 0.3);
-    cursor: ns-resize;
-    touch-action: none;
-  }
-  .label-resize-handle:hover {
-    background: rgba(30, 32, 40, 0.6);
-    transform: scale(1.3);
-  }
-
-  .scene-label-edit {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    font-family: var(--font-data);
-    color: var(--color-fg);
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(30, 32, 40, 0.25);
-    border-radius: 3px;
-    padding: 2px 6px;
-    width: 100px;
-    text-align: center;
-    outline: none;
-    z-index: 8;
-  }
-
   /* ── Solo button (near selected pattern node) ── */
   .solo-btn {
     position: absolute;
@@ -1359,194 +1016,6 @@
     pointer-events: none;
   }
 
-  /* ── Toolbar buttons ── */
-  .scene-format-btn {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1.5px solid rgba(30, 32, 40, 0.12);
-    background: rgba(255, 255, 255, 0.8);
-    color: rgba(30, 32, 40, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-  }
-  .scene-format-btn-v {
-    right: 40px;
-    border-radius: 4px 0 0 4px;
-    border-right: none;
-  }
-  .scene-format-btn:not(.scene-format-btn-v) {
-    border-radius: 0 4px 4px 0;
-  }
-  .scene-format-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--color-fg);
-  }
-
-  .scene-focus-root-btn {
-    position: absolute;
-    top: 8px;
-    right: 76px;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1.5px solid rgba(30, 32, 40, 0.12);
-    background: rgba(255, 255, 255, 0.8);
-    color: rgba(30, 32, 40, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-  }
-  .scene-focus-root-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--color-fg);
-  }
-
-  .scene-focus-playing-btn {
-    position: absolute;
-    top: 8px;
-    right: 110px;
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1.5px solid rgba(30, 32, 40, 0.12);
-    background: rgba(255, 255, 255, 0.8);
-    color: var(--color-olive);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-    animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
-  }
-  .scene-focus-playing-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--color-fg);
-  }
-
-  .zoom-reset-btn {
-    position: absolute;
-    top: 8px;
-    right: 110px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 4px;
-    border: 1.5px solid rgba(30, 32, 40, 0.12);
-    background: rgba(255, 255, 255, 0.8);
-    color: rgba(30, 32, 40, 0.5);
-    font-family: var(--font-data);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    z-index: 5;
-  }
-  .zoom-reset-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
-    color: var(--color-fg);
-  }
-
-  /* ── Radial bubble menu ── */
-  /* ── Param popup ── */
-  .param-popup {
-    position: absolute;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(30, 32, 40, 0.12);
-    border-radius: 4px;
-    padding: 2px;
-    z-index: 6;
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
-  }
-  .param-btn {
-    width: 22px;
-    height: 22px;
-    border: none;
-    border-radius: 3px;
-    background: transparent;
-    color: var(--color-fg);
-    font-family: var(--font-data);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .param-btn:hover {
-    background: rgba(30, 32, 40, 0.06);
-  }
-  .param-btn:active {
-    background: rgba(30, 32, 40, 0.12);
-  }
-  .param-val {
-    font-family: var(--font-data);
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--color-fg);
-    min-width: 28px;
-    text-align: center;
-    letter-spacing: 0.04em;
-  }
-
-  /* ── Mode toggle (REL/ABS) ── */
-  .mode-toggle {
-    border: none;
-    border-radius: 3px;
-    background: rgba(30, 32, 40, 0.06);
-    color: rgba(30, 32, 40, 0.45);
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 3px 4px;
-    cursor: pointer;
-    margin-right: 2px;
-  }
-  .mode-toggle:hover {
-    background: rgba(30, 32, 40, 0.1);
-  }
-  .mode-toggle.absolute {
-    background: var(--color-fg);
-    color: var(--color-bg);
-  }
-
-  /* ── FX toggle popup ── */
-  .fx-popup {
-    gap: 2px;
-  }
-  .fx-toggle {
-    border: none;
-    border-radius: 3px;
-    background: rgba(30, 32, 40, 0.06);
-    color: rgba(30, 32, 40, 0.35);
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 3px 5px;
-    cursor: pointer;
-  }
-  .fx-toggle:hover {
-    background: rgba(30, 32, 40, 0.1);
-  }
-  .fx-toggle.active {
-    background: var(--color-fg);
-    color: var(--color-bg);
-  }
-
-
   /* ── Empty state ── */
   .scene-empty {
     position: absolute;
@@ -1577,9 +1046,6 @@
     .scene-node.fn .node-label { font-size: 9px; }
     .fn-icon { width: 14px; height: 14px; }
     .node-label { font-size: 11px; }
-    .zoom-reset-btn { right: 12px; }
-    .param-btn { width: 32px; height: 32px; font-size: 18px; }
-    .param-val { font-size: 13px; min-width: 36px; }
     .scene-play-btn { width: 34px; height: 34px; }
   }
 </style>

@@ -1,6 +1,6 @@
 # inboil
 
-ブラウザベースのグルーブボックス / DAW。Svelte 5 + TypeScript + C++ WASM AudioWorklet。npm 依存ゼロ。
+Browser-based groove box / DAW. Svelte 5 + TypeScript + C++ WASM AudioWorklet. Zero npm dependencies.
 
 ## Build
 
@@ -13,10 +13,10 @@ pnpm deploy    # build + Cloudflare Pages
 
 ## Conventions
 
-- Svelte 5 runes のみ (`$state`, `$derived`, `$effect`, `$props()`)。stores / 旧 `$:` 不使用
-- deep copy は `clonePattern()` (`structuredClone` は Svelte proxy で不可)
-- undo は snapshot ベース: mutation 先頭に `pushUndo(label)` を挿入
-- パラメータは正規化 (0.0–1.0)、DSP 側でデノーマライズ
-- 日英二言語 (`data-tip` / `data-tip-ja`)
-- ADR は `docs/ai/adr/` に記録 (001–038)。実装前に参照すること
-- docs / コード / コミットメッセージは英語で書く (会話は日本語OK)
+- Svelte 5 runes only (`$state`, `$derived`, `$effect`, `$props()`). No stores or legacy `$:`
+- Deep copy via `clonePattern()` (`structuredClone` fails on Svelte proxies)
+- Undo is snapshot-based: insert `pushUndo(label)` before mutations
+- Parameters are normalized (0.0–1.0); denormalized on the DSP side
+- Bilingual tooltips (`data-tip` / `data-tip-ja`)
+- ADRs are in `docs/ai/adr/` (001–059). Review before implementation
+- Docs, code, and commit messages in English (conversation in Japanese is OK)
