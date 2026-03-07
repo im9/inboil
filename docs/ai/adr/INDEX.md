@@ -22,7 +22,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |
 | 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, iDEATH/iPOLY (ADR 063), factory presets |
-| 012 | Sampler | Proposed | |
+| 012 | Sampler | Implemented | SamplerVoice + user sample loading; Crash/Ride in drum category |
 | 023 | Oscilloscope Display | Implemented | |
 
 ## Sequencer / Pattern

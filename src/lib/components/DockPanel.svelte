@@ -1,29 +1,33 @@
 <script lang="ts">
   import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, changeVoice, toggleDockMinimized } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
+  import { getParamDefs, normalizeParam, displayLabel, paramSteps, SAMPLER_IDS } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import type { VoiceId } from '../state.svelte.ts'
+  import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
     { id: 'drum', label: 'DRUM' },
     { id: 'bass', label: 'BASS' },
     { id: 'lead', label: 'LEAD' },
+    { id: 'sampler', label: 'SMPL' },
   ]
 
-  const track  = $derived(song.tracks[ui.selectedTrack])
+  const hasSelection = $derived(ui.selectedTrack >= 0)
+  const track  = $derived(hasSelection ? song.tracks[ui.selectedTrack] : null)
   const TRACK_LABELS = song.tracks.map((_t, i) => `TR${i + 1}`)
-  const cell   = $derived(activeCell(ui.selectedTrack))
-  const currentCat = $derived(VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum')
+  const cell   = $derived(hasSelection ? activeCell(ui.selectedTrack) : null)
+  const currentCat = $derived(cell ? (VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum') : 'drum')
   const voicesInCat = $derived(VOICE_LIST.filter(v => v.category === currentCat))
-  const params = $derived(getParamDefs(cell.voiceId))
-  const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
+  const params = $derived(cell ? getParamDefs(cell.voiceId) : [])
+  const selTrig = $derived(cell && ui.selectedStep !== null ? cell.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
+  const isSampler = $derived(cell?.voiceId === 'Sampler')
 
   // ── Preset browser ──
-  const showPresets = $derived(hasPresets(cell.voiceId))
+  const showPresets = $derived(cell ? hasPresets(cell.voiceId) : false)
   let presetCategory = $state<PresetCategory | null>(null)
   const presetList = $derived(getPresets(presetCategory))
   let presetOpen = $state(false)
@@ -35,6 +39,81 @@
     applyPreset(ui.selectedTrack, preset.params)
     presetOpen = false
   }
+
+  // ── Sample loader (ADR 012 Phase 2) ──
+  let fileInput = $state<HTMLInputElement>(null!)
+  let waveformCanvas = $state<HTMLCanvasElement>(null!)
+  let samplesByTrack = $state<Record<number, { name: string; waveform: Float32Array }>>({})
+  let dropActive = $state(false)
+  const currentSample = $derived(samplesByTrack[ui.selectedTrack])
+
+  async function loadSampleFile(file: File) {
+    const waveform = await engine.loadUserSample(ui.selectedTrack, file)
+    if (waveform) {
+      samplesByTrack[ui.selectedTrack] = { name: file.name, waveform }
+    }
+  }
+
+  function handleFileSelect(e: Event) {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (file) void loadSampleFile(file)
+    input.value = ''
+  }
+
+  function handleSampleDrop(e: DragEvent) {
+    e.preventDefault()
+    dropActive = false
+    const file = e.dataTransfer?.files[0]
+    if (file && file.type.startsWith('audio/')) void loadSampleFile(file)
+  }
+
+  function drawWaveform(canvas: HTMLCanvasElement, waveform: Float32Array) {
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const dpr = window.devicePixelRatio || 1
+    const w = canvas.clientWidth
+    const h = canvas.clientHeight
+    canvas.width = w * dpr
+    canvas.height = h * dpr
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'
+    ctx.fillRect(0, 0, w, h)
+    // Waveform
+    ctx.strokeStyle = 'rgba(237,232,220,0.6)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    const step = Math.max(1, Math.floor(waveform.length / w))
+    const mid = h / 2
+    for (let x = 0; x < w; x++) {
+      const idx = Math.floor((x / w) * waveform.length)
+      let min = 1, max = -1
+      for (let j = 0; j < step; j++) {
+        const v = waveform[idx + j] ?? 0
+        if (v < min) min = v
+        if (v > max) max = v
+      }
+      const y1 = mid - max * mid
+      const y2 = mid - min * mid
+      ctx.moveTo(x + 0.5, y1)
+      ctx.lineTo(x + 0.5, y2)
+    }
+    ctx.stroke()
+    // Center line
+    ctx.strokeStyle = 'rgba(237,232,220,0.15)'
+    ctx.beginPath()
+    ctx.moveTo(0, mid)
+    ctx.lineTo(w, mid)
+    ctx.stroke()
+  }
+
+  $effect(() => {
+    if (waveformCanvas && currentSample?.waveform) {
+      drawWaveform(waveformCanvas, currentSample.waveform)
+    }
+  })
 </script>
 
 <div class="dock-panel" class:minimized={ui.dockMinimized}>
@@ -61,6 +140,7 @@
             {/each}
           </div>
 
+          {#if cell && track}
           <div class="lock-row">
             <button
               class="btn-lock"
@@ -122,6 +202,34 @@
                   {/each}
                 </div>
               {/if}
+            </div>
+          {/if}
+
+          <!-- Sample loader (ADR 012 Phase 2) -->
+          {#if isSampler}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div
+              class="sample-section"
+              class:drop-active={dropActive}
+              ondragover={e => { e.preventDefault(); dropActive = true }}
+              ondragenter={() => { dropActive = true }}
+              ondragleave={() => { dropActive = false }}
+              ondrop={handleSampleDrop}
+            >
+              <div class="sample-file-row">
+                <button class="btn-load" onpointerdown={() => fileInput.click()}
+                  data-tip="Load audio sample" data-tip-ja="サンプルを読み込む"
+                >LOAD</button>
+                <span class="sample-name">{currentSample?.name ?? 'Drop audio file'}</span>
+              </div>
+              <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
+              <input
+                type="file"
+                accept="audio/*"
+                bind:this={fileInput}
+                onchange={handleFileSelect}
+                style="display: none"
+              />
             </div>
           {/if}
 
@@ -188,6 +296,7 @@
               <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
             </span>
           </div>
+          {/if}
         </div>
     </div>
   {/if}
@@ -482,6 +591,53 @@
   .voice-btn:hover:not(.active) {
     color: rgba(237,232,220,0.7);
     border-color: rgba(237,232,220,0.3);
+  }
+
+  /* ── Sample loader (ADR 012 Phase 2) ── */
+  .sample-section {
+    margin-bottom: 8px;
+    border: 1px dashed rgba(237,232,220,0.15);
+    padding: 6px;
+    transition: border-color 80ms;
+  }
+  .sample-section.drop-active {
+    border-color: var(--color-olive);
+    background: rgba(108,119,68,0.1);
+  }
+  .sample-file-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .btn-load {
+    border: 1px solid rgba(237,232,220,0.3);
+    background: transparent;
+    color: rgba(237,232,220,0.6);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .btn-load:hover {
+    color: rgba(237,232,220,0.9);
+    border-color: rgba(237,232,220,0.5);
+  }
+  .sample-name {
+    font-size: 9px;
+    color: rgba(237,232,220,0.4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .waveform-canvas {
+    width: 100%;
+    height: 36px;
+    display: block;
   }
 
   .knob-grid {

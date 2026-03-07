@@ -9,9 +9,15 @@ import workletUrl from './worklet-processor.ts?worker&url'
 import crashUrl from './samples/tr909_crash.webm'
 import rideUrl from './samples/tr909_ride.webm'
 
-const BUILTIN_SAMPLES: Record<string, string> = {
-  SampleCrash: crashUrl,
-  SampleRide:  rideUrl,
+/** Drum voices with built-in PCM samples (auto-loaded, hidden from user) */
+const DRUM_SAMPLES: Record<string, string> = {
+  Crash: crashUrl,
+  Ride:  rideUrl,
+}
+
+/** Sampler category presets (user-selectable via preset browser) */
+export const SAMPLER_PRESETS: Record<string, string> = {
+  // Future: add preset samples here (e.g. breaks, one-shots, foley)
 }
 
 type PerfState = {
@@ -82,7 +88,7 @@ export class GrooveboxEngine {
       const vid = wp.tracks[i].voiceId
       const prev = this.trackVoiceIds[i]
       this.trackVoiceIds[i] = vid
-      if (!(vid in BUILTIN_SAMPLES)) continue
+      if (!(vid in DRUM_SAMPLES)) continue
       // Reload when voice changed (new SamplerVoice instance needs fresh buffer)
       if (prev === vid) continue
       void this.loadBuiltinSample(i, vid)
@@ -115,14 +121,10 @@ export class GrooveboxEngine {
     }
   }
 
-  /** Decode a built-in sample and send Float32Array to worklet (ADR 012) */
-  async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
-    const url = BUILTIN_SAMPLES[voiceId]
-    if (!url || !this.ctx || !this.node) return
-    const resp = await fetch(url)
-    const arrayBuf = await resp.arrayBuffer()
+  /** Decode audio to mono Float32Array */
+  private async _decodeToMono(arrayBuf: ArrayBuffer): Promise<{ mono: Float32Array; sampleRate: number } | null> {
+    if (!this.ctx) return null
     const audioBuf = await this.ctx.decodeAudioData(arrayBuf)
-    // Convert to mono Float32Array
     let mono: Float32Array
     if (audioBuf.numberOfChannels === 1) {
       mono = audioBuf.getChannelData(0)
@@ -132,12 +134,38 @@ export class GrooveboxEngine {
       mono = new Float32Array(L.length)
       for (let i = 0; i < L.length; i++) mono[i] = (L[i] + R[i]) * 0.5
     }
-    // Transfer to worklet (zero-copy)
+    return { mono, sampleRate: audioBuf.sampleRate }
+  }
+
+  /** Send mono sample to worklet (zero-copy transfer) */
+  private _sendSample(trackId: number, mono: Float32Array, sampleRate: number): void {
+    if (!this.node) return
     const buffer = mono.buffer.byteLength === mono.length * 4 ? mono : new Float32Array(mono)
     this.node.port.postMessage(
-      { type: 'loadSample', trackId, buffer, sampleRate: audioBuf.sampleRate },
+      { type: 'loadSample', trackId, buffer, sampleRate },
       [buffer.buffer],
     )
+  }
+
+  /** Decode a built-in sample and send Float32Array to worklet (ADR 012) */
+  async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
+    const url = DRUM_SAMPLES[voiceId]
+    if (!url || !this.ctx) return
+    const resp = await fetch(url)
+    const result = await this._decodeToMono(await resp.arrayBuffer())
+    if (!result) return
+    this._sendSample(trackId, result.mono, result.sampleRate)
+  }
+
+  /** Decode a user-provided File and send to worklet. Returns waveform for display. (ADR 012 Phase 2) */
+  async loadUserSample(trackId: number, file: File): Promise<Float32Array | null> {
+    await this.init()
+    const result = await this._decodeToMono(await file.arrayBuffer())
+    if (!result) return null
+    // Keep a copy for waveform display before transferring
+    const waveform = new Float32Array(result.mono)
+    this._sendSample(trackId, result.mono, result.sampleRate)
+    return waveform
   }
 
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }

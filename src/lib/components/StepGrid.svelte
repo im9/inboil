@@ -148,21 +148,18 @@
       class:solo-muted={ui.soloTracks.size > 0 && !ui.soloTracks.has(trackId)}
     >
       <div class="track-head">
-        <!-- Track label -->
-        <div class="track-label-group">
-          <button
-            class="track-label"
-            onpointerdown={() => { ui.selectedTrack = trackId }}
-            data-tip="Select track to edit" data-tip-ja="トラックを選択"
-          >
-            <span class="track-name">{ph.name}</span>
-          </button>
-          <button
-            class="voice-btn"
-            onpointerdown={() => { ui.selectedTrack = trackId }}
-            data-tip="Select track" data-tip-ja="トラックを選択"
-          >{ph.voiceId}</button>
-        </div>
+        <!-- Track label + expand toggle -->
+        <button
+          class="track-label"
+          class:expanded={selected}
+          onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
+          data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
+        >
+          <span class="track-name">{ph.name}</span>
+          <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1,1 5,5 9,1" />
+          </svg>
+        </button>
 
         <!-- Step count -->
         <button
@@ -334,19 +331,24 @@
     );
   }
 
-  /* ── Track label group (name + voice btn, 64px total) ── */
-  .track-label-group {
+  /* ── Track label (expand toggle) ── */
+  .track-label {
     width: 64px;
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    align-items: center;
+    justify-content: space-between;
     padding: 4px 6px;
-  }
-  .track-label {
     border: none;
     background: transparent;
-    text-align: left;
-    padding: 0;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 100ms;
+  }
+  .track-label:hover {
+    background: rgba(30,32,40,0.06);
+  }
+  .track-label.expanded {
+    background: rgba(30,32,40,0.08);
   }
   .track-name {
     font-size: 11px;
@@ -356,23 +358,18 @@
     line-height: 1;
     text-transform: uppercase;
   }
-  .voice-btn {
-    padding: 1px 4px;
-    border: 1px solid rgba(30,32,40,0.12);
-    background: transparent;
-    font-size: 8px;
+  .chevron {
+    width: 10px;
+    height: 6px;
+    flex-shrink: 0;
     color: var(--color-muted);
-    line-height: 1;
-    text-transform: uppercase;
-    text-align: center;
-    cursor: pointer;
-    border-radius: 3px;
-    transition: color 100ms, border-color 100ms, background 100ms;
+    transition: color 100ms, transform 150ms ease-out;
   }
-  .voice-btn:hover {
+  .chevron.open {
+    transform: rotate(180deg);
+  }
+  .track-label:hover .chevron {
     color: var(--color-fg);
-    border-color: rgba(30,32,40,0.25);
-    background: rgba(30,32,40,0.04);
   }
 
   /* ── Solo button ── */

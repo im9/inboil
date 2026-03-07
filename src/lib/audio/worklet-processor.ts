@@ -263,10 +263,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
         case 'loadSample': {
           const t = cmd.trackId ?? 0
-          const v = this.voices[t]
-          if (v instanceof SamplerVoice && cmd.buffer && cmd.sampleRate) {
-            v.loadSample(cmd.buffer, cmd.sampleRate)
+          if (!cmd.buffer || !cmd.sampleRate) break
+          // Create SamplerVoice if not yet initialized or wrong type
+          if (!(this.voices[t] instanceof SamplerVoice)) {
+            this.voices[t] = new SamplerVoice(sampleRate)
           }
+          (this.voices[t] as SamplerVoice).loadSample(cmd.buffer, cmd.sampleRate)
           break
         }
         case 'setPattern': {

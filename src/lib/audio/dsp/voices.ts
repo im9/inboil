@@ -1162,7 +1162,8 @@ export type VoiceId =
   | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
   | 'iDEATH'
-  | 'SampleCrash' | 'SampleRide'
+  | 'Crash' | 'Ride'
+  | 'Sampler'
 
 const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   Kick:     sr => new DrumMachine(sr, 'Kick'),
@@ -1181,17 +1182,18 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   Analog:   sr => new AnalogVoice(sr),
   FM:       sr => new FMVoice(sr),
   iDEATH:      sr => new IdeathSynth(sr),
-  SampleCrash: sr => new SamplerVoice(sr),
-  SampleRide:  sr => new SamplerVoice(sr),
+  Crash: sr => new SamplerVoice(sr),
+  Ride:  sr => new SamplerVoice(sr),
+  Sampler:     sr => new SamplerVoice(sr),
 }
 
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
   'Tom', 'Rimshot', 'Cowbell', 'Shaker',
-  'SampleCrash', 'SampleRide',
+  'Crash', 'Ride', 'Sampler',
 ])
 
-export type VoiceCategory = 'drum' | 'bass' | 'lead'
+export type VoiceCategory = 'drum' | 'bass' | 'lead' | 'sampler'
 
 export interface VoiceMeta {
   id: VoiceId
@@ -1217,8 +1219,9 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'MoogLead', label: 'MOOG',  category: 'lead' },
   { id: 'FM',       label: 'FM',    category: 'lead' },
   { id: 'iDEATH',      label: 'SYNTH', category: 'lead' },
-  { id: 'SampleCrash', label: 'CRSH',  category: 'drum' },
-  { id: 'SampleRide',  label: 'RIDE',  category: 'drum' },
+  { id: 'Crash', label: 'CRSH',  category: 'drum' },
+  { id: 'Ride',  label: 'RIDE',  category: 'drum' },
+  { id: 'Sampler',     label: 'SMPL',  category: 'sampler' },
 ]
 
 /** Lookup sidechainSource flag by voiceId (ADR 064) */

@@ -1,6 +1,6 @@
 # ADR 012: Sampler Implementation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -84,6 +84,8 @@ Before full user-sample support, ship a minimal set of built-in cymbal/ride samp
 - Decoded via `OfflineAudioContext.decodeAudioData()`, transferred to worklet as `Float32Array`
 - Existing CymbalVoice remains as zero-dependency fallback (offline, instant load)
 - New VoiceId entries: `'SampleCrash'`, `'SampleRide'` in drum category
+
+**Implementation note:** Crash/Ride voices were placed in the `drum` category (not `sampler`) because from the user's perspective they are drum sounds — the fact that they use sample playback internally is an implementation detail. The `sampler` category is reserved for user-loaded samples.
 
 ### Phase 2: User Sample Loading
 

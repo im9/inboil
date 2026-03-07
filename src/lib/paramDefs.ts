@@ -108,7 +108,7 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
 
 // VoiceIds that share DrumMachine params (ADR 010)
 const DRUM_MACHINE_IDS = new Set(['Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal', 'Tom', 'Rimshot', 'Cowbell', 'Shaker'])
-const SAMPLER_IDS = new Set(['SampleCrash', 'SampleRide'])
+export const SAMPLER_IDS = new Set(['Crash', 'Ride', 'Sampler'])
 
 export function getParamDefs(voiceId: VoiceId): ParamDef[] {
   if (DRUM_MACHINE_IDS.has(voiceId)) return VOICE_PARAMS.DrumMachine ?? []
