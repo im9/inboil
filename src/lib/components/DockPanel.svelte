@@ -3,14 +3,21 @@
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
-  import { DRUM_VOICES, VOICE_LIST } from '../audio/dsp/voices.ts'
+  import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
+  import type { VoiceId } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
 
+  const CATEGORIES: { id: VoiceCategory; label: string }[] = [
+    { id: 'drum', label: 'DRUM' },
+    { id: 'bass', label: 'BASS' },
+    { id: 'lead', label: 'LEAD' },
+  ]
+
   const track  = $derived(song.tracks[ui.selectedTrack])
-  const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
+  const TRACK_LABELS = song.tracks.map((_t, i) => `TR${i + 1}`)
   const cell   = $derived(activeCell(ui.selectedTrack))
-  const isDrum = $derived(DRUM_VOICES.has(cell.voiceId))
-  const drumVoices = VOICE_LIST.filter(v => v.category === 'drum')
+  const currentCat = $derived(VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum')
+  const voicesInCat = $derived(VOICE_LIST.filter(v => v.category === currentCat))
   const params = $derived(getParamDefs(cell.voiceId))
   const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
@@ -50,7 +57,7 @@
                 class:muted={_t.muted}
                 onpointerdown={() => { ui.selectedTrack = i }}
                 data-tip={activeCell(i).name} data-tip-ja={activeCell(i).name}
-              >{TRACK_ABBR[i] ?? activeCell(i).name.slice(0, 2)}</button>
+              >{TRACK_LABELS[i]}</button>
             {/each}
           </div>
 
@@ -67,19 +74,27 @@
             {/if}
           </div>
 
-          <!-- Drum preset selector (ADR 010) -->
-          {#if isDrum}
-            <div class="drum-presets">
-              {#each drumVoices as dv}
-                <button
-                  class="drum-preset-btn"
-                  class:active={cell.voiceId === dv.id}
-                  onpointerdown={() => changeVoice(ui.selectedTrack, dv.id)}
-                  data-tip={dv.id} data-tip-ja={dv.id}
-                >{dv.label}</button>
-              {/each}
-            </div>
-          {/if}
+          <!-- Voice category + instrument selector -->
+          <div class="voice-cats">
+            {#each CATEGORIES as cat}
+              <button
+                class="voice-cat-btn"
+                class:active={currentCat === cat.id}
+                onpointerdown={() => changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId)}
+                data-tip={cat.label} data-tip-ja={cat.label}
+              >{cat.label}</button>
+            {/each}
+          </div>
+          <div class="voice-list">
+            {#each voicesInCat as v}
+              <button
+                class="voice-btn"
+                class:active={cell.voiceId === v.id}
+                onpointerdown={() => changeVoice(ui.selectedTrack, v.id)}
+                data-tip={v.id} data-tip-ja={v.id}
+              >{v.label}</button>
+            {/each}
+          </div>
 
           <!-- Preset browser (Synth/Poly only) -->
           {#if showPresets}
@@ -409,14 +424,39 @@
     white-space: nowrap;
   }
 
-  /* ── Drum preset selector ── */
-  .drum-presets {
+  /* ── Voice category + instrument selector ── */
+  .voice-cats {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  .voice-cat-btn {
+    flex: 1;
+    border: 1px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.4);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .voice-cat-btn.active {
+    background: rgba(237,232,220,0.08);
+    border-color: var(--color-olive);
+    color: var(--color-olive);
+  }
+  .voice-cat-btn:hover:not(.active) {
+    color: rgba(237,232,220,0.7);
+    border-color: rgba(237,232,220,0.3);
+  }
+  .voice-list {
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
     margin-bottom: 8px;
   }
-  .drum-preset-btn {
+  .voice-btn {
     border: 1px solid rgba(237,232,220,0.15);
     background: transparent;
     color: rgba(237,232,220,0.4);
@@ -427,12 +467,12 @@
     cursor: pointer;
     min-width: 0;
   }
-  .drum-preset-btn.active {
+  .voice-btn.active {
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);
   }
-  .drum-preset-btn:hover:not(.active) {
+  .voice-btn:hover:not(.active) {
     color: rgba(237,232,220,0.7);
     border-color: rgba(237,232,220,0.3);
   }
