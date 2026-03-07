@@ -26,22 +26,48 @@
     onpick: (type: BubblePickType) => void
     onclose: () => void
   } = $props()
+
+  const RADIUS = 48
+  const MARGIN = RADIUS + 20  // enough room for arc + half bubble size
+
+  // Offset the arc origin so bubbles never clip the container edge
+  const origin = $derived.by(() => {
+    const x = Math.max(MARGIN, Math.min(containerWidth - MARGIN, pos.x))
+    const y = Math.max(MARGIN, Math.min(containerHeight - MARGIN, pos.y))
+    return { x, y }
+  })
+
+  // Pick arc center angle: point away from nearest edge
+  const arcCenter = $derived.by(() => {
+    const dx = origin.x - containerWidth / 2
+    const dy = origin.y - containerHeight / 2
+    const nearTop = pos.y < MARGIN
+    const nearBottom = pos.y > containerHeight - MARGIN
+    const nearLeft = pos.x < MARGIN
+    const nearRight = pos.x > containerWidth - MARGIN
+    if (nearTop && nearLeft)  return Math.PI / 4
+    if (nearTop && nearRight) return 3 * Math.PI / 4
+    if (nearBottom && nearLeft)  return -Math.PI / 4
+    if (nearBottom && nearRight) return -3 * Math.PI / 4
+    if (nearTop)    return Math.PI / 2
+    if (nearBottom) return -Math.PI / 2
+    if (nearLeft)   return 0
+    if (nearRight)  return Math.PI
+    return -Math.PI / 2
+  })
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); onclose() }}></div>
 {#each BUBBLE_ITEMS as item, i}
-  {@const angle = -Math.PI / 2 + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.7}
-  {@const radius = 48}
-  {@const bx = pos.x + Math.cos(angle) * radius}
-  {@const by = pos.y + Math.sin(angle) * radius}
-  {@const clampedX = Math.max(20, Math.min(containerWidth - 20, bx))}
-  {@const clampedY = Math.max(20, Math.min(containerHeight - 20, by))}
+  {@const angle = arcCenter + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.7}
+  {@const bx = origin.x + Math.cos(angle) * RADIUS}
+  {@const by = origin.y + Math.sin(angle) * RADIUS}
   <button
     class="bubble-item"
     style="
-      left: {clampedX - 16}px;
-      top: {clampedY - 16}px;
+      left: {bx - 16}px;
+      top: {by - 16}px;
       transition-delay: {i * 30}ms;
     "
     data-tip={item.tip} data-tip-ja={item.tipJa}

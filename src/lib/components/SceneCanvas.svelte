@@ -105,26 +105,6 @@
       ctx.fillText(String(edge.order), mx, my)
     }
 
-    // Active playback edge highlight (solid accent line)
-    if (playback.playing && playback.sceneEdgeId) {
-      const activeEdge = edges.find(e => e.id === playback.sceneEdgeId)
-      if (activeEdge) {
-        const fn = nodes.find(n => n.id === activeEdge.from)
-        const tn = nodes.find(n => n.id === activeEdge.to)
-        if (fn && tn) {
-          const fp = toPixel(fn.x, fn.y, WORLD_W, WORLD_H)
-          const tp = toPixel(tn.x, tn.y, WORLD_W, WORLD_H)
-          const bl = COLORS_RGB.blue
-          const be = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
-          drawBezier(ctx, be,
-            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.5)`,
-            `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`,
-            2.5,
-          )
-        }
-      }
-    }
-
     // Temporary edge during edge-draw mode
     if (edgeFrom && dragMoved && viewEl) {
       const srcNode = nodes.find(n => n.id === edgeFrom)
@@ -170,8 +150,7 @@
           ctx.roundRect(bx, by, barW, barH, 1)
           ctx.fill()
           // Fill
-          const bl = COLORS_RGB.blue
-          ctx.fillStyle = `rgba(${bl.r}, ${bl.g}, ${bl.b}, 0.6)`
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
           ctx.beginPath()
           ctx.roundRect(bx, by, barW * progress, barH, 1)
           ctx.fill()

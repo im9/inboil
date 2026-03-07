@@ -77,6 +77,17 @@
     panY = rect.height / 2 - pos.y * zoom
   }
 
+  /** Pan to center the currently playing node */
+  function focusPlaying() {
+    if (!playback.sceneNodeId || !viewEl) return
+    const node = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
+    if (!node) return
+    const rect = viewEl.getBoundingClientRect()
+    const pos = toPixel(node.x, node.y, WORLD_W, WORLD_H)
+    panX = rect.width / 2 - pos.x * zoom
+    panY = rect.height / 2 - pos.y * zoom
+  }
+
   $effect(() => {
     if (viewEl && !panInitialized) {
       panInitialized = true
@@ -256,6 +267,11 @@
       }
     }
     dragging = null
+  }
+
+  function onContextMenu(e: MouseEvent) {
+    e.preventDefault()
+    openPickerAt(e.clientX, e.clientY)
   }
 
   function onBgDown(e: PointerEvent) {
@@ -572,6 +588,7 @@
   onpointerup={endDrag}
   onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false }}
   onpointerdown={onBgDown}
+  oncontextmenu={onContextMenu}
   onwheel={onWheel}
   ondragover={onDragOver}
   ondrop={onDrop}
@@ -600,7 +617,8 @@
         style="
           left: {PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)}px;
           top: {PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)}px;
-          {nc ? `--nc: ${nc}` : ''}
+          {nc ? `--nc: ${nc};` : ''}
+          {isPlaying ? `--beat: ${30 / song.bpm}s` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
       >
@@ -856,6 +874,17 @@
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html ICON.focusRoot}</svg>
     </button>
+    {#if playback.playing && playback.mode === 'scene' && playback.sceneNodeId}
+      <button
+        class="scene-focus-playing-btn"
+        aria-label="Focus playing node"
+        data-tip="Focus playing" data-tip-ja="再生中にフォーカス"
+        style="--beat: {30 / song.bpm}s"
+        onpointerdown={focusPlaying}
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="4"/></svg>
+      </button>
+    {/if}
   {/if}
   {#if zoom !== 1}
     <button
@@ -1008,16 +1037,23 @@
   }
 
   .scene-node.playing {
-    border: 1px solid var(--color-blue);
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
   }
   .scene-node.playing .node-label {
     color: white;
   }
   .scene-node.fn.playing {
-    border: 1px solid var(--color-blue);
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
+  }
+
+  @keyframes node-pulse {
+    from { filter: brightness(1.35); }
+    to   { filter: brightness(1.0); }
   }
   .scene-node.fn.playing .node-label {
-    color: var(--color-blue);
+    color: rgba(255, 255, 255, 0.9);
   }
 
   .scene-node.edge-source {
@@ -1034,16 +1070,16 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: rgba(68, 114, 180, 0.3);
-    border: 1.5px solid rgba(68, 114, 180, 0.5);
+    background: rgba(30, 32, 40, 0.25);
+    border: 1.5px solid rgba(30, 32, 40, 0.4);
     transform: translate(-50%, -50%);
     cursor: crosshair;
     z-index: 4;
     transition: background 80ms, transform 80ms;
   }
   .edge-handle:hover {
-    background: rgba(68, 114, 180, 0.6);
-    border-color: var(--color-blue);
+    background: rgba(30, 32, 40, 0.5);
+    border-color: var(--color-fg);
     transform: translate(-50%, -50%) scale(1.3);
   }
 
@@ -1117,9 +1153,9 @@
     width: 26px;
     height: 26px;
     border-radius: 4px;
-    border: 1.5px solid rgba(68, 114, 180, 0.4);
+    border: 1.5px solid rgba(30, 32, 40, 0.3);
     background: rgba(255, 255, 255, 0.85);
-    color: rgba(68, 114, 180, 0.7);
+    color: rgba(30, 32, 40, 0.5);
     font-size: 10px;
     font-weight: 700;
     display: flex;
@@ -1130,21 +1166,21 @@
     transition: background 80ms, border-color 80ms, color 80ms;
   }
   .solo-btn:hover {
-    background: rgba(68, 114, 180, 0.12);
-    border-color: var(--color-blue);
-    color: var(--color-blue);
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--color-fg);
+    color: var(--color-fg);
   }
   .solo-btn.armed {
-    background: rgba(68, 114, 180, 0.08);
-    border-color: rgba(68, 114, 180, 0.5);
-    color: rgba(68, 114, 180, 0.5);
+    background: rgba(30, 32, 40, 0.06);
+    border-color: rgba(30, 32, 40, 0.4);
+    color: rgba(30, 32, 40, 0.4);
     border-style: dashed;
   }
   .solo-btn.active {
-    background: rgba(68, 114, 180, 0.2);
-    border-color: var(--color-blue);
-    color: var(--color-blue);
-    box-shadow: 0 0 6px rgba(68, 114, 180, 0.25);
+    background: rgba(30, 32, 40, 0.12);
+    border-color: var(--color-fg);
+    color: var(--color-fg);
+    box-shadow: 0 0 6px rgba(30, 32, 40, 0.15);
   }
   .solo-btn.active .solo-icon {
     animation: solo-spin 1.5s linear infinite;
@@ -1200,10 +1236,32 @@
     color: var(--color-fg);
   }
 
-  .zoom-reset-btn {
+  .scene-focus-playing-btn {
     position: absolute;
     top: 8px;
     right: 76px;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    border: 1.5px solid rgba(30, 32, 40, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--color-olive);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
+  }
+  .scene-focus-playing-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-fg);
+  }
+
+  .zoom-reset-btn {
+    position: absolute;
+    top: 8px;
+    right: 110px;
     height: 28px;
     padding: 0 8px;
     border-radius: 4px;
