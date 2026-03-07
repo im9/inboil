@@ -183,6 +183,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private muteGains      = new Float64Array(8).fill(1.0)
   private panGainsL      = new Float64Array(8).fill(Math.SQRT1_2)
   private panGainsR      = new Float64Array(8).fill(Math.SQRT1_2)
+  // Sidechain source flags (ADR 064) — true = triggers ducker & bypasses ducking
+  private scSource       = new Uint8Array(8)  // 0 or 1
   // Arpeggiator — per-track state (melodic tracks t>=6)
   private arpNotes:    number[][] = Array.from({length: 8}, () => [])
   private arpIdx       = new Int32Array(8)
@@ -286,6 +288,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.voices[i]?.setParam('bpm', this.bpm)
           }
           this.tracks = p.tracks
+          for (let i = 0; i < p.tracks.length; i++) {
+            this.scSource[i] = p.tracks[i].sidechainSource ? 1 : 0
+          }
           const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
           this.patternLen = newLen
           // Clamp patternPos if patternLen shrank (valid range: 0..patternLen)
@@ -429,7 +434,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         const rand = (this.fillSeed >>> 16) / 65536
         const prob = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
         if (rand < prob) {
-          if (t === 0) this.ducker.trigger(this.duckDepth)
+          if (this.scSource[t]) this.ducker.trigger(this.duckDepth)
           if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, 0.6 + rand * 0.4)
           this.gateCounters[t] = 1
         }
@@ -440,7 +445,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           continue
         }
         const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
-        if (t === 0) this.ducker.trigger(this.duckDepth)
+        if (this.scSource[t]) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {
           // Poly chord: trigger all notes in notes[] array
           if (trig.notes && trig.notes.length > 1) {
@@ -489,7 +494,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (!outL) return true
 
     for (let s = 0; s < outL.length; s++) {
-      let kickDry = 0
+      let sourceDry = 0
       let restL = 0, restR = 0
       let reverbIn = 0, delayIn = 0, glitchIn = 0, granularIn = 0
 
@@ -535,7 +540,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             voice.tickStereo(this._stereoTmp)
             const sL = this._stereoTmp[0] * gain
             const sR = this._stereoTmp[1] * gain
-            if (t === 0) { kickDry += (sL + sR) * 0.5 }
+            if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
             else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
             const sendMono = (sL + sR) * 0.5
             reverbIn   += sendMono * (track?.reverbSend   ?? 0)
@@ -544,7 +549,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             granularIn += sendMono * (track?.granularSend ?? 0)
           } else {
             const sig = voice.tick() * gain
-            if (t === 0) { kickDry += sig }
+            if (this.scSource[t]) { sourceDry += sig }
             else { restL += sig * this.panGainsL[t]; restR += sig * this.panGainsR[t] }
             reverbIn   += sig * (track?.reverbSend   ?? 0)
             delayIn    += sig * (track?.delaySend    ?? 0)
@@ -563,14 +568,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             voice.tickStereo(this._stereoTmp)
             const sL = this._stereoTmp[0] * vol
             const sR = this._stereoTmp[1] * vol
-            if (t === 0) { kickDry += (sL + sR) * 0.5 }
+            if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
             else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
             reverbIn   += (sL + sR) * 0.5 * (track?.reverbSend   ?? 0)
             delayIn    += (sL + sR) * 0.5 * (track?.delaySend    ?? 0)
           } else {
             const sig = voice.tick()
             if (!sig) continue
-            if (t === 0) { kickDry += sig * vol }
+            if (this.scSource[t]) { sourceDry += sig * vol }
             else { restL += sig * vol * this.panGainsL[t]; restR += sig * vol * this.panGainsR[t] }
             reverbIn   += sig * vol * (track?.reverbSend   ?? 0)
             delayIn    += sig * vol * (track?.delaySend    ?? 0)
@@ -599,10 +604,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         gltR = Math.round(this.glitchHoldR * levels) / levels
       }
 
-      // Sidechain: duck rest + FX returns; kick punches through untouched
+      // Sidechain: duck rest + FX returns; source tracks punch through untouched (ADR 064)
       const duck = this.ducker.tick()
-      const mixL = kickDry + (restL + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
-      const mixR = kickDry + (restR + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
+      const mixL = sourceDry + (restL + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
+      const mixR = sourceDry + (restR + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
 
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)

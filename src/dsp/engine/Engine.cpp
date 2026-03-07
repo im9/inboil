@@ -79,6 +79,8 @@ void Engine::init(float sampleRate, int blockSize) {
         _tracks[i].reverbSend = drumTrack[i] ? 0.08f : 0.25f;
         _tracks[i].delaySend  = drumTrack[i] ? 0.00f : 0.12f;
     }
+    // Default sidechain source: track 0 (kick) — overridden by setTrack() at runtime
+    _tracks[0].sidechainSource = true;
 }
 
 // ── Transport ─────────────────────────────────────────────────────────────────
@@ -146,8 +148,8 @@ void Engine::setFx(const FxParams& fx) {
 
 void Engine::process(float* outL, float* outR) {
     for (int s = 0; s < _blockSize; ++s) {
-        // Kick signal bypasses sidechain; everything else gets ducked
-        float kickDry = 0.0f;
+        // Sidechain source signal bypasses ducking (ADR 064)
+        float sourceDry = 0.0f;
         float restL   = 0.0f, restR   = 0.0f;
         float reverbIn = 0.0f, delayIn = 0.0f;
 
@@ -160,8 +162,8 @@ void Engine::process(float* outL, float* outR) {
             for (int t = 0; t < MAX_TRACKS; ++t) {
                 if (!_voices[t] || _tracks[t].muted) continue;
                 const float sig = _voices[t]->tick();
-                if (t == 0) {
-                    kickDry += sig;  // kick: no ducking
+                if (_tracks[t].sidechainSource) {
+                    sourceDry += sig;
                 } else {
                     restL += sig;
                     restR += sig;
@@ -177,10 +179,10 @@ void Engine::process(float* outL, float* outR) {
         if (_reverb) _reverb->process(reverbIn, revL, revR);
         if (_delay)  _delay->process(delayIn, delayIn, _delayFeedback, delL, delR);
 
-        // Sidechain: kick punches through; rest + FX are ducked
+        // Sidechain: source tracks punch through; rest + FX are ducked (ADR 064)
         const float duck = _ducker ? _ducker->tick() : 1.0f;
-        const float mixL = kickDry + (restL + revL + delL) * duck;
-        const float mixR = kickDry + (restR + revR + delR) * duck;
+        const float mixL = sourceDry + (restL + revL + delL) * duck;
+        const float mixR = sourceDry + (restR + revR + delR) * duck;
 
         // Bus compressor
         float cL = mixL, cR = mixR;
@@ -202,8 +204,8 @@ void Engine::_advanceStep() {
         const Trig& trig = track.trigs[_playheads[t]];
         if (trig.active && !track.muted) {
             _triggerVoice(t, trig);
-            // Kick (track 0) triggers sidechain ducking
-            if (t == 0 && _ducker) _ducker->trigger(_duckDepth);
+            // Sidechain source triggers ducking (ADR 064)
+            if (_tracks[t].sidechainSource && _ducker) _ducker->trigger(_duckDepth);
         }
     }
 }

@@ -47,6 +47,7 @@ export interface WorkletPattern {
 export interface WorkletTrack {
   steps: number; trigs: WorkletTrig[]
   muted: boolean; voiceId: string
+  sidechainSource: boolean  // ADR 064: triggers ducker & bypasses ducking
   volume: number
   pan: number
   reverbSend: number; delaySend: number

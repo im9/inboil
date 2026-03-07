@@ -1166,10 +1166,11 @@ export interface VoiceMeta {
   id: VoiceId
   label: string
   category: VoiceCategory
+  sidechainSource?: boolean  // true = triggers sidechain ducker & bypasses ducking (ADR 064)
 }
 
 export const VOICE_LIST: VoiceMeta[] = [
-  { id: 'Kick',     label: 'KICK',  category: 'drum' },
+  { id: 'Kick',     label: 'KICK',  category: 'drum', sidechainSource: true },
   { id: 'Snare',    label: 'SNARE', category: 'drum' },
   { id: 'Clap',     label: 'CLAP',  category: 'drum' },
   { id: 'Hat',      label: 'C.HH',  category: 'drum' },
@@ -1181,6 +1182,12 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'FM',       label: 'FM',    category: 'lead' },
   { id: 'iDEATH',      label: 'SYNTH', category: 'lead' },
 ]
+
+/** Lookup sidechainSource flag by voiceId (ADR 064) */
+const _scSourceMap = new Map(VOICE_LIST.map(v => [v.id as string, v.sidechainSource === true]))
+export function isSidechainSource(voiceId: string): boolean {
+  return _scSourceMap.get(voiceId) ?? false
+}
 
 export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice {
   const factory = VOICE_REGISTRY[voiceId]

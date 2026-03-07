@@ -4,6 +4,7 @@
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Song, Effects } from '../state.svelte.ts'
 import { ui, masterPad, masterLevels } from '../state.svelte.ts'
+import { isSidechainSource } from './dsp/voices.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 
 type PerfState = {
@@ -172,6 +173,7 @@ function buildWorkletPattern(
         steps:       cell.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
         voiceId:     cell.voiceId,
+        sidechainSource: isSidechainSource(cell.voiceId),
         volume:      t.volume,
         pan:         t.pan,
         reverbSend:    Math.min(1, cell.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),

@@ -1,6 +1,6 @@
 # ADR 064: Dynamic Sidechain Source
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

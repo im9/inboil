@@ -23,6 +23,7 @@ struct Track {
     uint8_t  steps      = 16;
     Trig     trigs[MAX_STEPS];
     bool     muted      = false;
+    bool     sidechainSource = false;  // ADR 064: triggers ducker & bypasses ducking
     float    reverbSend = 0.0f;  // 0–1
     float    delaySend  = 0.0f;  // 0–1
 };
