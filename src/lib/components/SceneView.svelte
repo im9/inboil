@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes, sceneAddLabel, sceneUpdateLabel, sceneDeleteLabel, sceneMoveLabel, sceneResizeLabel, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes, sceneAlignNodes, sceneAddLabel, sceneUpdateLabel, sceneDeleteLabel, sceneMoveLabel, sceneResizeLabel, pushUndo } from '../state.svelte.ts'
+  import type { AlignMode } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
   import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
@@ -489,10 +490,12 @@
       editingLabelId = null
       pickerOpen = false
     }
+    const selectedCount = Object.keys(ui.selectedSceneNodes).length
     const primary = primarySelectedNode()
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && primary) {
       e.preventDefault()
       if (e.shiftKey) sceneCopySubgraph(primary)
+      else if (selectedCount > 1) sceneCopySelected(ui.selectedSceneNodes)
       else sceneCopyNode(primary)
     }
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard()) {
@@ -500,8 +503,19 @@
       const ids = scenePaste(0.4 + Math.random() * 0.2, 0.4 + Math.random() * 0.2)
       if (ids.length > 0) {
         ui.selectedSceneNodes = {}
-        ui.selectedSceneNodes[ids[0]] = true
+        for (const id of ids) ui.selectedSceneNodes[id] = true
         ui.selectedSceneEdge = null
+      }
+    }
+    // Alt+key alignment shortcuts (2+ nodes selected)
+    if (e.altKey && Object.keys(ui.selectedSceneNodes).length >= 2) {
+      const alignMap: Record<string, AlignMode> = e.shiftKey
+        ? { KeyX: 'distribute-h', KeyE: 'distribute-v' }
+        : { KeyA: 'left', KeyD: 'right', KeyW: 'top', KeyS: 'bottom', KeyX: 'center-h', KeyE: 'center-v' }
+      const mode = alignMap[e.code]
+      if (mode) {
+        e.preventDefault()
+        sceneAlignNodes(ui.selectedSceneNodes, mode)
       }
     }
   }
@@ -991,11 +1005,19 @@
   {#if song.scene.nodes.length > 1}
     <button
       class="scene-format-btn"
-      aria-label="Auto-layout"
-      data-tip="Auto-layout" data-tip-ja="自動整列"
-      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined)}
+      aria-label="Auto-layout horizontal"
+      data-tip="Auto-layout →" data-tip-ja="自動整列 →"
+      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined, 'horizontal')}
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.autoLayout}</svg>
+    </button>
+    <button
+      class="scene-format-btn scene-format-btn-v"
+      aria-label="Auto-layout vertical"
+      data-tip="Auto-layout ↓" data-tip-ja="自動整列 ↓"
+      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined, 'vertical')}
+    >
+      <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true" style="transform: rotate(90deg)">{@html ICON.autoLayout}</svg>
     </button>
     <button
       class="scene-focus-root-btn"
@@ -1354,6 +1376,14 @@
     cursor: pointer;
     z-index: 5;
   }
+  .scene-format-btn-v {
+    right: 40px;
+    border-radius: 4px 0 0 4px;
+    border-right: none;
+  }
+  .scene-format-btn:not(.scene-format-btn-v) {
+    border-radius: 0 4px 4px 0;
+  }
   .scene-format-btn:hover {
     background: rgba(255, 255, 255, 0.95);
     color: var(--color-fg);
@@ -1362,7 +1392,7 @@
   .scene-focus-root-btn {
     position: absolute;
     top: 8px;
-    right: 42px;
+    right: 76px;
     width: 28px;
     height: 28px;
     border-radius: 4px;
@@ -1383,7 +1413,7 @@
   .scene-focus-playing-btn {
     position: absolute;
     top: 8px;
-    right: 76px;
+    right: 110px;
     width: 28px;
     height: 28px;
     border-radius: 4px;

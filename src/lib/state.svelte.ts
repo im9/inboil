@@ -1212,7 +1212,7 @@ export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void
 }
 
 /** Auto-layout scene nodes left→right using BFS layers from root */
-export function sceneFormatNodes(nodeIds?: Record<string, true>): void {
+export function sceneFormatNodes(nodeIds?: Record<string, true>, direction: 'horizontal' | 'vertical' = 'horizontal'): void {
   const { nodes, edges } = song.scene
   if (nodes.length === 0) return
   pushUndo('Format nodes')
@@ -1267,18 +1267,67 @@ export function sceneFormatNodes(nodeIds?: Record<string, true>): void {
     })
   }
 
-  // Assign normalized positions: x = layer (left→right), y = spread within layer
+  // Compute layout region: bounding box of targets (partial) or full canvas
+  let x1 = 0.08, x2 = 0.92, y1 = 0.08, y2 = 0.92
+  if (targets) {
+    const targetNodes = nodes.filter(n => targets[n.id])
+    if (targetNodes.length > 0) {
+      x1 = Math.min(...targetNodes.map(n => n.x))
+      x2 = Math.max(...targetNodes.map(n => n.x))
+      y1 = Math.min(...targetNodes.map(n => n.y))
+      y2 = Math.max(...targetNodes.map(n => n.y))
+      // Ensure minimum spread so nodes don't collapse to a point
+      if (x2 - x1 < 0.05) { x1 = Math.max(0, x1 - 0.05); x2 = Math.min(1, x2 + 0.05) }
+      if (y2 - y1 < 0.05) { y1 = Math.max(0, y1 - 0.05); y2 = Math.min(1, y2 + 0.05) }
+    }
+  }
+
+  // Assign positions within layout region
+  // horizontal: layer→x, spread→y  |  vertical: layer→y, spread→x
+  const vert = direction === 'vertical'
   const totalLayers = Math.max(1, ...layers.keys()) + 1
-  const margin = 0.08
   for (const [d, ids] of layers) {
-    const nx = totalLayers === 1 ? 0.5 : margin + (d / Math.max(1, totalLayers - 1)) * (1 - margin * 2)
+    const primary = totalLayers === 1
+      ? ((vert ? y1 + y2 : x1 + x2) / 2)
+      : (vert ? y1 : x1) + (d / Math.max(1, totalLayers - 1)) * (vert ? y2 - y1 : x2 - x1)
     for (let i = 0; i < ids.length; i++) {
-      const ny = ids.length === 1 ? 0.5 : margin + (i / (ids.length - 1)) * (1 - margin * 2)
+      const secondary = ids.length === 1
+        ? ((vert ? x1 + x2 : y1 + y2) / 2)
+        : (vert ? x1 : y1) + (i / (ids.length - 1)) * (vert ? x2 - x1 : y2 - y1)
       const node = nodes.find(n => n.id === ids[i])
       if (node) {
-        node.x = nx
-        node.y = ny
+        node.x = vert ? secondary : primary
+        node.y = vert ? primary : secondary
       }
+    }
+  }
+}
+
+export type AlignMode = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v' | 'distribute-h' | 'distribute-v'
+
+/** Align or distribute selected scene nodes */
+export function sceneAlignNodes(nodeIds: Record<string, true>, mode: AlignMode): void {
+  const targets = song.scene.nodes.filter(n => nodeIds[n.id])
+  if (targets.length < 2) return
+  pushUndo('Align nodes')
+  switch (mode) {
+    case 'left':       { const v = Math.min(...targets.map(n => n.x)); for (const n of targets) n.x = v; break }
+    case 'right':      { const v = Math.max(...targets.map(n => n.x)); for (const n of targets) n.x = v; break }
+    case 'top':        { const v = Math.min(...targets.map(n => n.y)); for (const n of targets) n.y = v; break }
+    case 'bottom':     { const v = Math.max(...targets.map(n => n.y)); for (const n of targets) n.y = v; break }
+    case 'center-h':   { const v = targets.reduce((s, n) => s + n.y, 0) / targets.length; for (const n of targets) n.y = v; break }
+    case 'center-v':   { const v = targets.reduce((s, n) => s + n.x, 0) / targets.length; for (const n of targets) n.x = v; break }
+    case 'distribute-h': {
+      targets.sort((a, b) => a.x - b.x)
+      const min = targets[0].x, max = targets[targets.length - 1].x
+      for (let i = 0; i < targets.length; i++) targets[i].x = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min)
+      break
+    }
+    case 'distribute-v': {
+      targets.sort((a, b) => a.y - b.y)
+      const min = targets[0].y, max = targets[targets.length - 1].y
+      for (let i = 0; i < targets.length; i++) targets[i].y = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min)
+      break
     }
   }
 }
@@ -1298,6 +1347,21 @@ export function sceneCopyNode(nodeId: string): void {
   sceneClipboard = {
     nodes: [{ ...node, params: node.params ? { ...node.params } : undefined }],
     edges: [],
+  }
+}
+
+/** Copy multiple selected nodes + internal edges to clipboard */
+export function sceneCopySelected(nodeIds: Record<string, true>): void {
+  const ids = new Set(Object.keys(nodeIds))
+  if (ids.size === 0) return
+  const collectedNodes = song.scene.nodes
+    .filter(n => ids.has(n.id))
+    .map(n => ({ ...n, params: n.params ? { ...n.params } : undefined }))
+  sceneClipboard = {
+    nodes: collectedNodes,
+    edges: song.scene.edges
+      .filter(e => ids.has(e.from) && ids.has(e.to))
+      .map(e => ({ ...e })),
   }
 }
 

@@ -1,6 +1,6 @@
 # ADR 059: Scene Multi-Select
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -228,9 +228,83 @@ ctx.setLineDash([])
 10. `pushUndo` on group move start
 11. Delete key deletes all selected nodes
 
-### Phase 3: Partial layout + copy
-12. `sceneFormatNodes(nodeIds?)` — partial auto-layout
-13. Ctrl+C / Ctrl+V for multi-node copy/paste
+### Phase 3: Partial layout + alignment + copy
+12. Fix `sceneFormatNodes(nodeIds?)` — layout within bounding box of selected nodes (not full canvas)
+13. Alignment tools for multi-selection (see Section I)
+14. Ctrl+C / Ctrl+V for multi-node copy/paste
+
+### I. Partial Format Fix + Alignment Tools
+
+**Problem with current partial format:** `sceneFormatNodes(nodeIds)` runs BFS on the full graph but spreads selected nodes across the entire canvas (0.08–0.92), ignoring the spatial context of unselected nodes.
+
+**Fix:** When `nodeIds` is provided, compute the bounding box of the selected nodes *before* layout, then redistribute within that bounding box instead of the full canvas:
+
+```typescript
+export function sceneFormatNodes(nodeIds?: Record<string, true>): void {
+  // ... BFS layer assignment (unchanged) ...
+
+  if (targets) {
+    // Compute bounding box of selected nodes
+    const targetNodes = nodes.filter(n => targets[n.id])
+    const minX = Math.min(...targetNodes.map(n => n.x))
+    const maxX = Math.max(...targetNodes.map(n => n.x))
+    const minY = Math.min(...targetNodes.map(n => n.y))
+    const maxY = Math.max(...targetNodes.map(n => n.y))
+    // Use bounding box as layout region (with small inset)
+    margin = { x1: minX, x2: maxX, y1: minY, y2: maxY }
+  }
+  // Assign positions within margin region
+}
+```
+
+**Alignment tools:** When 2+ nodes are selected, provide alignment actions. Triggered via keyboard shortcuts or context menu:
+
+| Action | Shortcut | Behavior |
+|--------|----------|----------|
+| Align Left | Alt+A | Set all selected nodes' x to `min(x)` |
+| Align Right | Alt+D | Set all selected nodes' x to `max(x)` |
+| Align Top | Alt+W | Set all selected nodes' y to `min(y)` |
+| Align Bottom | Alt+S | Set all selected nodes' y to `max(y)` |
+| Align Center H | Alt+X | Set all selected nodes' y to `mean(y)` |
+| Align Center V | Alt+E | Set all selected nodes' x to `mean(x)` |
+| Distribute H | Alt+Shift+X | Space selected nodes evenly along x axis |
+| Distribute V | Alt+Shift+E | Space selected nodes evenly along y axis |
+
+**Implementation:**
+
+```typescript
+export function sceneAlignNodes(
+  nodeIds: Record<string, true>,
+  mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v' | 'distribute-h' | 'distribute-v'
+): void {
+  const targets = song.scene.nodes.filter(n => nodeIds[n.id])
+  if (targets.length < 2) return
+  pushUndo('Align nodes')
+
+  switch (mode) {
+    case 'left':       { const v = Math.min(...targets.map(n => n.x)); targets.forEach(n => n.x = v); break }
+    case 'right':      { const v = Math.max(...targets.map(n => n.x)); targets.forEach(n => n.x = v); break }
+    case 'top':        { const v = Math.min(...targets.map(n => n.y)); targets.forEach(n => n.y = v); break }
+    case 'bottom':     { const v = Math.max(...targets.map(n => n.y)); targets.forEach(n => n.y = v); break }
+    case 'center-h':   { const v = targets.reduce((s, n) => s + n.y, 0) / targets.length; targets.forEach(n => n.y = v); break }
+    case 'center-v':   { const v = targets.reduce((s, n) => s + n.x, 0) / targets.length; targets.forEach(n => n.x = v); break }
+    case 'distribute-h': {
+      targets.sort((a, b) => a.x - b.x)
+      const min = targets[0].x, max = targets[targets.length - 1].x
+      targets.forEach((n, i) => n.x = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min))
+      break
+    }
+    case 'distribute-v': {
+      targets.sort((a, b) => a.y - b.y)
+      const min = targets[0].y, max = targets[targets.length - 1].y
+      targets.forEach((n, i) => n.y = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min))
+      break
+    }
+  }
+}
+```
+
+**UI:** Alignment actions appear in the right-click bubble menu when 2+ nodes are selected, grouped as a row of small icons.
 
 ## Considerations
 
@@ -245,5 +319,5 @@ ctx.setLineDash([])
 ## Future Extensions
 
 - Lasso select (freeform selection path) for irregular node clusters
-- Alignment tools (align left, distribute evenly, snap to grid) for selected nodes
+- Snap to grid while dragging (hold Shift or toggle)
 - Group/ungroup: collapse selected nodes into a single compound node
