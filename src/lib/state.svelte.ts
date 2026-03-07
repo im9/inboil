@@ -720,6 +720,13 @@ export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
   }
 }
 
+/** Apply a synth preset to the selected track */
+export function applyPreset(trackIdx: number, params: Record<string, number>) {
+  pushUndo('Apply preset')
+  const c = activeCell(trackIdx)
+  c.voiceParams = { ...c.voiceParams, ...params }
+}
+
 export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const
 
 export function setTrackSteps(trackId: number, newSteps: number) {

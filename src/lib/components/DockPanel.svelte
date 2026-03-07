@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, toggleDockMinimized } from '../state.svelte.ts'
+  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, toggleDockMinimized } from '../state.svelte.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
+  import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
   import Knob from './Knob.svelte'
 
   const track  = $derived(song.tracks[ui.selectedTrack])
@@ -9,6 +10,20 @@
   const params = $derived(getParamDefs(track.voiceId))
   const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
+
+  // ── Preset browser ──
+  const showPresets = $derived(hasPresets(track.voiceId))
+  let presetCategory = $state<PresetCategory | null>(null)
+  const presetList = $derived(getPresets(presetCategory))
+  let presetOpen = $state(false)
+  // Track selected preset name per track (keyed by track index)
+  let presetByTrack = $state<Record<number, string>>({})
+  const currentPreset = $derived(presetByTrack[ui.selectedTrack] ?? '')
+  function selectPreset(preset: { name: string; params: Record<string, number> }) {
+    presetByTrack[ui.selectedTrack] = preset.name
+    applyPreset(ui.selectedTrack, preset.params)
+    presetOpen = false
+  }
 </script>
 
 <div class="dock-panel" class:minimized={ui.dockMinimized}>
@@ -47,6 +62,35 @@
               <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
             {/if}
           </div>
+
+          <!-- Preset browser (Synth/Poly only) -->
+          {#if showPresets}
+            <div class="preset-section">
+              <button class="preset-toggle" onpointerdown={() => presetOpen = !presetOpen}
+                data-tip="Browse presets" data-tip-ja="プリセットを選択"
+              >{currentPreset ? currentPreset : 'PRESETS'} {presetOpen ? '▾' : '▸'}</button>
+              {#if presetOpen}
+                <div class="preset-cats">
+                  <button class="cat-btn" class:active={presetCategory === null}
+                    onpointerdown={() => presetCategory = null}>ALL</button>
+                  {#each getPresetCategories() as cat}
+                    <button class="cat-btn" class:active={presetCategory === cat}
+                      onpointerdown={() => presetCategory = cat}>{CATEGORY_LABELS[cat]}</button>
+                  {/each}
+                </div>
+                <div class="preset-list">
+                  {#each presetList as preset}
+                    <button class="preset-item" class:selected={currentPreset === preset.name}
+                      onpointerdown={() => selectPreset(preset)}
+                    >
+                      <span class="preset-cat-tag">{CATEGORY_LABELS[preset.category]}</span>
+                      <span class="preset-name">{preset.name}</span>
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/if}
 
           <!-- Synth param knobs (multi-row grid) -->
           <div class="knob-grid">
@@ -225,6 +269,99 @@
   .btn-clr:active {
     background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.85);
+  }
+
+  /* ── Preset browser ── */
+  .preset-section {
+    margin-bottom: 8px;
+  }
+  .preset-toggle {
+    border: 1px solid rgba(237,232,220,0.2);
+    background: transparent;
+    color: rgba(237,232,220,0.55);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+  .preset-toggle:hover {
+    color: rgba(237,232,220,0.8);
+    border-color: rgba(237,232,220,0.35);
+  }
+  .preset-cats {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .cat-btn {
+    border: 1px solid rgba(237,232,220,0.15);
+    background: transparent;
+    color: rgba(237,232,220,0.4);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 5px;
+    cursor: pointer;
+  }
+  .cat-btn.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .preset-list {
+    max-height: 160px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-top: 4px;
+    border: 1px solid rgba(237,232,220,0.1);
+  }
+  .preset-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid rgba(237,232,220,0.06);
+    background: transparent;
+    color: rgba(237,232,220,0.65);
+    font-size: 10px;
+    padding: 4px 6px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .preset-item:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.9);
+  }
+  .preset-item:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .preset-item.selected {
+    background: rgba(108,119,68,0.2);
+    color: rgba(237,232,220,0.95);
+  }
+  .preset-item.selected .preset-cat-tag {
+    color: var(--color-olive);
+  }
+  .preset-cat-tag {
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(237,232,220,0.35);
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .preset-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .knob-grid {

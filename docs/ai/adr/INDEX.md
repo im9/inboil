@@ -21,7 +21,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 002 | TypeScript AudioWorklet | Implemented | Current DSP runtime |
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |
-| 011 | Full Synth Engines | Proposed | |
+| 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, InboilSynth/PolySynth, factory presets |
 | 012 | Sampler | Proposed | |
 | 023 | Oscilloscope Display | Implemented | |
 

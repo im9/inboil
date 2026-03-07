@@ -251,6 +251,14 @@ export class SVFilter {
     this.ic1eq = 2 * v1 - this.ic1eq
     this.ic2eq = 2 * v2 - this.ic2eq
 
+    // Guard against NaN/Infinity from coefficient discontinuities
+    if (!(this.ic1eq === this.ic1eq) || !(this.ic2eq === this.ic2eq) ||
+        this.ic1eq > 1e15 || this.ic1eq < -1e15 ||
+        this.ic2eq > 1e15 || this.ic2eq < -1e15) {
+      this.ic1eq = 0; this.ic2eq = 0
+      return 0
+    }
+
     switch (this._mode) {
       case SVFMode.LP:    return v2
       case SVFMode.HP:    return input - this._k * v1 - v2

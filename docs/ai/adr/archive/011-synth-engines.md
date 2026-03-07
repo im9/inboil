@@ -1,6 +1,6 @@
 # ADR 011: Synth Engine Architecture — Wavetable + Modulation Matrix
 
-## Status: Proposed (revised)
+## Status: Implemented
 
 ## Context
 
@@ -212,6 +212,25 @@ Macro knobs (e.g., "Brightness", "Movement", "Body", "Space") abstract complexit
 - 8 basic tables × 256 frames × 2048 samples × 4 bytes = ~16MB if naive
 - Optimization: generate on `AudioWorklet` init, keep only active tables in memory (~512KB typical)
 
+### I. Factory Presets & Preset Browser
+
+DockPanel includes a preset selector for Synth/Poly voices. Presets are named parameter snapshots.
+
+**Data structure:**
+```ts
+interface SynthPreset {
+  name: string                       // e.g. "Warm Pad"
+  category: 'lead' | 'bass' | 'pad' | 'pluck' | 'keys' | 'fx'
+  params: Record<string, number>     // voiceParams values
+}
+```
+
+**Categories:** Lead, Bass, Pad, Pluck, Keys, FX — ~20 factory presets covering the full sound palette.
+
+**UI (DockPanel):** Compact scrollable preset list between track selector and param knobs. Only visible when track uses Synth or Poly voice. Selecting a preset applies all voiceParams at once via `applyPreset()`.
+
+**Future:** User-saved presets (stored alongside patterns in persistence layer, ADR 020).
+
 ## Implementation Order
 
 1. **SVFilter** (JS) — replace OnePole, used by everything after
@@ -221,11 +240,11 @@ Macro knobs (e.g., "Brightness", "Movement", "Body", "Space") abstract complexit
 5. **ModMatrix** (JS) — source/dest routing, per-sample evaluation
 6. **PolySynth** (JS) — voice allocator (4-voice)
 7. **LFO** — tempo-synced + free-running, multiple shapes
-8. **WASM migration** — if profiling shows need, move hot paths to C++
-9. **Factory presets** — recreate current sounds + new patches
+8. **Factory presets** — preset data + DockPanel preset browser
+9. **WASM migration** — if profiling shows need, move hot paths to C++
 10. **Detail UI** — full parameter overlay sheet
 
-Steps 1–3 can ship as a first release (already a big upgrade). Step 4 determines if WASM is needed. Steps 5–7 add the "Serum-like" modulation depth.
+Steps 1–3 can ship as a first release (already a big upgrade). Step 4 determines if WASM is needed. Steps 5–7 add the "Serum-like" modulation depth. Step 8 makes presets browsable from the dock panel.
 
 ## Consequences
 

@@ -577,7 +577,9 @@ class WavetableOsc {
 
   tick(freq: number): number {
     this.phase += freq / this.sr
-    if (this.phase >= 1) this.phase -= 1
+    // Robust phase wrapping — handles large freq jumps from FM modulation
+    this.phase -= Math.floor(this.phase)
+    if (this.phase < 0) this.phase = 0
 
     // Morph position selects between tables
     const pos = this.position * (SHAPE_COUNT - 1)
@@ -587,9 +589,9 @@ class WavetableOsc {
 
     // Linear interpolation within table
     const phaseSample = this.phase * WT_SIZE
-    const s0 = Math.floor(phaseSample)
+    const s0 = Math.floor(phaseSample) & (WT_SIZE - 1)
     const s1 = (s0 + 1) & (WT_SIZE - 1)
-    const sf = phaseSample - s0
+    const sf = phaseSample - Math.floor(phaseSample)
 
     const a = this.tables[idx][s0] + (this.tables[idx][s1] - this.tables[idx][s0]) * sf
     const b = this.tables[idxNext][s0] + (this.tables[idxNext][s1] - this.tables[idxNext][s0]) * sf
@@ -809,7 +811,10 @@ class InboilSynthCore {
     // Volume mod
     const vol = Math.max(0, 0.65 + volMod * 0.3)
 
-    return sig * aenv * this.vel * vol
+    const out = sig * aenv * this.vel * vol
+    // Guard against NaN from filter/osc state discontinuities during preset changes
+    if (out !== out) { this.filter.reset(); return 0 }
+    return out
   }
 }
 
