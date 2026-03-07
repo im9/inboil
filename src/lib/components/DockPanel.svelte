@@ -96,20 +96,29 @@
           <!-- Synth param knobs (multi-row grid) -->
           <div class="knob-grid">
             {#each params as p, i}
-              {#if i > 0 && p.group && p.group !== params[i - 1].group}
-                <div class="param-sep-row" aria-hidden="true"></div>
+              {#if p.key === 'polyMode'}
+                <button
+                  class="btn-toggle"
+                  class:active={(knobValue(p) ?? p.default) >= 0.5}
+                  onpointerdown={() => knobChange(p, (knobValue(p) ?? p.default) >= 0.5 ? 0 : 1)}
+                  data-tip={p.tip} data-tip-ja={p.tipJa}
+                >{(knobValue(p) ?? p.default) >= 0.5 ? 'POLY' : 'MONO'}</button>
+              {:else}
+                {#if i > 0 && p.group && p.group !== params[i - 1].group}
+                  <div class="param-sep-row" aria-hidden="true"></div>
+                {/if}
+                <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
+                  <Knob
+                    value={normalizeParam(p, knobValue(p))}
+                    label={p.label}
+                    size={32}
+                    locked={isParamLocked(p.key)}
+                    steps={paramSteps(p)}
+                    displayValue={displayLabel(p, knobValue(p))}
+                    onchange={v => knobChange(p, v)}
+                  />
+                </span>
               {/if}
-              <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
-                <Knob
-                  value={normalizeParam(p, knobValue(p))}
-                  label={p.label}
-                  size={32}
-                  locked={isParamLocked(p.key)}
-                  steps={paramSteps(p)}
-                  displayValue={displayLabel(p, knobValue(p))}
-                  onchange={v => knobChange(p, v)}
-                />
-              </span>
             {/each}
           </div>
 
@@ -270,6 +279,24 @@
   .btn-clr:active {
     background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.85);
+  }
+
+  .btn-toggle {
+    border: 1px solid rgba(237,232,220,0.25);
+    background: transparent;
+    color: rgba(237,232,220,0.55);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    cursor: pointer;
+    min-width: 38px;
+    height: 22px;
+  }
+  .btn-toggle.active {
+    background: rgba(237,232,220,0.12);
+    color: rgba(237,232,220,0.9);
+    border-color: rgba(237,232,220,0.4);
   }
 
   /* ── Preset browser ── */

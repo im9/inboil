@@ -157,6 +157,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private compMakeup     = 2.2
   private verbReturn     = 1.0
   private dlyReturn      = 1.0
+  private _stereoTmp     = new Float32Array(2)
 
   // Performance
   private rootNote       = 0
@@ -243,6 +244,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.currentThreshold = this.swingPhase === 0
               ? (1 - this.swing) * 2 * this.samplesPerStep
               : this.swing * 2 * this.samplesPerStep
+            for (const v of this.voices) v.setParam('bpm', this.bpm)
           }
           break
         case 'triggerNote': {
@@ -281,6 +283,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             if (vp && this.voices[i]) {
               for (const k in vp) this.voices[i].setParam(k, vp[k])
             }
+            this.voices[i]?.setParam('bpm', this.bpm)
           }
           this.tracks = p.tracks
           const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
@@ -526,31 +529,52 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const mc = muteTarget > this.muteGains[t] ? 0.02 : 0.002
           this.muteGains[t] += (muteTarget - this.muteGains[t]) * mc
           if (this.muteGains[t] < 0.0001 && track?.muted) continue
-          const sig = this.voices[t].tick() * this.muteGains[t] * (track?.volume ?? 0.8)
-          if (t === 0) {
-            kickDry += sig
+          const voice = this.voices[t]
+          const gain = this.muteGains[t] * (track?.volume ?? 0.8)
+          if (voice.tickStereo) {
+            voice.tickStereo(this._stereoTmp)
+            const sL = this._stereoTmp[0] * gain
+            const sR = this._stereoTmp[1] * gain
+            if (t === 0) { kickDry += (sL + sR) * 0.5 }
+            else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
+            const sendMono = (sL + sR) * 0.5
+            reverbIn   += sendMono * (track?.reverbSend   ?? 0)
+            delayIn    += sendMono * (track?.delaySend    ?? 0)
+            glitchIn   += sendMono * (track?.glitchSend   ?? 0)
+            granularIn += sendMono * (track?.granularSend ?? 0)
           } else {
-            restL += sig * this.panGainsL[t]; restR += sig * this.panGainsR[t]
+            const sig = voice.tick() * gain
+            if (t === 0) { kickDry += sig }
+            else { restL += sig * this.panGainsL[t]; restR += sig * this.panGainsR[t] }
+            reverbIn   += sig * (track?.reverbSend   ?? 0)
+            delayIn    += sig * (track?.delaySend    ?? 0)
+            glitchIn   += sig * (track?.glitchSend   ?? 0)
+            granularIn += sig * (track?.granularSend ?? 0)
           }
-          reverbIn   += sig * (track?.reverbSend   ?? 0)
-          delayIn    += sig * (track?.delaySend    ?? 0)
-          glitchIn   += sig * (track?.glitchSend   ?? 0)
-          granularIn += sig * (track?.granularSend ?? 0)
         }
       } else {
         // Not playing — still tick voices for triggerNote audition
         for (let t = 0; t < this.voices.length; t++) {
           const track = this.tracks[t]
-          const sig = this.voices[t]?.tick()
-          if (!sig) continue
+          const voice = this.voices[t]
+          if (!voice) continue
           const vol = track?.volume ?? 0.8
-          if (t === 0) {
-            kickDry += sig * vol
+          if (voice.tickStereo) {
+            voice.tickStereo(this._stereoTmp)
+            const sL = this._stereoTmp[0] * vol
+            const sR = this._stereoTmp[1] * vol
+            if (t === 0) { kickDry += (sL + sR) * 0.5 }
+            else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
+            reverbIn   += (sL + sR) * 0.5 * (track?.reverbSend   ?? 0)
+            delayIn    += (sL + sR) * 0.5 * (track?.delaySend    ?? 0)
           } else {
-            restL += sig * vol * this.panGainsL[t]; restR += sig * vol * this.panGainsR[t]
+            const sig = voice.tick()
+            if (!sig) continue
+            if (t === 0) { kickDry += sig * vol }
+            else { restL += sig * vol * this.panGainsL[t]; restR += sig * vol * this.panGainsR[t] }
+            reverbIn   += sig * vol * (track?.reverbSend   ?? 0)
+            delayIn    += sig * vol * (track?.delaySend    ?? 0)
           }
-          reverbIn   += sig * vol * (track?.reverbSend   ?? 0)
-          delayIn    += sig * vol * (track?.delaySend    ?? 0)
         }
       }
 

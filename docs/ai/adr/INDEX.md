@@ -21,7 +21,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 002 | TypeScript AudioWorklet | Implemented | Current DSP runtime |
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |
-| 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, InboilSynth/PolySynth, factory presets |
+| 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, iDEATH/iPOLY (ADR 063), factory presets |
 | 012 | Sampler | Proposed | |
 | 023 | Oscilloscope Display | Implemented | |
 
@@ -88,7 +88,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 010 | Drum Synth Expansion | Proposed | Analog-modeled percussion (808 Kick, Rimshot, Tom, etc.) |
 | 015 | Named Instrument Presets | Proposed | |
 | 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |
-| 063 | iDEATH Synth Engine | Proposed | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, wobble bass |
+| 063 | iDEATH Synth Engine | Implemented | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, drive, wobble bass presets |
 
 ## Performance / Live
 

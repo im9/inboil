@@ -1,6 +1,6 @@
 # ADR 063: iDEATH Synth Engine — Rename, Unison & Wobble Bass
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

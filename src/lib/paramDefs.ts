@@ -85,7 +85,8 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',             min: 0.5,   max: 6.0,  default: 3.5  },
     { key: 'decay',      label: 'DCY',   group: 'amp',    tip: 'Amplitude decay',            tipJa: '音量ディケイ',           min: 0.1,   max: 0.5,  default: 0.25 },
   ],
-  Synth: [
+  iDEATH: [
+    { key: 'polyMode',   label: 'POLY',  group: 'osc',    tip: 'Polyphony: MONO → POLY(4)',  tipJa: 'ポリフォニー: モノ → ポリ(4)', min: 0, max: 1, step: 1, default: 0 },
     { key: 'oscAPos',    label: 'WV-A',  group: 'osc',    tip: 'Osc A wavetable position',   tipJa: 'オシレータA波形位置',     min: 0.0,  max: 1.0,  default: 0.0   },
     { key: 'oscBPos',    label: 'WV-B',  group: 'osc',    tip: 'Osc B wavetable position',   tipJa: 'オシレータB波形位置',     min: 0.0,  max: 1.0,  default: 0.25  },
     { key: 'oscBSemi',   label: 'SEMI',  group: 'osc',    tip: 'Osc B semitone offset',      tipJa: 'オシレータB半音オフセット', min: -24, max: 24,   step: 1, default: 0    },
@@ -96,20 +97,24 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'envMod',     label: 'FMOD',  group: 'filter', tip: 'Filter envelope depth',      tipJa: 'フィルターエンベロープ深さ', min: 0,  max: 8000, default: 4000  },
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',              min: 0.5,  max: 10.0, default: 2.0   },
     { key: 'filterMode', label: 'FTYP',  group: 'filter', tip: 'Filter: LP → HP → BP → NTCH', tipJa: 'フィルター: LP → HP → BP → NTCH', min: 0, max: 3, step: 1, default: 0 },
-    { key: 'attack',     label: 'ATCK',  group: 'env',    tip: 'Amp attack',                 tipJa: 'アタック',                min: 0.001, max: 1.0, default: 0.005  },
+    { key: 'drive',         label: 'DRIV',  group: 'filter', tip: 'Post-filter drive (saturation)', tipJa: 'ドライブ（サチュレーション）', min: 0.0, max: 1.0, default: 0.0 },
+    { key: 'unisonVoices', label: 'UNI',   group: 'osc',    tip: 'Unison voices: 1 → 3 → 5 → 7', tipJa: 'ユニゾンボイス数',     min: 1, max: 7, step: 2, default: 1 },
+    { key: 'unisonSpread', label: 'SPRD',  group: 'osc',    tip: 'Unison detune spread',       tipJa: 'ユニゾンデチューン幅',    min: 0.0, max: 1.0, default: 0.3 },
+    { key: 'unisonWidth',  label: 'WIDE',  group: 'osc',    tip: 'Unison stereo width',        tipJa: 'ユニゾンステレオ幅',      min: 0.0, max: 1.0, default: 0.8 },
+    { key: 'attack',       label: 'ATCK',  group: 'env',    tip: 'Amp attack',                 tipJa: 'アタック',                min: 0.001, max: 1.0, default: 0.005  },
     { key: 'decay',      label: 'DCY',   group: 'env',    tip: 'Amp decay',                  tipJa: 'ディケイ',                min: 0.01, max: 2.0,  default: 0.3   },
     { key: 'sustain',    label: 'SUST',  group: 'env',    tip: 'Amp sustain',                tipJa: 'サスティン',              min: 0.0,  max: 1.0,  default: 0.5   },
     { key: 'release',    label: 'RLS',   group: 'env',    tip: 'Amp release',                tipJa: 'リリース',                min: 0.01, max: 2.0,  default: 0.3   },
     { key: 'modDecay',   label: 'MDCY',  group: 'env',    tip: 'Mod envelope decay',         tipJa: 'モジュレーションディケイ', min: 0.01, max: 2.0,  default: 0.25  },
     { key: 'lfo1Rate',  label: 'LF1R',  group: 'lfo',    tip: 'LFO 1 rate (Hz)',            tipJa: 'LFO 1 速度',              min: 0.1,  max: 20.0, default: 2.0   },
     { key: 'lfo1Shape', label: 'LF1S',  group: 'lfo',    tip: 'LFO 1: SIN → TRI → SAW → SQR → S&H', tipJa: 'LFO 1: SIN → TRI → SAW → SQR → S&H', min: 0, max: 4, step: 1, default: 0 },
+    { key: 'lfo1Sync',  label: 'L1SY',  group: 'lfo',    tip: 'LFO 1 tempo sync: OFF → ON', tipJa: 'LFO 1 テンポ同期',        min: 0, max: 1, step: 1, default: 0 },
+    { key: 'lfo1Div',   label: 'L1DV',  group: 'lfo',    tip: 'LFO 1 sync: 1/1 → 1/2 → 1/4 → 1/8 → 1/16 → 1/32 → 1/4T → 1/8T → 1/16T → 1/4D → 1/8D → 1/16D', tipJa: 'LFO 1 同期分割', min: 0, max: 11, step: 1, default: 2 },
     { key: 'lfo2Rate',  label: 'LF2R',  group: 'lfo',    tip: 'LFO 2 rate (Hz)',            tipJa: 'LFO 2 速度',              min: 0.1,  max: 20.0, default: 0.5   },
     { key: 'lfo2Shape', label: 'LF2S',  group: 'lfo',    tip: 'LFO 2: SIN → TRI → SAW → SQR → S&H', tipJa: 'LFO 2: SIN → TRI → SAW → SQR → S&H', min: 0, max: 4, step: 1, default: 0 },
   ],
 }
 
-// Poly shares the same param definitions as Synth
-VOICE_PARAMS.Poly = VOICE_PARAMS.Synth
 
 export function getParamDefs(voiceId: VoiceId): ParamDef[] {
   return VOICE_PARAMS[voiceId] ?? []
