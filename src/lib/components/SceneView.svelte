@@ -537,12 +537,13 @@
     pickerOpen = false
   }
 
-  /** Add a node at the current viewport center (from toolbar) */
+  /** Add a node near the viewport center with slight random offset to avoid stacking */
   function addNodeAtCenter(type: BubblePickType) {
     if (!viewEl) return
     const rect = viewEl.getBoundingClientRect()
-    const cx = (rect.width / 2 - panX) / zoom
-    const cy = (rect.height / 2 - panY) / zoom
+    const jitter = 40 / zoom
+    const cx = (rect.width / 2 - panX) / zoom + (Math.random() - 0.5) * jitter * 2
+    const cy = (rect.height / 2 - panY) / zoom + (Math.random() - 0.5) * jitter * 2
     const nx = Math.max(0.05, Math.min(0.95, (cx - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
     const ny = Math.max(0.05, Math.min(0.95, (cy - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
     if (type === 'label') {

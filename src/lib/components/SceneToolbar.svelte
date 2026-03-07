@@ -21,6 +21,7 @@
     onadd?: (type: BubblePickType) => void
   } = $props()
 
+
   function centerPan() {
     if (!viewEl) return
     const rect = viewEl.getBoundingClientRect()

@@ -1,12 +1,17 @@
 <script lang="ts">
   import { perf, playback, ui, vkbd, isViewingPlayingPattern, song, effects, fxPad, NOTE_NAMES } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
+  import { PATTERN_COLORS } from '../constants.ts'
   import { engine } from '../audio/engine.ts'
 
   let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
 
   const isLooping = $derived(playback.playing && playback.mode === 'loop')
   const isViewingPlaying = $derived(isViewingPlayingPattern())
+
+  const pat = $derived(song.patterns[ui.currentPattern])
+  const patName = $derived(pat?.name || `PAT ${String(ui.currentPattern).padStart(2, '0')}`)
+  const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
   const KEYS = NOTE_NAMES.map((note, i) => ({
     note,
@@ -133,6 +138,14 @@
 </script>
 
 <div class="pattern-toolbar">
+  <!-- Pattern name indicator -->
+  <div class="pat-indicator" data-tip="Current pattern" data-tip-ja="現在のパターン">
+    <span class="pat-dot" style="background: {patColor}"></span>
+    <span class="pat-label">{patName}</span>
+  </div>
+
+  <div class="sep" aria-hidden="true"></div>
+
   <!-- KEY piano (desktop) -->
   <div class="toolbar-group key-group">
     <span class="group-label">KEY</span>
@@ -239,6 +252,28 @@
     background: var(--color-bg);
     border-bottom: 1px solid rgba(30,32,40,0.08);
     flex-shrink: 0;
+  }
+
+  /* ── Pattern indicator ── */
+  .pat-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .pat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .pat-label {
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(30,32,40,0.55);
+    white-space: nowrap;
   }
 
   /* ── Loop button ── */
