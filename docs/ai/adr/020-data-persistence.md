@@ -245,7 +245,120 @@ DELETE /api/sync/:id       ← Delete project from cloud
 
 All endpoints require Bearer token (see ADR 061).
 
-### I. Export / Import (File-Based)
+### I. Sample Storage
+
+ユーザーがアップロードしたサンプル（ADR 012, 065）の永続化。
+
+#### Tier 1: IndexedDB（ローカル）
+
+```
+// Object Store: 'samples'
+interface StoredSample {
+  id?: number            // auto-increment
+  name: string           // original filename
+  trackId: number        // assigned track
+  buffer: ArrayBuffer    // raw audio data (pre-decode)
+  sampleRate: number
+  duration: number       // seconds
+  createdAt: number
+}
+```
+
+- サンプル読み込み時に IndexedDB に保存、次回起動時に自動復元
+- プロジェクト保存に含める（project 単位でサンプルを紐付け）
+- 1サンプル ≈ 1.7MB (10s@44.1kHz mono Float32) → 8トラック分でも ~14MB
+- IndexedDB 容量は十分（ブラウザ上限 50–100MB+）
+
+#### Tier 2: Cloudflare R2（クラウド）
+
+```
+┌─────────────────────────────────────────┐
+│           Cloudflare R2                 │
+│  Bucket: 'inboil-samples'              │
+│  Key: 'user:{uid}/sample:{hash}.wav'   │
+│  ← S3 互換、egress 無料               │
+├─────────────────────────────────────────┤
+│        Pages Function (Worker)          │
+│  POST /api/sample/upload-url            │
+│    → R2 署名付き PUT URL 発行           │
+│  GET  /api/sample/download-url/:key     │
+│    → R2 署名付き GET URL 発行           │
+└─────────────────────────────────────────┘
+
+Upload flow:
+  Client → Worker (認証+署名URL発行)
+  Client → R2 直接 PUT (署名付き、max 10MB)
+
+Download flow:
+  Client → Worker (署名URL発行)
+  Client ← R2 直接 GET
+```
+
+- KV はバイナリに不向き（value 上限 25MB だが遅い）→ R2 が最適
+- R2 無料枠: 10GB storage, 1M Class B reads/mo, 100K Class A writes/mo
+- Content-addressable key (`sha256(buffer)`) でデデュプ可能
+- プロジェクト JSON にはサンプル参照（R2 key + metadata）のみ含める
+- 認証必須（ADR 061）
+
+#### Tier 3: 外部ストレージ連携（Dropbox / Google Drive）
+
+ユーザーの既存サンプルプールを直接参照する。
+
+```
+┌───────────┐     OAuth2      ┌──────────────┐
+│  inboil   │ ←─────────────→ │   Dropbox    │
+│ (browser) │   Access Token   │  /samples/   │
+└───────────┘                  └──────────────┘
+     │                              │
+     │  Dropbox JS SDK              │
+     │  files/list_folder           │
+     │  files/download              │
+     └──────────────────────────────┘
+```
+
+**Dropbox:**
+- Dropbox JavaScript SDK（`dropbox` npm パッケージ、または REST API 直接呼び出し）
+- OAuth2 PKCE flow でブラウザから直接認証（バックエンド不要）
+- `files/list_folder` でフォルダ一覧、`files/download` でサンプル取得
+- ユーザーが指定したフォルダ（例: `/Music/Samples/`）をブラウズ
+- ダウンロードしたサンプルは IndexedDB にキャッシュ（オフライン対応）
+
+**Google Drive:**
+- Google Identity Services + Drive API v3
+- 同様に OAuth2 PKCE、ブラウザ完結
+- `files.list` + `files.get?alt=media` でサンプル取得
+
+**UI:**
+```
+┌─────────────────────────────┐
+│ SAMPLE SOURCE               │
+│ [LOCAL] [R2] [DROPBOX] [GD] │
+│                             │
+│ 📁 /Music/Samples/          │
+│   breakbeat_170bpm.wav      │
+│   kick_808.wav              │
+│   snare_vinyl.wav           │
+│   ...                       │
+│                             │
+│ [LOAD SELECTED]             │
+└─────────────────────────────┘
+```
+
+**制約・注意点:**
+- Dropbox API は無料（個人アプリ、500ユーザーまで）。Production は App Review が必要
+- npm 依存を追加するか REST API 直叩きかの選択（zero-dep ポリシーなら REST 直叩き）
+- CORS: Dropbox Content API は `dl.dropboxusercontent.com` で CORS 対応済み
+- ファイルサイズ制限を UI 側で適用（10MB / 10s 上限、ADR 012 準拠）
+
+#### 実装優先度
+
+| 段階 | やること | 依存 |
+|------|----------|------|
+| Phase A | IndexedDB にサンプル保存・復元 | なし（今すぐ可能） |
+| Phase B | R2 にクラウドバックアップ | ADR 061 (認証) |
+| Phase C | Dropbox / Google Drive 連携 | OAuth2 設定のみ |
+
+### J. Export / Import (File-Based)
 
 ```typescript
 // Export as JSON file (works for all users, including demo)
@@ -269,11 +382,14 @@ async function importProject(json: string): Promise<void> {
 3. Pattern save/load — auto-save on `switchPattern`, `stop`
 4. Factory pattern write on first launch
 5. `beforeunload` best-effort save
-6. Factory reset feature in SYSTEM settings
-7. Export/Import UI (file-based, works for all users)
-8. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
-9. Cloud sync Worker + KV setup
-10. Sync UI (status indicator, manual sync button, conflict notification)
+6. Sample persistence in IndexedDB (Section I, Phase A)
+7. Factory reset feature in SYSTEM settings
+8. Export/Import UI (file-based, works for all users)
+9. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
+10. Cloud sync Worker + KV setup
+11. R2 sample upload/download (Section I, Phase B)
+12. Dropbox / Google Drive integration (Section I, Phase C)
+13. Sync UI (status indicator, manual sync button, conflict notification)
 
 ## Consequences
 
@@ -291,3 +407,6 @@ async function importProject(json: string): Promise<void> {
 - **Dependency:** ADR 018 (Settings Panel) — settings field localStorage persistence
 - **Dependency:** ADR 015 (Presets) — presets store usage
 - **Dependency:** ADR 061 (Authentication) — required for cloud sync
+- **Dependency:** ADR 012/065 (Sampler) — sample buffer persistence
+- **Positive:** Dropbox/GDrive integration lets users bring their own sample library without uploading
+- **Negative:** External OAuth providers add API key management and app review process

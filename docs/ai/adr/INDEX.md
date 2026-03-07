@@ -90,6 +90,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |
 | 063 | iDEATH Synth Engine | Implemented | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, drive, wobble bass presets |
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
+| 065 | Sampler Chop & Timestretch | Proposed | Phase 1: chop/slice, Phase 2: repitch BPM sync, Phase 3: WSOLA |
 
 ## Performance / Live
 
