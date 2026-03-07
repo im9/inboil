@@ -1049,6 +1049,25 @@ export class SamplerVoice implements Voice {
   private decay = 1.0    // seconds — FWD: envelope decay, REV: swell length
   private reverse = 0    // 0 or 1
   private pitchShift = 0 // semitones
+  private chopSlices = 0 // 0=OFF, 8, 16, 32
+  private chopMode = 0   // 0=NOTE-MAP, 1=SEQ
+  private seqIndex = 0   // current slice for SEQ mode
+  private activeStart = 0 // resolved start for current note (after chop)
+  private activeEnd = 1   // resolved end for current note (after chop)
+  private sampleBPM = 0   // 0=OFF, else original BPM of sample
+  private loopMode = 0    // 0=ONE-SHOT, 1=LOOP
+  private stretchMode = 0 // 0=REPITCH, 1=WSOLA
+  private currentBPM = 120 // current song BPM (set from worklet)
+
+  // WSOLA state
+  private static readonly WIN = 2048    // window size in samples (~46ms @44.1kHz)
+  private static readonly HOP_RATIO = 0.5
+  private wsolaOut = new Float32Array(SamplerVoice.WIN) // overlap-add output ring
+  private wsolaReadPos = 0   // read position in output ring
+  private wsolaWritePos = 0  // write position in output ring
+  private wsolaAvail = 0     // samples available in output ring
+  private wsolaInputPos = 0  // fractional position in source buffer
+  private wsolaActive = false
 
   private readonly sr: number
 
@@ -1074,14 +1093,53 @@ export class SamplerVoice implements Voice {
 
   noteOn(note: number, velocity: number): void {
     if (!this.buffer) return
+    const srRatio = this.bufferSR / this.sr
     const semis = (note - this.rootNote) + this.pitchShift
-    this.rate = Math.pow(2, semis / 12) * (this.bufferSR / this.sr)
-    const startSample = Math.floor(this.start * this.buffer.length)
-    const endSample = Math.floor(this.end * this.buffer.length)
+    // BPM sync: repitch to match tempo, then apply pitch shift on top
+    if (this.sampleBPM > 0) {
+      this.rate = (this.currentBPM / this.sampleBPM) * srRatio * Math.pow(2, this.pitchShift / 12)
+    } else {
+      this.rate = Math.pow(2, semis / 12) * srRatio
+    }
+
+    let s = this.start
+    let e = this.end
+
+    if (this.chopSlices > 0) {
+      const sliceSize = 1 / this.chopSlices
+      let idx: number
+      if (this.chopMode === 0) {
+        // NOTE-MAP: note offset selects slice
+        idx = ((note - this.rootNote) % this.chopSlices + this.chopSlices) % this.chopSlices
+      } else {
+        // SEQ: advance to next slice each noteOn
+        idx = this.seqIndex
+        this.seqIndex = (this.seqIndex + 1) % this.chopSlices
+      }
+      s = idx * sliceSize
+      e = s + sliceSize
+    }
+
+    this.activeStart = s
+    this.activeEnd = e
+    const startSample = Math.floor(s * this.buffer.length)
+    const endSample = Math.floor(e * this.buffer.length)
     this.cursor = this.reverse ? endSample - 1 : startSample
     this.amp = velocity
     this.ampTarget = velocity
     this.playing = true
+
+    // WSOLA init
+    this.wsolaActive = this.stretchMode === 1 && this.sampleBPM > 0
+    if (this.wsolaActive) {
+      this.wsolaInputPos = startSample
+      this.wsolaReadPos = 0
+      this.wsolaWritePos = 0
+      this.wsolaAvail = 0
+      this.wsolaOut.fill(0)
+      // Pre-fill first hop
+      this._wsolaHop()
+    }
   }
 
   noteOff(): void {
@@ -1097,24 +1155,54 @@ export class SamplerVoice implements Voice {
   tick(): number {
     if (!this.playing || !this.buffer) return 0
 
-    const startSample = Math.floor(this.start * this.buffer.length)
-    const endSample = Math.floor(this.end * this.buffer.length)
+    let sample: number
 
-    // Interpolated read
-    const idx = Math.floor(this.cursor)
-    if (idx < 0 || idx >= this.buffer.length) { this.playing = false; return 0 }
-    const frac = this.cursor - idx
-    const s0 = this.buffer[idx]
-    const s1 = idx + 1 < this.buffer.length ? this.buffer[idx + 1] : s0
-    const sample = s0 + (s1 - s0) * frac
+    if (this.wsolaActive) {
+      // WSOLA mode: read from output ring at playback rate
+      const WIN = SamplerVoice.WIN
+      const hop = Math.floor(WIN * SamplerVoice.HOP_RATIO)
 
-    // Advance cursor
-    if (this.reverse) {
-      this.cursor -= this.rate
-      if (this.cursor < startSample) { this.playing = false; return 0 }
+      if (this.wsolaAvail <= 0) {
+        if (!this.loopMode) { this.playing = false; return 0 }
+        this._wsolaHop()
+        if (!this.wsolaActive) { this.playing = false; return 0 }
+      }
+
+      sample = this.wsolaOut[this.wsolaReadPos]
+      this.wsolaReadPos = (this.wsolaReadPos + 1) % WIN
+      this.wsolaAvail--
+
+      // Refill when running low
+      if (this.wsolaAvail < hop) {
+        this._wsolaHop()
+      }
     } else {
-      this.cursor += this.rate
-      if (this.cursor >= endSample) { this.playing = false; return 0 }
+      // Normal / repitch mode
+      const startSample = Math.floor(this.activeStart * this.buffer.length)
+      const endSample = Math.floor(this.activeEnd * this.buffer.length)
+
+      // Interpolated read
+      const idx = Math.floor(this.cursor)
+      if (idx < 0 || idx >= this.buffer.length) { this.playing = false; return 0 }
+      const frac = this.cursor - idx
+      const s0 = this.buffer[idx]
+      const s1 = idx + 1 < this.buffer.length ? this.buffer[idx + 1] : s0
+      sample = s0 + (s1 - s0) * frac
+
+      // Advance cursor
+      if (this.reverse) {
+        this.cursor -= this.rate
+        if (this.cursor < startSample) {
+          if (this.loopMode) { this.cursor = endSample - 1 }
+          else { this.playing = false; return 0 }
+        }
+      } else {
+        this.cursor += this.rate
+        if (this.cursor >= endSample) {
+          if (this.loopMode) { this.cursor = startSample }
+          else { this.playing = false; return 0 }
+        }
+      }
     }
 
     // Amplitude envelope (FWD only — REV uses natural sample crescendo)
@@ -1145,7 +1233,87 @@ export class SamplerVoice implements Voice {
       case 'decay':      this.decay = value; this._updateEnvCoeffs(); break
       case 'reverse':    this.reverse = value >= 0.5 ? 1 : 0; break
       case 'pitchShift': this.pitchShift = value; break
+      case 'chopSlices': this.chopSlices = Math.round(value); this.seqIndex = 0; break
+      case 'chopMode':   this.chopMode = value >= 0.5 ? 1 : 0; this.seqIndex = 0; break
+      case 'sampleBPM':   this.sampleBPM = Math.round(value); break
+      case 'loopMode':    this.loopMode = value >= 0.5 ? 1 : 0; break
+      case 'stretchMode': this.stretchMode = value >= 0.5 ? 1 : 0; break
+      case 'bpm':         this.currentBPM = value; break
     }
+  }
+
+  /** WSOLA: find best overlap offset within ±tolerance using cross-correlation */
+  private _wsolaFindBest(ideal: number, startSamp: number, endSamp: number): number {
+    const buf = this.buffer!
+    const WIN = SamplerVoice.WIN
+    const tolerance = WIN >> 2  // search ±quarter window
+    const prevEnd = this.wsolaWritePos  // tail of previous window in ring
+    let bestOff = 0
+    let bestCorr = -Infinity
+    for (let d = -tolerance; d <= tolerance; d++) {
+      const cand = ideal + d
+      if (cand < startSamp || cand + WIN > endSamp) continue
+      let corr = 0
+      // correlate overlap region (first half of new window vs tail of ring)
+      const overlap = WIN >> 1
+      for (let j = 0; j < overlap; j++) {
+        const ringIdx = (prevEnd - overlap + j + WIN) % WIN
+        corr += buf[cand + j] * this.wsolaOut[ringIdx]
+      }
+      if (corr > bestCorr) { bestCorr = corr; bestOff = d }
+    }
+    return ideal + bestOff
+  }
+
+  /** WSOLA: synthesize one hop of output into the ring buffer */
+  private _wsolaHop(): void {
+    const buf = this.buffer!
+    const WIN = SamplerVoice.WIN
+    const hop = Math.floor(WIN * SamplerVoice.HOP_RATIO)
+    const startSamp = Math.floor(this.activeStart * buf.length)
+    const endSamp = Math.floor(this.activeEnd * buf.length)
+    const regionLen = endSamp - startSamp
+
+    if (regionLen < WIN) { this.wsolaActive = false; return }
+
+    // Ideal input position (original speed through source)
+    let idealPos = Math.floor(this.wsolaInputPos)
+    if (idealPos + WIN > endSamp) {
+      if (this.loopMode) {
+        this.wsolaInputPos = startSamp
+        idealPos = startSamp
+      } else {
+        this.wsolaActive = false
+        return
+      }
+    }
+    if (idealPos < startSamp) idealPos = startSamp
+
+    // Find best alignment via cross-correlation
+    const bestPos = this.wsolaAvail > 0
+      ? this._wsolaFindBest(idealPos, startSamp, endSamp)
+      : idealPos
+
+    // Overlap-add: crossfade old tail with new window
+    const overlap = WIN >> 1
+    for (let j = 0; j < WIN; j++) {
+      const srcVal = bestPos + j < endSamp ? buf[bestPos + j] : 0
+      if (j < overlap && this.wsolaAvail > 0) {
+        // Crossfade region: blend old ring content with new
+        const fadeIn = j / overlap
+        const ringIdx = (this.wsolaWritePos + j) % WIN
+        this.wsolaOut[ringIdx] = this.wsolaOut[ringIdx] * (1 - fadeIn) + srcVal * fadeIn
+      } else {
+        const ringIdx = (this.wsolaWritePos + j) % WIN
+        this.wsolaOut[ringIdx] = srcVal
+      }
+    }
+
+    this.wsolaWritePos = (this.wsolaWritePos + hop) % WIN
+    this.wsolaAvail = Math.min(this.wsolaAvail + hop, WIN)
+    // Advance input position at original playback speed (SR-compensated)
+    const srRatio = this.bufferSR / this.sr
+    this.wsolaInputPos += hop * srRatio
   }
 
   private _updateEnvCoeffs(): void {

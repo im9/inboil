@@ -25,6 +25,7 @@
   const selTrig = $derived(cell && ui.selectedStep !== null ? cell.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const isSampler = $derived(cell?.voiceId === 'Sampler')
+  const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
   // ── Preset browser ──
   const showPresets = $derived(cell ? hasPresets(cell.voiceId) : false)
@@ -68,7 +69,7 @@
     if (file && file.type.startsWith('audio/')) void loadSampleFile(file)
   }
 
-  function drawWaveform(canvas: HTMLCanvasElement, waveform: Float32Array) {
+  function drawWaveform(canvas: HTMLCanvasElement, waveform: Float32Array, slices = 0) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     const dpr = window.devicePixelRatio || 1
@@ -107,11 +108,23 @@
     ctx.moveTo(0, mid)
     ctx.lineTo(w, mid)
     ctx.stroke()
+    // Slice lines
+    if (slices > 0) {
+      ctx.strokeStyle = 'rgba(108,119,68,0.6)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      for (let i = 1; i < slices; i++) {
+        const sx = Math.round((i / slices) * w) + 0.5
+        ctx.moveTo(sx, 0)
+        ctx.lineTo(sx, h)
+      }
+      ctx.stroke()
+    }
   }
 
   $effect(() => {
     if (waveformCanvas && currentSample?.waveform) {
-      drawWaveform(waveformCanvas, currentSample.waveform)
+      drawWaveform(waveformCanvas, currentSample.waveform, chopSlices)
     }
   })
 </script>

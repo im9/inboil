@@ -102,6 +102,11 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'end',        label: 'END',   group: 'sample',  tip: 'Sample end point',         tipJa: 'サンプル終了点',       min: 0.0,  max: 1.0,  default: 1.0  },
     { key: 'pitchShift', label: 'PTCH',  group: 'sample',  tip: 'Pitch shift (semitones)',  tipJa: 'ピッチシフト（半音）', min: -24,  max: 24,   step: 1, default: 0 },
     { key: 'reverse',    label: 'REV',   group: 'sample',  tip: 'Reverse playback',         tipJa: 'リバース再生',         min: 0,    max: 1,    step: 1, default: 0 },
+    { key: 'chopSlices', label: 'CHOP',  group: 'chop',    tip: 'Slice count: OFF/8/16/32', tipJa: 'スライス数',           min: 0,    max: 32,   step: 8, default: 0 },
+    { key: 'chopMode',   label: 'MODE',  group: 'chop',    tip: 'Chop: NOTE-MAP / SEQ',     tipJa: 'チョップモード',       min: 0,    max: 1,    step: 1, default: 0 },
+    { key: 'sampleBPM',  label: 'BPM',   group: 'sync',    tip: 'Sample BPM (0=OFF)',       tipJa: 'サンプルBPM（0=OFF）', min: 0,    max: 200,  step: 1, default: 0 },
+    { key: 'loopMode',   label: 'LOOP',  group: 'sync',    tip: 'Loop: ONE-SHOT / LOOP',    tipJa: 'ループモード',         min: 0,    max: 1,    step: 1, default: 0 },
+    { key: 'stretchMode', label: 'STRC', group: 'sync',    tip: 'Stretch: REPITCH / WSOLA', tipJa: 'ストレッチモード',     min: 0,    max: 1,    step: 1, default: 0 },
   ],
 }
 
@@ -134,6 +139,10 @@ const DISPLAY_LABELS: Record<string, string[]> = {
   filterMode: ['LP', 'HP', 'BP', 'NTCH'],
   noiseFilterMode: ['LP', 'HP', 'BP'],
   reverse: ['OFF', 'ON'],
+  chopSlices: ['OFF', '8', '16', '32'],
+  chopMode: ['MAP', 'SEQ'],
+  loopMode: ['1SHT', 'LOOP'],
+  stretchMode: ['RPTC', 'WSLA'],
   lfo1Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
   lfo2Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
 }

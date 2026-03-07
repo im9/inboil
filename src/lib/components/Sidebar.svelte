@@ -132,6 +132,12 @@
         : 'Drag knobs in the dock panel to shape the sound. Parameters grouped by function: e.g. LEAD = FILTER | ENV | ARP, Synth = OSC | FILTER | ENV | LFO.\n\nPresets: For Synth/Poly voices, click the PRESETS button to browse factory presets (6 categories: Lead, Bass, Pad, Pluck, Keys, FX).\n\nP-Lock (parameter lock): In LOCK mode, knob changes apply only to the selected step. Select a step → enable LOCK → turn knobs to set per-step values. CLR removes locks for that step.',
     },
     {
+      title: L === 'ja' ? 'サンプラー' : 'SAMPLER',
+      body: L === 'ja'
+        ? 'SMPLカテゴリからSamplerを選択。LOADボタンまたはドラッグ&ドロップでオーディオファイルを読み込み。波形が表示されます。\n\nパラメータ: STRT/END (再生範囲), PTCH (ピッチシフト), DCY (ディケイ), REV (リバース再生)。\n\nChop: CHOPノブでスライス数 (8/16/32) を設定。MAPモードではノート番号でスライスを選択、SEQモードでは順番に再生。波形にスライス線が表示されます。P-Lockと組み合わせてブレイクビーツのパターンを作成可能。\n\nBPM同期: BPMノブでサンプルの元テンポを設定すると、曲のBPMに自動追従。LOOPでループ再生ON/OFF。STRCノブでRPTC (リピッチ: ピッチも変わる) とWSLA (WSOLA: ピッチ維持) を切り替え。'
+        : 'Select Sampler from the SMPL category. Load audio via the LOAD button or drag & drop. The waveform is displayed.\n\nParams: STRT/END (playback range), PTCH (pitch shift), DCY (decay), REV (reverse).\n\nChop: Set slice count (8/16/32) with the CHOP knob. MAP mode selects slices by note number, SEQ mode plays slices sequentially. Slice lines appear on the waveform. Combine with P-Lock for complex breakbeat patterns.\n\nBPM sync: Set the sample\'s original tempo with the BPM knob — playback auto-syncs to song BPM. LOOP toggles loop playback. STRC knob switches between RPTC (repitch: pitch changes with speed) and WSLA (WSOLA: pitch-preserving timestretch).',
+    },
+    {
       title: 'GRID',
       body: L === 'ja'
         ? 'メインのステップシーケンサー。ステップをタップしてON/OFF。選択トラックにベロシティバー表示。メロディトラックではピアノロールも常時表示。'
