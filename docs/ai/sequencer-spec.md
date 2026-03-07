@@ -11,7 +11,7 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 |---|---|
 | Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
 | Pattern | A reusable unit of music: id + name + 8 cells. One pattern plays at a time. |
-| Cell | Step data for one track in one pattern: steps, trigs, voiceParams, FX sends. |
+| Cell | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX sends. |
 | Track | Instrument configuration only: id, name, voiceId, muted, volume, pan. |
 | Section | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, FX). |
 | Scene | Node-based directed graph for arrangement. Nodes reference patterns or apply functions. |
@@ -49,6 +49,8 @@ The song maintains a pool of 100 pattern slots. Slots 0–20 are factory pattern
 
 ```typescript
 Cell {
+  name:         string         // per-pattern track name (ADR 062)
+  voiceId:      VoiceId        // per-pattern instrument (ADR 062)
   steps:        number         // 1–64
   trigs:        Trig[]         // length === steps
   voiceParams:  Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
@@ -65,7 +67,7 @@ Cell {
 Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  voiceId:     VoiceId         // 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'Synth' | 'Poly'
+  voiceId:     VoiceId         // 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'iDEATH' | 'Crash' | 'Ride' | 'Sampler'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
@@ -143,12 +145,12 @@ See ADR 021 for duration/slide, ADR 028 for chance, ADR 014 for parameter locks.
 
 | Track | Name | VoiceId | Voice Class | Default Note | Default Pan |
 |---|---|---|---|---|---|
-| 0 | KICK | Kick | KickVoice | 60 | 0.00 |
-| 1 | SNARE | Snare | SnareVoice | 60 | -0.10 |
-| 2 | CLAP | Clap | ClapVoice | 60 | 0.15 |
-| 3 | C.HH | Hat | HatVoice | 60 | -0.30 |
-| 4 | O.HH | OpenHat | OpenHatVoice | 60 | 0.35 |
-| 5 | CYM | Cymbal | CymbalVoice | 60 | 0.25 |
+| 0 | KICK | Kick | DrumMachine | 60 | 0.00 |
+| 1 | SNARE | Snare | DrumMachine | 60 | -0.10 |
+| 2 | CLAP | Clap | DrumMachine | 60 | 0.15 |
+| 3 | C.HH | Hat | DrumMachine | 60 | -0.30 |
+| 4 | O.HH | OpenHat | DrumMachine | 60 | 0.35 |
+| 5 | CYM | Cymbal | DrumMachine | 60 | 0.25 |
 | 6 | BASS | Bass303 | TB303Voice | 48 | 0.00 |
 | 7 | LEAD | MoogLead | MoogVoice | 64 | 0.10 |
 

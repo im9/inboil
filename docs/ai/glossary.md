@@ -8,7 +8,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 |---|---|
 | **Song** | Top-level container. Holds BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
 | **Pattern** | A reusable unit of music: string id + name + 8 cells (one per track). Stored in Song.patterns pool. |
-| **Cell** | Step data for one track in one pattern: steps, trigs, voiceParams, FX send levels. |
+| **Cell** | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX send levels. Per-pattern instrument assignment (ADR 062). |
 | **Track** | Instrument configuration only: id, name, voiceId, muted, volume, pan. No step data — that's in Cell. |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
@@ -39,10 +39,11 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Operator** | A single oscillator unit in FM synthesis. This app uses 3-operator FM (YM2612-inspired). |
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
-| **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by InboilSynth. |
-| **InboilSynth** | Mono wavetable synth: 2 osc (WT morph) + SVF filter + 2 env + 2 LFO + mod matrix. VoiceId: 'Synth'. |
-| **PolySynth** | 4-voice polyphonic wrapper around InboilSynth. Round-robin allocation, oldest-note stealing. VoiceId: 'Poly'. |
-| **Factory preset** | Named parameter snapshot for InboilSynth/PolySynth. 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). |
+| **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by iDEATH synth. |
+| **iDEATH** | Wavetable synth (named after Brautigan's "In Watermelon Sugar"). Mono/poly via polyMode param. 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'iDEATH'`. |
+| **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
+| **SamplerVoice** | Sample playback voice (ADR 012). Used by Crash, Ride (drum category), and user Sampler. |
+| **Factory preset** | Named parameter snapshot for iDEATH synth. 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |
@@ -71,7 +72,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
-| **VoicePicker** | Bubble menu for changing a track's instrument. Category tabs (DRUM/BASS/LEAD) + radial voice buttons. Triggered from StepGrid track label. |
+| **VoicePicker** | Voice selection UI in DockPanel for changing a track's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list. |
 | **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 

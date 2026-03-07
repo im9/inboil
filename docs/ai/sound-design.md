@@ -12,91 +12,61 @@ Tracks can be reassigned to any voice via VoicePicker (ADR 009). These are the f
 
 | Track | Name | VoiceId | Voice Class | Description |
 |---|---|---|---|---|
-| 0 | KICK | Kick | KickVoice | TR-909 style bass drum |
-| 1 | SNARE | Snare | SnareVoice | TR-909 style snare |
-| 2 | CLAP | Clap | ClapVoice | TR-909 style hand clap |
-| 3 | C.HH | Hat | HatVoice | TR-909 closed hi-hat |
-| 4 | O.HH | OpenHat | OpenHatVoice | TR-909 open hi-hat |
-| 5 | CYM | Cymbal | CymbalVoice | TR-909 crash cymbal |
+| 0 | KICK | Kick | DrumMachine | TR-909 style bass drum |
+| 1 | SNARE | Snare | DrumMachine | TR-909 style snare |
+| 2 | CLAP | Clap | DrumMachine | TR-909 style hand clap |
+| 3 | C.HH | Hat | DrumMachine | TR-909 closed hi-hat |
+| 4 | O.HH | OpenHat | DrumMachine | TR-909 open hi-hat |
+| 5 | CYM | Cymbal | DrumMachine | TR-909 crash cymbal |
 | 6 | BASS | Bass303 | TB303Voice | TB-303 acid bass |
 | 7 | LEAD | MoogLead | MoogVoice | Moog-style 4-pole lead |
 
 ## Synth Voices
 
-### KickVoice (TR-909 style)
+### DrumMachine (unified drum synth — ADR 010)
 
-Based on 909 bridged-T oscillator circuit analysis.
-Exponential pitch sweep (~340→55 Hz) + exponential amplitude decay + 2ms noise click transient.
+A single `DrumMachine` class handles all drum sounds (Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker). Each VoiceId selects a preset from `DRUM_PRESETS` that configures the same parameter set differently. The architecture has three signal layers:
 
-Parameters (via `paramDefs.ts`):
+1. **Tone oscillator** — sine with exponential pitch sweep (pitchStart → pitchEnd)
+2. **Noise generator** — white noise through SVF (LP/HP/BP configurable)
+3. **Metallic oscillator** — 6 square waves at inharmonic ratios (hat/cymbal sounds)
+
+All three are mixed per-preset, then processed through HP filter → drive → burst generator → output.
+
+Parameters (via `paramDefs.ts`, shared by all drum VoiceIds):
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| pitchStart | PSTRT | 100–600 Hz | 340 | Initial pitch |
-| pitchEnd | PEND | 30–120 Hz | 55 | Final pitch |
-| pitchDecay | PDCY | 0.01–0.10 s | 0.035 | Pitch sweep time constant |
-| ampDecay | DCY | 0.1–1.0 s | 0.35 | Amplitude decay time constant |
-| drive | DRIV | 0.5–2.5 | 1.4 | Soft-clip saturation |
+| toneLevel | TONE | 0.0–1.0 | 1.0 | Tone oscillator level |
+| pitchStart | PSTRT | 30–800 Hz | 340 | Initial pitch |
+| pitchEnd | PEND | 30–800 Hz | 55 | Final pitch |
+| pitchDecay | PDCY | 0.003–0.2 s | 0.035 | Pitch sweep time constant |
+| noiseLevel | NOIS | 0.0–1.2 | 0 | Noise level |
+| noiseFilterFreq | FREQ | 500–12000 Hz | 3000 | Noise filter frequency |
+| noiseFilterQ | Q | 0.5–5.0 | 1.0 | Noise filter resonance |
+| noiseFilterMode | FTYP | 0–2 (step 1) | 0 | Filter: LP/HP/BP |
+| metalLevel | METL | 0.0–1.0 | 0 | Metallic oscillator level |
+| metalFreq | MFRQ | 200–1200 Hz | 800 | Metal base frequency |
+| decay | DCY | 0.01–2.0 s | 0.35 | Amplitude decay |
+| drive | DRIV | 0.0–2.5 | 1.4 | Distortion amount |
+| hpFreq | HP | 20–8000 Hz | 20 | Output highpass frequency |
+| click | CLCK | 0.0–1.0 | 0.6 | Transient click amount |
+| burstCount | BRST | 1–6 (step 1) | 1 | Burst count (1=normal, 4=clap) |
+| burstGap | GAP | 0.005–0.03 s | 0.015 | Burst gap time |
 
-### SnareVoice (TR-909 style)
+Each drum VoiceId has a factory preset in `DRUM_PRESETS` that overrides these defaults for the specific drum sound.
 
-Separate tone/noise VCAs with exponential decay. Tone at ~185 Hz, noise through resonant LP filter.
+### SamplerVoice (ADR 012)
+
+Sample playback voice used by Crash, Ride, and user Sampler. Loads audio via `loadSample` WorkletCommand. Factory samples for Crash/Ride are bundled; user Sampler accepts any audio file. Crash and Ride are categorized as `drum` in the UI (not `sampler`) because they are drum sounds that happen to use sample playback internally.
 
 Parameters:
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| toneDecay | TDCY | 0.03–0.3 s | 0.08 | Tone body decay |
-| noiseDecay | NDCY | 0.02–0.25 s | 0.07 | Noise snap decay |
-| toneAmt | TONE | 0.0–0.6 | 0.20 | Tone level |
-| noiseAmt | NOIS | 0.3–1.2 | 0.85 | Noise level |
-| noiseFc | SNAP | 1000–6000 Hz | 3000 | Noise filter center freq |
-
-### ClapVoice (TR-909 style)
-
-4 rapid noise bursts (~2ms each, ~15ms apart) + exponential decay tail. Bandpass filtered noise.
-
-Parameters:
-| Key | Label | Range | Default | Description |
-|---|---|---|---|---|
-| decay | DCY | 0.05–0.5 s | 0.18 | Tail decay |
-| filterFc | TONE | 600–3000 Hz | 1200 | Bandpass center |
-| burstGap | SPRD | 0.008–0.025 s | 0.015 | Gap between bursts |
-
-### HatVoice (TR-909 closed hat)
-
-6 square-wave oscillators at inharmonic metallic ratios (from 909 IC divider circuit). 12 dB/oct HP filter + 25% noise.
-Tuned from 909 sample analysis: spectral peaks at 5000, 5800, 6700, 8500 Hz.
-
-Parameters:
-| Key | Label | Range | Default | Description |
-|---|---|---|---|---|
-| decay | DCY | 0.01–0.15 s | 0.04 | Amplitude decay |
-| baseFreq | FREQ | 400–1200 Hz | 800 | Oscillator base frequency |
-| hpCutoff | HP | 3000–9000 Hz | 5000 | High-pass filter cutoff |
-| volume | VOL | 0.1–1.0 | 0.65 | Output level |
-
-### OpenHatVoice (TR-909 open hat)
-
-Same oscillator bank as closed hat but longer decay and lower HP cutoff.
-
-Parameters:
-| Key | Label | Range | Default | Description |
-|---|---|---|---|---|
-| decay | DCY | 0.05–0.5 s | 0.18 | Amplitude decay |
-| baseFreq | FREQ | 400–1200 Hz | 800 | Oscillator base frequency |
-| hpCutoff | HP | 3000–9000 Hz | 4500 | High-pass filter cutoff |
-| volume | VOL | 0.1–1.0 | 0.60 | Output level |
-
-### CymbalVoice (TR-909 crash)
-
-Same metallic oscillator technique but with wider ratio spread, 35% noise, onset body burst at 500 Hz.
-
-Parameters:
-| Key | Label | Range | Default | Description |
-|---|---|---|---|---|
-| decay | DCY | 0.15–1.5 s | 0.35 | Amplitude decay |
-| baseFreq | FREQ | 250–800 Hz | 500 | Oscillator base frequency |
-| hpCutoff | HP | 1500–5000 Hz | 2500 | High-pass filter cutoff |
-| volume | VOL | 0.1–1.0 | 0.55 | Output level |
+| decay | DCY | 0.05–5.0 s | 1.0 | Amplitude decay time |
+| start | STRT | 0.0–1.0 | 0.0 | Sample start point |
+| end | END | 0.0–1.0 | 1.0 | Sample end point |
+| pitchShift | PTCH | -24–24 (step 1) | 0 | Pitch shift (semitones) |
+| reverse | REV | 0–1 (step 1) | 0 | Reverse playback |
 
 ### TB303Voice (acid bass)
 
@@ -156,13 +126,18 @@ Parameters:
 | resonance | RESO | 0.5–6.0 | 3.5 | Filter Q |
 | decay | DCY | 0.1–0.5 s | 0.25 | Amplitude decay |
 
-### InboilSynth (wavetable synth — mono)
+### iDEATH (wavetable synth — mono/poly)
 
-Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
+Named after the central commune in Richard Brautigan's "In Watermelon Sugar". VoiceId: `'iDEATH'`. Class: `IdeathSynth`.
+
+Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, unison, filter drive, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
+
+Mono/poly mode switchable via `polyMode` parameter (0=mono, 1=4-voice poly with round-robin allocation and oldest-note stealing). Poly mode supports chord input via `trig.notes[]` field.
 
 Parameters (via `paramDefs.ts`):
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
+| polyMode | POLY | 0–1 (step 1) | 0 | Polyphony: MONO/POLY(4) |
 | oscAPos | WV-A | 0.0–1.0 | 0.0 | Osc A wavetable position |
 | oscBPos | WV-B | 0.0–1.0 | 0.25 | Osc B wavetable position |
 | oscBSemi | SEMI | -24–24 (step 1) | 0 | Osc B semitone offset |
@@ -173,6 +148,10 @@ Parameters (via `paramDefs.ts`):
 | envMod | FMOD | 0–8000 Hz | 4000 | Filter envelope depth |
 | resonance | RESO | 0.5–10.0 | 2.0 | Filter resonance |
 | filterMode | FTYP | 0–3 (step 1) | 0 | Filter: LP/HP/BP/Notch |
+| drive | DRIV | 0.0–1.0 | 0.0 | Post-filter drive (saturation) |
+| unisonVoices | UNI | 1–7 (step 2) | 1 | Unison voices: 1/3/5/7 |
+| unisonSpread | SPRD | 0.0–1.0 | 0.3 | Unison detune spread |
+| unisonWidth | WIDE | 0.0–1.0 | 0.8 | Unison stereo width |
 | attack | ATCK | 0.001–1.0 s | 0.005 | Amp attack |
 | decay | DCY | 0.01–2.0 s | 0.3 | Amp decay |
 | sustain | SUST | 0.0–1.0 | 0.5 | Amp sustain level |
@@ -180,14 +159,12 @@ Parameters (via `paramDefs.ts`):
 | modDecay | MDCY | 0.01–2.0 s | 0.25 | Mod envelope decay |
 | lfo1Rate | LF1R | 0.1–20.0 Hz | 2.0 | LFO 1 rate |
 | lfo1Shape | LF1S | 0–4 (step 1) | 0 | LFO 1: SIN/TRI/SAW/SQR/S&H |
+| lfo1Sync | L1SY | 0–1 (step 1) | 0 | LFO 1 tempo sync: OFF/ON |
+| lfo1Div | L1DV | 0–11 (step 1) | 2 | LFO 1 sync division |
 | lfo2Rate | LF2R | 0.1–20.0 Hz | 0.5 | LFO 2 rate |
 | lfo2Shape | LF2S | 0–4 (step 1) | 0 | LFO 2: SIN/TRI/SAW/SQR/S&H |
 
-Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (Synth/Poly only).
-
-### PolySynth (wavetable synth — 4-voice polyphonic)
-
-Voice allocator wrapping InboilSynth. 4-voice max, round-robin allocation with oldest-note stealing. Shares all parameters with InboilSynth. Supports chord input via `trig.notes[]` field.
+Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (iDEATH only).
 
 ## DSP Building Blocks
 
@@ -197,7 +174,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 |---|---|---|
 | filters.ts | ResonantLP | 2-pole resonant low-pass biquad (12 dB/oct). Used for 303 filter, snare noise, clap. |
 | filters.ts | BiquadHP | 2-pole high-pass biquad (12 dB/oct). Used for metallic percussion. |
-| filters.ts | SVFilter | Trapezoidal-integrated state variable filter. LP/HP/BP/Notch modes. Used by InboilSynth/PolySynth. |
+| filters.ts | SVFilter | Trapezoidal-integrated state variable filter. LP/HP/BP/Notch modes. Used by iDEATH synth. |
 | filters.ts | DJFilter | Combined LP/HP sweep filter. X = LP←0.5→HP, Y = resonance. Used for master filter. |
 | filters.ts | PeakingEQ | Parametric peaking EQ band. Used for 3-band master EQ. |
 | filters.ts | ADSR | 4-stage envelope generator (attack/decay/sustain/release). |
@@ -208,7 +185,10 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | PeakLimiter | Lookahead (~1.5ms) brickwall limiter at 0.92 ceiling. |
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
-| voices.ts | KickVoice, SnareVoice, … | All synth voice implementations (including InboilSynth, PolySynth). |
+| voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
+| voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. |
+| voices.ts | IdeathSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
+| voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. |
 | voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
 | voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |
 | voices.ts | VOICE_REGISTRY | Maps VoiceId string → voice constructor. |

@@ -349,6 +349,7 @@
     {#each faders as fader}
       {@const val = getFaderValue(fader.key)}
       {@const active = faderDragging === fader.key}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="fader"
         class:active

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, changeVoice, toggleDockMinimized } from '../state.svelte.ts'
-  import { getParamDefs, normalizeParam, displayLabel, paramSteps, SAMPLER_IDS } from '../paramDefs.ts'
+  import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
@@ -135,24 +135,12 @@
                 class:active={i === ui.selectedTrack}
                 class:muted={_t.muted}
                 onpointerdown={() => { ui.selectedTrack = i }}
-                data-tip={activeCell(i).name} data-tip-ja={activeCell(i).name}
               >{TRACK_LABELS[i]}</button>
             {/each}
           </div>
 
           {#if cell && track}
-          <div class="lock-row">
-            <button
-              class="btn-lock"
-              class:active={ui.lockMode}
-              onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
-              data-tip="Parameter lock mode" data-tip-ja="パラメーターロックモード"
-            >LOCK</button>
-            {#if ui.lockMode && ui.selectedStep !== null}
-              <span class="lock-label">STEP{ui.selectedStep + 1}</span>
-              <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
-            {/if}
-          </div>
+          <div class="selected-track-name">{cell.name}</div>
 
           <!-- Voice category + instrument selector -->
           <div class="voice-cats">
@@ -233,6 +221,19 @@
             </div>
           {/if}
 
+          <div class="lock-row">
+            <button
+              class="btn-lock"
+              class:active={ui.lockMode}
+              onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
+              data-tip="Parameter lock mode" data-tip-ja="パラメーターロックモード"
+            >LOCK</button>
+            {#if ui.lockMode && ui.selectedStep !== null}
+              <span class="lock-label">STEP{ui.selectedStep + 1}</span>
+              <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
+            {/if}
+          </div>
+
           <!-- Synth param knobs (multi-row grid) -->
           <div class="knob-grid">
             {#each params as p, i}
@@ -273,16 +274,16 @@
           <div class="section-divider" aria-hidden="true"></div>
           <div class="knob-grid">
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-              <Knob value={activeCell(ui.selectedTrack).reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
+              <Knob value={cell.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
             </span>
             <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-              <Knob value={activeCell(ui.selectedTrack).delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
+              <Knob value={cell.delaySend} label="DLY" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
             </span>
             <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-              <Knob value={activeCell(ui.selectedTrack).glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
+              <Knob value={cell.glitchSend} label="GLT" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
             </span>
             <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-              <Knob value={activeCell(ui.selectedTrack).granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+              <Knob value={cell.granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
             </span>
           </div>
 
@@ -304,6 +305,21 @@
 
 <style>
   .dock-panel {
+    /* ── Dock design tokens ── */
+    --dk-cream: 237,232,220;
+    --dk-text: rgba(var(--dk-cream), 0.85);
+    --dk-text-mid: rgba(var(--dk-cream), 0.55);
+    --dk-text-dim: rgba(var(--dk-cream), 0.4);
+    --dk-border: rgba(var(--dk-cream), 0.15);
+    --dk-border-mid: rgba(var(--dk-cream), 0.3);
+    --dk-bg-hover: rgba(var(--dk-cream), 0.08);
+    --dk-bg-faint: rgba(var(--dk-cream), 0.06);
+    --dk-bg-active: rgba(var(--dk-cream), 0.12);
+    --dk-fs-xs: 8px;
+    --dk-fs-sm: 9px;
+    --dk-fs-md: 10px;
+    --dk-fs-lg: 11px;
+
     position: relative;
     width: 280px;
     flex-shrink: 0;
@@ -311,7 +327,7 @@
     color: var(--color-bg);
     display: flex;
     flex-direction: column;
-    border-left: 1px solid rgba(237,232,220,0.08);
+    border-left: 1px solid rgba(var(--dk-cream), 0.08);
     overflow: hidden;
     transition: width 120ms ease-out;
   }
@@ -335,17 +351,17 @@
     z-index: 1;
   }
   .dock-handle:hover .handle-bar {
-    background: rgba(237,232,220,0.35);
+    background: rgba(var(--dk-cream), 0.35);
   }
   .handle-bar {
     width: 3px;
     height: 28px;
     border-radius: 1.5px;
-    background: rgba(237,232,220,0.12);
+    background: var(--dk-bg-active);
     transition: background 80ms;
   }
   .dock-panel.minimized .handle-bar {
-    background: rgba(237,232,220,0.25);
+    background: rgba(var(--dk-cream), 0.25);
   }
 
   /* ── Body ── */
@@ -366,10 +382,10 @@
   }
   .track-btn {
     flex: 1;
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dk-border);
     background: transparent;
-    color: rgba(237,232,220,0.4);
-    font-size: 8px;
+    color: var(--dk-text-dim);
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 4px 0;
@@ -384,6 +400,15 @@
     opacity: 0.35;
   }
 
+  .selected-track-name {
+    font-size: var(--dk-fs-lg);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--dk-text);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
   .lock-row {
     display: flex;
     align-items: center;
@@ -391,10 +416,10 @@
     margin-bottom: 8px;
   }
   .btn-lock {
-    border: 1px solid rgba(237,232,220,0.3);
+    border: 1px solid var(--dk-border-mid);
     background: transparent;
-    color: rgba(237,232,220,0.45);
-    font-size: 9px;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 2px 6px;
@@ -407,33 +432,33 @@
     color: var(--color-bg);
   }
   .lock-label {
-    font-size: 9px;
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-olive);
     white-space: nowrap;
   }
   .btn-clr {
-    font-size: 8px;
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.5);
+    color: var(--dk-text-mid);
     background: transparent;
-    border: 1px solid rgba(237,232,220,0.25);
+    border: 1px solid rgba(var(--dk-cream), 0.25);
     padding: 1px 5px;
     line-height: 14px;
   }
   .btn-clr.hidden { visibility: hidden; }
   .btn-clr:active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
+    background: rgba(var(--dk-cream), 0.15);
+    color: var(--dk-text);
   }
 
   .btn-toggle {
-    border: 1px solid rgba(237,232,220,0.25);
+    border: 1px solid rgba(var(--dk-cream), 0.25);
     background: transparent;
-    color: rgba(237,232,220,0.55);
-    font-size: 9px;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 3px 8px;
@@ -442,9 +467,9 @@
     height: 22px;
   }
   .btn-toggle.active {
-    background: rgba(237,232,220,0.12);
-    color: rgba(237,232,220,0.9);
-    border-color: rgba(237,232,220,0.4);
+    background: var(--dk-bg-active);
+    color: rgba(var(--dk-cream), 0.9);
+    border-color: var(--dk-text-dim);
   }
 
   /* ── Preset browser ── */
@@ -452,10 +477,10 @@
     margin-bottom: 8px;
   }
   .preset-toggle {
-    border: 1px solid rgba(237,232,220,0.2);
+    border: 1px solid rgba(var(--dk-cream), 0.2);
     background: transparent;
-    color: rgba(237,232,220,0.55);
-    font-size: 9px;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 3px 8px;
@@ -464,8 +489,8 @@
     cursor: pointer;
   }
   .preset-toggle:hover {
-    color: rgba(237,232,220,0.8);
-    border-color: rgba(237,232,220,0.35);
+    color: rgba(var(--dk-cream), 0.8);
+    border-color: rgba(var(--dk-cream), 0.35);
   }
   .preset-cats {
     display: flex;
@@ -474,10 +499,10 @@
     flex-wrap: wrap;
   }
   .cat-btn {
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dk-border);
     background: transparent;
-    color: rgba(237,232,220,0.4);
-    font-size: 7px;
+    color: var(--dk-text-dim);
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 2px 5px;
@@ -493,7 +518,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     margin-top: 4px;
-    border: 1px solid rgba(237,232,220,0.1);
+    border: 1px solid rgba(var(--dk-cream), 0.1);
   }
   .preset-item {
     display: flex;
@@ -501,17 +526,17 @@
     gap: 6px;
     width: 100%;
     border: none;
-    border-bottom: 1px solid rgba(237,232,220,0.06);
+    border-bottom: 1px solid var(--dk-bg-faint);
     background: transparent;
-    color: rgba(237,232,220,0.65);
-    font-size: 10px;
+    color: rgba(var(--dk-cream), 0.65);
+    font-size: var(--dk-fs-md);
     padding: 4px 6px;
     text-align: left;
     cursor: pointer;
   }
   .preset-item:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.9);
+    background: var(--dk-bg-hover);
+    color: rgba(var(--dk-cream), 0.9);
   }
   .preset-item:active {
     background: var(--color-olive);
@@ -519,16 +544,16 @@
   }
   .preset-item.selected {
     background: rgba(108,119,68,0.2);
-    color: rgba(237,232,220,0.95);
+    color: rgba(var(--dk-cream), 0.95);
   }
   .preset-item.selected .preset-cat-tag {
     color: var(--color-olive);
   }
   .preset-cat-tag {
-    font-size: 7px;
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.35);
+    color: rgba(var(--dk-cream), 0.35);
     width: 28px;
     flex-shrink: 0;
   }
@@ -548,23 +573,23 @@
   }
   .voice-cat-btn {
     flex: 1;
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dk-border);
     background: transparent;
-    color: rgba(237,232,220,0.4);
-    font-size: 8px;
+    color: var(--dk-text-dim);
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 4px 0;
     cursor: pointer;
   }
   .voice-cat-btn.active {
-    background: rgba(237,232,220,0.08);
+    background: var(--dk-bg-hover);
     border-color: var(--color-olive);
     color: var(--color-olive);
   }
   .voice-cat-btn:hover:not(.active) {
-    color: rgba(237,232,220,0.7);
-    border-color: rgba(237,232,220,0.3);
+    color: rgba(var(--dk-cream), 0.7);
+    border-color: var(--dk-border-mid);
   }
   .voice-list {
     display: flex;
@@ -573,10 +598,10 @@
     margin-bottom: 8px;
   }
   .voice-btn {
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dk-border);
     background: transparent;
-    color: rgba(237,232,220,0.4);
-    font-size: 7px;
+    color: var(--dk-text-dim);
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 3px 5px;
@@ -589,14 +614,14 @@
     color: var(--color-bg);
   }
   .voice-btn:hover:not(.active) {
-    color: rgba(237,232,220,0.7);
-    border-color: rgba(237,232,220,0.3);
+    color: rgba(var(--dk-cream), 0.7);
+    border-color: var(--dk-border-mid);
   }
 
   /* ── Sample loader (ADR 012 Phase 2) ── */
   .sample-section {
     margin-bottom: 8px;
-    border: 1px dashed rgba(237,232,220,0.15);
+    border: 1px dashed var(--dk-border);
     padding: 6px;
     transition: border-color 80ms;
   }
@@ -611,10 +636,10 @@
     margin-bottom: 4px;
   }
   .btn-load {
-    border: 1px solid rgba(237,232,220,0.3);
+    border: 1px solid var(--dk-border-mid);
     background: transparent;
-    color: rgba(237,232,220,0.6);
-    font-size: 8px;
+    color: rgba(var(--dk-cream), 0.6);
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 2px 8px;
@@ -622,12 +647,12 @@
     flex-shrink: 0;
   }
   .btn-load:hover {
-    color: rgba(237,232,220,0.9);
-    border-color: rgba(237,232,220,0.5);
+    color: rgba(var(--dk-cream), 0.9);
+    border-color: rgba(var(--dk-cream), 0.5);
   }
   .sample-name {
-    font-size: 9px;
-    color: rgba(237,232,220,0.4);
+    font-size: var(--dk-fs-sm);
+    color: var(--dk-text-dim);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -649,12 +674,12 @@
   .param-sep-row {
     width: 100%;
     height: 1px;
-    background: rgba(237,232,220,0.08);
+    background: var(--dk-bg-hover);
   }
   .section-divider {
     width: 100%;
     height: 1px;
-    background: rgba(237,232,220,0.12);
+    background: var(--dk-bg-active);
     margin: 8px 0;
   }
 

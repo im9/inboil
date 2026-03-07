@@ -20,7 +20,6 @@ The goal is a focused, expressive tool for composing and performing electronic m
 - Cloud sync / user accounts
 - Collaboration features
 - MIDI controller support (deferred)
-- Sample import / Sampler voice (deferred)
 
 ## Constraints
 
@@ -37,7 +36,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 
 The TypeScript AudioWorklet implementation is fully functional with:
 - 8 tracks with configurable voice assignment (any voice on any track, ADR 058)
-- 12 voice types: 6 drum (TR-909), 2 bass (TB-303, Analog), 2 lead (Moog, FM), 2 wavetable synth (InboilSynth mono, PolySynth 4-voice poly)
+- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice), 2 bass (TB-303, Analog), 2 lead (Moog, FM), 1 wavetable synth (iDEATH — mono/poly via polyMode param), 1 user sampler
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
@@ -51,8 +50,8 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Lead arpeggiator (5 modes, chord types, octave range)
-- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for PolySynth
-- Factory preset browser (22 presets across 6 categories) for InboilSynth/PolySynth voices
+- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for iDEATH poly mode
+- Factory preset browser (22 presets across 6 categories) for iDEATH synth
 - Master view with VU meter and audio-reactive visuals (ADR 035)
 - Virtual MIDI keyboard (PC keyboard audition, Phase 1)
 - Undo/redo (snapshot-based, Ctrl+Z)

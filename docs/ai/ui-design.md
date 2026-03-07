@@ -187,14 +187,9 @@ XY filter/EQ surface (dark zone). Rendered as an overlay sheet over SceneView (A
 
 M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Shows columns: NOTE/VEL/DUR/SLD/CHN. Keyboard-navigable with arrow keys. Uses `activeCell(trackId)` — edits the same data as StepGrid. Track selector bar at the top.
 
-### VoicePicker — DECIDED
+### VoicePicker (in DockPanel) — DECIDED
 
-Radial bubble menu for changing a track's instrument. Triggered by clicking the voice button (instrument abbreviation) in StepGrid's track label area. Props: `pos`, `currentVoiceId`, `onpick`, `onclose`.
-
-- **Category tabs**: DRUM / BASS / LEAD filter buttons (top row)
-- **Radial layout**: Voice buttons arranged in an arc around the trigger point, with staggered pop-in animation (180ms, 25ms delay per item)
-- **Backdrop dismiss**: Full-screen transparent backdrop closes on tap
-- Calls `changeVoice(trackIdx, voiceId)` on selection (resets cell voiceParams to new voice defaults)
+Voice selection is integrated into DockPanel as category tabs + voice list (moved from separate bubble menu). Category tabs: DRUM / BASS / LEAD / SAMPLER. Clicking a voice calls `changeVoice(trackIdx, voiceId)` (resets cell voiceParams to new voice defaults).
 
 ### SceneView — DECIDED
 
@@ -246,8 +241,12 @@ Right-side param dock (280px, dark zone). Minimizable to 16px thin strip via lef
 
 Contents:
 - **Track selector bar**: 2-letter abbreviations (KK, SN, CP, CH, OH, CY, BS, LD)
+- **Selected track name**: Shows current track's voice name between track bar and voice picker
+- **Voice category tabs**: DRUM/BASS/LEAD/SAMPLER for voice selection
+- **Voice list**: Voices in selected category, click to change
+- **Preset browser** (iDEATH only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
+- **Sample loader** (Sampler/Crash/Ride): File input for loading user samples
 - **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
-- **Preset browser** (Synth/Poly only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
 - **Synth knob grid**: Voice parameters from `paramDefs.ts`
 - **Send knobs**: VERB, DLY, GLT, GRN per selected track
 - **Mixer knobs**: VOL, PAN per selected track

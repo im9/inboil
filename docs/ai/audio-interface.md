@@ -32,13 +32,15 @@ The `AnalyserNode` (fftSize=1024, smoothingTimeConstant=0.8) is inserted between
 
 ```typescript
 interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'loadSample'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
-  trackId?: number          // for triggerNote / releaseNote
+  trackId?: number          // for triggerNote / releaseNote / loadSample
   note?: number             // for triggerNote
   velocity?: number         // for triggerNote
+  buffer?: Float32Array     // loadSample: mono sample data
+  sampleRate?: number       // loadSample: original sample rate
 }
 ```
 

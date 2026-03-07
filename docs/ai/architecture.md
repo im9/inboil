@@ -66,7 +66,8 @@ See [adr/](./adr/) for full rationale.
 - **Dock minimize & sidebar separation** (IMPLEMENTED) — DockPanel minimize toggle, sidebar as fixed drawer. → [adr/055-dock-sidebar-separation.md](./adr/055-dock-sidebar-separation.md)
 - **Pattern toolbar** (IMPLEMENTED) — RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header. → [adr/057-pattern-toolbar.md](./adr/057-pattern-toolbar.md)
 - **Cross-category voice assignment** (IMPLEMENTED) — Any voice on any track, drill-down picker. → [adr/058-cross-category-voice.md](./adr/058-cross-category-voice.md)
-- **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, InboilSynth/PolySynth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
+- **Sampler** (IMPLEMENTED) — SamplerVoice + user sample loading; Crash/Ride in drum category. → [adr/012-sampler.md](./adr/012-sampler.md)
+- **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, iDEATH synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 
 ## Threading Model
@@ -79,7 +80,7 @@ Communication:   MessagePort (postMessage) — bidirectional
 
 The AudioWorklet has no access to the DOM.
 All communication crosses the thread boundary via `MessagePort`:
-- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`
+- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `loadSample`
 - **Worklet → UI:** `step` event with playhead positions array
 
 No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (8 tracks × 64 steps max).
@@ -134,7 +135,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
-│   │   ├── presets.ts            ← Factory presets for InboilSynth/PolySynth (22 presets, 6 categories)
+│   │   ├── presets.ts            ← Factory presets for iDEATH synth (22 presets, 6 categories)
 │   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt

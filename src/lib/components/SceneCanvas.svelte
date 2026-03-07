@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
-  import { PAD_INSET, COLORS_RGB } from '../constants.ts'
+  import { PAD_INSET } from '../constants.ts'
   import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt } from '../sceneGeometry.ts'
 
   const {

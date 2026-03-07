@@ -39,8 +39,6 @@
 
   // Pick arc center angle: point away from nearest edge
   const arcCenter = $derived.by(() => {
-    const dx = origin.x - containerWidth / 2
-    const dy = origin.y - containerHeight / 2
     const nearTop = pos.y < MARGIN
     const nearBottom = pos.y > containerHeight - MARGIN
     const nearLeft = pos.x < MARGIN
