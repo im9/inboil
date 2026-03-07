@@ -64,7 +64,7 @@
   function addToScene(pi: number) {
     const pat = song.patterns[pi]
     const id = sceneAddNode(pat.id, 0.3 + Math.random() * 0.4, 0.3 + Math.random() * 0.4)
-    ui.selectedSceneNode = id
+    ui.selectedSceneNodes = { [id]: true }
   }
 
   let lastTapPat = -1

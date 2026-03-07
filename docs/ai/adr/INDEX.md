@@ -63,6 +63,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 053 | Scene Automation Node | Proposed | Continuous parameter change during pattern playback |
 | 054 | Overlay Sheet Model | Implemented | Pattern/FX/EQ as overlay sheets over SceneView |
 | 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
+| 059 | Scene Multi-Select | Proposed | Rectangle select, group drag, partial auto-layout, Illustrator-style pan/zoom |
 
 ## UI / Layout
 

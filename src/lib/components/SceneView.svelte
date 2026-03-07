@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes, sceneAddLabel, sceneUpdateLabel, sceneDeleteLabel, sceneMoveLabel, sceneResizeLabel } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneUpdateNodeParams, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, scenePaste, hasSceneClipboard, hasScenePlayback, sceneFormatNodes, sceneAddLabel, sceneUpdateLabel, sceneDeleteLabel, sceneMoveLabel, sceneResizeLabel, pushUndo } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET, PATTERN_COLORS } from '../constants.ts'
   import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist } from '../sceneGeometry.ts'
@@ -15,6 +15,9 @@
   let dragging: string | null = $state(null)  // node id being dragged
   let dragMoved = $state(false)
   let startPos = { x: 0, y: 0 }
+  let dragStartNorm = { x: 0, y: 0 }
+  let nodeStartPositions = new Map<string, { x: number; y: number }>()
+  let dragUndoPushed = false
 
   // ── Edge creation state ──
   let edgeFrom: string | null = $state(null)  // source node id during edge draw
@@ -42,6 +45,12 @@
   let bgLongPressTimer: ReturnType<typeof setTimeout> | null = null
   let bgPointerStart = { x: 0, y: 0 }
   let bgPointerMoved = false
+
+  // ── Space key pan mode ──
+  let spaceHeld = $state(false)
+
+  // ── Selection rectangle ──
+  let selectRect: { x1: number; y1: number; x2: number; y2: number } | null = $state(null)
 
   // ── Drop from MatrixView ──
   let dropActive = $state(false)
@@ -128,7 +137,19 @@
 
     dragging = nodeId
     dragMoved = false
+    dragUndoPushed = false
     startPos = { x: e.clientX, y: e.clientY }
+
+    // Snapshot positions for group drag
+    const norm = toNorm(e)
+    if (norm) dragStartNorm = { x: norm.x, y: norm.y }
+    nodeStartPositions.clear()
+    if (ui.selectedSceneNodes[nodeId]) {
+      for (const id of Object.keys(ui.selectedSceneNodes)) {
+        const n = song.scene.nodes.find(n => n.id === id)
+        if (n) nodeStartPositions.set(id, { x: n.x, y: n.y })
+      }
+    }
 
     // Long-press: switch to edge-draw mode after 500ms (mobile-friendly)
     if (longPressTimer) clearTimeout(longPressTimer)
@@ -183,6 +204,22 @@
       return
     }
 
+    // Rectangle selection
+    if (selectRect) {
+      // Cancel long-press if pointer moved
+      if (bgLongPressTimer && !bgPointerMoved) {
+        const dx = Math.abs(e.clientX - bgPointerStart.x)
+        const dy = Math.abs(e.clientY - bgPointerStart.y)
+        if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) {
+          bgPointerMoved = true
+          clearTimeout(bgLongPressTimer)
+          bgLongPressTimer = null
+        }
+      }
+      selectRect = { ...selectRect, x2: e.clientX, y2: e.clientY }
+      return
+    }
+
     // Edge drawing mode
     if (edgeFrom) {
       edgeCursor = { x: e.clientX, y: e.clientY }
@@ -205,7 +242,23 @@
     }
     if (dragMoved) {
       const pos = toNorm(e)
-      if (pos) sceneUpdateNode(dragging, pos.x, pos.y)
+      if (pos) {
+        if (ui.selectedSceneNodes[dragging] && nodeStartPositions.size > 1) {
+          if (!dragUndoPushed) { pushUndo('Move nodes'); dragUndoPushed = true }
+          // Group drag — move all selected nodes by delta
+          const dx = pos.x - dragStartNorm.x
+          const dy = pos.y - dragStartNorm.y
+          for (const [id, start] of nodeStartPositions) {
+            const node = song.scene.nodes.find(n => n.id === id)
+            if (node) {
+              node.x = Math.max(0, Math.min(1, start.x + dx))
+              node.y = Math.max(0, Math.min(1, start.y + dy))
+            }
+          }
+        } else {
+          sceneUpdateNode(dragging, pos.x, pos.y)
+        }
+      }
     }
   }
 
@@ -215,6 +268,33 @@
     activePointers.delete(e.pointerId)
     if (isPanning) {
       if (activePointers.size === 0) isPanning = false
+      return
+    }
+
+    // Finalize rectangle selection
+    if (selectRect) {
+      const r = selectRect
+      selectRect = null
+      const dx = Math.abs(r.x2 - r.x1)
+      const dy = Math.abs(r.y2 - r.y1)
+      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) {
+        // Convert rect to canvas coords and select nodes inside
+        if (viewEl) {
+          const rect = viewEl.getBoundingClientRect()
+          const cx1 = (Math.min(r.x1, r.x2) - rect.left - panX) / zoom
+          const cy1 = (Math.min(r.y1, r.y2) - rect.top - panY) / zoom
+          const cx2 = (Math.max(r.x1, r.x2) - rect.left - panX) / zoom
+          const cy2 = (Math.max(r.y1, r.y2) - rect.top - panY) / zoom
+          if (!e.shiftKey) ui.selectedSceneNodes = {}
+          for (const node of song.scene.nodes) {
+            const np = toPixel(node.x, node.y, WORLD_W, WORLD_H)
+            if (np.x >= cx1 && np.x <= cx2 && np.y >= cy1 && np.y <= cy2) {
+              ui.selectedSceneNodes[node.id] = true
+            }
+          }
+        }
+      }
+      // If it was just a click (no drag), selection was already cleared in onBgDown
       return
     }
 
@@ -254,13 +334,22 @@
         lastTapTime = 0
         lastTapNode = ''
       } else {
-        // Single click — select
+        // Single click — select (Shift toggles)
         const node = song.scene.nodes.find(n => n.id === nodeId)
         if (node?.patternId) {
           const pi = song.patterns.findIndex(p => p.id === node.patternId)
           if (pi >= 0) selectPattern(pi)
         }
-        ui.selectedSceneNode = nodeId
+        if (e.shiftKey) {
+          if (ui.selectedSceneNodes[nodeId]) {
+            delete ui.selectedSceneNodes[nodeId]
+          } else {
+            ui.selectedSceneNodes[nodeId] = true
+          }
+        } else {
+          ui.selectedSceneNodes = {}
+          ui.selectedSceneNodes[nodeId] = true
+        }
         ui.selectedSceneEdge = null
         lastTapTime = now
         lastTapNode = nodeId
@@ -278,8 +367,8 @@
     // Close bubble menu on any background interaction
     if (pickerOpen) { pickerOpen = false }
 
-    // Middle mouse or Ctrl+left → start pan
-    if (e.button === 1 || (e.ctrlKey && e.button === 0)) {
+    // Middle mouse, Ctrl+left, or Space+left → start pan
+    if (e.button === 1 || (e.ctrlKey && e.button === 0) || (spaceHeld && e.button === 0)) {
       e.preventDefault()
       isPanning = true
       panPointerStart = { x: e.clientX, y: e.clientY }
@@ -302,7 +391,7 @@
 
     // Edge hit-testing on background click
     if (!viewEl) {
-      ui.selectedSceneNode = null
+      ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabel = null
       return
@@ -328,13 +417,9 @@
 
     if (hitEdge) {
       ui.selectedSceneEdge = hitEdge
-      ui.selectedSceneNode = null
+      ui.selectedSceneNodes = {}
       ui.selectedSceneLabel = null
     } else {
-      ui.selectedSceneNode = null
-      ui.selectedSceneEdge = null
-      ui.selectedSceneLabel = null
-
       // Double-click background → open bubble menu at pointer
       const now = Date.now()
       if (lastBgClickTime && now - lastBgClickTime < 300) {
@@ -342,10 +427,14 @@
         lastBgClickTime = 0
       } else {
         lastBgClickTime = now
-        // Start pan on left-click drag of empty space
-        isPanning = true
-        panPointerStart = { x: e.clientX, y: e.clientY }
-        panStartX = panX; panStartY = panY
+
+        // Start rectangle selection on background drag
+        if (!e.shiftKey) {
+          ui.selectedSceneNodes = {}
+        }
+        ui.selectedSceneEdge = null
+        ui.selectedSceneLabel = null
+        selectRect = { x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY }
         viewEl?.setPointerCapture(e.pointerId)
 
         // Long-press on empty space → open bubble menu (mobile)
@@ -354,8 +443,8 @@
         if (bgLongPressTimer) clearTimeout(bgLongPressTimer)
         bgLongPressTimer = setTimeout(() => {
           bgLongPressTimer = null
-          if (!bgPointerMoved && isPanning) {
-            isPanning = false
+          if (!bgPointerMoved && selectRect) {
+            selectRect = null
             openPickerAt(e.clientX, e.clientY)
             if (navigator.vibrate) navigator.vibrate(30)
           }
@@ -365,6 +454,12 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    // Space key → pan mode
+    if (e.code === 'Space' && !e.repeat && !(e.target instanceof HTMLInputElement)) {
+      e.preventDefault()
+      spaceHeld = true
+      return
+    }
     if (ui.patternSheet) return
     if (e.target instanceof HTMLInputElement) return
     // Let MatrixView handle its own keyboard shortcuts when focused
@@ -376,8 +471,11 @@
         ui.selectedSceneLabel = null
       } else if (ui.selectedSceneEdge) {
         sceneDeleteEdge(ui.selectedSceneEdge)
-      } else if (ui.selectedSceneNode) {
-        sceneDeleteNode(ui.selectedSceneNode)
+      } else if (Object.keys(ui.selectedSceneNodes).length > 0) {
+        for (const id of Object.keys(ui.selectedSceneNodes)) {
+          sceneDeleteNode(id)
+        }
+        ui.selectedSceneNodes = {}
       }
     }
     if (ui.selectedSceneEdge && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -385,21 +483,32 @@
       sceneReorderEdge(ui.selectedSceneEdge, e.key === 'ArrowUp' ? 'up' : 'down')
     }
     if (e.key === 'Escape') {
-      ui.selectedSceneNode = null
+      ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabel = null
       editingLabelId = null
       pickerOpen = false
     }
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && ui.selectedSceneNode) {
+    const primary = primarySelectedNode()
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && primary) {
       e.preventDefault()
-      if (e.shiftKey) sceneCopySubgraph(ui.selectedSceneNode)
-      else sceneCopyNode(ui.selectedSceneNode)
+      if (e.shiftKey) sceneCopySubgraph(primary)
+      else sceneCopyNode(primary)
     }
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard()) {
       e.preventDefault()
       const ids = scenePaste(0.4 + Math.random() * 0.2, 0.4 + Math.random() * 0.2)
-      if (ids.length > 0) { ui.selectedSceneNode = ids[0]; ui.selectedSceneEdge = null }
+      if (ids.length > 0) {
+        ui.selectedSceneNodes = {}
+        ui.selectedSceneNodes[ids[0]] = true
+        ui.selectedSceneEdge = null
+      }
+    }
+  }
+
+  function onKeyup(e: KeyboardEvent) {
+    if (e.code === 'Space') {
+      spaceHeld = false
     }
   }
 
@@ -445,8 +554,9 @@
   // ── Selected node helpers ──
 
   const selectedFnNode = $derived.by(() => {
-    if (!ui.selectedSceneNode) return null
-    const n = song.scene.nodes.find(n => n.id === ui.selectedSceneNode)
+    const primary = primarySelectedNode()
+    if (!primary || Object.keys(ui.selectedSceneNodes).length !== 1) return null
+    const n = song.scene.nodes.find(n => n.id === primary)
     return (n && n.type !== 'pattern') ? n : null
   })
 
@@ -522,12 +632,13 @@
     const ny = Math.max(0.05, Math.min(0.95, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
     if (type === 'label') {
       const id = sceneAddLabel(nx, ny)
-      ui.selectedSceneNode = null
+      ui.selectedSceneNodes = {}
       // Defer editing mode so the label renders first
       requestAnimationFrame(() => { editingLabelId = id })
     } else {
       const id = sceneAddFunctionNode(type, nx, ny)
-      ui.selectedSceneNode = id
+      ui.selectedSceneNodes = {}
+      ui.selectedSceneNodes[id] = true
     }
     ui.selectedSceneEdge = null
     pickerOpen = false
@@ -538,15 +649,21 @@
   function onWheel(e: WheelEvent) {
     e.preventDefault()
     if (!viewEl) return
-    const rect = viewEl.getBoundingClientRect()
-    const cx = e.clientX - rect.left
-    const cy = e.clientY - rect.top
-    const factor = e.deltaY > 0 ? 0.9 : 1.1
-    const newZoom = Math.max(0.5, Math.min(3, zoom * factor))
-    // Zoom centered on cursor
-    panX = cx - (cx - panX) * (newZoom / zoom)
-    panY = cy - (cy - panY) * (newZoom / zoom)
-    zoom = newZoom
+    if (e.ctrlKey || e.metaKey) {
+      // Pinch-to-zoom (trackpad) or Ctrl+scroll (mouse)
+      const rect = viewEl.getBoundingClientRect()
+      const cx = e.clientX - rect.left
+      const cy = e.clientY - rect.top
+      const factor = e.deltaY > 0 ? 0.9 : 1.1
+      const newZoom = Math.max(0.5, Math.min(3, zoom * factor))
+      panX = cx - (cx - panX) * (newZoom / zoom)
+      panY = cy - (cy - panY) * (newZoom / zoom)
+      zoom = newZoom
+    } else {
+      // 2-finger swipe (trackpad) or scroll wheel → pan
+      panX -= e.deltaX
+      panY -= e.deltaY
+    }
   }
 
   let lastBgClickTime = 0
@@ -569,7 +686,8 @@
     const norm = toNormXY(e.clientX, e.clientY)
     if (!norm) return
     const id = sceneAddNode(pat.id, norm.x, norm.y)
-    ui.selectedSceneNode = id
+    ui.selectedSceneNodes = {}
+    ui.selectedSceneNodes[id] = true
   }
 
   function onDragLeave() {
@@ -577,16 +695,17 @@
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} onkeyup={onKeyup} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   class="scene-view"
   class:drop-active={dropActive}
+  class:space-pan={spaceHeld}
   bind:this={viewEl}
   onpointermove={onMove}
   onpointerup={endDrag}
-  onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false }}
+  onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false; selectRect = null }}
   onpointerdown={onBgDown}
   oncontextmenu={onContextMenu}
   onwheel={onWheel}
@@ -596,12 +715,24 @@
 >
   <SceneCanvas {zoom} {panX} {panY} {edgeFrom} {dragMoved} {edgeCursor} {viewEl} />
 
+  <!-- Selection rectangle -->
+  {#if selectRect && viewEl}
+    {@const rect = viewEl.getBoundingClientRect()}
+    {@const sx = Math.min(selectRect.x1, selectRect.x2) - rect.left}
+    {@const sy = Math.min(selectRect.y1, selectRect.y2) - rect.top}
+    {@const sw = Math.abs(selectRect.x2 - selectRect.x1)}
+    {@const sh = Math.abs(selectRect.y2 - selectRect.y1)}
+    {#if sw > TAP_THRESHOLD || sh > TAP_THRESHOLD}
+      <div class="select-rect" style="left:{sx}px;top:{sy}px;width:{sw}px;height:{sh}px"></div>
+    {/if}
+  {/if}
+
   <!-- Transform container for nodes (zoom/pan) -->
   <div class="scene-transform" style="width: {WORLD_W}px; height: {WORLD_H}px; transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
     {#each song.scene.nodes as node (node.id)}
       {@const isFn = node.type !== 'pattern'}
       {@const isRoot = node.root}
-      {@const isSelected = ui.selectedSceneNode === node.id}
+      {@const isSelected = ui.selectedSceneNodes[node.id]}
       {@const isDragging = dragging === node.id}
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
@@ -694,7 +825,7 @@
         {@const isSoloing = playback.soloNodeId === node.id}
         {@const isLooping = isSoloing && playback.sceneNodeId === node.id}
         {@const isArmed = isSoloing && !isLooping}
-        {@const isSelected = node.id === ui.selectedSceneNode}
+        {@const isSelected = ui.selectedSceneNodes[node.id]}
         {#if isSoloing || isSelected}
           <button
             class="solo-btn"
@@ -800,7 +931,7 @@
           "
           onpointerdown={(e: PointerEvent) => {
             e.stopPropagation()
-            ui.selectedSceneNode = null
+            ui.selectedSceneNodes = {}
             ui.selectedSceneEdge = null
             ui.selectedSceneLabel = label.id
             draggingLabel = label.id
@@ -862,7 +993,7 @@
       class="scene-format-btn"
       aria-label="Auto-layout"
       data-tip="Auto-layout" data-tip-ja="自動整列"
-      onpointerdown={sceneFormatNodes}
+      onpointerdown={() => sceneFormatNodes(Object.keys(ui.selectedSceneNodes).length > 0 ? ui.selectedSceneNodes : undefined)}
     >
       <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.autoLayout}</svg>
     </button>
@@ -918,14 +1049,25 @@
     overflow: hidden;
     touch-action: none;
     user-select: none;
+    cursor: default;
+  }
+  .scene-view.space-pan {
     cursor: grab;
   }
-  .scene-view:active {
+  .scene-view.space-pan:active {
     cursor: grabbing;
   }
   .scene-view.drop-active {
     outline: 2px dashed rgba(30,32,40,0.25);
     outline-offset: -2px;
+  }
+
+  .select-rect {
+    position: absolute;
+    border: 1px dashed rgba(30, 32, 40, 0.4);
+    background: rgba(30, 32, 40, 0.06);
+    z-index: 8;
+    pointer-events: none;
   }
 
   .scene-transform {
@@ -1004,7 +1146,8 @@
   }
 
   .scene-node.selected {
-    border: 1px solid var(--color-fg);
+    outline: 1.5px dashed var(--color-fg);
+    outline-offset: 2px;
   }
 
   .scene-node.dragging {
@@ -1033,7 +1176,8 @@
   }
   .scene-node.fn.selected {
     color: var(--color-bg);
-    border: 1px solid var(--color-fg);
+    outline: 1.5px dashed var(--color-fg);
+    outline-offset: 2px;
   }
 
   .scene-node.playing {

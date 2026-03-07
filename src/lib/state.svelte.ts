@@ -212,7 +212,7 @@ const UNDO_MAX = 50
 let lastPushTime = 0
 let lastPushLabel = ''
 
-function pushUndo(label: string): void {
+export function pushUndo(label: string): void {
   const now = Date.now()
   if (label === lastPushLabel && now - lastPushTime < 500) {
     return
@@ -319,7 +319,7 @@ export const ui = $state<{
   viewFocus: 'pattern' | 'scene'
   patternSheet: boolean
   patternSheetOrigin: { x: number; y: number } | null
-  selectedSceneNode: string | null
+  selectedSceneNodes: Record<string, true>
   selectedSceneEdge: string | null
   selectedSceneLabel: string | null
   sidebar: 'help' | 'system' | null
@@ -336,7 +336,7 @@ export const ui = $state<{
   viewFocus: 'pattern',
   patternSheet: false,
   patternSheetOrigin: null,
-  selectedSceneNode: null,
+  selectedSceneNodes: {} as Record<string, true>,
   selectedSceneEdge: null,
   selectedSceneLabel: null,
   sidebar: null,
@@ -346,6 +346,12 @@ export const ui = $state<{
   dockMinimized: false,
   mobileOverlay: false,
 })
+
+/** Get the first selected scene node (for single-selection compatibility) */
+export function primarySelectedNode(): string | null {
+  const keys = Object.keys(ui.selectedSceneNodes)
+  return keys.length > 0 ? keys[0] : null
+}
 
 // ── Section navigation ───────────────────────────────────────────────
 
@@ -724,7 +730,7 @@ export function factoryReset(): void {
   ui.selectedStep = null
   ui.dockMinimized = false
   ui.mobileOverlay = false
-  ui.selectedSceneNode = null
+  ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
@@ -922,7 +928,7 @@ export function songLoadPreset(index: number) {
   playback.sceneAbsoluteKey = null
   playback.soloNodeId = null
   ui.currentPattern = 0
-  ui.selectedSceneNode = null
+  ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
 }
 
@@ -1090,7 +1096,7 @@ export function sceneDeleteNode(nodeId: string): void {
     const nextRoot = song.scene.nodes.find(n => n.type === 'pattern') || song.scene.nodes[0]
     nextRoot.root = true
   }
-  if (ui.selectedSceneNode === nodeId) ui.selectedSceneNode = null
+  delete ui.selectedSceneNodes[nodeId]
   if (ui.selectedSceneEdge && !song.scene.edges.some(e => e.id === ui.selectedSceneEdge)) {
     ui.selectedSceneEdge = null
   }
@@ -1206,10 +1212,12 @@ export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void
 }
 
 /** Auto-layout scene nodes left→right using BFS layers from root */
-export function sceneFormatNodes(): void {
+export function sceneFormatNodes(nodeIds?: Record<string, true>): void {
   const { nodes, edges } = song.scene
   if (nodes.length === 0) return
   pushUndo('Format nodes')
+
+  const targets = nodeIds && Object.keys(nodeIds).length > 0 ? nodeIds : null
 
   // Build adjacency list
   const children = new Map<string, string[]>()
@@ -1241,9 +1249,10 @@ export function sceneFormatNodes(): void {
     if (!layer.has(n.id)) layer.set(n.id, maxLayer + 1)
   }
 
-  // Group nodes by layer
+  // Group nodes by layer (only count targets for layout spacing)
   const layers = new Map<number, string[]>()
   for (const [id, d] of layer) {
+    if (targets && !targets[id]) continue
     const list = layers.get(d) || []
     list.push(id)
     layers.set(d, list)

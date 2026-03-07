@@ -35,7 +35,7 @@
       const rect = btn.getBoundingClientRect()
       spawnPulse(rect.left + rect.width / 2, rect.bottom)
     }
-    ui.selectedSceneNode = node.id
+    ui.selectedSceneNodes = { [node.id]: true }
   }
 
   function spawnPulse(x: number, y: number) {
@@ -83,7 +83,7 @@
   {#each orderedNodes as node, i (node.id)}
     {@const isPattern = node.type === 'pattern'}
     {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
-    {@const isSelected = ui.selectedSceneNode === node.id}
+    {@const isSelected = !!ui.selectedSceneNodes[node.id]}
     {@const pc = isPattern ? (song.patterns.find(p => p.id === node.patternId)?.color ?? 0) : -1}
     <button
       class="ribbon-node"
