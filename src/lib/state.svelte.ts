@@ -20,11 +20,12 @@ import { defaultVoiceParams } from './paramDefs.ts'
 
 export interface Trig {
   active: boolean
-  note: number      // MIDI note (60 = C4)
+  note: number      // MIDI note (60 = C4) — primary / mono note
   velocity: number  // 0.0–1.0
   duration: number  // step count 1-16 (default 1)
   slide: boolean    // slide/glide to next note (default false)
   chance?: number   // 0.0–1.0, undefined = always fire (100%)
+  notes?: number[]  // poly: all chord notes (includes primary `note`); absent = mono [note]
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
@@ -598,6 +599,12 @@ export function setTrigChance(trackId: number, stepIdx: number, chance: number) 
   activeCell(trackId).trigs[stepIdx].chance = v >= 1 ? undefined : v
 }
 
+/** Check if a trig contains a specific note (handles both mono and poly) */
+export function trigHasNote(trig: Trig, note: number): boolean {
+  if (trig.notes) return trig.notes.includes(note)
+  return trig.note === note
+}
+
 /** Place a note bar: set head trig + clear covered steps */
 export function placeNoteBar(trackId: number, startStep: number, note: number, duration: number) {
   pushUndo('Place note')
@@ -606,9 +613,58 @@ export function placeNoteBar(trackId: number, startStep: number, note: number, d
   c.trigs[startStep].active = true
   c.trigs[startStep].note = note
   c.trigs[startStep].duration = dur
+  // Clear notes array when placing a single note bar (mono mode)
+  delete c.trigs[startStep].notes
   for (let d = 1; d < dur; d++) {
     const idx = startStep + d
     if (idx < c.steps) c.trigs[idx].active = false
+  }
+}
+
+/** Add a note to a step's chord (poly mode) */
+export function addNoteToStep(trackId: number, stepIdx: number, note: number) {
+  pushUndo('Add chord note')
+  const c = activeCell(trackId)
+  const trig = c.trigs[stepIdx]
+  if (!trig.active) {
+    // Empty step — place as primary note
+    trig.active = true
+    trig.note = note
+    trig.duration = 1
+    delete trig.notes
+    return
+  }
+  // Already active — build/extend notes array
+  const existing = trig.notes ?? [trig.note]
+  if (existing.includes(note)) return  // already has this note
+  existing.push(note)
+  existing.sort((a, b) => a - b)
+  trig.notes = existing
+  trig.note = existing[0]  // primary = lowest note
+}
+
+/** Remove a note from a step's chord (poly mode) */
+export function removeNoteFromStep(trackId: number, stepIdx: number, note: number) {
+  pushUndo('Remove chord note')
+  const c = activeCell(trackId)
+  const trig = c.trigs[stepIdx]
+  if (!trig.active) return
+  if (!trig.notes) {
+    // Mono: just deactivate if it matches
+    if (trig.note === note) trig.active = false
+    return
+  }
+  const idx = trig.notes.indexOf(note)
+  if (idx < 0) return
+  trig.notes.splice(idx, 1)
+  if (trig.notes.length === 0) {
+    trig.active = false
+    delete trig.notes
+  } else if (trig.notes.length === 1) {
+    trig.note = trig.notes[0]
+    delete trig.notes
+  } else {
+    trig.note = trig.notes[0]
   }
 }
 
@@ -620,10 +676,10 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
     if (prev < 0) break
     const trig = trigs[prev]
     if (!trig) break
-    if (trig.active && trig.note === note && (trig.duration ?? 1) > d) {
+    if (trig.active && trigHasNote(trig, note) && (trig.duration ?? 1) > d) {
       return prev
     }
-    if (d > 0 && trig.active && trig.note === note) break
+    if (d > 0 && trig.active && trigHasNote(trig, note)) break
   }
   return -1
 }

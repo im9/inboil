@@ -91,7 +91,7 @@ export class GrooveboxEngine {
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }
 }
 
-function mapTrig(trig: { active: boolean; note: number; velocity: number; duration?: number; slide?: boolean; chance?: number; paramLocks?: Record<string, number> }, transpose = 0) {
+function mapTrig(trig: { active: boolean; note: number; velocity: number; duration?: number; slide?: boolean; chance?: number; notes?: number[]; paramLocks?: Record<string, number> }, transpose = 0) {
   return {
     active:   trig.active,
     note:     trig.note + transpose,
@@ -99,6 +99,7 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
     duration: trig.duration ?? 1,
     slide:    trig.slide ?? false,
     ...(trig.chance != null ? { chance: trig.chance } : {}),
+    ...(trig.notes ? { notes: trig.notes.map(n => n + transpose) } : {}),
     ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
       ? { paramLocks: { ...trig.paramLocks } } : {}),
   }

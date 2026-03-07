@@ -59,6 +59,7 @@ export interface WorkletTrig {
   duration: number  // step count 1-16, default 1
   slide: boolean    // default false
   chance?: number   // 0.0–1.0, undefined = always fire
+  notes?: number[]  // poly: all chord notes (includes primary `note`); absent = mono [note]
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 

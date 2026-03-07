@@ -85,7 +85,31 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',             min: 0.5,   max: 6.0,  default: 3.5  },
     { key: 'decay',      label: 'DCY',   group: 'amp',    tip: 'Amplitude decay',            tipJa: '音量ディケイ',           min: 0.1,   max: 0.5,  default: 0.25 },
   ],
+  Synth: [
+    { key: 'oscAPos',    label: 'WV-A',  group: 'osc',    tip: 'Osc A wavetable position',   tipJa: 'オシレータA波形位置',     min: 0.0,  max: 1.0,  default: 0.0   },
+    { key: 'oscBPos',    label: 'WV-B',  group: 'osc',    tip: 'Osc B wavetable position',   tipJa: 'オシレータB波形位置',     min: 0.0,  max: 1.0,  default: 0.25  },
+    { key: 'oscBSemi',   label: 'SEMI',  group: 'osc',    tip: 'Osc B semitone offset',      tipJa: 'オシレータB半音オフセット', min: -24, max: 24,   step: 1, default: 0    },
+    { key: 'oscMix',     label: 'MIX',   group: 'osc',    tip: 'Osc A/B mix',                tipJa: 'オシレータA/Bミックス',   min: 0.0,  max: 1.0,  default: 0.5   },
+    { key: 'combine',    label: 'COMB',  group: 'osc',    tip: 'Combine: MIX → FM → RING',   tipJa: '合成: MIX → FM → RING',  min: 0,    max: 2,    step: 1, default: 0    },
+    { key: 'fmIndex',    label: 'FMIX',  group: 'osc',    tip: 'FM modulation depth',        tipJa: 'FM変調深さ',              min: 0.0,  max: 8.0,  default: 3.0   },
+    { key: 'cutoffBase', label: 'CUT',   group: 'filter', tip: 'Filter cutoff',              tipJa: 'フィルターカットオフ',    min: 50,   max: 8000, default: 1200  },
+    { key: 'envMod',     label: 'FMOD',  group: 'filter', tip: 'Filter envelope depth',      tipJa: 'フィルターエンベロープ深さ', min: 0,  max: 8000, default: 4000  },
+    { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',              min: 0.5,  max: 10.0, default: 2.0   },
+    { key: 'filterMode', label: 'FTYP',  group: 'filter', tip: 'Filter: LP → HP → BP → NTCH', tipJa: 'フィルター: LP → HP → BP → NTCH', min: 0, max: 3, step: 1, default: 0 },
+    { key: 'attack',     label: 'ATCK',  group: 'env',    tip: 'Amp attack',                 tipJa: 'アタック',                min: 0.001, max: 1.0, default: 0.005  },
+    { key: 'decay',      label: 'DCY',   group: 'env',    tip: 'Amp decay',                  tipJa: 'ディケイ',                min: 0.01, max: 2.0,  default: 0.3   },
+    { key: 'sustain',    label: 'SUST',  group: 'env',    tip: 'Amp sustain',                tipJa: 'サスティン',              min: 0.0,  max: 1.0,  default: 0.5   },
+    { key: 'release',    label: 'RLS',   group: 'env',    tip: 'Amp release',                tipJa: 'リリース',                min: 0.01, max: 2.0,  default: 0.3   },
+    { key: 'modDecay',   label: 'MDCY',  group: 'env',    tip: 'Mod envelope decay',         tipJa: 'モジュレーションディケイ', min: 0.01, max: 2.0,  default: 0.25  },
+    { key: 'lfo1Rate',  label: 'LF1R',  group: 'lfo',    tip: 'LFO 1 rate (Hz)',            tipJa: 'LFO 1 速度',              min: 0.1,  max: 20.0, default: 2.0   },
+    { key: 'lfo1Shape', label: 'LF1S',  group: 'lfo',    tip: 'LFO 1: SIN → TRI → SAW → SQR → S&H', tipJa: 'LFO 1: SIN → TRI → SAW → SQR → S&H', min: 0, max: 4, step: 1, default: 0 },
+    { key: 'lfo2Rate',  label: 'LF2R',  group: 'lfo',    tip: 'LFO 2 rate (Hz)',            tipJa: 'LFO 2 速度',              min: 0.1,  max: 20.0, default: 0.5   },
+    { key: 'lfo2Shape', label: 'LF2S',  group: 'lfo',    tip: 'LFO 2: SIN → TRI → SAW → SQR → S&H', tipJa: 'LFO 2: SIN → TRI → SAW → SQR → S&H', min: 0, max: 4, step: 1, default: 0 },
+  ],
 }
+
+// Poly shares the same param definitions as Synth
+VOICE_PARAMS.Poly = VOICE_PARAMS.Synth
 
 export function getParamDefs(voiceId: VoiceId): ParamDef[] {
   return VOICE_PARAMS[voiceId] ?? []
@@ -98,8 +122,12 @@ export function defaultVoiceParams(voiceId: VoiceId): Record<string, number> {
 
 // ── Discrete-param display labels ─────────────────────────────────────────
 const DISPLAY_LABELS: Record<string, string[]> = {
-  arpMode:  ['OFF', 'UP', 'DWN', 'U/D', 'RND'],
-  arpChord: ['OCT', '5TH', 'TRD', 'SUS', '7TH'],
+  arpMode:    ['OFF', 'UP', 'DWN', 'U/D', 'RND'],
+  arpChord:   ['OCT', '5TH', 'TRD', 'SUS', '7TH'],
+  combine:    ['MIX', 'FM', 'RING'],
+  filterMode: ['LP', 'HP', 'BP', 'NTCH'],
+  lfo1Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
+  lfo2Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
 }
 
 /** Human-readable display string for a param's actual value (discrete params only) */

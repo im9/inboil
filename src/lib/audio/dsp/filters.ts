@@ -214,6 +214,54 @@ export class PeakingEQ {
   }
 }
 
+/**
+ * State Variable Filter (Trapezoidal Integrated SVF) — mono, multi-mode.
+ * Supports LP, HP, BP, Notch modes at 12dB/oct.
+ * Cascade two for 24dB/oct (call process twice in series).
+ */
+export const enum SVFMode { LP, HP, BP, Notch }
+
+export class SVFilter {
+  private ic1eq = 0
+  private ic2eq = 0
+  private _a1 = 0
+  private _a2 = 0
+  private _a3 = 0
+  private _k = 1  // 1/Q — damping
+  private _mode: SVFMode = SVFMode.LP
+
+  constructor(private sr: number) {}
+
+  set mode(m: SVFMode) { this._mode = m }
+  get mode() { return this._mode }
+
+  setParams(cutoff: number, resonance: number) {
+    const fc = Math.max(20, Math.min(cutoff, this.sr * 0.49))
+    this._k = 1 / Math.max(0.5, resonance)
+    const g = Math.tan(Math.PI * fc / this.sr)
+    this._a1 = 1 / (1 + g * (g + this._k))
+    this._a2 = g * this._a1
+    this._a3 = g * this._a2
+  }
+
+  process(input: number): number {
+    const v3 = input - this.ic2eq
+    const v1 = this._a1 * this.ic1eq + this._a2 * v3
+    const v2 = this.ic2eq + this._a2 * this.ic1eq + this._a3 * v3
+    this.ic1eq = 2 * v1 - this.ic1eq
+    this.ic2eq = 2 * v2 - this.ic2eq
+
+    switch (this._mode) {
+      case SVFMode.LP:    return v2
+      case SVFMode.HP:    return input - this._k * v1 - v2
+      case SVFMode.BP:    return v1
+      case SVFMode.Notch: return input - this._k * v1
+    }
+  }
+
+  reset() { this.ic1eq = 0; this.ic2eq = 0 }
+}
+
 const enum Stage { Idle, Attack, Decay, Sustain, Release }
 export class ADSR {
   attack = 0.01; decay = 0.1; sustain = 0.7; release = 0.3

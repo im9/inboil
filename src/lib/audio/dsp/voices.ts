@@ -1,7 +1,7 @@
 /**
  * Synth voices: TR-909 drums, TB-303 acid bass, Moog lead, FM.
  */
-import { ResonantLP, BiquadHP, ADSR } from './filters.ts'
+import { ResonantLP, BiquadHP, ADSR, SVFilter, SVFMode } from './filters.ts'
 
 export function midiToHz(note: number): number {
   return 440 * Math.pow(2, (note - 69) / 12)
@@ -521,11 +521,424 @@ export class FMVoice implements Voice {
   }
 }
 
+// ── Wavetable Oscillator (ADR 011) ──────────────────────────────────
+
+/** Wavetable shapes — generated mathematically at init, zero bundle cost. */
+const enum WTShape { Saw, Square, Triangle, Sine, Pulse }
+
+const WT_SIZE = 2048
+
+/** Generate a single-cycle wavetable via additive synthesis (band-limited). */
+function generateTable(shape: WTShape, sr: number, baseFreq: number): Float32Array {
+  const table = new Float32Array(WT_SIZE)
+  const nyquist = sr / 2
+  const maxHarmonics = Math.floor(nyquist / Math.max(1, baseFreq))
+
+  for (let h = 1; h <= maxHarmonics; h++) {
+    let amp = 0
+    switch (shape) {
+      case WTShape.Saw:      amp = (h % 2 === 0 ? -1 : 1) * (1 / h); break
+      case WTShape.Square:   amp = h % 2 === 1 ? (1 / h) : 0; break
+      case WTShape.Triangle: amp = h % 2 === 1 ? ((h % 4 === 1 ? 1 : -1) / (h * h)) : 0; break
+      case WTShape.Sine:     amp = h === 1 ? 1 : 0; break
+      case WTShape.Pulse:    amp = 1 / h; break  // all harmonics equal = narrow pulse
+    }
+    if (amp === 0) continue
+    for (let i = 0; i < WT_SIZE; i++) {
+      table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE)
+    }
+  }
+
+  // Normalize
+  let peak = 0
+  for (let i = 0; i < WT_SIZE; i++) { const a = Math.abs(table[i]); if (a > peak) peak = a }
+  if (peak > 0) for (let i = 0; i < WT_SIZE; i++) table[i] /= peak
+
+  return table
+}
+
+const SHAPE_COUNT = 5
+
+class WavetableOsc {
+  private tables: Float32Array[] = []
+  private phase = 0
+
+  /** Position 0.0–1.0 morphs between wavetable shapes */
+  position = 0
+
+  constructor(private sr: number) {
+    // Generate band-limited tables for a middle-range base frequency
+    for (let s = 0; s < SHAPE_COUNT; s++) {
+      this.tables.push(generateTable(s as WTShape, sr, 100))
+    }
+  }
+
+  reset() { this.phase = 0 }
+
+  tick(freq: number): number {
+    this.phase += freq / this.sr
+    if (this.phase >= 1) this.phase -= 1
+
+    // Morph position selects between tables
+    const pos = this.position * (SHAPE_COUNT - 1)
+    const idx = Math.floor(pos)
+    const frac = pos - idx
+    const idxNext = Math.min(idx + 1, SHAPE_COUNT - 1)
+
+    // Linear interpolation within table
+    const phaseSample = this.phase * WT_SIZE
+    const s0 = Math.floor(phaseSample)
+    const s1 = (s0 + 1) & (WT_SIZE - 1)
+    const sf = phaseSample - s0
+
+    const a = this.tables[idx][s0] + (this.tables[idx][s1] - this.tables[idx][s0]) * sf
+    const b = this.tables[idxNext][s0] + (this.tables[idxNext][s1] - this.tables[idxNext][s0]) * sf
+
+    return a + (b - a) * frac
+  }
+}
+
+// ── LFO (ADR 011) ───────────────────────────────────────────────────
+
+const enum LFOShape { Sine, Triangle, Saw, Square, SampleHold }
+
+class LFO {
+  private phase = 0
+  private holdValue = 0
+  private seed = 44444
+  shape: LFOShape = LFOShape.Sine
+  rate = 2.0       // Hz (free-running) or will be set from BPM externally
+  private sr: number
+
+  constructor(sr: number) { this.sr = sr }
+
+  reset() { this.phase = 0; this.holdValue = 0 }
+
+  /** Returns bipolar value -1..+1 */
+  tick(): number {
+    this.phase += this.rate / this.sr
+    const wrapped = this.phase >= 1
+    if (wrapped) this.phase -= 1
+
+    switch (this.shape) {
+      case LFOShape.Sine:     return Math.sin(this.phase * 2 * Math.PI)
+      case LFOShape.Triangle: return this.phase < 0.5 ? this.phase * 4 - 1 : 3 - this.phase * 4
+      case LFOShape.Saw:      return this.phase * 2 - 1
+      case LFOShape.Square:   return this.phase < 0.5 ? 1 : -1
+      case LFOShape.SampleHold: {
+        if (wrapped) {
+          this.seed = (this.seed * 1664525 + 1013904223) >>> 0
+          this.holdValue = (this.seed >>> 16) / 32768 - 1
+        }
+        return this.holdValue
+      }
+    }
+  }
+}
+
+// ── Modulation Matrix (ADR 011) ─────────────────────────────────────
+
+const enum ModSrc { LFO1, LFO2, Env2, Velocity, Note }
+const enum ModDst { Pitch, WTPos, Cutoff, Resonance, FMIndex, Volume }
+
+interface ModSlot {
+  src: ModSrc
+  dst: ModDst
+  amount: number  // -1..+1 bipolar
+}
+
+class ModMatrix {
+  slots: ModSlot[] = []
+
+  /** Compute modulated param offsets. Returns per-destination sum of modulations. */
+  process(
+    lfo1: number, lfo2: number, env2: number, velocity: number, note: number
+  ): Float64Array {
+    // 6 destinations: Pitch, WTPos, Cutoff, Reso, FMIndex, Volume
+    const out = new Float64Array(6)
+    for (let i = 0; i < this.slots.length; i++) {
+      const s = this.slots[i]
+      let srcVal = 0
+      switch (s.src) {
+        case ModSrc.LFO1:     srcVal = lfo1; break
+        case ModSrc.LFO2:     srcVal = lfo2; break
+        case ModSrc.Env2:     srcVal = env2; break
+        case ModSrc.Velocity: srcVal = velocity * 2 - 1; break  // map 0-1 to bipolar
+        case ModSrc.Note:     srcVal = (note - 60) / 48; break  // center at C4
+      }
+      out[s.dst] += srcVal * s.amount
+    }
+    return out
+  }
+}
+
+// ── InboilSynth — unified wavetable synth engine (ADR 011) ──────────
+
+/**
+ * 2-osc wavetable synth with SVF filter, dual ADSR, 2× LFO, mod matrix.
+ * Osc combine modes: mix, FM, ringmod
+ * Filter modes: LP, HP, BP, Notch (via SVFilter)
+ */
+const enum OscCombine { Mix, FM, Ring }
+
+class InboilSynthCore {
+  oscA: WavetableOsc
+  oscB: WavetableOsc
+  ampEnv = new ADSR()
+  modEnv = new ADSR()
+  lfo1 = new LFO(44100)
+  lfo2 = new LFO(44100)
+  modMatrix = new ModMatrix()
+  filter: SVFilter
+  freq = 220
+  targetFreq = 220
+  vel = 1
+  note = 60
+  slideRate: number
+
+  // Osc params
+  oscAPos = 0
+  oscBPos = 0.25
+  oscBSemi = 0
+  oscBDetune = 0
+  oscMix = 0.5
+  combineMode: OscCombine = OscCombine.Mix
+  fmIndex = 3.0
+
+  // Filter params
+  cutoffBase = 1200
+  envMod = 4000
+  resonance = 2.0
+
+  constructor(private sr: number) {
+    this.oscA = new WavetableOsc(sr)
+    this.oscB = new WavetableOsc(sr)
+    this.filter = new SVFilter(sr)
+    this.lfo1 = new LFO(sr)
+    this.lfo2 = new LFO(sr)
+    this.ampEnv.setSampleRate(sr)
+    this.ampEnv.attack = 0.005; this.ampEnv.decay = 0.3
+    this.ampEnv.sustain = 0.5; this.ampEnv.release = 0.3
+    this.modEnv.setSampleRate(sr)
+    this.modEnv.attack = 0.001; this.modEnv.decay = 0.25
+    this.modEnv.sustain = 0.0; this.modEnv.release = 0.1
+    this.slideRate = 1 - Math.exp(-1 / (0.060 * sr))
+  }
+
+  noteOn(n: number, v: number) {
+    this.freq = midiToHz(n); this.targetFreq = this.freq
+    this.vel = v; this.note = n
+    this.oscA.reset(); this.oscB.reset()
+    this.ampEnv.noteOn(); this.modEnv.noteOn()
+  }
+
+  noteOff() { this.ampEnv.noteOff(); this.modEnv.noteOff() }
+
+  slideNoteTo(n: number, v: number) {
+    this.targetFreq = midiToHz(n)
+    this.vel = v; this.note = n
+    this.modEnv.noteOn()
+  }
+
+  reset() {
+    this.ampEnv.reset(); this.modEnv.reset()
+    this.filter.reset(); this.lfo1.reset(); this.lfo2.reset()
+    this.oscA.reset(); this.oscB.reset()
+    this.freq = this.targetFreq = 220
+  }
+
+  tick(): number {
+    if (this.ampEnv.isIdle()) return 0
+
+    this.freq += (this.targetFreq - this.freq) * this.slideRate
+
+    const aenv = this.ampEnv.tick()
+    const menv = this.modEnv.tick()
+    const l1 = this.lfo1.tick()
+    const l2 = this.lfo2.tick()
+
+    // Mod matrix
+    const mod = this.modMatrix.process(l1, l2, menv, this.vel, this.note)
+    const pitchMod = mod[ModDst.Pitch]
+    const wtPosMod = mod[ModDst.WTPos]
+    const cutMod   = mod[ModDst.Cutoff]
+    const resoMod  = mod[ModDst.Resonance]
+    const fmMod    = mod[ModDst.FMIndex]
+    const volMod   = mod[ModDst.Volume]
+
+    // Apply pitch mod (semitones)
+    const pitchMultiplier = Math.pow(2, pitchMod * 12 / 12)  // ±12 semi range
+
+    // Osc A
+    this.oscA.position = Math.max(0, Math.min(1, this.oscAPos + wtPosMod * 0.5))
+    const freqA = this.freq * pitchMultiplier
+
+    // Osc B
+    const detuneRatio = Math.pow(2, this.oscBSemi / 12 + this.oscBDetune / 1200)
+    const freqB = this.freq * detuneRatio * pitchMultiplier
+    this.oscB.position = Math.max(0, Math.min(1, this.oscBPos + wtPosMod * 0.5))
+
+    let sig: number
+    const effectiveFmIndex = Math.max(0, this.fmIndex + fmMod * 4)
+    switch (this.combineMode) {
+      case OscCombine.FM: {
+        const m = this.oscB.tick(freqB) * effectiveFmIndex * menv
+        sig = this.oscA.tick(freqA * (1 + m))
+        break
+      }
+      case OscCombine.Ring: {
+        sig = this.oscA.tick(freqA) * this.oscB.tick(freqB)
+        break
+      }
+      default: {
+        const a = this.oscA.tick(freqA)
+        const b = this.oscB.tick(freqB)
+        sig = a * (1 - this.oscMix) + b * this.oscMix
+      }
+    }
+
+    // Filter
+    const fc = Math.min(
+      Math.max(20, this.cutoffBase + this.envMod * menv + cutMod * 4000),
+      this.sr * 0.45
+    )
+    const reso = Math.max(0.5, this.resonance + resoMod * 3)
+    this.filter.setParams(fc, reso)
+    sig = this.filter.process(sig)
+
+    // Volume mod
+    const vol = Math.max(0, 0.65 + volMod * 0.3)
+
+    return sig * aenv * this.vel * vol
+  }
+}
+
+/** Mono InboilSynth — single voice, implements Voice interface. */
+export class InboilSynth implements Voice {
+  private core: InboilSynthCore
+
+  constructor(sr: number) { this.core = new InboilSynthCore(sr) }
+
+  noteOn(note: number, v: number) { this.core.noteOn(note, v) }
+  noteOff() { this.core.noteOff() }
+  slideNote(note: number, v: number) { this.core.slideNoteTo(note, v) }
+  reset() { this.core.reset() }
+  tick(): number { return this.core.tick() }
+
+  setParam(key: string, value: number) {
+    switch (key) {
+      case 'oscAPos':    this.core.oscAPos = value; break
+      case 'oscBPos':    this.core.oscBPos = value; break
+      case 'oscBSemi':   this.core.oscBSemi = value; break
+      case 'oscBDetune': this.core.oscBDetune = value; break
+      case 'oscMix':     this.core.oscMix = value; break
+      case 'combine':    this.core.combineMode = Math.round(value) as OscCombine; break
+      case 'fmIndex':    this.core.fmIndex = value; break
+      case 'cutoffBase': this.core.cutoffBase = value; break
+      case 'envMod':     this.core.envMod = value; break
+      case 'resonance':  this.core.resonance = value; break
+      case 'filterMode': this.core.filter.mode = Math.round(value) as SVFMode; break
+      case 'attack':     this.core.ampEnv.attack = value; break
+      case 'decay':      this.core.ampEnv.decay = value; break
+      case 'sustain':    this.core.ampEnv.sustain = value; break
+      case 'release':    this.core.ampEnv.release = value; break
+      case 'modAttack':  this.core.modEnv.attack = value; break
+      case 'modDecay':   this.core.modEnv.decay = value; break
+      case 'lfo1Rate':   this.core.lfo1.rate = value; break
+      case 'lfo1Shape':  this.core.lfo1.shape = Math.round(value) as LFOShape; break
+      case 'lfo2Rate':   this.core.lfo2.rate = value; break
+      case 'lfo2Shape':  this.core.lfo2.shape = Math.round(value) as LFOShape; break
+    }
+  }
+}
+
+/** 4-voice polyphonic wrapper — round-robin voice allocation. */
+export class PolySynth implements Voice {
+  private voices: InboilSynthCore[]
+  private nextVoice = 0
+  private activeNotes = new Int8Array(4).fill(-1)  // MIDI note per voice, -1=free
+
+  constructor(sr: number) {
+    this.voices = Array.from({ length: 4 }, () => new InboilSynthCore(sr))
+  }
+
+  noteOn(note: number, v: number) {
+    // Check if note is already playing — retrigger same voice
+    for (let i = 0; i < 4; i++) {
+      if (this.activeNotes[i] === note) {
+        this.voices[i].noteOn(note, v)
+        return
+      }
+    }
+    // Round-robin allocation
+    const idx = this.nextVoice
+    this.nextVoice = (this.nextVoice + 1) & 3
+    this.activeNotes[idx] = note
+    this.voices[idx].noteOn(note, v)
+  }
+
+  noteOff() {
+    for (let i = 0; i < 4; i++) {
+      this.voices[i].noteOff()
+      this.activeNotes[i] = -1
+    }
+  }
+
+  slideNote(note: number, v: number) {
+    // Slide the most recently triggered voice
+    const prev = (this.nextVoice - 1 + 4) & 3
+    this.voices[prev].slideNoteTo(note, v)
+    this.activeNotes[prev] = note
+  }
+
+  reset() {
+    for (let i = 0; i < 4; i++) { this.voices[i].reset(); this.activeNotes[i] = -1 }
+    this.nextVoice = 0
+  }
+
+  tick(): number {
+    let sum = 0
+    for (let i = 0; i < 4; i++) sum += this.voices[i].tick()
+    return sum * 0.5  // scale down to avoid clipping
+  }
+
+  setParam(key: string, value: number) {
+    // Apply param to all voices
+    for (let i = 0; i < 4; i++) {
+      const c = this.voices[i]
+      switch (key) {
+        case 'oscAPos':    c.oscAPos = value; break
+        case 'oscBPos':    c.oscBPos = value; break
+        case 'oscBSemi':   c.oscBSemi = value; break
+        case 'oscBDetune': c.oscBDetune = value; break
+        case 'oscMix':     c.oscMix = value; break
+        case 'combine':    c.combineMode = Math.round(value) as OscCombine; break
+        case 'fmIndex':    c.fmIndex = value; break
+        case 'cutoffBase': c.cutoffBase = value; break
+        case 'envMod':     c.envMod = value; break
+        case 'resonance':  c.resonance = value; break
+        case 'filterMode': c.filter.mode = Math.round(value) as SVFMode; break
+        case 'attack':     c.ampEnv.attack = value; break
+        case 'decay':      c.ampEnv.decay = value; break
+        case 'sustain':    c.ampEnv.sustain = value; break
+        case 'release':    c.ampEnv.release = value; break
+        case 'modAttack':  c.modEnv.attack = value; break
+        case 'modDecay':   c.modEnv.decay = value; break
+        case 'lfo1Rate':   c.lfo1.rate = value; break
+        case 'lfo1Shape':  c.lfo1.shape = Math.round(value) as LFOShape; break
+        case 'lfo2Rate':   c.lfo2.rate = value; break
+        case 'lfo2Shape':  c.lfo2.shape = Math.round(value) as LFOShape; break
+      }
+    }
+  }
+}
+
 // ── Voice registry (ADR 009) ────────────────────────────────────────
 
 export type VoiceId =
   | 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
+  | 'Synth' | 'Poly'
 
 const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   Kick:     sr => new KickVoice(sr),
@@ -538,6 +951,8 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   MoogLead: sr => new MoogVoice(sr),
   Analog:   sr => new AnalogVoice(sr),
   FM:       sr => new FMVoice(sr),
+  Synth:    sr => new InboilSynth(sr),
+  Poly:     sr => new PolySynth(sr),
 }
 
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
@@ -563,6 +978,8 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Analog',   label: 'ANA',   category: 'bass' },
   { id: 'MoogLead', label: 'MOOG',  category: 'lead' },
   { id: 'FM',       label: 'FM',    category: 'lead' },
+  { id: 'Synth',    label: 'SYNTH', category: 'lead' },
+  { id: 'Poly',     label: 'POLY',  category: 'lead' },
 ]
 
 export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice {

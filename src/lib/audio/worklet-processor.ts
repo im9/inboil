@@ -439,9 +439,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
         if (t === 0) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {
-          // Auto-legato: melodic tracks glide when previous note was gated (303 behavior)
-          // Explicit slide flag also enables glide on any track
-          if (wasGated && (isMelodic || trig.slide)) {
+          // Poly chord: trigger all notes in notes[] array
+          if (trig.notes && trig.notes.length > 1) {
+            for (let ni = 0; ni < trig.notes.length; ni++) {
+              const cn = isMelodic ? transposeNote(trig.notes[ni], this.rootNote, this.octave) : trig.notes[ni]
+              this.voices[t]?.noteOn(cn, trig.velocity)
+            }
+          } else if (wasGated && (isMelodic || trig.slide)) {
+            // Auto-legato: melodic tracks glide when previous note was gated (303 behavior)
+            // Explicit slide flag also enables glide on any track
             this.voices[t]?.slideNote(note, trig.velocity)
           } else {
             this.voices[t]?.noteOn(note, trig.velocity)

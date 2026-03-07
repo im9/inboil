@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { activeCell, playback, perf, prefs, vkbd, setTrigDuration, placeNoteBar, findNoteHead, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { activeCell, playback, perf, prefs, vkbd, song, setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote, isViewingPlayingPattern } from '../state.svelte.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   interface Props {
@@ -8,6 +8,7 @@
   let { trackId }: Props = $props()
 
   const ph = $derived(activeCell(trackId))
+  const isPoly = $derived(song.tracks[trackId]?.voiceId === 'Poly')
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
@@ -90,13 +91,13 @@
   /** Returns cell visual state for duration rendering */
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
     const trig = ph.trigs[stepIdx]
-    if (trig?.active && trig.note === note) return 'head'
+    if (trig?.active && trigHasNote(trig, note)) return 'head'
     // Look backwards for a head whose duration covers this step
     const maxLook = Math.min(16, ph.steps)
     for (let d = 1; d < maxLook; d++) {
       const prevStep = ((stepIdx - d) % ph.steps + ph.steps) % ph.steps
       const prevTrig = ph.trigs[prevStep]
-      if (prevTrig?.active && prevTrig.note === note) {
+      if (prevTrig?.active && trigHasNote(prevTrig, note)) {
         return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
       }
     }
@@ -133,6 +134,12 @@
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
 
     if (state === 'head') {
+      if (isPoly) {
+        // Poly mode: tap on head → remove this note from chord
+        removeNoteFromStep(trackId, stepIdx, note)
+        barDragging = false
+        return
+      }
       // Long-press → move mode; short tap → delete
       moveStep = stepIdx
       movePointerId = e.pointerId
@@ -148,12 +155,24 @@
     } else if (state === 'continuation') {
       // Click on continuation → delete the parent note
       const headStep = findNoteHead(trackId, stepIdx, note)
-      if (headStep >= 0) ph.trigs[headStep].active = false
+      if (headStep >= 0) {
+        if (isPoly) {
+          removeNoteFromStep(trackId, headStep, note)
+        } else {
+          ph.trigs[headStep].active = false
+        }
+      }
       barDragging = false
     } else {
       // Empty cell — check if this step already has an active note
       const trig = ph.trigs[stepIdx]
       if (trig?.active) {
+        if (isPoly) {
+          // Poly mode: add this note to the chord
+          addNoteToStep(trackId, stepIdx, note)
+          barDragging = false
+          return
+        }
         // Step has a note: long-press → move mode, short tap → move note to tapped pitch
         moveStep = stepIdx
         movePointerId = e.pointerId
@@ -168,11 +187,16 @@
         }, 180)
       } else {
         // Truly empty step → place a new note and start bar drag
-        placeNoteBar(trackId, stepIdx, note, 1)
-        barDragging = true
-        barStartStep = stepIdx
-        barNote = note
-        noteGridEl?.setPointerCapture(e.pointerId)
+        if (isPoly) {
+          addNoteToStep(trackId, stepIdx, note)
+          barDragging = false
+        } else {
+          placeNoteBar(trackId, stepIdx, note, 1)
+          barDragging = true
+          barStartStep = stepIdx
+          barNote = note
+          noteGridEl?.setPointerCapture(e.pointerId)
+        }
       }
     }
   }
