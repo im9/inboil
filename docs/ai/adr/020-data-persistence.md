@@ -20,18 +20,23 @@ inboil currently holds all state in memory — a page reload loses all pattern e
 
 ### A. Storage Layers
 
-Two tiers based on data characteristics:
+Three tiers based on data characteristics:
 
 ```
 ┌─────────────────────────────────────────┐
 │         localStorage['inboil']          │  ← Lightweight settings (< 5KB)
-│  { v, lang, visited, settings }         │
+│  { v, lang, visited, settings, ... }    │
 ├─────────────────────────────────────────┤
 │              IndexedDB                  │  ← Patterns & presets (several MB)
-│  Database: 'inboil'                     │
+│  Database: 'inboil'                     │  ← Offline-first, always available
 │  ├── Store: 'patterns'                  │
 │  ├── Store: 'presets'                   │
 │  └── Store: 'projects'                 │
+├─────────────────────────────────────────┤
+│        Cloudflare Workers KV            │  ← Cloud backup & cross-device sync
+│  Namespace: 'inboil-projects'           │  ← Requires authentication (ADR 061)
+│  Key: 'user:{uid}:project:{id}'         │
+│  Value: Full project JSON (gzip)        │
 └─────────────────────────────────────────┘
 ```
 
@@ -40,10 +45,17 @@ Two tiers based on data characteristics:
 - Single key `inboil` with unified JSON
 - Version field (`v`) for schema migration
 
-**IndexedDB** — Large structured data:
+**IndexedDB** — Large structured data (local):
 - Pattern bank (100 slots x 8 tracks x up to 64 steps)
 - User presets (future)
-- Project-level export (future)
+- Project-level data
+- Always the primary read/write target (offline-first)
+
+**Cloudflare Workers KV** — Cloud persistence (authenticated users only):
+- Project-level snapshots synced from IndexedDB
+- Cross-device access and backup
+- Authentication required — see ADR 061
+- Unauthenticated users work in demo mode (local-only, feature-limited)
 
 ### B. localStorage Schema
 
@@ -184,10 +196,59 @@ Presets ×100 ≈ 50 KB
 Total: < 5 MB — well within IndexedDB limits (50–100 MB)
 ```
 
-### H. Export / Import (Future)
+### H. Cloud Sync (Cloudflare Workers KV)
+
+#### KV Schema
+
+```
+Key:   "user:{uid}:project:{projectId}"
+Value: gzip-compressed JSON (full project snapshot)
+
+Key:   "user:{uid}:meta"
+Value: { projects: [{ id, name, updatedAt }] }  ← project listing
+```
+
+#### Sync Strategy — Offline-First, Project-Level
+
+1. **All reads/writes go to IndexedDB first** — the app works fully offline
+2. **Cloud sync is async and debounced** — triggered on save events, not every edit
+3. **Sync triggers:**
+   - Project save (manual or auto) → debounced upload (30s cooldown)
+   - App open (authenticated) → pull latest project list from KV
+   - Explicit "Sync Now" action in UI
+4. **Conflict resolution:** last-write-wins based on `updatedAt` timestamp
+   - On pull: if remote `updatedAt` > local, overwrite local
+   - On push: always overwrite remote (local is source of truth during a session)
+5. **Granularity:** entire project (patterns + effects + metadata) as one KV value
+   - Simpler than per-pattern sync, fewer write operations
+   - Typical project < 500KB uncompressed, < 100KB gzipped
+
+#### Free Tier Budget
+
+| Resource | Free Limit | Estimated Usage |
+|----------|-----------|-----------------|
+| KV reads | 100,000/day | ~50/session (project list + pulls) |
+| KV writes | 1,000/day | ~10–30/session (debounced saves) |
+| Storage | 1 GB | ~100KB/project, supports ~10,000 projects |
+| Worker requests | 100,000/day | Auth + sync combined |
+
+30s debounce on writes keeps well within 1,000 writes/day for single-user development. At scale (multi-user), upgrade to Workers Paid plan ($5/mo → 1M writes/month).
+
+#### API Endpoints (Cloudflare Worker)
+
+```
+POST   /api/sync/push     ← Upload project (gzipped JSON body)
+GET    /api/sync/pull/:id  ← Download project
+GET    /api/sync/list      ← Project listing for user
+DELETE /api/sync/:id       ← Delete project from cloud
+```
+
+All endpoints require Bearer token (see ADR 061).
+
+### I. Export / Import (File-Based)
 
 ```typescript
-// Export as JSON file
+// Export as JSON file (works for all users, including demo)
 async function exportProject(): Promise<string> {
   const patterns = await db.loadAllPatterns()
   return JSON.stringify({ v: 1, patterns, effects, exportedAt: Date.now() })
@@ -209,7 +270,10 @@ async function importProject(json: string): Promise<void> {
 4. Factory pattern write on first launch
 5. `beforeunload` best-effort save
 6. Factory reset feature in SYSTEM settings
-7. Export/Import UI
+7. Export/Import UI (file-based, works for all users)
+8. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
+9. Cloud sync Worker + KV setup
+10. Sync UI (status indicator, manual sync button, conflict notification)
 
 ## Consequences
 
@@ -221,5 +285,9 @@ async function importProject(json: string): Promise<void> {
 - **Negative:** IndexedDB async API is more complex than localStorage
 - **Negative:** Factory reset UX design needed
 - **Negative:** `beforeunload` save is not guaranteed (browser-dependent)
+- **Positive:** Cloud sync provides cross-device access and backup
+- **Negative:** Cloud sync adds Cloudflare Worker infrastructure dependency
+- **Negative:** KV free tier write limit (1,000/day) requires careful debouncing
 - **Dependency:** ADR 018 (Settings Panel) — settings field localStorage persistence
 - **Dependency:** ADR 015 (Presets) — presets store usage
+- **Dependency:** ADR 061 (Authentication) — required for cloud sync
