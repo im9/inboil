@@ -92,8 +92,8 @@
     {
       title: L === 'ja' ? 'トラック' : 'TRACKS',
       body: L === 'ja'
-        ? '8トラック構成: KICK, SNARE, CLAP, C.HH, O.HH, CYM (ドラム) + BASS, LEAD (メロディ)。トラック名タップで選択。VOL/PANノブで音量とパンを調整。Mボタンでミュート、Sボタンでソロ (複数トラック同時ソロ可)。'
-        : '8 tracks: KICK, SNARE, CLAP, C.HH, O.HH, CYM (drums) + BASS, LEAD (melodic). Tap track name to select. VOL/PAN knobs for volume and panning. M to mute, S to solo (additive — multiple tracks can be soloed).',
+        ? '8トラック構成 (デフォルト: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD)。楽器はトラックごとに自由に変更可能 — ドラム12種 + ベース/リード/シンセ (Synth, Poly) から選択。トラック名タップで選択。VOL/PANノブで音量とパンを調整。Mボタンでミュート、Sボタンでソロ (複数トラック同時ソロ可)。'
+        : '8 tracks (default: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD). Voice can be reassigned per track — choose from drums, bass, lead, or wavetable synths (Synth, Poly). Tap track name to select. VOL/PAN knobs for volume and panning. M to mute, S to solo (additive — multiple tracks can be soloed).',
     },
     {
       title: L === 'ja' ? 'ベロシティ & チャンス' : 'VELOCITY & CHANCE',
@@ -104,8 +104,8 @@
     {
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
-        ? 'メロディトラック (BASS/LEAD) 選択時に自動表示。グリッドタップでノートを配置。ノートの長さはドラッグで調整可。スライドノートはSLDトグルで設定 (ポルタメント効果)。スケールモード ON 時はスケール外のノートが無効化されます。'
-        : 'Shown automatically for melodic tracks (BASS/LEAD). Tap to place notes. Drag note edges to adjust duration. SLD toggle enables slide (portamento). With scale mode ON, out-of-scale notes are disabled.',
+        ? 'メロディトラック選択時に自動表示。グリッドタップでノートを配置。ノートの長さはドラッグで調整可。スライドノートはSLDトグルで設定 (ポルタメント効果)。スケールモード ON 時はスケール外のノートが無効化されます。Poly ボイスでは同じステップに複数ノートを重ねてコード入力が可能。'
+        : 'Shown automatically for melodic tracks. Tap to place notes. Drag note edges to adjust duration. SLD toggle enables slide (portamento). With scale mode ON, out-of-scale notes are disabled. With Poly voice, tap multiple notes on the same step to input chords.',
     },
     {
       title: L === 'ja' ? 'パフォーマンス' : 'PERFORMANCE',
@@ -126,10 +126,10 @@
         : 'PAT ◀▶ to switch patterns. 00–19: factory presets. Switch at bar boundary during playback. CPY/PST to copy & paste, CLR to clear. Click pattern name to rename (max 8 chars). Color dot assigns one of 8 colors, reflected in Matrix and Scene views.',
     },
     {
-      title: L === 'ja' ? 'シンセパラメータ & P-Lock' : 'SYNTH PARAMS & P-LOCK',
+      title: L === 'ja' ? 'シンセパラメータ & プリセット' : 'SYNTH PARAMS & PRESETS',
       body: L === 'ja'
-        ? 'ドックパネルのノブをドラッグして音色を調整。パラメータは機能ごとにグループ化: 例 LEAD = FILTER | ENV | ARP。P-Lock (パラメーターロック): LOCKモードで特定ステップのパラメータを個別に設定可能。ステップを選択 → LOCKをON → ノブを回すとそのステップだけに適用。CLR でステップのロックを解除。'
-        : 'Drag knobs in the dock panel to shape the sound. Parameters grouped by function: e.g. LEAD = FILTER | ENV | ARP. P-Lock (parameter lock): In LOCK mode, knob changes apply only to the selected step. Select a step → enable LOCK → turn knobs to set per-step values. CLR removes locks for that step.',
+        ? 'ドックパネルのノブをドラッグして音色を調整。パラメータは機能ごとにグループ化: 例 LEAD = FILTER | ENV | ARP、Synth = OSC | FILTER | ENV | LFO。\n\nプリセット: Synth/Poly ボイスでは PRESETS ボタンからファクトリープリセットを選択可能 (Lead, Bass, Pad, Pluck, Keys, FX の6カテゴリ)。\n\nP-Lock (パラメーターロック): LOCKモードで特定ステップのパラメータを個別に設定。ステップを選択 → LOCKをON → ノブを回すとそのステップだけに適用。CLR でロック解除。'
+        : 'Drag knobs in the dock panel to shape the sound. Parameters grouped by function: e.g. LEAD = FILTER | ENV | ARP, Synth = OSC | FILTER | ENV | LFO.\n\nPresets: For Synth/Poly voices, click the PRESETS button to browse factory presets (6 categories: Lead, Bass, Pad, Pluck, Keys, FX).\n\nP-Lock (parameter lock): In LOCK mode, knob changes apply only to the selected step. Select a step → enable LOCK → turn knobs to set per-step values. CLR removes locks for that step.',
     },
     {
       title: 'GRID',
