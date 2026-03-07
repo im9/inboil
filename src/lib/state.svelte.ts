@@ -9,6 +9,7 @@ import {
   makePatternId,
   TRACK_DEFAULTS, SECTION_COUNT, FACTORY_COUNT,
 } from './factory.ts'
+import { VOICE_LIST } from './audio/dsp/voices.ts'
 
 export { NOTE_NAMES } from './constants.ts'
 export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
@@ -639,12 +640,22 @@ export function isDrum(track: Track): boolean {
   return DRUM_VOICES.has(track.voiceId)
 }
 
-/** Change a track's instrument voice (ADR 009 Phase 3) */
+/** Change a track's instrument voice (ADR 009 Phase 3, ADR 058) */
 export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
   pushUndo('Change instrument')
-  song.tracks[trackIdx].voiceId = newVoiceId
+  const track = song.tracks[trackIdx]
+  const wasDrum = DRUM_VOICES.has(track.voiceId)
+  track.voiceId = newVoiceId
+  const meta = VOICE_LIST.find(v => v.id === newVoiceId)
+  if (meta) track.name = meta.label
   const c = activeCell(trackIdx)
   c.voiceParams = defaultVoiceParams(newVoiceId)
+  // Reset sends when switching between drum and melodic (ADR 058 Phase 2)
+  const nowDrum = DRUM_VOICES.has(newVoiceId)
+  if (wasDrum !== nowDrum) {
+    c.reverbSend = nowDrum ? 0.08 : 0.25
+    c.delaySend  = nowDrum ? 0.00 : 0.12
+  }
 }
 
 export const STEP_OPTIONS = [2, 4, 8, 12, 16, 24, 32, 48, 64] as const

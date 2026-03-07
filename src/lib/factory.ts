@@ -392,7 +392,8 @@ function buildFactoryCell(
   const s = f.steps ?? 16
   const steps = f.ts?.[trackIdx] ?? s
   const activeSteps = [f.kick, f.snare, f.clap, f.chh, f.ohh, f.cym, f.bass[0], f.lead[0]][trackIdx]
-  const baseNote = trackIdx === 6 ? f.bass[1] : trackIdx === 7 ? f.lead[1] : defaultNote
+  const baseNote = DRUM_VOICES.has(voiceId) ? defaultNote
+    : voiceId === 'Bass303' || voiceId === 'Analog' ? f.bass[1] : f.lead[1]
   const drum = DRUM_VOICES.has(voiceId)
 
   const trigs = makeTrigs(steps, activeSteps, baseNote)

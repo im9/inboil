@@ -35,7 +35,7 @@ declare const sampleRate: number
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ } from './dsp/filters.ts'
 import { SimpleReverb, PingPongDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor } from './dsp/effects.ts'
-import { makeVoice } from './dsp/voices.ts'
+import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletEvent } from './dsp/types.ts'
 
@@ -387,7 +387,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       // Was the previous note's gate still open?
       const wasGated = this.gateCounters[t] > 0
       // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303
-      const isMelodic = t >= 6
+      const isMelodic = !DRUM_VOICES.has(track.voiceId)
       // Legato condition: suppress noteOff if incoming trig continues the phrase
       const isLegato = trig?.active && (isMelodic || trig.slide)
 
@@ -402,7 +402,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // Step-synced arp: advance on step boundary for continuing notes
-      if (t >= 6 && this.arpNotes[t].length > 0 && this.gateCounters[t] > 0 && !trig?.active) {
+      if (isMelodic && this.arpNotes[t].length > 0 && this.gateCounters[t] > 0 && !trig?.active) {
         const rate = Math.round(track.voiceParams?.arpRate ?? 1)
         if (rate <= 1) {
           // Rate=1: advance arp once per step (step-synced only)
@@ -420,7 +420,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         this.arpCounter[t] = 0
       }
 
-      if (this.filling && t <= 5) {
+      if (this.filling && !isMelodic) {
         // Fill mode: random hits, always duration=1, no slide
         this.fillSeed = (this.fillSeed * 1664525 + 1013904223) >>> 0
         const rand = (this.fillSeed >>> 16) / 65536
@@ -436,7 +436,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.gateCounters[t] = trig.duration ?? 1
           continue
         }
-        const note = t >= 6 ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
+        const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
         if (t === 0) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {
           // Auto-legato: melodic tracks glide when previous note was gated (303 behavior)
@@ -449,7 +449,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
         this.gateCounters[t] = trig.duration ?? 1
         // Arpeggiator: start on melodic trigs with arp enabled
-        if (t >= 6) {
+        if (isMelodic) {
           const am = Math.round(trig.paramLocks?.arpMode  ?? track.voiceParams?.arpMode  ?? 0)
           const ar = Math.round(trig.paramLocks?.arpRate  ?? track.voiceParams?.arpRate  ?? 1)
           const ac = Math.round(trig.paramLocks?.arpChord ?? track.voiceParams?.arpChord ?? 0)
