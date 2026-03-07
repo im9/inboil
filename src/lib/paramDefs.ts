@@ -47,7 +47,7 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
   ],
   Cymbal: [
     { key: 'decay',      label: 'DCY',   tip: 'Decay time',           tipJa: 'ディケイ',     min: 0.15,  max: 1.5,  default: 0.35  },
-    { key: 'baseFreq',   label: 'FREQ',  tip: 'Base frequency',       tipJa: 'ベース周波数', min: 250,   max: 800,  default: 500   },
+    { key: 'baseFreq',   label: 'TONE',  tip: 'Bandpass center freq', tipJa: 'バンドパス中心周波数', min: 4000,  max: 12000, default: 7500  },
     { key: 'hpCutoff',   label: 'HP',    tip: 'Highpass cutoff',      tipJa: 'ハイパスカットオフ', min: 1500,  max: 5000, default: 2500  },
     { key: 'volume',     label: 'VOL',   tip: 'Volume',               tipJa: '音量',         min: 0.1,   max: 1.0,  default: 0.55  },
   ],

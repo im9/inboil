@@ -252,57 +252,63 @@ export class OpenHatVoice implements Voice {
   }
 }
 
-/** Crash cymbal: TR-909 style — wider ratios, onset body burst. */
+/** Crash cymbal: TR-606 style — noise + metallic sine through resonant BP filter.
+ *  Noise provides the wash, a high sine adds metallic ping/shimmer. */
 export class CymbalVoice implements Voice {
   private vel = 1; private t = 0; private playing = false
   private seed = 66666
+  private bp: SVFilter
   private hp = new BiquadHP()
-  private bodyPhase = 0
-  private phases = [0, 0, 0, 0, 0, 0]
-  private readonly ratios = [1.0, 1.347, 1.732, 2.069, 2.414, 3.137]
-  private baseFreq = 500; private hpCutoff = 2500
+  private tonePhase = 0
+  private baseFreq = 7500; private hpCutoff = 2500
   private volume = 0.55; private decay = 0.35
   constructor(private sr: number) {
+    this.bp = new SVFilter(sr)
+    this.bp.mode = SVFMode.BP
+    this.bp.setParams(this.baseFreq, 2.0)
     this.hp.setParams(this.hpCutoff, 0.5, sr)
   }
   noteOn(_n: number, v: number) {
     this.vel = v; this.t = 0; this.playing = true
-    this.bodyPhase = 0; this.hp.reset()
+    this.tonePhase = 0; this.bp.reset(); this.hp.reset()
   }
   noteOff() {}
   slideNote(n: number, v: number) { this.noteOn(n, v) }
   reset() {
-    this.t = 0; this.playing = false; this.bodyPhase = 0
-    this.hp.reset(); this.phases.fill(0)
+    this.t = 0; this.playing = false; this.tonePhase = 0
+    this.bp.reset(); this.hp.reset()
   }
   tick(): number {
     if (!this.playing) return 0
     const ts = this.t / this.sr
-    const amp = Math.exp(-ts / this.decay)
+    // Two-stage envelope: sharp attack transient + longer tail
+    const attack = Math.exp(-ts / 0.012)
+    const tail = Math.exp(-ts / this.decay)
+    const amp = attack * 0.35 + tail * 0.65
     if (amp < 0.001) { this.playing = false; return 0 }
-    let sig = 0
-    for (let i = 0; i < 6; i++) {
-      this.phases[i] += (this.baseFreq * this.ratios[i]) / this.sr
-      if (this.phases[i] >= 1) this.phases[i] -= 1
-      sig += this.phases[i] < 0.5 ? 1 : -1
-    }
-    sig /= 6
+    // White noise — the wash
     this.seed = (this.seed * 1664525 + 1013904223) >>> 0
-    sig += ((this.seed >>> 16) / 32768 - 1) * 0.35
-    const hp = this.hp.process(sig)
-    let body = 0
-    if (ts < 0.030) {
-      this.bodyPhase += 500 / this.sr
-      if (this.bodyPhase >= 1) this.bodyPhase -= 1
-      body = Math.sin(this.bodyPhase * 2 * Math.PI) * Math.exp(-ts / 0.008) * 0.4
-    }
+    const noise = (this.seed >>> 16) / 32768 - 1
+    // Metallic sine tone — adds shimmer/ping that noise alone lacks
+    this.tonePhase += this.baseFreq / this.sr
+    if (this.tonePhase >= 1) this.tonePhase -= 1
+    const tone = Math.sin(this.tonePhase * 2 * Math.PI) * 0.3
+    // Mix noise + tone, then through resonant BP
+    const bpFreq = this.baseFreq + 3000 * attack
+    this.bp.setParams(bpFreq, 2.0)
+    let sig = this.bp.process(noise + tone)
+    // HP to remove low-end rumble
+    sig = this.hp.process(sig)
     this.t++
-    return (hp * amp + body) * this.vel * this.volume
+    return sig * amp * this.vel * this.volume * 2.0
   }
   setParam(key: string, value: number) {
     switch (key) {
       case 'decay':    this.decay    = value; break
-      case 'baseFreq': this.baseFreq = value; break
+      case 'baseFreq':
+        this.baseFreq = value
+        this.bp.setParams(value, 2.0)
+        break
       case 'hpCutoff':
         this.hpCutoff = value
         this.hp.setParams(value, 0.5, this.sr)
