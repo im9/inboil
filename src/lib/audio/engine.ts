@@ -132,8 +132,8 @@ function buildWorkletPattern(
     fx:  {
       reverb: { size: reverbSize, damp: reverbDamp },
       delay:  { time: (60000 / s.bpm) * delayTimeFrac, feedback: delayFb },
-      ducker: md.on ? { depth: md.x, release: 20 + md.y * 480 } : fx.ducker,
-      comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup } : fx.comp,
+      ducker: md.on ? { depth: md.x, release: 20 + md.y * 480 } : { ...fx.ducker },
+      comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup } : { ...fx.comp },
       verbReturn: mr.on ? mr.x * 2.0 : 1.0,
       dlyReturn:  mr.on ? mr.y * 2.0 : 1.0,
       filter: {
