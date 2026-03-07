@@ -103,8 +103,9 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 007 | Pattern Persistence | Proposed | |
+| 007 | Pattern Persistence | Superseded | Replaced by 020 (Data Persistence) |
 | 016 | VST Plugin / MIDI | Proposed | |
 | 019 | Multi-Device Collaboration | Proposed | |
 | 020 | Data Persistence & Storage | Proposed | |
 | 030 | Audio & MIDI Export | Proposed | |
+| 061 | Authentication | Proposed | OAuth (Google/Apple) for cloud persistence (ADR 020) |
