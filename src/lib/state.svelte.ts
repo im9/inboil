@@ -3,6 +3,7 @@ import {
   SCALE_DEGREES_SET,
   PIANO_ROLL_MIN, PIANO_ROLL_MAX,
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
+  PATTERN_COLORS,
 } from './constants.ts'
 import {
   DRUM_VOICES, makeTrig, makeDefaultSong, makeEmptyCell,
@@ -564,9 +565,26 @@ export const effects = $state<Effects>({
 
 // ── Actions ─────────────────────────────────────────────────────────
 
+/** Auto-assign a color when the first trig is placed in a default-color pattern */
+function maybeAutoColor() {
+  const pat = song.patterns[ui.currentPattern]
+  if (!pat || pat.color !== 0) return  // already customized
+  if (pat.cells.some(c => c.trigs.some(t => t.active))) return  // already has data
+  // Pick the least-used color (skip 0 = default)
+  const counts = new Array(PATTERN_COLORS.length).fill(0)
+  for (const p of song.patterns) { if (p.cells.some(c => c.trigs.some(t => t.active))) counts[p.color]++ }
+  let best = 1, bestCount = Infinity
+  for (let i = 1; i < counts.length; i++) {
+    if (counts[i] < bestCount) { bestCount = counts[i]; best = i }
+  }
+  pat.color = best
+}
+
 export function toggleTrig(trackId: number, stepIndex: number) {
   pushUndo('Toggle step')
   const c = activeCell(trackId)
+  const willActivate = !c.trigs[stepIndex].active
+  if (willActivate) maybeAutoColor()
   c.trigs[stepIndex].active = !c.trigs[stepIndex].active
 }
 
@@ -582,6 +600,7 @@ export function setTrigNote(trackId: number, stepIndex: number, note: number) {
   if (trig.active && trig.note === note) {
     trig.active = false
   } else {
+    if (!trig.active) maybeAutoColor()
     trig.active = true
     trig.note = note
   }
@@ -612,6 +631,7 @@ export function trigHasNote(trig: Trig, note: number): boolean {
 /** Place a note bar: set head trig + clear covered steps */
 export function placeNoteBar(trackId: number, startStep: number, note: number, duration: number) {
   pushUndo('Place note')
+  maybeAutoColor()
   const c = activeCell(trackId)
   const dur = Math.max(1, Math.min(c.steps - startStep, Math.min(16, duration)))
   c.trigs[startStep].active = true
@@ -632,6 +652,7 @@ export function addNoteToStep(trackId: number, stepIdx: number, note: number) {
   const trig = c.trigs[stepIdx]
   if (!trig.active) {
     // Empty step — place as primary note
+    maybeAutoColor()
     trig.active = true
     trig.note = note
     trig.duration = 1

@@ -48,17 +48,18 @@
     else if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
   }
 
-  // ── Color picker ──
-  let colorPickerOpen = $state(false)
-
-  function toggleColorPicker(e: PointerEvent) {
-    e.stopPropagation()
-    colorPickerOpen = !colorPickerOpen
-  }
-
   function pickColor(ci: number) {
     patternSetColor(ui.currentPattern, ci)
-    colorPickerOpen = false
+  }
+
+  function jumpToNextEmpty() {
+    const idx = song.patterns.findIndex((_, i) => i > ui.currentPattern && !patternHasData(i))
+    if (idx >= 0) { selectPattern(idx); gridEl?.focus() }
+    else {
+      // Wrap around from beginning
+      const idx2 = song.patterns.findIndex((_, i) => !patternHasData(i))
+      if (idx2 >= 0) { selectPattern(idx2); gridEl?.focus() }
+    }
   }
 
   function addToScene(pi: number) {
@@ -110,16 +111,9 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="matrix-view" onpointerdown={() => { colorPickerOpen = false }}>
-  <!-- Header: color dot + pattern name (editable) -->
+<div class="matrix-view">
+  <!-- Header: name (click to edit) + action buttons -->
   <div class="matrix-head">
-    <!-- svelte-ignore a11y_consider_explicit_label -->
-    <button
-      class="head-color"
-      style="background: {PATTERN_COLORS[selectedColor]}"
-      onpointerdown={toggleColorPicker}
-      data-tip="Pattern color" data-tip-ja="パターンカラー"
-    ></button>
     {#if editing}
       <input
         bind:this={inputEl}
@@ -131,9 +125,13 @@
         onkeydown={onEditKeydown}
       />
     {:else}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span class="head-name" ondblclick={startEdit} data-tip="Double-click to rename pattern" data-tip-ja="ダブルクリックでパターン名を変更">{selectedName}</span>
+      <button class="head-name" onpointerdown={startEdit} data-tip="Click to rename" data-tip-ja="クリックでパターン名を変更">{selectedName}</button>
     {/if}
+    <button
+      class="head-add"
+      onpointerdown={jumpToNextEmpty}
+      data-tip="Next empty pattern" data-tip-ja="次の空パターンへ"
+    >+</button>
     <button
       class="head-scene"
       onpointerdown={() => addToScene(ui.currentPattern)}
@@ -141,20 +139,18 @@
     >→</button>
   </div>
 
-  <!-- Color picker popup -->
-  {#if colorPickerOpen}
-    <div class="color-picker">
-      {#each PATTERN_COLORS as hex, ci}
-        <!-- svelte-ignore a11y_consider_explicit_label -->
-        <button
-          class="color-swatch"
-          class:active={ci === selectedColor}
-          style="background: {hex}"
-          onpointerdown={e => { e.stopPropagation(); pickColor(ci) }}
-        ></button>
-      {/each}
-    </div>
-  {/if}
+  <!-- Color bar: always visible -->
+  <div class="color-bar">
+    {#each PATTERN_COLORS as hex, ci}
+      <!-- svelte-ignore a11y_consider_explicit_label -->
+      <button
+        class="color-swatch"
+        class:active={ci === selectedColor}
+        style="--sw: {hex}"
+        onpointerdown={() => pickColor(ci)}
+      ></button>
+    {/each}
+  </div>
 
   <!-- Grid: square cells -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -202,20 +198,6 @@
     border-bottom: 1px solid rgba(30,32,40,0.08);
   }
 
-  .head-color {
-    width: 10px;
-    height: 10px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    border: 1px solid rgba(30,32,40,0.12);
-    padding: 0;
-    cursor: pointer;
-    transition: border-color 80ms;
-  }
-  .head-color:hover {
-    border-color: rgba(30,32,40,0.4);
-  }
-
   .head-name {
     flex: 1;
     min-width: 0;
@@ -227,7 +209,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 1px 3px;
     cursor: text;
+  }
+  .head-name:hover {
+    border-color: rgba(30,32,40,0.15);
+    background: rgba(255,255,255,0.4);
   }
 
   .head-input {
@@ -246,13 +237,12 @@
     text-transform: uppercase;
   }
 
-  .head-scene {
+  .head-add, .head-scene {
     width: 18px;
     height: 16px;
     flex-shrink: 0;
-    border: 1px solid rgba(120,120,69,0.3);
+    border: 1px solid rgba(30,32,40,0.15);
     background: transparent;
-    color: var(--color-olive);
     font-family: var(--font-data);
     font-size: 9px;
     font-weight: 700;
@@ -261,40 +251,52 @@
     justify-content: center;
     padding: 0;
     cursor: pointer;
+    color: rgba(30,32,40,0.45);
+  }
+  .head-add:hover, .head-scene:hover {
+    background: rgba(30,32,40,0.06);
+    color: var(--color-fg);
+  }
+  .head-scene {
+    color: var(--color-olive);
+    border-color: rgba(120,120,69,0.3);
   }
   .head-scene:hover {
     background: rgba(120,120,69,0.1);
+    color: var(--color-olive);
   }
 
-  /* ── Color picker ── */
-  .color-picker {
-    position: absolute;
-    top: 24px;
-    left: 4px;
+  /* ── Color bar (always visible) ── */
+  .color-bar {
     display: flex;
-    gap: 3px;
-    padding: 4px;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(30,32,40,0.1);
-    border-radius: 4px;
-    z-index: 10;
-    box-shadow: 0 4px 12px rgba(30,32,40,0.15);
+    gap: 0;
+    padding: 2px 6px 4px;
+    border-bottom: 1px solid rgba(30,32,40,0.08);
   }
 
   .color-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1.5px solid transparent;
+    flex: 1;
+    height: 6px;
+    background: var(--sw);
+    border: none;
     padding: 0;
     cursor: pointer;
-    transition: border-color 60ms, transform 60ms;
+    opacity: 0.4;
+    transition: opacity 60ms, transform 60ms;
+  }
+  .color-swatch:first-child {
+    border-radius: 2px 0 0 2px;
+  }
+  .color-swatch:last-child {
+    border-radius: 0 2px 2px 0;
   }
   .color-swatch:hover {
-    transform: scale(1.2);
+    opacity: 0.8;
+    transform: scaleY(1.5);
   }
   .color-swatch.active {
-    border-color: var(--color-fg);
+    opacity: 1;
+    transform: scaleY(1.8);
   }
 
   /* ── Grid ── */
