@@ -171,13 +171,13 @@
             onpointerdown={() => { ui.selectedTrack = trackId }}
             data-tip="Select track to edit" data-tip-ja="トラックを選択"
           >
-            <span class="track-name">{track.name}</span>
+            <span class="track-name">{ph.name}</span>
           </button>
           <button
             class="voice-btn"
             onpointerdown={e => openVoicePicker(e, trackId)}
             data-tip="Change instrument" data-tip-ja="楽器を変更"
-          >{track.voiceId}</button>
+          >{ph.voiceId}</button>
         </div>
 
         <!-- Step count -->
@@ -293,7 +293,7 @@
         </div>
       </div>
       <!-- Inline piano roll for melodic tracks -->
-      {#if !isDrum(track)}
+      {#if !isDrum(ph)}
         <div transition:slide={{ duration: 120 }}>
           <PianoRoll trackId={trackId} />
         </div>
@@ -305,7 +305,7 @@
 {#if pickerOpen}
   <VoicePicker
     pos={{ x: pickerOpen.x, y: pickerOpen.y }}
-    currentVoiceId={song.tracks[pickerOpen.trackIdx].voiceId}
+    currentVoiceId={song.patterns[ui.currentPattern].cells[pickerOpen.trackIdx].voiceId}
     onpick={pickVoice}
     onclose={() => { pickerOpen = null }}
   />

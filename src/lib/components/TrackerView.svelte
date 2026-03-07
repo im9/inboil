@@ -12,9 +12,8 @@
   const COL_COUNT = 5
 
   const trackId = $derived(ui.selectedTrack)
-  const track = $derived(song.tracks[trackId])
   const ph = $derived(activeCell(trackId))
-  const drum = $derived(isDrum(track))
+  const drum = $derived(isDrum(ph))
 
   // ── Note display ─────────────────────────────────────────────────
   function noteLabel(midi: number): string {
@@ -258,7 +257,7 @@
         class:muted={t.muted}
         class:soloed={ui.soloTracks.has(i)}
       >
-        <button class="track-label" onpointerdown={() => { ui.selectedTrack = i; cursorRow = Math.min(cursorRow, activeCell(i).steps - 1) }}>{t.name}</button>
+        <button class="track-label" onpointerdown={() => { ui.selectedTrack = i; cursorRow = Math.min(cursorRow, activeCell(i).steps - 1) }}>{activeCell(i).name}</button>
         <button class="track-act" onpointerdown={() => toggleMute(i)}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>

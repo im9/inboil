@@ -4,9 +4,8 @@
   import MobileParamOverlay from './MobileParamOverlay.svelte'
   import SplitFlap from './SplitFlap.svelte'
 
-  const track = $derived(song.tracks[ui.selectedTrack])
   const ph = $derived(activeCell(ui.selectedTrack))
-  const drum = $derived(isDrum(track))
+  const drum = $derived(isDrum(ph))
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
@@ -175,10 +174,10 @@
 
     <div class="track-info">
       <button class="track-name-btn" onpointerdown={() => { ui.mobileOverlay = !ui.mobileOverlay }}>
-        <span class="track-name"><SplitFlap value={track.name} width={5} /></span>
+        <span class="track-name"><SplitFlap value={ph.name} width={5} /></span>
       </button>
       <div class="track-meta">
-        <span class="track-type">{track.voiceId}</span>
+        <span class="track-type">{ph.voiceId}</span>
       </div>
       <div class="step-row">
         <button class="step-adj" onpointerdown={stepDown}>−</button>

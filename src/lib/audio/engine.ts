@@ -171,7 +171,7 @@ function buildWorkletPattern(
       return {
         steps:       cell.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
-        voiceId:     t.voiceId,
+        voiceId:     cell.voiceId,
         volume:      t.volume,
         pan:         t.pan,
         reverbSend:    Math.min(1, cell.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),

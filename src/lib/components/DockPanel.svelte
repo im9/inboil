@@ -7,12 +7,13 @@
 
   const track  = $derived(song.tracks[ui.selectedTrack])
   const TRACK_ABBR = ['KK', 'SN', 'CP', 'CH', 'OH', 'CY', 'BS', 'LD']
-  const params = $derived(getParamDefs(track.voiceId))
+  const cell   = $derived(activeCell(ui.selectedTrack))
+  const params = $derived(getParamDefs(cell.voiceId))
   const selTrig = $derived(ui.selectedStep !== null ? activeCell(ui.selectedTrack).trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
 
   // ── Preset browser ──
-  const showPresets = $derived(hasPresets(track.voiceId))
+  const showPresets = $derived(hasPresets(cell.voiceId))
   let presetCategory = $state<PresetCategory | null>(null)
   const presetList = $derived(getPresets(presetCategory))
   let presetOpen = $state(false)
@@ -45,8 +46,8 @@
                 class:active={i === ui.selectedTrack}
                 class:muted={_t.muted}
                 onpointerdown={() => { ui.selectedTrack = i }}
-                data-tip={_t.name} data-tip-ja={_t.name}
-              >{TRACK_ABBR[i] ?? _t.name.slice(0, 2)}</button>
+                data-tip={activeCell(i).name} data-tip-ja={activeCell(i).name}
+              >{TRACK_ABBR[i] ?? activeCell(i).name.slice(0, 2)}</button>
             {/each}
           </div>
 

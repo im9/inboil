@@ -39,9 +39,11 @@ export const TRACK_DEFAULTS: { name: string; voiceId: VoiceId; note: number; pan
   { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
 ]
 
-export function makeEmptyCell(_trackId: number, voiceId: VoiceId, note: number, steps = 16): Cell {
+export function makeEmptyCell(_trackId: number, name: string, voiceId: VoiceId, note: number, steps = 16): Cell {
   const drum = DRUM_VOICES.has(voiceId)
   return {
+    name,
+    voiceId,
     steps,
     trigs: Array.from({ length: steps }, () => makeTrig(false, note)),
     voiceParams: defaultVoiceParams(voiceId),
@@ -61,7 +63,7 @@ export function makeEmptyPattern(index: number, name = ''): Pattern {
     id: makePatternId(index),
     name,
     color: 0,
-    cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.voiceId, d.note)),
+    cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note)),
   }
 }
 
@@ -387,7 +389,7 @@ const FACTORY: FactoryDef[] = [
 /** Build a cell from a factory definition for a given track */
 function buildFactoryCell(
   trackIdx: number, f: FactoryDef,
-  voiceId: VoiceId, defaultNote: number,
+  name: string, voiceId: VoiceId, defaultNote: number,
 ): Cell {
   const s = f.steps ?? 16
   const steps = f.ts?.[trackIdx] ?? s
@@ -422,6 +424,8 @@ function buildFactoryCell(
   }
 
   return {
+    name,
+    voiceId,
     steps,
     trigs,
     voiceParams: vp,
@@ -506,7 +510,7 @@ export function makeDefaultSong(): Song {
       name: f.name.slice(0, 8),
       color: 0,
       cells: TRACK_DEFAULTS.map((d, trackIdx) =>
-        buildFactoryCell(trackIdx, f, d.voiceId, d.note)
+        buildFactoryCell(trackIdx, f, d.name, d.voiceId, d.note)
       ),
     })
     sections.push(makeEmptySection(i))

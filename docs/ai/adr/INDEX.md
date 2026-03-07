@@ -84,6 +84,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 008 | Granular Enhancements | Implemented | Pitch shift, reverse, scatter, freeze |
 | 009 | Instrument Selection | Implemented | VoiceId registry, bubble picker, worklet voice swap |
 | 058 | Cross-Category Voice Assignment | Implemented | Any voice on any track, drill-down picker, voiceId-based melodic detection |
+| 062 | Per-Pattern Voice Assignment | Implemented | voiceId + name moved from Track to Cell; per-pattern instruments and track names |
 | 010 | Drum Synth Expansion | Proposed | |
 | 015 | Named Instrument Presets | Proposed | |
 | 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |

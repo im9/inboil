@@ -31,6 +31,8 @@ export interface Trig {
 
 /** Inline step data for one track in one section (ADR 042, replaces Phrase) */
 export interface Cell {
+  name: string            // per-pattern track name (ADR 062)
+  voiceId: VoiceId        // per-pattern instrument (ADR 062)
   steps: number           // 1–64
   trigs: Trig[]           // length === steps
   voiceParams: Record<string, number>
@@ -156,6 +158,8 @@ function cloneTrig(tr: Trig): Trig {
 
 function cloneCell(c: Cell): Cell {
   return {
+    name: c.name,
+    voiceId: c.voiceId,
     steps: c.steps,
     voiceParams: { ...c.voiceParams },
     reverbSend: c.reverbSend, delaySend: c.delaySend,
@@ -698,20 +702,22 @@ export function toggleSolo(trackId: number) {
   ui.soloTracks = new Set(ui.soloTracks)
 }
 
-export function isDrum(track: Track): boolean {
-  return DRUM_VOICES.has(track.voiceId)
+export function isDrum(trackOrCell: { voiceId: VoiceId }): boolean {
+  return DRUM_VOICES.has(trackOrCell.voiceId)
 }
 
-/** Change a track's instrument voice (ADR 009 Phase 3, ADR 058) */
+/** Change instrument voice for the active cell (ADR 062, was track-level) */
 export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
   pushUndo('Change instrument')
   const track = song.tracks[trackIdx]
-  const wasDrum = DRUM_VOICES.has(track.voiceId)
-  track.voiceId = newVoiceId
-  const meta = VOICE_LIST.find(v => v.id === newVoiceId)
-  if (meta) track.name = meta.label
   const c = activeCell(trackIdx)
+  const wasDrum = DRUM_VOICES.has(c.voiceId)
+  c.voiceId = newVoiceId
   c.voiceParams = defaultVoiceParams(newVoiceId)
+  const meta = VOICE_LIST.find(v => v.id === newVoiceId)
+  if (meta) c.name = meta.label
+  // Keep track-level voiceId in sync as template default
+  track.voiceId = newVoiceId
   // Reset sends when switching between drum and melodic (ADR 058 Phase 2)
   const nowDrum = DRUM_VOICES.has(newVoiceId)
   if (wasDrum !== nowDrum) {
@@ -1049,11 +1055,12 @@ export function sectionSetFxSend(index: number, fx: SongFxKey, value: number) {
   else s[fx]!.x = value
 }
 
-/** Clear a pattern's cells to empty */
+/** Clear a pattern's cells to empty (preserves per-cell voiceId, ADR 062) */
 export function patternClear(patternIndex: number): void {
   pushUndo('Clear pattern')
-  song.patterns[patternIndex].cells = TRACK_DEFAULTS.map((d, i) =>
-    makeEmptyCell(i, d.voiceId, d.note)
+  const pat = song.patterns[patternIndex]
+  pat.cells = pat.cells.map((c, i) =>
+    makeEmptyCell(i, c.name, c.voiceId, TRACK_DEFAULTS[i]?.note ?? 60)
   )
 }
 
@@ -1718,24 +1725,23 @@ export function randomizePattern(): void {
   const highNotes = allNotes.filter(n => n >= 60)
 
   for (let t = 0; t < song.tracks.length; t++) {
-    const track = song.tracks[t]
     const c = activeCell(t)
     const steps = c.steps
 
-    if (isDrum(track)) {
+    if (isDrum(c)) {
       for (let s = 0; s < steps; s++) {
         let prob = 0
         const beat = s % 8
 
-        if (track.name === 'KICK') {
+        if (c.voiceId === 'Kick') {
           prob = beat === 0 ? 0.92 : beat === 4 ? 0.40 : 0.08
-        } else if (track.name === 'SNARE') {
+        } else if (c.voiceId === 'Snare') {
           prob = beat === 4 ? 0.88 : beat === 6 ? 0.25 : 0.05
-        } else if (track.name === 'CLAP') {
+        } else if (c.voiceId === 'Clap') {
           prob = beat === 4 ? 0.70 : 0.03
-        } else if (track.name === 'O.HH') {
+        } else if (c.voiceId === 'OpenHat') {
           prob = (beat === 2 || beat === 6) ? 0.50 : 0.05
-        } else if (track.name === 'CYM') {
+        } else if (c.voiceId === 'Cymbal') {
           prob = beat === 0 ? 0.25 : 0.02
         } else {
           const on8th = s % 2 === 0
@@ -1748,10 +1754,11 @@ export function randomizePattern(): void {
         c.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
       }
     } else {
-      const pool    = track.name === 'BASS'
+      const isBass  = c.voiceId === 'Bass303' || c.voiceId === 'Analog'
+      const pool    = isBass
         ? (lowNotes.length  > 0 ? lowNotes  : allNotes)
         : (highNotes.length > 0 ? highNotes : allNotes)
-      const density = track.name === 'BASS' ? 0.30 : 0.27
+      const density = isBass ? 0.30 : 0.27
 
       for (let s = 0; s < steps; s++) {
         const active = Math.random() < density
