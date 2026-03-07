@@ -460,18 +460,30 @@ function generateTable(shape: WTShape, sr: number, baseFreq: number): Float32Arr
 
 const SHAPE_COUNT = 5
 
+/** Cached wavetable per sample rate — avoids regenerating on every voice instantiation */
+const tableCache = new Map<number, Float32Array[]>()
+
+function getCachedTables(sr: number): Float32Array[] {
+  let tables = tableCache.get(sr)
+  if (!tables) {
+    tables = []
+    for (let s = 0; s < SHAPE_COUNT; s++) {
+      tables.push(generateTable(s as WTShape, sr, 100))
+    }
+    tableCache.set(sr, tables)
+  }
+  return tables
+}
+
 class WavetableOsc {
-  private tables: Float32Array[] = []
+  private tables: Float32Array[]
   private phase = 0
 
   /** Position 0.0–1.0 morphs between wavetable shapes */
   position = 0
 
   constructor(private sr: number) {
-    // Generate band-limited tables for a middle-range base frequency
-    for (let s = 0; s < SHAPE_COUNT; s++) {
-      this.tables.push(generateTable(s as WTShape, sr, 100))
-    }
+    this.tables = getCachedTables(sr)
   }
 
   reset() { this.phase = 0 }
