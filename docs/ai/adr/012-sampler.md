@@ -6,6 +6,10 @@
 
 `Sampler` is declared in `SynthType` but has no implementation. Sample playback is essential for real-world production — vocals, one-shots, breaks, foley, and any sound that can't be synthesized. The AudioWorklet runs at sample-rate, so playback must happen inside the worklet thread.
 
+### Primary motivation: cymbal/ride samples
+
+Cymbal-type sounds are notoriously difficult to synthesize (even the TR-909 used PCM for cymbals). The current CymbalVoice uses 6 detuned square-wave oscillators + HP filter, which has been extensively tuned but still sounds artificial. A minimal sampler with built-in cymbal/ride samples (~25KB compressed each, lazy-loaded) would immediately solve the weakest link in the drum palette while also opening the door to user sample loading.
+
 ## Proposed Design
 
 ### Audio Loading Pipeline
@@ -70,11 +74,28 @@ Leverage `AudioContext.decodeAudioData()` — supports WAV, MP3, OGG, FLAC, AAC 
 - Total budget: ~8 samples × 1.7MB = ~14MB (comfortable for worklet)
 - Reject files exceeding limit with user feedback
 
+### Phase 1: Built-in Cymbal Samples
+
+Before full user-sample support, ship a minimal set of built-in cymbal/ride samples:
+
+- **Crash** (1 sample, ~2s, ~25KB compressed)
+- **Ride** (1 sample, ~1.5s, ~20KB compressed)
+- Stored as OGG/MP4 in `public/samples/`, lazy-loaded on first use
+- Decoded via `OfflineAudioContext.decodeAudioData()`, transferred to worklet as `Float32Array`
+- Existing CymbalVoice remains as zero-dependency fallback (offline, instant load)
+- New VoiceId entries: `'SampleCrash'`, `'SampleRide'` in drum category
+
+### Phase 2: User Sample Loading
+
+Full drag-and-drop / file picker support as described above.
+
 ## Consequences
 
+- **Positive:** Immediately fixes the weakest drum sound (cymbal) with ~45KB of lazy-loaded samples.
 - **Positive:** Unlocks sample-based music — breaks, vocals, one-shots, foley.
 - **Positive:** Pitch shifting from note enables melodic sample playback.
 - **Negative:** Memory management in worklet — must handle buffer lifecycle.
 - **Negative:** File I/O adds complexity (permissions, format handling, error states).
 - **Negative:** No streaming — entire sample must fit in memory.
+- **Negative:** External asset dependency (samples must be fetched) — mitigated by synth fallback.
 - **Dependency:** Requires ADR 009 (instrument selection) to assign Sampler type to a track.
