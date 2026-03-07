@@ -3,13 +3,15 @@
  */
 
 export interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'loadSample'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
   trackId?: number
   note?: number
   velocity?: number
+  buffer?: Float32Array    // loadSample: mono sample data
+  sampleRate?: number      // loadSample: original sample rate
 }
 
 export interface WorkletPattern {

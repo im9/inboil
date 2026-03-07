@@ -135,6 +135,13 @@
                   onpointerdown={() => knobChange(p, (knobValue(p) ?? p.default) >= 0.5 ? 0 : 1)}
                   data-tip={p.tip} data-tip-ja={p.tipJa}
                 >{(knobValue(p) ?? p.default) >= 0.5 ? 'POLY' : 'MONO'}</button>
+              {:else if p.key === 'reverse'}
+                <button
+                  class="btn-toggle"
+                  class:active={(knobValue(p) ?? p.default) >= 0.5}
+                  onpointerdown={() => knobChange(p, (knobValue(p) ?? p.default) >= 0.5 ? 0 : 1)}
+                  data-tip={p.tip} data-tip-ja={p.tipJa}
+                >{(knobValue(p) ?? p.default) >= 0.5 ? 'REV' : 'FWD'}</button>
               {:else}
                 {#if i > 0 && p.group && p.group !== params[i - 1].group}
                   <div class="param-sep-row" aria-hidden="true"></div>

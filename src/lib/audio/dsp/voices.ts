@@ -1029,6 +1029,132 @@ export class IdeathSynth implements Voice {
   }
 }
 
+// ── Sampler Voice (ADR 012) ─────────────────────────────────────────
+
+export class SamplerVoice implements Voice {
+  private buffer: Float32Array | null = null
+  private bufferSR = 44100
+  private cursor = 0
+  private rate = 1.0
+  private playing = false
+  private amp = 0
+  private ampTarget = 0
+  private ampCoeff = 0
+  private releaseCoeff = 0
+
+  // params
+  private rootNote = 60  // C4
+  private start = 0      // 0.0–1.0
+  private end = 1        // 0.0–1.0
+  private decay = 1.0    // seconds — FWD: envelope decay, REV: swell length
+  private reverse = 0    // 0 or 1
+  private pitchShift = 0 // semitones
+
+  private readonly sr: number
+
+  constructor(sr: number) {
+    this.sr = sr
+    this._updateEnvCoeffs()
+  }
+
+  loadSample(buffer: Float32Array, bufferSR: number): void {
+    // Peak-normalize to 1.0
+    let peak = 0
+    for (let i = 0; i < buffer.length; i++) {
+      const a = Math.abs(buffer[i])
+      if (a > peak) peak = a
+    }
+    if (peak > 0 && peak !== 1) {
+      const scale = 1 / peak
+      for (let i = 0; i < buffer.length; i++) buffer[i] *= scale
+    }
+    this.buffer = buffer
+    this.bufferSR = bufferSR
+  }
+
+  noteOn(note: number, velocity: number): void {
+    if (!this.buffer) return
+    const semis = (note - this.rootNote) + this.pitchShift
+    this.rate = Math.pow(2, semis / 12) * (this.bufferSR / this.sr)
+    const startSample = Math.floor(this.start * this.buffer.length)
+    const endSample = Math.floor(this.end * this.buffer.length)
+    this.cursor = this.reverse ? endSample - 1 : startSample
+    this.amp = velocity
+    this.ampTarget = velocity
+    this.playing = true
+  }
+
+  noteOff(): void {
+    // Drum samples: ignore noteOff — let sample play to end / natural decay
+    // (same as DrumMachine behavior)
+  }
+
+  slideNote(note: number, _velocity: number): void {
+    const semis = (note - this.rootNote) + this.pitchShift
+    this.rate = Math.pow(2, semis / 12) * (this.bufferSR / this.sr)
+  }
+
+  tick(): number {
+    if (!this.playing || !this.buffer) return 0
+
+    const startSample = Math.floor(this.start * this.buffer.length)
+    const endSample = Math.floor(this.end * this.buffer.length)
+
+    // Interpolated read
+    const idx = Math.floor(this.cursor)
+    if (idx < 0 || idx >= this.buffer.length) { this.playing = false; return 0 }
+    const frac = this.cursor - idx
+    const s0 = this.buffer[idx]
+    const s1 = idx + 1 < this.buffer.length ? this.buffer[idx + 1] : s0
+    const sample = s0 + (s1 - s0) * frac
+
+    // Advance cursor
+    if (this.reverse) {
+      this.cursor -= this.rate
+      if (this.cursor < startSample) { this.playing = false; return 0 }
+    } else {
+      this.cursor += this.rate
+      if (this.cursor >= endSample) { this.playing = false; return 0 }
+    }
+
+    // Amplitude envelope (FWD only — REV uses natural sample crescendo)
+    if (!this.reverse) {
+      const coeff = this.ampTarget > 0 ? this.ampCoeff : this.releaseCoeff
+      this.amp += (this.ampTarget - this.amp) * coeff
+      if (this.ampTarget === 0) {
+        if (this.amp < 0.001) { this.playing = false; return 0 }
+      } else {
+        this.ampTarget *= (1 - 1 / (this.decay * this.sr))
+      }
+    }
+
+    return sample * this.amp * 0.7
+  }
+
+  reset(): void {
+    this.playing = false
+    this.amp = 0
+    this.cursor = 0
+  }
+
+  setParam(key: string, value: number): void {
+    switch (key) {
+      case 'rootNote':   this.rootNote = Math.round(value); break
+      case 'start':      this.start = Math.max(0, Math.min(1, value)); break
+      case 'end':        this.end = Math.max(0, Math.min(1, value)); break
+      case 'decay':      this.decay = value; this._updateEnvCoeffs(); break
+      case 'reverse':    this.reverse = value >= 0.5 ? 1 : 0; break
+      case 'pitchShift': this.pitchShift = value; break
+    }
+  }
+
+  private _updateEnvCoeffs(): void {
+    // One-pole smoothing: coeff ≈ 1 - e^(-1/(time*sr))
+    this.ampCoeff = 1 - Math.exp(-1 / (0.005 * this.sr))  // 5ms attack
+    this.releaseCoeff = 1 - Math.exp(-1 / (0.01 * this.sr)) // 10ms release
+  }
+}
+
 // ── Voice registry (ADR 009) ────────────────────────────────────────
 
 export type VoiceId =
@@ -1036,6 +1162,7 @@ export type VoiceId =
   | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
   | 'iDEATH'
+  | 'SampleCrash' | 'SampleRide'
 
 const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   Kick:     sr => new DrumMachine(sr, 'Kick'),
@@ -1054,11 +1181,14 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   Analog:   sr => new AnalogVoice(sr),
   FM:       sr => new FMVoice(sr),
   iDEATH:      sr => new IdeathSynth(sr),
+  SampleCrash: sr => new SamplerVoice(sr),
+  SampleRide:  sr => new SamplerVoice(sr),
 }
 
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
   'Tom', 'Rimshot', 'Cowbell', 'Shaker',
+  'SampleCrash', 'SampleRide',
 ])
 
 export type VoiceCategory = 'drum' | 'bass' | 'lead'
@@ -1087,6 +1217,8 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'MoogLead', label: 'MOOG',  category: 'lead' },
   { id: 'FM',       label: 'FM',    category: 'lead' },
   { id: 'iDEATH',      label: 'SYNTH', category: 'lead' },
+  { id: 'SampleCrash', label: 'CRSH',  category: 'drum' },
+  { id: 'SampleRide',  label: 'RIDE',  category: 'drum' },
 ]
 
 /** Lookup sidechainSource flag by voiceId (ADR 064) */

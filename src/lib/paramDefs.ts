@@ -96,14 +96,23 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'lfo2Rate',  label: 'LF2R',  group: 'lfo',    tip: 'LFO 2 rate (Hz)',            tipJa: 'LFO 2 速度',              min: 0.1,  max: 20.0, default: 0.5   },
     { key: 'lfo2Shape', label: 'LF2S',  group: 'lfo',    tip: 'LFO 2: SIN → TRI → SAW → SQR → S&H', tipJa: 'LFO 2: SIN → TRI → SAW → SQR → S&H', min: 0, max: 4, step: 1, default: 0 },
   ],
+  Sampler: [
+    { key: 'decay',      label: 'DCY',   group: 'amp',     tip: 'Amplitude decay time',     tipJa: '音量ディケイ',         min: 0.05, max: 5.0,  default: 1.0  },
+    { key: 'start',      label: 'STRT',  group: 'sample',  tip: 'Sample start point',       tipJa: 'サンプル開始点',       min: 0.0,  max: 1.0,  default: 0.0  },
+    { key: 'end',        label: 'END',   group: 'sample',  tip: 'Sample end point',         tipJa: 'サンプル終了点',       min: 0.0,  max: 1.0,  default: 1.0  },
+    { key: 'pitchShift', label: 'PTCH',  group: 'sample',  tip: 'Pitch shift (semitones)',  tipJa: 'ピッチシフト（半音）', min: -24,  max: 24,   step: 1, default: 0 },
+    { key: 'reverse',    label: 'REV',   group: 'sample',  tip: 'Reverse playback',         tipJa: 'リバース再生',         min: 0,    max: 1,    step: 1, default: 0 },
+  ],
 }
 
 
 // VoiceIds that share DrumMachine params (ADR 010)
 const DRUM_MACHINE_IDS = new Set(['Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal', 'Tom', 'Rimshot', 'Cowbell', 'Shaker'])
+const SAMPLER_IDS = new Set(['SampleCrash', 'SampleRide'])
 
 export function getParamDefs(voiceId: VoiceId): ParamDef[] {
   if (DRUM_MACHINE_IDS.has(voiceId)) return VOICE_PARAMS.DrumMachine ?? []
+  if (SAMPLER_IDS.has(voiceId)) return VOICE_PARAMS.Sampler ?? []
   return VOICE_PARAMS[voiceId] ?? []
 }
 
@@ -124,6 +133,7 @@ const DISPLAY_LABELS: Record<string, string[]> = {
   combine:    ['MIX', 'FM', 'RING'],
   filterMode: ['LP', 'HP', 'BP', 'NTCH'],
   noiseFilterMode: ['LP', 'HP', 'BP'],
+  reverse: ['OFF', 'ON'],
   lfo1Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
   lfo2Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
 }

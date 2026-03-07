@@ -6,6 +6,13 @@ import type { Song, Effects } from '../state.svelte.ts'
 import { ui, masterPad, masterLevels } from '../state.svelte.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
+import crashUrl from './samples/tr909_crash.webm'
+import rideUrl from './samples/tr909_ride.webm'
+
+const BUILTIN_SAMPLES: Record<string, string> = {
+  SampleCrash: crashUrl,
+  SampleRide:  rideUrl,
+}
 
 type PerfState = {
   rootNote: number; octave: number
@@ -28,6 +35,8 @@ export class GrooveboxEngine {
   private analyser: AnalyserNode | null = null
   private _onStep: ((playheads: number[], cycle: boolean) => void) | null = null
   private suspendTimer: ReturnType<typeof setTimeout> | null = null
+  /** Tracks current voiceId per track to detect changes and reload samples */
+  private trackVoiceIds: string[] = []
 
   set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
@@ -53,14 +62,31 @@ export class GrooveboxEngine {
 
   sendPattern(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, sectionIndex = 0): void {
     if (!this.node) return
-    this._post({ type: 'setPattern', pattern: patternToWorklet(song, fx, perf, fxPad, sectionIndex), reset })
+    const wp = patternToWorklet(song, fx, perf, fxPad, sectionIndex)
+    this._post({ type: 'setPattern', pattern: wp, reset })
+    this._autoLoadSamples(wp)
   }
 
   sendPatternByIndex(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, patternIndex = 0): void {
     if (!this.node) return
     const pat = song.patterns[patternIndex]
     if (!pat) return
-    this._post({ type: 'setPattern', pattern: buildWorkletPattern(song, pat, fx, perf, fxPad), reset })
+    const wp = buildWorkletPattern(song, pat, fx, perf, fxPad)
+    this._post({ type: 'setPattern', pattern: wp, reset })
+    this._autoLoadSamples(wp)
+  }
+
+  /** Auto-load built-in samples for sampler voices (ADR 012) */
+  private _autoLoadSamples(wp: WorkletPattern): void {
+    for (let i = 0; i < wp.tracks.length; i++) {
+      const vid = wp.tracks[i].voiceId
+      const prev = this.trackVoiceIds[i]
+      this.trackVoiceIds[i] = vid
+      if (!(vid in BUILTIN_SAMPLES)) continue
+      // Reload when voice changed (new SamplerVoice instance needs fresh buffer)
+      if (prev === vid) continue
+      void this.loadBuiltinSample(i, vid)
+    }
   }
 
   play(): void {
@@ -87,6 +113,31 @@ export class GrooveboxEngine {
     if (this.ctx && this.ctx.state === 'running') {
       this.suspendTimer = setTimeout(() => { this.suspendTimer = null; if (this.ctx?.state === 'running') void this.ctx.suspend() }, 8000)
     }
+  }
+
+  /** Decode a built-in sample and send Float32Array to worklet (ADR 012) */
+  async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
+    const url = BUILTIN_SAMPLES[voiceId]
+    if (!url || !this.ctx || !this.node) return
+    const resp = await fetch(url)
+    const arrayBuf = await resp.arrayBuffer()
+    const audioBuf = await this.ctx.decodeAudioData(arrayBuf)
+    // Convert to mono Float32Array
+    let mono: Float32Array
+    if (audioBuf.numberOfChannels === 1) {
+      mono = audioBuf.getChannelData(0)
+    } else {
+      const L = audioBuf.getChannelData(0)
+      const R = audioBuf.getChannelData(1)
+      mono = new Float32Array(L.length)
+      for (let i = 0; i < L.length; i++) mono[i] = (L[i] + R[i]) * 0.5
+    }
+    // Transfer to worklet (zero-copy)
+    const buffer = mono.buffer.byteLength === mono.length * 4 ? mono : new Float32Array(mono)
+    this.node.port.postMessage(
+      { type: 'loadSample', trackId, buffer, sampleRate: audioBuf.sampleRate },
+      [buffer.buffer],
+    )
   }
 
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }

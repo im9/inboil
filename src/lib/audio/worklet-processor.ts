@@ -35,7 +35,7 @@ declare const sampleRate: number
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ } from './dsp/filters.ts'
 import { SimpleReverb, PingPongDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor } from './dsp/effects.ts'
-import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
+import { makeVoice, DRUM_VOICES, SamplerVoice } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletEvent } from './dsp/types.ts'
 
@@ -259,6 +259,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const t = cmd.trackId ?? 0
           const v = this.voices[t]
           if (v) v.noteOff()
+          break
+        }
+        case 'loadSample': {
+          const t = cmd.trackId ?? 0
+          const v = this.voices[t]
+          if (v instanceof SamplerVoice && cmd.buffer && cmd.sampleRate) {
+            v.loadSample(cmd.buffer, cmd.sampleRate)
+          }
           break
         }
         case 'setPattern': {
