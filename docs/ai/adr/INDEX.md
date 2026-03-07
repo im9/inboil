@@ -85,9 +85,10 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 009 | Instrument Selection | Implemented | VoiceId registry, bubble picker, worklet voice swap |
 | 058 | Cross-Category Voice Assignment | Implemented | Any voice on any track, drill-down picker, voiceId-based melodic detection |
 | 062 | Per-Pattern Voice Assignment | Implemented | voiceId + name moved from Track to Cell; per-pattern instruments and track names |
-| 010 | Drum Synth Expansion | Proposed | |
+| 010 | Drum Synth Expansion | Proposed | Analog-modeled percussion (808 Kick, Rimshot, Tom, etc.) |
 | 015 | Named Instrument Presets | Proposed | |
 | 056 | Variable Track Count & Track Types | Proposed | Dynamic 1–16 tracks, synth/audio/midi types |
+| 063 | iDEATH Synth Engine | Proposed | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, wobble bass |
 
 ## Performance / Live
 
