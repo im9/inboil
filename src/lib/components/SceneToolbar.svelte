@@ -2,12 +2,23 @@
   import { song, playback, ui, sceneFormatNodes } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { WORLD_W, WORLD_H, toPixel } from '../sceneGeometry.ts'
+  import type { BubblePickType } from './SceneBubbleMenu.svelte'
 
-  const { zoom, viewEl, onpan, onreset }: {
+  const ADD_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
+    { type: 'transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
+    { type: 'tempo', tip: 'Tempo', tipJa: 'テンポ' },
+    { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
+    { type: 'probability', tip: 'Probability', tipJa: '確率' },
+    { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'label', tip: 'Label', tipJa: 'ラベル' },
+  ]
+
+  const { zoom, viewEl, onpan, onreset, onadd }: {
     zoom: number
     viewEl: HTMLDivElement
     onpan?: (x: number, y: number) => void
     onreset?: (x: number, y: number) => void
+    onadd?: (type: BubblePickType) => void
   } = $props()
 
   function centerPan() {
@@ -42,6 +53,32 @@
     }
   }
 </script>
+
+<!-- Center: add-node buttons -->
+<div class="add-bar">
+  {#each ADD_ITEMS as item}
+    <button
+      class="add-btn"
+      aria-label={item.tip}
+      data-tip={item.tip} data-tip-ja={item.tipJa}
+      onpointerdown={() => onadd?.(item.type)}
+    >
+      {#if item.type === 'transpose'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
+      {:else if item.type === 'tempo'}
+        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true">{@html ICON.tempo}</svg>
+      {:else if item.type === 'repeat'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.repeat}</svg>
+      {:else if item.type === 'probability'}
+        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true">{@html ICON.probability}</svg>
+      {:else if item.type === 'fx'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
+      {:else if item.type === 'label'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
+      {/if}
+    </button>
+  {/each}
+</div>
 
 {#if song.scene.nodes.length > 1}
   <button
@@ -98,6 +135,42 @@
 {/if}
 
 <style>
+  .add-bar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0;
+    z-index: 5;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1.5px solid rgba(30, 32, 40, 0.12);
+  }
+  .add-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.8);
+    color: rgba(30, 32, 40, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    border-right: 1px solid rgba(30, 32, 40, 0.08);
+  }
+  .add-btn:last-child {
+    border-right: none;
+  }
+  .add-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-fg);
+  }
+  .add-btn:active {
+    background: var(--color-fg);
+    color: rgba(237, 232, 220, 0.9);
+  }
+
   .scene-toolbar-btn {
     position: absolute;
     top: 8px;

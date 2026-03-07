@@ -537,6 +537,26 @@
     pickerOpen = false
   }
 
+  /** Add a node at the current viewport center (from toolbar) */
+  function addNodeAtCenter(type: BubblePickType) {
+    if (!viewEl) return
+    const rect = viewEl.getBoundingClientRect()
+    const cx = (rect.width / 2 - panX) / zoom
+    const cy = (rect.height / 2 - panY) / zoom
+    const nx = Math.max(0.05, Math.min(0.95, (cx - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
+    const ny = Math.max(0.05, Math.min(0.95, (cy - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
+    if (type === 'label') {
+      const id = sceneAddLabel(nx, ny)
+      ui.selectedSceneNodes = {}
+      requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
+    } else {
+      const id = sceneAddFunctionNode(type, nx, ny)
+      ui.selectedSceneNodes = {}
+      ui.selectedSceneNodes[id] = true
+    }
+    ui.selectedSceneEdge = null
+  }
+
   // ── Zoom/Pan interactions ──
 
   function onWheel(e: WheelEvent) {
@@ -756,6 +776,7 @@
   <SceneToolbar {zoom} {viewEl}
     onpan={(x, y) => { panX = x; panY = y }}
     onreset={(x, y) => { zoom = 1; panX = x; panY = y }}
+    onadd={addNodeAtCenter}
   />
 
   <!-- Radial bubble menu for function nodes (appears at pointer position) -->
