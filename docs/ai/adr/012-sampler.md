@@ -99,3 +99,4 @@ Full drag-and-drop / file picker support as described above.
 - **Negative:** No streaming — entire sample must fit in memory.
 - **Negative:** External asset dependency (samples must be fetched) — mitigated by synth fallback.
 - **Dependency:** Requires ADR 009 (instrument selection) to assign Sampler type to a track.
+- **Note:** Sidechain ducker (ADR 064) auto-detects kick voices via registry flag. Sampler is a generic voice, so kick samples won't trigger ducking automatically. When implementing sampler, consider adding per-sample or per-track sidechain override.
