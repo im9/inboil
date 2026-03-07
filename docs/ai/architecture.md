@@ -64,6 +64,10 @@ See [adr/](./adr/) for full rationale.
 - **Decouple playback from view** (IMPLEMENTED) — Separate `playback.mode` from `ui.phraseView`. → [adr/045-decouple-playback-from-view.md](./adr/045-decouple-playback-from-view.md)
 - **Overlay sheet model** (IMPLEMENTED) — Pattern/FX/EQ as overlay sheets over SceneView. → [adr/054-split-view.md](./adr/054-split-view.md)
 - **Dock minimize & sidebar separation** (IMPLEMENTED) — DockPanel minimize toggle, sidebar as fixed drawer. → [adr/055-dock-sidebar-separation.md](./adr/055-dock-sidebar-separation.md)
+- **Pattern toolbar** (IMPLEMENTED) — RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header. → [adr/057-pattern-toolbar.md](./adr/057-pattern-toolbar.md)
+- **Cross-category voice assignment** (IMPLEMENTED) — Any voice on any track, drill-down picker. → [adr/058-cross-category-voice.md](./adr/058-cross-category-voice.md)
+- **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, InboilSynth/PolySynth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
+- **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 
 ## Threading Model
 
@@ -96,31 +100,41 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
 │   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
 │   │   │   ├── SectionNav.svelte ← Section strip + metadata editor
-│   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, minimizable
-│   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks
+│   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
+│   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
+│   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
 │   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
 │   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
 │   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
+│   │   │   ├── MasterView.svelte ← Master bus VU meter + audio-reactive visuals
 │   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
+│   │   │   ├── VoicePicker.svelte ← Bubble menu for instrument selection
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
 │   │   │   ├── Sidebar.svelte    ← Help / System settings panel (fixed right drawer)
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
-│   │   │   └── SplitFlap.svelte  ← パタパタ split-flap display
+│   │   │   ├── SplitFlap.svelte  ← パタパタ split-flap display
+│   │   │   ├── SceneCanvas.svelte ← Canvas layer for scene edges/arrowheads
+│   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
+│   │   │   ├── SceneLabels.svelte ← Free-floating canvas text labels
+│   │   │   ├── SceneBubbleMenu.svelte ← Radial menu for adding scene nodes
+│   │   │   └── SceneNodePopup.svelte ← Node detail popup (rename, params)
 │   │   ├── audio/
 │   │   │   ├── engine.ts         ← Main-thread audio engine API
 │   │   │   ├── worklet-processor.ts ← AudioWorklet entry point + sequencer
 │   │   │   └── dsp/              ← DSP modules (imported by worklet)
 │   │   │       ├── types.ts      ← Message types (WorkletPattern, etc.)
-│   │   │       ├── filters.ts    ← ResonantLP, BiquadHP, DJFilter, PeakingEQ, ADSR
+│   │   │       ├── filters.ts    ← ResonantLP, BiquadHP, SVFilter, DJFilter, PeakingEQ, ADSR
 │   │   │       ├── effects.ts    ← Reverb, delay, ducker, compressor, limiter, granular
 │   │   │       └── voices.ts     ← Voice interface, all synth voices, makeVoice
 │   │   ├── factory.ts            ← Factory patterns, track defaults, song builder
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
+│   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
+│   │   ├── presets.ts            ← Factory presets for InboilSynth/PolySynth (22 presets, 6 categories)
 │   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt

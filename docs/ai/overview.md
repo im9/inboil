@@ -36,7 +36,8 @@ The goal is a focused, expressive tool for composing and performing electronic m
 ## Current State
 
 The TypeScript AudioWorklet implementation is fully functional with:
-- 8 tracks (6 drum + 2 melodic) with TR-909 / TB-303 / Moog-inspired voices
+- 8 tracks with configurable voice assignment (any voice on any track, ADR 058)
+- 12 voice types: 6 drum (TR-909), 2 bass (TB-303, Analog), 2 lead (Moog, FM), 2 wavetable synth (InboilSynth mono, PolySynth 4-voice poly)
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
@@ -50,7 +51,9 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Lead arpeggiator (5 modes, chord types, octave range)
-- Note bar editor (PianoRoll) with auto-legato for melodic tracks
+- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for PolySynth
+- Factory preset browser (22 presets across 6 categories) for InboilSynth/PolySynth voices
+- Master view with VU meter and audio-reactive visuals (ADR 035)
 - Virtual MIDI keyboard (PC keyboard audition, Phase 1)
 - Undo/redo (snapshot-based, Ctrl+Z)
 - Pattern copy/paste/clear

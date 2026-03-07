@@ -247,6 +247,7 @@ Right-side param dock (280px, dark zone). Minimizable to 16px thin strip via lef
 Contents:
 - **Track selector bar**: 2-letter abbreviations (KK, SN, CP, CH, OH, CY, BS, LD)
 - **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
+- **Preset browser** (Synth/Poly only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
 - **Synth knob grid**: Voice parameters from `paramDefs.ts`
 - **Send knobs**: VERB, DLY, GLT, GRN per selected track
 - **Mixer knobs**: VOL, PAN per selected track

@@ -65,7 +65,7 @@ Cell {
 Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  voiceId:     VoiceId         // 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
+  voiceId:     VoiceId         // 'Kick' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'Synth' | 'Poly'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
@@ -133,6 +133,7 @@ Trig {
   slide:       boolean         // slide/glide flag (default false)
   chance?:     number          // 0.0–1.0, undefined = always fire (100%)
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
+  notes?:      number[]       // poly: all chord notes (includes primary `note`); absent = mono [note]
 }
 ```
 

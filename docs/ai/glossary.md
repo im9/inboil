@@ -38,6 +38,11 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **FM synthesis** | Frequency Modulation synthesis. One oscillator modulates the frequency of another. |
 | **Operator** | A single oscillator unit in FM synthesis. This app uses 3-operator FM (YM2612-inspired). |
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
+| **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
+| **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by InboilSynth. |
+| **InboilSynth** | Mono wavetable synth: 2 osc (WT morph) + SVF filter + 2 env + 2 LFO + mod matrix. VoiceId: 'Synth'. |
+| **PolySynth** | 4-voice polyphonic wrapper around InboilSynth. Round-robin allocation, oldest-note stealing. VoiceId: 'Poly'. |
+| **Factory preset** | Named parameter snapshot for InboilSynth/PolySynth. 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |
@@ -50,7 +55,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Othello flip** | Step trig toggle animation: 3D `rotateY` flip between cream (empty) and olive (active) faces. |
 | **PerfBar** | Performance controls strip: KEY piano, OCT shift, DUC/CMP/GAIN/SWG knobs, FX/EQ sheet toggles, FILL/REV/BRK buttons. |
 | **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. Rendered as overlay sheet (ADR 054). |
-| **DockPanel** | Right-side param dock (minimizable to 16px via edge handle). Track selector + synth knobs + lock toolbar + send/mixer knobs. |
+| **DockPanel** | Right-side param dock (minimizable to 16px via edge handle). Track selector + preset browser + synth knobs + lock toolbar + send/mixer knobs. |
+| **MasterView** | Master bus overlay sheet with VU meter and audio-reactive visuals. |
 | **MobileParamOverlay** | Mobile bottom-sheet overlay for param editing, lock, solo, mute. Opened by tapping track name. |
 | **Zone inversion** | Dark zone (navy bg) vs light zone (cream bg) — compositional tool for visual separation. |
 | **Knob** | SVG rotary control (270° arc). Vertical drag to change value. |

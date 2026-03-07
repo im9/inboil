@@ -99,6 +99,7 @@ interface WorkletTrig {
   slide: boolean            // slide/glide flag (default false)
   chance?: number           // 0.0–1.0, undefined = always fire
   paramLocks?: Record<string, number>  // per-step voice param overrides
+  notes?: number[]          // poly: all chord notes (includes primary `note`); absent = mono [note]
 }
 ```
 

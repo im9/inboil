@@ -156,6 +156,39 @@ Parameters:
 | resonance | RESO | 0.5–6.0 | 3.5 | Filter Q |
 | decay | DCY | 0.1–0.5 s | 0.25 | Amplitude decay |
 
+### InboilSynth (wavetable synth — mono)
+
+Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
+
+Parameters (via `paramDefs.ts`):
+| Key | Label | Range | Default | Description |
+|---|---|---|---|---|
+| oscAPos | WV-A | 0.0–1.0 | 0.0 | Osc A wavetable position |
+| oscBPos | WV-B | 0.0–1.0 | 0.25 | Osc B wavetable position |
+| oscBSemi | SEMI | -24–24 (step 1) | 0 | Osc B semitone offset |
+| oscMix | MIX | 0.0–1.0 | 0.5 | Osc A/B mix |
+| combine | COMB | 0–2 (step 1) | 0 | Combine mode: MIX/FM/RING |
+| fmIndex | FMIX | 0.0–8.0 | 3.0 | FM modulation depth |
+| cutoffBase | CUT | 50–8000 Hz | 1200 | SVF filter cutoff |
+| envMod | FMOD | 0–8000 Hz | 4000 | Filter envelope depth |
+| resonance | RESO | 0.5–10.0 | 2.0 | Filter resonance |
+| filterMode | FTYP | 0–3 (step 1) | 0 | Filter: LP/HP/BP/Notch |
+| attack | ATCK | 0.001–1.0 s | 0.005 | Amp attack |
+| decay | DCY | 0.01–2.0 s | 0.3 | Amp decay |
+| sustain | SUST | 0.0–1.0 | 0.5 | Amp sustain level |
+| release | RLS | 0.01–2.0 s | 0.3 | Amp release |
+| modDecay | MDCY | 0.01–2.0 s | 0.25 | Mod envelope decay |
+| lfo1Rate | LF1R | 0.1–20.0 Hz | 2.0 | LFO 1 rate |
+| lfo1Shape | LF1S | 0–4 (step 1) | 0 | LFO 1: SIN/TRI/SAW/SQR/S&H |
+| lfo2Rate | LF2R | 0.1–20.0 Hz | 0.5 | LFO 2 rate |
+| lfo2Shape | LF2S | 0–4 (step 1) | 0 | LFO 2: SIN/TRI/SAW/SQR/S&H |
+
+Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (Synth/Poly only).
+
+### PolySynth (wavetable synth — 4-voice polyphonic)
+
+Voice allocator wrapping InboilSynth. 4-voice max, round-robin allocation with oldest-note stealing. Shares all parameters with InboilSynth. Supports chord input via `trig.notes[]` field.
+
 ## DSP Building Blocks
 
 Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ porting.
@@ -164,6 +197,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 |---|---|---|
 | filters.ts | ResonantLP | 2-pole resonant low-pass biquad (12 dB/oct). Used for 303 filter, snare noise, clap. |
 | filters.ts | BiquadHP | 2-pole high-pass biquad (12 dB/oct). Used for metallic percussion. |
+| filters.ts | SVFilter | Trapezoidal-integrated state variable filter. LP/HP/BP/Notch modes. Used by InboilSynth/PolySynth. |
 | filters.ts | DJFilter | Combined LP/HP sweep filter. X = LP←0.5→HP, Y = resonance. Used for master filter. |
 | filters.ts | PeakingEQ | Parametric peaking EQ band. Used for 3-band master EQ. |
 | filters.ts | ADSR | 4-stage envelope generator (attack/decay/sustain/release). |
@@ -174,7 +208,8 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | PeakLimiter | Lookahead (~1.5ms) brickwall limiter at 0.92 ceiling. |
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
-| voices.ts | KickVoice, SnareVoice, … | All synth voice implementations. |
+| voices.ts | KickVoice, SnareVoice, … | All synth voice implementations (including InboilSynth, PolySynth). |
+| voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
 | voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |
 | voices.ts | VOICE_REGISTRY | Maps VoiceId string → voice constructor. |
 | voices.ts | DRUM_VOICES | ReadonlySet of drum VoiceIds for isDrum() check. |
