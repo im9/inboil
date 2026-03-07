@@ -358,21 +358,25 @@
   }
 
   .btn-view {
-    border: 1.5px solid rgba(237,232,220,0.30);
-    background: transparent;
-    color: rgba(237,232,220,0.40);
+    border: 1.5px solid rgba(237,232,220,0.35);
+    background: rgba(237,232,220,0.04);
+    color: rgba(237,232,220,0.55);
     padding: 4px 10px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    transition: background 40ms linear, color 40ms linear;
+    transition: background 40ms linear, color 40ms linear, border-color 40ms linear;
     user-select: none;
   }
+  .btn-view:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.70);
+  }
   .btn-view.active {
-    background: rgba(237,232,220,0.12);
-    color: rgba(237,232,220,0.85);
-    border-color: rgba(237,232,220,0.45);
+    background: rgba(237,232,220,0.14);
+    color: rgba(237,232,220,0.90);
+    border-color: rgba(237,232,220,0.50);
   }
 
   /* ── Performance buttons ── */

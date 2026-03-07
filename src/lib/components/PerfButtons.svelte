@@ -1,33 +1,38 @@
 <script lang="ts">
-  import { perf } from '../state.svelte.ts'
+  import { perf, playback } from '../state.svelte.ts'
 
   let { variant = 'bar' }: { variant?: 'bar' | 'bubble' } = $props()
+
+  const stopped = $derived(!playback.playing)
 </script>
 
 {#if variant === 'bar'}
   <button
     class="btn-perf"
     class:active={perf.filling}
+    class:stopped
     onpointerdown={() => { perf.filling = true }}
     onpointerup={() => { perf.filling = false }}
     onpointerleave={() => { perf.filling = false }}
-    data-tip="Hold for drum fill" data-tip-ja="長押しでドラムフィル"
+    data-tip="Hold for drum fill (play first)" data-tip-ja="長押しでドラムフィル (再生中のみ)"
   >FILL</button>
   <button
     class="btn-perf"
     class:active={perf.reversing}
+    class:stopped
     onpointerdown={() => { perf.reversing = true }}
     onpointerup={() => { perf.reversing = false }}
     onpointerleave={() => { perf.reversing = false }}
-    data-tip="Hold to reverse playback" data-tip-ja="長押しで逆再生"
+    data-tip="Hold to reverse playback (play first)" data-tip-ja="長押しで逆再生 (再生中のみ)"
   >REV</button>
   <button
     class="btn-perf btn-brk"
     class:active={perf.breaking}
+    class:stopped
     onpointerdown={() => { perf.breaking = true }}
     onpointerup={() => { perf.breaking = false }}
     onpointerleave={() => { perf.breaking = false }}
-    data-tip="Hold for rhythmic break" data-tip-ja="長押しでリズムブレイク"
+    data-tip="Hold for rhythmic break (play first)" data-tip-ja="長押しでリズムブレイク (再生中のみ)"
   >BRK</button>
 {:else}
   <button
@@ -76,6 +81,11 @@
     background: var(--color-blue);
     color: var(--color-bg);
   }
+  .btn-perf.stopped {
+    border-color: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,0.25);
+    cursor: default;
+  }
   .btn-brk {
     border-color: var(--color-salmon);
     color: var(--color-salmon);
@@ -84,6 +94,10 @@
   .btn-brk.active {
     background: var(--color-salmon);
     color: var(--color-bg);
+  }
+  .btn-brk.stopped {
+    border-color: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,0.25);
   }
 
   /* ── Bubble variant (PerfBubble) ── */
