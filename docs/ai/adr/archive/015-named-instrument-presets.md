@@ -1,6 +1,6 @@
 # ADR 015: Presets & Pattern Templates
 
-## Status: In Progress (built-in synth presets done, user presets + templates pending)
+## Status: Implemented
 
 ## Context
 
@@ -175,8 +175,8 @@ The original ADR 015 proposed "drum kits" — bundling 6 drum tracks as a named 
 3. ~~Extend built-in presets to drum voices + Bass303/MoogLead/FM/Analog~~ Done
 4. ~~Pattern templates (data + factory.ts integration)~~ Done
 5. ~~Template selector UI (pattern creation flow)~~ Done
-6. User preset save/load (IndexedDB `presets` store, DB v3)
-7. User preset management UI (save, delete, rename)
+6. ~~User preset save/load (IndexedDB `presets` store, DB v3)~~ Done
+7. ~~User preset management UI (save, delete, rename)~~ Done
 
 ## Consequences
 

@@ -349,27 +349,91 @@ for (const p of ALL_PRESETS) {
 
 export type PresetCategory = string
 
-/** Check if a voice has any presets */
-export function hasPresets(voiceId: VoiceId): boolean {
-  return PRESETS_BY_VOICE.has(voiceId)
+/** A user-saved preset (from IndexedDB) */
+export interface UserPreset extends SynthPreset {
+  id: number           // IndexedDB auto-increment id
+  isUser: true
 }
 
-/** Get presets for a voice, optionally filtered by category */
+/** In-memory cache of user presets, keyed by voiceId */
+const USER_PRESETS_BY_VOICE = new Map<string, UserPreset[]>()
+let userPresetsLoaded = false
+
+/** Load all user presets from IndexedDB into memory cache */
+export async function loadUserPresetsIntoCache(): Promise<void> {
+  const { loadAllUserPresets } = await import('./storage.ts')
+  const stored = await loadAllUserPresets()
+  USER_PRESETS_BY_VOICE.clear()
+  for (const s of stored) {
+    const preset: UserPreset = {
+      name: s.name,
+      voiceId: s.voiceId as VoiceId,
+      params: s.params,
+      category: 'user',
+      id: s.id!,
+      isUser: true,
+    }
+    const list = USER_PRESETS_BY_VOICE.get(s.voiceId) ?? []
+    list.push(preset)
+    USER_PRESETS_BY_VOICE.set(s.voiceId, list)
+  }
+  userPresetsLoaded = true
+}
+
+/** Add a user preset to the cache (call after saving to IDB) */
+export function addUserPresetToCache(voiceId: string, name: string, params: Record<string, number>, id: number): void {
+  const preset: UserPreset = { name, voiceId: voiceId as VoiceId, params, category: 'user', id, isUser: true }
+  const list = USER_PRESETS_BY_VOICE.get(voiceId) ?? []
+  list.push(preset)
+  USER_PRESETS_BY_VOICE.set(voiceId, list)
+}
+
+/** Remove a user preset from the cache */
+export function removeUserPresetFromCache(voiceId: string, id: number): void {
+  const list = USER_PRESETS_BY_VOICE.get(voiceId)
+  if (!list) return
+  const idx = list.findIndex(p => p.id === id)
+  if (idx >= 0) list.splice(idx, 1)
+}
+
+/** Rename a user preset in the cache */
+export function renameUserPresetInCache(voiceId: string, id: number, name: string): void {
+  const list = USER_PRESETS_BY_VOICE.get(voiceId)
+  if (!list) return
+  const preset = list.find(p => p.id === id)
+  if (preset) preset.name = name.slice(0, 16)
+}
+
+/** Check if a voice has any presets (factory or user) */
+export function hasPresets(voiceId: VoiceId): boolean {
+  return PRESETS_BY_VOICE.has(voiceId) || (USER_PRESETS_BY_VOICE.get(voiceId)?.length ?? 0) > 0
+}
+
+/** Get presets for a voice, optionally filtered by category. Includes user presets. */
 export function getPresets(voiceId: VoiceId, category?: string | null): SynthPreset[] {
-  const list = PRESETS_BY_VOICE.get(voiceId) ?? []
-  if (!category) return list
-  return list.filter(p => p.category === category)
+  const factory = PRESETS_BY_VOICE.get(voiceId) ?? []
+  const user = USER_PRESETS_BY_VOICE.get(voiceId) ?? []
+  const all = [...factory, ...user]
+  if (!category) return all
+  return all.filter(p => p.category === category)
 }
 
 /** Get unique categories for a voice's presets (empty if no categories) */
 export function getPresetCategories(voiceId: VoiceId): string[] {
-  const list = PRESETS_BY_VOICE.get(voiceId) ?? []
+  const factory = PRESETS_BY_VOICE.get(voiceId) ?? []
+  const user = USER_PRESETS_BY_VOICE.get(voiceId) ?? []
   const cats = new Set<string>()
-  for (const p of list) if (p.category) cats.add(p.category)
+  for (const p of factory) if (p.category) cats.add(p.category)
+  if (user.length > 0) cats.add('user')
   return [...cats]
+}
+
+/** Check if user presets have been loaded */
+export function isUserPresetsLoaded(): boolean {
+  return userPresetsLoaded
 }
 
 /** Category display labels */
 export const CATEGORY_LABELS: Record<string, string> = {
-  lead: 'LEAD', bass: 'BASS', pad: 'PAD', pluck: 'PLCK', keys: 'KEYS', fx: 'FX',
+  lead: 'LEAD', bass: 'BASS', pad: 'PAD', pluck: 'PLCK', keys: 'KEYS', fx: 'FX', user: 'USER',
 }

@@ -23,10 +23,20 @@ export interface StoredSample {
   createdAt: number
 }
 
+/** User-saved voice preset (ADR 015 §B) */
+export interface StoredPreset {
+  id?: number             // auto-increment
+  voiceId: string         // which voice this preset is for
+  name: string            // user-given name (max 16 chars)
+  params: Record<string, number>
+  createdAt: number
+}
+
 const DB_NAME = 'inboil'
-const DB_VERSION = 2
+const DB_VERSION = 3
 const STORE = 'projects'
 const SAMPLE_STORE = 'samples'
+const PRESET_STORE = 'presets'
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -43,8 +53,19 @@ function open(): Promise<IDBDatabase> {
         const ss = db.createObjectStore(SAMPLE_STORE, { keyPath: 'key' })
         ss.createIndex('projectId', 'projectId', { unique: false })
       }
+      if (!db.objectStoreNames.contains(PRESET_STORE)) {
+        const ps = db.createObjectStore(PRESET_STORE, { keyPath: 'id', autoIncrement: true })
+        ps.createIndex('voiceId', 'voiceId', { unique: false })
+      }
     }
-    req.onsuccess = () => resolve(req.result)
+    req.onblocked = () => { console.warn('[inboil] DB upgrade blocked — close other tabs and reload') }
+    req.onsuccess = () => {
+      const db = req.result
+      // When another tab opens a newer DB version, close this connection
+      // so the upgrade isn't blocked (the user will reload this tab anyway)
+      db.onversionchange = () => { db.close(); dbPromise = null }
+      resolve(db)
+    }
     req.onerror = () => { dbPromise = null; reject(req.error) }
   })
   return dbPromise
@@ -126,4 +147,41 @@ export async function deleteSamples(projectId: string): Promise<void> {
 export async function deleteSample(projectId: string, trackId: number): Promise<void> {
   const store = await tx(SAMPLE_STORE, 'readwrite')
   await req(store.delete(`${projectId}_${trackId}`))
+}
+
+// ── User Presets (ADR 015 §B) ────────────────────────────────────────
+
+/** Save a user preset, returns the auto-incremented id */
+export async function saveUserPreset(voiceId: string, name: string, params: Record<string, number>): Promise<number> {
+  const store = await tx(PRESET_STORE, 'readwrite')
+  const preset: StoredPreset = { voiceId, name: name.slice(0, 16), params, createdAt: Date.now() }
+  return req(store.add(preset) as IDBRequest<number>)
+}
+
+/** Load all user presets for a voice */
+export async function loadUserPresets(voiceId: string): Promise<StoredPreset[]> {
+  const store = await tx(PRESET_STORE, 'readonly')
+  const index = store.index('voiceId')
+  return req(index.getAll(voiceId))
+}
+
+/** Load all user presets */
+export async function loadAllUserPresets(): Promise<StoredPreset[]> {
+  const store = await tx(PRESET_STORE, 'readonly')
+  return req(store.getAll())
+}
+
+/** Delete a user preset by id */
+export async function deleteUserPreset(id: number): Promise<void> {
+  const store = await tx(PRESET_STORE, 'readwrite')
+  await req(store.delete(id))
+}
+
+/** Rename a user preset */
+export async function renameUserPreset(id: number, name: string): Promise<void> {
+  const store = await tx(PRESET_STORE, 'readwrite')
+  const existing: StoredPreset | undefined = await req(store.get(id))
+  if (!existing) return
+  existing.name = name.slice(0, 16)
+  await req(store.put(existing))
 }
