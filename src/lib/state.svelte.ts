@@ -303,7 +303,7 @@ export function redo(): boolean {
 
 export const song = $state<Song>(makeEmptySong())
 // Restore project name synchronously to avoid flash of "Untitled"
-try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName } catch {}
+try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch {}
 
 export const playback = $state({
   playing: false,
@@ -460,10 +460,11 @@ interface StoredPrefs {
   showGuide: boolean
   lastProjectId: string | null
   lastProjectName: string
+  lastBpm: number
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled' }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -493,6 +494,7 @@ function savePrefs(): void {
     showGuide: prefs.showGuide,
     lastProjectId: project.id,
     lastProjectName: song.name,
+    lastBpm: song.bpm,
   }))
 }
 

@@ -53,6 +53,27 @@
     else if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit() }
   }
 
+  // ── Inline BPM edit ──
+  let editingBpm = $state(false)
+  let editBpmValue = $state('')
+  let bpmInputEl: HTMLInputElement | undefined = $state()
+
+  function startBpmEdit() {
+    editBpmValue = String(song.bpm)
+    editingBpm = true
+    requestAnimationFrame(() => bpmInputEl?.select())
+  }
+  function commitBpmEdit() {
+    editingBpm = false
+    const v = Math.round(Number(editBpmValue))
+    if (!isNaN(v) && v >= 40 && v <= 240) song.bpm = v
+  }
+  function cancelBpmEdit() { editingBpm = false }
+  function onBpmKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); commitBpmEdit() }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelBpmEdit() }
+  }
+
   // ── Long-press auto-repeat for BPM ±buttons ──
   let bpmRepeatTimer: ReturnType<typeof setTimeout> | null = null
   let bpmRepeatInterval: ReturnType<typeof setInterval> | null = null
@@ -118,7 +139,22 @@
   <div class="sub-header">
     <div class="bpm-block">
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(-1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Decrease tempo (hold to scroll)" data-tip-ja="テンポを下げる (長押しでスクロール)">−</button>
-      <span class="bpm-value" data-tip="Current tempo (BPM)" data-tip-ja="現在のテンポ (BPM)"><SplitFlap value={song.bpm} /></span>
+      {#if editingBpm}
+        <input
+          bind:this={bpmInputEl}
+          class="bpm-input"
+          type="text"
+          inputmode="numeric"
+          maxlength="3"
+          bind:value={editBpmValue}
+          onblur={commitBpmEdit}
+          onkeydown={onBpmKeydown}
+        />
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <span class="bpm-value" onclick={startBpmEdit} data-tip="Click to edit tempo" data-tip-ja="クリックでテンポを変更"><SplitFlap value={song.bpm} /></span>
+      {/if}
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Increase tempo (hold to scroll)" data-tip-ja="テンポを上げる (長押しでスクロール)">+</button>
       <span class="bpm-label">BPM</span>
     </div>
@@ -345,11 +381,12 @@
 
   .bpm-value {
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: 24px;
     line-height: 1;
     color: var(--color-bg);
+    cursor: text;
   }
-  .compact .bpm-value { font-size: 26px; }
+  .compact .bpm-value { font-size: 18px; }
 
   .bpm-adj {
     border: 1px solid rgba(237,232,220,0.3);
@@ -364,6 +401,21 @@
     flex-shrink: 0;
   }
   .bpm-adj:active { background: rgba(237,232,220,0.15); }
+
+  .bpm-input {
+    font-family: var(--font-display);
+    font-size: 24px;
+    line-height: 1;
+    color: rgba(237,232,220,0.9);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(237,232,220,0.25);
+    border-radius: 2px;
+    padding: 0 4px;
+    width: 3.5ch;
+    outline: none;
+    text-align: center;
+  }
+  .compact .bpm-input { font-size: 18px; }
 
   .bpm-label {
     font-size: 9px;
@@ -508,7 +560,8 @@
     .bpm-block {
       padding: 4px 0 4px 8px;
     }
-    .bpm-value { font-size: 22px; }
+    .bpm-value { font-size: 14px; }
+    .bpm-input { font-size: 14px; }
     .bpm-adj { width: 20px; height: 20px; font-size: 12px; }
     .bpm-label { display: none; }
 
