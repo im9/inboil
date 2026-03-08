@@ -1,9 +1,10 @@
-# ADR 053 — Scene Automation Node
+# ADR 053 — Scene Automation Node (Graphical Curve Editor)
 
 | field   | value                              |
 | ------- | ---------------------------------- |
 | status  | proposed                           |
 | date    | 2026-03-06                         |
+| revised | 2026-03-08                         |
 | parent  | ADR 050 (Scene Function Nodes)     |
 
 ## Context
@@ -16,20 +17,32 @@ In the current inboil scene graph, function nodes (transpose, tempo, repeat, pro
 
 - Gradually increase tempo during a pattern (accelerando)
 - Open a filter cutoff over 4 bars
-- Fade in reverb wet amount
-- Fade out pattern volume
+- Fade in reverb wet amount per track
+- Wobble a track's pan left-right
+- Sweep a synth parameter (e.g. filter resonance) while a pattern plays
 
 ## Decision
 
 ### 1. New Function Node Type: `automation`
 
 ```typescript
+export interface AutomationPoint {
+  t: number  // 0.0–1.0 — position within pattern duration
+  v: number  // 0.0–1.0 — normalized parameter value
+}
+
+export type AutomationTarget =
+  | { kind: 'global'; param: 'tempo' | 'masterVolume' }
+  | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
+  | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
+                            | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
+
 type: 'automation'
 params: {
-  target: number    // 0=tempo, 1=volume, 2=filterCutoff, 3=reverbWet, 4=delayWet
-  startVal: number  // normalized 0.0–1.0
-  endVal: number    // normalized 0.0–1.0
-  curve: number     // 0=linear, 1=ease-in, 2=ease-out, 3=s-curve
+  target: AutomationTarget
+  points: AutomationPoint[]       // sorted by t, minimum 2 points
+  interpolation: 'linear' | 'smooth'  // linear = connect-the-dots, smooth = monotone cubic spline
 }
 ```
 
@@ -39,151 +52,244 @@ Add `'automation'` to the `SceneNode.type` union:
 type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
 ```
 
-### 2. Behavior Model
+### 2. Behavior Model — Decorator Pattern
 
-Automation nodes connect to the graph via edges, like other function nodes. They **continuously vary a parameter during the connected pattern's playback**:
+Automation nodes act as **decorators** on pattern nodes. An automation node's outgoing edge connects to a pattern node, and it continuously varies a parameter during that pattern's playback:
 
 ```
-[INTRO] ──→ [automation: tempo 80→120] ──→ [BUILDUP]
-                                             ↑ tempo changes 80→120 during this pattern's playback
+[INTRO] ──→ [auto: filter sweep] ──→ [BUILDUP]
+                                       ↑ filter cutoff varies according to drawn curve
 ```
 
-- When an automation node's outgoing edge leads to a pattern node, values are interpolated in sync with that pattern's playback steps
 - Multiple automation nodes can connect to the same pattern (different targets)
-- If multiple automations target the same parameter, the last connected one takes priority
+- Multiple automations on the same target: values are **summed** (clamped 0–1), enabling layered modulation
+- An automation node without a target connection is inert (no effect)
 
-### 3. Interpolation
+### 3. Graphical Curve Editor
 
-Interpolate using the pattern's playback progress `t = currentStep / totalSteps` (0.0–1.0):
+The core of this ADR: automation curves are drawn visually, not entered numerically.
+
+#### Editor Canvas
+
+A dedicated `<canvas>` element inside DockPanel (or overlay sheet) when an automation node is selected:
+
+```
+┌──────────────────────────────────┐
+│ TARGET: [track 1 volume  ▾]     │
+│ MODE:  ● Bezier  ○ Freehand     │
+├──────────────────────────────────┤
+│ 1.0 ┤                     ╱‾‾╲  │
+│     │        ╱‾‾‾╲       ╱    │  │
+│     │       ╱     ╲     ╱     │  │
+│     │      ╱       ╲   ╱      │  │
+│     │     ╱         ╲─╱       │  │
+│ 0.0 ┤────╱                    │  │
+│     └──────────────────────── t  │
+│     0              pattern    1  │
+├──────────────────────────────────┤
+│ INTERP: ● linear  ○ smooth      │
+│ [Clear] [Snap ▾] [Undo]         │
+└──────────────────────────────────┘
+```
+
+- Horizontal axis: pattern time `t` (0–1), with optional grid lines at beat/step boundaries
+- Vertical axis: parameter value `v` (0–1)
+- Canvas size: fits DockPanel width (~248px usable), height ~140px
+
+#### Drawing Modes
+
+**Bezier Mode** (precision):
+- Click to add anchor points on the canvas
+- Drag existing points to reposition
+- Shift+drag to adjust curve tension (control handles)
+- Double-click a point to delete it
+- Points auto-sort by `t`
+- Minimum 2 points (start + end)
+
+**Freehand Mode** (intuitive):
+- Press and drag across canvas to draw a curve
+- Raw input sampled at ~60 Hz → produces many points
+- On pointer-up, simplify with Ramer-Douglas-Peucker (epsilon ~0.02) to reduce to ~10–30 points
+- Result stored as `AutomationPoint[]`, same as Bezier mode
+- Can redraw any segment by drawing over it
+
+#### Editor Controls
+
+| Control | Behavior |
+|---------|----------|
+| Target selector | Dropdown grouped by kind: Global / Track N / FX / Send |
+| Mode toggle | Switch between Bezier and Freehand |
+| Interpolation | `linear` (straight lines between points) or `smooth` (monotone cubic) |
+| Snap | Off / 1/4 beat / 1/8 beat / 1/16 step — quantizes `t` on point placement |
+| Clear | Reset to default (flat line at 0.5) |
+| Undo | Undo last point add / freehand stroke (local undo stack, not global) |
+
+### 4. Interpolation
+
+At playback time, compute value for progress `t`:
 
 ```typescript
-function interpolate(t: number, start: number, end: number, curve: number): number {
-  let ct: number
-  switch (curve) {
-    case 0: ct = t; break                                    // linear
-    case 1: ct = t * t; break                                // ease-in
-    case 2: ct = 1 - (1 - t) * (1 - t); break              // ease-out
-    case 3: ct = t < 0.5 ? 2*t*t : 1 - 2*(1-t)*(1-t); break // s-curve
+function evaluateAutomation(points: AutomationPoint[], t: number, interpolation: string): number {
+  if (points.length === 0) return 0.5
+  if (t <= points[0].t) return points[0].v
+  if (t >= points[points.length - 1].t) return points[points.length - 1].v
+
+  // find surrounding points
+  let i = 0
+  while (i < points.length - 1 && points[i + 1].t < t) i++
+  const p0 = points[i], p1 = points[i + 1]
+  const segT = (t - p0.t) / (p1.t - p0.t)
+
+  if (interpolation === 'linear') {
+    return p0.v + (p1.v - p0.v) * segT
   }
-  return start + (end - start) * ct
+  // smooth: monotone cubic hermite
+  return monotoneCubic(points, i, segT)
 }
 ```
 
-### 4. Scene Graph Traversal Integration
+### 5. Target Parameter Mapping
+
+#### Global
+
+| param | Range (denormalized) | DSP target |
+|-------|---------------------|------------|
+| `tempo` | 60–300 BPM | `playback.bpm` via `setTempo()` message |
+| `masterVolume` | 0–100% | `perf.masterGain` |
+
+#### Track (per `trackIndex`)
+
+| param | Range | DSP target |
+|-------|-------|------------|
+| `volume` | 0.0–1.0 | `Track.volume` |
+| `pan` | -1.0–1.0 (stored 0–1, mapped) | `Track.pan` |
+
+#### FX (global effect parameters)
+
+| param | Range | DSP target |
+|-------|-------|------------|
+| `reverbWet` | 0–1 | `fxPad.verb.x` |
+| `reverbDamp` | 0–1 | `fxPad.verb.y` |
+| `delayTime` | 0–1 | `fxPad.delay.x` |
+| `delayFeedback` | 0–1 | `fxPad.delay.y` |
+| `filterCutoff` | 0–1 | `fxPad.filter.x` |
+| `glitchX` | 0–1 | `fxPad.glitch.x` |
+| `glitchY` | 0–1 | `fxPad.glitch.y` |
+| `granularSize` | 0–1 | `fxPad.granular.x` |
+| `granularDensity` | 0–1 | `fxPad.granular.y` |
+
+#### Send (per `trackIndex`)
+
+| param | Range | DSP target |
+|-------|-------|------------|
+| `reverbSend` | 0–1 | `Cell.reverbSend` |
+| `delaySend` | 0–1 | `Cell.delaySend` |
+| `glitchSend` | 0–1 | `Cell.glitchSend` |
+| `granularSend` | 0–1 | `Cell.granularSend` |
+
+### 6. Scene Graph Traversal Integration
 
 During `walkToNode()` traversal:
 1. Collect automation nodes along the path before reaching the next pattern node
-2. Store collected automation info in `playback` state when pattern playback starts
-3. As the AudioWorklet playhead advances, compute interpolated values on the main thread and update DSP parameters
+2. Store collected automations in playback state when pattern playback starts
+3. On each step advance (main thread tick), evaluate all active automations at `t = currentStep / totalSteps` and apply values to their targets
 
 ```typescript
 // Addition to playback state
 activeAutomations: Array<{
-  target: number
-  startVal: number
-  endVal: number
-  curve: number
+  target: AutomationTarget
+  points: AutomationPoint[]
+  interpolation: 'linear' | 'smooth'
 }>
 ```
 
-### 5. UI
-
-#### Node Display
+### 7. Node Display (SceneView Canvas)
 
 ```
 ┌────────┐
-│ ⤯ A→B  │  ← automation icon + start→end notation
+│ ∿ AUTO │  ← wave icon + label
 └────────┘
- tempo 80→120  ← label (target name + denormalized values)
+ trk1 vol   ← target summary
 ```
 
-- Icon: Rising curve SVG (similar to ⤯)
+- Icon: Sine-wave-like SVG (`∿`)
 - Node shape: Same rounded rect as other function nodes
-- Added to BubbleMenu
+- Label below: abbreviated target (`trk1 vol`, `tempo`, `verb wet`, etc.)
+- Added to BubbleMenu as 7th item
 
-#### Parameter Editing (DockPanel)
+#### Playback Visualization
 
-```
-┌──────────────────────────┐
-│ AUTOMATION               │
-│                          │
-│ Target: [tempo     ▾]    │
-│ Start:  ===●========  80 │
-│ End:    ========●===  120│
-│ Curve:  [linear  ▾]     │
-│                          │
-│ ┌──────────────────┐     │
-│ │    ╱‾‾‾          │     │  ← curve preview
-│ │   ╱              │     │
-│ │  ╱               │     │
-│ │ ╱                │     │
-│ └──────────────────┘     │
-└──────────────────────────┘
-```
-
-#### Canvas Drawing (During Playback)
-
-When an active pattern has connected automation nodes, draw a mini-curve below the node with a dot indicating the current position:
+When an active pattern has connected automation nodes, draw a mini-curve on the pattern node with a moving dot:
 
 ```
 ┌──────────┐
 │ BUILDUP  │
+│ ╱‾╲_╱● │  ← automation curve + playhead position
 └──────────┘
- ╱‾‾● ← current position
 ```
 
-### 6. Target Parameters
+### 8. Data Storage & Serialization
 
-| target | Name | Range (denormalized) | DSP parameter |
-|--------|------|---------------------|---------------|
-| 0 | Tempo | 60–300 BPM | `playback.bpm` |
-| 1 | Volume | 0–100% | `perf.masterGain` |
-| 2 | Filter Cutoff | 20–20000 Hz | `fxPad.filter.x` |
-| 3 | Reverb Wet | 0–100% | `effects.reverb.size` |
-| 4 | Delay Wet | 0–100% | `effects.delay.feedback` |
+Points arrays are plain JSON-serializable. Typical automation curve: 5–30 points (~200–1200 bytes). No special serialization needed.
+
+Default new automation node:
+```typescript
+{
+  target: { kind: 'global', param: 'masterVolume' },
+  points: [{ t: 0, v: 0 }, { t: 1, v: 1 }],  // simple ramp up
+  interpolation: 'linear'
+}
+```
 
 ## Implementation Phases
 
 ### Phase 1: Data model + node type
-1. Add `'automation'` to `SceneNode.type`
-2. Support automation in `sceneAddFunctionNode`
-3. Add automation icon to BubbleMenu
-4. Node display (SVG icon + label)
+1. Define `AutomationPoint`, `AutomationTarget` types
+2. Add `'automation'` to `SceneNode.type`
+3. Support automation in `sceneAddFunctionNode` with default params
+4. Add automation icon to BubbleMenu
+5. Node display on canvas (SVG icon + target label)
 
-### Phase 2: Param editing UI
-1. Automation parameter editing UI in DockPanel
-2. Target selector, start/end sliders, curve selector
-3. Curve preview drawing
+### Phase 2: Graphical curve editor
+1. Canvas-based curve editor component (`AutomationEditor.svelte`)
+2. Bezier mode: click to add points, drag to move, double-click to delete
+3. Freehand mode: pointer draw + Ramer-Douglas-Peucker simplification
+4. Target selector dropdown (grouped by kind, dynamic track list)
+5. Interpolation toggle, snap grid, clear, local undo
+6. Integrate into DockPanel (shown when automation node selected)
 
 ### Phase 3: Playback integration
 1. Collect automation nodes in `walkToNode()`
-2. Add `activeAutomations` to `playback` state
-3. Compute and apply interpolated values in the playback loop
-4. Notify AudioWorklet of tempo changes
+2. Add `activeAutomations` to playback state
+3. Evaluate curves on each step tick, apply to DSP targets
+4. Handle tempo automation (AudioWorklet `setTempo()` message)
+5. Handle track-level and send-level parameter updates
 
 ### Phase 4: Visual feedback
-1. Mini-curve + current position dot during playback (canvas drawing)
-2. Automation edge animation
+1. Mini-curve + playhead dot rendered inside pattern nodes during playback
+2. Automation node edge highlighting when active
 
 ## Considerations
 
-- **Scope**: This feature spans 4 phases. Phase 3 (playback integration) requires AudioWorklet coordination. Implement incrementally
-- **Real-time tempo changes**: Changing BPM during playback requires dynamically updating the AudioWorklet's `interval`. The existing `setTempo()` message handles this
-- **Parameter normalization**: All automation values are stored as 0.0–1.0 and denormalized per target. This aligns with the existing parameter design convention (CLAUDE.md)
-- **Cycle detection**: If an automation node is connected in a cycle, the existing graph traversal cycle detection handles it
-- **Future extensions**: LFO (periodic modulation) and step automation (discrete value changes) can be added as separate node types
+- **Point density**: Freehand mode could generate excessive points. RDP simplification with epsilon ~0.02 keeps curves under 30 points. If needed, enforce a hard cap at 64 points
+- **Real-time tempo changes**: BPM automation requires dynamically updating the AudioWorklet's `interval`. The existing `setTempo()` message handles this
+- **Parameter normalization**: All values stored 0.0–1.0, denormalized per target at application time (CLAUDE.md convention)
+- **Cycle detection**: Existing graph traversal cycle detection applies
+- **Canvas performance**: Editor canvas redraws only on point mutations or mode changes, not on animation frames. Playback visualization uses the existing SceneView render loop
+- **Touch support**: Freehand mode naturally supports touch/stylus input. Bezier mode point dragging uses pointer events (works on touch)
 
 ## Future Extensions
 
-- **LFO node**: Periodic parameter modulation (sine, triangle, square, random)
-- **Envelope node**: ADSR envelope for parameter control
-- **Custom curve editor**: Draw arbitrary automation shapes with bezier curves
-- **Per-track automation**: Automate parameters independently per track (instrument)
+- **LFO node**: Periodic parameter modulation (sine, triangle, square, random) — separate node type
+- **Envelope node**: ADSR-style parameter control
+- **Per-voice automation**: Automate synth parameters (voiceParams) per track
+- **Curve presets**: Save/load commonly used automation shapes
+- **Multi-lane editing**: Edit multiple automation curves simultaneously in a stacked view
 
 ## Extends
 
 | ADR | Impact |
 |-----|--------|
 | 044 (Scene Graph) | Add `'automation'` to `SceneNode.type` |
-| 050 (Scene Function Nodes) | 6th function node. BubbleMenu + DockPanel extension |
-| 048 (Scene Playback) | Extend `walkToNode()`, add automation info to `playback` state |
+| 050 (Scene Function Nodes) | 7th function node. BubbleMenu + DockPanel extension |
+| 048 (Scene Playback) | Extend `walkToNode()`, add automation info to playback state |
