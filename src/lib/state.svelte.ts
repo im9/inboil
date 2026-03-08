@@ -5,7 +5,7 @@ import {
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
 } from './constants.ts'
 import {
-  DRUM_VOICES, makeDefaultSong, makeEmptySong,
+  DRUM_VOICES, makeDefaultSong, makeEmptySong, makeEmptyCell,
   SECTION_COUNT,
 } from './factory.ts'
 
@@ -29,7 +29,7 @@ export interface Trig {
 /** Inline step data for one track in one section (ADR 042, replaces Phrase) */
 export interface Cell {
   name: string            // per-pattern track name (ADR 062)
-  voiceId: VoiceId        // per-pattern instrument (ADR 062)
+  voiceId: VoiceId | null  // per-pattern instrument (null = unassigned)
   steps: number           // 1–64
   trigs: Trig[]           // length === steps
   voiceParams: Record<string, number>
@@ -71,7 +71,7 @@ export interface Section {
 export interface Track {
   id: number
   name: string
-  voiceId: VoiceId
+  voiceId: VoiceId | null  // null = unassigned
   muted: boolean
   volume: number
   pan: number
@@ -253,12 +253,16 @@ function restoreSong(src: Song): void {
   song.bpm = src.bpm
   song.rootNote = src.rootNote ?? 0
   song.tracks = src.tracks.map(t => ({ ...t }))
-  song.patterns = src.patterns.map(p => ({
-    id: p.id,
-    name: p.name,
-    color: p.color ?? 0,
-    cells: p.cells.map(restoreCell),
-  }))
+  song.patterns = src.patterns.map(p => {
+    const cells = p.cells.map(restoreCell)
+    // Reconcile cells count with tracks (ADR 056)
+    while (cells.length < song.tracks.length) {
+      const t = song.tracks[cells.length]
+      cells.push(makeEmptyCell(cells.length, t.name, t.voiceId, 60))
+    }
+    if (cells.length > song.tracks.length) cells.length = song.tracks.length
+    return { id: p.id, name: p.name, color: p.color ?? 0, cells }
+  })
   song.sections = src.sections.map(s => ({
     patternIndex: s.patternIndex,
     repeats: s.repeats,
@@ -913,7 +917,7 @@ export function randomizePattern(): void {
     const c = activeCell(t)
     const steps = c.steps
 
-    if (DRUM_VOICES.has(c.voiceId)) {
+    if (c.voiceId && DRUM_VOICES.has(c.voiceId)) {
       for (let s = 0; s < steps; s++) {
         let prob = 0
         const beat = s % 8

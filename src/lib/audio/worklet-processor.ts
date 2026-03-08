@@ -130,10 +130,10 @@ function generateArpNotes(base: number, mode: number, chord: number, oct: number
 // ── Processor ─────────────────────────────────────────────────────────────────
 
 class GrooveboxProcessor extends AudioWorkletProcessor {
-  private voices: Voice[] = []
+  private voices: (Voice | null)[] = []
   private tracks: WorkletTrack[] = []
   private playheads: number[] = new Array(8).fill(0)
-  private gateCounters = new Int32Array(8)  // remaining steps before noteOff
+  private gateCounters = new Int32Array(8)
   private playing = false
   private bpm = 120
   private samplesPerStep = 0
@@ -185,7 +185,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private panGainsR      = new Float64Array(8).fill(Math.SQRT1_2)
   // Sidechain source flags (ADR 064) — true = triggers ducker & bypasses ducking
   private scSource       = new Uint8Array(8)  // 0 or 1
-  // Arpeggiator — per-track state (melodic tracks t>=6)
+  // Arpeggiator — per-track state (melodic tracks only)
   private arpNotes:    number[][] = Array.from({length: 8}, () => [])
   private arpIdx       = new Int32Array(8)
   private arpCounter   = new Int32Array(8)
@@ -238,7 +238,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         case 'stop':
           this.playing = false; this.playheads.fill(0)
           this.gateCounters.fill(0)
-          for (const v of this.voices) v.reset()
+          for (const v of this.voices) v?.reset()
           break
         case 'setBpm':
           if (cmd.bpm !== undefined) {
@@ -246,7 +246,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.currentThreshold = this.swingPhase === 0
               ? (1 - this.swing) * 2 * this.samplesPerStep
               : this.swing * 2 * this.samplesPerStep
-            for (const v of this.voices) v.setParam('bpm', this.bpm)
+            for (const v of this.voices) v?.setParam('bpm', this.bpm)
           }
           break
         case 'triggerNote': {
@@ -279,8 +279,22 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.currentThreshold = this.swingPhase === 0
             ? (1 - this.swing) * 2 * this.samplesPerStep
             : this.swing * 2 * this.samplesPerStep
-          if (this.voices.length !== p.tracks.length) {
+          const n = p.tracks.length
+          if (this.voices.length !== n) {
             this.voices = p.tracks.map((t, i) => makeVoice(i, t.voiceId, sampleRate))
+            // Resize per-track arrays
+            this.playheads    = new Array(n).fill(0)
+            this.gateCounters = new Int32Array(n)
+            this.muteGains    = new Float64Array(n).fill(1.0)
+            this.panGainsL    = new Float64Array(n).fill(Math.SQRT1_2)
+            this.panGainsR    = new Float64Array(n).fill(Math.SQRT1_2)
+            this.scSource     = new Uint8Array(n)
+            this.arpNotes     = Array.from({length: n}, () => [])
+            this.arpIdx       = new Int32Array(n)
+            this.arpCounter   = new Int32Array(n)
+            this.arpTickSize  = new Int32Array(n)
+            this.arpVel       = new Float64Array(n)
+            this.arpSeed      = new Uint32Array(n).fill(77777)
           } else {
             // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
             for (let i = 0; i < p.tracks.length; i++) {
@@ -293,7 +307,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           for (let i = 0; i < p.tracks.length; i++) {
             const vp = p.tracks[i].voiceParams
             if (vp && this.voices[i]) {
-              for (const k in vp) this.voices[i].setParam(k, vp[k])
+              for (const k in vp) this.voices[i]!.setParam(k, vp[k])
             }
             this.voices[i]?.setParam('bpm', this.bpm)
           }
@@ -396,16 +410,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // P-Lock: restore base params, then overlay per-step locks
       if (this.voices[t] && track.voiceParams) {
-        for (const k in track.voiceParams) this.voices[t].setParam(k, track.voiceParams[k])
+        for (const k in track.voiceParams) this.voices[t]!.setParam(k, track.voiceParams[k])
       }
       if (this.voices[t] && trig?.active && trig.paramLocks) {
-        for (const k in trig.paramLocks) this.voices[t].setParam(k, trig.paramLocks[k])
+        for (const k in trig.paramLocks) this.voices[t]!.setParam(k, trig.paramLocks[k])
       }
 
       // Was the previous note's gate still open?
       const wasGated = this.gateCounters[t] > 0
       // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303
-      const isMelodic = !DRUM_VOICES.has(track.voiceId)
+      const isMelodic = track.voiceId ? !DRUM_VOICES.has(track.voiceId) : false
       // Legato condition: suppress noteOff if incoming trig continues the phrase
       const isLegato = trig?.active && (isMelodic || trig.slide)
 
@@ -519,7 +533,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             : (1 - this.swing) * 2 * this.samplesPerStep
         }
         // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceStep)
-        for (let t = 6; t < this.voices.length; t++) {
+        for (let t = 0; t < this.voices.length; t++) {
           if (this.arpNotes[t].length === 0) continue
           const arpRate = Math.round(this.tracks[t]?.voiceParams?.arpRate ?? 1)
           if (arpRate <= 1) continue
@@ -545,6 +559,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.muteGains[t] += (muteTarget - this.muteGains[t]) * mc
           if (this.muteGains[t] < 0.0001 && track?.muted) continue
           const voice = this.voices[t]
+          if (!voice) continue
           const gain = this.muteGains[t] * (track?.volume ?? 0.8)
           if (voice.tickStereo) {
             voice.tickStereo(this._stereoTmp)

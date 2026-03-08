@@ -1,9 +1,20 @@
 <script lang="ts">
-  import { onDestroy, tick } from 'svelte'
-  import { slide } from 'svelte/transition'
+  import { onDestroy, onMount, tick } from 'svelte'
   import { song, activeCell, playback, ui, isViewingPlayingPattern } from '../state.svelte.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
+
+  // Force scroll recalc after mount — transition:fly on parent can delay layout
+  let scrollEl: HTMLDivElement | undefined = $state(undefined)
+  onMount(() => {
+    requestAnimationFrame(() => {
+      if (scrollEl) {
+        scrollEl.style.overflowY = 'hidden'
+        void scrollEl.offsetHeight
+        scrollEl.style.overflowY = ''
+      }
+    })
+  })
 
   function cycleSteps(trackId: number) {
     const current = activeCell(trackId).steps
@@ -138,6 +149,7 @@
 </script>
 
 <div class="step-grid">
+<div class="step-grid-scroll" bind:this={scrollEl}>
   {#each song.tracks as track, trackId}
     {@const selected = ui.selectedTrack === trackId}
     {@const ph = activeCell(trackId)}
@@ -192,6 +204,7 @@
             <span class="flip-face back mute-on">M</span>
           </span>
         </button>
+
       </div>
 
       <!-- Steps -->
@@ -235,7 +248,6 @@
         onpointermove={velOnMove}
         onpointerup={velEndDrag}
         onpointercancel={velEndDrag}
-        transition:slide={{ duration: 120 }}
       >
         <div class="track-head">
           <div class="vel-label">
@@ -276,12 +288,20 @@
       </div>
       <!-- Inline piano roll for melodic tracks -->
       {#if !isDrum(ph)}
-        <div transition:slide={{ duration: 120 }}>
+        <div>
           <PianoRoll trackId={trackId} />
         </div>
       {/if}
     {/if}
   {/each}
+  {#if song.tracks.length < 16}
+    <button
+      class="btn-add-track"
+      onpointerdown={() => addTrack()}
+      data-tip="Add empty track" data-tip-ja="空トラックを追加"
+    >+</button>
+  {/if}
+</div>
 </div>
 
 
@@ -289,10 +309,16 @@
   .step-grid {
     /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
     --head-w: 136px;
+    position: relative;
     flex: 1;
-    overflow-y: auto;
-    overscroll-behavior: none;
+    min-height: 0;
     background: var(--color-bg);
+  }
+  .step-grid-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
     padding: 4px 0;
   }
 
@@ -314,7 +340,6 @@
     padding: 0 8px;
     border-bottom: 1px solid rgba(30,32,40,0.08);
     overflow: hidden;
-    overscroll-behavior: none;
     touch-action: none;
   }
   .track-row.selected {
@@ -489,7 +514,6 @@
     gap: 4px;
     background: var(--color-surface);
     border-bottom: 1px solid rgba(30,32,40,0.08);
-    touch-action: none;
     user-select: none;
     border-left: 3px solid var(--color-olive);
     padding-left: 5px;
@@ -603,6 +627,23 @@
     transform: rotate(45deg);
     z-index: 1;
     pointer-events: none;
+  }
+
+  /* ── Add track ── */
+  .btn-add-track {
+    width: 24px;
+    height: 24px;
+    margin: 4px 8px;
+    border: 1px dashed rgba(30,32,40,0.2);
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 80ms, border-color 80ms;
+  }
+  .btn-add-track:hover {
+    color: var(--color-olive);
+    border-color: var(--color-olive);
   }
 
 </style>

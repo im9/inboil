@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, activeCell, ui, toggleDockMinimized, samplesByTrack, setSample } from '../state.svelte.ts'
-  import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice } from '../stepActions.ts'
+  import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, loadUserPresetsIntoCache, isUserPresetsLoaded, addUserPresetToCache, removeUserPresetFromCache, renameUserPresetInCache, type UserPreset } from '../presets.ts'
@@ -21,15 +21,28 @@
 
   const hasSelection = $derived(ui.selectedTrack >= 0)
   const track  = $derived(hasSelection ? song.tracks[ui.selectedTrack] : null)
-  const TRACK_LABELS = song.tracks.map((_t, i) => `TR${i + 1}`)
   const cell   = $derived(hasSelection ? activeCell(ui.selectedTrack) : null)
-  const currentCat = $derived(cell ? (VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum') : 'drum')
+  const currentCat = $derived(cell?.voiceId ? (VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum') : 'drum')
   const voicesInCat = $derived(VOICE_LIST.filter(v => v.category === currentCat))
   const params = $derived(cell ? getParamDefs(cell.voiceId) : [])
   const selTrig = $derived(cell && ui.selectedStep !== null ? cell.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
+
+  // ── Track delete (2-step confirm) ──
+  let confirmDelete = $state(false)
+  // Reset confirm when switching tracks
+  $effect(() => { void ui.selectedTrack; confirmDelete = false })
+
+  function handleDeleteTrack() {
+    if (confirmDelete) {
+      removeTrack(ui.selectedTrack)
+      confirmDelete = false
+    } else {
+      confirmDelete = true
+    }
+  }
 
   // ── Preset browser ──
   const showPresets = $derived(cell ? hasPresets(cell.voiceId) : false)
@@ -267,19 +280,35 @@
   <div class="dock-body">
         <div class="param-content">
           <!-- Track selector bar -->
+          <span class="track-bar-label"
+            data-tip="Select a track to edit its voice, params and sends"
+            data-tip-ja="トラックを選択して音源・パラメータ・センドを編集"
+          >TRACKS</span>
           <div class="track-bar">
             {#each song.tracks as _t, i}
+              {@const c = activeCell(i)}
               <button
                 class="track-btn"
                 class:active={i === ui.selectedTrack}
                 class:muted={_t.muted}
                 onpointerdown={() => { ui.selectedTrack = i }}
-              >{TRACK_LABELS[i]}</button>
+                data-tip="Track {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
+                data-tip-ja="トラック {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
+              >{i + 1}</button>
             {/each}
           </div>
 
           {#if cell && track}
-          <div class="selected-track-name">{cell.name}</div>
+          <div class="selected-track-name">
+            {cell.name}
+            <button
+              class="btn-del-track"
+              class:confirm={confirmDelete}
+              onpointerdown={handleDeleteTrack}
+              data-tip={confirmDelete ? 'Tap again to confirm' : 'Remove this track from all patterns'}
+              data-tip-ja={confirmDelete ? 'もう一度タップで確定' : 'このトラックを全パターンから削除'}
+            >{confirmDelete ? 'REMOVE?' : 'REMOVE'}</button>
+          </div>
 
           <!-- Voice category + instrument selector -->
           <div class="voice-cats">
@@ -571,20 +600,29 @@
     padding: 10px 12px 10px 16px;
   }
   /* ── Track selector bar ── */
+  .track-bar-label {
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: rgba(var(--dk-cream), 0.3);
+    margin-bottom: 4px;
+  }
   .track-bar {
     display: flex;
+    flex-wrap: wrap;
     gap: 2px;
     margin-bottom: 8px;
   }
   .track-btn {
-    flex: 1;
+    width: 24px;
+    height: 22px;
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text-dim);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 4px 0;
+    padding: 0;
     text-align: center;
   }
   .track-btn.active {
@@ -603,8 +641,31 @@
     color: var(--dk-text);
     text-transform: uppercase;
     margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
-
+  .btn-del-track {
+    margin-left: auto;
+    border: 1px solid rgba(var(--dk-cream), 0.15);
+    background: transparent;
+    color: rgba(var(--dk-cream), 0.35);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 80ms, border-color 80ms, background 80ms;
+  }
+  .btn-del-track:hover {
+    color: rgba(var(--dk-cream), 0.6);
+    border-color: rgba(var(--dk-cream), 0.3);
+  }
+  .btn-del-track.confirm {
+    color: var(--color-salmon);
+    border-color: var(--color-salmon);
+    background: rgba(220, 80, 80, 0.1);
+  }
   .lock-row {
     display: flex;
     align-items: center;

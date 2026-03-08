@@ -88,6 +88,7 @@ export class GrooveboxEngine {
   private _autoLoadSamples(wp: WorkletPattern): void {
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
+      if (!vid) continue
       const prev = this.trackVoiceIds[i]
       this.trackVoiceIds[i] = vid
       // Built-in drum samples (Crash, Ride)
@@ -273,11 +274,16 @@ function buildWorkletPattern(
     },
     tracks: s.tracks.map((t, i) => {
       const cell = pat.cells[i]
+      if (!cell) return {
+        steps: 16, muted: true, voiceId: '', sidechainSource: false,
+        volume: 0, pan: 0, reverbSend: 0, delaySend: 0, glitchSend: 0, granularSend: 0,
+        voiceParams: {}, trigs: [],
+      }
       return {
         steps:       cell.steps,
         muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
-        voiceId:     cell.voiceId,
-        sidechainSource: isSidechainSource(cell.voiceId),
+        voiceId:     cell.voiceId ?? '',
+        sidechainSource: cell.voiceId ? isSidechainSource(cell.voiceId) : false,
         volume:      t.volume,
         pan:         t.pan,
         reverbSend:    Math.min(1, cell.reverbSend   + (fxPad?.verb.on    ? 0.3 : 0)),

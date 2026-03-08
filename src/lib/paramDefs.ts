@@ -115,13 +115,15 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
 const DRUM_MACHINE_IDS = new Set(['Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal', 'Tom', 'Rimshot', 'Cowbell', 'Shaker'])
 export const SAMPLER_IDS = new Set(['Crash', 'Ride', 'Sampler'])
 
-export function getParamDefs(voiceId: VoiceId): ParamDef[] {
+export function getParamDefs(voiceId: VoiceId | null): ParamDef[] {
+  if (!voiceId) return []
   if (DRUM_MACHINE_IDS.has(voiceId)) return VOICE_PARAMS.DrumMachine ?? []
   if (SAMPLER_IDS.has(voiceId)) return VOICE_PARAMS.Sampler ?? []
   return VOICE_PARAMS[voiceId] ?? []
 }
 
-export function defaultVoiceParams(voiceId: VoiceId): Record<string, number> {
+export function defaultVoiceParams(voiceId: VoiceId | null): Record<string, number> {
+  if (!voiceId) return {}
   const defs = getParamDefs(voiceId)
   const preset = DRUM_PRESETS[voiceId]
   if (preset) {

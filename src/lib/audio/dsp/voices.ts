@@ -1410,7 +1410,8 @@ export function isSidechainSource(voiceId: string): boolean {
   return _scSourceMap.get(voiceId) ?? false
 }
 
-export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice {
+export function makeVoice(_trackIdx: number, voiceId: string, sr: number): Voice | null {
+  if (!voiceId) return null
   const factory = VOICE_REGISTRY[voiceId]
   return factory ? factory(sr) : new AnalogVoice(sr)
 }

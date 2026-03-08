@@ -21,7 +21,7 @@ function makeTrigs(steps: number, activeSteps: number[], note = 60): Trig[] {
 export function makeTrack(
   id: number,
   name: string,
-  voiceId: VoiceId,
+  voiceId: VoiceId | null,
   pan = 0,
 ): Track {
   return { id, name, voiceId, muted: false, volume: 0.8, pan }
@@ -111,14 +111,14 @@ export function getTemplate(id?: string): PatternTemplate {
   return PATTERN_TEMPLATES.find(t => t.id === id) ?? PATTERN_TEMPLATES[0]
 }
 
-export function makeEmptyCell(_trackId: number, name: string, voiceId: VoiceId, note: number, steps = 16): Cell {
-  const drum = DRUM_VOICES.has(voiceId)
+export function makeEmptyCell(_trackId: number, name: string, voiceId: VoiceId | null, note: number, steps = 16): Cell {
+  const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
   return {
     name,
     voiceId,
     steps,
     trigs: Array.from({ length: steps }, () => makeTrig(false, note)),
-    voiceParams: defaultVoiceParams(voiceId),
+    voiceParams: voiceId ? defaultVoiceParams(voiceId) : {},
     reverbSend:  drum ? 0.08 : 0.25,
     delaySend:   drum ? 0.00 : 0.12,
     glitchSend:  0,

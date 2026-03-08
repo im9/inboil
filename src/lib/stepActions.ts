@@ -6,7 +6,7 @@
 import { song, ui, pushUndo, activeCell } from './state.svelte.ts'
 import type { Trig, VoiceId } from './state.svelte.ts'
 import { PATTERN_COLORS } from './constants.ts'
-import { makeTrig, DRUM_VOICES } from './factory.ts'
+import { makeTrig, makeTrack, makeEmptyCell, DRUM_VOICES } from './factory.ts'
 import { VOICE_LIST } from './audio/dsp/voices.ts'
 import { defaultVoiceParams } from './paramDefs.ts'
 
@@ -172,8 +172,8 @@ export function toggleSolo(trackId: number) {
   ui.soloTracks = new Set(ui.soloTracks)
 }
 
-export function isDrum(trackOrCell: { voiceId: VoiceId }): boolean {
-  return DRUM_VOICES.has(trackOrCell.voiceId)
+export function isDrum(trackOrCell: { voiceId: VoiceId | null }): boolean {
+  return !!trackOrCell.voiceId && DRUM_VOICES.has(trackOrCell.voiceId)
 }
 
 /** Change instrument voice for the active cell (ADR 062, was track-level) */
@@ -181,7 +181,7 @@ export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
   pushUndo('Change instrument')
   const track = song.tracks[trackIdx]
   const c = activeCell(trackIdx)
-  const wasDrum = DRUM_VOICES.has(c.voiceId)
+  const wasDrum = c.voiceId ? DRUM_VOICES.has(c.voiceId) : false
   c.voiceId = newVoiceId
   c.voiceParams = defaultVoiceParams(newVoiceId)
   const meta = VOICE_LIST.find(v => v.id === newVoiceId)
@@ -250,4 +250,39 @@ export function clearParamLock(trackId: number, stepIdx: number, key: string) {
 export function clearAllParamLocks(trackId: number, stepIdx: number) {
   pushUndo('Clear all P-Locks')
   activeCell(trackId).trigs[stepIdx].paramLocks = undefined
+}
+
+// ── Dynamic track count (ADR 056) ──
+
+const MAX_TRACKS = 16
+
+export function addTrack(voiceId: VoiceId | null = null): number | null {
+  if (song.tracks.length >= MAX_TRACKS) return null
+  pushUndo('Add track')
+  const idx = song.tracks.length
+  const meta = voiceId ? VOICE_LIST.find(v => v.id === voiceId) : null
+  const name = meta?.label ?? (voiceId ? voiceId.toUpperCase().slice(0, 4) : `TR${idx + 1}`)
+  const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
+  song.tracks.push(makeTrack(idx, name, voiceId, 0))
+  for (const pat of song.patterns) {
+    pat.cells.push(makeEmptyCell(idx, name, voiceId, drum ? 60 : 48))
+  }
+  ui.selectedTrack = idx
+  return idx
+}
+
+export function removeTrack(idx: number): boolean {
+  if (song.tracks.length === 0) return false
+  pushUndo('Remove track')
+  song.tracks.splice(idx, 1)
+  song.tracks.forEach((t, i) => t.id = i)
+  for (const pat of song.patterns) {
+    pat.cells.splice(idx, 1)
+  }
+  if (song.tracks.length === 0) {
+    ui.selectedTrack = -1
+  } else if (ui.selectedTrack >= song.tracks.length) {
+    ui.selectedTrack = song.tracks.length - 1
+  }
+  return true
 }

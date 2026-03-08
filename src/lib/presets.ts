@@ -405,12 +405,14 @@ export function renameUserPresetInCache(voiceId: string, id: number, name: strin
 }
 
 /** Check if a voice has any presets (factory or user) */
-export function hasPresets(voiceId: VoiceId): boolean {
+export function hasPresets(voiceId: VoiceId | null): boolean {
+  if (!voiceId) return false
   return PRESETS_BY_VOICE.has(voiceId) || (USER_PRESETS_BY_VOICE.get(voiceId)?.length ?? 0) > 0
 }
 
 /** Get presets for a voice, optionally filtered by category. Includes user presets. */
-export function getPresets(voiceId: VoiceId, category?: string | null): SynthPreset[] {
+export function getPresets(voiceId: VoiceId | null, category?: string | null): SynthPreset[] {
+  if (!voiceId) return []
   const factory = PRESETS_BY_VOICE.get(voiceId) ?? []
   const user = USER_PRESETS_BY_VOICE.get(voiceId) ?? []
   const all = [...factory, ...user]
@@ -419,7 +421,8 @@ export function getPresets(voiceId: VoiceId, category?: string | null): SynthPre
 }
 
 /** Get unique categories for a voice's presets (empty if no categories) */
-export function getPresetCategories(voiceId: VoiceId): string[] {
+export function getPresetCategories(voiceId: VoiceId | null): string[] {
+  if (!voiceId) return []
   const factory = PRESETS_BY_VOICE.get(voiceId) ?? []
   const user = USER_PRESETS_BY_VOICE.get(voiceId) ?? []
   const cats = new Set<string>()
