@@ -433,8 +433,9 @@
                   data-tip={p.tip} data-tip-ja={p.tipJa}
                 >{(knobValue(p) ?? p.default) >= 0.5 ? 'REV' : 'FWD'}</button>
               {:else}
-                {#if i > 0 && p.group && p.group !== params[i - 1].group}
-                  <div class="param-sep-row" aria-hidden="true"></div>
+                {#if p.group && (i === 0 || p.group !== params[i - 1].group)}
+                  {@const groupLabels: Record<string, string> = { tone: 'OSC', noise: 'NOISE', metal: 'METAL', amp: 'AMP', filter: 'FILTER', env: 'ENV', arp: 'ARP', osc: 'OSC', lfo: 'LFO', sample: 'SAMPLE', chop: 'CHOP', sync: 'SYNC' }}
+                  <div class="param-group-label">{groupLabels[p.group] ?? p.group.toUpperCase()}</div>
                 {/if}
                 <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
                   <Knob
@@ -453,6 +454,7 @@
 
           <!-- Send knobs -->
           <div class="section-divider" aria-hidden="true"></div>
+          <div class="section-label">SEND</div>
           <div class="knob-grid">
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
               <Knob value={cell.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
@@ -470,6 +472,7 @@
 
           <!-- Mixer knobs -->
           <div class="section-divider" aria-hidden="true"></div>
+          <div class="section-label">MIXER</div>
           <div class="knob-grid">
             <span data-tip="Track volume" data-tip-ja="トラック音量">
               <Knob value={track.volume} label="VOL" size={32} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
@@ -923,16 +926,28 @@
     gap: 8px 12px;
     padding: 4px 0;
   }
-  .param-sep-row {
+  .param-group-label {
     width: 100%;
-    height: 1px;
-    background: var(--dk-bg-hover);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--dk-text-dim);
+    margin-top: 6px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--dk-bg-hover);
   }
   .section-divider {
     width: 100%;
     height: 1px;
     background: var(--dk-bg-active);
     margin: 8px 0;
+  }
+  .section-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--dk-text-dim);
+    padding-bottom: 2px;
   }
 
 </style>
