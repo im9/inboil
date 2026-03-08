@@ -1,4 +1,4 @@
-# ADR 062: Scene Node Decorators — Function Node Snap-Attach Model
+# ADR 066: Scene Node Decorators — Function Node Snap-Attach Model
 
 ## Status: Implemented
 
