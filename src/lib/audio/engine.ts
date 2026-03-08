@@ -2,7 +2,7 @@
  * engine.ts — main thread audio engine API.
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
-import type { Song, Effects } from '../state.svelte.ts'
+import type { Song } from '../state.svelte.ts'
 import { ui, masterPad, masterLevels } from '../state.svelte.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
@@ -66,18 +66,18 @@ export class GrooveboxEngine {
     }
   }
 
-  sendPattern(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, sectionIndex = 0): void {
+  sendPattern(song: Song, perf?: PerfState, fxPad?: FxPadState, reset = false, sectionIndex = 0): void {
     if (!this.node) return
-    const wp = patternToWorklet(song, fx, perf, fxPad, sectionIndex)
+    const wp = patternToWorklet(song, perf, fxPad, sectionIndex)
     this._post({ type: 'setPattern', pattern: wp, reset })
     this._autoLoadSamples(wp)
   }
 
-  sendPatternByIndex(song: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, reset = false, patternIndex = 0): void {
+  sendPatternByIndex(song: Song, perf?: PerfState, fxPad?: FxPadState, reset = false, patternIndex = 0): void {
     if (!this.node) return
     const pat = song.patterns[patternIndex]
     if (!pat) return
-    const wp = buildWorkletPattern(song, pat, fx, perf, fxPad)
+    const wp = buildWorkletPattern(song, pat, perf, fxPad)
     this._post({ type: 'setPattern', pattern: wp, reset })
     this._autoLoadSamples(wp)
   }
@@ -186,17 +186,18 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
 }
 
 function patternToWorklet(
-  s: Song, fx: Effects, perf?: PerfState, fxPad?: FxPadState, sectionIndex = 0,
+  s: Song, perf?: PerfState, fxPad?: FxPadState, sectionIndex = 0,
 ): WorkletPattern {
   const sec = s.sections[sectionIndex]
-  return buildWorkletPattern(s, s.patterns[sec.patternIndex], fx, perf, fxPad)
+  return buildWorkletPattern(s, s.patterns[sec.patternIndex], perf, fxPad)
 }
 
 import type { Pattern } from '../state.svelte.ts'
 
 function buildWorkletPattern(
-  s: Song, pat: Pattern, fx: Effects, perf?: PerfState, fxPad?: FxPadState,
+  s: Song, pat: Pattern, perf?: PerfState, fxPad?: FxPadState,
 ): WorkletPattern {
+  const fx = s.effects
   const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
   const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
   const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time

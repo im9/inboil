@@ -2,6 +2,7 @@
 import { defaultVoiceParams } from './paramDefs.ts'
 import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, VoiceId } from './state.svelte.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
+import { DEFAULT_EFFECTS } from './constants.ts'
 
 export { DRUM_VOICES }
 
@@ -491,6 +492,36 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
 }
 
 /**
+ * Build a completely empty Song (for new projects).
+ */
+export function makeEmptySong(): Song {
+  const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) =>
+    makeTrack(trackIdx, d.name, d.voiceId, d.pan)
+  )
+  const patterns: Pattern[] = []
+  const sections: Section[] = []
+  for (let i = 0; i < SECTION_COUNT; i++) {
+    patterns.push(makeEmptyPattern(i))
+    sections.push(makeEmptySection(i))
+  }
+  return {
+    name: 'Untitled',
+    bpm: 120,
+    rootNote: 0,
+    tracks,
+    patterns,
+    sections,
+    scene: { name: 'Main', nodes: [], edges: [], labels: [] },
+    effects: {
+      reverb: { ...DEFAULT_EFFECTS.reverb },
+      delay:  { ...DEFAULT_EFFECTS.delay },
+      ducker: { ...DEFAULT_EFFECTS.ducker },
+      comp:   { ...DEFAULT_EFFECTS.comp },
+    },
+  }
+}
+
+/**
  * Build the default Song with pattern pool + arrangement sections + scene (ADR 044).
  * First FACTORY_COUNT patterns come from factory presets, rest are empty.
  * Sections have 1:1 mapping to patterns via patternIndex.
@@ -528,5 +559,11 @@ export function makeDefaultSong(): Song {
     patterns,
     sections,
     scene: makeDefaultScene(patterns),
+    effects: {
+      reverb: { ...DEFAULT_EFFECTS.reverb },
+      delay:  { ...DEFAULT_EFFECTS.delay },
+      ducker: { ...DEFAULT_EFFECTS.ducker },
+      comp:   { ...DEFAULT_EFFECTS.comp },
+    },
   }
 }

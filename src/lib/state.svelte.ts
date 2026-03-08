@@ -6,7 +6,7 @@ import {
   PATTERN_COLORS,
 } from './constants.ts'
 import {
-  DRUM_VOICES, makeTrig, makeDefaultSong, makeEmptyCell,
+  DRUM_VOICES, makeTrig, makeDefaultSong, makeEmptySong, makeEmptyCell,
   makePatternId,
   TRACK_DEFAULTS, SECTION_COUNT, FACTORY_COUNT,
 } from './factory.ts'
@@ -133,6 +133,7 @@ export interface Song {
   patterns: Pattern[]     // pattern pool (ADR 044)
   sections: Section[]     // arrangement slots referencing patterns
   scene: Scene            // arrangement graph (ADR 044, data-only in Phase 1a)
+  effects: Effects        // global send/bus effects (ADR 020)
 }
 
 /** Resolve the Pattern referenced by a section index */
@@ -208,6 +209,12 @@ function cloneSong(): Song {
     patterns: song.patterns.map(clonePattern),
     sections: song.sections.map(cloneSection),
     scene: cloneScene(song.scene),
+    effects: {
+      reverb: { ...song.effects.reverb },
+      delay: { ...song.effects.delay },
+      ducker: { ...song.effects.ducker },
+      comp: { ...song.effects.comp },
+    },
   }
 }
 
@@ -228,6 +235,8 @@ export function pushUndo(label: string): void {
   redoStack.length = 0
   lastPushTime = now
   lastPushLabel = label
+  project.dirty = true
+  scheduleAutoSave()
 }
 
 function restoreCell(c: Cell): Cell {
@@ -244,7 +253,7 @@ function restoreCell(c: Cell): Cell {
 }
 
 function restoreSong(src: Song): void {
-  song.name = src.name
+  song.name = src.name || 'Untitled'
   song.bpm = src.bpm
   song.rootNote = src.rootNote ?? 0
   song.tracks = src.tracks.map(t => ({ ...t }))
@@ -274,6 +283,13 @@ function restoreSong(src: Song): void {
         labels: (src.scene.labels ?? []).map(l => ({ ...l })),
       }
     : { name: 'Main', nodes: [], edges: [], labels: [] }
+  const fx = src.effects ?? DEFAULT_EFFECTS
+  song.effects = {
+    reverb: { ...fx.reverb },
+    delay: { ...fx.delay },
+    ducker: { ...fx.ducker },
+    comp: { ...fx.comp },
+  }
 }
 
 export function undo(): boolean {
@@ -296,7 +312,9 @@ export function redo(): boolean {
 
 // ── Reactive state ───────────────────────────────────────────────────
 
-export const song = $state<Song>(makeDefaultSong())
+export const song = $state<Song>(makeEmptySong())
+// Restore project name synchronously to avoid flash of "Untitled"
+try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName } catch {}
 
 export const playback = $state({
   playing: false,
@@ -451,10 +469,12 @@ interface StoredPrefs {
   dockMinimized: boolean
   patternEditor: 'grid' | 'tracker'
   showGuide: boolean
+  lastProjectId: string | null
+  lastProjectName: string
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled' }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -482,6 +502,8 @@ function savePrefs(): void {
     dockMinimized: ui.dockMinimized,
     patternEditor: prefs.patternEditor,
     showGuide: prefs.showGuide,
+    lastProjectId: project.id,
+    lastProjectName: song.name,
   }))
 }
 
@@ -556,12 +578,17 @@ export const vkbd = $state({
   heldKeys: new Set<string>(),
 })
 
-export const effects = $state<Effects>({
-  reverb: { ...DEFAULT_EFFECTS.reverb },
-  delay:  { ...DEFAULT_EFFECTS.delay },
-  ducker: { ...DEFAULT_EFFECTS.ducker },
-  comp:   { ...DEFAULT_EFFECTS.comp },
-})
+/** @deprecated Use song.effects directly — kept as re-export for migration convenience */
+export const effects = {
+  get reverb() { return song.effects.reverb },
+  set reverb(v) { song.effects.reverb = v },
+  get delay() { return song.effects.delay },
+  set delay(v) { song.effects.delay = v },
+  get ducker() { return song.effects.ducker },
+  set ducker(v) { song.effects.ducker = v },
+  get comp() { return song.effects.comp },
+  set comp(v) { song.effects.comp = v },
+}
 
 // ── Actions ─────────────────────────────────────────────────────────
 
@@ -806,7 +833,7 @@ export function clearAllParamLocks(trackId: number, stepIdx: number) {
 // ── Factory reset ────────────────────────────────────────────────────
 
 export function factoryReset(): void {
-  restoreSong(makeDefaultSong())
+  restoreSong(makeEmptySong())
   // Reset UI
   ui.selectedTrack = 0
   ui.currentSection = 0
@@ -825,11 +852,7 @@ export function factoryReset(): void {
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
-  // Reset effects
-  effects.reverb = { ...DEFAULT_EFFECTS.reverb }
-  effects.delay = { ...DEFAULT_EFFECTS.delay }
-  effects.ducker = { ...DEFAULT_EFFECTS.ducker }
-  effects.comp = { ...DEFAULT_EFFECTS.comp }
+  // effects are reset by restoreSong above
   // Reset FX pad
   fxPad.verb = { ...DEFAULT_FX_PAD.verb }
   fxPad.delay = { ...DEFAULT_FX_PAD.delay }
@@ -854,6 +877,11 @@ export function factoryReset(): void {
   playback.sceneTranspose = 0
   playback.sceneAbsoluteKey = null
   playback.soloNodeId = null
+  // Reset project
+  project.id = null
+  project.dirty = false
+  undoStack.length = 0
+  redoStack.length = 0
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -1022,8 +1050,7 @@ export function songLoadPreset(index: number) {
   ui.selectedSceneEdge = null
 }
 
-// Pre-populate with LOFI preset
-songLoadPreset(0)
+// Factory preset is now loaded explicitly via projectLoadFactory()
 
 export function sectionStepRepeats(index: number, dir: -1 | 1) {
   const s = song.sections[index]
@@ -1791,4 +1818,163 @@ export function randomizePattern(): void {
       }
     }
   }
+}
+
+// ── Project persistence (ADR 020) ────────────────────────────────────
+
+import { saveProject, loadProject, listProjects, deleteProject, type StoredProject } from './storage.ts'
+export type { StoredProject }
+export { listProjects, deleteProject }
+
+/** Project tracking state */
+export const project = $state({
+  /** Current project id (null = unsaved new project) */
+  id: initialPrefs.lastProjectId as string | null,
+  /** Whether the song has been modified since last save */
+  dirty: false,
+  /** Timestamp of last successful save (for UI feedback) */
+  lastSavedAt: 0,
+})
+
+/** Build a StoredProject from current state */
+function buildStoredProject(id: string, name: string, now: number, createdAt?: number): StoredProject {
+  return { id, name, song: cloneSong(), createdAt: createdAt ?? now, updatedAt: now }
+}
+
+/** Save current song as a new project */
+export async function projectSaveAs(name: string): Promise<string> {
+  song.name = name
+  const id = crypto.randomUUID()
+  const now = Date.now()
+  await saveProject(buildStoredProject(id, name, now))
+  project.id = id
+  project.dirty = false
+  project.lastSavedAt = now
+  savePrefs()
+  return id
+}
+
+/** Overwrite the current project (or save-as if no project yet) */
+export async function projectSave(): Promise<void> {
+  if (!project.id) {
+    await projectSaveAs(song.name || 'Untitled')
+    return
+  }
+  const existing = await loadProject(project.id)
+  const now = Date.now()
+  await saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
+  project.dirty = false
+  project.lastSavedAt = now
+}
+
+/** Load a project by id and replace current state */
+export async function projectLoad(id: string): Promise<boolean> {
+  const proj = await loadProject(id)
+  if (!proj) return false
+  // Migrate: ensure song.name matches project name
+  if (!proj.song.name) proj.song.name = proj.name
+  restoreSong(proj.song)
+  project.id = id
+  project.dirty = false
+  // Reset UI
+  ui.currentPattern = 0
+  ui.currentSection = 0
+  ui.selectedTrack = 0
+  ui.patternSheet = false
+  ui.selectedSceneNodes = {}
+  ui.selectedSceneEdge = null
+  undoStack.length = 0
+  redoStack.length = 0
+  savePrefs()
+  return true
+}
+
+/** Create a new empty project (does not persist until first save) */
+export function projectNew(): void {
+  restoreSong(makeEmptySong())
+  project.id = null
+  project.dirty = false
+  ui.currentPattern = 0
+  ui.currentSection = 0
+  ui.selectedTrack = 0
+  ui.patternSheet = false
+  ui.selectedSceneNodes = {}
+  ui.selectedSceneEdge = null
+  undoStack.length = 0
+  redoStack.length = 0
+  savePrefs()
+}
+
+/** Delete a project and reset to new if it was current */
+export async function projectDelete(id: string): Promise<void> {
+  await deleteProject(id)
+  if (project.id === id) projectNew()
+}
+
+/** Auto-save: immediate on every mutation */
+let autoSaveRunning = false
+
+function scheduleAutoSave() {
+  if (autoSaveRunning) return
+  void doAutoSave()
+}
+
+async function doAutoSave(): Promise<void> {
+  if (autoSaveRunning || !project.dirty) return
+  autoSaveRunning = true
+  try {
+    if (!project.id) {
+      await projectSaveAs(song.name || 'Untitled')
+    } else {
+      await projectSave()
+    }
+  } finally {
+    autoSaveRunning = false
+  }
+}
+
+/** Immediate auto-save (for beforeunload) */
+export async function projectAutoSave(): Promise<void> {
+  if (!project.dirty) return
+  if (!project.id) {
+    await projectSaveAs(song.name || 'Untitled')
+  } else {
+    await projectSave()
+  }
+}
+
+/** Restore last project on app startup */
+export async function projectRestore(): Promise<void> {
+  if (!project.id) return
+  const ok = await projectLoad(project.id)
+  if (!ok) { project.id = null; savePrefs() }
+}
+
+/** Rename the current project */
+export async function projectRename(name: string): Promise<void> {
+  song.name = name
+  if (project.id) {
+    const existing = await loadProject(project.id)
+    if (existing) {
+      existing.name = name
+      existing.song.name = name
+      existing.updatedAt = Date.now()
+      await saveProject(existing)
+    }
+  }
+}
+
+/** Load factory demo patterns as a new unsaved project */
+export function projectLoadFactory(): void {
+  restoreSong(makeDefaultSong())
+  project.id = null
+  project.dirty = true
+  ui.currentPattern = 0
+  ui.currentSection = 0
+  ui.selectedTrack = 0
+  ui.patternSheet = false
+  ui.selectedSceneNodes = {}
+  ui.selectedSceneEdge = null
+  undoStack.length = 0
+  redoStack.length = 0
 }

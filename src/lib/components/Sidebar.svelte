@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, song, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, listProjects, type StoredProject } from '../state.svelte.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -35,6 +35,51 @@
   }
 
   let openSections = $state(new Set<number>([0]))
+
+  // ── Project management ──
+  let projectList = $state<Pick<StoredProject, 'id' | 'name' | 'createdAt' | 'updatedAt'>[]>([])
+  let savingAs = $state(false)
+  let saveAsName = $state('')
+  let saveAsInput: HTMLInputElement | undefined = $state()
+  let confirmDeleteId = $state<string | null>(null)
+
+  async function refreshProjects() { projectList = await listProjects() }
+
+  $effect(() => {
+    if (visibleMode === 'system') void refreshProjects()
+  })
+
+  let confirmNew = $state(false)
+
+  function handleNew() {
+    if (project.dirty) { confirmNew = true; return }
+    doNew()
+  }
+  function doNew() { confirmNew = false; projectNew(); void refreshProjects() }
+
+  function handleSaveAs() {
+    savingAs = true
+    saveAsName = ''
+    requestAnimationFrame(() => saveAsInput?.focus())
+  }
+
+  async function commitSaveAs() {
+    savingAs = false
+    const name = saveAsName.trim() || 'Untitled'
+    await projectSaveAs(name)
+    await refreshProjects()
+  }
+
+  async function handleLoad(id: string) {
+    await projectLoad(id)
+    await refreshProjects()
+  }
+
+  async function handleDelete(id: string) {
+    await projectDelete(id)
+    confirmDeleteId = null
+    await refreshProjects()
+  }
 
   // ── Search filter ──
   let searchQuery = $state('')
@@ -241,6 +286,74 @@
             {/if}
           {/each}
         {:else}
+          <!-- Project management -->
+          <div class="setting-group proj-section">
+            <span class="setting-label">PROJECT</span>
+            <div class="proj-actions">
+              <button class="btn-proj" onpointerdown={handleNew}
+                data-tip="New project" data-tip-ja="新規プロジェクト">NEW</button>
+              <button class="btn-proj" onpointerdown={handleSaveAs}
+                data-tip="Save as new project" data-tip-ja="別名で保存">SAVE AS</button>
+            </div>
+            {#if confirmNew}
+              <div class="proj-confirm">
+                <span class="proj-confirm-text">{L === 'ja' ? '未保存の変更があります。破棄しますか？' : 'Discard unsaved changes?'}</span>
+                <div class="proj-confirm-actions">
+                  <button class="btn-proj danger" onpointerdown={doNew}>{L === 'ja' ? '破棄' : 'DISCARD'}</button>
+                  <button class="btn-proj" onpointerdown={() => { confirmNew = false }}>{L === 'ja' ? 'キャンセル' : 'CANCEL'}</button>
+                </div>
+              </div>
+            {/if}
+            {#if savingAs}
+              <div class="proj-save-as">
+                <input
+                  bind:this={saveAsInput}
+                  class="proj-name-input"
+                  type="text"
+                  maxlength="20"
+                  placeholder={L === 'ja' ? 'プロジェクト名...' : 'Project name...'}
+                  bind:value={saveAsName}
+                  onkeydown={(e) => { if (e.key === 'Enter') void commitSaveAs(); if (e.key === 'Escape') savingAs = false }}
+                />
+                <button class="btn-proj" onpointerdown={() => void commitSaveAs()}>OK</button>
+              </div>
+            {/if}
+            <div class="proj-list">
+              <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
+              <div class="proj-item">
+                <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
+                  {L === 'ja' ? 'Factory Demo' : 'Factory Demo'}
+                </button>
+                <span class="proj-item-date">built-in</span>
+              </div>
+            </div>
+            {#if projectList.length > 0}
+              <div class="proj-list">
+                <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
+                {#each projectList as p}
+                  <div class="proj-item" class:current={p.id === project.id}>
+                    <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
+                      {p.name}
+                    </button>
+                    <span class="proj-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
+                    {#if confirmDeleteId === p.id}
+                      <button class="proj-item-del confirm" onpointerdown={() => void handleDelete(p.id)}>
+                        {L === 'ja' ? '削除' : 'DEL'}
+                      </button>
+                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = null }}>
+                        ✕
+                      </button>
+                    {:else}
+                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = p.id }}>
+                        🗑
+                      </button>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+
           <div class="setting-group">
             <span class="setting-label">{L === 'ja' ? 'スケールモード' : 'SCALE MODE'}</span>
             <button
@@ -658,4 +771,109 @@
       transform: translateX(-50%);
     }
   }
+
+  /* ── Project section ── */
+  .proj-section { border-bottom: 1px solid rgba(237,232,220,0.1); padding-bottom: 10px; }
+  .proj-actions { display: flex; gap: 4px; margin-top: 4px; }
+  .btn-proj {
+    border: 1px solid rgba(237,232,220,0.25);
+    background: transparent;
+    color: rgba(237,232,220,0.7);
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  .btn-proj:hover { background: rgba(237,232,220,0.08); color: rgba(237,232,220,0.9); }
+  .proj-save-as {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .proj-name-input {
+    flex: 1;
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.9);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(237,232,220,0.2);
+    padding: 3px 6px;
+    outline: none;
+  }
+  .proj-list { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .proj-list-label {
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(237,232,220,0.3);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .proj-item-name.factory { color: rgba(237,232,220,0.45); font-style: italic; }
+  .proj-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 4px;
+    border-radius: 2px;
+  }
+  .proj-item.current { background: rgba(237,232,220,0.06); }
+  .proj-item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: none;
+    border: none;
+    color: rgba(237,232,220,0.6);
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    cursor: pointer;
+    padding: 0;
+  }
+  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.9); }
+  .proj-item-name:hover { color: rgba(237,232,220,0.9); }
+  .proj-item-date {
+    font-family: var(--font-data);
+    font-size: 7px;
+    color: rgba(237,232,220,0.3);
+    flex-shrink: 0;
+  }
+  .proj-item-del {
+    background: none;
+    border: none;
+    color: rgba(237,232,220,0.25);
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .proj-item-del:hover { color: rgba(237,232,220,0.6); }
+  .proj-item-del.confirm { color: var(--color-salmon); font-family: var(--font-data); font-size: 8px; font-weight: 700; }
+  .proj-confirm {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(237,232,220,0.04);
+    border: 1px solid rgba(237,232,220,0.12);
+    border-radius: 2px;
+  }
+  .proj-confirm-text {
+    font-family: var(--font-data);
+    font-size: 8px;
+    color: rgba(237,232,220,0.6);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .proj-confirm-actions { display: flex; gap: 4px; }
+  .btn-proj.danger { border-color: var(--color-salmon); color: var(--color-salmon); }
+  .btn-proj.danger:hover { background: rgba(var(--color-salmon), 0.1); }
 </style>

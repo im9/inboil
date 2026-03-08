@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, isViewingPlayingPattern, song, effects, fxPad, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, isViewingPlayingPattern, song, fxPad, NOTE_NAMES } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import { engine } from '../audio/engine.ts'
@@ -89,7 +89,7 @@
   async function ensureEngine() {
     if (vkbdReady) return
     await engine.init()
-    engine.sendPattern(song, effects, perf, fxPad)
+    engine.sendPattern(song, perf, fxPad)
     vkbdReady = true
   }
 

@@ -14,9 +14,23 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
-  import { song, playback, ui, prefs, randomizePattern, effects, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
   import { engine } from './lib/audio/engine.ts'
   import { fade, fly } from 'svelte/transition'
+
+  // ── Project restore (once) + save on page hide ───────────────────
+  let restored = false
+  $effect(() => {
+    if (!restored) { restored = true; void projectRestore() }
+    const onVisChange = () => { if (document.visibilityState === 'hidden') void projectAutoSave() }
+    const onBeforeUnload = () => { void projectAutoSave() }
+    document.addEventListener('visibilitychange', onVisChange)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisChange)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  })
 
   // ── Responsive ────────────────────────────────────────────────────
   let windowWidth = $state(window.innerWidth)
@@ -28,22 +42,22 @@
   const isMobile = $derived(windowWidth < 640)
 
   // ── Audio engine ──────────────────────────────────────────────────
-  // Sync song + effects → worklet on any state change (rAF-throttled)
+  // Sync song (incl. effects) → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(effects) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
       const soloIdx = soloPatternIndex()
       if (soloIdx != null) {
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, soloIdx)
+        engine.sendPatternByIndex(song, perf, fxPad, false, soloIdx)
       } else if (playback.mode === 'scene' && hasScenePlayback()) {
         if (playback.playingPattern == null) return
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, playback.playingPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, false, playback.playingPattern)
       } else if (playback.mode === 'scene' && hasArrangement()) {
-        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
       } else {
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
       }
     })
     return () => cancelAnimationFrame(rafId)
@@ -58,7 +72,7 @@
       if (cycle && playback.soloNodeId !== soloSent) {
         soloSent = playback.soloNodeId
         const idx = soloPatternIndex()
-        if (idx != null) engine.sendPatternByIndex(song, effects, perf, fxPad, true, idx)
+        if (idx != null) engine.sendPatternByIndex(song, perf, fxPad, true, idx)
       }
       return
     }
@@ -72,7 +86,7 @@
         if (shouldStop) { stop(); return }
         if (advanced) {
           perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
-          engine.sendPatternByIndex(song, effects, perf, fxPad, true, patternIndex)
+          engine.sendPatternByIndex(song, perf, fxPad, true, patternIndex)
           // Check if we just arrived at the solo target
           if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
             soloSent = playback.soloNodeId
@@ -85,14 +99,14 @@
       if (hasArrangement()) {
         if (sectionAdvanced) applySection(song.sections[playback.currentSection])
         updateSectionPerf(heads[0])
-        engine.sendPattern(song, effects, perf, fxPad, true, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, true, playback.currentSection)
         return
       }
     }
     if (hasArrangement() && !hasScenePlayback()) {
       const changed = updateSectionPerf(heads[0])
       if (changed) {
-        engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
       }
     }
   }
@@ -105,7 +119,7 @@
     const soloIdx2 = soloPatternIndex()
     if (soloIdx2 != null) {
       soloSent = playback.soloNodeId
-      engine.sendPatternByIndex(song, effects, perf, fxPad, false, soloIdx2)
+      engine.sendPatternByIndex(song, perf, fxPad, false, soloIdx2)
       engine.play()
       playback.playing = true
       return
@@ -122,13 +136,13 @@
       const { patternIndex, stop: shouldStop } = advanceSceneNode()
       if (shouldStop) return
       perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
-      engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
+      engine.sendPatternByIndex(song, perf, fxPad, false, patternIndex)
     } else if (playback.mode === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
-      engine.sendPattern(song, effects, perf, fxPad, false, playback.currentSection)
+      engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
     } else {
-      engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
+      engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
     }
     engine.play()
     playback.playing = true
@@ -153,6 +167,7 @@
     playback.sceneAbsoluteKey = null
     playback.mode = 'loop'
     playback.playingPattern = null
+    void projectAutoSave()
   }
 
   function closeAllSheets() {
@@ -171,7 +186,7 @@
       playback.soloNodeId = null
       playback.playingPattern = null
       if (playback.playing) {
-        engine.sendPatternByIndex(song, effects, perf, fxPad, false, ui.currentPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
       }
     }
   }

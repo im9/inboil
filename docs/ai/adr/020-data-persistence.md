@@ -1,6 +1,6 @@
 # ADR 020: Data Persistence & Storage Design
 
-## Status: Proposed
+## Status: In Progress (local persistence done, cloud sync pending)
 
 ## Context
 
@@ -247,9 +247,9 @@ All endpoints require Bearer token (see ADR 061).
 
 ### I. Sample Storage
 
-ユーザーがアップロードしたサンプル（ADR 012, 065）の永続化。
+Persistence for user-uploaded samples (ADR 012, 065).
 
-#### Tier 1: IndexedDB（ローカル）
+#### Tier 1: IndexedDB (local)
 
 ```
 // Object Store: 'samples'
@@ -264,49 +264,49 @@ interface StoredSample {
 }
 ```
 
-- サンプル読み込み時に IndexedDB に保存、次回起動時に自動復元
-- プロジェクト保存に含める（project 単位でサンプルを紐付け）
-- 1サンプル ≈ 1.7MB (10s@44.1kHz mono Float32) → 8トラック分でも ~14MB
-- IndexedDB 容量は十分（ブラウザ上限 50–100MB+）
+- Save to IndexedDB on sample load, auto-restore on next launch
+- Include in project save (samples are bound per-project)
+- 1 sample ~ 1.7MB (10s@44.1kHz mono Float32) -> 8 tracks ~ 14MB
+- Well within IndexedDB limits (browser cap 50-100MB+)
 
-#### Tier 2: Cloudflare R2（クラウド）
+#### Tier 2: Cloudflare R2 (cloud)
 
 ```
 ┌─────────────────────────────────────────┐
 │           Cloudflare R2                 │
 │  Bucket: 'inboil-samples'              │
 │  Key: 'user:{uid}/sample:{hash}.wav'   │
-│  ← S3 互換、egress 無料               │
+│  <- S3-compatible, zero egress fees    │
 ├─────────────────────────────────────────┤
 │        Pages Function (Worker)          │
 │  POST /api/sample/upload-url            │
-│    → R2 署名付き PUT URL 発行           │
+│    -> Issue R2 signed PUT URL           │
 │  GET  /api/sample/download-url/:key     │
-│    → R2 署名付き GET URL 発行           │
+│    -> Issue R2 signed GET URL           │
 └─────────────────────────────────────────┘
 
 Upload flow:
-  Client → Worker (認証+署名URL発行)
-  Client → R2 直接 PUT (署名付き、max 10MB)
+  Client -> Worker (auth + signed URL)
+  Client -> R2 direct PUT (signed, max 10MB)
 
 Download flow:
-  Client → Worker (署名URL発行)
-  Client ← R2 直接 GET
+  Client -> Worker (signed URL)
+  Client <- R2 direct GET
 ```
 
-- KV はバイナリに不向き（value 上限 25MB だが遅い）→ R2 が最適
-- R2 無料枠: 10GB storage, 1M Class B reads/mo, 100K Class A writes/mo
-- Content-addressable key (`sha256(buffer)`) でデデュプ可能
-- プロジェクト JSON にはサンプル参照（R2 key + metadata）のみ含める
-- 認証必須（ADR 061）
+- KV is unsuitable for binary (25MB value limit, slow) -> R2 is optimal
+- R2 free tier: 10GB storage, 1M Class B reads/mo, 100K Class A writes/mo
+- Content-addressable key (`sha256(buffer)`) enables deduplication
+- Project JSON stores only sample references (R2 key + metadata)
+- Authentication required (ADR 061)
 
-#### Tier 3: 外部ストレージ連携（Dropbox / Google Drive）
+#### Tier 3: External Storage (Dropbox / Google Drive)
 
-ユーザーの既存サンプルプールを直接参照する。
+Directly reference the user's existing sample pool.
 
 ```
 ┌───────────┐     OAuth2      ┌──────────────┐
-│  inboil   │ ←─────────────→ │   Dropbox    │
+│  inboil   │ <─────────────> │   Dropbox    │
 │ (browser) │   Access Token   │  /samples/   │
 └───────────┘                  └──────────────┘
      │                              │
@@ -317,16 +317,16 @@ Download flow:
 ```
 
 **Dropbox:**
-- Dropbox JavaScript SDK（`dropbox` npm パッケージ、または REST API 直接呼び出し）
-- OAuth2 PKCE flow でブラウザから直接認証（バックエンド不要）
-- `files/list_folder` でフォルダ一覧、`files/download` でサンプル取得
-- ユーザーが指定したフォルダ（例: `/Music/Samples/`）をブラウズ
-- ダウンロードしたサンプルは IndexedDB にキャッシュ（オフライン対応）
+- Dropbox JavaScript SDK (`dropbox` npm package, or direct REST API calls)
+- OAuth2 PKCE flow, browser-only authentication (no backend needed)
+- `files/list_folder` for directory listing, `files/download` for sample fetch
+- User selects a folder (e.g. `/Music/Samples/`) to browse
+- Downloaded samples cached in IndexedDB (offline support)
 
 **Google Drive:**
 - Google Identity Services + Drive API v3
-- 同様に OAuth2 PKCE、ブラウザ完結
-- `files.list` + `files.get?alt=media` でサンプル取得
+- OAuth2 PKCE, browser-only
+- `files.list` + `files.get?alt=media` for sample fetch
 
 **UI:**
 ```
@@ -334,7 +334,7 @@ Download flow:
 │ SAMPLE SOURCE               │
 │ [LOCAL] [R2] [DROPBOX] [GD] │
 │                             │
-│ 📁 /Music/Samples/          │
+│   /Music/Samples/           │
 │   breakbeat_170bpm.wav      │
 │   kick_808.wav              │
 │   snare_vinyl.wav           │
@@ -344,19 +344,19 @@ Download flow:
 └─────────────────────────────┘
 ```
 
-**制約・注意点:**
-- Dropbox API は無料（個人アプリ、500ユーザーまで）。Production は App Review が必要
-- npm 依存を追加するか REST API 直叩きかの選択（zero-dep ポリシーなら REST 直叩き）
-- CORS: Dropbox Content API は `dl.dropboxusercontent.com` で CORS 対応済み
-- ファイルサイズ制限を UI 側で適用（10MB / 10s 上限、ADR 012 準拠）
+**Constraints:**
+- Dropbox API is free (personal apps, up to 500 users). Production requires App Review
+- Choice between npm dependency or direct REST API calls (zero-dep policy favors REST)
+- CORS: Dropbox Content API supports CORS via `dl.dropboxusercontent.com`
+- File size limit enforced in UI (10MB / 10s cap, per ADR 012)
 
-#### 実装優先度
+#### Implementation Priority
 
-| 段階 | やること | 依存 |
-|------|----------|------|
-| Phase A | IndexedDB にサンプル保存・復元 | なし（今すぐ可能） |
-| Phase B | R2 にクラウドバックアップ | ADR 061 (認証) |
-| Phase C | Dropbox / Google Drive 連携 | OAuth2 設定のみ |
+| Phase   | Task                              | Dependency              |
+|---------|-----------------------------------|-------------------------|
+| Phase A | Sample save/restore in IndexedDB  | None (can start now)    |
+| Phase B | Cloud backup via R2               | ADR 061 (auth)          |
+| Phase C | Dropbox / Google Drive integration | OAuth2 setup only      |
 
 ### J. Export / Import (File-Based)
 
@@ -378,18 +378,22 @@ async function importProject(json: string): Promise<void> {
 ## Implementation Order
 
 1. ~~localStorage unification (`inboil` single key + version)~~ Done
-2. `src/lib/storage.ts` — IndexedDB wrapper
-3. Pattern save/load — auto-save on `switchPattern`, `stop`
-4. Factory pattern write on first launch
-5. `beforeunload` best-effort save
-6. Sample persistence in IndexedDB (Section I, Phase A)
-7. Factory reset feature in SYSTEM settings
-8. Export/Import UI (file-based, works for all users)
-9. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
-10. Cloud sync Worker + KV setup
-11. R2 sample upload/download (Section I, Phase B)
-12. Dropbox / Google Drive integration (Section I, Phase C)
-13. Sync UI (status indicator, manual sync button, conflict notification)
+2. ~~`src/lib/storage.ts` — IndexedDB wrapper (`projects` store)~~ Done
+3. ~~Project concept: `Song` includes `effects`, project = named song snapshot~~ Done
+4. ~~Project CRUD: save/load/delete/list/rename in `state.svelte.ts`~~ Done
+5. ~~Auto-save: immediate save on every `pushUndo`, auto-create project on first mutation~~ Done
+6. ~~Save on `visibilitychange` (hidden) + `beforeunload` as fallback~~ Done
+7. ~~Project name in header (editable, save status indicator)~~ Done
+8. ~~Project management UI in system settings (NEW, SAVE AS, load, delete, Factory Demo)~~ Done
+9. ~~Factory reset uses empty song (not factory patterns)~~ Done
+10. ~~`lastProjectName` in localStorage for flash-free reload~~ Done
+11. Sample persistence in IndexedDB (Section I, Phase A)
+12. ~~Export/Import UI (file-based, works for all users)~~ Deferred — cloud sync is higher priority
+13. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
+14. Cloud sync Worker + KV setup
+15. R2 sample upload/download (Section I, Phase B)
+16. Dropbox / Google Drive integration (Section I, Phase C)
+17. Sync UI (status indicator, manual sync button, conflict notification)
 
 ## Consequences
 
@@ -399,8 +403,8 @@ async function importProject(json: string): Promise<void> {
 - **Positive:** IndexedDB handles async, large, structured data well
 - **Positive:** Export/Import provides data portability
 - **Negative:** IndexedDB async API is more complex than localStorage
-- **Negative:** Factory reset UX design needed
-- **Negative:** `beforeunload` save is not guaranteed (browser-dependent)
+- **Positive:** Immediate auto-save on every mutation eliminates data loss risk
+- **Positive:** `visibilitychange` + `beforeunload` double-safety net for page close
 - **Positive:** Cloud sync provides cross-device access and backup
 - **Negative:** Cloud sync adds Cloudflare Worker infrastructure dependency
 - **Negative:** KV free tier write limit (1,000/day) requires careful debouncing

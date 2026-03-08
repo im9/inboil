@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, perf, toggleSidebar } from '../state.svelte.ts'
-  import { PROJECT_NAME } from '../constants.ts'
+  import { song, playback, ui, perf, project, projectRename, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
   import Knob from './Knob.svelte'
@@ -19,6 +18,39 @@
 
   function handleSystem() {
     toggleSidebar('system')
+  }
+
+  // ── Inline project name edit ──
+  let editingName = $state(false)
+  let editNameValue = $state('')
+  let nameInputEl: HTMLInputElement | undefined = $state()
+
+  function startNameEdit() {
+    editNameValue = song.name || ''
+    editingName = true
+    requestAnimationFrame(() => nameInputEl?.select())
+  }
+  function commitNameEdit() {
+    editingName = false
+    const name = editNameValue.trim() || 'Untitled'
+    void projectRename(name)
+  }
+  // ── Save indicator ──
+  let showSaved = $state(false)
+  let savedTimer: ReturnType<typeof setTimeout> | null = null
+  $effect(() => {
+    const ts = project.lastSavedAt
+    if (ts > 0 && !project.dirty) {
+      showSaved = true
+      if (savedTimer) clearTimeout(savedTimer)
+      savedTimer = setTimeout(() => { showSaved = false }, 1500)
+    }
+  })
+
+  function cancelNameEdit() { editingName = false }
+  function onNameKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); commitNameEdit() }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelNameEdit() }
   }
 
   // ── Long-press auto-repeat for BPM ±buttons ──
@@ -150,9 +182,30 @@
       <PerfButtons variant="bar" />
     </div>
 
-    <div class="pat-block">
-      <div class="pat-display">
-        <span class="pat-name"><SplitFlap value={PROJECT_NAME} width={8} /></span>
+    <div class="proj-block">
+      <div class="proj-display">
+        {#if editingName}
+          <input
+            bind:this={nameInputEl}
+            class="proj-name-input"
+            type="text"
+            maxlength="20"
+            bind:value={editNameValue}
+            onblur={commitNameEdit}
+            onkeydown={onNameKeydown}
+          />
+        {:else}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <span class="proj-name" onclick={startNameEdit} data-tip="Click to rename project" data-tip-ja="クリックでプロジェクト名を変更">
+            <SplitFlap value={song.name} width={10} />
+            {#if project.dirty}
+              <span class="save-dot dirty">●</span>
+            {:else if showSaved}
+              <span class="save-dot saved">✓</span>
+            {/if}
+          </span>
+        {/if}
       </div>
     </div>
   </div>
@@ -387,23 +440,59 @@
   }
 
   /* ── Pattern block ── */
-  .pat-block {
+  .proj-block {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     margin-left: auto;
   }
-  .pat-display {
+  .proj-display {
     display: flex;
     align-items: center;
   }
-  .pat-name {
+  .proj-name {
     font-size: 24px;
     line-height: 1;
     color: rgba(237,232,220,0.5);
     transform: translateY(2px);
+    cursor: text;
+    position: relative;
   }
-  .compact .pat-name { font-size: 18px; }
+  .proj-name:hover { color: rgba(237,232,220,0.7); }
+  .compact .proj-name { font-size: 18px; }
+  .save-dot {
+    position: absolute;
+    top: -2px;
+    right: -10px;
+    font-size: 8px;
+    line-height: 1;
+  }
+  .save-dot.dirty {
+    color: var(--color-olive);
+  }
+  .save-dot.saved {
+    color: rgba(237,232,220,0.4);
+    animation: save-fade 1.5s ease-out forwards;
+  }
+  @keyframes save-fade {
+    0% { opacity: 1; }
+    60% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .proj-name-input {
+    font-family: var(--font-data);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.9);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(237,232,220,0.25);
+    border-radius: 2px;
+    padding: 2px 6px;
+    width: 140px;
+    outline: none;
+    text-transform: uppercase;
+  }
 
   /* ── Mobile ── */
   @media (max-width: 639px) {
@@ -468,13 +557,13 @@
     }
 
     /* BPM + pat side by side */
-    .pat-block {
+    .proj-block {
       margin-left: auto;
       align-items: flex-end;
       gap: 2px;
       padding-right: 8px;
     }
-    .pat-name { font-size: 14px; }
+    .proj-name { font-size: 14px; }
 
     /* Row 2: full-width tab bar */
     .view-toggle {
