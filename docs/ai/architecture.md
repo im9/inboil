@@ -43,7 +43,7 @@ See [adr/](./adr/) for full rationale.
 - **Queued pattern switching** (IMPLEMENTED) — Queue during playback, apply at loop boundary. → [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md)
 - **Swing / shuffle** (IMPLEMENTED) — Global swing parameter for groove timing. → [adr/005-swing.md](./adr/005-swing.md)
 - **Per-step velocity editing** (IMPLEMENTED) — Bar overlay + mobile 3-mode tabs. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
-- **Pattern persistence** (PROPOSED) — localStorage save/load for patterns. → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
+- **Pattern persistence** (SUPERSEDED) — Replaced by ADR 020 (Data Persistence). → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
 - **Granular enhancements** (IMPLEMENTED) — Pitch shift, reverse grains, scatter, freeze. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
 - **Pattern chain** (SUPERSEDED) — Replaced by scene graph (ADR 044). → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
 - **Parameter locks** (IMPLEMENTED) — Per-step voice parameter overrides. → [adr/014-parameter-locks.md](./adr/014-parameter-locks.md)
@@ -83,7 +83,7 @@ All communication crosses the thread boundary via `MessagePort`:
 - **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `loadSample`
 - **Worklet → UI:** `step` event with playhead positions array
 
-No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (8 tracks × 64 steps max).
+No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (0–16 tracks × 64 steps max).
 
 ## Directory Structure
 
@@ -122,7 +122,9 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
 │   │   │   ├── SceneLabels.svelte ← Free-floating canvas text labels
 │   │   │   ├── SceneBubbleMenu.svelte ← Radial menu for adding scene nodes
-│   │   │   └── SceneNodePopup.svelte ← Node detail popup (rename, params)
+│   │   │   ├── SceneNodePopup.svelte ← Node detail popup (rename, params)
+│   │   │   ├── EnvGraph.svelte  ← ADSR envelope visualization
+│   │   │   └── WaveGraph.svelte ← Wavetable preview visualization
 │   │   ├── audio/
 │   │   │   ├── engine.ts         ← Main-thread audio engine API
 │   │   │   ├── worklet-processor.ts ← AudioWorklet entry point + sequencer
@@ -154,7 +156,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 User action (click/drag)
   → Svelte $state mutation (state.svelte.ts)
     → $effect in App.svelte detects change via JSON.stringify
-      → engine.sendPatternByIndex(song, effects, perf, fxPad, false, patternIndex)
+      → engine.sendPatternByIndex(song, perf, fxPad, false, patternIndex)
         → MessagePort.postMessage({ type: 'setPattern', pattern: {...} })
           → AudioWorklet applies new state on next process() cycle
 

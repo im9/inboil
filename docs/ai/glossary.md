@@ -14,6 +14,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
 | **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, probability, or fx type. |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
+| **SceneDecorator** | Function decorator (transpose/tempo/repeat/fx) attached to a pattern node (ADR 066). Snap-attaches visually. |
+| **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
 | **Polymetric** | Cells running with different step counts, causing their loops to phase against each other. |

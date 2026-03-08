@@ -50,7 +50,7 @@ The song maintains a pool of 100 pattern slots. Slots 0–20 are factory pattern
 ```typescript
 Cell {
   name:         string         // per-pattern track name (ADR 062)
-  voiceId:      VoiceId        // per-pattern instrument (ADR 062)
+  voiceId:      VoiceId | null  // per-pattern instrument (null = unassigned, ADR 056/062)
   steps:        number         // 1–64
   trigs:        Trig[]         // length === steps
   voiceParams:  Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
@@ -67,7 +67,7 @@ Cell {
 Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  voiceId:     VoiceId         // 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'iDEATH' | 'Crash' | 'Ride' | 'Sampler'
+  voiceId:     VoiceId | null  // null = unassigned (ADR 056). VoiceId: 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'iDEATH' | 'Crash' | 'Ride' | 'Sampler'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
@@ -104,14 +104,20 @@ Scene {
   labels: SceneLabel[]        // free-floating canvas text labels (ADR 052)
 }
 
+SceneDecorator {
+  type:   'transpose' | 'tempo' | 'repeat' | 'fx'
+  params: Record<string, number>
+}
+
 SceneNode {
-  id:         string
-  type:       'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
-  x:          number           // canvas position (normalized 0–1)
-  y:          number
-  root:       boolean          // true = playback entry point (exactly one)
-  patternId?: string           // for type === 'pattern'
-  params?:    Record<string, number>
+  id:          string
+  type:        'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
+  x:           number           // canvas position (normalized 0–1)
+  y:           number
+  root:        boolean          // true = playback entry point (exactly one)
+  patternId?:  string           // for type === 'pattern'
+  params?:     Record<string, number>
+  decorators?: SceneDecorator[] // function decorators attached to pattern nodes (ADR 066)
 }
 
 SceneEdge {
@@ -122,7 +128,17 @@ SceneEdge {
 }
 ```
 
-See ADR 044 for scene graph design and playback traversal.
+```typescript
+SceneLabel {
+  id:    string
+  text:  string
+  x:     number               // normalized 0–1
+  y:     number
+  size?: number               // font scale factor (default 1.0 = 10px)
+}
+```
+
+See ADR 044 for scene graph design and playback traversal, ADR 066 for decorators.
 
 ## Trig — DECIDED
 

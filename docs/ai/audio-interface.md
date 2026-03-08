@@ -57,6 +57,8 @@ interface WorkletPattern {
     delay:   { time: number; feedback: number }    // time in ms (computed from beat fraction × BPM)
     ducker:  { depth: number; release: number }
     comp:    { threshold: number; ratio: number; makeup: number }
+    verbReturn: number                               // reverb return level
+    dlyReturn:  number                               // delay return level
     filter:  { on: boolean; x: number; y: number }  // master filter sweep
     eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }  // 3-band EQ
   }
@@ -84,6 +86,7 @@ interface WorkletTrack {
   trigs: WorkletTrig[]
   muted: boolean
   voiceId: string            // VoiceId — determines which synth voice to instantiate
+  sidechainSource: boolean   // ADR 064: triggers ducker & bypasses ducking
   volume: number            // 0.0–1.0 (default 0.8)
   pan: number               // -1.0 to 1.0
   reverbSend: number        // 0.0–1.0
@@ -110,9 +113,10 @@ interface WorkletTrig {
 ```typescript
 type WorkletEvent =
   | { type: 'step'; playheads: number[]; cycle: boolean }   // current step position per track; cycle=true on pattern loop
+  | { type: 'levels'; peakL: number; peakR: number }        // master output peak levels for VU meter
 ```
 
-The `step` event fires on every step advance and carries the current playhead position for all 8 tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching).
+The `step` event fires on every step advance and carries the current playhead position for all tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching). The `levels` event provides master output peak levels for VU metering.
 
 ## Parameter Application Timing
 
@@ -132,8 +136,8 @@ Located at `src/lib/audio/engine.ts`.
 ```typescript
 class GrooveboxEngine {
   async init(): Promise<void>                                                    // Create AudioContext + load worklet + AnalyserNode
-  sendPattern(song, fx, perf?, fxPad?, reset?, sectionIndex?): void              // Serialize section's pattern & post
-  sendPatternByIndex(song, fx, perf?, fxPad?, reset?, patternIndex?): void       // Serialize pattern by index & post
+  sendPattern(song, perf?, fxPad?, reset?, sectionIndex?): void                   // Serialize section's pattern & post
+  sendPatternByIndex(song, perf?, fxPad?, reset?, patternIndex?): void            // Serialize pattern by index & post
   play(): void                                                                   // Resume AudioContext + post play
   stop(): void                                                                   // Post stop (suspends context after 8s idle)
   triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD audition)
@@ -143,7 +147,7 @@ class GrooveboxEngine {
 }
 ```
 
-`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode.
+`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode. Effects are read from `song.effects` internally (no separate effects parameter).
 
 ## State Serialization
 

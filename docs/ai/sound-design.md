@@ -67,6 +67,11 @@ Parameters:
 | end | END | 0.0–1.0 | 1.0 | Sample end point |
 | pitchShift | PTCH | -24–24 (step 1) | 0 | Pitch shift (semitones) |
 | reverse | REV | 0–1 (step 1) | 0 | Reverse playback |
+| chopSlices | CHOP | 0–32 (step 8) | 0 | Slice count: OFF/8/16/32 (ADR 065) |
+| chopMode | MODE | 0–1 (step 1) | 0 | Chop: NOTE-MAP / SEQ |
+| sampleBPM | BPM | 0–200 (step 1) | 0 | Sample BPM (0=OFF, enables tempo sync) |
+| loopMode | LOOP | 0–1 (step 1) | 0 | Loop: ONE-SHOT / LOOP |
+| stretchMode | STRC | 0–1 (step 1) | 0 | Stretch: REPITCH / WSOLA |
 
 ### TB303Voice (acid bass)
 
@@ -80,7 +85,7 @@ Parameters:
 | cutoffBase | CUT | 50–500 Hz | 200 | Filter base cutoff |
 | envMod | MOD | 500–8000 Hz | 4000 | Envelope modulation depth |
 | resonance | RESO | 1.0–14.0 | 7.0 | Filter Q |
-| decay | DCY | 0.08–0.5 s | 0.18 | Filter envelope decay time |
+| decay | DCY | 0.08–0.5 s | 0.18 | Amplitude decay |
 | drive | DRIV | 0.5–3.0 | 1.6 | Pre-filter saturation |
 
 ### MoogVoice (4-pole analog lead)
@@ -182,7 +187,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | PingPongDelay | Stereo ping-pong with cross-feedback. |
 | effects.ts | SidechainDucker | Kick-triggered gain duck with exponential recovery. |
 | effects.ts | BusCompressor | Peak-detecting compressor (0.8ms attack, 60ms release). |
-| effects.ts | PeakLimiter | Lookahead (~1.5ms) brickwall limiter at 0.92 ceiling. |
+| effects.ts | PeakLimiter | Lookahead (~2.5ms) brickwall limiter at 0.92 ceiling. |
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
@@ -306,7 +311,7 @@ Also toggleable via PerfBar GLT press-hold button.
 
 ### PeakLimiter
 
-Lookahead (~1.5ms) brickwall limiter at 0.92 ceiling. Fast attack, slow release.
+Lookahead (~2.5ms) brickwall limiter at 0.92 ceiling. Fast attack, slow release.
 
 ## FxPad (XY Performance Controller) — DECIDED
 

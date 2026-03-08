@@ -35,7 +35,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 ## Current State
 
 The TypeScript AudioWorklet implementation is fully functional with:
-- 8 tracks with configurable voice assignment (any voice on any track, ADR 058)
+- Variable track count (0–16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
 - 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice), 2 bass (TB-303, Analog), 2 lead (Moog, FM), 1 wavetable synth (iDEATH — mono/poly via polyMode param), 1 user sampler
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
@@ -43,7 +43,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
 - Song model: pattern pool (100 patterns: 21 factory + 79 user), sections, scene graph
-- Scene graph: node-based directed graph for arrangement (pattern/transpose/tempo/repeat/probability nodes)
+- Scene graph: node-based directed graph for arrangement (pattern/transpose/tempo/repeat/probability/fx nodes, decorators via ADR 066)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
 - SectionNav: section strip with metadata (repeats, key, oct, FX)
