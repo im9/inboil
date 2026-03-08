@@ -841,11 +841,11 @@
     />
   {/if}
 
-  {#if song.scene.nodes.length === 0}
-    <div class="scene-empty" data-tip="Drag patterns from the matrix, then connect them" data-tip-ja="マトリクスからパターンをドラッグし、接続して曲を作ろう">
+  {#if true}
+    <div class="scene-empty" class:has-nodes={song.scene.nodes.length > 0} data-tip="Drag patterns from the matrix, then connect them" data-tip-ja="マトリクスからパターンをドラッグし、接続して曲を作ろう">
       <div class="empty-steps">
         <span class="empty-step">
-          <span class="empty-icon">◫</span>
+          <span class="empty-icon">■</span>
           <span>Drag patterns here</span>
         </span>
         <span class="empty-arrow">→</span>
@@ -1162,13 +1162,16 @@
     justify-content: center;
     pointer-events: none;
   }
+  .scene-empty.has-nodes {
+    opacity: 0.4;
+  }
   .empty-steps {
     display: flex;
     align-items: center;
     gap: 16px;
     font-family: var(--font-data);
-    font-size: 10px;
-    color: rgba(30, 32, 40, 0.22);
+    font-size: 13px;
+    color: var(--color-olive);
   }
   .empty-step {
     display: flex;
@@ -1177,13 +1180,13 @@
     gap: 6px;
   }
   .empty-icon {
-    font-size: 20px;
+    font-size: 24px;
     line-height: 1;
     opacity: 0.5;
   }
   .empty-arrow {
-    font-size: 16px;
-    opacity: 0.3;
+    font-size: 18px;
+    opacity: 0.35;
     margin-top: -14px;
   }
 
