@@ -3,7 +3,7 @@
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
-  import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'
+  import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS } from '../presets.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import type { VoiceId } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
@@ -30,9 +30,12 @@
 
   // ── Preset browser ──
   const showPresets = $derived(cell ? hasPresets(cell.voiceId) : false)
-  let presetCategory = $state<PresetCategory | null>(null)
-  const presetList = $derived(getPresets(presetCategory))
+  const presetCategories = $derived(cell ? getPresetCategories(cell.voiceId) : [])
+  let presetCategory = $state<string | null>(null)
+  const presetList = $derived(cell ? getPresets(cell.voiceId, presetCategory) : [])
   let presetOpen = $state(false)
+  // Reset category filter when voice changes
+  $effect(() => { cell?.voiceId; presetCategory = null })
   // Track selected preset name per track (keyed by track index)
   let presetByTrack = $state<Record<number, string>>({})
   const currentPreset = $derived(presetByTrack[ui.selectedTrack] ?? '')
@@ -192,20 +195,22 @@
                 data-tip="Browse presets" data-tip-ja="プリセットを選択"
               >{currentPreset ? currentPreset : 'PRESETS'} {presetOpen ? '▾' : '▸'}</button>
               {#if presetOpen}
+                {#if presetCategories.length > 0}
                 <div class="preset-cats">
                   <button class="cat-btn" class:active={presetCategory === null}
                     onpointerdown={() => presetCategory = null}>ALL</button>
-                  {#each getPresetCategories() as cat}
+                  {#each presetCategories as cat}
                     <button class="cat-btn" class:active={presetCategory === cat}
-                      onpointerdown={() => presetCategory = cat}>{CATEGORY_LABELS[cat]}</button>
+                      onpointerdown={() => presetCategory = cat}>{CATEGORY_LABELS[cat] ?? cat.toUpperCase()}</button>
                   {/each}
                 </div>
+                {/if}
                 <div class="preset-list">
                   {#each presetList as preset}
                     <button class="preset-item" class:selected={currentPreset === preset.name}
                       onpointerdown={() => selectPreset(preset)}
                     >
-                      <span class="preset-cat-tag">{CATEGORY_LABELS[preset.category]}</span>
+                      {#if preset.category}<span class="preset-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
                       <span class="preset-name">{preset.name}</span>
                     </button>
                   {/each}
