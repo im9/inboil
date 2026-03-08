@@ -88,6 +88,12 @@ export interface Effects {
   comp:   { threshold: number; ratio: number; makeup: number }
 }
 
+/** Function decorator attached to a pattern node (ADR 062) */
+export interface SceneDecorator {
+  type: 'transpose' | 'tempo' | 'repeat' | 'fx'
+  params: Record<string, number>
+}
+
 /** Node on the scene canvas (ADR 044) */
 export interface SceneNode {
   id: string
@@ -97,6 +103,7 @@ export interface SceneNode {
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
   params?: Record<string, number>
+  decorators?: SceneDecorator[]  // function decorators attached to pattern nodes (ADR 062)
 }
 
 /** Directed edge between nodes (ADR 044) */
@@ -193,14 +200,7 @@ function cloneTrack(t: Track): Track {
   return { id: t.id, name: t.name, voiceId: t.voiceId, muted: t.muted, volume: t.volume, pan: t.pan }
 }
 
-function cloneScene(sc: Scene): Scene {
-  return {
-    name: sc.name,
-    nodes: sc.nodes.map(n => ({ ...n, ...(n.params ? { params: { ...n.params } } : {}) })),
-    edges: sc.edges.map(e => ({ ...e })),
-    labels: (sc.labels ?? []).map(l => ({ ...l })),
-  }
-}
+import { cloneScene, restoreScene, hasMigratableFnNodes, migrateFnToDecorators } from './sceneData.ts'
 
 function cloneSong(): Song {
   return {
@@ -275,14 +275,7 @@ function restoreSong(src: Song): void {
     ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
     ...(s.granular ? { granular: { ...s.granular } } : {}),
   }))
-  song.scene = src.scene
-    ? {
-        name: src.scene.name,
-        nodes: src.scene.nodes.map(n => ({ ...n, ...(n.params ? { params: { ...n.params } } : {}) })),
-        edges: src.scene.edges.map(e => ({ ...e })),
-        labels: (src.scene.labels ?? []).map(l => ({ ...l })),
-      }
-    : { name: 'Main', nodes: [], edges: [], labels: [] }
+  song.scene = restoreScene(src.scene)
   const fx = src.effects ?? DEFAULT_EFFECTS
   song.effects = {
     reverb: { ...fx.reverb },
@@ -1313,6 +1306,63 @@ export function sceneUpdateNodeParams(nodeId: string, params: Record<string, num
   node.params = { ...params }
 }
 
+/** Attach a function node as a decorator on a pattern node (ADR 062) */
+export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): boolean {
+  const fnNode = song.scene.nodes.find(n => n.id === fnNodeId)
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!fnNode || !patNode || patNode.type !== 'pattern') return false
+  if (fnNode.type === 'pattern' || fnNode.type === 'probability') return false
+  pushUndo('Attach decorator')
+  const dec: SceneDecorator = { type: fnNode.type, params: { ...(fnNode.params ?? {}) } }
+  patNode.decorators ??= []
+  patNode.decorators.push(dec)
+  // Remove the function node and its edges
+  song.scene.edges = song.scene.edges.filter(e => e.from !== fnNodeId && e.to !== fnNodeId)
+  song.scene.nodes = song.scene.nodes.filter(n => n.id !== fnNodeId)
+  return true
+}
+
+/** Detach a decorator from a pattern node back into a standalone function node (ADR 062) */
+export function sceneDetachDecorator(patternNodeId: string, decoratorIndex: number): string | null {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode || !patNode.decorators || decoratorIndex >= patNode.decorators.length) return null
+  pushUndo('Detach decorator')
+  const dec = patNode.decorators.splice(decoratorIndex, 1)[0]
+  // Create standalone function node near the pattern node
+  const id = nextSceneId('sn')
+  song.scene.nodes.push({
+    id,
+    type: dec.type,
+    x: Math.min(1, patNode.x + 0.05),
+    y: Math.min(1, patNode.y + 0.05),
+    root: false,
+    params: { ...dec.params },
+  })
+  return id
+}
+
+/** Check if there are function nodes in edge chains that can be migrated to decorators */
+export function sceneHasMigratableFnNodes(): boolean {
+  return hasMigratableFnNodes(song.scene.nodes, song.scene.edges)
+}
+
+/** Migrate edge-chain function nodes to decorators (ADR 062 Phase 4) */
+export function sceneMigrateFnToDecorators(): number {
+  pushUndo('Migrate to decorators')
+  const result = migrateFnToDecorators(song.scene.nodes, song.scene.edges)
+  song.scene.nodes = result.nodes
+  song.scene.edges = result.edges
+  return result.converted
+}
+
+/** Update a decorator's params on a pattern node (ADR 062) */
+export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: number, params: Record<string, number>): void {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode?.decorators?.[decoratorIndex]) return
+  pushUndo('Update decorator')
+  patNode.decorators[decoratorIndex].params = { ...params }
+}
+
 /** Swap edge order with its neighbor */
 export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void {
   const edge = song.scene.edges.find(e => e.id === edgeId)
@@ -1574,10 +1624,33 @@ export function soloPatternIndex(): number | null {
   return idx >= 0 ? idx : null
 }
 
+/** Apply decorators attached to a pattern node before playback (ADR 062) */
+function applyDecorators(node: SceneNode): void {
+  for (const dec of node.decorators ?? []) {
+    if (dec.type === 'transpose') {
+      if (dec.params.mode === 1) {
+        playback.sceneAbsoluteKey = dec.params.key ?? 0
+      } else {
+        playback.sceneTranspose += (dec.params.semitones ?? 0)
+      }
+    } else if (dec.type === 'tempo') {
+      song.bpm = dec.params.bpm ?? 120
+    } else if (dec.type === 'repeat') {
+      playback.sceneRepeatLeft = (dec.params.count ?? 2) - 1
+    } else if (dec.type === 'fx') {
+      fxPad.verb     = { ...fxPad.verb,     on: !!dec.params.verb }
+      fxPad.delay    = { ...fxPad.delay,    on: !!dec.params.delay }
+      fxPad.glitch   = { ...fxPad.glitch,   on: !!dec.params.glitch }
+      fxPad.granular = { ...fxPad.granular, on: !!dec.params.granular }
+    }
+  }
+}
+
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
   if (node.type === 'pattern') {
+    applyDecorators(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
     playback.playingPattern = idx
@@ -1605,6 +1678,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
+      applyDecorators(node)
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)

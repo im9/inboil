@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator, pushUndo } from '../state.svelte.ts'
   import type { AlignMode } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, decoratorLabel } from '../sceneGeometry.ts'
   import SceneCanvas from './SceneCanvas.svelte'
   import SceneBubbleMenu from './SceneBubbleMenu.svelte'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
@@ -51,6 +51,10 @@
 
   // ── Selection rectangle ──
   let selectRect: { x1: number; y1: number; x2: number; y2: number } | null = $state(null)
+
+  // ── Snap-attach state (ADR 062) ──
+  let snapTarget: string | null = $state(null)  // pattern node id for snap highlight
+  let justAttached: string | null = $state(null)  // pattern node id for bounce animation
 
   // ── Drop from MatrixView ──
   let dropActive = $state(false)
@@ -238,6 +242,25 @@
         } else {
           sceneUpdateNode(dragging, pos.x, pos.y)
         }
+        // Snap detection: function node near a pattern node? (ADR 062)
+        const dragNode = song.scene.nodes.find(n => n.id === dragging)
+        if (dragNode && dragNode.type !== 'pattern' && dragNode.type !== 'probability') {
+          const dragPx = toPixel(pos.x, pos.y, WORLD_W, WORLD_H)
+          let closest: string | null = null
+          let closestDist = Infinity
+          for (const n of song.scene.nodes) {
+            if (n.type !== 'pattern' || n.id === dragging) continue
+            const np = toPixel(n.x, n.y, WORLD_W, WORLD_H)
+            const dist = Math.hypot(dragPx.x - np.x, dragPx.y - np.y)
+            if (dist < 60 && dist < closestDist) {
+              closest = n.id
+              closestDist = dist
+            }
+          }
+          snapTarget = closest
+        } else {
+          snapTarget = null
+        }
       }
     }
   }
@@ -296,6 +319,20 @@
 
     if (!dragging) return
     const nodeId = dragging
+
+    // Snap-attach: function node dropped near pattern node (ADR 062)
+    if (dragMoved && snapTarget) {
+      const attached = sceneAttachDecorator(nodeId, snapTarget)
+      if (attached) {
+        justAttached = snapTarget
+        setTimeout(() => { justAttached = null }, 200)
+      }
+      snapTarget = null
+      dragging = null
+      return
+    }
+    snapTarget = null
+
     if (!dragMoved) {
       // Double-click detection
       const now = Date.now()
@@ -650,6 +687,9 @@
       {@const isDragging = dragging === node.id}
       {@const isEdgeSource = edgeFrom === node.id}
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
+      {@const isSnapTarget = snapTarget === node.id}
+      {@const isBouncing = justAttached === node.id}
+      {@const decs = node.decorators ?? []}
       {@const nc = nodeColor(node, song.patterns)}
       <button
         class="scene-node"
@@ -659,6 +699,8 @@
         class:dragging={isDragging}
         class:edge-source={isEdgeSource}
         class:playing={isPlaying}
+        class:snap-target={isSnapTarget}
+        class:just-attached={isBouncing}
         style="
           left: {PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)}px;
           top: {PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)}px;
@@ -683,6 +725,13 @@
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
+        {/if}
+        {#if !isFn && decs.length > 0}
+          <span class="dec-row">
+            {#each decs as dec}
+              <span class="dec-tag">{decoratorLabel(dec)}</span>
+            {/each}
+          </span>
         {/if}
       </button>
       <!-- Output handle for edge creation -->
@@ -898,6 +947,59 @@
   @keyframes scene-pulse {
     0%, 100% { box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15); }
     50% { box-shadow: 0 0 0 5px rgba(30, 32, 40, 0.1); }
+  }
+
+  /* ── Snap-attach highlight (ADR 062) ── */
+  .scene-node.snap-target {
+    outline: 2px solid var(--color-olive);
+    outline-offset: 3px;
+    filter: brightness(1.1);
+  }
+  .scene-node.just-attached {
+    animation: dec-bounce 200ms cubic-bezier(0.2, 0, 0, 1.3);
+  }
+  @keyframes dec-bounce {
+    0%   { transform: translate(-50%, -50%) scale(1.08); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+  }
+
+  /* ── Decorator row on pattern nodes (ADR 062) ── */
+  .dec-row {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    padding-top: 2px;
+    pointer-events: none;
+  }
+  .dec-tag {
+    background: var(--color-fg);
+    color: rgba(237, 232, 220, 0.7);
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 4px;
+    border-radius: 6px;
+    white-space: nowrap;
+    animation: dec-pop-in 120ms cubic-bezier(0.2, 0, 0, 1.3);
+  }
+  .scene-node.playing .dec-tag {
+    animation: dec-flash 80ms ease-out;
+  }
+  @keyframes dec-pop-in {
+    0%   { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes dec-flash {
+    0%   { filter: brightness(1.6); }
+    100% { filter: brightness(1); }
+  }
+  .dec-tag:hover {
+    transform: translateY(-1px);
+    transition: transform 60ms ease-out;
   }
 
   .scene-node.selected {

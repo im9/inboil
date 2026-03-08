@@ -82,7 +82,7 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, Pattern } from './state.svelte.ts'
+import type { SceneNode, SceneDecorator, Pattern } from './state.svelte.ts'
 import { PATTERN_COLORS } from './constants.ts'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -105,6 +105,27 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
   if (node.type === 'probability') return '?%'
   if (node.type === 'fx') {
     const p = node.params ?? {}
+    const tags = []
+    if (p.verb) tags.push('V')
+    if (p.delay) tags.push('D')
+    if (p.glitch) tags.push('G')
+    if (p.granular) tags.push('R')
+    return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
+  }
+  return '?'
+}
+
+/** Get compact label for a decorator (ADR 062) */
+export function decoratorLabel(dec: SceneDecorator): string {
+  if (dec.type === 'transpose') {
+    if (dec.params.mode === 1) return `KEY ${NOTE_NAMES[dec.params.key ?? 0]}`
+    const s = dec.params.semitones ?? 0
+    return `T${s >= 0 ? '+' : ''}${s}`
+  }
+  if (dec.type === 'tempo') return `×${dec.params.bpm ?? 120}`
+  if (dec.type === 'repeat') return `RPT${dec.params.count ?? 2}`
+  if (dec.type === 'fx') {
+    const p = dec.params
     const tags = []
     if (p.verb) tags.push('V')
     if (p.delay) tags.push('D')
