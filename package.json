@@ -1,6 +1,8 @@
 {
   "name": "inboil",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "origamiworks",
   "version": "0.0.1",
   "type": "module",
   "scripts": {

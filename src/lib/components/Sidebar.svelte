@@ -405,6 +405,7 @@
           <div class="setting-group about">
             <span class="setting-label">ABOUT</span>
             <p class="about-text">inboil v0.1.0</p>
+            <p class="about-text">&copy; 2026 origamiworks</p>
           </div>
 
         {/if}
