@@ -842,7 +842,19 @@
   {/if}
 
   {#if song.scene.nodes.length === 0}
-    <div class="scene-empty" data-tip="Double-click to add nodes" data-tip-ja="ダブルクリックでノード追加">Double-click to add nodes</div>
+    <div class="scene-empty" data-tip="Drag patterns from the matrix, then connect them" data-tip-ja="マトリクスからパターンをドラッグし、接続して曲を作ろう">
+      <div class="empty-steps">
+        <span class="empty-step">
+          <span class="empty-icon">◫</span>
+          <span>Drag patterns here</span>
+        </span>
+        <span class="empty-arrow">→</span>
+        <span class="empty-step">
+          <span class="empty-icon">◯─◯</span>
+          <span>Connect to build a song</span>
+        </span>
+      </div>
+    </div>
   {/if}
 </div>
 
@@ -1148,10 +1160,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
+  }
+  .empty-steps {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     font-family: var(--font-data);
     font-size: 10px;
-    color: rgba(30, 32, 40, 0.2);
-    pointer-events: none;
+    color: rgba(30, 32, 40, 0.22);
+  }
+  .empty-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .empty-icon {
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.5;
+  }
+  .empty-arrow {
+    font-size: 16px;
+    opacity: 0.3;
+    margin-top: -14px;
   }
 
   /* ── Mobile responsive ── */
