@@ -43,6 +43,8 @@ export class GrooveboxEngine {
   private suspendTimer: ReturnType<typeof setTimeout> | null = null
   /** Tracks current voiceId per track to detect changes and reload samples */
   private trackVoiceIds: string[] = []
+  /** Cached decoded user samples per track — re-sent after voice re-init (ADR 020 §I) */
+  private userSamples: Map<number, { mono: Float32Array; sampleRate: number }> = new Map()
 
   set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
@@ -82,16 +84,22 @@ export class GrooveboxEngine {
     this._autoLoadSamples(wp)
   }
 
-  /** Auto-load built-in samples for sampler voices (ADR 012) */
+  /** Auto-load built-in and user samples for sampler voices (ADR 012, 020) */
   private _autoLoadSamples(wp: WorkletPattern): void {
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
       const prev = this.trackVoiceIds[i]
       this.trackVoiceIds[i] = vid
-      if (!(vid in DRUM_SAMPLES)) continue
-      // Reload when voice changed (new SamplerVoice instance needs fresh buffer)
-      if (prev === vid) continue
-      void this.loadBuiltinSample(i, vid)
+      // Built-in drum samples (Crash, Ride)
+      if (vid in DRUM_SAMPLES) {
+        if (prev !== vid) void this.loadBuiltinSample(i, vid)
+        continue
+      }
+      // User samples — re-send cached buffer when voice was re-initialized
+      if (vid === 'Sampler' && prev !== vid) {
+        const cached = this.userSamples.get(i)
+        if (cached) this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
+      }
     }
   }
 
@@ -157,14 +165,30 @@ export class GrooveboxEngine {
     this._sendSample(trackId, result.mono, result.sampleRate)
   }
 
-  /** Decode a user-provided File and send to worklet. Returns waveform for display. (ADR 012 Phase 2) */
-  async loadUserSample(trackId: number, file: File): Promise<Float32Array | null> {
+  /** Decode a user-provided File and send to worklet. Returns waveform + raw buffer for persistence. (ADR 012 Phase 2) */
+  async loadUserSample(trackId: number, file: File): Promise<{ waveform: Float32Array; rawBuffer: ArrayBuffer } | null> {
     await this.init()
-    const result = await this._decodeToMono(await file.arrayBuffer())
+    const rawBuffer = await file.arrayBuffer()
+    // Clone before decodeAudioData (which detaches the buffer)
+    const rawCopy = rawBuffer.slice(0)
+    const result = await this._decodeToMono(rawBuffer)
     if (!result) return null
-    // Keep a copy for waveform display before transferring
     const waveform = new Float32Array(result.mono)
+    // Cache decoded mono for re-send after voice re-init
+    this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
     this._sendSample(trackId, result.mono, result.sampleRate)
+    return { waveform, rawBuffer: rawCopy }
+  }
+
+  /** Decode a stored ArrayBuffer and cache for worklet. Returns waveform for display. (ADR 020 Section I) */
+  async loadSampleFromBuffer(trackId: number, rawBuffer: ArrayBuffer): Promise<Float32Array | null> {
+    await this.init()
+    // Clone before decodeAudioData (which detaches the buffer)
+    const result = await this._decodeToMono(rawBuffer.slice(0))
+    if (!result) return null
+    const waveform = new Float32Array(result.mono)
+    // Cache decoded mono — will be sent to worklet by _autoLoadSamples on next sendPattern
+    this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
     return waveform
   }
 

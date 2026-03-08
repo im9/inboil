@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, activeCell, ui, toggleDockMinimized } from '../state.svelte.ts'
+  import { song, activeCell, ui, toggleDockMinimized, samplesByTrack, setSample } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
@@ -42,17 +42,24 @@
     presetOpen = false
   }
 
-  // ── Sample loader (ADR 012 Phase 2) ──
+  // ── Sample loader (ADR 012 Phase 2, persistence ADR 020 §I) ──
+  const MAX_SAMPLE_SIZE = 10 * 1024 * 1024 // 10 MB (ADR 012)
   let fileInput = $state<HTMLInputElement>(null!)
   let waveformCanvas = $state<HTMLCanvasElement>(null!)
-  let samplesByTrack = $state<Record<number, { name: string; waveform: Float32Array }>>({})
   let dropActive = $state(false)
+  let sampleError = $state('')
   const currentSample = $derived(samplesByTrack[ui.selectedTrack])
 
   async function loadSampleFile(file: File) {
-    const waveform = await engine.loadUserSample(ui.selectedTrack, file)
-    if (waveform) {
-      samplesByTrack[ui.selectedTrack] = { name: file.name, waveform }
+    if (file.size > MAX_SAMPLE_SIZE) {
+      sampleError = `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB, max 10 MB)`
+      setTimeout(() => { sampleError = '' }, 3000)
+      return
+    }
+    sampleError = ''
+    const result = await engine.loadUserSample(ui.selectedTrack, file)
+    if (result) {
+      setSample(ui.selectedTrack, file.name, result.waveform, result.rawBuffer)
     }
   }
 
@@ -222,7 +229,7 @@
                 <button class="btn-load" onpointerdown={() => fileInput.click()}
                   data-tip="Load audio sample" data-tip-ja="サンプルを読み込む"
                 >LOAD</button>
-                <span class="sample-name">{currentSample?.name ?? 'Drop audio file'}</span>
+                <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || currentSample?.name || 'Drop audio file'}</span>
               </div>
               <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
               <input
@@ -668,6 +675,9 @@
     font-size: var(--dk-fs-sm);
     color: var(--dk-text-dim);
     overflow: hidden;
+  }
+  .sample-error {
+    color: #e57373;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;

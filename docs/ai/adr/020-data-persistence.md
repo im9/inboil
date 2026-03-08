@@ -387,7 +387,7 @@ async function importProject(json: string): Promise<void> {
 8. ~~Project management UI in system settings (NEW, SAVE AS, load, delete, Factory Demo)~~ Done
 9. ~~Factory reset uses empty song (not factory patterns)~~ Done
 10. ~~`lastProjectName` in localStorage for flash-free reload~~ Done
-11. Sample persistence in IndexedDB (Section I, Phase A)
+11. ~~Sample persistence in IndexedDB (Section I, Phase A)~~ Done
 12. ~~Export/Import UI (file-based, works for all users)~~ Deferred — cloud sync is higher priority
 13. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
 14. Cloud sync Worker + KV setup

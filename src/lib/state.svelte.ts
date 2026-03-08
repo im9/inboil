@@ -957,7 +957,7 @@ export function randomizePattern(): void {
 
 // ── Project persistence (ADR 020) ────────────────────────────────────
 
-import { saveProject, loadProject, listProjects, deleteProject, type StoredProject } from './storage.ts'
+import { saveProject, loadProject, listProjects, deleteProject, saveSample, loadSamples, deleteSamples, type StoredProject } from './storage.ts'
 export type { StoredProject }
 export { listProjects, deleteProject }
 
@@ -970,6 +970,49 @@ export const project = $state({
   /** Timestamp of last successful save (for UI feedback) */
   lastSavedAt: 0,
 })
+
+// ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────
+
+/** In-memory sample state per track (survives navigation, persisted to IndexedDB) */
+export interface SampleMeta {
+  name: string
+  waveform: Float32Array
+  rawBuffer: ArrayBuffer
+}
+
+export const samplesByTrack = $state<Record<number, SampleMeta>>({})
+
+/** Store a loaded sample in memory + persist to IndexedDB */
+export function setSample(trackId: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
+  samplesByTrack[trackId] = { name, waveform, rawBuffer }
+  if (project.id) void saveSample(project.id, trackId, name, rawBuffer)
+}
+
+/** Persist any pending samples after project gets an id (called from projectSaveAs) */
+async function persistPendingSamples(projectId: string): Promise<void> {
+  for (const [tid, meta] of Object.entries(samplesByTrack)) {
+    await saveSample(projectId, Number(tid), meta.name, meta.rawBuffer)
+  }
+}
+
+/** Restore samples from IndexedDB — decode + cache in engine (sent on next sendPattern) */
+export async function restoreSamples(projectId: string): Promise<void> {
+  clearSamples()
+  const stored = await loadSamples(projectId)
+  if (stored.length === 0) return
+  const { engine } = await import('./audio/engine.ts')
+  for (const s of stored) {
+    const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer)
+    if (waveform) {
+      samplesByTrack[s.trackId] = { name: s.name, waveform, rawBuffer: s.buffer }
+    }
+  }
+}
+
+/** Clear all in-memory sample state */
+function clearSamples(): void {
+  for (const k of Object.keys(samplesByTrack)) delete samplesByTrack[Number(k)]
+}
 
 /** Build a StoredProject from current state */
 function buildStoredProject(id: string, name: string, now: number, createdAt?: number): StoredProject {
@@ -985,6 +1028,7 @@ export async function projectSaveAs(name: string): Promise<string> {
   project.id = id
   project.dirty = false
   project.lastSavedAt = now
+  await persistPendingSamples(id)
   savePrefs()
   return id
 }
@@ -1021,12 +1065,15 @@ export async function projectLoad(id: string): Promise<boolean> {
   undoStack.length = 0
   redoStack.length = 0
   savePrefs()
+  // Restore persisted samples (async, non-blocking)
+  void restoreSamples(id)
   return true
 }
 
 /** Create a new empty project (does not persist until first save) */
 export function projectNew(): void {
   restoreSong(makeEmptySong())
+  clearSamples()
   project.id = null
   project.dirty = false
   ui.currentPattern = 0
@@ -1043,6 +1090,7 @@ export function projectNew(): void {
 /** Delete a project and reset to new if it was current */
 export async function projectDelete(id: string): Promise<void> {
   await deleteProject(id)
+  await deleteSamples(id)
   if (project.id === id) projectNew()
 }
 
@@ -1102,6 +1150,7 @@ export async function projectRename(name: string): Promise<void> {
 /** Load factory demo patterns as a new unsaved project */
 export function projectLoadFactory(): void {
   restoreSong(makeDefaultSong())
+  clearSamples()
   project.id = null
   project.dirty = true
   ui.currentPattern = 0
