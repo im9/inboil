@@ -9,6 +9,8 @@
   import type { VoiceId } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
+  import EnvGraph from './EnvGraph.svelte'
+  import WaveGraph from './WaveGraph.svelte'
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
     { id: 'drum', label: 'DRUM' },
@@ -436,6 +438,16 @@
                 {#if p.group && (i === 0 || p.group !== params[i - 1].group)}
                   {@const groupLabels: Record<string, string> = { tone: 'OSC', noise: 'NOISE', metal: 'METAL', amp: 'AMP', filter: 'FILTER', env: 'ENV', arp: 'ARP', osc: 'OSC', lfo: 'LFO', sample: 'SAMPLE', chop: 'CHOP', sync: 'SYNC' }}
                   <div class="param-group-label">{groupLabels[p.group] ?? p.group.toUpperCase()}</div>
+                  {#if cell?.voiceId === 'iDEATH' && p.group === 'osc'}
+                    <WaveGraph position={cell.voiceParams.oscAPos ?? 0} />
+                  {:else if cell?.voiceId === 'iDEATH' && p.group === 'env'}
+                    <EnvGraph
+                      attack={cell.voiceParams.attack ?? 0.005}
+                      decay={cell.voiceParams.decay ?? 0.3}
+                      sustain={cell.voiceParams.sustain ?? 0.5}
+                      release={cell.voiceParams.release ?? 0.3}
+                    />
+                  {/if}
                 {/if}
                 <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
                   <Knob
