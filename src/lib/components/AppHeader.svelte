@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { song, playback, ui, perf, project, projectRename, toggleSidebar } from '../state.svelte.ts'
+  import { song, playback, ui, project, projectRename, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
-  import Knob from './Knob.svelte'
+
   import PerfButtons from './PerfButtons.svelte'
 
   interface Props {
@@ -174,18 +174,6 @@
         data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>
     </div>
-
-    <div class="sep" aria-hidden="true"></div>
-
-    <!-- Master gain + Swing -->
-    <span class="gain-wrap">
-      <span data-tip="Master output volume" data-tip-ja="マスター出力音量">
-      <Knob value={perf.masterGain} label="GAIN" size={36} onchange={v => { perf.masterGain = v }} />
-      </span>
-      <span data-tip="Swing amount (shuffle feel)" data-tip-ja="スウィング量 (シャッフル感)">
-      <Knob value={perf.swing} label="SWG" size={36} onchange={v => { perf.swing = v }} />
-      </span>
-    </span>
 
     <div class="sep" aria-hidden="true"></div>
 
@@ -452,9 +440,6 @@
     flex-shrink: 0;
   }
 
-  /* ── Gain/Swing knobs ── */
-  .gain-wrap { display: contents; }
-
   /* ── View toggle ── */
   .view-toggle {
     display: flex;
@@ -566,20 +551,6 @@
     .bpm-label { display: none; }
 
     .sep { display: none; }
-
-    /* Show GAIN/SWG knobs on mobile, scaled down */
-    .gain-wrap {
-      display: flex;
-      gap: 2px;
-      order: 10;
-      padding-left: 4px;
-      padding-right: 6px;
-      border-left: 1px solid rgba(237,232,220,0.12);
-    }
-    .gain-wrap :global(.knob-wrap) {
-      transform: scale(0.72);
-      margin: -5px -4px;
-    }
 
     /* Hide perf-btns on mobile (moved to PerfBubble) */
     .perf-btns { display: none; }
