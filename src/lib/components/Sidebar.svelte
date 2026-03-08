@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, project, song, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, listProjects, type StoredProject } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, listProjects, type StoredProject } from '../state.svelte.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)

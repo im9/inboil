@@ -1,6 +1,7 @@
 <script lang="ts">
   import { masterPad, perf, effects, masterLevels, playback, song } from '../state.svelte.ts'
-  import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
+  import { PAD_INSET } from '../constants.ts'
+  import { padNorm, movedPastTap } from '../padHelpers.ts'
 
   type NodeKey = 'comp' | 'duck' | 'ret'
 
@@ -37,12 +38,8 @@
   let startPos = { x: 0, y: 0 }
   let dragRect: DOMRect | null = null
 
-  function toNorm(e: PointerEvent): { x: number; y: number } | null {
-    const rect = dragRect
-    if (!rect) return null
-    const x = Math.max(0, Math.min(1, (e.clientX - rect.left - PAD_INSET) / (rect.width  - PAD_INSET * 2)))
-    const y = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top - PAD_INSET) / (rect.height - PAD_INSET * 2)))
-    return { x, y }
+  function toNorm(e: PointerEvent) {
+    return dragRect ? padNorm(e, dragRect) : null
   }
 
   function startDrag(key: NodeKey, e: PointerEvent) {
@@ -56,11 +53,7 @@
 
   function onMove(e: PointerEvent) {
     if (!dragging) return
-    if (!dragMoved) {
-      const dx = Math.abs(e.clientX - startPos.x)
-      const dy = Math.abs(e.clientY - startPos.y)
-      if (dx > TAP_THRESHOLD || dy > TAP_THRESHOLD) dragMoved = true
-    }
+    if (!dragMoved && movedPastTap(e, startPos)) dragMoved = true
     if (dragMoved) {
       const pos = toNorm(e)
       if (pos) {
