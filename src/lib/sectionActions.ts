@@ -7,7 +7,7 @@ import { song, ui, playback, pushUndo } from './state.svelte.ts'
 import type { SceneNode, ChainFx, Pattern } from './state.svelte.ts'
 import {
   makePatternId, makeEmptyCell,
-  TRACK_DEFAULTS, FACTORY_COUNT,
+  TRACK_DEFAULTS, FACTORY_COUNT, getTemplate,
 } from './factory.ts'
 
 // ── Internal helpers (needed for pattern ops) ──
@@ -241,6 +241,14 @@ export function patternClear(patternIndex: number): void {
   pat.cells = pat.cells.map((c, i) =>
     makeEmptyCell(i, c.name, c.voiceId, TRACK_DEFAULTS[i]?.note ?? 60)
   )
+}
+
+/** Apply a pattern template — overwrites cells with template's voice layout (ADR 015 §C) */
+export function patternApplyTemplate(patternIndex: number, templateId: string): void {
+  pushUndo('Apply template')
+  const tmpl = getTemplate(templateId)
+  const pat = song.patterns[patternIndex]
+  pat.cells = tmpl.tracks.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note))
 }
 
 /** Rename a pattern (max 8 chars, uppercase) */

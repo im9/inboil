@@ -84,7 +84,7 @@ interface PatternTemplate {
 const PATTERN_TEMPLATES: PatternTemplate[] = [
   {
     id: 'standard', name: 'Standard',
-    // Current default: 6 drums + bass + lead
+    // 6 drums + bass + lead (current default)
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
       { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
@@ -97,45 +97,59 @@ const PATTERN_TEMPLATES: PatternTemplate[] = [
     ],
   },
   {
-    id: 'sampler-4', name: '4 Sampler',
-    // 4 drums + 4 sampler tracks
-    tracks: [
-      { name: 'KICK',  voiceId: 'Kick',    note: 60, pan:  0.00 },
-      { name: 'SNARE', voiceId: 'Snare',   note: 60, pan: -0.10 },
-      { name: 'C.HH',  voiceId: 'Hat',     note: 60, pan: -0.30 },
-      { name: 'O.HH',  voiceId: 'OpenHat', note: 60, pan:  0.35 },
-      { name: 'SMP1',  voiceId: 'Sampler', note: 60, pan: -0.20 },
-      { name: 'SMP2',  voiceId: 'Sampler', note: 60, pan:  0.20 },
-      { name: 'SMP3',  voiceId: 'Sampler', note: 60, pan: -0.40 },
-      { name: 'SMP4',  voiceId: 'Sampler', note: 60, pan:  0.40 },
-    ],
-  },
-  {
-    id: 'minimal', name: 'Minimal',
-    // 4 drums + 2 bass/lead + 2 sampler
+    id: 'techno', name: 'Techno',
+    // 4 drums + bass + pad + arp + fx
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
-      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
-      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-      { name: 'LEAD',  voiceId: 'iDEATH',   note: 64, pan:  0.10 },
-      { name: 'SMP1',  voiceId: 'Sampler',  note: 60, pan: -0.20 },
-      { name: 'SMP2',  voiceId: 'Sampler',  note: 60, pan:  0.20 },
-    ],
-  },
-  {
-    id: 'synth-heavy', name: 'Synth',
-    // 3 drums + 5 synths
-    tracks: [
-      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
-      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
       { name: 'PAD',   voiceId: 'iDEATH',   note: 60, pan: -0.15 },
-      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
       { name: 'ARP',   voiceId: 'FM',       note: 60, pan:  0.20 },
       { name: 'FX',    voiceId: 'iDEATH',   note: 60, pan:  0.00 },
+    ],
+  },
+  {
+    id: 'house', name: 'House',
+    // Full drum kit + bass + keys
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
+      { name: 'CYM',   voiceId: 'Cymbal',   note: 60, pan:  0.25 },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'LEAD',  voiceId: 'iDEATH',   note: 64, pan:  0.10 },
+    ],
+  },
+  {
+    id: 'ambient', name: 'Ambient',
+    // No drums — synths + sampler pads
+    tracks: [
+      { name: 'PAD1',  voiceId: 'iDEATH',  note: 60, pan: -0.20 },
+      { name: 'PAD2',  voiceId: 'iDEATH',  note: 60, pan:  0.20 },
+      { name: 'LEAD',  voiceId: 'iDEATH',  note: 64, pan:  0.00 },
+      { name: 'BELL',  voiceId: 'FM',       note: 72, pan: -0.35 },
+      { name: 'TONE',  voiceId: 'FM',       note: 60, pan:  0.35 },
+      { name: 'WARM',  voiceId: 'Analog',   note: 60, pan:  0.00 },
+      { name: 'SMP1',  voiceId: 'Sampler',  note: 60, pan: -0.40 },
+      { name: 'SMP2',  voiceId: 'Sampler',  note: 60, pan:  0.40 },
+    ],
+  },
+  {
+    id: 'hiphop', name: 'HipHop',
+    // 4 drums + 2 sampler + bass + lead
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
+      { name: 'SMP1',  voiceId: 'Sampler',  note: 60, pan: -0.20 },
+      { name: 'SMP2',  voiceId: 'Sampler',  note: 60, pan:  0.20 },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
     ],
   },
 ]
@@ -160,7 +174,7 @@ The original ADR 015 proposed "drum kits" — bundling 6 drum tracks as a named 
 2. ~~Preset browser UI in DockPanel~~ Done
 3. ~~Extend built-in presets to drum voices + Bass303/MoogLead/FM/Analog~~ Done
 4. ~~Pattern templates (data + factory.ts integration)~~ Done
-5. Template selector UI (pattern creation flow)
+5. ~~Template selector UI (pattern creation flow)~~ Done
 6. User preset save/load (IndexedDB `presets` store, DB v3)
 7. User preset management UI (save, delete, rename)
 

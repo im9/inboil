@@ -58,7 +58,6 @@
     const idx = song.patterns.findIndex((_, i) => i > ui.currentPattern && !patternHasData(i))
     if (idx >= 0) { selectPattern(idx); gridEl?.focus() }
     else {
-      // Wrap around from beginning
       const idx2 = song.patterns.findIndex((_, i) => !patternHasData(i))
       if (idx2 >= 0) { selectPattern(idx2); gridEl?.focus() }
     }
@@ -372,5 +371,6 @@
   .cell-bg:active {
     background: rgba(30,32,40,0.06);
   }
+
 
 </style>

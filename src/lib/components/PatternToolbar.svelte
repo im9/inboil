@@ -3,6 +3,8 @@
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import { engine } from '../audio/engine.ts'
+  import { PATTERN_TEMPLATES } from '../factory.ts'
+  import { patternApplyTemplate } from '../sectionActions.ts'
 
   let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
 
@@ -12,6 +14,14 @@
   const pat = $derived(song.patterns[ui.currentPattern])
   const patName = $derived(pat?.name || `PAT ${String(ui.currentPattern).padStart(2, '0')}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
+
+  // ── Template picker ──
+  let tmplOpen = $state(false)
+
+  function applyTemplate(templateId: string) {
+    tmplOpen = false
+    patternApplyTemplate(ui.currentPattern, templateId)
+  }
 
   const KEYS = NOTE_NAMES.map((note, i) => ({
     note,
@@ -144,6 +154,27 @@
     <span class="pat-label">{patName}</span>
   </div>
 
+  <!-- Template picker -->
+  <div class="tmpl-wrap">
+    <button
+      class="btn-tmpl"
+      class:open={tmplOpen}
+      onpointerdown={() => { tmplOpen = !tmplOpen }}
+      data-tip="Apply track template" data-tip-ja="トラックテンプレートを適用"
+    >TMPL</button>
+    {#if tmplOpen}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="tmpl-backdrop" onpointerdown={() => { tmplOpen = false }}></div>
+      <div class="tmpl-dropdown">
+        {#each PATTERN_TEMPLATES as tmpl}
+          <button class="tmpl-option" onpointerdown={() => applyTemplate(tmpl.id)}>
+            {tmpl.name}
+          </button>
+        {/each}
+      </div>
+    {/if}
+  </div>
+
   <div class="sep" aria-hidden="true"></div>
 
   <!-- KEY piano (desktop) -->
@@ -274,6 +305,75 @@
     letter-spacing: 0.04em;
     color: rgba(30,32,40,0.55);
     white-space: nowrap;
+  }
+
+  /* ── Template picker ── */
+  .tmpl-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .btn-tmpl {
+    border: 1px solid rgba(30,32,40,0.20);
+    background: transparent;
+    color: rgba(30,32,40,0.45);
+    padding: 4px 8px;
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 60ms, color 60ms, border-color 60ms;
+  }
+  .btn-tmpl:hover, .btn-tmpl.open {
+    background: rgba(30,32,40,0.06);
+    color: rgba(30,32,40,0.70);
+    border-color: rgba(30,32,40,0.30);
+  }
+  .tmpl-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+  }
+  .tmpl-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 200;
+    min-width: 100px;
+    background: var(--color-bg);
+    border: 1px solid rgba(30,32,40,0.20);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+    animation: tmpl-in 80ms ease-out;
+  }
+  @keyframes tmpl-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .tmpl-option {
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(30,32,40,0.70);
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 40ms, color 40ms;
+    white-space: nowrap;
+  }
+  .tmpl-option:hover {
+    background: rgba(30,32,40,0.08);
+    color: var(--color-fg);
+  }
+  .tmpl-option:active {
+    background: rgba(30,32,40,0.14);
   }
 
   /* ── Loop button ── */
