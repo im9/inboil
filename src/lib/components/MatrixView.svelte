@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, sceneAddNode, patternHasData, patternDensity, patternUsedInScene, patternCopy, patternPaste, patternClear, patternRename, patternSetColor, soloPatternIndex } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene, soloPatternIndex } from '../state.svelte.ts'
+  import { sceneAddNode } from '../sceneActions.ts'
+  import { patternCopy, patternPaste, patternClear, patternRename, patternSetColor } from '../sectionActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
 
   // Show all patterns in the pool

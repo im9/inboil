@@ -1,4 +1,5 @@
-import { activeCell, ui, setVoiceParam, setParamLock } from './state.svelte.ts'
+import { activeCell, ui } from './state.svelte.ts'
+import { setVoiceParam, setParamLock } from './stepActions.ts'
 import { denormalizeParam, type ParamDef } from './paramDefs.ts'
 
 export function knobValue(p: { key: string; default: number }): number {

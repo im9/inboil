@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, activeCell, ui, clearAllParamLocks, setTrackSend, applyPreset, changeVoice, toggleDockMinimized } from '../state.svelte.ts'
+  import { song, activeCell, ui, toggleDockMinimized } from '../state.svelte.ts'
+  import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, type PresetCategory } from '../presets.ts'

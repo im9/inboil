@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte'
   import { slide } from 'svelte/transition'
-  import { song, activeCell, playback, ui, toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, isViewingPlayingPattern, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   function cycleSteps(trackId: number) {

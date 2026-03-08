@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { song, playback, ui, primarySelectedNode, selectPattern, sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, hasScenePlayback, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator, pushUndo } from '../state.svelte.ts'
-  import type { AlignMode } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, hasScenePlayback, pushUndo } from '../state.svelte.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
+  import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, decoratorLabel } from '../sceneGeometry.ts'

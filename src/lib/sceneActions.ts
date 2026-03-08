@@ -1,0 +1,429 @@
+/**
+ * Scene graph CRUD, layout, and clipboard operations.
+ * Extracted from state.svelte.ts for modularity.
+ */
+
+import { song, ui, pushUndo } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, SceneDecorator } from './state.svelte.ts'
+import { hasMigratableFnNodes, migrateFnToDecorators } from './sceneData.ts'
+
+// ── ID generation ──
+
+function nextSceneId(prefix: 'sn' | 'se'): string {
+  const items = prefix === 'sn' ? song.scene.nodes : song.scene.edges
+  const max = items.reduce((m, item) => {
+    const num = parseInt(item.id.replace(`${prefix}_`, ''))
+    return isNaN(num) ? m : Math.max(m, num)
+  }, -1)
+  return `${prefix}_${String(max + 1).padStart(2, '0')}`
+}
+
+// ── Node CRUD ──
+
+/** Update a scene node's position (no undo — cosmetic, high frequency) */
+export function sceneUpdateNode(nodeId: string, x: number, y: number): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  node.x = x
+  node.y = y
+}
+
+/** Add a pattern node at position */
+export function sceneAddNode(patternId: string, x: number, y: number): string {
+  pushUndo('Add scene node')
+  const id = nextSceneId('sn')
+  const isFirst = song.scene.nodes.length === 0
+  song.scene.nodes.push({
+    id, type: 'pattern', x, y,
+    root: isFirst,
+    patternId,
+  })
+  return id
+}
+
+/** Delete a node and its connected edges */
+export function sceneDeleteNode(nodeId: string): void {
+  pushUndo('Delete scene node')
+  const wasRoot = song.scene.nodes.find(n => n.id === nodeId)?.root
+  song.scene.edges = song.scene.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
+  song.scene.nodes = song.scene.nodes.filter(n => n.id !== nodeId)
+  if (wasRoot && song.scene.nodes.length > 0) {
+    const nextRoot = song.scene.nodes.find(n => n.type === 'pattern') || song.scene.nodes[0]
+    nextRoot.root = true
+  }
+  delete ui.selectedSceneNodes[nodeId]
+  if (ui.selectedSceneEdge && !song.scene.edges.some(e => e.id === ui.selectedSceneEdge)) {
+    ui.selectedSceneEdge = null
+  }
+}
+
+/** Set a node as root (only pattern nodes can be root) */
+export function sceneSetRoot(nodeId: string): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node || node.type !== 'pattern') return
+  pushUndo('Set root node')
+  for (const n of song.scene.nodes) n.root = n.id === nodeId
+}
+
+// ── Edge CRUD ──
+
+/** Create a directed edge (prevents duplicates and self-loops) */
+export function sceneAddEdge(from: string, to: string): string | null {
+  if (from === to) return null
+  if (song.scene.edges.some(e => e.from === from && e.to === to)) return null
+  pushUndo('Add scene edge')
+  const id = nextSceneId('se')
+  const maxOrder = song.scene.edges
+    .filter(e => e.from === from)
+    .reduce((m, e) => Math.max(m, e.order), -1)
+  song.scene.edges.push({ id, from, to, order: maxOrder + 1 })
+  return id
+}
+
+/** Delete an edge */
+export function sceneDeleteEdge(edgeId: string): void {
+  pushUndo('Delete scene edge')
+  song.scene.edges = song.scene.edges.filter(e => e.id !== edgeId)
+  if (ui.selectedSceneEdge === edgeId) ui.selectedSceneEdge = null
+}
+
+/** Swap edge order with its neighbor */
+export function sceneReorderEdge(edgeId: string, direction: 'up' | 'down'): void {
+  const edge = song.scene.edges.find(e => e.id === edgeId)
+  if (!edge) return
+  const siblings = song.scene.edges
+    .filter(e => e.from === edge.from)
+    .sort((a, b) => a.order - b.order)
+  const idx = siblings.findIndex(e => e.id === edgeId)
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+  if (swapIdx < 0 || swapIdx >= siblings.length) return
+  pushUndo('Reorder edge')
+  const tmp = edge.order
+  edge.order = siblings[swapIdx].order
+  siblings[swapIdx].order = tmp
+}
+
+// ── Labels (ADR 052) ──
+
+export function sceneAddLabel(x: number, y: number, text = ''): string {
+  pushUndo('Add label')
+  const id = crypto.randomUUID().slice(0, 8)
+  song.scene.labels = [...(song.scene.labels ?? []), { id, text, x, y }]
+  return id
+}
+
+export function sceneUpdateLabel(labelId: string, text: string): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  pushUndo('Update label')
+  label.text = text
+}
+
+export function sceneDeleteLabel(labelId: string): void {
+  pushUndo('Delete label')
+  song.scene.labels = song.scene.labels.filter(l => l.id !== labelId)
+}
+
+export function sceneMoveLabel(labelId: string, x: number, y: number): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  label.x = x
+  label.y = y
+}
+
+export function sceneResizeLabel(labelId: string, delta: number): void {
+  const label = song.scene.labels.find(l => l.id === labelId)
+  if (!label) return
+  label.size = Math.max(0.5, Math.min(4, (label.size ?? 1) + delta))
+}
+
+// ── Function nodes ──
+
+const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
+  transpose: { mode: 0, semitones: 0, key: 0 },
+  tempo: { bpm: 120 },
+  repeat: { count: 2 },
+  probability: {},
+  fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
+}
+
+/** Add a function node */
+export function sceneAddFunctionNode(
+  type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx',
+  x: number, y: number
+): string {
+  pushUndo('Add function node')
+  const id = nextSceneId('sn')
+  song.scene.nodes.push({
+    id, type, x, y,
+    root: false,
+    params: { ...FUNCTION_DEFAULTS[type] },
+  })
+  return id
+}
+
+/** Update a function node's params */
+export function sceneUpdateNodeParams(nodeId: string, params: Record<string, number>): void {
+  pushUndo('Update node params')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  node.params = { ...params }
+}
+
+// ── Decorators (ADR 066) ──
+
+/** Attach a function node as a decorator on a pattern node */
+export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): boolean {
+  const fnNode = song.scene.nodes.find(n => n.id === fnNodeId)
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!fnNode || !patNode || patNode.type !== 'pattern') return false
+  if (fnNode.type === 'pattern' || fnNode.type === 'probability') return false
+  pushUndo('Attach decorator')
+  const dec: SceneDecorator = { type: fnNode.type, params: { ...(fnNode.params ?? {}) } }
+  patNode.decorators ??= []
+  patNode.decorators.push(dec)
+  song.scene.edges = song.scene.edges.filter(e => e.from !== fnNodeId && e.to !== fnNodeId)
+  song.scene.nodes = song.scene.nodes.filter(n => n.id !== fnNodeId)
+  return true
+}
+
+/** Detach a decorator from a pattern node back into a standalone function node */
+export function sceneDetachDecorator(patternNodeId: string, decoratorIndex: number): string | null {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode || !patNode.decorators || decoratorIndex >= patNode.decorators.length) return null
+  pushUndo('Detach decorator')
+  const dec = patNode.decorators.splice(decoratorIndex, 1)[0]
+  const id = nextSceneId('sn')
+  song.scene.nodes.push({
+    id,
+    type: dec.type,
+    x: Math.min(1, patNode.x + 0.05),
+    y: Math.min(1, patNode.y + 0.05),
+    root: false,
+    params: { ...dec.params },
+  })
+  return id
+}
+
+/** Update a decorator's params on a pattern node */
+export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: number, params: Record<string, number>): void {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode?.decorators?.[decoratorIndex]) return
+  pushUndo('Update decorator')
+  patNode.decorators[decoratorIndex].params = { ...params }
+}
+
+/** Check if there are function nodes in edge chains that can be migrated to decorators */
+export function sceneHasMigratableFnNodes(): boolean {
+  return hasMigratableFnNodes(song.scene.nodes, song.scene.edges)
+}
+
+/** Migrate edge-chain function nodes to decorators (ADR 066 Phase 4) */
+export function sceneMigrateFnToDecorators(): number {
+  pushUndo('Migrate to decorators')
+  const result = migrateFnToDecorators(song.scene.nodes, song.scene.edges)
+  song.scene.nodes = result.nodes
+  song.scene.edges = result.edges
+  return result.converted
+}
+
+// ── Layout ──
+
+/** Auto-layout scene nodes left→right using BFS layers from root */
+export function sceneFormatNodes(nodeIds?: Record<string, true>, direction: 'horizontal' | 'vertical' = 'horizontal'): void {
+  const { nodes, edges } = song.scene
+  if (nodes.length === 0) return
+  pushUndo('Format nodes')
+
+  const targets = nodeIds && Object.keys(nodeIds).length > 0 ? nodeIds : null
+
+  const children = new Map<string, string[]>()
+  for (const e of edges) {
+    const list = children.get(e.from) || []
+    list.push(e.to)
+    children.set(e.from, list)
+  }
+
+  const root = nodes.find(n => n.root) || nodes[0]
+  const layer = new Map<string, number>()
+  const queue: string[] = [root.id]
+  layer.set(root.id, 0)
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    const d = layer.get(id)!
+    for (const child of children.get(id) || []) {
+      if (!layer.has(child)) {
+        layer.set(child, d + 1)
+        queue.push(child)
+      }
+    }
+  }
+
+  const maxLayer = Math.max(0, ...layer.values())
+  for (const n of nodes) {
+    if (!layer.has(n.id)) layer.set(n.id, maxLayer + 1)
+  }
+
+  const layers = new Map<number, string[]>()
+  for (const [id, d] of layer) {
+    if (targets && !targets[id]) continue
+    const list = layers.get(d) || []
+    list.push(id)
+    layers.set(d, list)
+  }
+
+  for (const [, ids] of layers) {
+    ids.sort((a, b) => {
+      const aEdge = edges.find(e => e.to === a)
+      const bEdge = edges.find(e => e.to === b)
+      return (aEdge?.order ?? 0) - (bEdge?.order ?? 0)
+    })
+  }
+
+  let x1 = 0.08, x2 = 0.92, y1 = 0.08, y2 = 0.92
+  if (targets) {
+    const targetNodes = nodes.filter(n => targets[n.id])
+    if (targetNodes.length > 0) {
+      x1 = Math.min(...targetNodes.map(n => n.x))
+      x2 = Math.max(...targetNodes.map(n => n.x))
+      y1 = Math.min(...targetNodes.map(n => n.y))
+      y2 = Math.max(...targetNodes.map(n => n.y))
+      if (x2 - x1 < 0.05) { x1 = Math.max(0, x1 - 0.05); x2 = Math.min(1, x2 + 0.05) }
+      if (y2 - y1 < 0.05) { y1 = Math.max(0, y1 - 0.05); y2 = Math.min(1, y2 + 0.05) }
+    }
+  }
+
+  const vert = direction === 'vertical'
+  const totalLayers = Math.max(1, ...layers.keys()) + 1
+  for (const [d, ids] of layers) {
+    const primary = totalLayers === 1
+      ? ((vert ? y1 + y2 : x1 + x2) / 2)
+      : (vert ? y1 : x1) + (d / Math.max(1, totalLayers - 1)) * (vert ? y2 - y1 : x2 - x1)
+    for (let i = 0; i < ids.length; i++) {
+      const secondary = ids.length === 1
+        ? ((vert ? x1 + x2 : y1 + y2) / 2)
+        : (vert ? x1 : y1) + (i / (ids.length - 1)) * (vert ? x2 - x1 : y2 - y1)
+      const node = nodes.find(n => n.id === ids[i])
+      if (node) {
+        node.x = vert ? secondary : primary
+        node.y = vert ? primary : secondary
+      }
+    }
+  }
+}
+
+export type AlignMode = 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v' | 'distribute-h' | 'distribute-v'
+
+/** Align or distribute selected scene nodes */
+export function sceneAlignNodes(nodeIds: Record<string, true>, mode: AlignMode): void {
+  const targets = song.scene.nodes.filter(n => nodeIds[n.id])
+  if (targets.length < 2) return
+  pushUndo('Align nodes')
+  switch (mode) {
+    case 'left':       { const v = Math.min(...targets.map(n => n.x)); for (const n of targets) n.x = v; break }
+    case 'right':      { const v = Math.max(...targets.map(n => n.x)); for (const n of targets) n.x = v; break }
+    case 'top':        { const v = Math.min(...targets.map(n => n.y)); for (const n of targets) n.y = v; break }
+    case 'bottom':     { const v = Math.max(...targets.map(n => n.y)); for (const n of targets) n.y = v; break }
+    case 'center-h':   { const v = targets.reduce((s, n) => s + n.y, 0) / targets.length; for (const n of targets) n.y = v; break }
+    case 'center-v':   { const v = targets.reduce((s, n) => s + n.x, 0) / targets.length; for (const n of targets) n.x = v; break }
+    case 'distribute-h': {
+      targets.sort((a, b) => a.x - b.x)
+      const min = targets[0].x, max = targets[targets.length - 1].x
+      for (let i = 0; i < targets.length; i++) targets[i].x = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min)
+      break
+    }
+    case 'distribute-v': {
+      targets.sort((a, b) => a.y - b.y)
+      const min = targets[0].y, max = targets[targets.length - 1].y
+      for (let i = 0; i < targets.length; i++) targets[i].y = targets.length === 1 ? min : min + (i / (targets.length - 1)) * (max - min)
+      break
+    }
+  }
+}
+
+// ── Copy/Paste ──
+
+let sceneClipboard: { nodes: SceneNode[]; edges: SceneEdge[] } | null = null
+
+export function hasSceneClipboard(): boolean {
+  return sceneClipboard !== null && sceneClipboard.nodes.length > 0
+}
+
+/** Copy a single node to clipboard */
+export function sceneCopyNode(nodeId: string): void {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node) return
+  sceneClipboard = {
+    nodes: [{ ...node, params: node.params ? { ...node.params } : undefined }],
+    edges: [],
+  }
+}
+
+/** Copy multiple selected nodes + internal edges to clipboard */
+export function sceneCopySelected(nodeIds: Record<string, true>): void {
+  const ids = new Set(Object.keys(nodeIds))
+  if (ids.size === 0) return
+  const collectedNodes = song.scene.nodes
+    .filter(n => ids.has(n.id))
+    .map(n => ({ ...n, params: n.params ? { ...n.params } : undefined }))
+  sceneClipboard = {
+    nodes: collectedNodes,
+    edges: song.scene.edges
+      .filter(e => ids.has(e.from) && ids.has(e.to))
+      .map(e => ({ ...e })),
+  }
+}
+
+/** Copy node + all reachable downstream nodes & connecting edges */
+export function sceneCopySubgraph(nodeId: string): void {
+  const startNode = song.scene.nodes.find(n => n.id === nodeId)
+  if (!startNode) return
+  const visited = new Set<string>()
+  const queue = [nodeId]
+  const collectedNodes: SceneNode[] = []
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    const node = song.scene.nodes.find(n => n.id === id)
+    if (!node) continue
+    collectedNodes.push({ ...node, params: node.params ? { ...node.params } : undefined })
+    for (const edge of song.scene.edges) {
+      if (edge.from === id && !visited.has(edge.to)) queue.push(edge.to)
+    }
+  }
+  sceneClipboard = {
+    nodes: collectedNodes,
+    edges: song.scene.edges
+      .filter(e => visited.has(e.from) && visited.has(e.to))
+      .map(e => ({ ...e })),
+  }
+}
+
+/** Paste clipboard at position, returns new node IDs */
+export function scenePaste(baseX: number, baseY: number): string[] {
+  if (!sceneClipboard || sceneClipboard.nodes.length === 0) return []
+  pushUndo('Paste scene nodes')
+  const idMap = new Map<string, string>()
+  const pastedIds: string[] = []
+  const ref = sceneClipboard.nodes[0]
+  const dx = baseX - ref.x, dy = baseY - ref.y
+  for (const src of sceneClipboard.nodes) {
+    const newId = nextSceneId('sn')
+    idMap.set(src.id, newId)
+    song.scene.nodes.push({
+      ...src, id: newId, root: false,
+      x: Math.max(0, Math.min(1, src.x + dx)),
+      y: Math.max(0, Math.min(1, src.y + dy)),
+      params: src.params ? { ...src.params } : undefined,
+    })
+    pastedIds.push(newId)
+  }
+  for (const src of sceneClipboard.edges) {
+    const newFrom = idMap.get(src.from), newTo = idMap.get(src.to)
+    if (newFrom && newTo) {
+      song.scene.edges.push({ id: nextSceneId('se'), from: newFrom, to: newTo, order: src.order })
+    }
+  }
+  return pastedIds
+}

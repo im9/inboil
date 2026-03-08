@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, activeCell, playback, ui, toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, isViewingPlayingPattern, STEP_OPTIONS } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
   import SplitFlap from './SplitFlap.svelte'

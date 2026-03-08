@@ -14,7 +14,8 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
-  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, hasArrangement, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
+  import { hasArrangement } from './lib/sectionActions.ts'
   import { engine } from './lib/audio/engine.ts'
   import { fade, fly } from 'svelte/transition'
 

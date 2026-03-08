@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, activeCell, ui, setTrackSend, clearAllParamLocks, toggleMute, toggleSolo } from '../state.svelte.ts'
+  import { song, activeCell, ui } from '../state.svelte.ts'
+  import { setTrackSend, clearAllParamLocks, toggleMute, toggleSolo } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import Knob from './Knob.svelte'

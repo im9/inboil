@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, sceneFormatNodes, sceneHasMigratableFnNodes, sceneMigrateFnToDecorators } from '../state.svelte.ts'
+  import { song, playback, ui } from '../state.svelte.ts'
+  import { sceneFormatNodes, sceneHasMigratableFnNodes, sceneMigrateFnToDecorators } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { WORLD_W, WORLD_H, toPixel } from '../sceneGeometry.ts'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'

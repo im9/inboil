@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, ui, primarySelectedNode, sceneUpdateNodeParams, sceneUpdateDecorator, sceneDetachDecorator } from '../state.svelte.ts'
+  import { song, ui, primarySelectedNode } from '../state.svelte.ts'
+  import { sceneUpdateNodeParams, sceneUpdateDecorator, sceneDetachDecorator } from '../sceneActions.ts'
   import { PAD_INSET } from '../constants.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
 

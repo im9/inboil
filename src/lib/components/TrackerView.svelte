@@ -1,9 +1,9 @@
 <script lang="ts">
+  import { song, playback, ui, activeCell, isViewingPlayingPattern } from '../state.svelte.ts'
   import {
-    song, playback, ui, activeCell, isDrum, isViewingPlayingPattern,
-    toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
+    isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
     setTrigSlide, setTrigChance, toggleMute, toggleSolo,
-  } from '../state.svelte.ts'
+  } from '../stepActions.ts'
   import { NOTE_NAMES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
   // ── Cursor state ─────────────────────────────────────────────────

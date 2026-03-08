@@ -2,12 +2,14 @@
   import {
     song, playback, ui,
     selectSection, sectionJump, sectionRewind,
+    sectionHasData, setLoopRange, sectionSetPattern, NOTE_NAMES,
+  } from '../state.svelte.ts'
+  import {
     sectionStepRepeats, sectionCycleKey, sectionCycleOct,
     sectionCyclePerf, sectionToggleFx, sectionClear,
-    sectionHasData, setLoopRange, sectionSetPattern,
-    SONG_PRESETS, songLoadPreset, NOTE_NAMES,
-  } from '../state.svelte.ts'
-  import type { SongFxKey } from '../state.svelte.ts'
+    SONG_PRESETS, songLoadPreset,
+  } from '../sectionActions.ts'
+  import type { SongFxKey } from '../sectionActions.ts'
   import { SECTION_COUNT, FACTORY_COUNT } from '../factory.ts'
 
   const PERF_LABELS = ['---', 'FILL', 'BRK', 'REV']

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, ui, sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel } from '../state.svelte.ts'
+  import { song, ui } from '../state.svelte.ts'
+  import { sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel } from '../sceneActions.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { WORLD_W, WORLD_H } from '../sceneGeometry.ts'
 
