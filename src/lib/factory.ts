@@ -27,18 +27,76 @@ export function makeTrack(
   return { id, name, voiceId, muted: false, volume: 0.8, pan }
 }
 
-// ── Track layout defaults ────────────────────────────────────────────
+// ── Pattern templates (ADR 015 §C) ──────────────────────────────────
 
-export const TRACK_DEFAULTS: { name: string; voiceId: VoiceId; note: number; pan: number }[] = [
-  { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
-  { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
-  { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
-  { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
-  { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
-  { name: 'CYM',   voiceId: 'Cymbal',   note: 60, pan:  0.25 },
-  { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-  { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
+export interface PatternTemplate {
+  id: string
+  name: string
+  tracks: { name: string; voiceId: VoiceId; note: number; pan: number }[]
+}
+
+export const PATTERN_TEMPLATES: PatternTemplate[] = [
+  {
+    id: 'standard', name: 'Standard',
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
+      { name: 'CYM',   voiceId: 'Cymbal',   note: 60, pan:  0.25 },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
+    ],
+  },
+  {
+    id: 'sampler-4', name: '4 Sampler',
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',    note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',   note: 60, pan: -0.10 },
+      { name: 'C.HH',  voiceId: 'Hat',     note: 60, pan: -0.30 },
+      { name: 'O.HH',  voiceId: 'OpenHat', note: 60, pan:  0.35 },
+      { name: 'SMP1',  voiceId: 'Sampler', note: 60, pan: -0.20 },
+      { name: 'SMP2',  voiceId: 'Sampler', note: 60, pan:  0.20 },
+      { name: 'SMP3',  voiceId: 'Sampler', note: 60, pan: -0.40 },
+      { name: 'SMP4',  voiceId: 'Sampler', note: 60, pan:  0.40 },
+    ],
+  },
+  {
+    id: 'minimal', name: 'Minimal',
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'LEAD',  voiceId: 'iDEATH',   note: 64, pan:  0.10 },
+      { name: 'SMP1',  voiceId: 'Sampler',  note: 60, pan: -0.20 },
+      { name: 'SMP2',  voiceId: 'Sampler',  note: 60, pan:  0.20 },
+    ],
+  },
+  {
+    id: 'synth-heavy', name: 'Synth',
+    tracks: [
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'PAD',   voiceId: 'iDEATH',   note: 60, pan: -0.15 },
+      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
+      { name: 'ARP',   voiceId: 'FM',       note: 60, pan:  0.20 },
+      { name: 'FX',    voiceId: 'iDEATH',   note: 60, pan:  0.00 },
+    ],
+  },
 ]
+
+/** Default template — backward compat alias for PATTERN_TEMPLATES[0].tracks */
+export const TRACK_DEFAULTS = PATTERN_TEMPLATES[0].tracks
+
+/** Look up a template by id (falls back to 'standard') */
+export function getTemplate(id?: string): PatternTemplate {
+  return PATTERN_TEMPLATES.find(t => t.id === id) ?? PATTERN_TEMPLATES[0]
+}
 
 export function makeEmptyCell(_trackId: number, name: string, voiceId: VoiceId, note: number, steps = 16): Cell {
   const drum = DRUM_VOICES.has(voiceId)
@@ -59,12 +117,13 @@ export function makePatternId(index: number): string {
   return `pat_${String(index).padStart(2, '0')}`
 }
 
-export function makeEmptyPattern(index: number, name = ''): Pattern {
+export function makeEmptyPattern(index: number, name = '', templateId?: string): Pattern {
+  const tmpl = getTemplate(templateId)
   return {
     id: makePatternId(index),
     name,
     color: 0,
-    cells: TRACK_DEFAULTS.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note)),
+    cells: tmpl.tracks.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note)),
   }
 }
 
@@ -494,14 +553,15 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
 /**
  * Build a completely empty Song (for new projects).
  */
-export function makeEmptySong(): Song {
-  const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) =>
+export function makeEmptySong(templateId?: string): Song {
+  const tmpl = getTemplate(templateId)
+  const tracks: Track[] = tmpl.tracks.map((d, trackIdx) =>
     makeTrack(trackIdx, d.name, d.voiceId, d.pan)
   )
   const patterns: Pattern[] = []
   const sections: Section[] = []
   for (let i = 0; i < SECTION_COUNT; i++) {
-    patterns.push(makeEmptyPattern(i))
+    patterns.push(makeEmptyPattern(i, '', templateId))
     sections.push(makeEmptySection(i))
   }
   return {

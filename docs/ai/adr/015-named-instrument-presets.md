@@ -159,7 +159,7 @@ The original ADR 015 proposed "drum kits" — bundling 6 drum tracks as a named 
 1. ~~Built-in iDEATH presets (35 presets, 6 categories)~~ Done
 2. ~~Preset browser UI in DockPanel~~ Done
 3. ~~Extend built-in presets to drum voices + Bass303/MoogLead/FM/Analog~~ Done
-4. Pattern templates (data + factory.ts integration)
+4. ~~Pattern templates (data + factory.ts integration)~~ Done
 5. Template selector UI (pattern creation flow)
 6. User preset save/load (IndexedDB `presets` store, DB v3)
 7. User preset management UI (save, delete, rename)
