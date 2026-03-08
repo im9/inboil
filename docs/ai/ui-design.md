@@ -197,13 +197,17 @@ Node-based directed graph canvas. Always the main view (ADR 054). Full arrangeme
 
 - Canvas rendering with `requestAnimationFrame` for edges, arrowheads, edge order badges, playback highlights
 - HTML overlay for nodes (positioned absolutely via CSS `calc()`)
-- Zoom/pan (pinch, scroll wheel, middle-click/Ctrl+click pan)
-- Node drag to reposition
-- Edge creation: drag from blue connection handle (dot) on node to another node
+- Zoom/pan (pinch, scroll wheel, Space+drag pan)
+- Node drag to reposition; group drag for multi-selected nodes
+- Edge creation: drag from blue connection handle (dot) on node to another node; long-press node on mobile
 - Node click: selects pattern and syncs `ui.currentPattern` to Grid/Tracker
-- Double-click node: set as root (playback entry point)
+- Double-tap pattern node: open pattern sheet; double-tap function node: set as root
+- Snap-attach: drag function node near pattern node to attach as decorator (ADR 066)
+- Rectangle select: background drag to select multiple nodes
 - Delete/Backspace: delete selected node or edge
-- `+` button opens picker: all patterns + function node types (transpose, tempo, repeat, probability)
+- Toolbar: add-node icon buttons (transpose/tempo/repeat/probability/fx/label), auto-layout (horizontal/vertical), focus root, focus playing, zoom reset
+- Long-press background: opens bubble menu for adding nodes/labels (mobile)
+- Drag from MatrixView: drop pattern onto canvas to add pattern node
 - Copy/paste (Ctrl+C, Ctrl+Shift+C for subgraph, Ctrl+V)
 
 ### MatrixView — DECIDED

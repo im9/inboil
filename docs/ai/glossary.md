@@ -7,7 +7,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | Term | Definition |
 |---|---|
 | **Song** | Top-level container. Holds BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
-| **Pattern** | A reusable unit of music: string id + name + 8 cells (one per track). Stored in Song.patterns pool. |
+| **Pattern** | A reusable unit of music: string id + name + N cells (one per track, up to 16). Stored in Song.patterns pool. |
 | **Cell** | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX send levels. Per-pattern instrument assignment (ADR 062). |
 | **Track** | Instrument configuration only: id, name, voiceId, muted, volume, pan. No step data — that's in Cell. |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |

@@ -18,7 +18,7 @@ engine.stop()                                → postMessage({ type: 'stop' })
                                         ◄──  postMessage({ type: 'step', playheads: [...] })
 ```
 
-The UI sends the **entire song + effects + performance + fxPad state** as a serialized object on every reactive change. The engine extracts the active pattern and builds a `WorkletPattern` snapshot. This is simple and correct for the current scale (8 tracks × 64 steps).
+The UI sends the **entire song + effects + performance + fxPad state** as a serialized object on every reactive change. The engine extracts the active pattern and builds a `WorkletPattern` snapshot. This is simple and correct for the current scale (up to 16 tracks × 64 steps).
 
 ## Audio Graph
 
@@ -153,7 +153,7 @@ class GrooveboxEngine {
 
 `buildWorkletPattern()` in `engine.ts` converts UI state to the wire format:
 - Takes Song + Pattern + Effects + Perf + FxPad, returns `WorkletPattern`
-- Merges Track (instrument config) with Cell (step data) for each of 8 tracks
+- Merges Track (instrument config) with Cell (step data) for each track
 - Clones all objects (no shared references across threads)
 - Computes delay time from beat fraction: `(60000 / bpm) * fraction`
 - Maps FxPad XY positions to effect parameters (e.g., verb.x → reverb size, verb.y → reverb damp)

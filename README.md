@@ -1,11 +1,11 @@
 # INBOIL
 
 Browser-based step sequencer inspired by Elektron hardware.
-8 tracks, pattern sequencing, parameter locks, real-time performance — all running in WebAssembly + Web Audio.
+Up to 16 tracks, pattern sequencing, parameter locks, real-time performance — all running in WebAssembly + Web Audio.
 
 ## Features
 
-- **8-track step sequencer** — 6 drum + 2 melodic tracks with independent step counts (1–64)
+- **Variable track count (up to 16)** — drum + melodic tracks with independent step counts (1–64)
 - **Polymetric sequencing** — each track runs at its own length
 - **Parameter locks (P-Lock)** — per-step parameter overrides, Elektron-style
 - **Piano roll** — note/duration editing for melodic tracks

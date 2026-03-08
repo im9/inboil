@@ -83,7 +83,7 @@ All communication crosses the thread boundary via `MessagePort`:
 - **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `loadSample`
 - **Worklet → UI:** `step` event with playhead positions array
 
-No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (0–16 tracks × 64 steps max).
+No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (up to 16 tracks × 64 steps max).
 
 ## Directory Structure
 

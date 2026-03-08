@@ -121,110 +121,138 @@
     openSections = new Set(openSections)
   }
 
+  type HelpCategory = { label: string; labelEn: string }
+  const categories: HelpCategory[] = [
+    { label: '基本', labelEn: 'BASICS' },
+    { label: 'エディター', labelEn: 'EDITOR' },
+    { label: 'サウンド', labelEn: 'SOUND' },
+    { label: 'パフォーマンス', labelEn: 'PERFORMANCE' },
+    { label: 'ビュー', labelEn: 'VIEWS' },
+    { label: 'リファレンス', labelEn: 'REFERENCE' },
+  ]
+
   const helpSections = $derived([
     {
+      category: 0,
       title: L === 'ja' ? 'inboil とは' : 'ABOUT',
       body: L === 'ja'
         ? 'テクノやエレクトロニカに特化した Web ベースの DAW です。ブラウザでアクセスするだけで、どのデバイスでも手軽に音楽制作やライブパフォーマンスを楽しめます。'
         : 'A web-based DAW specialized for techno and electronica. Just open your browser — make music and perform live on any device, anywhere.',
     },
     {
+      category: 0,
       title: L === 'ja' ? '基本操作' : 'BASICS',
       body: L === 'ja'
         ? 'SPACEキーで再生/停止。グリッドをタップしてステップのON/OFFを切り替え。RANDでランダムパターン生成。Ctrl+Z で元に戻す、Ctrl+Shift+Z でやり直し。'
         : 'SPACE to play/stop. Tap the grid to toggle steps ON/OFF. RAND generates a random pattern. Ctrl+Z to undo, Ctrl+Shift+Z to redo.',
     },
     {
+      category: 1,
       title: L === 'ja' ? 'トラック' : 'TRACKS',
       body: L === 'ja'
-        ? '8トラック構成 (デフォルト: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD)。楽器はトラックごとに自由に変更可能 — ドラム12種 + ベース/リード/シンセ (Synth, Poly) から選択。トラック名タップで選択。VOL/PANノブで音量とパンを調整。Mボタンでミュート、Sボタンでソロ (複数トラック同時ソロ可)。'
-        : '8 tracks (default: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD). Voice can be reassigned per track — choose from drums, bass, lead, or wavetable synths (Synth, Poly). Tap track name to select. VOL/PAN knobs for volume and panning. M to mute, S to solo (additive — multiple tracks can be soloed).',
+        ? '最大16トラック (デフォルト8: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD)。＋ボタンでトラック追加、ドックのREMOVEで削除。楽器はトラックごとに自由に変更可能 — ドラム12種 + ベース/リード/シンセ (Synth, Poly) から選択。トラック名タップで選択。VOL/PANノブで音量とパンを調整。Mボタンでミュート、Sボタンでソロ (複数トラック同時ソロ可)。'
+        : 'Up to 16 tracks (default 8: KICK, SNARE, CLAP, C.HH, O.HH, CYM + BASS, LEAD). Add tracks with + button, remove via dock REMOVE button. Voice can be reassigned per track — choose from drums, bass, lead, or wavetable synths (Synth, Poly). Tap track name to select. VOL/PAN knobs for volume and panning. M to mute, S to solo (additive — multiple tracks can be soloed).',
     },
     {
+      category: 1,
       title: L === 'ja' ? 'ベロシティ & チャンス' : 'VELOCITY & CHANCE',
       body: L === 'ja'
         ? '選択トラックの下にバーが表示されます。3つのモード: STEP (トリガー ON/OFF)、VEL (上下ドラッグで各ステップの音量)、CHNC (各ステップの発音確率 0–100%)。ステップ数はVEL下の数字タップで変更 (2〜64)。'
         : 'Bars appear below the selected track. Three modes: STEP (toggle triggers), VEL (drag up/down for per-step volume), CHNC (per-step trigger probability 0–100%). Tap the step count number to cycle (2–64).',
     },
     {
+      category: 1,
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
         ? 'メロディトラック選択時に自動表示。グリッドタップでノートを配置。ノートの長さはドラッグで調整可。スライドノートはSLDトグルで設定 (ポルタメント効果)。スケールモード ON 時はスケール外のノートが無効化されます。Poly ボイスでは同じステップに複数ノートを重ねてコード入力が可能。'
         : 'Shown automatically for melodic tracks. Tap to place notes. Drag note edges to adjust duration. SLD toggle enables slide (portamento). With scale mode ON, out-of-scale notes are disabled. With Poly voice, tap multiple notes on the same step to input chords.',
     },
     {
+      category: 3,
       title: L === 'ja' ? 'パフォーマンス' : 'PERFORMANCE',
       body: L === 'ja'
         ? 'FILL でフィルインを挿入。REV で逆再生。BRK でブレイク (リズムゲート)。KEY でルートノートを変更してキーを移調。'
         : 'FILL: insert fill-in. REV: reverse playback. BRK: rhythmic gate break. KEY changes root note for transposition.',
     },
     {
+      category: 3,
       title: L === 'ja' ? 'バーチャルキーボード' : 'VIRTUAL KEYBOARD',
       body: L === 'ja'
         ? '🎹 ボタンで ON/OFF。A〜; キーで演奏 (2列クロマチック配列)。Z/X でオクターブ上下 (ピアノロールと連動)。1〜9, 0 でベロシティ設定。'
         : 'Toggle with 🎹 button. Play notes with A–; keys (2-row chromatic layout). Z/X shifts octave (synced with piano roll). 1–9, 0 sets velocity.',
     },
     {
+      category: 1,
       title: L === 'ja' ? 'パターン' : 'PATTERNS',
       body: L === 'ja'
         ? 'PAT ◀▶ でパターン切り替え。00–19 はファクトリープリセット。再生中はバー境界で自動切り替え。CPY/PST でコピー&ペースト、CLR でクリア。パターン名クリックでリネーム (最大8文字)。カラードットで8色から色を設定でき、MatrixとSceneに反映されます。'
         : 'PAT ◀▶ to switch patterns. 00–19: factory presets. Switch at bar boundary during playback. CPY/PST to copy & paste, CLR to clear. Click pattern name to rename (max 8 chars). Color dot assigns one of 8 colors, reflected in Matrix and Scene views.',
     },
     {
+      category: 2,
       title: L === 'ja' ? 'シンセパラメータ & プリセット' : 'SYNTH PARAMS & PRESETS',
       body: L === 'ja'
         ? 'ドックパネルのノブをドラッグして音色を調整。パラメータは機能ごとにグループ化: 例 LEAD = FILTER | ENV | ARP、Synth = OSC | FILTER | ENV | LFO。\n\nプリセット: Synth/Poly ボイスでは PRESETS ボタンからファクトリープリセットを選択可能 (Lead, Bass, Pad, Pluck, Keys, FX の6カテゴリ)。\n\nP-Lock (パラメーターロック): LOCKモードで特定ステップのパラメータを個別に設定。ステップを選択 → LOCKをON → ノブを回すとそのステップだけに適用。CLR でロック解除。'
         : 'Drag knobs in the dock panel to shape the sound. Parameters grouped by function: e.g. LEAD = FILTER | ENV | ARP, Synth = OSC | FILTER | ENV | LFO.\n\nPresets: For Synth/Poly voices, click the PRESETS button to browse factory presets (6 categories: Lead, Bass, Pad, Pluck, Keys, FX).\n\nP-Lock (parameter lock): In LOCK mode, knob changes apply only to the selected step. Select a step → enable LOCK → turn knobs to set per-step values. CLR removes locks for that step.',
     },
     {
+      category: 2,
       title: L === 'ja' ? 'サンプラー' : 'SAMPLER',
       body: L === 'ja'
         ? 'SMPLカテゴリからSamplerを選択。LOADボタンまたはドラッグ&ドロップでオーディオファイルを読み込み。波形が表示されます。\n\nパラメータ: STRT/END (再生範囲), PTCH (ピッチシフト), DCY (ディケイ), REV (リバース再生)。\n\nChop: CHOPノブでスライス数 (8/16/32) を設定。MAPモードではノート番号でスライスを選択、SEQモードでは順番に再生。波形にスライス線が表示されます。P-Lockと組み合わせてブレイクビーツのパターンを作成可能。\n\nBPM同期: BPMノブでサンプルの元テンポを設定すると、曲のBPMに自動追従。LOOPでループ再生ON/OFF。STRCノブでRPTC (リピッチ: ピッチも変わる) とWSLA (WSOLA: ピッチ維持) を切り替え。'
         : 'Select Sampler from the SMPL category. Load audio via the LOAD button or drag & drop. The waveform is displayed.\n\nParams: STRT/END (playback range), PTCH (pitch shift), DCY (decay), REV (reverse).\n\nChop: Set slice count (8/16/32) with the CHOP knob. MAP mode selects slices by note number, SEQ mode plays slices sequentially. Slice lines appear on the waveform. Combine with P-Lock for complex breakbeat patterns.\n\nBPM sync: Set the sample\'s original tempo with the BPM knob — playback auto-syncs to song BPM. LOOP toggles loop playback. STRC knob switches between RPTC (repitch: pitch changes with speed) and WSLA (WSOLA: pitch-preserving timestretch).',
     },
     {
+      category: 1,
       title: 'GRID',
       body: L === 'ja'
         ? 'メインのステップシーケンサー。ステップをタップしてON/OFF。選択トラックにベロシティバー表示。メロディトラックではピアノロールも常時表示。'
         : 'The main step sequencer. Tap steps to toggle triggers. The selected track shows velocity bars, and melodic tracks display a piano roll.',
     },
     {
+      category: 4,
       title: L === 'ja' ? 'FX パッド' : 'FX PAD',
       body: L === 'ja'
         ? 'エフェクトノード (VERB, DLY, GLT, GRN) をドラッグしてパラメータ調整。タップでON/OFF。下部のセンドバーで各トラックのセンド量を設定。PerfBar の FX ボタンでオーバーレイシートとしても開けます。'
         : 'Drag effect nodes (VERB, DLY, GLT, GRN) to adjust parameters. Tap to toggle ON/OFF. Send bar at the bottom sets per-track send levels. Also accessible as an overlay sheet via the FX button in PerfBar.',
     },
     {
+      category: 4,
       title: 'EQ',
       body: L === 'ja'
         ? '3バンドEQ (LOW, MID, HIGH) とフィルターノードをドラッグして音質調整。フィルターは左=ローパス、右=ハイパス。ノードタップでON/OFF。PerfBar の EQ ボタンでオーバーレイシートとしても開けます。'
         : 'Drag 3-band EQ nodes (LOW, MID, HIGH) and filter node to shape tone. Filter sweeps LP (left) to HP (right). Tap nodes to toggle. Also accessible as an overlay sheet via EQ button in PerfBar.',
     },
     {
+      category: 4,
       title: L === 'ja' ? 'マスター' : 'MASTER',
       body: L === 'ja'
         ? '3つのXYパッド: COMP (コンプレッサー: X=スレッショルド, Y=レシオ)、DUCK (サイドチェイン: X=深さ, Y=リリース)、RET (FXリターン: X=リバーブ量, Y=ディレイ量)。タップでON/OFF、ドラッグで調整。右側にフェーダー: GAIN (マスター音量), MKP (メイクアップゲイン), SWG (スウィング)。VUメーターでL/Rピークを確認。'
         : 'Three XY pads: COMP (compressor: X=threshold, Y=ratio), DUCK (sidechain: X=depth, Y=release), RET (FX returns: X=reverb, Y=delay). Tap to toggle, drag to adjust. Right-side faders: GAIN (master volume), MKP (makeup gain), SWG (swing). VU meter shows L/R stereo peaks.',
     },
     {
+      category: 4,
       title: L === 'ja' ? 'マトリクスビュー' : 'MATRIX VIEW',
       body: L === 'ja'
         ? 'パターンプールをグリッド表示。各セルはパターンの密度を明るさで表現し、色はパターンカラーに対応。タップでパターン選択。ダブルタップでパターンシートを開く。シーンで使用中のパターンにはマーカーが表示されます。'
         : 'Grid overview of the pattern pool. Each cell shows pattern density as brightness, tinted with pattern color. Tap to select. Double-tap to open pattern sheet. Patterns used in the scene are marked.',
     },
     {
+      category: 4,
       title: L === 'ja' ? 'シーンビュー' : 'SCENE VIEW',
       body: L === 'ja'
-        ? 'ノードベースのグラフで曲構成を作成。パターンノードをエッジで繋いで再生順を定義します。ルートノードから再生開始、分岐はランダムに選択、接続のないノードで停止。\n\nノードタイプ: パターン (楽曲データ), Transpose (移調), Tempo (BPM変更), Repeat (繰り返し), Probability (確率), FX (エフェクト切替)。\n\n操作: ノードをドラッグで移動。エッジポートからドラッグで接続。背景を長押しでバブルメニュー (ノード/ラベル追加)。パターンノードをダブルタップでパターンシート表示。Delete で選択中のノード/エッジを削除。ピンチでズーム。'
-        : 'Node-based graph for song arrangement. Connect pattern nodes with edges to define playback order. Starts from root node, random pick at forks, stops at terminal nodes.\n\nNode types: Pattern (music data), Transpose, Tempo, Repeat, Probability, FX (effect toggle).\n\nInteractions: Drag nodes to reposition. Drag from edge ports to connect. Long-press background for bubble menu (add nodes/labels). Double-tap pattern node to open pattern sheet. Delete/Backspace removes selected node/edge. Pinch to zoom.',
+        ? 'ノードベースのグラフで曲構成を作成。パターンノードをエッジで繋いで再生順を定義します。ルートノードから再生開始、分岐はランダムに選択、接続のないノードで停止。\n\nノードタイプ: パターン (楽曲データ), Transpose (移調), Tempo (BPM変更), Repeat (繰り返し), Probability (確率), FX (エフェクト切替)。ツールバーのアイコンボタンまたは背景長押しのバブルメニューでノードを追加。\n\n操作: ノードをドラッグで移動。エッジポートからドラッグで接続。パターンノードをダブルタップでパターンシート表示。ファンクションノードをパターンノード付近にドラッグするとデコレーターとしてアタッチ。背景ドラッグで矩形選択。Delete で選択中のノード/エッジを削除。ピンチでズーム、自動整列ボタンで配置を整理。Matrixからノードをドラッグ&ドロップでパターン追加も可能。'
+        : 'Node-based graph for song arrangement. Connect pattern nodes with edges to define playback order. Starts from root node, random pick at forks, stops at terminal nodes.\n\nNode types: Pattern (music data), Transpose, Tempo, Repeat, Probability, FX (effect toggle). Add nodes via toolbar icon buttons or long-press background for bubble menu.\n\nInteractions: Drag nodes to reposition. Drag from edge ports to connect. Double-tap pattern node to open pattern sheet. Drag a function node near a pattern node to snap-attach as decorator. Background drag for rectangle selection. Delete/Backspace removes selected. Pinch to zoom, auto-layout buttons to tidy. Drag patterns from Matrix to add nodes.',
     },
     {
+      category: 5,
       title: L === 'ja' ? 'KEY / スケール' : 'KEY / SCALE',
       body: L === 'ja'
         ? 'KEYはチャーチモード (教会旋法) に基づいています。ルートノートごとにモードが固定されており、スケールモード ON 時はそのモードの音階のみ使用できます。\n\nC — Ionian (メジャー)\nD — Dorian (マイナー系、明るめ)\nE — Phrygian (マイナー系、暗め)\nF — Lydian (メジャー系、浮遊感)\nG — Mixolydian (メジャー系、ブルージー)\nA — Aeolian (ナチュラルマイナー)\nB — Locrian (ディミニッシュ)\nC#/Eb/F#/Ab/Bb — Major'
         : 'KEY uses church modes (modal scales). Each root note has a fixed mode. With scale mode ON, only notes in that mode are available.\n\nC — Ionian (major)\nD — Dorian (minor, bright)\nE — Phrygian (minor, dark)\nF — Lydian (major, dreamy)\nG — Mixolydian (major, bluesy)\nA — Aeolian (natural minor)\nB — Locrian (diminished)\nC#/Eb/F#/Ab/Bb — Major',
     },
     {
+      category: 0,
       title: L === 'ja' ? 'キーボードショートカット' : 'KEYBOARD SHORTCUTS',
       body: L === 'ja'
         ? 'Space — 再生/停止\nCtrl+Z — 元に戻す\nCtrl+Shift+Z — やり直し\nEscape — シートを閉じる / 選択解除\nDelete — 選択したノード/エッジを削除\n↑↓ — エッジの並べ替え (エッジ選択時)\nCtrl+C — コピー (ノード/パターン)\nCtrl+Shift+C — サブグラフコピー\nCtrl+V — ペースト'
@@ -268,21 +296,27 @@
               <button class="search-clear" onpointerdown={() => { searchQuery = '' }}>&times;</button>
             {/if}
           </div>
-          {#each helpSections as section, i}
-            {#if !filteredIndices || filteredIndices.includes(i)}
-            <div class="help-section">
-              <button
-                class="section-head"
-                class:open={filteredIndices ? true : openSections.has(i)}
-                onpointerdown={() => toggleSection(i)}
-              >
-                <span class="section-arrow">{(filteredIndices || openSections.has(i)) ? '▾' : '▸'}</span>
-                {section.title}
-              </button>
-              {#if filteredIndices || openSections.has(i)}
-                <div class="section-body">{section.body}</div>
-              {/if}
-            </div>
+          {#each categories as cat, ci}
+            {@const catSections = helpSections
+              .map((s, i) => ({ ...s, idx: i }))
+              .filter(s => s.category === ci && (!filteredIndices || filteredIndices.includes(s.idx)))}
+            {#if catSections.length > 0}
+              <div class="category-label">{L === 'ja' ? cat.label : cat.labelEn}</div>
+              {#each catSections as section}
+                <div class="help-section">
+                  <button
+                    class="section-head"
+                    class:open={filteredIndices ? true : openSections.has(section.idx)}
+                    onpointerdown={() => toggleSection(section.idx)}
+                  >
+                    <span class="section-arrow">{(filteredIndices || openSections.has(section.idx)) ? '▾' : '▸'}</span>
+                    {section.title}
+                  </button>
+                  {#if filteredIndices || openSections.has(section.idx)}
+                    <div class="section-body">{section.body}</div>
+                  {/if}
+                </div>
+              {/each}
             {/if}
           {/each}
         {:else}
@@ -668,6 +702,16 @@
     font-size: 11px;
     line-height: 1.6;
     color: rgba(237,232,220,0.55);
+    white-space: pre-line;
+  }
+
+  .category-label {
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    color: rgba(237,232,220,0.3);
+    text-transform: uppercase;
+    padding: 12px 12px 4px;
+    margin-top: 4px;
   }
 
   /* ── System settings ── */

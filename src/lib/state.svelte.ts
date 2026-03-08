@@ -45,12 +45,12 @@ export interface ChainFx {
   y: number
 }
 
-/** Reusable pattern — name + color + 8 tracks of step data (ADR 044, 049) */
+/** Reusable pattern — name + color + N tracks of step data (ADR 044, 049, 056) */
 export interface Pattern {
   id: string              // e.g. 'pat_00'
   name: string            // max 8 chars
   color: number           // index into PATTERN_COLORS (0–7)
-  cells: Cell[]           // 8 fixed (one per track)
+  cells: Cell[]           // one per track (up to 16)
 }
 
 /** Arrangement slot referencing a Pattern (ADR 044) */

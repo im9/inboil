@@ -35,7 +35,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 ## Current State
 
 The TypeScript AudioWorklet implementation is fully functional with:
-- Variable track count (0–16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
+- Variable track count (up to 16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
 - 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice), 2 bass (TB-303, Analog), 2 lead (Moog, FM), 1 wavetable synth (iDEATH — mono/poly via polyMode param), 1 user sampler
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)

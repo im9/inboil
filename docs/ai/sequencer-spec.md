@@ -3,14 +3,14 @@
 ## Overview
 
 A step sequencer modeled after Elektron-style trig-based sequencing.
-The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pattern contains 8 Cells (one per track), and each Cell has an independent step count and trig list.
+The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pattern contains N Cells (one per track, up to 16 tracks per ADR 056), and each Cell has an independent step count and trig list.
 
 ## Core Concepts
 
 | Term | Definition |
 |---|---|
 | Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
-| Pattern | A reusable unit of music: id + name + 8 cells. One pattern plays at a time. |
+| Pattern | A reusable unit of music: id + name + N cells (one per track). One pattern plays at a time. |
 | Cell | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX sends. |
 | Track | Instrument configuration only: id, name, voiceId, muted, volume, pan. |
 | Section | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, FX). |
@@ -25,7 +25,7 @@ Song {
   name:      string
   bpm:       number            // 20–300
   rootNote:  number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
-  tracks:    Track[]           // 8 fixed (instrument config only)
+  tracks:    Track[]           // up to 16 (instrument config only, ADR 056)
   patterns:  Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)
   sections:  Section[]         // arrangement slots referencing patterns
   scene:     Scene             // arrangement graph (ADR 044)
@@ -39,7 +39,7 @@ Pattern {
   id:        string            // e.g. 'pat_00'
   name:      string            // max 8 chars
   color:     number            // 0–7 index into PATTERN_COLORS
-  cells:     Cell[]            // 8 fixed (one per track)
+  cells:     Cell[]            // one per track (up to 16)
 }
 ```
 

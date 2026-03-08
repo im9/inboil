@@ -88,7 +88,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 062 | Per-Pattern Voice Assignment | Implemented | voiceId + name moved from Track to Cell; per-pattern instruments and track names |
 | 010 | Unified Drum Machine Voice | Implemented | Single DrumMachine class with tone/noise/metal sections, 11 factory presets |
 | 015 | Named Instrument Presets | Implemented | Built-in presets for all voices, user presets (IDB), pattern templates |
-| 056 | Variable Track Count | Implemented | 0–16 tracks, nullable voiceId, dynamic worklet arrays, StepGrid scroll, DockPanel 2-row selector |
+| 056 | Variable Track Count | Implemented | Up to 16 tracks, nullable voiceId, dynamic worklet arrays, StepGrid scroll, DockPanel 2-row selector |
 | 063 | iDEATH Synth Engine | Implemented | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, drive, wobble bass presets |
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |

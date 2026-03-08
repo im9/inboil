@@ -2,7 +2,7 @@
 
 ## Overview
 
-8 tracks with configurable voice assignment via VoiceId registry (ADR 009).
+Up to 16 tracks (variable, ADR 056) with configurable voice assignment via VoiceId registry (ADR 009).
 All synthesis is implemented in **TypeScript** and runs inside the AudioWorklet processor.
 A parallel C++ DSP core exists in `src/dsp/` (compiled via Emscripten) but is not yet integrated.
 
