@@ -2,7 +2,7 @@
 
 | field   | value                              |
 | ------- | ---------------------------------- |
-| status  | proposed                           |
+| status  | implemented                        |
 | date    | 2026-03-06                         |
 | revised | 2026-03-08                         |
 | parent  | ADR 050 (Scene Function Nodes)     |

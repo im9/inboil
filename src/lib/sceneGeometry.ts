@@ -82,7 +82,7 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, SceneDecorator, Pattern } from './state.svelte.ts'
+import type { SceneNode, SceneDecorator, Pattern, AutomationTarget } from './state.svelte.ts'
 import { PATTERN_COLORS } from './constants.ts'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -112,7 +112,21 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
     if (p.granular) tags.push('R')
     return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
   }
+  if (node.type === 'automation') {
+    return '~' + automationTargetLabel(node.automationParams?.target)
+  }
   return '?'
+}
+
+/** Short label for an automation target */
+export function automationTargetLabel(target?: AutomationTarget): string {
+  if (!target) return 'AUTO'
+  switch (target.kind) {
+    case 'global': return target.param === 'tempo' ? 'TEMPO' : 'VOL'
+    case 'track':  return `T${target.trackIndex + 1} ${target.param === 'volume' ? 'VOL' : 'PAN'}`
+    case 'fx':     return target.param.replace(/([A-Z])/g, ' $1').trim().toUpperCase().slice(0, 8)
+    case 'send':   return `T${target.trackIndex + 1} ${target.param.replace('Send', '').toUpperCase()}`
+  }
 }
 
 /** Get compact label for a decorator (ADR 062) */
@@ -132,6 +146,9 @@ export function decoratorLabel(dec: SceneDecorator): string {
     if (p.glitch) tags.push('G')
     if (p.granular) tags.push('R')
     return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
+  }
+  if (dec.type === 'automation') {
+    return '~' + automationTargetLabel(dec.automationParams?.target)
   }
   return '?'
 }

@@ -4,8 +4,8 @@
  */
 
 import { song, ui, pushUndo } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, SceneDecorator } from './state.svelte.ts'
-import { hasMigratableFnNodes, migrateFnToDecorators } from './sceneData.ts'
+import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams } from './state.svelte.ts'
+import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
 
 // ── ID generation ──
 
@@ -147,18 +147,32 @@ const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
   fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
 }
 
+const DEFAULT_AUTOMATION_PARAMS: AutomationParams = {
+  target: { kind: 'global', param: 'tempo' },
+  points: [{ t: 0, v: 0.25 }, { t: 1, v: 0.5 }],  // ~120→180 BPM
+  interpolation: 'linear',
+}
+
 /** Add a function node */
 export function sceneAddFunctionNode(
-  type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx',
+  type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation',
   x: number, y: number
 ): string {
   pushUndo('Add function node')
   const id = nextSceneId('sn')
-  song.scene.nodes.push({
-    id, type, x, y,
-    root: false,
-    params: { ...FUNCTION_DEFAULTS[type] },
-  })
+  if (type === 'automation') {
+    song.scene.nodes.push({
+      id, type, x, y,
+      root: false,
+      automationParams: structuredClone(DEFAULT_AUTOMATION_PARAMS),
+    })
+  } else {
+    song.scene.nodes.push({
+      id, type, x, y,
+      root: false,
+      params: { ...FUNCTION_DEFAULTS[type] },
+    })
+  }
   return id
 }
 
@@ -179,7 +193,13 @@ export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): b
   if (!fnNode || !patNode || patNode.type !== 'pattern') return false
   if (fnNode.type === 'pattern' || fnNode.type === 'probability') return false
   pushUndo('Attach decorator')
-  const dec: SceneDecorator = { type: fnNode.type, params: { ...(fnNode.params ?? {}) } }
+  let dec: SceneDecorator
+  if (fnNode.type === 'automation') {
+    const ap = fnNode.automationParams ?? DEFAULT_AUTOMATION_PARAMS
+    dec = { type: 'automation', params: {}, automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation } }
+  } else {
+    dec = { type: fnNode.type, params: { ...(fnNode.params ?? {}) } }
+  }
   patNode.decorators ??= []
   patNode.decorators.push(dec)
   song.scene.edges = song.scene.edges.filter(e => e.from !== fnNodeId && e.to !== fnNodeId)
@@ -194,14 +214,19 @@ export function sceneDetachDecorator(patternNodeId: string, decoratorIndex: numb
   pushUndo('Detach decorator')
   const dec = patNode.decorators.splice(decoratorIndex, 1)[0]
   const id = nextSceneId('sn')
-  song.scene.nodes.push({
+  const node: SceneNode = {
     id,
     type: dec.type,
     x: Math.min(1, patNode.x + 0.05),
     y: Math.min(1, patNode.y + 0.05),
     root: false,
     params: { ...dec.params },
-  })
+  }
+  if (dec.type === 'automation' && dec.automationParams) {
+    const ap = dec.automationParams
+    node.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
+  }
+  song.scene.nodes.push(node)
   return id
 }
 
@@ -211,6 +236,20 @@ export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: numb
   if (!patNode?.decorators?.[decoratorIndex]) return
   pushUndo('Update decorator')
   patNode.decorators[decoratorIndex].params = { ...params }
+}
+
+/** Add an automation decorator directly to a pattern node */
+export function sceneAddAutomationDecorator(patternNodeId: string): void {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode || patNode.type !== 'pattern') return
+  pushUndo('Add automation decorator')
+  const ap = DEFAULT_AUTOMATION_PARAMS
+  patNode.decorators ??= []
+  patNode.decorators.push({
+    type: 'automation',
+    params: {},
+    automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation },
+  })
 }
 
 /** Check if there are function nodes in edge chains that can be migrated to decorators */
@@ -353,21 +392,15 @@ export function hasSceneClipboard(): boolean {
 export function sceneCopyNode(nodeId: string): void {
   const node = song.scene.nodes.find(n => n.id === nodeId)
   if (!node) return
-  sceneClipboard = {
-    nodes: [{ ...node, params: node.params ? { ...node.params } : undefined }],
-    edges: [],
-  }
+  sceneClipboard = { nodes: [cloneSceneNode(node)], edges: [] }
 }
 
 /** Copy multiple selected nodes + internal edges to clipboard */
 export function sceneCopySelected(nodeIds: Record<string, true>): void {
   const ids = new Set(Object.keys(nodeIds))
   if (ids.size === 0) return
-  const collectedNodes = song.scene.nodes
-    .filter(n => ids.has(n.id))
-    .map(n => ({ ...n, params: n.params ? { ...n.params } : undefined }))
   sceneClipboard = {
-    nodes: collectedNodes,
+    nodes: song.scene.nodes.filter(n => ids.has(n.id)).map(cloneSceneNode),
     edges: song.scene.edges
       .filter(e => ids.has(e.from) && ids.has(e.to))
       .map(e => ({ ...e })),
@@ -387,7 +420,7 @@ export function sceneCopySubgraph(nodeId: string): void {
     visited.add(id)
     const node = song.scene.nodes.find(n => n.id === id)
     if (!node) continue
-    collectedNodes.push({ ...node, params: node.params ? { ...node.params } : undefined })
+    collectedNodes.push(cloneSceneNode(node))
     for (const edge of song.scene.edges) {
       if (edge.from === id && !visited.has(edge.to)) queue.push(edge.to)
     }
@@ -411,12 +444,12 @@ export function scenePaste(baseX: number, baseY: number): string[] {
   for (const src of sceneClipboard.nodes) {
     const newId = nextSceneId('sn')
     idMap.set(src.id, newId)
-    song.scene.nodes.push({
-      ...src, id: newId, root: false,
-      x: Math.max(0, Math.min(1, src.x + dx)),
-      y: Math.max(0, Math.min(1, src.y + dy)),
-      params: src.params ? { ...src.params } : undefined,
-    })
+    const cloned = cloneSceneNode(src)
+    cloned.id = newId
+    cloned.root = false
+    cloned.x = Math.max(0, Math.min(1, src.x + dx))
+    cloned.y = Math.max(0, Math.min(1, src.y + dy))
+    song.scene.nodes.push(cloned)
     pastedIds.push(newId)
   }
   for (const src of sceneClipboard.edges) {

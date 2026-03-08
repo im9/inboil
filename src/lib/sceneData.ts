@@ -7,12 +7,26 @@ import type { SceneNode, SceneEdge, Scene, SceneDecorator } from './state.svelte
 
 // ── Clone helpers ──
 
+function cloneDecorator(d: SceneDecorator): SceneDecorator {
+  const clone: SceneDecorator = { type: d.type, params: { ...d.params } }
+  if (d.automationParams) {
+    const ap = d.automationParams
+    clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
+  }
+  return clone
+}
+
 export function cloneSceneNode(n: SceneNode): SceneNode {
-  return {
+  const clone: SceneNode = {
     ...n,
     ...(n.params ? { params: { ...n.params } } : {}),
-    decorators: (n.decorators ?? []).map(d => ({ type: d.type, params: { ...d.params } })),
+    decorators: (n.decorators ?? []).map(cloneDecorator),
   }
+  if (n.automationParams) {
+    const ap = n.automationParams
+    clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
+  }
+  return clone
 }
 
 export function cloneScene(sc: Scene): Scene {
@@ -67,6 +81,10 @@ export function migrateFnToDecorators(
       const targetNode = nodes.find(n => n.id === outEdges[0].to)
       if (!targetNode || targetNode.type !== 'pattern') continue
       const dec: SceneDecorator = { type: fn.type, params: { ...(fn.params ?? {}) } }
+      if (fn.type === 'automation' && fn.automationParams) {
+        const ap = fn.automationParams
+        dec.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
+      }
       targetNode.decorators ??= []
       targetNode.decorators.push(dec)
       for (const ie of inEdges) {

@@ -60,7 +60,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
 | 052 | Scene Free-Floating Labels | Implemented | Canvas text labels independent of nodes |
-| 053 | Scene Automation Node | Proposed | Continuous parameter change during pattern playback |
+| 053 | Scene Automation Node | Implemented | Graphical curve editor, decorator-based automation, snapshot/restore, mini-curve visualization |
 | 054 | Overlay Sheet Model | Implemented | Pattern/FX/EQ as overlay sheets over SceneView |
 | 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
 | 059 | Scene Multi-Select | Implemented | Rectangle select, group drag, alignment tools, partial auto-layout, multi-copy/paste |

@@ -14,7 +14,7 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
-  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine } from './lib/audio/engine.ts'
   import { fade, fly } from 'svelte/transition'
@@ -68,6 +68,14 @@
 
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
+    // Apply automation curves on every step (ADR 053)
+    if (playback.mode === 'scene' && playback.activeAutomations.length > 0 && playback.playingPattern != null) {
+      const pat = song.patterns[playback.playingPattern]
+      if (pat) {
+        const totalSteps = Math.max(1, ...pat.cells.map(c => c.steps))
+        applyAutomations(heads[0], totalSteps)
+      }
+    }
     // Solo node — only loop when scene has reached the target node
     if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
       if (cycle && playback.soloNodeId !== soloSent) {
@@ -166,6 +174,11 @@
     playback.sceneRepeatLeft = 0
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
+    if (playback.automationSnapshot) {
+      restoreAutomationSnapshot(playback.automationSnapshot)
+      playback.automationSnapshot = null
+    }
+    playback.activeAutomations = []
     playback.mode = 'loop'
     playback.playingPattern = null
     void projectAutoSave()

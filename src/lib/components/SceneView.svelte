@@ -11,6 +11,7 @@
   import SceneLabels from './SceneLabels.svelte'
   import SceneToolbar from './SceneToolbar.svelte'
   import SceneNodePopup from './SceneNodePopup.svelte'
+  import AutomationEditor from './AutomationEditor.svelte'
 
   const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
@@ -72,6 +73,35 @@
   let activePointers = new Map<number, { x: number; y: number }>()
   let pinchStartDist = 0
   let pinchStartZoom = 1
+
+  // ── Automation mini-curve on playing pattern nodes ──
+  const MINI_W = 48, MINI_H = 14
+
+  function evaluateMiniCurve(points: import('../state.svelte.ts').AutomationPoint[], t: number): number {
+    if (points.length === 0) return 0.5
+    if (t <= points[0].t) return points[0].v
+    if (t >= points[points.length - 1].t) return points[points.length - 1].v
+    let i = 0
+    while (i < points.length - 1 && points[i + 1].t <= t) i++
+    const p0 = points[i], p1 = points[i + 1]
+    const segT = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t)
+    return p0.v + (p1.v - p0.v) * segT
+  }
+
+  function autoMiniPolyline(points: import('../state.svelte.ts').AutomationPoint[]): string {
+    if (points.length < 2) return ''
+    return points.map(p => `${(p.t * MINI_W).toFixed(1)},${((1 - p.v) * MINI_H).toFixed(1)}`).join(' ')
+  }
+
+  /** Playback progress 0–1 for the currently playing pattern */
+  const autoProgress = $derived.by(() => {
+    if (!playback.playing || playback.playingPattern == null) return 0
+    const pat = song.patterns[playback.playingPattern]
+    if (!pat) return 0
+    const totalSteps = Math.max(1, ...pat.cells.map(c => c.steps))
+    const step = playback.playheads[0] ?? 0
+    return totalSteps > 1 ? step / (totalSteps - 1) : 0
+  })
 
   /** Center the world in the viewport */
   function centerPan() {
@@ -266,6 +296,68 @@
     }
   }
 
+  /** Handle pointerup directly on a node button (bypasses delegation issues with setPointerCapture) */
+  function endNodeDrag(e: PointerEvent, nodeId: string) {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+
+    // Snap-attach: function node dropped near pattern node (ADR 062)
+    if (dragMoved && snapTarget) {
+      const attached = sceneAttachDecorator(nodeId, snapTarget)
+      if (attached) {
+        justAttached = snapTarget
+        setTimeout(() => { justAttached = null }, 200)
+      }
+      snapTarget = null
+      dragging = null
+      return
+    }
+    snapTarget = null
+
+    if (!dragMoved) {
+      // Double-click detection
+      const now = Date.now()
+      if (lastTapNode === nodeId && now - lastTapTime < 300) {
+        // Double-click on pattern node → open pattern sheet
+        const dblNode = song.scene.nodes.find(n => n.id === nodeId)
+        if (dblNode?.type === 'pattern' && dblNode.patternId) {
+          const pi = song.patterns.findIndex(p => p.id === dblNode.patternId)
+          if (pi >= 0) selectPattern(pi)
+          ui.patternSheetOrigin = { x: e.clientX, y: e.clientY }
+          ui.patternSheet = true
+        } else if (dblNode?.type === 'automation') {
+          // Double-click on automation node → ensure dock is open for editing
+          ui.dockMinimized = false
+        } else {
+          // Double-click on function node → set root
+          sceneSetRoot(nodeId)
+        }
+        lastTapTime = 0
+        lastTapNode = ''
+      } else {
+        // Single click — select (Shift toggles)
+        const node = song.scene.nodes.find(n => n.id === nodeId)
+        if (node?.patternId) {
+          const pi = song.patterns.findIndex(p => p.id === node.patternId)
+          if (pi >= 0) selectPattern(pi)
+        }
+        if (e.shiftKey) {
+          if (ui.selectedSceneNodes[nodeId]) {
+            delete ui.selectedSceneNodes[nodeId]
+          } else {
+            ui.selectedSceneNodes[nodeId] = true
+          }
+        } else {
+          ui.selectedSceneNodes = {}
+          ui.selectedSceneNodes[nodeId] = true
+        }
+        ui.selectedSceneEdge = null
+        lastTapTime = now
+        lastTapNode = nodeId
+      }
+    }
+    dragging = null
+  }
+
   function endDrag(e: PointerEvent) {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
     if (bgLongPressTimer) { clearTimeout(bgLongPressTimer); bgLongPressTimer = null }
@@ -318,62 +410,10 @@
       return
     }
 
-    if (!dragging) return
-    const nodeId = dragging
-
-    // Snap-attach: function node dropped near pattern node (ADR 062)
-    if (dragMoved && snapTarget) {
-      const attached = sceneAttachDecorator(nodeId, snapTarget)
-      if (attached) {
-        justAttached = snapTarget
-        setTimeout(() => { justAttached = null }, 200)
-      }
-      snapTarget = null
+    // Node drag is handled by endNodeDrag on the button itself
+    if (dragging) {
       dragging = null
-      return
     }
-    snapTarget = null
-
-    if (!dragMoved) {
-      // Double-click detection
-      const now = Date.now()
-      if (lastTapNode === nodeId && now - lastTapTime < 300) {
-        // Double-click on pattern node → open pattern sheet
-        const dblNode = song.scene.nodes.find(n => n.id === nodeId)
-        if (dblNode?.type === 'pattern' && dblNode.patternId) {
-          const pi = song.patterns.findIndex(p => p.id === dblNode.patternId)
-          if (pi >= 0) selectPattern(pi)
-          ui.patternSheetOrigin = { x: e.clientX, y: e.clientY }
-          ui.patternSheet = true
-        } else {
-          // Double-click on function node → set root
-          sceneSetRoot(nodeId)
-        }
-        lastTapTime = 0
-        lastTapNode = ''
-      } else {
-        // Single click — select (Shift toggles)
-        const node = song.scene.nodes.find(n => n.id === nodeId)
-        if (node?.patternId) {
-          const pi = song.patterns.findIndex(p => p.id === node.patternId)
-          if (pi >= 0) selectPattern(pi)
-        }
-        if (e.shiftKey) {
-          if (ui.selectedSceneNodes[nodeId]) {
-            delete ui.selectedSceneNodes[nodeId]
-          } else {
-            ui.selectedSceneNodes[nodeId] = true
-          }
-        } else {
-          ui.selectedSceneNodes = {}
-          ui.selectedSceneNodes[nodeId] = true
-        }
-        ui.selectedSceneEdge = null
-        lastTapTime = now
-        lastTapNode = nodeId
-      }
-    }
-    dragging = null
   }
 
   function onContextMenu(e: MouseEvent) {
@@ -709,6 +749,7 @@
           {isPlaying ? `--beat: ${30 / song.bpm}s` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
+        onpointerup={e => endNodeDrag(e, node.id)}
       >
         {#if node.type === 'transpose'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
@@ -724,6 +765,9 @@
         {:else if node.type === 'fx'}
           <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
           <span class="node-label">{nodeName(node, song.patterns)}</span>
+        {:else if node.type === 'automation'}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.automation}</svg>
+          <span class="node-label">{nodeName(node, song.patterns)}</span>
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
@@ -731,6 +775,17 @@
           <span class="dec-row">
             {#each decs as dec}
               <span class="dec-tag">{decoratorLabel(dec)}</span>
+            {/each}
+          </span>
+        {/if}
+        {#if isPlaying && !isFn && decs.some(d => d.type === 'automation' && d.automationParams)}
+          {@const autoDecs = decs.filter(d => d.type === 'automation' && d.automationParams)}
+          <span class="auto-mini-row">
+            {#each autoDecs as ad}
+              <svg class="auto-mini" viewBox="0 0 {MINI_W} {MINI_H}" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points={autoMiniPolyline(ad.automationParams!.points)} fill="none" stroke="rgba(120,120,69,0.5)" stroke-width="1.2" />
+                <circle cx={autoProgress * MINI_W} cy={(1 - (ad.automationParams!.points.length > 0 ? evaluateMiniCurve(ad.automationParams!.points, autoProgress) : 0.5)) * MINI_H} r="2" fill="rgba(120,120,69,0.9)" />
+              </svg>
             {/each}
           </span>
         {/if}
@@ -819,6 +874,7 @@
     {/each}
 
     <SceneNodePopup />
+    <AutomationEditor />
 
     <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} />
   </div>
@@ -850,7 +906,11 @@
         </span>
         <span class="empty-arrow">→</span>
         <span class="empty-step">
-          <span class="empty-icon">◯─◯</span>
+          <span class="empty-nodes">
+            <span class="empty-node root"></span>
+            <span class="empty-edge"></span>
+            <span class="empty-node"></span>
+          </span>
           <span>Connect to build a song</span>
         </span>
       </div>
@@ -1013,6 +1073,24 @@
   .dec-tag:hover {
     transform: translateY(-1px);
     transition: transform 60ms ease-out;
+  }
+
+  /* ── Automation mini-curve on playing pattern nodes ── */
+  .auto-mini-row {
+    position: absolute;
+    bottom: 2px;
+    left: 4px;
+    right: 4px;
+    display: flex;
+    gap: 2px;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .auto-mini {
+    opacity: 0.8;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 12px;
   }
 
   .scene-node.selected {
@@ -1188,6 +1266,27 @@
     font-size: 18px;
     opacity: 0.35;
     margin-top: -14px;
+  }
+  .empty-nodes {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .empty-node {
+    width: 28px;
+    height: 14px;
+    background: var(--color-olive);
+    opacity: 0.45;
+  }
+  .empty-node.root {
+    border: 1.5px solid var(--color-fg);
+    opacity: 0.55;
+  }
+  .empty-edge {
+    width: 12px;
+    height: 0;
+    border-top: 1.5px solid var(--color-olive);
+    opacity: 0.35;
   }
 
   /* ── Mobile responsive ── */

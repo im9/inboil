@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ICON } from '../icons.ts'
 
-  export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
+  export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
   export type BubblePickType = FnNodeType | 'label'
 
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
@@ -10,6 +10,7 @@
     { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'probability', tip: 'Probability', tipJa: '確率' },
     { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'automation', tip: 'Automation', tipJa: 'オートメーション' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -81,6 +82,8 @@
       <svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true">{@html ICON.probability}</svg>
     {:else if item.type === 'fx'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
+    {:else if item.type === 'automation'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.automation}</svg>
     {:else if item.type === 'label'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
     {/if}

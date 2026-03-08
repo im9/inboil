@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, ui, primarySelectedNode } from '../state.svelte.ts'
-  import { sceneUpdateNodeParams, sceneUpdateDecorator, sceneDetachDecorator } from '../sceneActions.ts'
+  import { sceneUpdateNodeParams, sceneUpdateDecorator, sceneDetachDecorator, sceneAddAutomationDecorator } from '../sceneActions.ts'
   import { PAD_INSET } from '../constants.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
 
@@ -131,7 +131,7 @@
 </script>
 
 <!-- Standalone function node popup (existing) -->
-{#if selectedFnNode && selectedFnNode.type !== 'probability' && selectedFnNode.type !== 'fx'}
+{#if selectedFnNode && selectedFnNode.type !== 'probability' && selectedFnNode.type !== 'fx' && selectedFnNode.type !== 'automation'}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="param-popup" style="
     left: calc({PAD_INSET}px + {selectedFnNode.x} * (100% - {PAD_INSET * 2}px) + 28px);
@@ -186,6 +186,9 @@
               onpointerdown={e => { e.stopPropagation(); toggleDecFxParam(selectedPatNode.id, i, dec, key) }}
             >{label}</button>
           {/each}
+        {:else if dec.type === 'automation'}
+          <button class="auto-edit-btn" onpointerdown={e => { e.stopPropagation(); ui.editingAutomationDecorator = { nodeId: selectedPatNode.id, decoratorIndex: i } }}
+            data-tip="Edit automation curve" data-tip-ja="オートメーションカーブを編集">Edit</button>
         {:else}
           {#if dec.type === 'transpose'}
             <button
@@ -202,6 +205,8 @@
           data-tip="Detach decorator" data-tip-ja="デコレーターを分離">×</button>
       </div>
     {/each}
+    <button class="add-auto-btn" onpointerdown={e => { e.stopPropagation(); sceneAddAutomationDecorator(selectedPatNode.id) }}
+      data-tip="Add automation decorator" data-tip-ja="オートメーションを追加">＋Auto</button>
   </div>
 {/if}
 
@@ -359,6 +364,40 @@
   .detach-btn:hover {
     background: rgba(30, 32, 40, 0.08);
     color: rgba(30, 32, 40, 0.6);
+  }
+  .auto-edit-btn {
+    border: none;
+    border-radius: 3px;
+    background: rgba(30, 32, 40, 0.06);
+    color: rgba(30, 32, 40, 0.5);
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 5px;
+    cursor: pointer;
+  }
+  .auto-edit-btn:hover {
+    background: rgba(30, 32, 40, 0.12);
+    color: rgba(30, 32, 40, 0.7);
+  }
+  .add-auto-btn {
+    border: 1px dashed rgba(30, 32, 40, 0.15);
+    border-radius: 3px;
+    background: transparent;
+    color: rgba(30, 32, 40, 0.35);
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 5px;
+    cursor: pointer;
+    margin-top: 1px;
+  }
+  .add-auto-btn:hover {
+    background: rgba(30, 32, 40, 0.04);
+    color: rgba(30, 32, 40, 0.55);
+    border-color: rgba(30, 32, 40, 0.25);
   }
 
   @media (max-width: 639px) {

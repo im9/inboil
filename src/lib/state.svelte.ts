@@ -86,19 +86,42 @@ export interface Effects {
 
 /** Function decorator attached to a pattern node (ADR 062) */
 export interface SceneDecorator {
-  type: 'transpose' | 'tempo' | 'repeat' | 'fx'
+  type: 'transpose' | 'tempo' | 'repeat' | 'fx' | 'automation'
   params: Record<string, number>
+  automationParams?: AutomationParams  // for type === 'automation'
+}
+
+/** Automation curve point (ADR 053) */
+export interface AutomationPoint {
+  t: number  // 0.0–1.0 — position within pattern duration
+  v: number  // 0.0–1.0 — normalized parameter value
+}
+
+/** Automation target parameter (ADR 053) */
+export type AutomationTarget =
+  | { kind: 'global'; param: 'tempo' | 'masterVolume' }
+  | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
+  | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
+                            | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
+
+/** Automation node parameters (ADR 053) */
+export interface AutomationParams {
+  target: AutomationTarget
+  points: AutomationPoint[]
+  interpolation: 'linear' | 'smooth'
 }
 
 /** Node on the scene canvas (ADR 044) */
 export interface SceneNode {
   id: string
-  type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
+  type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
   x: number               // canvas position (normalized 0–1)
   y: number
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
   params?: Record<string, number>
+  automationParams?: AutomationParams  // for type === 'automation' (ADR 053)
   decorators?: SceneDecorator[]  // function decorators attached to pattern nodes (ADR 062)
 }
 
@@ -326,6 +349,9 @@ export const playback = $state({
   // ADR 045: playback mode decoupled from view
   mode: 'loop' as 'loop' | 'scene',
   playingPattern: null as number | null,
+  // ADR 053: active automation curves during scene playback
+  activeAutomations: [] as AutomationParams[],
+  automationSnapshot: null as Record<string, number> | null,
 })
 
 export const ui = $state<{
@@ -345,6 +371,7 @@ export const ui = $state<{
   soloTracks: Set<number>
   dockMinimized: boolean
   mobileOverlay: boolean
+  editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
 }>({
   selectedTrack: 0,
   currentSection: 0,
@@ -362,6 +389,7 @@ export const ui = $state<{
   soloTracks: new Set<number>(),
   dockMinimized: false,
   mobileOverlay: false,
+  editingAutomationDecorator: null,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
@@ -604,6 +632,7 @@ export function factoryReset(): void {
   ui.mobileOverlay = false
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
+  ui.editingAutomationDecorator = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
@@ -631,6 +660,11 @@ export function factoryReset(): void {
   playback.sceneRepeatLeft = 0
   playback.sceneTranspose = 0
   playback.sceneAbsoluteKey = null
+  if (playback.automationSnapshot) {
+    restoreAutomationSnapshot(playback.automationSnapshot)
+  }
+  playback.activeAutomations = []
+  playback.automationSnapshot = null
   playback.soloNodeId = null
   // Reset project
   project.id = null
@@ -709,6 +743,8 @@ function applyDecorators(node: SceneNode): void {
       fxPad.delay    = { ...fxPad.delay,    on: !!dec.params.delay }
       fxPad.glitch   = { ...fxPad.glitch,   on: !!dec.params.glitch }
       fxPad.granular = { ...fxPad.granular, on: !!dec.params.granular }
+    } else if (dec.type === 'automation' && dec.automationParams) {
+      playback.activeAutomations.push(dec.automationParams)
     }
   }
 }
@@ -716,20 +752,44 @@ function applyDecorators(node: SceneNode): void {
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
+  // Restore previous automation snapshot before applying new decorators
+  if (playback.automationSnapshot) {
+    restoreAutomationSnapshot(playback.automationSnapshot)
+    playback.automationSnapshot = null
+  }
+  playback.activeAutomations = []
   if (node.type === 'pattern') {
+    // Snapshot values before automation/decorators modify them
+    playback.automationSnapshot = snapshotAutomationTargets()
     applyDecorators(node)
+    // Collect automation nodes connected to this pattern
+    collectAutomationsForPattern(node.id)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
   // Root is a function node — follow its edges
+  if (node.type === 'automation' && node.automationParams) {
+    playback.activeAutomations.push(node.automationParams)
+  }
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
     const pick = edges[Math.floor(Math.random() * edges.length)]
     return walkToNode(pick)
   }
   return { advanced: false, patternIndex: -1, stop: true }
+}
+
+/** Collect automation nodes that have edges pointing to a pattern node */
+function collectAutomationsForPattern(patternNodeId: string): void {
+  const inEdges = song.scene.edges.filter(e => e.to === patternNodeId)
+  for (const edge of inEdges) {
+    const srcNode = song.scene.nodes.find(n => n.id === edge.from)
+    if (srcNode?.type === 'automation' && srcNode.automationParams) {
+      playback.activeAutomations.push(srcNode.automationParams)
+    }
+  }
 }
 
 function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number; stop?: boolean } {
@@ -745,7 +805,14 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
+      // Restore previous automation snapshot before applying new decorators
+      if (playback.automationSnapshot) {
+        restoreAutomationSnapshot(playback.automationSnapshot)
+      }
+      playback.activeAutomations = []
+      playback.automationSnapshot = snapshotAutomationTargets()
       applyDecorators(node)
+      collectAutomationsForPattern(node.id)
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
@@ -777,6 +844,8 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       else            fxPad.glitch   = { ...fxPad.glitch, on: false }
       if (p.granular) fxPad.granular = { ...fxPad.granular, on: true }
       else            fxPad.granular = { ...fxPad.granular, on: false }
+    } else if (node.type === 'automation' && node.automationParams) {
+      playback.activeAutomations.push(node.automationParams)
     }
 
     // Follow this function node's outgoing edges (random pick)
@@ -820,6 +889,104 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
 
   // Random pick among outgoing edges
   return walkToNode(outEdges[Math.floor(Math.random() * outEdges.length)])
+}
+
+/** Evaluate automation curve at progress t (0–1) */
+function evaluateAutomation(points: AutomationPoint[], t: number, interpolation: string): number {
+  if (points.length === 0) return 0.5
+  if (t <= points[0].t) return points[0].v
+  if (t >= points[points.length - 1].t) return points[points.length - 1].v
+  let i = 0
+  while (i < points.length - 1 && points[i + 1].t <= t) i++
+  const p0 = points[i], p1 = points[i + 1]
+  const segT = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t)
+  if (interpolation === 'smooth') {
+    // Smoothstep
+    const s = segT * segT * (3 - 2 * segT)
+    return p0.v + (p1.v - p0.v) * s
+  }
+  return p0.v + (p1.v - p0.v) * segT
+}
+
+/** Snapshot current values of all automation targets so they can be restored later */
+function snapshotAutomationTargets(): Record<string, number> {
+  const snap: Record<string, number> = {}
+  snap['global:tempo'] = song.bpm
+  snap['global:masterVolume'] = perf.masterGain
+  for (let i = 0; i < song.tracks.length; i++) {
+    snap[`track:${i}:volume`] = song.tracks[i].volume
+    snap[`track:${i}:pan`] = song.tracks[i].pan
+  }
+  return snap
+}
+
+/** Restore values from a snapshot taken before automation was applied */
+export function restoreAutomationSnapshot(snap: Record<string, number>): void {
+  if (snap['global:tempo'] != null) song.bpm = snap['global:tempo']
+  if (snap['global:masterVolume'] != null) perf.masterGain = snap['global:masterVolume']
+  for (let i = 0; i < song.tracks.length; i++) {
+    if (snap[`track:${i}:volume`] != null) song.tracks[i].volume = snap[`track:${i}:volume`]
+    if (snap[`track:${i}:pan`] != null) song.tracks[i].pan = snap[`track:${i}:pan`]
+  }
+}
+
+/** Apply active automations at current step progress. Called from App.svelte onStep. */
+export function applyAutomations(stepIndex: number, totalSteps: number): void {
+  if (playback.activeAutomations.length === 0) return
+  const t = totalSteps > 1 ? stepIndex / (totalSteps - 1) : 0
+
+  for (const auto of playback.activeAutomations) {
+    const v = evaluateAutomation(auto.points, t, auto.interpolation)
+    applyAutomationValue(auto.target, v)
+  }
+}
+
+function applyAutomationValue(target: AutomationTarget, v: number): void {
+  switch (target.kind) {
+    case 'global':
+      if (target.param === 'tempo') {
+        song.bpm = Math.round(60 + v * 240)  // 60–300 BPM
+      } else if (target.param === 'masterVolume') {
+        perf.masterGain = v
+      }
+      break
+    case 'track': {
+      const track = song.tracks[target.trackIndex]
+      if (!track) break
+      if (target.param === 'volume') {
+        track.volume = v
+      } else if (target.param === 'pan') {
+        track.pan = v * 2 - 1  // 0–1 → -1..1
+      }
+      break
+    }
+    case 'fx':
+      switch (target.param) {
+        case 'reverbWet':      fxPad.verb     = { ...fxPad.verb,     x: v }; break
+        case 'reverbDamp':     fxPad.verb     = { ...fxPad.verb,     y: v }; break
+        case 'delayTime':      fxPad.delay    = { ...fxPad.delay,    x: v }; break
+        case 'delayFeedback':  fxPad.delay    = { ...fxPad.delay,    y: v }; break
+        case 'filterCutoff':   fxPad.filter   = { ...fxPad.filter,   x: v }; break
+        case 'glitchX':        fxPad.glitch   = { ...fxPad.glitch,   x: v }; break
+        case 'glitchY':        fxPad.glitch   = { ...fxPad.glitch,   y: v }; break
+        case 'granularSize':   fxPad.granular = { ...fxPad.granular, x: v }; break
+        case 'granularDensity': fxPad.granular = { ...fxPad.granular, y: v }; break
+      }
+      break
+    case 'send': {
+      const pat = playback.playingPattern != null ? song.patterns[playback.playingPattern] : null
+      if (!pat) break
+      const cell = pat.cells[target.trackIndex]
+      if (!cell) break
+      switch (target.param) {
+        case 'reverbSend':   cell.reverbSend = v; break
+        case 'delaySend':    cell.delaySend = v; break
+        case 'glitchSend':   cell.glitchSend = v; break
+        case 'granularSend': cell.granularSend = v; break
+      }
+      break
+    }
+  }
 }
 
 /** Apply FX and key/oct for a section (called on section advance) */

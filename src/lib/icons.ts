@@ -21,6 +21,9 @@ export const ICON = {
 
   fx: `<path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>`,
 
+  automation: `<polyline points="1,12 4,10 7,4 10,6 13,2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`
+    + `<circle cx="4" cy="10" r="1.2" fill="currentColor"/><circle cx="7" cy="4" r="1.2" fill="currentColor"/><circle cx="10" cy="6" r="1.2" fill="currentColor"/>`,
+
   label: `<text x="7" y="11" text-anchor="middle" font-family="serif" font-size="12" font-weight="700">T</text>`,
 
   // ── Scene controls (viewBox 0 0 16 16) ──
