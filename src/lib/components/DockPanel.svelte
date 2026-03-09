@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, activeCell, ui, toggleDockMinimized, samplesByTrack, setSample } from '../state.svelte.ts'
+  import { song, activeCell, ui, playback, toggleDockMinimized, samplesByTrack, setSample } from '../state.svelte.ts'
   import type { SceneDecorator } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -11,6 +11,7 @@
   import { engine } from '../audio/engine.ts'
   import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator } from '../sceneActions.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
+  import { PATTERN_COLORS } from '../constants.ts'
   import Knob from './Knob.svelte'
   import EnvGraph from './EnvGraph.svelte'
   import WaveGraph from './WaveGraph.svelte'
@@ -19,8 +20,11 @@
   // ── Scene decorator editing (ADR 069) ──
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
+  // FX/EQ/Master sheets override decorator editor → show navigator instead
+  const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
+
   const scenePatternNode = $derived.by(() => {
-    if (ui.patternSheet) return null
+    if (ui.patternSheet || isOverlaySheet) return null
     const selected = Object.keys(ui.selectedSceneNodes)
     if (selected.length !== 1) return null
     const node = song.scene.nodes.find(n => n.id === selected[0])
@@ -81,6 +85,18 @@
     const p = { ...dec.params }
     p[key] = p[key] ? 0 : 1
     sceneUpdateDecorator(nodeId, idx, p)
+  }
+
+  // ── Scene Navigator (ADR 070) ──
+  const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
+  const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
+
+  const placedPatternNodes = $derived(
+    song.scene.nodes.filter(n => n.type === 'pattern')
+  )
+
+  function selectSceneNode(nodeId: string) {
+    ui.selectedSceneNodes = { [nodeId]: true }
   }
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
@@ -444,7 +460,43 @@
             <div class="section-divider" aria-hidden="true"></div>
           {/if}
 
-          {#if !scenePatternNode}
+          <!-- Scene Navigator (ADR 070) -->
+          {#if showNavigator}
+            <div class="nav-section">
+              <span class="section-label">SCENE</span>
+              <div class="nav-list">
+                {#each placedPatternNodes as node}
+                  {@const pat = song.patterns.find(p => p.id === node.patternId)}
+                  {#if pat}
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <div
+                      class="nav-item"
+                      class:selected={ui.selectedSceneNodes[node.id]}
+                      class:playing={playback.playing && playback.sceneNodeId === node.id}
+                      onpointerdown={() => selectSceneNode(node.id)}
+                      style={playback.playing && playback.sceneNodeId === node.id ? `--pulse-dur: ${60 / (song.bpm || 120)}s` : ''}
+                    >
+                      <span class="nav-color" style="background: {PATTERN_COLORS[pat.color ?? 0]}"></span>
+                      {#if node.root}<span class="nav-root">★</span>{/if}
+                      <span class="nav-name">{pat.name}</span>
+                      {#if node.decorators?.length}
+                        <span class="nav-decs">
+                          {#each node.decorators as dec}
+                            <span class="nav-dec-tag">{decoratorLabel(dec)}</span>
+                          {/each}
+                        </span>
+                      {/if}
+                    </div>
+                  {/if}
+                {/each}
+                {#if !placedPatternNodes.length}
+                  <div class="dec-empty">No patterns in scene</div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+
+          {#if showTrackParams}
           <!-- Track selector bar -->
           <span class="track-bar-label"
             data-tip="Select a track to edit its voice, params and sends"
@@ -1190,6 +1242,95 @@
     letter-spacing: 0.12em;
     color: var(--dk-text-dim);
     padding-bottom: 2px;
+  }
+
+  /* ── Scene Navigator (ADR 070) ── */
+  .nav-section {
+    margin-bottom: 4px;
+  }
+  .nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 6px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 6px;
+    cursor: pointer;
+    transition: background 60ms;
+  }
+  .nav-item:hover {
+    background: var(--dk-bg-hover);
+  }
+  .nav-item.selected {
+    background: var(--dk-bg-active);
+  }
+  .nav-color {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .nav-root {
+    font-size: 9px;
+    color: var(--color-olive);
+    flex-shrink: 0;
+    margin: 0 -2px;
+  }
+  .nav-name {
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--dk-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-item.playing {
+    animation: nav-pulse var(--pulse-dur, 0.5s) ease-in-out infinite;
+  }
+  .nav-item.playing .nav-color {
+    box-shadow: 0 0 6px 2px currentColor;
+  }
+  @keyframes nav-pulse {
+    0%, 100% { background: var(--dk-bg-active); }
+    50% { background: rgba(var(--dk-cream), 0.2); }
+  }
+  .nav-decs {
+    display: flex;
+    gap: 3px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .nav-dec-tag {
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--dk-text-dim);
+    background: var(--dk-bg-faint);
+    border-radius: 2px;
+    padding: 1px 3px;
+    white-space: nowrap;
+  }
+  @media (max-width: 639px) {
+    .nav-item {
+      padding: 8px 8px;
+      gap: 8px;
+    }
+    .nav-color {
+      width: 10px;
+      height: 10px;
+    }
+    .nav-name {
+      font-size: var(--dk-fs-md);
+    }
+    .nav-dec-tag {
+      font-size: 8px;
+      padding: 2px 4px;
+    }
   }
 
   /* ── Decorator editor (ADR 069) ── */
