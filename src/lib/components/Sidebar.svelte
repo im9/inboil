@@ -311,126 +311,125 @@
             {/if}
           {/each}
         {:else}
-          <!-- Project management -->
-          <div class="setting-group proj-section">
-            <span class="setting-label">PROJECT</span>
-            <div class="proj-actions">
-              <button class="btn-proj" onpointerdown={handleNew}
-                data-tip="New project" data-tip-ja="新規プロジェクト">NEW</button>
-              <button class="btn-proj" onpointerdown={handleSaveAs}
-                data-tip="Save as new project" data-tip-ja="別名で保存">SAVE AS</button>
+          <!-- Project actions -->
+          <div class="proj-primary">
+            <button class="btn-proj-primary" onpointerdown={handleNew}
+              data-tip="New project" data-tip-ja="新規プロジェクト">
+              {L === 'ja' ? '新規プロジェクト' : 'NEW PROJECT'}
+            </button>
+            <button class="btn-proj-primary outline" onpointerdown={handleSaveAs}
+              data-tip="Save as new project" data-tip-ja="別名で保存">
+              {L === 'ja' ? '別名で保存' : 'SAVE AS'}
+            </button>
+          </div>
+          {#if confirmNew}
+            <div class="proj-confirm">
+              <span class="proj-confirm-text">{L === 'ja' ? '未保存の変更があります。破棄しますか？' : 'Discard unsaved changes?'}</span>
+              <div class="proj-confirm-actions">
+                <button class="btn-proj-primary danger" onpointerdown={doNew}>{L === 'ja' ? '破棄' : 'DISCARD'}</button>
+                <button class="btn-proj-primary outline" onpointerdown={() => { confirmNew = false }}>{L === 'ja' ? 'キャンセル' : 'CANCEL'}</button>
+              </div>
             </div>
-            {#if confirmNew}
-              <div class="proj-confirm">
-                <span class="proj-confirm-text">{L === 'ja' ? '未保存の変更があります。破棄しますか？' : 'Discard unsaved changes?'}</span>
-                <div class="proj-confirm-actions">
-                  <button class="btn-proj danger" onpointerdown={doNew}>{L === 'ja' ? '破棄' : 'DISCARD'}</button>
-                  <button class="btn-proj" onpointerdown={() => { confirmNew = false }}>{L === 'ja' ? 'キャンセル' : 'CANCEL'}</button>
-                </div>
-              </div>
-            {/if}
-            {#if savingAs}
-              <div class="proj-save-as">
-                <input
-                  bind:this={saveAsInput}
-                  class="proj-name-input"
-                  type="text"
-                  maxlength="20"
-                  placeholder={L === 'ja' ? 'プロジェクト名...' : 'Project name...'}
-                  bind:value={saveAsName}
-                  onkeydown={(e) => { if (e.key === 'Enter') void commitSaveAs(); if (e.key === 'Escape') savingAs = false }}
-                />
-                <button class="btn-proj" onpointerdown={() => void commitSaveAs()}>OK</button>
-              </div>
-            {/if}
+          {/if}
+          {#if savingAs}
+            <div class="proj-save-as">
+              <input
+                bind:this={saveAsInput}
+                class="proj-name-input"
+                type="text"
+                maxlength="20"
+                placeholder={L === 'ja' ? 'プロジェクト名...' : 'Project name...'}
+                bind:value={saveAsName}
+                onkeydown={(e) => { if (e.key === 'Enter') void commitSaveAs(); if (e.key === 'Escape') savingAs = false }}
+              />
+              <button class="btn-proj-primary" onpointerdown={() => void commitSaveAs()}>OK</button>
+            </div>
+          {/if}
+
+          <!-- Project list -->
+          <div class="proj-list">
+            <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
+            <div class="proj-item">
+              <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
+                Factory Demo
+              </button>
+              <span class="proj-item-date">built-in</span>
+            </div>
+          </div>
+          {#if projectList.length > 0}
             <div class="proj-list">
-              <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
-              <div class="proj-item">
-                <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
-                  {L === 'ja' ? 'Factory Demo' : 'Factory Demo'}
-                </button>
-                <span class="proj-item-date">built-in</span>
-              </div>
-            </div>
-            {#if projectList.length > 0}
-              <div class="proj-list">
-                <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
-                {#each projectList as p}
-                  <div class="proj-item" class:current={p.id === project.id}>
-                    <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
-                      {p.name}
+              <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
+              {#each projectList as p}
+                <div class="proj-item" class:current={p.id === project.id}>
+                  <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
+                    {p.name}
+                  </button>
+                  <span class="proj-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
+                  {#if confirmDeleteId === p.id}
+                    <button class="proj-item-del confirm" onpointerdown={() => void handleDelete(p.id)}>
+                      {L === 'ja' ? '削除' : 'DEL'}
                     </button>
-                    <span class="proj-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
-                    {#if confirmDeleteId === p.id}
-                      <button class="proj-item-del confirm" onpointerdown={() => void handleDelete(p.id)}>
-                        {L === 'ja' ? '削除' : 'DEL'}
-                      </button>
-                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = null }}>
-                        ✕
-                      </button>
-                    {:else}
-                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = p.id }}>
-                        🗑
-                      </button>
-                    {/if}
-                  </div>
-                {/each}
+                    <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = null }}>
+                      ✕
+                    </button>
+                  {:else}
+                    <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = p.id }}>
+                      ✕
+                    </button>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+
+          <!-- Settings -->
+          <div class="settings-section">
+            <div class="setting-row">
+              <div class="setting-row-text">
+                <span class="setting-row-label">{L === 'ja' ? 'パターン入力' : 'PATTERN INPUT'}</span>
+                <span class="setting-row-desc">{L === 'ja'
+                  ? (prefs.patternEditor === 'grid' ? 'グリッド — タップでリズム入力' : 'トラッカー — 数値で精密入力')
+                  : (prefs.patternEditor === 'grid' ? 'Grid — tap to edit rhythm' : 'Tracker — precise numeric entry')}</span>
               </div>
-            {/if}
-          </div>
-
-          <div class="setting-group">
-            <span class="setting-label">{L === 'ja' ? 'スケールモード' : 'SCALE MODE'}</span>
-            <button
-              class="btn-toggle"
-              class:on={prefs.scaleMode}
-              onpointerdown={toggleScaleMode}
-            >
-              {prefs.scaleMode ? 'ON' : 'OFF'}
-            </button>
-            <p class="setting-desc">{L === 'ja'
-              ? 'ON の場合、ピアノロールでスケール外のノートが無効になります。'
-              : 'When ON, out-of-scale notes are disabled in the piano roll.'}</p>
-          </div>
-
-          <div class="setting-group">
-            <span class="setting-label">{L === 'ja' ? 'エディター' : 'EDITOR'}</span>
-            <button class="btn-toggle" onpointerdown={togglePatternEditor}>
-              {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
-            </button>
-            <p class="setting-desc">{L === 'ja'
-              ? 'パターンエディターの表示形式を切り替えます。'
-              : 'Switch pattern editor between grid and tracker.'}</p>
-          </div>
-
-          <div class="setting-group">
-            <span class="setting-label">{L === 'ja' ? 'ホバーガイド' : 'HOVER GUIDE'}</span>
-            <button
-              class="btn-toggle"
-              class:on={prefs.showGuide}
-              onpointerdown={toggleShowGuide}
-            >
-              {prefs.showGuide ? 'ON' : 'OFF'}
-            </button>
-            <p class="setting-desc">{L === 'ja'
-              ? 'UI要素にカーソルを合わせた時にガイドを表示します。'
-              : 'Show floating guide when hovering over UI elements.'}</p>
-          </div>
-
-          <div class="setting-group">
-            <span class="setting-label">{L === 'ja' ? '言語' : 'LANGUAGE'}</span>
-            <button
-              class="btn-toggle"
-              onpointerdown={toggleLang}
-            >
-              {L === 'ja' ? 'EN' : 'JP'}
-            </button>
+              <button class="btn-toggle" onpointerdown={togglePatternEditor}>
+                {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-text">
+                <span class="setting-row-label">{L === 'ja' ? 'スケール制限' : 'SCALE LOCK'}</span>
+                <span class="setting-row-desc">{L === 'ja'
+                  ? 'ピアノロールでキー外のノートを無効化'
+                  : 'Disable out-of-key notes in piano roll'}</span>
+              </div>
+              <button class="btn-toggle" class:on={prefs.scaleMode} onpointerdown={toggleScaleMode}>
+                {prefs.scaleMode ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-text">
+                <span class="setting-row-label">{L === 'ja' ? 'ホバーガイド' : 'HOVER GUIDE'}</span>
+                <span class="setting-row-desc">{L === 'ja'
+                  ? 'UIにカーソルを合わせると説明を表示'
+                  : 'Show tooltip when hovering UI elements'}</span>
+              </div>
+              <button class="btn-toggle" class:on={prefs.showGuide} onpointerdown={toggleShowGuide}>
+                {prefs.showGuide ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-row-text">
+                <span class="setting-row-label">{L === 'ja' ? '表示言語' : 'LANGUAGE'}</span>
+                <span class="setting-row-desc">{L === 'ja' ? '日本語 ↔ English' : 'English ↔ 日本語'}</span>
+              </div>
+              <button class="btn-toggle" onpointerdown={toggleLang}>
+                {L === 'ja' ? 'EN' : 'JP'}
+              </button>
+            </div>
           </div>
 
           <div class="setting-group about">
-            <span class="setting-label">ABOUT</span>
-            <p class="about-text">inboil v0.1.0</p>
-            <p class="about-text">&copy; 2026 origamiworks</p>
+            <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
           </div>
 
         {/if}
@@ -696,12 +695,11 @@
   /* ── System settings ── */
   .setting-group {
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(237,232,220,0.08);
   }
   .setting-label {
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.5);
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;
@@ -751,8 +749,8 @@
     background: rgba(237,232,220,0.15);
   }
   .about-text {
-    font-size: 11px;
-    color: rgba(237,232,220,0.4);
+    font-size: 10px;
+    color: rgba(237,232,220,0.3);
     margin: 0;
   }
   .btn-toggle {
@@ -768,12 +766,6 @@
     color: var(--color-olive);
   }
   .btn-toggle:active { opacity: 0.7; }
-  .setting-desc {
-    font-size: 10px;
-    line-height: 1.5;
-    color: rgba(237,232,220,0.35);
-    margin: 6px 0 0;
-  }
 
   /* ── Mobile: fullscreen overlay ── */
   @media (max-width: 639px) {
@@ -796,57 +788,107 @@
     }
   }
 
-  /* ── Project section ── */
-  .proj-section { border-bottom: 1px solid rgba(237,232,220,0.1); padding-bottom: 10px; }
-  .proj-actions { display: flex; gap: 4px; margin-top: 4px; }
-  .btn-proj {
-    border: 1px solid rgba(237,232,220,0.25);
-    background: transparent;
-    color: rgba(237,232,220,0.7);
-    font-family: var(--font-data);
-    font-size: 9px;
+  /* ── Project primary actions ── */
+  .proj-primary {
+    display: flex;
+    gap: 6px;
+    padding: 12px 16px 8px;
+  }
+  .btn-proj-primary {
+    flex: 1;
+    border: 1.5px solid rgba(237,232,220,0.5);
+    background: rgba(237,232,220,0.12);
+    color: rgba(237,232,220,0.9);
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 3px 8px;
+    text-transform: uppercase;
+    padding: 10px 8px;
     cursor: pointer;
+    transition: background 40ms linear, color 40ms linear;
   }
-  .btn-proj:hover { background: rgba(237,232,220,0.08); color: rgba(237,232,220,0.9); }
+  .btn-proj-primary:hover {
+    background: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,1);
+  }
+  .btn-proj-primary:active {
+    background: rgba(237,232,220,0.24);
+  }
+  .btn-proj-primary.outline {
+    background: transparent;
+    border-color: rgba(237,232,220,0.3);
+    color: rgba(237,232,220,0.7);
+  }
+  .btn-proj-primary.outline:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.9);
+  }
+  .btn-proj-primary.danger {
+    border-color: var(--color-salmon);
+    background: transparent;
+    color: var(--color-salmon);
+  }
+  .btn-proj-primary.danger:hover {
+    background: rgba(237,232,220,0.06);
+  }
   .proj-save-as {
     display: flex;
-    gap: 4px;
-    margin-top: 6px;
+    gap: 6px;
+    padding: 0 16px 8px;
   }
   .proj-name-input {
     flex: 1;
-    font-family: var(--font-data);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     color: rgba(237,232,220,0.9);
     background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(237,232,220,0.2);
-    padding: 3px 6px;
+    border: 1.5px solid rgba(237,232,220,0.25);
+    padding: 8px 10px;
     outline: none;
   }
-  .proj-list { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
-  .proj-list-label {
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    color: rgba(237,232,220,0.3);
-    text-transform: uppercase;
-    margin-bottom: 2px;
+  .proj-name-input:focus {
+    border-color: rgba(237,232,220,0.5);
   }
-  .proj-item-name.factory { color: rgba(237,232,220,0.45); font-style: italic; }
+  .proj-confirm {
+    margin: 0 16px 8px;
+    padding: 10px 12px;
+    background: rgba(237,232,220,0.04);
+    border: 1px solid rgba(237,232,220,0.12);
+  }
+  .proj-confirm-text {
+    font-size: 11px;
+    color: rgba(237,232,220,0.7);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .proj-confirm-actions { display: flex; gap: 6px; }
+
+  /* ── Project list ── */
+  .proj-list {
+    padding: 4px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .proj-list-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: rgba(237,232,220,0.4);
+    text-transform: uppercase;
+    padding: 8px 0 4px;
+  }
   .proj-item {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 4px;
+    gap: 6px;
+    padding: 7px 8px;
     border-radius: 2px;
+    transition: background 40ms linear;
   }
-  .proj-item.current { background: rgba(237,232,220,0.06); }
+  .proj-item:hover { background: rgba(237,232,220,0.04); }
+  .proj-item.current { background: rgba(237,232,220,0.08); }
   .proj-item-name {
     flex: 1;
     min-width: 0;
@@ -855,49 +897,70 @@
     white-space: nowrap;
     background: none;
     border: none;
-    color: rgba(237,232,220,0.6);
-    font-family: var(--font-data);
-    font-size: 9px;
+    color: rgba(237,232,220,0.65);
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     text-align: left;
     cursor: pointer;
     padding: 0;
   }
-  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.9); }
+  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.95); }
   .proj-item-name:hover { color: rgba(237,232,220,0.9); }
+  .proj-item-name.factory { color: rgba(237,232,220,0.5); font-style: italic; }
   .proj-item-date {
-    font-family: var(--font-data);
-    font-size: 7px;
-    color: rgba(237,232,220,0.3);
+    font-size: 9px;
+    color: rgba(237,232,220,0.35);
     flex-shrink: 0;
   }
   .proj-item-del {
     background: none;
     border: none;
-    color: rgba(237,232,220,0.25);
-    font-size: 10px;
+    color: rgba(237,232,220,0.2);
+    font-size: 11px;
     cursor: pointer;
-    padding: 0 2px;
+    padding: 2px 4px;
     flex-shrink: 0;
+    transition: color 40ms linear;
   }
   .proj-item-del:hover { color: rgba(237,232,220,0.6); }
-  .proj-item-del.confirm { color: var(--color-salmon); font-family: var(--font-data); font-size: 8px; font-weight: 700; }
-  .proj-confirm {
-    margin-top: 6px;
-    padding: 6px 8px;
-    background: rgba(237,232,220,0.04);
-    border: 1px solid rgba(237,232,220,0.12);
-    border-radius: 2px;
+  .proj-item-del.confirm {
+    color: var(--color-salmon);
+    font-size: 10px;
+    font-weight: 700;
   }
-  .proj-confirm-text {
-    font-family: var(--font-data);
-    font-size: 8px;
-    color: rgba(237,232,220,0.6);
-    display: block;
-    margin-bottom: 6px;
+
+  /* ── Settings rows ── */
+  .settings-section {
+    padding: 4px 16px;
+    border-top: 1px solid rgba(237,232,220,0.08);
+    border-bottom: 1px solid rgba(237,232,220,0.08);
   }
-  .proj-confirm-actions { display: flex; gap: 4px; }
-  .btn-proj.danger { border-color: var(--color-salmon); color: var(--color-salmon); }
-  .btn-proj.danger:hover { background: rgba(var(--color-salmon), 0.1); }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(237,232,220,0.04);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .setting-row-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(237,232,220,0.8);
+    text-transform: uppercase;
+  }
+  .setting-row-desc {
+    font-size: 10px;
+    color: rgba(237,232,220,0.4);
+    line-height: 1.3;
+  }
 </style>
