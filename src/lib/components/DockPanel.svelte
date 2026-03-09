@@ -316,6 +316,7 @@
 
   // ── Sample loader (ADR 012 Phase 2, persistence ADR 020 §I) ──
   const MAX_SAMPLE_SIZE = 10 * 1024 * 1024 // 10 MB (ADR 012)
+  let collapsedGroups = $state(new Set<string>())
   let fileInput = $state<HTMLInputElement>(null!)
   let waveformCanvas = $state<HTMLCanvasElement>(null!)
   let dropActive = $state(false)
@@ -604,7 +605,7 @@
                 onpointerdown={() => { ui.selectedTrack = i }}
                 data-tip="Track {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
                 data-tip-ja="トラック {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
-              >{i + 1}</button>
+              ><span class="track-num">{i + 1}</span><span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
             {/each}
           </div>
 
@@ -785,20 +786,29 @@
                 {@const prevNormalIdx = params.findLastIndex((q, j) => j < i && q.key !== 'polyMode' && q.key !== 'reverse')}
                 {#if p.group && (prevNormalIdx < 0 || p.group !== params[prevNormalIdx].group)}
                   {@const groupLabels: Record<string, string> = { tone: 'OSC', noise: 'NOISE', metal: 'METAL', amp: 'AMP', filter: 'FILTER', env: 'ENV', arp: 'ARP', osc: 'OSC', lfo: 'LFO', sample: 'SAMPLE', chop: 'CHOP', sync: 'SYNC', ratio: 'RATIO', level: 'LEVEL', decay: 'DECAY' }}
-                  <div class="param-group-label">{groupLabels[p.group] ?? p.group.toUpperCase()}</div>
-                  {#if cell?.voiceId === 'iDEATH' && p.group === 'osc'}
-                    <WaveGraph position={cell.voiceParams.oscAPos ?? 0} />
-                  {:else if cell?.voiceId === 'iDEATH' && p.group === 'env'}
-                    <EnvGraph
-                      attack={cell.voiceParams.attack ?? 0.005}
-                      decay={cell.voiceParams.decay ?? 0.3}
-                      sustain={cell.voiceParams.sustain ?? 0.5}
-                      release={cell.voiceParams.release ?? 0.3}
-                    />
-                  {:else if cell?.voiceId === 'FM' && p.group === 'osc'}
-                    <AlgoGraph algorithm={cell.voiceParams.algorithm ?? 0} />
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div class="param-group-label" class:collapsed={collapsedGroups.has(p.group!)}
+                    onclick={() => { const g = p.group!; const s = new Set(collapsedGroups); s.has(g) ? s.delete(g) : s.add(g); collapsedGroups = s }}>
+                    <span class="group-chevron">{collapsedGroups.has(p.group!) ? '▸' : '▾'}</span>
+                    {groupLabels[p.group!] ?? p.group!.toUpperCase()}
+                  </div>
+                  {#if !collapsedGroups.has(p.group!)}
+                    {#if cell?.voiceId === 'iDEATH' && p.group === 'osc'}
+                      <WaveGraph position={cell.voiceParams.oscAPos ?? 0} />
+                    {:else if cell?.voiceId === 'iDEATH' && p.group === 'env'}
+                      <EnvGraph
+                        attack={cell.voiceParams.attack ?? 0.005}
+                        decay={cell.voiceParams.decay ?? 0.3}
+                        sustain={cell.voiceParams.sustain ?? 0.5}
+                        release={cell.voiceParams.release ?? 0.3}
+                      />
+                    {:else if cell?.voiceId === 'FM' && p.group === 'osc'}
+                      <AlgoGraph algorithm={cell.voiceParams.algorithm ?? 0} />
+                    {/if}
                   {/if}
                 {/if}
+                {#if !collapsedGroups.has(p.group ?? '')}
                 <span data-tip={p.tip ?? 'Drag to adjust'} data-tip-ja={p.tipJa ?? 'ドラッグで調整'}>
                   <Knob
                     value={normalizeParam(p, knobValue(p))}
@@ -810,14 +820,21 @@
                     onchange={v => knobChange(p, v)}
                   />
                 </span>
+                {/if}
               {/if}
             {/each}
           </div>
 
-          <!-- Send knobs -->
+          <!-- Send + Mixer -->
           <div class="section-divider" aria-hidden="true"></div>
-          <div class="section-label">SEND</div>
+          <div class="section-label">SEND / MIX</div>
           <div class="knob-grid">
+            <span data-tip="Track volume" data-tip-ja="トラック音量">
+              <Knob value={track.volume} label="VOL" size={32} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
+            </span>
+            <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
+              <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+            </span>
             <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
               <Knob value={cell.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
             </span>
@@ -829,18 +846,6 @@
             </span>
             <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
               <Knob value={cell.granularSend} label="GRN" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
-            </span>
-          </div>
-
-          <!-- Mixer knobs -->
-          <div class="section-divider" aria-hidden="true"></div>
-          <div class="section-label">MIXER</div>
-          <div class="knob-grid">
-            <span data-tip="Track volume" data-tip-ja="トラック音量">
-              <Knob value={track.volume} label="VOL" size={32} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
-            </span>
-            <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-              <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
             </span>
           </div>
 
@@ -949,20 +954,38 @@
     margin-bottom: 8px;
   }
   .track-btn {
-    width: 24px;
-    height: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    padding: 3px 4px 2px;
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text-dim);
-    font-size: var(--dk-fs-xs);
     font-weight: 700;
-    padding: 0;
-    text-align: center;
+    cursor: pointer;
+    gap: 1px;
+  }
+  .track-num {
+    font-size: 8px;
+    opacity: 0.5;
+  }
+  .track-voice {
+    font-size: 7px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 32px;
   }
   .track-btn.active {
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);
+  }
+  .track-btn.active .track-num {
+    opacity: 0.7;
   }
   .track-btn.muted:not(.active) {
     opacity: 0.35;
@@ -1319,7 +1342,15 @@
     margin-top: 6px;
     padding-bottom: 2px;
     border-bottom: 1px solid var(--dk-bg-hover);
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
   }
+  .param-group-label:hover { color: var(--dk-text-mid); }
+  .param-group-label.collapsed { margin-bottom: 0; }
+  .group-chevron { font-size: 7px; line-height: 1; }
   .section-divider {
     width: 100%;
     height: 1px;

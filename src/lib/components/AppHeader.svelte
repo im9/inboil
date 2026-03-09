@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, toggleSidebar } from '../state.svelte.ts'
+  import { song, playback, ui, project, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -170,7 +170,7 @@
         onpointerdown={handleSystem}
         aria-label="System settings"
         data-tip="System settings" data-tip-ja="システム設定"
-      >SYSTEM</button>
+      >SYSTEM{#if project.dirty}<span class="dirty-dot">●</span>{/if}</button>
     </div>
   </div>
 
@@ -242,6 +242,12 @@
     background: rgba(237,232,220,0.14);
     color: rgba(237,232,220,0.90);
     border-color: rgba(237,232,220,0.50);
+  }
+  .dirty-dot {
+    color: var(--color-olive);
+    font-size: 6px;
+    margin-left: 3px;
+    vertical-align: top;
   }
 
   /* ── Sub header (controls) ── */
