@@ -370,54 +370,252 @@ export class MoogVoice implements Voice {
   }
 }
 
-/** 3-operator FM — YM2612 (Sega Genesis) inspired. */
-export class FMVoice implements Voice {
-  private freq = 440; private vel = 1
-  private op1P = 0; private op2P = 0; private cP = 0
-  private fb = 0
-  private cEnv   = new ADSR()
-  private op2Env = new ADSR()
-  private op2Ratio = 2.1; private fbAmt = 0.55; private op2Index = 4.5; private carrierIndex = 3.5
-  constructor(private sr: number) {
-    this.cEnv.setSampleRate(sr)
-    this.cEnv.attack  = 0.003; this.cEnv.decay  = 0.30; this.cEnv.sustain = 0.20; this.cEnv.release = 0.4
-    this.op2Env.setSampleRate(sr)
-    this.op2Env.attack = 0.001; this.op2Env.decay = 0.10; this.op2Env.sustain = 0.0; this.op2Env.release = 0.05
+// ── 4-Operator FM Synth (ADR 068) ────────────────────────────────────
+
+/** Single FM operator with phase, envelope, feedback, and detune. */
+class FMOp {
+  phase = 0; prevOut = 0
+  ratio = 1.0; detune = 0; level = 1.0; feedback = 0.0
+  env = new ADSR()
+  constructor(sr: number) { this.env.setSampleRate(sr) }
+  reset() { this.phase = 0; this.prevOut = 0; this.env.reset() }
+  noteOn() {
+    // Only reset phase when idle — avoids click on retrigger
+    if (this.env.isIdle()) { this.phase = 0; this.prevOut = 0 }
+    this.env.noteOn()
   }
+  noteOff() { this.env.noteOff() }
+  /** Tick operator with external modulation input. Returns output signal. */
+  tick(freq: number, sr: number, modIn: number): number {
+    const e = this.env.tick()
+    if (e < 0.00001) return 0
+    const centsFactor = this.detune !== 0 ? Math.pow(2, this.detune / 1200) : 1
+    const hz = freq * this.ratio * centsFactor
+    this.phase += hz / sr
+    if (this.phase >= 1) this.phase -= 1
+    const fb = this.feedback > 0 ? this.prevOut * this.feedback * 3.2 : 0
+    const out = Math.sin(this.phase * TAU + modIn + fb) * e * this.level
+    this.prevOut = out
+    return out
+  }
+}
+
+const TAU = 2 * Math.PI
+
+/** LFO shape enum for FM voice (mirrors iDEATH LFOShape) */
+const enum FMLFOShape { Sine, Triangle, Saw, Square, SampleHold }
+
+/** Simple LFO for FM voice — supports free and tempo-sync modes. */
+class FMLFO {
+  private phase = 0
+  private holdValue = 0
+  private seed = 55555
+  shape: FMLFOShape = FMLFOShape.Sine
+  rate = 2.0; sync = false; divIndex = 2; bpm = 120; depth = 0
+  dest = 0  // 0=off, 1-4=op1-4 level, 5-8=op1-4 ratio
+  private sr: number
+  constructor(sr: number) { this.sr = sr }
+  reset() { this.phase = 0; this.holdValue = 0 }
+  /** Returns bipolar value -1..+1, scaled by depth */
+  tick(): number {
+    if (this.depth < 0.001) return 0
+    const LFO_DIVS = [4, 2, 1, 0.5, 0.25, 0.125]
+    const effectiveRate = this.sync
+      ? 1 / ((LFO_DIVS[this.divIndex] ?? 1) * 60 / this.bpm)
+      : this.rate
+    this.phase += effectiveRate / this.sr
+    const wrapped = this.phase >= 1
+    if (wrapped) this.phase -= 1
+    let v = 0
+    switch (this.shape) {
+      case FMLFOShape.Sine:     v = Math.sin(this.phase * TAU); break
+      case FMLFOShape.Triangle: v = this.phase < 0.5 ? this.phase * 4 - 1 : 3 - this.phase * 4; break
+      case FMLFOShape.Saw:      v = this.phase * 2 - 1; break
+      case FMLFOShape.Square:   v = this.phase < 0.5 ? 1 : -1; break
+      case FMLFOShape.SampleHold:
+        if (wrapped) { this.seed = (this.seed * 1664525 + 1013904223) >>> 0; this.holdValue = (this.seed >>> 16) / 32768 - 1 }
+        v = this.holdValue; break
+    }
+    return v * this.depth
+  }
+}
+
+/** 4-op FM core — single voice instance used by FMVoice poly wrapper. */
+class FMCore {
+  freq = 440; vel = 1
+  ops: FMOp[]
+  algorithm = 0
+  lfo: FMLFO
+
+  constructor(private sr: number) {
+    this.ops = [new FMOp(sr), new FMOp(sr), new FMOp(sr), new FMOp(sr)]
+    this.lfo = new FMLFO(sr)
+    const [o1, o2, o3, o4] = this.ops
+    o1.ratio = 1.0; o1.level = 1.0; o1.env.attack = 0.003; o1.env.decay = 0.30; o1.env.sustain = 0.20; o1.env.release = 0.4
+    o2.ratio = 2.0; o2.level = 0.7; o2.env.attack = 0.001; o2.env.decay = 0.20; o2.env.sustain = 0.10; o2.env.release = 0.15
+    o3.ratio = 3.0; o3.level = 0.5; o3.env.attack = 0.001; o3.env.decay = 0.10; o3.env.sustain = 0.0;  o3.env.release = 0.05
+    o4.ratio = 4.0; o4.level = 0.3; o4.env.attack = 0.001; o4.env.decay = 0.08; o4.env.sustain = 0.0;  o4.env.release = 0.05
+    o1.feedback = 0.15
+  }
+
   noteOn(note: number, v: number) {
     this.freq = midiToHz(note); this.vel = v
-    this.op1P = this.op2P = this.cP = this.fb = 0
-    this.cEnv.noteOn(); this.op2Env.noteOn()
+    for (const op of this.ops) op.noteOn()
+    this.lfo.reset()
   }
-  noteOff() { this.cEnv.noteOff(); this.op2Env.noteOff() }
-  slideNote(note: number, v: number) { this.noteOn(note, v) }
-  reset() {
-    this.cEnv.reset(); this.op2Env.reset()
-    this.op1P = this.op2P = this.cP = this.fb = 0
+  noteOff() { for (const op of this.ops) op.noteOff() }
+  reset() { for (const op of this.ops) op.reset(); this.lfo.reset() }
+
+  isIdle(): boolean {
+    for (const op of this.ops) { if (!op.env.isIdle()) return false }
+    return true
   }
+
   tick(): number {
-    if (this.cEnv.isIdle()) return 0
-    const ce  = this.cEnv.tick()
-    const m2e = this.op2Env.tick()
-    const tau = 2 * Math.PI
-    this.op1P += this.freq / this.sr
-    if (this.op1P >= 1) this.op1P -= 1
-    const op1 = Math.sin(this.op1P * tau + this.fb * 3.2)
-    this.fb = op1 * this.fbAmt
-    this.op2P += (this.freq * this.op2Ratio) / this.sr
-    if (this.op2P >= 1) this.op2P -= 1
-    const op2 = Math.sin(this.op2P * tau + op1 * this.op2Index * m2e)
-    this.cP += this.freq / this.sr
-    if (this.cP >= 1) this.cP -= 1
-    return Math.sin((this.cP + op2 * this.carrierIndex * ce / tau) * tau) * ce * this.vel * 0.55
+    const [o1, o2, o3, o4] = this.ops
+    const f = this.freq, sr = this.sr
+
+    // Apply LFO modulation
+    const lfoVal = this.lfo.tick()
+    if (lfoVal !== 0 && this.lfo.dest > 0) {
+      const dest = this.lfo.dest
+      if (dest >= 1 && dest <= 4) {
+        const op = this.ops[dest - 1]
+        op.level = Math.max(0, op.level + lfoVal * 0.5)
+      }
+    }
+
+    if (this.isIdle()) return 0
+
+    let out = 0
+    switch (this.algorithm) {
+      case 0: { const s4 = o4.tick(f, sr, 0); const s3 = o3.tick(f, sr, s4 * TAU); const s2 = o2.tick(f, sr, s3 * TAU); out = o1.tick(f, sr, s2 * TAU); break }
+      case 1: { const s4 = o4.tick(f, sr, 0); const s3 = o3.tick(f, sr, s4 * TAU); out = o2.tick(f, sr, s3 * TAU) + o1.tick(f, sr, 0); break }
+      case 2: { const s4 = o4.tick(f, sr, 0); const s2 = o2.tick(f, sr, s4 * TAU); out = o3.tick(f, sr, s4 * TAU) + o1.tick(f, sr, s2 * TAU); break }
+      case 3: { const s4 = o4.tick(f, sr, 0); const s2 = o2.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o1.tick(f, sr, s2 * TAU); break }
+      case 4: { const s3 = o3.tick(f, sr, 0); const s4 = o4.tick(f, sr, 0); out = o2.tick(f, sr, s3 * TAU) + o1.tick(f, sr, s4 * TAU); break }
+      case 5: { const s4 = o4.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
+      case 6: { const s4 = o4.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
+      case 7: { out = o4.tick(f, sr, 0) + o3.tick(f, sr, 0) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
+    }
+    const carrierCount = this.algorithm >= 7 ? 4 : this.algorithm >= 5 ? 3 : 2
+    return out / carrierCount * this.vel * 0.55
   }
+}
+
+/**
+ * 4-operator FM synth with 4-voice polyphony (ADR 068).
+ * Mono/poly switchable via polyMode param, same pattern as iDEATH.
+ */
+export class FMVoice implements Voice {
+  private cores: FMCore[]
+  private polyMode = false
+  private nextVoice = 0
+  private activeNotes = new Int8Array(4).fill(-1)
+
+  constructor(sr: number) {
+    this.cores = Array.from({ length: 4 }, () => new FMCore(sr))
+  }
+
+  noteOn(note: number, v: number) {
+    if (!this.polyMode) {
+      this.cores[0].noteOn(note, v)
+      return
+    }
+    // Retrigger if same note is already playing
+    for (let i = 0; i < 4; i++) {
+      if (this.activeNotes[i] === note) {
+        this.cores[i].noteOn(note, v)
+        return
+      }
+    }
+    const idx = this.nextVoice
+    this.nextVoice = (this.nextVoice + 1) & 3
+    this.activeNotes[idx] = note
+    this.cores[idx].noteOn(note, v)
+  }
+
+  noteOff() {
+    if (!this.polyMode) {
+      this.cores[0].noteOff()
+      return
+    }
+    for (let i = 0; i < 4; i++) {
+      this.cores[i].noteOff()
+      this.activeNotes[i] = -1
+    }
+  }
+
+  slideNote(note: number, v: number) {
+    if (!this.polyMode) {
+      this.cores[0].noteOn(note, v) // FM doesn't have portamento, retrigger
+      return
+    }
+    const prev = (this.nextVoice - 1 + 4) & 3
+    this.cores[prev].noteOn(note, v)
+    this.activeNotes[prev] = note
+  }
+
+  reset() {
+    for (let i = 0; i < 4; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
+    this.nextVoice = 0
+  }
+
+  tick(): number {
+    if (!this.polyMode) return this.cores[0].tick()
+    let sum = 0
+    for (let i = 0; i < 4; i++) sum += this.cores[i].tick()
+    return sum * 0.5
+  }
+
   setParam(key: string, value: number) {
-    switch (key) {
-      case 'op2Ratio':     this.op2Ratio     = value; break
-      case 'fbAmt':        this.fbAmt        = value; break
-      case 'op2Index':     this.op2Index     = value; break
-      case 'carrierIndex': this.carrierIndex = value; break
-      case 'decay':        this.cEnv.decay   = value; break
+    if (key === 'polyMode') {
+      this.polyMode = value >= 0.5
+      if (!this.polyMode) {
+        for (let i = 1; i < 4; i++) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
+      }
+      return
+    }
+    // Apply param to all 4 cores
+    for (let i = 0; i < 4; i++) {
+      const core = this.cores[i]
+      if (key === 'algorithm') { core.algorithm = Math.round(value); continue }
+
+      const opMatch = key.match(/^op([1-4])(\w+)$/)
+      if (opMatch) {
+        const op = core.ops[parseInt(opMatch[1]) - 1]
+        const param = opMatch[2]
+        switch (param) {
+          case 'Ratio':   op.ratio    = value; break
+          case 'Detune':  op.detune   = value; break
+          case 'Level':   op.level    = value; break
+          case 'Fb':      op.feedback = value; break
+          case 'Attack':  op.env.attack  = value; break
+          case 'Decay':   op.env.decay   = value; break
+          case 'Sustain': op.env.sustain = value; break
+          case 'Release': op.env.release = value; break
+        }
+        continue
+      }
+
+      switch (key) {
+        case 'lfoRate':     core.lfo.rate     = value; break
+        case 'lfoSync':     core.lfo.sync     = value >= 0.5; break
+        case 'lfoDiv':      core.lfo.divIndex = Math.round(value); break
+        case 'lfoWave':     core.lfo.shape    = Math.round(value) as FMLFOShape; break
+        case 'lfoDest':     core.lfo.dest     = Math.round(value); break
+        case 'lfoDepth':    core.lfo.depth    = value; break
+        case 'bpm':         core.lfo.bpm      = value; break
+      }
+
+      // Backward compat: old 2-op param names
+      switch (key) {
+        case 'op2Ratio':     core.ops[1].ratio    = value; break
+        case 'fbAmt':        core.ops[0].feedback = value; break
+        case 'op2Index':     core.ops[1].level    = value / 8; break
+        case 'carrierIndex': core.ops[0].level    = value / 8; break
+        case 'decay':        core.ops[0].env.decay = value; core.ops[1].env.decay = value * 0.5; break
+      }
     }
   }
 }

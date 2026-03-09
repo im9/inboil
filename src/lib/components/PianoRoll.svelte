@@ -9,7 +9,7 @@
   let { trackId }: Props = $props()
 
   const ph = $derived(activeCell(trackId))
-  const isPoly = $derived(ph.voiceId === 'iDEATH' && (ph.voiceParams?.polyMode ?? 0) >= 0.5)
+  const isPoly = $derived((ph.voiceId === 'iDEATH' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5)
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)

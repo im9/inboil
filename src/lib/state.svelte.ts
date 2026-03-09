@@ -1125,7 +1125,7 @@ export function randomizePattern(): void {
   for (let t = 0; t < song.tracks.length; t++) {
     const c = activeCell(t)
     const steps = c.steps
-    const isPoly = c.voiceId === 'iDEATH' && (c.voiceParams?.polyMode ?? 0) >= 0.5
+    const isPoly = (c.voiceId === 'iDEATH' || c.voiceId === 'FM') && (c.voiceParams?.polyMode ?? 0) >= 0.5
 
     if (c.voiceId && DRUM_VOICES.has(c.voiceId)) {
       // ── Drums: beat-locked probabilities (unchanged) ──

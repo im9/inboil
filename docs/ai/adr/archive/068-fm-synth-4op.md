@@ -1,6 +1,6 @@
 # ADR 068: 4-Operator FM Synth Engine
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
