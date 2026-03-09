@@ -230,12 +230,38 @@ export function sceneDetachDecorator(patternNodeId: string, decoratorIndex: numb
   return id
 }
 
+/** Remove a decorator from a pattern node (ADR 069) */
+export function sceneRemoveDecorator(patternNodeId: string, decoratorIndex: number): void {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode?.decorators?.[decoratorIndex]) return
+  pushUndo('Remove decorator')
+  patNode.decorators.splice(decoratorIndex, 1)
+}
+
 /** Update a decorator's params on a pattern node */
 export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: number, params: Record<string, number>): void {
   const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
   if (!patNode?.decorators?.[decoratorIndex]) return
   pushUndo('Update decorator')
   patNode.decorators[decoratorIndex].params = { ...params }
+}
+
+/** Add a decorator directly to a pattern node (ADR 069) */
+export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['type']): void {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode || patNode.type !== 'pattern') return
+  pushUndo('Add decorator')
+  patNode.decorators ??= []
+  if (type === 'automation') {
+    const ap = DEFAULT_AUTOMATION_PARAMS
+    patNode.decorators.push({
+      type: 'automation',
+      params: {},
+      automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation },
+    })
+  } else {
+    patNode.decorators.push({ type, params: { ...FUNCTION_DEFAULTS[type] } })
+  }
 }
 
 /** Add an automation decorator directly to a pattern node */

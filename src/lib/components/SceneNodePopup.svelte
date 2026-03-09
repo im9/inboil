@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, ui, primarySelectedNode } from '../state.svelte.ts'
-  import { sceneUpdateNodeParams, sceneUpdateDecorator, sceneDetachDecorator, sceneAddAutomationDecorator } from '../sceneActions.ts'
+  import { sceneUpdateNodeParams } from '../sceneActions.ts'
   import { PAD_INSET } from '../constants.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
 
@@ -76,57 +76,10 @@
     sceneUpdateNodeParams(selectedFnNode.id, p)
   }
 
-  // ── Decorator param controls ──
-  function decDecParam(e: PointerEvent, nodeId: string, idx: number, dec: { type: string; params: Record<string, number> }) {
+  // ── Decorator read-only display (ADR 069: editing moved to DockPanel) ──
+  function focusDecorator(e: PointerEvent) {
     e.stopPropagation()
-    const p = { ...dec.params }
-    if (dec.type === 'transpose') {
-      if (p.mode === 1) p.key = ((p.key ?? 0) + 11) % 12
-      else p.semitones = Math.max(-12, (p.semitones ?? 0) - 1)
-    }
-    else if (dec.type === 'tempo') p.bpm = Math.max(60, (p.bpm ?? 120) - 5)
-    else if (dec.type === 'repeat') p.count = Math.max(1, (p.count ?? 2) - 1)
-    sceneUpdateDecorator(nodeId, idx, p)
-  }
-
-  function incDecParam(e: PointerEvent, nodeId: string, idx: number, dec: { type: string; params: Record<string, number> }) {
-    e.stopPropagation()
-    const p = { ...dec.params }
-    if (dec.type === 'transpose') {
-      if (p.mode === 1) p.key = ((p.key ?? 0) + 1) % 12
-      else p.semitones = Math.min(12, (p.semitones ?? 0) + 1)
-    }
-    else if (dec.type === 'tempo') p.bpm = Math.min(300, (p.bpm ?? 120) + 5)
-    else if (dec.type === 'repeat') p.count = Math.min(16, (p.count ?? 2) + 1)
-    sceneUpdateDecorator(nodeId, idx, p)
-  }
-
-  function toggleDecTransposeMode(e: PointerEvent, nodeId: string, idx: number, dec: { type: string; params: Record<string, number> }) {
-    e.stopPropagation()
-    const p = { ...dec.params }
-    p.mode = p.mode === 1 ? 0 : 1
-    sceneUpdateDecorator(nodeId, idx, p)
-  }
-
-  function toggleDecFxParam(nodeId: string, idx: number, dec: { type: string; params: Record<string, number> }, key: string) {
-    const p = { ...dec.params }
-    p[key] = p[key] ? 0 : 1
-    sceneUpdateDecorator(nodeId, idx, p)
-  }
-
-  function detach(e: PointerEvent, nodeId: string, idx: number) {
-    e.stopPropagation()
-    sceneDetachDecorator(nodeId, idx)
-  }
-
-  function decParamDisplay(dec: { type: string; params: Record<string, number> }): string {
-    if (dec.type === 'transpose') {
-      if (dec.params.mode === 1) return NOTE_NAMES[dec.params.key ?? 0]
-      return String(dec.params.semitones ?? 0)
-    }
-    if (dec.type === 'tempo') return String(dec.params.bpm ?? 120)
-    if (dec.type === 'repeat') return String(dec.params.count ?? 2)
-    return ''
+    ui.dockMinimized = false
   }
 </script>
 
@@ -168,45 +121,18 @@
   </div>
 {/if}
 
-<!-- Decorator popup on pattern node (ADR 062 Phase 3) -->
+<!-- Decorator summary on pattern node (ADR 069: read-only, editing in DockPanel) -->
 {#if selectedPatNode}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="dec-popup" style="
     left: calc({PAD_INSET}px + {selectedPatNode.x} * (100% - {PAD_INSET * 2}px) + 42px);
     top: calc({PAD_INSET}px + {selectedPatNode.y} * (100% - {PAD_INSET * 2}px) + 18px);
-  " onpointerdown={e => e.stopPropagation()}>
-    {#each selectedPatNode.decorators ?? [] as dec, i}
-      <div class="dec-edit-row">
-        <span class="dec-type">{decoratorLabel(dec)}</span>
-        {#if dec.type === 'fx'}
-          {#each [['verb', 'VRB'], ['delay', 'DLY'], ['glitch', 'GLT'], ['granular', 'GRN']] as [key, label]}
-            <button
-              class="fx-toggle sm"
-              class:active={dec.params[key]}
-              onpointerdown={e => { e.stopPropagation(); toggleDecFxParam(selectedPatNode.id, i, dec, key) }}
-            >{label}</button>
-          {/each}
-        {:else if dec.type === 'automation'}
-          <button class="auto-edit-btn" onpointerdown={e => { e.stopPropagation(); ui.editingAutomationDecorator = { nodeId: selectedPatNode.id, decoratorIndex: i } }}
-            data-tip="Edit automation curve" data-tip-ja="オートメーションカーブを編集">Edit</button>
-        {:else}
-          {#if dec.type === 'transpose'}
-            <button
-              class="mode-toggle sm"
-              class:absolute={dec.params.mode === 1}
-              onpointerdown={e => toggleDecTransposeMode(e, selectedPatNode.id, i, dec)}
-            >{dec.params.mode === 1 ? 'ABS' : 'REL'}</button>
-          {/if}
-          <button class="param-btn sm" onpointerdown={e => decDecParam(e, selectedPatNode.id, i, dec)}>−</button>
-          <span class="param-val sm">{decParamDisplay(dec)}</span>
-          <button class="param-btn sm" onpointerdown={e => incDecParam(e, selectedPatNode.id, i, dec)}>+</button>
-        {/if}
-        <button class="detach-btn" onpointerdown={e => detach(e, selectedPatNode.id, i)}
-          data-tip="Detach decorator" data-tip-ja="デコレーターを分離">×</button>
-      </div>
-    {/each}
-    <button class="add-auto-btn" onpointerdown={e => { e.stopPropagation(); sceneAddAutomationDecorator(selectedPatNode.id) }}
-      data-tip="Add automation decorator" data-tip-ja="オートメーションを追加">＋Auto</button>
+  " onpointerdown={focusDecorator}>
+    <div class="dec-label-row">
+      {#each selectedPatNode.decorators ?? [] as dec}
+        <span class="dec-tag-ro">{decoratorLabel(dec)}</span>
+      {/each}
+    </div>
   </div>
 {/if}
 
@@ -245,11 +171,6 @@
   .param-btn:active {
     background: rgba(30, 32, 40, 0.12);
   }
-  .param-btn.sm {
-    width: 18px;
-    height: 18px;
-    font-size: 12px;
-  }
   .param-val {
     font-family: var(--font-data);
     font-size: 10px;
@@ -258,10 +179,6 @@
     min-width: 28px;
     text-align: center;
     letter-spacing: 0.04em;
-  }
-  .param-val.sm {
-    font-size: 9px;
-    min-width: 22px;
   }
   .mode-toggle {
     border: none;
@@ -282,10 +199,6 @@
   .mode-toggle.absolute {
     background: var(--color-fg);
     color: var(--color-bg);
-  }
-  .mode-toggle.sm {
-    font-size: 6px;
-    padding: 2px 3px;
   }
   .fx-popup {
     gap: 2px;
@@ -309,12 +222,8 @@
     background: var(--color-fg);
     color: var(--color-bg);
   }
-  .fx-toggle.sm {
-    font-size: 6px;
-    padding: 2px 3px;
-  }
 
-  /* ── Decorator popup (ADR 062) ── */
+  /* ── Decorator read-only popup (ADR 069) ── */
   .dec-popup {
     position: absolute;
     display: flex;
@@ -323,87 +232,36 @@
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(30, 32, 40, 0.12);
     border-radius: 4px;
-    padding: 3px;
+    padding: 3px 5px;
     z-index: 6;
     box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
     animation: dec-popup-in 100ms ease-out;
+    cursor: pointer;
   }
   @keyframes dec-popup-in {
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .dec-edit-row {
+  .dec-label-row {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
+    flex-wrap: wrap;
   }
-  .dec-type {
+  .dec-tag-ro {
     font-family: var(--font-data);
     font-size: 7px;
     font-weight: 700;
-    color: rgba(30, 32, 40, 0.4);
-    letter-spacing: 0.04em;
-    min-width: 32px;
-    white-space: nowrap;
-  }
-  .detach-btn {
-    width: 16px;
-    height: 16px;
-    border: none;
-    border-radius: 3px;
-    background: transparent;
-    color: rgba(30, 32, 40, 0.3);
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 2px;
-  }
-  .detach-btn:hover {
-    background: rgba(30, 32, 40, 0.08);
-    color: rgba(30, 32, 40, 0.6);
-  }
-  .auto-edit-btn {
-    border: none;
-    border-radius: 3px;
-    background: rgba(30, 32, 40, 0.06);
     color: rgba(30, 32, 40, 0.5);
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
     letter-spacing: 0.04em;
-    padding: 2px 5px;
-    cursor: pointer;
-  }
-  .auto-edit-btn:hover {
-    background: rgba(30, 32, 40, 0.12);
-    color: rgba(30, 32, 40, 0.7);
-  }
-  .add-auto-btn {
-    border: 1px dashed rgba(30, 32, 40, 0.15);
-    border-radius: 3px;
-    background: transparent;
-    color: rgba(30, 32, 40, 0.35);
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 2px 5px;
-    cursor: pointer;
-    margin-top: 1px;
-  }
-  .add-auto-btn:hover {
-    background: rgba(30, 32, 40, 0.04);
-    color: rgba(30, 32, 40, 0.55);
-    border-color: rgba(30, 32, 40, 0.25);
+    background: rgba(30, 32, 40, 0.06);
+    border-radius: 2px;
+    padding: 1px 4px;
+    white-space: nowrap;
   }
 
   @media (max-width: 639px) {
     .param-btn { width: 32px; height: 32px; font-size: 18px; }
-    .param-btn.sm { width: 26px; height: 26px; font-size: 14px; }
     .param-val { font-size: 13px; min-width: 36px; }
-    .param-val.sm { font-size: 11px; min-width: 28px; }
   }
 </style>
