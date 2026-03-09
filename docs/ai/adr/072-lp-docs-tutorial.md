@@ -153,3 +153,4 @@ Quick lookup during use         Sit down and learn
 - Blog / changelog section: release notes and dev diary
 - Community: Discord link, user creation gallery
 - SEO / OGP: embed demo song audio preview in OGP tags for rich social sharing
+- **Social sharing (TikTok / Instagram / X)**: export a short video clip (pattern loop + visualizer) directly from the app, ready to post to social media. This is probably the strongest organic growth channel — users show off what they made, viewers tap through to try it. Implementation options: MediaRecorder API capturing canvas + Web Audio, or server-side rendering for higher quality. Share link with OGP preview should accompany the video so viewers can open the project directly
