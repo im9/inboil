@@ -543,6 +543,13 @@ export const prefs = $state({
 
 ui.dockMinimized = initialPrefs.dockMinimized
 
+/** Project tracking state */
+export const project = $state({
+  id: initialPrefs.lastProjectId as string | null,
+  dirty: false,
+  lastSavedAt: 0,
+})
+
 if (!prefs.visited) {
   ui.sidebar = 'help'
   prefs.visited = true
@@ -1133,16 +1140,6 @@ export function randomizePattern(): void {
 import { saveProject, loadProject, listProjects, deleteProject, saveSample, loadSamples, deleteSamples, type StoredProject } from './storage.ts'
 export type { StoredProject }
 export { listProjects, deleteProject }
-
-/** Project tracking state */
-export const project = $state({
-  /** Current project id (null = unsaved new project) */
-  id: initialPrefs.lastProjectId as string | null,
-  /** Whether the song has been modified since last save */
-  dirty: false,
-  /** Timestamp of last successful save (for UI feedback) */
-  lastSavedAt: 0,
-})
 
 // ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────
 
