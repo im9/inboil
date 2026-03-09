@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, project, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, listProjects, type StoredProject } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, song, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -8,13 +8,10 @@
   // ── Open/close animation ──
   let closing = $state(false)
   let visibleMode = $state<'help' | 'system' | null>(null)
-  let collapsed = $state(false)
-
   $effect(() => {
     if (mode) {
       closing = false
       visibleMode = mode
-      collapsed = false
     } else if (visibleMode) {
       closing = true
     }
@@ -46,6 +43,21 @@
   $effect(() => {
     if (visibleMode === 'system') void refreshProjects()
   })
+
+  let renameName = $state('')
+  let renameInput: HTMLInputElement | undefined = $state()
+  let renamingProject = $state(false)
+
+  function startRename() {
+    renameName = song.name || ''
+    renamingProject = true
+    requestAnimationFrame(() => renameInput?.select())
+  }
+  function commitRename() {
+    renamingProject = false
+    const name = renameName.trim() || 'Untitled'
+    void projectRename(name)
+  }
 
   let confirmNew = $state(false)
 
@@ -262,27 +274,19 @@
 </script>
 
 {#if visibleMode}
-  <div class="sidebar" class:closing class:collapsed onanimationend={onAnimEnd}>
+  <div class="sidebar" class:closing onanimationend={onAnimEnd}>
     <div class="sidebar-head">
-      {#if visibleMode === 'help'}
-        <button class="btn-collapse" onpointerdown={() => { collapsed = !collapsed }}>
-          {collapsed ? '▴' : '▾'}
-        </button>
-      {/if}
-      <span class="sidebar-title">{collapsed ? 'GUIDE' : visibleMode === 'help' ? 'HELP' : 'SYSTEM'}</span>
-      {#if !collapsed}
-        <div class="sidebar-head-right">
-          {#if visibleMode === 'help'}
-            <button class="btn-lang" onpointerdown={toggleLang}>
-              {L === 'ja' ? 'EN' : 'JP'}
-            </button>
-          {/if}
-          <button class="btn-close" onpointerdown={() => { ui.sidebar = null }}>&times;</button>
-        </div>
-      {/if}
+      <span class="sidebar-title">{visibleMode === 'help' ? 'HELP' : 'SYSTEM'}</span>
+      <div class="sidebar-head-right">
+        {#if visibleMode === 'help'}
+          <button class="btn-lang" onpointerdown={toggleLang}>
+            {L === 'ja' ? 'EN' : 'JP'}
+          </button>
+        {/if}
+        <button class="btn-close" onpointerdown={() => { ui.sidebar = null }}>&times;</button>
+      </div>
     </div>
 
-    {#if !collapsed}
       <div class="sidebar-body">
         {#if visibleMode === 'help'}
           <div class="search-bar">
@@ -321,6 +325,31 @@
               data-tip="Save as new project" data-tip-ja="別名で保存">
               {L === 'ja' ? '別名で保存' : 'SAVE AS'}
             </button>
+          </div>
+
+          <!-- Rename current project -->
+          <div class="proj-rename">
+            <span class="proj-rename-label">{L === 'ja' ? 'プロジェクト名' : 'PROJECT NAME'}</span>
+            {#if renamingProject}
+              <div class="proj-rename-row">
+                <input
+                  bind:this={renameInput}
+                  class="proj-name-input"
+                  type="text"
+                  maxlength="20"
+                  bind:value={renameName}
+                  onkeydown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { renamingProject = false } }}
+                />
+                <button class="btn-proj-primary" onpointerdown={commitRename}>OK</button>
+              </div>
+            {:else}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <span class="proj-rename-value" onclick={startRename}
+                data-tip="Click to rename" data-tip-ja="クリックで名前変更">
+                {song.name || 'Untitled'}
+              </span>
+            {/if}
           </div>
           {#if confirmNew}
             <div class="proj-confirm">
@@ -434,7 +463,6 @@
 
         {/if}
       </div>
-    {/if}
 
     {#if visibleMode === 'system'}
       <div class="sidebar-footer">
@@ -462,7 +490,7 @@
 {/if}
 
 {#if guideText && prefs.showGuide}
-  <div class="guide-float" class:shifted={visibleMode && !collapsed}>
+  <div class="guide-float" class:shifted={!!visibleMode}>
     <span class="guide-label">GUIDE</span>
     <p class="guide-text">{guideText}</p>
   </div>
@@ -473,7 +501,7 @@
     position: fixed;
     right: 0;
     bottom: 0;
-    top: 0;
+    top: 104px;
     width: 280px;
     z-index: 110;
     background: var(--color-fg);
@@ -483,12 +511,6 @@
     box-shadow: -4px 0 16px rgba(0,0,0,0.3);
     overflow: hidden;
     animation: sidebar-in 50ms ease-out;
-  }
-  .sidebar.collapsed {
-    top: auto;
-  }
-  .sidebar.collapsed .sidebar-head {
-    border-bottom: none;
   }
   .sidebar.closing {
     animation: sidebar-out 50ms ease-in forwards;
@@ -551,20 +573,6 @@
     background: rgba(237,232,220,0.15);
   }
 
-  .btn-collapse {
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.55);
-    font-size: 10px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .btn-collapse:active {
-    background: rgba(237,232,220,0.15);
-  }
 
   .sidebar-body {
     flex: 1;
@@ -774,9 +782,6 @@
       width: 100%;
       z-index: 110;
     }
-    .sidebar.collapsed {
-      top: auto;
-    }
     :global(.guide-float) {
       max-width: calc(100% - 16px);
       width: auto;
@@ -830,6 +835,34 @@
   }
   .btn-proj-primary.danger:hover {
     background: rgba(237,232,220,0.06);
+  }
+  .proj-rename {
+    padding: 4px 16px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .proj-rename-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: rgba(237,232,220,0.35);
+    text-transform: uppercase;
+  }
+  .proj-rename-value {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.7);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .proj-rename-value:hover {
+    color: rgba(237,232,220,0.9);
+  }
+  .proj-rename-row {
+    display: flex;
+    gap: 6px;
   }
   .proj-save-as {
     display: flex;
