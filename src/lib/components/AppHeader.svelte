@@ -108,31 +108,22 @@
       <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
     </svg>
     <span class="app-name">INBOIL</span>
-    {#if compact}
+    <div class="header-nav">
       <button
-        class="btn-help-mobile"
+        class="btn-header-nav"
         class:active={ui.sidebar === 'help'}
-        onpointerdown={() => toggleSidebar('help')}
+        onpointerdown={compact ? () => toggleSidebar('help') : handleHelp}
         aria-label="Help"
         data-tip="Show help" data-tip-ja="ヘルプを表示"
-      >?</button>
-    {/if}
-    {#if !compact}
+      >HELP</button>
       <button
-        class="btn-help-desktop"
-        class:active={ui.sidebar === 'help'}
-        onpointerdown={handleHelp}
-        aria-label="Help"
-        data-tip="Show help" data-tip-ja="ヘルプを表示"
-      >?</button>
-    {/if}
-    <button
-      class="btn-system"
-      class:active={ui.sidebar === 'system'}
-      onpointerdown={handleSystem}
-      aria-label="System settings"
-      data-tip="System settings" data-tip-ja="システム設定"
-    >&#x2699;</button>
+        class="btn-header-nav"
+        class:active={ui.sidebar === 'system'}
+        onpointerdown={handleSystem}
+        aria-label="System settings"
+        data-tip="System settings" data-tip-ja="システム設定"
+      >SYSTEM</button>
+    </div>
   </header>
 
   <!-- Sub header: BPM, transport, perf controls, pattern -->
@@ -282,75 +273,36 @@
     z-index: 1;
   }
 
-  .btn-help-mobile {
+  .header-nav {
     position: absolute;
-    right: 42px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 1;
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.45);
-    font-size: 13px;
+    display: flex;
+    gap: 4px;
+  }
+  .btn-header-nav {
+    border: 1.5px solid rgba(237,232,220,0.35);
+    background: rgba(237,232,220,0.04);
+    color: rgba(237,232,220,0.55);
+    padding: 4px 10px;
+    font-size: 9px;
     font-weight: 700;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: background 40ms linear, color 40ms linear, border-color 40ms linear;
+    user-select: none;
   }
-  .btn-help-mobile:active,
-  .btn-help-mobile.active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
+  .btn-header-nav:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.70);
   }
-
-  .btn-help-desktop {
-    position: absolute;
-    right: 42px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.45);
-    font-size: 13px;
-    font-weight: 700;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-  .btn-help-desktop:active,
-  .btn-help-desktop.active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
-  }
-
-  .btn-system {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.45);
-    font-size: 14px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-  .btn-system:active,
-  .btn-system.active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
+  .btn-header-nav:active,
+  .btn-header-nav.active {
+    background: rgba(237,232,220,0.14);
+    color: rgba(237,232,220,0.90);
+    border-color: rgba(237,232,220,0.50);
   }
 
   /* ── Sub header (controls) ── */
