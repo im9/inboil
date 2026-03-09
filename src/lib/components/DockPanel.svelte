@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, activeCell, ui, playback, toggleDockMinimized, samplesByTrack, setSample, selectPattern } from '../state.svelte.ts'
-  import type { SceneDecorator } from '../state.svelte.ts'
+  import type { SceneDecorator, SceneNode } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -95,9 +95,39 @@
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
 
-  const placedPatternNodes = $derived(
-    song.scene.nodes.filter(n => n.type === 'pattern')
-  )
+  // BFS from root to order patterns by playback traversal; unreachable nodes appended at end
+  type NavEntry = { node: SceneNode; depth: number }
+  const sceneBfs = $derived.by(() => {
+    const nodes = song.scene.nodes
+    const edges = song.scene.edges
+    const root = nodes.find(n => n.root)
+    if (!root) return { ordered: nodes.filter(n => n.type === 'pattern').map(n => ({ node: n, depth: 0 })) as NavEntry[], reachable: new Set<string>() }
+
+    const visited = new Set<string>()
+    const ordered: NavEntry[] = []
+    const queue: { id: string; depth: number }[] = [{ id: root.id, depth: 0 }]
+    visited.add(root.id)
+
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!
+      const node = nodes.find(n => n.id === id)
+      if (node?.type === 'pattern') ordered.push({ node, depth })
+      const outEdges = edges.filter(e => e.from === id).sort((a, b) => a.order - b.order)
+      for (const e of outEdges) {
+        if (!visited.has(e.to)) {
+          visited.add(e.to)
+          queue.push({ id: e.to, depth: depth + 1 })
+        }
+      }
+    }
+
+    const reachable = new Set(ordered.map(e => e.node.id))
+    for (const n of nodes) {
+      if (n.type === 'pattern' && !visited.has(n.id)) ordered.push({ node: n, depth: 0 })
+    }
+    return { ordered, reachable }
+  })
+  const placedPatternNodes = $derived(sceneBfs.ordered)
 
   function selectSceneNode(nodeId: string) {
     ui.selectedSceneNodes = { [nodeId]: true }
@@ -519,16 +549,19 @@
             <div class="nav-section">
               <span class="section-label">SCENE</span>
               <div class="nav-list">
-                {#each placedPatternNodes as node}
+                {#each placedPatternNodes as entry}
+                  {@const node = entry.node}
                   {@const pat = song.patterns.find(p => p.id === node.patternId)}
+                  {@const unreachable = !sceneBfs.reachable.has(node.id)}
                   {#if pat}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div
                       class="nav-item"
                       class:selected={ui.selectedSceneNodes[node.id]}
                       class:playing={playback.playing && playback.sceneNodeId === node.id}
+                      class:unreachable
                       onpointerdown={() => selectSceneNode(node.id)}
-                      style={playback.playing && playback.sceneNodeId === node.id ? `--pulse-dur: ${60 / (song.bpm || 120)}s` : ''}
+                      style="padding-left: {4 + Math.min(entry.depth, 2) * 10}px;{playback.playing && playback.sceneNodeId === node.id ? ` --pulse-dur: ${60 / (song.bpm || 120)}s` : ''}"
                     >
                       <span class="nav-color" style="background: {PATTERN_COLORS[pat.color ?? 0]}"></span>
                       {#if node.root}<span class="nav-root">★</span>{/if}
@@ -1420,6 +1453,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .nav-item.unreachable {
+    opacity: 0.35;
   }
   .nav-item.playing {
     animation: nav-pulse var(--pulse-dur, 0.5s) ease-in-out infinite;
