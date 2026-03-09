@@ -33,6 +33,7 @@ export interface Cell {
   steps: number           // 1–64
   trigs: Trig[]           // length === steps
   voiceParams: Record<string, number>
+  presetName?: string     // last applied preset name (for UI recall)
   reverbSend: number      // 0.0–1.0
   delaySend: number
   glitchSend: number
@@ -179,6 +180,7 @@ function cloneTrig(tr: Trig): Trig {
     active: tr.active, note: tr.note, velocity: tr.velocity,
     duration: tr.duration, slide: tr.slide,
     ...(tr.chance != null ? { chance: tr.chance } : {}),
+    ...(tr.notes && tr.notes.length > 0 ? { notes: [...tr.notes] } : {}),
     ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
       ? { paramLocks: { ...tr.paramLocks } } : {}),
   }
@@ -190,6 +192,7 @@ function cloneCell(c: Cell): Cell {
     voiceId: c.voiceId,
     steps: c.steps,
     voiceParams: { ...c.voiceParams },
+    ...(c.presetName ? { presetName: c.presetName } : {}),
     reverbSend: c.reverbSend, delaySend: c.delaySend,
     glitchSend: c.glitchSend, granularSend: c.granularSend,
     trigs: c.trigs.map(cloneTrig),

@@ -51,12 +51,10 @@
   let presetOpen = $state(false)
   // Reset category filter when voice changes
   $effect(() => { cell?.voiceId; presetCategory = null })
-  // Track selected preset name per track (keyed by track index)
-  let presetByTrack = $state<Record<number, string>>({})
-  const currentPreset = $derived(presetByTrack[ui.selectedTrack] ?? '')
+  // Derive preset name from cell (persisted in Cell.presetName)
+  const currentPreset = $derived(cell?.presetName ?? '')
   function selectPreset(preset: { name: string; params: Record<string, number> }) {
-    presetByTrack[ui.selectedTrack] = preset.name
-    applyPreset(ui.selectedTrack, preset.params)
+    applyPreset(ui.selectedTrack, preset.params, preset.name)
     presetOpen = false
   }
 
@@ -103,7 +101,7 @@
       const id = await saveUserPreset(voiceId, name, params)
       addUserPresetToCache(voiceId, name, params, id)
       userPresetVersion++
-      presetByTrack[ui.selectedTrack] = name
+      if (cell) cell.presetName = name
     } finally {
       saving = false
     }
@@ -118,8 +116,8 @@
     await deleteUserPreset(preset.id)
     removeUserPresetFromCache(preset.voiceId, preset.id)
     userPresetVersion++
-    if (presetByTrack[ui.selectedTrack] === preset.name) {
-      presetByTrack[ui.selectedTrack] = ''
+    if (cell?.presetName === preset.name) {
+      cell.presetName = undefined
     }
   }
 
@@ -161,8 +159,8 @@
       await renameUserPreset(id, name)
       renameUserPresetInCache(preset.voiceId, id, name)
       userPresetVersion++
-      if (presetByTrack[ui.selectedTrack] === preset.name) {
-        presetByTrack[ui.selectedTrack] = name.slice(0, 16)
+      if (cell?.presetName === preset.name) {
+        cell.presetName = name.slice(0, 16)
       }
     } finally {
       renaming = false
