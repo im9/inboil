@@ -769,7 +769,8 @@
                   data-tip={p.tip} data-tip-ja={p.tipJa}
                 >{(knobValue(p) ?? p.default) >= 0.5 ? 'REV' : 'FWD'}</button>
               {:else}
-                {#if p.group && (i === 0 || p.group !== params[i - 1].group)}
+                {@const prevNormalIdx = params.findLastIndex((q, j) => j < i && q.key !== 'polyMode' && q.key !== 'reverse')}
+                {#if p.group && (prevNormalIdx < 0 || p.group !== params[prevNormalIdx].group)}
                   {@const groupLabels: Record<string, string> = { tone: 'OSC', noise: 'NOISE', metal: 'METAL', amp: 'AMP', filter: 'FILTER', env: 'ENV', arp: 'ARP', osc: 'OSC', lfo: 'LFO', sample: 'SAMPLE', chop: 'CHOP', sync: 'SYNC', ratio: 'RATIO', level: 'LEVEL', decay: 'DECAY' }}
                   <div class="param-group-label">{groupLabels[p.group] ?? p.group.toUpperCase()}</div>
                   {#if cell?.voiceId === 'iDEATH' && p.group === 'osc'}
