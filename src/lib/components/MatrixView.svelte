@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene, soloPatternIndex } from '../state.svelte.ts'
   import { sceneAddNode } from '../sceneActions.ts'
-  import { patternCopy, patternPaste, patternClear, patternRename, patternSetColor } from '../sectionActions.ts'
+  import { patternCopy, patternPaste, patternClear } from '../sectionActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
 
   // Show all patterns in the pool
@@ -20,48 +20,7 @@
   })
 
   const selectedName = $derived(song.patterns[ui.currentPattern]?.name || '------')
-  const selectedColor = $derived(song.patterns[ui.currentPattern]?.color ?? 0)
-
   let gridEl: HTMLDivElement | undefined = $state()
-
-  // ── Inline rename ──
-  let editing = $state(false)
-  let editValue = $state('')
-  let inputEl: HTMLInputElement | undefined = $state()
-
-  function startEdit() {
-    editValue = selectedName
-    editing = true
-    // Focus after Svelte renders the input
-    requestAnimationFrame(() => inputEl?.select())
-  }
-
-  function commitEdit() {
-    editing = false
-    patternRename(ui.currentPattern, editValue)
-  }
-
-  function cancelEdit() {
-    editing = false
-  }
-
-  function onEditKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') { e.preventDefault(); commitEdit() }
-    else if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
-  }
-
-  function pickColor(ci: number) {
-    patternSetColor(ui.currentPattern, ci)
-  }
-
-  function jumpToNextEmpty() {
-    const idx = song.patterns.findIndex((_, i) => i > ui.currentPattern && !patternHasData(i))
-    if (idx >= 0) { selectPattern(idx); gridEl?.focus() }
-    else {
-      const idx2 = song.patterns.findIndex((_, i) => !patternHasData(i))
-      if (idx2 >= 0) { selectPattern(idx2); gridEl?.focus() }
-    }
-  }
 
   function addToScene(pi: number) {
     const pat = song.patterns[pi]
@@ -85,6 +44,16 @@
       lastTapTime = now
     }
     selectPattern(pi)
+    // Sync DockPanel: select corresponding scene node if exists
+    const pat = song.patterns[pi]
+    if (pat) {
+      const sceneNode = song.scene.nodes.find(n => n.patternId === pat.id)
+      if (sceneNode) {
+        ui.selectedSceneNodes = { [sceneNode.id]: true }
+      } else {
+        ui.selectedSceneNodes = {}
+      }
+    }
     gridEl?.focus()
   }
 
@@ -115,42 +84,13 @@
 <div class="matrix-view">
   <!-- Header: name (click to edit) + action buttons -->
   <div class="matrix-head">
-    {#if editing}
-      <input
-        bind:this={inputEl}
-        class="head-input"
-        type="text"
-        maxlength="8"
-        bind:value={editValue}
-        onblur={commitEdit}
-        onkeydown={onEditKeydown}
-      />
-    {:else}
-      <button class="head-name" onpointerdown={startEdit} data-tip="Click to rename" data-tip-ja="クリックでパターン名を変更">{selectedName}</button>
-    {/if}
-    <button
-      class="head-add"
-      onpointerdown={jumpToNextEmpty}
-      data-tip="Next empty pattern" data-tip-ja="次の空パターンへ"
-    >+</button>
+    <span class="head-dot" style="background: {PATTERN_COLORS[song.patterns[ui.currentPattern]?.color ?? 0]}"></span>
+    <span class="head-name">{selectedName}</span>
     <button
       class="head-scene"
       onpointerdown={() => addToScene(ui.currentPattern)}
       data-tip="Add to scene" data-tip-ja="シーンに追加"
     >→</button>
-  </div>
-
-  <!-- Color bar: always visible -->
-  <div class="color-bar">
-    {#each PATTERN_COLORS as hex, ci}
-      <!-- svelte-ignore a11y_consider_explicit_label -->
-      <button
-        class="color-swatch"
-        class:active={ci === selectedColor}
-        style="--sw: {hex}"
-        onpointerdown={() => pickColor(ci)}
-      ></button>
-    {/each}
   </div>
 
   <!-- Grid: square cells -->
@@ -199,6 +139,12 @@
     border-bottom: 1px solid rgba(30,32,40,0.08);
   }
 
+  .head-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .head-name {
     flex: 1;
     min-width: 0;
@@ -212,33 +158,11 @@
     white-space: nowrap;
     text-align: left;
     background: none;
-    border: 1px solid transparent;
-    border-radius: 2px;
+    border: none;
     padding: 1px 3px;
-    cursor: text;
-  }
-  .head-name:hover {
-    border-color: rgba(30,32,40,0.15);
-    background: rgba(255,255,255,0.4);
   }
 
-  .head-input {
-    flex: 1;
-    min-width: 0;
-    font-family: var(--font-data);
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--color-fg);
-    background: rgba(255,255,255,0.6);
-    border: 1px solid rgba(30,32,40,0.15);
-    border-radius: 2px;
-    padding: 1px 3px;
-    outline: none;
-    text-transform: uppercase;
-  }
-
-  .head-add, .head-scene {
+  .head-scene {
     width: 18px;
     height: 16px;
     flex-shrink: 0;
@@ -254,7 +178,7 @@
     cursor: pointer;
     color: rgba(30,32,40,0.45);
   }
-  .head-add:hover, .head-scene:hover {
+  .head-scene:hover {
     background: rgba(30,32,40,0.06);
     color: var(--color-fg);
   }
@@ -265,39 +189,6 @@
   .head-scene:hover {
     background: rgba(120,120,69,0.1);
     color: var(--color-olive);
-  }
-
-  /* ── Color bar (always visible) ── */
-  .color-bar {
-    display: flex;
-    gap: 0;
-    padding: 2px 6px 4px;
-    border-bottom: 1px solid rgba(30,32,40,0.08);
-  }
-
-  .color-swatch {
-    flex: 1;
-    height: 6px;
-    background: var(--sw);
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    opacity: 0.4;
-    transition: opacity 60ms, transform 60ms;
-  }
-  .color-swatch:first-child {
-    border-radius: 2px 0 0 2px;
-  }
-  .color-swatch:last-child {
-    border-radius: 0 2px 2px 0;
-  }
-  .color-swatch:hover {
-    opacity: 0.8;
-    transform: scaleY(1.5);
-  }
-  .color-swatch.active {
-    opacity: 1;
-    transform: scaleY(1.8);
   }
 
   /* ── Grid ── */
@@ -322,7 +213,8 @@
     transition: background 40ms, border-color 40ms;
   }
 
-  .pat-cell.has-data {
+  .pat-cell.has-data,
+  .pat-cell.in-scene {
     background: var(--pat-hex);
   }
   .pat-cell.selected {

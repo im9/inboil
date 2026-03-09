@@ -89,6 +89,9 @@
   }
 
   // ── Scene Navigator (ADR 070) ──
+  // Show pattern header when no pattern sheet and no overlay — either scene node selected or current pattern
+  const showPatternHeader = $derived(!ui.patternSheet && !isOverlaySheet)
+  // Navigator: show when no pattern sheet and no scene node selected (including overlay sheets)
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
 
@@ -101,9 +104,12 @@
     ui.focusSceneNodeId = nodeId
   }
 
+  // Selected pattern: prefer scene node's pattern, fallback to ui.currentPattern
   const selectedPatternIndex = $derived.by(() => {
-    if (!scenePatternNode?.patternId) return -1
-    return song.patterns.findIndex(p => p.id === scenePatternNode.patternId)
+    if (scenePatternNode?.patternId) {
+      return song.patterns.findIndex(p => p.id === scenePatternNode.patternId)
+    }
+    return ui.currentPattern
   })
 
   const selectedPattern = $derived(selectedPatternIndex >= 0 ? song.patterns[selectedPatternIndex] : null)
@@ -379,10 +385,11 @@
   {#if !ui.dockMinimized}
   <div class="dock-body">
         <div class="param-content">
-          <!-- Decorator editor (ADR 069) -->
-          {#if scenePatternNode}
+          <!-- Pattern header (ADR 069/070) -->
+          {#if showPatternHeader && selectedPattern}
             <span class="section-label">PATTERN</span>
             <div class="dec-pat-header">
+              <span class="dec-pat-dot" style="background: {PATTERN_COLORS[selectedPattern?.color ?? 0]}"></span>
               <input
                 class="dec-pat-input"
                 value={selectedPattern?.name ?? ''}
@@ -394,23 +401,25 @@
                 onkeydown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
               />
             </div>
-            {#if selectedPattern}
-              <div class="dec-color-bar">
-                {#each PATTERN_COLORS as c, i}
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <span
-                    class="dec-color-sw"
-                    class:active={selectedPattern.color === i}
-                    style="--sw: {c}"
-                    onpointerdown={() => patternSetColor(selectedPatternIndex, i)}
-                  ></span>
-                {/each}
-              </div>
-            {/if}
+            <div class="dec-color-bar">
+              {#each PATTERN_COLORS as c, i}
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <span
+                  class="dec-color-sw"
+                  class:active={selectedPattern.color === i}
+                  style="--sw: {c}"
+                  onpointerdown={() => patternSetColor(selectedPatternIndex, i)}
+                ></span>
+              {/each}
+            </div>
             <button class="btn-open-seq" onpointerdown={openPatternSheet}
               data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
             >Open Sequencer ▸</button>
             <div class="section-divider" aria-hidden="true"></div>
+          {/if}
+
+          <!-- Decorator editor (ADR 069) -->
+          {#if scenePatternNode}
             <div class="dec-section">
               <div class="dec-section-header">
                 <span class="section-label">DECORATORS</span>
@@ -1295,6 +1304,13 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 4px;
+    gap: 6px;
+  }
+  .dec-pat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
   }
   .dec-pat-input {
     font-size: var(--dk-fs-lg);
