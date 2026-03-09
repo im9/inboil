@@ -123,7 +123,11 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── SceneLabels.svelte ← Free-floating canvas text labels
 │   │   │   ├── SceneBubbleMenu.svelte ← Radial menu for adding scene nodes
 │   │   │   ├── SceneNodePopup.svelte ← Node detail popup (rename, params)
+│   │   │   ├── AlgoGraph.svelte ← FM algorithm topology visualization (ADR 068)
+│   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
 │   │   │   ├── EnvGraph.svelte  ← ADSR envelope visualization
+│   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
+│   │   │   ├── SceneRibbon.svelte ← Playback scrubber (unused, future mobile)
 │   │   │   └── WaveGraph.svelte ← Wavetable preview visualization
 │   │   ├── audio/
 │   │   │   ├── engine.ts         ← Main-thread audio engine API

@@ -115,4 +115,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 019 | Multi-Device Collaboration | Proposed | |
 | 020 | Data Persistence & Storage | Proposed | |
 | 030 | Audio & MIDI Export | Proposed | |
-| 061 | Authentication | Proposed | OAuth (Google/Apple) for cloud persistence (ADR 020) |
+| 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |

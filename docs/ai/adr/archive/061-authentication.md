@@ -1,6 +1,8 @@
 # ADR 061: Authentication
 
-## Status: Proposed
+## Status: Superseded
+
+> **Superseded reason:** Cloudflare KV/R2 cloud sync (ADR 020) was cancelled due to privacy concerns with user audio data and the decision to use Dropbox/Google Drive for backup instead. Without a self-hosted backend, there is no need for self-hosted authentication. Dropbox/GDrive OAuth PKCE flows are browser-only and don't require this infrastructure.
 
 ## Context
 

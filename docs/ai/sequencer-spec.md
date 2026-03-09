@@ -105,19 +105,39 @@ Scene {
 }
 
 SceneDecorator {
-  type:   'transpose' | 'tempo' | 'repeat' | 'fx'
-  params: Record<string, number>
+  type:              'transpose' | 'tempo' | 'repeat' | 'fx' | 'automation'
+  params:            Record<string, number>
+  automationParams?: AutomationParams  // for type === 'automation' (ADR 053)
+}
+
+AutomationPoint {
+  t: number          // 0.0–1.0 — position within pattern duration
+  v: number          // 0.0–1.0 — normalized parameter value
+}
+
+AutomationTarget =
+  | { kind: 'global'; param: 'tempo' | 'masterVolume' }
+  | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
+  | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
+                            | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
+
+AutomationParams {
+  target:        AutomationTarget
+  points:        AutomationPoint[]
+  interpolation: 'linear' | 'smooth'
 }
 
 SceneNode {
-  id:          string
-  type:        'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx'
-  x:           number           // canvas position (normalized 0–1)
-  y:           number
-  root:        boolean          // true = playback entry point (exactly one)
-  patternId?:  string           // for type === 'pattern'
-  params?:     Record<string, number>
-  decorators?: SceneDecorator[] // function decorators attached to pattern nodes (ADR 066)
+  id:                string
+  type:              'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+  x:                 number           // canvas position (normalized 0–1)
+  y:                 number
+  root:              boolean          // true = playback entry point (exactly one)
+  patternId?:        string           // for type === 'pattern'
+  params?:           Record<string, number>
+  automationParams?: AutomationParams // for type === 'automation' (ADR 053)
+  decorators?:       SceneDecorator[] // function decorators attached to pattern nodes (ADR 066)
 }
 
 SceneEdge {
@@ -138,7 +158,7 @@ SceneLabel {
 }
 ```
 
-See ADR 044 for scene graph design and playback traversal, ADR 066 for decorators.
+See ADR 044 for scene graph design and playback traversal, ADR 053 for automation, ADR 066 for decorators.
 
 ## Trig — DECIDED
 

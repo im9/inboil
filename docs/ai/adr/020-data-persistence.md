@@ -389,10 +389,10 @@ async function importProject(json: string): Promise<void> {
 10. ~~`lastProjectName` in localStorage for flash-free reload~~ Done
 11. ~~Sample persistence in IndexedDB (Section I, Phase A)~~ Done
 12. ~~Export/Import UI (file-based, works for all users)~~ Deferred — cloud sync is higher priority
-13. Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers
-14. Cloud sync Worker + KV setup
-15. R2 sample upload/download (Section I, Phase B)
-16. Dropbox / Google Drive integration (Section I, Phase C)
+13. ~~Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers~~ Cancelled — ADR 061 Superseded; no self-hosted auth needed
+14. ~~Cloud sync Worker + KV setup~~ Cancelled — replaced by Dropbox/Google Drive backup (no Cloudflare KV)
+15. ~~R2 sample upload/download (Section I, Phase B)~~ Cancelled — privacy concern with user audio; samples stay local or in user's own cloud storage
+16. Dropbox / Google Drive integration (Section I, Phase C) — now covers both sample access and project backup
 17. Sync UI (status indicator, manual sync button, conflict notification)
 
 ## Consequences

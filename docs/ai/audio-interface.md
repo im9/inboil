@@ -142,6 +142,9 @@ class GrooveboxEngine {
   stop(): void                                                                   // Post stop (suspends context after 8s idle)
   triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD audition)
   releaseNote(trackId): void                                                     // Release triggered note
+  async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load TR-909 Crash/Ride sample
+  async loadUserSample(trackId, file): Promise<{waveform, rawBuffer} | null>     // Load user audio file (ADR 012)
+  async loadSampleFromBuffer(trackId, rawBuffer): Promise<Float32Array | null>   // Reload stored buffer (ADR 020 §I)
   set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback
   getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
 }

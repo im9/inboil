@@ -105,19 +105,39 @@ Parameters:
 | ampDecay | ADCY | 0.01–1.0 s | 0.3 | Amp envelope decay |
 | ampSustain | SUST | 0.0–1.0 | 0.8 | Amp envelope sustain level |
 | ampRelease | RLS | 0.01–2.0 s | 0.25 | Amp envelope release |
+| arpMode | ARP | 0–4 (step 1) | 0 | Arpeggio: OFF/UP/DOWN/U-D/RND |
+| arpRate | RATE | 1–4 (step 1) | 2 | Arp subdivisions per step |
+| arpChord | CHRD | 0–4 (step 1) | 0 | Chord: OCT/5TH/TRD/SUS/7TH |
+| arpOct | AOCT | 1–4 (step 1) | 1 | Arp octave range |
 
-### FMVoice (YM2612-inspired 3-operator FM)
+### FMVoice (4-operator FM synth — ADR 068)
 
-Op1: self-feedback modulator (Genesis "rasp"). Op2: fast-decaying bright transient. Carrier: phase-modulated by op chain.
+4-operator FM synth with 8 algorithm topologies, per-operator envelopes, tempo-sync LFO, and mono/poly mode (4-voice polyphony). AlgoGraph visualization in DockPanel. 20 factory presets.
 
 Parameters:
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| op2Ratio | RATIO | 0.5–4.0 | 2.1 | Modulator frequency ratio |
-| fbAmt | FDBK | 0.0–1.0 | 0.55 | Op1 self-feedback amount |
-| op2Index | IDX2 | 1.0–8.0 | 4.5 | Op2 modulation index |
-| carrierIndex | CIDX | 1.0–8.0 | 3.5 | Carrier modulation index |
-| decay | DCY | 0.1–0.8 s | 0.30 | Carrier ADSR decay time |
+| polyMode | POLY | 0–1 (step 1) | 0 | Polyphony: MONO/POLY(4) |
+| algorithm | ALG | 0–7 (step 1) | 0 | FM algorithm topology |
+| op1Fb | FB | 0.0–1.0 | 0.15 | Op1 self-feedback |
+| op1Ratio | R1 | 0.5–16.0 | 1.0 | Op1 frequency ratio |
+| op2Ratio | R2 | 0.5–16.0 | 2.0 | Op2 frequency ratio |
+| op3Ratio | R3 | 0.5–16.0 | 3.0 | Op3 frequency ratio |
+| op4Ratio | R4 | 0.5–16.0 | 4.0 | Op4 frequency ratio |
+| op1Level | L1 | 0.0–1.0 | 1.0 | Op1 output level |
+| op2Level | L2 | 0.0–1.0 | 0.7 | Op2 output level |
+| op3Level | L3 | 0.0–1.0 | 0.5 | Op3 output level |
+| op4Level | L4 | 0.0–1.0 | 0.3 | Op4 output level |
+| op1Decay | D1 | 0.01–4.0 s | 0.30 | Op1 envelope decay |
+| op2Decay | D2 | 0.01–4.0 s | 0.20 | Op2 envelope decay |
+| op3Decay | D3 | 0.01–4.0 s | 0.10 | Op3 envelope decay |
+| op4Decay | D4 | 0.01–4.0 s | 0.08 | Op4 envelope decay |
+| op1Attack | ATK | 0.001–2.0 s | 0.003 | Op1 envelope attack |
+| op1Release | REL | 0.01–4.0 s | 0.40 | Op1 envelope release |
+| lfoRate | LRAT | 0.1–20.0 Hz | 2.0 | LFO rate |
+| lfoDepth | LDEP | 0.0–1.0 | 0.0 | LFO modulation depth |
+| lfoWave | LWAV | 0–4 (step 1) | 0 | LFO: SIN/TRI/SAW/SQR/S&H |
+| lfoDest | LDST | 0–8 (step 1) | 0 | LFO destination |
 
 ### AnalogVoice (generic analog synth)
 
@@ -191,7 +211,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
-| voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. |
+| voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. FMVoice is 4-op (ADR 068). |
 | voices.ts | IdeathSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
 | voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. |
 | voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
