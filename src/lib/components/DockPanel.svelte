@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { song, activeCell, ui, playback, toggleDockMinimized, samplesByTrack, setSample } from '../state.svelte.ts'
+  import { song, activeCell, ui, playback, toggleDockMinimized, samplesByTrack, setSample, selectPattern } from '../state.svelte.ts'
   import type { SceneDecorator } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
+  import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, loadUserPresetsIntoCache, isUserPresetsLoaded, addUserPresetToCache, removeUserPresetFromCache, renameUserPresetInCache, type UserPreset } from '../presets.ts'
@@ -98,6 +99,19 @@
   function selectSceneNode(nodeId: string) {
     ui.selectedSceneNodes = { [nodeId]: true }
     ui.focusSceneNodeId = nodeId
+  }
+
+  const selectedPatternIndex = $derived.by(() => {
+    if (!scenePatternNode?.patternId) return -1
+    return song.patterns.findIndex(p => p.id === scenePatternNode.patternId)
+  })
+
+  const selectedPattern = $derived(selectedPatternIndex >= 0 ? song.patterns[selectedPatternIndex] : null)
+
+  function openPatternSheet() {
+    if (selectedPatternIndex < 0) return
+    selectPattern(selectedPatternIndex)
+    ui.patternSheet = true
   }
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
@@ -367,6 +381,36 @@
         <div class="param-content">
           <!-- Decorator editor (ADR 069) -->
           {#if scenePatternNode}
+            <span class="section-label">PATTERN</span>
+            <div class="dec-pat-header">
+              <input
+                class="dec-pat-input"
+                value={selectedPattern?.name ?? ''}
+                maxlength="8"
+                placeholder="NAME"
+                onpointerdown={e => e.stopPropagation()}
+                onfocus={e => (e.target as HTMLInputElement).select()}
+                onblur={e => { if (selectedPatternIndex >= 0) patternRename(selectedPatternIndex, (e.target as HTMLInputElement).value) }}
+                onkeydown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+              />
+            </div>
+            {#if selectedPattern}
+              <div class="dec-color-bar">
+                {#each PATTERN_COLORS as c, i}
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <span
+                    class="dec-color-sw"
+                    class:active={selectedPattern.color === i}
+                    style="--sw: {c}"
+                    onpointerdown={() => patternSetColor(selectedPatternIndex, i)}
+                  ></span>
+                {/each}
+              </div>
+            {/if}
+            <button class="btn-open-seq" onpointerdown={openPatternSheet}
+              data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
+            >Open Sequencer ▸</button>
+            <div class="section-divider" aria-hidden="true"></div>
             <div class="dec-section">
               <div class="dec-section-header">
                 <span class="section-label">DECORATORS</span>
@@ -1243,6 +1287,77 @@
     letter-spacing: 0.12em;
     color: var(--dk-text-dim);
     padding-bottom: 2px;
+  }
+
+  /* ── Decorator pattern header ── */
+  .dec-pat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .dec-pat-input {
+    font-size: var(--dk-fs-lg);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--dk-text);
+    background: var(--dk-bg-faint);
+    border: 1px solid var(--dk-border);
+    border-bottom: 1px solid var(--dk-border-mid);
+    outline: none;
+    padding: 2px 6px;
+    flex: 1;
+    min-width: 0;
+    text-transform: uppercase;
+    transition: border-color 60ms;
+  }
+  .dec-pat-input::placeholder {
+    color: var(--dk-text-dim);
+    font-style: italic;
+  }
+  .dec-pat-input:focus {
+    border-color: var(--dk-border-mid);
+    background: var(--dk-bg-hover);
+  }
+  .dec-color-bar {
+    display: flex;
+    gap: 2px;
+    margin: 10px 0 10px;
+  }
+  .dec-color-sw {
+    width: 100%;
+    height: 6px;
+    background: var(--sw);
+    opacity: 0.4;
+    cursor: pointer;
+    transition: opacity 60ms, transform 60ms;
+  }
+  .dec-color-sw:first-child { border-radius: 2px 0 0 2px; }
+  .dec-color-sw:last-child { border-radius: 0 2px 2px 0; }
+  .dec-color-sw:hover {
+    opacity: 0.7;
+    transform: scaleY(1.5);
+  }
+  .dec-color-sw.active {
+    opacity: 1;
+    transform: scaleY(1.8);
+  }
+  .btn-open-seq {
+    width: 100%;
+    border: 1px solid var(--dk-border-mid);
+    background: transparent;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 5px 0;
+    cursor: pointer;
+    transition: color 60ms, background 60ms;
+    margin: 6px 0 8px;
+  }
+  .btn-open-seq:hover {
+    color: var(--dk-text);
+    background: var(--dk-bg-hover);
   }
 
   /* ── Scene Navigator (ADR 070) ── */

@@ -177,8 +177,14 @@
 
     <div class="sep" aria-hidden="true"></div>
 
-    <!-- View toggle: FX / EQ / MST -->
+    <!-- View toggle: SCENE / FX / EQ / MST -->
     <div class="view-toggle">
+      <button
+        class="btn-view"
+        class:active={ui.phraseView === 'pattern' && !ui.patternSheet}
+        onpointerdown={() => { ui.phraseView = 'pattern'; ui.patternSheet = false }}
+        data-tip="Scene view" data-tip-ja="シーンビュー"
+      >SCENE</button>
       <button
         class="btn-view"
         class:active={ui.phraseView === 'fx'}
