@@ -1255,7 +1255,7 @@
     pointer-events: none;
   }
   .scene-empty.has-nodes {
-    opacity: 0.4;
+    display: none;
   }
   .empty-steps {
     display: flex;
