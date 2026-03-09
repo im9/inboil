@@ -375,6 +375,7 @@ export const ui = $state<{
   dockMinimized: boolean
   mobileOverlay: boolean
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
+  focusSceneNodeId: string | null
 }>({
   selectedTrack: 0,
   currentSection: 0,
@@ -393,6 +394,7 @@ export const ui = $state<{
   dockMinimized: false,
   mobileOverlay: false,
   editingAutomationDecorator: null,
+  focusSceneNodeId: null,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */

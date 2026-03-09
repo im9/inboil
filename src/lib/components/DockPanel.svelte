@@ -97,6 +97,7 @@
 
   function selectSceneNode(nodeId: string) {
     ui.selectedSceneNodes = { [nodeId]: true }
+    ui.focusSceneNodeId = nodeId
   }
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [

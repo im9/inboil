@@ -119,6 +119,20 @@
     }
   })
 
+  // ── Focus on node from DockPanel navigator (ADR 070) ──
+  $effect(() => {
+    const nodeId = ui.focusSceneNodeId
+    if (!nodeId || !viewEl) return
+    const node = song.scene.nodes.find(n => n.id === nodeId)
+    if (!node) { ui.focusSceneNodeId = null; return }
+    const rect = viewEl.getBoundingClientRect()
+    const px = PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)
+    const py = PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)
+    panX = rect.width / 2 - px * zoom
+    panY = rect.height / 2 - py * zoom
+    ui.focusSceneNodeId = null
+  })
+
   /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
   function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
     if (!viewEl) return null
