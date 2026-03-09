@@ -1576,30 +1576,31 @@ export type VoiceCategory = 'drum' | 'bass' | 'lead' | 'sampler'
 export interface VoiceMeta {
   id: VoiceId
   label: string
+  fullName: string
   category: VoiceCategory
   sidechainSource?: boolean  // true = triggers sidechain ducker & bypasses ducking (ADR 064)
 }
 
 export const VOICE_LIST: VoiceMeta[] = [
-  { id: 'Kick',     label: 'KICK',  category: 'drum', sidechainSource: true },
-  { id: 'Kick808',  label: '808K',  category: 'drum', sidechainSource: true },
-  { id: 'Snare',    label: 'SNARE', category: 'drum' },
-  { id: 'Clap',     label: 'CLAP',  category: 'drum' },
-  { id: 'Hat',      label: 'C.HH',  category: 'drum' },
-  { id: 'OpenHat',  label: 'O.HH',  category: 'drum' },
-  { id: 'Cymbal',   label: 'CYM',   category: 'drum' },
-  { id: 'Tom',      label: 'TOM',   category: 'drum' },
-  { id: 'Rimshot',  label: 'RIM',   category: 'drum' },
-  { id: 'Cowbell',  label: 'BELL',  category: 'drum' },
-  { id: 'Shaker',   label: 'SHKR',  category: 'drum' },
-  { id: 'Bass303',  label: '303',   category: 'bass' },
-  { id: 'Analog',   label: 'ANA',   category: 'bass' },
-  { id: 'MoogLead', label: 'MOOG',  category: 'lead' },
-  { id: 'FM',       label: 'FM',    category: 'lead' },
-  { id: 'iDEATH',      label: 'SYNTH', category: 'lead' },
-  { id: 'Crash', label: 'CRSH',  category: 'drum' },
-  { id: 'Ride',  label: 'RIDE',  category: 'drum' },
-  { id: 'Sampler',     label: 'SMPL',  category: 'sampler' },
+  { id: 'Kick',     label: '909K',  fullName: '909 Kick',   category: 'drum', sidechainSource: true },
+  { id: 'Kick808',  label: '808K',  fullName: '808 Kick',   category: 'drum', sidechainSource: true },
+  { id: 'Snare',    label: 'SNARE', fullName: 'Snare',      category: 'drum' },
+  { id: 'Clap',     label: 'CLAP',  fullName: 'Clap',       category: 'drum' },
+  { id: 'Hat',      label: 'C.HH',  fullName: 'Closed HH',  category: 'drum' },
+  { id: 'OpenHat',  label: 'O.HH',  fullName: 'Open HH',    category: 'drum' },
+  { id: 'Cymbal',   label: 'CYM',   fullName: 'Cymbal',     category: 'drum' },
+  { id: 'Tom',      label: 'TOM',   fullName: 'Tom',        category: 'drum' },
+  { id: 'Rimshot',  label: 'RIM',   fullName: 'Rimshot',    category: 'drum' },
+  { id: 'Cowbell',  label: 'BELL',  fullName: 'Cowbell',    category: 'drum' },
+  { id: 'Shaker',   label: 'SHKR',  fullName: 'Shaker',     category: 'drum' },
+  { id: 'Crash',    label: 'CRSH',  fullName: 'Crash',      category: 'drum' },
+  { id: 'Ride',     label: 'RIDE',  fullName: 'Ride',       category: 'drum' },
+  { id: 'Bass303',  label: '303',   fullName: 'Bass 303',   category: 'bass' },
+  { id: 'Analog',   label: 'ANA',   fullName: 'Analog',     category: 'bass' },
+  { id: 'MoogLead', label: 'MOOG',  fullName: 'Moog Lead',  category: 'lead' },
+  { id: 'FM',       label: 'FM',    fullName: 'FM Synth',   category: 'lead' },
+  { id: 'iDEATH',   label: 'SYNTH', fullName: 'iDEATH',    category: 'lead' },
+  { id: 'Sampler',  label: 'SMPL',  fullName: 'Sampler',    category: 'sampler' },
 ]
 
 /** Lookup sidechainSource flag by voiceId (ADR 064) */

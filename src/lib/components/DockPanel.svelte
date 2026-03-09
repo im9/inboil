@@ -168,6 +168,11 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
+  // ── Voice picker toggle ──
+  let voiceOpen = $state(false)
+  $effect(() => { void ui.selectedTrack; voiceOpen = false })
+  const currentVoiceMeta = $derived(cell?.voiceId ? VOICE_LIST.find(v => v.id === cell.voiceId) : null)
+
   // ── Track delete (2-step confirm) ──
   let confirmDelete = $state(false)
   // Reset confirm when switching tracks
@@ -604,46 +609,46 @@
           </div>
 
           {#if cell && track}
-          <div class="selected-track-name">
-            {cell.name}
-            <button
-              class="btn-del-track"
-              class:confirm={confirmDelete}
-              onpointerdown={handleDeleteTrack}
-              data-tip={confirmDelete ? 'Tap again to confirm' : 'Remove this track from all patterns'}
-              data-tip-ja={confirmDelete ? 'もう一度タップで確定' : 'このトラックを全パターンから削除'}
-            >{confirmDelete ? 'REMOVE?' : 'REMOVE'}</button>
-          </div>
 
-          <!-- Voice category + instrument selector -->
-          <div class="voice-cats">
-            {#each CATEGORIES as cat}
-              <button
-                class="voice-cat-btn"
-                class:active={currentCat === cat.id}
-                onpointerdown={() => changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId)}
-                data-tip={cat.label} data-tip-ja={cat.label}
-              >{cat.label}</button>
-            {/each}
-          </div>
-          <div class="voice-list">
-            {#each voicesInCat as v}
-              <button
-                class="voice-btn"
-                class:active={cell.voiceId === v.id}
-                onpointerdown={() => changeVoice(ui.selectedTrack, v.id)}
-                data-tip={v.id} data-tip-ja={v.id}
-              >{v.label}</button>
-            {/each}
-          </div>
+          <!-- Voice selector (collapsible) -->
+          <button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen; if (voiceOpen) presetOpen = false }}
+            data-tip="Change instrument" data-tip-ja="楽器を変更">
+            <span class="voice-current-name">{currentVoiceMeta?.fullName ?? cell.voiceId}</span>
+            <span class="voice-current-arrow">{voiceOpen ? '▾' : '▸'}</span>
+          </button>
+          {#if voiceOpen}
+            <div class="picker-cats">
+              {#each CATEGORIES as cat}
+                <button
+                  class="cat-btn"
+                  class:active={currentCat === cat.id}
+                  onpointerdown={() => changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId)}
+                  data-tip={cat.label} data-tip-ja={cat.label}
+                >{cat.label}</button>
+              {/each}
+            </div>
+            <div class="picker-list">
+              {#each voicesInCat as v}
+                <button
+                  class="picker-item"
+                  class:selected={cell.voiceId === v.id}
+                  onpointerdown={() => { changeVoice(ui.selectedTrack, v.id); voiceOpen = false; presetOpen = false }}
+                  data-tip={v.id} data-tip-ja={v.id}
+                ><span class="picker-cat-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
+              {/each}
+            </div>
+          {/if}
 
           <!-- Preset browser -->
           {#if showPresets}
             <div class="preset-section">
               <div class="preset-header">
-                <button class="preset-toggle" onpointerdown={() => presetOpen = !presetOpen}
+                <button class="voice-current" onpointerdown={() => { presetOpen = !presetOpen; if (presetOpen) voiceOpen = false }}
                   data-tip="Browse presets" data-tip-ja="プリセットを選択"
-                >{currentPreset ? currentPreset : 'PRESETS'} {presetOpen ? '▾' : '▸'}</button>
+                >
+                  <span class="voice-current-name">{currentPreset || 'PRESETS'}</span>
+                  <span class="voice-current-arrow">{presetOpen ? '▾' : '▸'}</span>
+                </button>
                 {#if presetOpen}
                   <button class="btn-save-preset" onpointerdown={startSavePreset}
                     data-tip="Save current sound as preset" data-tip-ja="現在の音色をプリセットとして保存"
@@ -666,7 +671,7 @@
                   </div>
                 {/if}
                 {#if presetCatsAll.length > 0}
-                <div class="preset-cats">
+                <div class="picker-cats">
                   <button class="cat-btn" class:active={presetCategory === null}
                     onpointerdown={() => presetCategory = null}>ALL</button>
                   {#each presetCatsAll as cat}
@@ -675,11 +680,11 @@
                   {/each}
                 </div>
                 {/if}
-                <div class="preset-list">
+                <div class="picker-list">
                   {#each presetListAll as preset}
                     {#if isUserPreset(preset) && renamingId === preset.id}
-                      <div class="preset-item renaming">
-                        {#if preset.category}<span class="preset-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
+                      <div class="picker-item renaming">
+                        {#if preset.category}<span class="picker-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
                         <input
                           bind:this={renameInput}
                           class="preset-rename-input"
@@ -691,11 +696,11 @@
                         />
                       </div>
                     {:else}
-                      <button class="preset-item" class:selected={currentPreset === preset.name}
+                      <button class="picker-item" class:selected={currentPreset === preset.name}
                         onpointerdown={() => isUserPreset(preset) ? handlePresetTap(preset) : selectPreset(preset)}
                       >
-                        {#if preset.category}<span class="preset-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
-                        <span class="preset-name">{preset.name}</span>
+                        {#if preset.category}<span class="picker-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
+                        <span class="picker-name">{preset.name}</span>
                         {#if isUserPreset(preset)}
                           <!-- svelte-ignore a11y_no_static_element_interactions -->
                           <span class="preset-del" onpointerdown={(e) => { e.stopPropagation(); deletePreset(preset) }}
@@ -738,36 +743,44 @@
             </div>
           {/if}
 
-          <div class="lock-row">
-            <button
-              class="btn-lock"
-              class:active={ui.lockMode}
-              onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
-              data-tip="Parameter lock mode" data-tip-ja="パラメーターロックモード"
-            >LOCK</button>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="mode-row" onpointerdown={() => { ui.lockMode = !ui.lockMode; ui.selectedStep = null }}
+            data-tip="Per-step parameter override — select a step, then tweak knobs" data-tip-ja="ステップごとにパラメータを変更 — ステップを選んでノブを操作">
+            <span class="mode-label">P-LOCK</span>
             {#if ui.lockMode && ui.selectedStep !== null}
-              <span class="lock-label">STEP{ui.selectedStep + 1}</span>
-              <button class="btn-clr" class:hidden={!hasAnyLock} onpointerdown={() => clearAllParamLocks(ui.selectedTrack, ui.selectedStep!)}>CLR</button>
+              <span class="lock-step">STEP {ui.selectedStep + 1}</span>
+            {:else if ui.lockMode}
+              <span class="lock-hint">select a step</span>
             {/if}
+            {#if ui.lockMode && ui.selectedStep !== null && hasAnyLock}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <span class="btn-clr" onpointerdown={(e) => { e.stopPropagation(); clearAllParamLocks(ui.selectedTrack, ui.selectedStep!) }}>CLR</span>
+            {/if}
+            <span class="mode-switch" class:on={ui.lockMode}><span class="mode-switch-thumb"></span></span>
           </div>
 
           <!-- Synth param knobs (multi-row grid) -->
           <div class="knob-grid">
             {#each params as p, i}
               {#if p.key === 'polyMode'}
-                <button
-                  class="btn-toggle"
-                  class:active={(knobValue(p) ?? p.default) >= 0.5}
-                  onpointerdown={() => knobChange(p, (knobValue(p) ?? p.default) >= 0.5 ? 0 : 1)}
-                  data-tip={p.tip} data-tip-ja={p.tipJa}
-                >{(knobValue(p) ?? p.default) >= 0.5 ? 'POLY' : 'MONO'}</button>
+                {@const isOn = (knobValue(p) ?? p.default) >= 0.5}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div class="mode-row" onpointerdown={() => knobChange(p, isOn ? 0 : 1)}
+                  data-tip={p.tip} data-tip-ja={p.tipJa}>
+                  <span class="mode-label">{isOn ? 'POLY (4-VOICE)' : 'MONO'}</span>
+                  <span class="mode-switch" class:on={isOn}><span class="mode-switch-thumb"></span></span>
+                </div>
               {:else if p.key === 'reverse'}
-                <button
-                  class="btn-toggle"
-                  class:active={(knobValue(p) ?? p.default) >= 0.5}
-                  onpointerdown={() => knobChange(p, (knobValue(p) ?? p.default) >= 0.5 ? 0 : 1)}
-                  data-tip={p.tip} data-tip-ja={p.tipJa}
-                >{(knobValue(p) ?? p.default) >= 0.5 ? 'REV' : 'FWD'}</button>
+                {@const isOn = (knobValue(p) ?? p.default) >= 0.5}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <div class="mode-row" onpointerdown={() => knobChange(p, isOn ? 0 : 1)}
+                  data-tip={p.tip} data-tip-ja={p.tipJa}>
+                  <span class="mode-label">{isOn ? 'REVERSE' : 'FORWARD'}</span>
+                  <span class="mode-switch" class:on={isOn}><span class="mode-switch-thumb"></span></span>
+                </div>
               {:else}
                 {@const prevNormalIdx = params.findLastIndex((q, j) => j < i && q.key !== 'polyMode' && q.key !== 'reverse')}
                 {#if p.group && (prevNormalIdx < 0 || p.group !== params[prevNormalIdx].group)}
@@ -829,6 +842,18 @@
             <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
               <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
             </span>
+          </div>
+
+          <!-- Remove track (bottom of panel, away from other controls) -->
+          <div class="section-divider" aria-hidden="true"></div>
+          <div class="track-remove-zone">
+            <button
+              class="btn-del-track"
+              class:confirm={confirmDelete}
+              onpointerdown={handleDeleteTrack}
+              data-tip={confirmDelete ? 'Tap again to confirm' : 'Remove this track from all patterns'}
+              data-tip-ja={confirmDelete ? 'もう一度タップで確定' : 'このトラックを全パターンから削除'}
+            >{confirmDelete ? 'REMOVE TRACK' : 'REMOVE TRACK'}</button>
           </div>
           {/if}
           {/if}
@@ -943,66 +968,41 @@
     opacity: 0.35;
   }
 
-  .selected-track-name {
-    font-size: var(--dk-fs-lg);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--dk-text);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .track-remove-zone {
+    margin-top: 8px;
+    padding-top: 8px;
   }
   .btn-del-track {
-    margin-left: auto;
-    border: 1px solid rgba(var(--dk-cream), 0.15);
+    width: 100%;
+    border: 1px solid rgba(var(--dk-cream), 0.1);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.35);
+    color: rgba(var(--dk-cream), 0.25);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 4px 8px;
+    padding: 6px 8px;
     cursor: pointer;
     transition: color 80ms, border-color 80ms, background 80ms;
   }
   .btn-del-track:hover {
-    color: rgba(var(--dk-cream), 0.6);
-    border-color: rgba(var(--dk-cream), 0.3);
+    color: rgba(var(--dk-cream), 0.5);
+    border-color: rgba(var(--dk-cream), 0.25);
   }
   .btn-del-track.confirm {
     color: var(--color-salmon);
     border-color: var(--color-salmon);
     background: rgba(220, 80, 80, 0.1);
   }
-  .lock-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-bottom: 8px;
-  }
-  .btn-lock {
-    border: 1px solid var(--dk-border-mid);
-    background: transparent;
-    color: var(--dk-text-mid);
-    font-size: var(--dk-fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
-    white-space: nowrap;
-    text-transform: uppercase;
-  }
-  .btn-lock.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .lock-label {
-    font-size: var(--dk-fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.06em;
+  .lock-step {
+    font-size: var(--dk-fs-xs);
     color: var(--color-olive);
-    white-space: nowrap;
+    letter-spacing: 0.06em;
+  }
+  .lock-hint {
+    font-size: var(--dk-fs-xs);
+    opacity: 0.45;
+    font-weight: 400;
+    letter-spacing: 0.04em;
   }
   .btn-clr {
     font-size: var(--dk-fs-xs);
@@ -1014,12 +1014,53 @@
     padding: 1px 5px;
     line-height: 14px;
   }
-  .btn-clr.hidden { visibility: hidden; }
   .btn-clr:active {
     background: rgba(var(--dk-cream), 0.15);
     color: var(--dk-text);
   }
 
+  .mode-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 0;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .mode-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--dk-text-mid);
+  }
+  .mode-switch {
+    margin-left: auto;
+    width: 28px;
+    height: 14px;
+    border-radius: 7px;
+    background: rgba(var(--dk-cream), 0.15);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 100ms;
+  }
+  .mode-switch.on {
+    background: var(--color-olive);
+  }
+  .mode-switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(var(--dk-cream), 0.7);
+    transition: left 100ms;
+  }
+  .mode-switch.on .mode-switch-thumb {
+    left: 16px;
+    background: var(--color-bg);
+  }
   .btn-toggle {
     border: 1px solid rgba(var(--dk-cream), 0.25);
     background: transparent;
@@ -1047,36 +1088,22 @@
     gap: 4px;
     align-items: stretch;
   }
-  .preset-toggle {
-    border: 1px solid rgba(var(--dk-cream), 0.2);
-    background: transparent;
-    color: var(--dk-text-mid);
-    font-size: var(--dk-fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 3px 8px;
-    flex: 1;
-    text-align: left;
-    cursor: pointer;
-  }
-  .preset-toggle:hover {
-    color: rgba(var(--dk-cream), 0.8);
-    border-color: rgba(var(--dk-cream), 0.35);
-  }
-  .preset-cats {
+  /* ── Shared picker (voice + preset) ── */
+  .picker-cats {
     display: flex;
     gap: 2px;
     margin-top: 4px;
     flex-wrap: wrap;
   }
   .cat-btn {
+    flex: 1;
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text-dim);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 2px 5px;
+    padding: 6px 5px;
     cursor: pointer;
   }
   .cat-btn.active {
@@ -1084,14 +1111,14 @@
     border-color: var(--color-olive);
     color: var(--color-bg);
   }
-  .preset-list {
+  .picker-list {
     max-height: 160px;
     overflow-y: auto;
     overscroll-behavior: contain;
     margin-top: 4px;
     border: 1px solid rgba(var(--dk-cream), 0.1);
   }
-  .preset-item {
+  .picker-item {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1101,34 +1128,34 @@
     background: transparent;
     color: rgba(var(--dk-cream), 0.65);
     font-size: var(--dk-fs-md);
-    padding: 4px 6px;
+    padding: 5px 6px;
     text-align: left;
     cursor: pointer;
   }
-  .preset-item:hover {
+  .picker-item:hover {
     background: var(--dk-bg-hover);
     color: rgba(var(--dk-cream), 0.9);
   }
-  .preset-item:active {
+  .picker-item:active {
     background: var(--color-olive);
     color: var(--color-bg);
   }
-  .preset-item.selected {
+  .picker-item.selected {
     background: rgba(108,119,68,0.2);
     color: rgba(var(--dk-cream), 0.95);
   }
-  .preset-item.selected .preset-cat-tag {
+  .picker-item.selected .picker-cat-tag {
     color: var(--color-olive);
   }
-  .preset-cat-tag {
+  .picker-cat-tag {
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: rgba(var(--dk-cream), 0.35);
-    width: 28px;
+    min-width: 28px;
     flex-shrink: 0;
   }
-  .preset-name {
+  .picker-name {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -1181,7 +1208,7 @@
   .preset-del:hover {
     color: rgba(220, 80, 80, 0.8);
   }
-  .preset-item.renaming {
+  .picker-item.renaming {
     background: var(--dk-bg-hover);
   }
   .preset-rename-input {
@@ -1200,56 +1227,31 @@
   }
 
   /* ── Voice category + instrument selector ── */
-  .voice-cats {
+  .voice-current {
     display: flex;
-    gap: 2px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 6px 10px;
+    cursor: pointer;
     margin-bottom: 4px;
+    transition: border-color 80ms;
   }
-  .voice-cat-btn {
-    flex: 1;
-    border: 1px solid var(--dk-border);
-    background: transparent;
-    color: var(--dk-text-dim);
-    font-size: var(--dk-fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 4px 0;
-    cursor: pointer;
-  }
-  .voice-cat-btn.active {
-    background: var(--dk-bg-hover);
-    border-color: var(--color-olive);
-    color: var(--color-olive);
-  }
-  .voice-cat-btn:hover:not(.active) {
-    color: rgba(var(--dk-cream), 0.7);
+  .voice-current:hover {
     border-color: var(--dk-border-mid);
   }
-  .voice-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    margin-bottom: 8px;
+  .voice-current-name {
+    text-transform: uppercase;
   }
-  .voice-btn {
-    border: 1px solid var(--dk-border);
-    background: transparent;
-    color: var(--dk-text-dim);
-    font-size: var(--dk-fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 3px 5px;
-    cursor: pointer;
-    min-width: 0;
-  }
-  .voice-btn.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .voice-btn:hover:not(.active) {
-    color: rgba(var(--dk-cream), 0.7);
-    border-color: var(--dk-border-mid);
+  .voice-current-arrow {
+    font-size: 9px;
+    opacity: 0.4;
   }
 
   /* ── Sample loader (ADR 012 Phase 2) ── */
