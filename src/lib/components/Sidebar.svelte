@@ -131,6 +131,13 @@
     },
     {
       category: 0,
+      title: L === 'ja' ? 'プロジェクト' : 'PROJECTS',
+      body: L === 'ja'
+        ? '自動保存 — 編集するたびに即時保存\nSYSTEM → NEW / SAVE AS で管理\nプロジェクト一覧からタップで切替、長押しで削除'
+        : 'Auto-saved on every edit\nSYSTEM → NEW / SAVE AS to manage\nTap to switch, long-press to delete',
+    },
+    {
+      category: 0,
       title: L === 'ja' ? 'ショートカット' : 'SHORTCUTS',
       body: 'Space — Play/Stop\nCtrl+Z / Ctrl+Shift+Z — Undo / Redo\nEscape — Close / Deselect\nDelete — Remove node/edge\nCtrl+C / V — Copy / Paste',
     },
@@ -151,24 +158,24 @@
     },
     {
       category: 1,
-      title: L === 'ja' ? 'VEL / CHNC' : 'VEL / CHNC',
+      title: L === 'ja' ? 'ベロシティ & 確率' : 'VELOCITY & CHANCE',
       body: L === 'ja'
-        ? 'STEP — トリガー ON/OFF\nVEL — ドラッグで音量調整\nCHNC — 発音確率 0–100%\nステップ数: 数字タップで 2–64'
-        : 'STEP — toggle triggers\nVEL — drag for volume\nCHNC — probability 0–100%\nStep count: tap number for 2–64',
+        ? 'トラック下部のバーを3モードで切替:\nSTEP — トリガー ON/OFF\nVEL — 各ステップの音量 (上下ドラッグ)\nCHNC — 発音確率 0–100%\nステップ数: 数字タップで 2–64'
+        : 'Switch 3 modes in the bar below each track:\nSTEP — toggle triggers\nVEL — per-step volume (drag up/down)\nCHNC — trigger probability 0–100%\nStep count: tap number for 2–64',
     },
     {
       category: 1,
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
-        ? 'メロディトラックで自動表示。タップでノート配置\nSLD — スライド、Poly — コード入力\nスケールモードで音階制限'
-        : 'Auto-shown for melodic tracks. Tap to place notes\nSLD — slide, Poly — chords\nScale mode restricts notes',
+        ? 'メロディトラックで自動表示。タップでノート配置\nSLD — なめらかに音程を繋ぐ\nPoly音色 — 同じステップに複数ノートでコード\nスケールモードで音階制限'
+        : 'Auto-shown for melodic tracks. Tap to place notes\nSLD — smooth pitch glide between notes\nPoly voices — tap multiple notes on same step for chords\nScale mode restricts to key notes',
     },
     {
       category: 1,
       title: L === 'ja' ? 'パターン' : 'PATTERNS',
       body: L === 'ja'
-        ? 'PAT ◀▶ で切替 (00–19 ファクトリー)\nCPY/PST/CLR — コピー/ペースト/クリア\n名前クリックでリネーム、カラードットで色設定'
-        : 'PAT ◀▶ to switch (00–19 factory)\nCPY/PST/CLR — copy/paste/clear\nClick name to rename, dot for color',
+        ? 'PAT ◀▶ で切替 (00–19 は内蔵デモ)\nCPY コピー / PST ペースト / CLR クリア\n名前クリックでリネーム、カラードットで色設定'
+        : 'PAT ◀▶ to switch (00–19 are built-in demos)\nCPY copy / PST paste / CLR clear\nClick name to rename, dot to set color',
     },
     // ── 2: SOUND ──
     {
@@ -180,25 +187,25 @@
     },
     {
       category: 2,
-      title: L === 'ja' ? 'プリセット & P-Lock' : 'PRESETS & P-LOCK',
+      title: L === 'ja' ? 'プリセット & ステップ固有設定' : 'PRESETS & PER-STEP LOCK',
       body: L === 'ja'
-        ? 'PRESETS — ファクトリー音色を選択\nP-Lock — LOCK ON → ステップ選択 → ノブ操作\nそのステップだけに適用。CLR で解除'
-        : 'PRESETS — browse factory sounds\nP-Lock — LOCK ON → select step → turn knobs\nApplies per-step only. CLR to remove',
+        ? 'PRESETS — 内蔵の音色プリセットを選択\nLOCK ON → ステップ選択 → ノブ操作\nそのステップだけ音色が変わる。CLR で解除'
+        : 'PRESETS — browse built-in sound presets\nLOCK ON → select step → turn knobs\nSound changes apply to that step only. CLR to clear',
     },
     {
       category: 2,
       title: L === 'ja' ? 'サンプラー' : 'SAMPLER',
       body: L === 'ja'
-        ? 'LOAD / D&D で読み込み\nSTRT/END/PTCH/DCY/REV\nCHOP — MAP (ノート選択) / SEQ (順次再生)\nBPM同期 — RPTC (リピッチ) / WSLA (タイムストレッチ)'
-        : 'LOAD / D&D to import\nSTRT/END/PTCH/DCY/REV\nCHOP — MAP (by note) / SEQ (sequential)\nBPM sync — RPTC (repitch) / WSLA (timestretch)',
+        ? 'LOAD ボタンまたはファイルをドラッグで読み込み\n開始/終了/ピッチ/減衰/逆再生を調整\nCHOP — サンプルを分割して再生\nBPM同期 — テンポに合わせて自動伸縮'
+        : 'LOAD button or drag file to import audio\nAdjust start/end/pitch/decay/reverse\nCHOP — slice sample into segments\nBPM sync — auto-stretch to match tempo',
     },
     // ── 3: MIXER & FX ──
     {
       category: 3,
       title: L === 'ja' ? 'FX パッド' : 'FX PAD',
       body: L === 'ja'
-        ? 'VERB / DLY / GLT / GRN をドラッグで調整、タップでON/OFF\nセンドバーで各トラックの送り量を設定'
-        : 'Drag VERB/DLY/GLT/GRN to adjust, tap to toggle\nSend bar sets per-track levels',
+        ? 'リバーブ/ディレイ/グリッチ/グラニュラーの4エフェクト\nノードをドラッグで調整、タップでON/OFF\nセンドバーで各トラックの送り量を設定'
+        : '4 effects: reverb / delay / glitch / granular\nDrag nodes to adjust, tap to toggle\nSend bar sets per-track levels',
     },
     {
       category: 3,
@@ -211,8 +218,8 @@
       category: 3,
       title: L === 'ja' ? 'マスター' : 'MASTER',
       body: L === 'ja'
-        ? 'XYパッド: COMP / DUCK / RET — タップでON/OFF\nフェーダー: GAIN / MKP / SWG\nVUメーターでL/Rピーク確認'
-        : 'XY pads: COMP / DUCK / RET — tap to toggle\nFaders: GAIN / MKP / SWG\nVU meter for L/R peaks',
+        ? 'XYパッド: コンプ / サイドチェイン / FXリターン\nフェーダー: 音量 / メイクアップ / スウィング\nVUメーターでL/Rピーク確認'
+        : 'XY pads: compressor / sidechain / FX return\nFaders: volume / makeup / swing\nVU meter for L/R peaks',
     },
     // ── 4: ARRANGEMENT ──
     {
@@ -234,8 +241,8 @@
       category: 5,
       title: 'FILL / REV / BRK',
       body: L === 'ja'
-        ? '長押し: FILL — 自動フィル、REV — 逆再生、BRK — リズムゲート\n離すと即復帰'
-        : 'Hold: FILL — auto fill, REV — reverse, BRK — rhythmic gate\nRelease to restore',
+        ? 'ボタン長押しでリアルタイム効果:\nFILL — ドラムの自動フィルイン\nREV — 逆再生\nBRK — リズムでブレイク\n離すと即復帰'
+        : 'Hold buttons for real-time effects:\nFILL — auto drum fill\nREV — reverse playback\nBRK — rhythmic break\nRelease to restore',
     },
     {
       category: 5,
@@ -246,10 +253,10 @@
     },
     {
       category: 5,
-      title: 'VKBD',
+      title: L === 'ja' ? 'キーボード演奏' : 'KEYBOARD PLAY',
       body: L === 'ja'
-        ? 'A~; キーで演奏、Z/X でオクターブ、1~0 でベロシティ'
-        : 'A–; keys to play, Z/X octave, 1–0 velocity',
+        ? 'VKBD ボタンで有効化。PCキーボードで演奏\nA~; で音階、Z/X でオクターブ、1~0 でベロシティ'
+        : 'Enable with VKBD button. Play with PC keyboard\nA–; for notes, Z/X octave, 1–0 velocity',
     },
   ])
 </script>
