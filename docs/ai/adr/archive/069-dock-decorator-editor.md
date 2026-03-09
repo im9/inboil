@@ -1,6 +1,6 @@
 # ADR 069: Dock Panel Decorator Editor
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

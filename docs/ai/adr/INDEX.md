@@ -66,6 +66,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
 | 059 | Scene Multi-Select | Implemented | Rectangle select, group drag, alignment tools, partial auto-layout, multi-copy/paste |
 | 066 | Scene Node Decorators | Implemented | Snap-attach function nodes to patterns as decorators, edge branching = probabilistic routing |
+| 069 | Dock Panel Decorator Editor | Implemented | Full-size Knob/toggle editing in DockPanel, Add dropdown, SceneNodePopup read-only labels |
 
 ## UI / Layout
 
