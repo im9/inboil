@@ -137,9 +137,14 @@ Quick lookup during use         Sit down and learn
 
 ## Considerations
 
+- **Custom domain**: acquire a custom domain (e.g. `inboil.app`) before public launch. A `.pages.dev` URL looks like a hobby project and undermines trust — especially when asking for donations (ADR 071). Custom domain is ~$10–15/year and significantly improves perceived credibility. Use `.pages.dev` during development, switch to custom domain for launch
+- **Domain structure** (with custom domain):
+  - `inboil.app` → LP
+  - `app.inboil.app` → Main app
+  - `docs.inboil.app` → Docs
 - **Demo weight**: a Web Audio demo is compelling but increases LP load time. Astro's partial hydration (`client:visible`) helps — only load the audio engine when the demo section scrolls into view
 - **Bilingual docs**: doubles the writing effort. Start with one language, expand based on demand
-- **Hosting**: LP + Docs + App on the same Cloudflare Pages project (subpath routing) keeps domain management simple but complicates the build pipeline. Separate Pages projects is an alternative
+- **Hosting**: Cloudflare Pages for all three (LP, app, docs). Can be separate Pages projects with custom subdomains, or a single project with subpath routing during development
 - **Component reuse boundary**: LP demo can import Svelte components from `../src/lib/`, but should only pull UI — not the entire state management layer
 
 ## Future Extensions
