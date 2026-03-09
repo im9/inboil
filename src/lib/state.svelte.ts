@@ -1060,11 +1060,41 @@ export function advanceSection(): boolean {
   return false
 }
 
+// ── Chord progression templates (scale-degree indices 0-6) ───────────
+const PROGRESSIONS = [
+  [0, 4, 5, 3],  // I  - V  - vi - IV  (pop)
+  [0, 3, 4, 4],  // I  - IV - V  - V   (rock)
+  [5, 3, 0, 4],  // vi - IV - I  - V   (emo/pop)
+  [0, 5, 3, 4],  // I  - vi - IV - V   (50s)
+  [1, 4, 0, 0],  // ii - V  - I  - I   (jazz turnaround)
+  [0, 3, 5, 3],  // I  - IV - vi - IV  (chill)
+]
+
+// Diatonic scale intervals (C major); same as SCALE_DEGREES but used locally for chord building
+const DIATONIC = [0, 2, 4, 5, 7, 9, 11]
+
+/** Build a diatonic chord (triad or 7th) from a scale degree root in a given octave */
+function buildChord(degree: number, octave: number, seventh: boolean): number[] {
+  const notes: number[] = []
+  const offsets = seventh ? [0, 2, 4, 6] : [0, 2, 4] // diatonic degree offsets
+  for (const off of offsets) {
+    const deg = (degree + off) % 7
+    const octShift = Math.floor((degree + off) / 7)
+    const midi = octave * 12 + DIATONIC[deg]
+    const n = midi + octShift * 12
+    if (n >= PIANO_ROLL_MIN && n <= PIANO_ROLL_MAX) notes.push(n)
+  }
+  return notes
+}
+
+/** Pick a random element from an array */
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
+
 export function randomizePattern(): void {
   pushUndo('Randomize')
   const roots = [48, 50, 51, 53, 55, 56, 58, 60]
-  const root  = roots[Math.floor(Math.random() * roots.length)]
-  const scale = SCALES[Math.floor(Math.random() * SCALES.length)]
+  const root  = pick(roots)
+  const scale = pick(SCALES)
 
   let allNotes: number[] = []
   for (let oct = 0; oct < 3; oct++) {
@@ -1087,11 +1117,18 @@ export function randomizePattern(): void {
   const lowNotes  = allNotes.filter(n => n < 60)
   const highNotes = allNotes.filter(n => n >= 60)
 
+  // Pick a chord progression for this randomization
+  const prog = pick(PROGRESSIONS)
+  const useSeventh = Math.random() < 0.3
+  const chordOctave = 4 // C4=60 region
+
   for (let t = 0; t < song.tracks.length; t++) {
     const c = activeCell(t)
     const steps = c.steps
+    const isPoly = c.voiceId === 'iDEATH' && (c.voiceParams?.polyMode ?? 0) >= 0.5
 
     if (c.voiceId && DRUM_VOICES.has(c.voiceId)) {
+      // ── Drums: beat-locked probabilities (unchanged) ──
       for (let s = 0; s < steps; s++) {
         let prob = 0
         const beat = s % 8
@@ -1116,20 +1153,87 @@ export function randomizePattern(): void {
         c.trigs[s].velocity = 0.55 + Math.random() * 0.45
         c.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
       }
+    } else if (isPoly) {
+      // ── Poly chord mode: diatonic chord progression with rhythm templates ──
+      // Rhythm templates: [stepOffset, duration, velocityBase]
+      // Each template covers one chord change period (beatsPerChord steps)
+      const CHORD_RHYTHMS: [number, number, number][][] = [
+        // Pad: sustained whole notes
+        [[0, 0, 0.80]],  // dur=0 means fill to next chord
+        // Comp: syncopated hits (off-beat accents)
+        [[0, 2, 0.75], [3, 1, 0.60], [5, 2, 0.70]],
+        // Stab: short rhythmic stabs
+        [[0, 1, 0.85], [2, 1, 0.55], [4, 1, 0.70], [6, 1, 0.50]],
+        // Ska/upstroke: off-beat only
+        [[1, 1, 0.70], [3, 1, 0.65], [5, 1, 0.72], [7, 1, 0.60]],
+        // Pulse: dotted rhythm
+        [[0, 3, 0.80], [3, 2, 0.65], [6, 2, 0.70]],
+      ]
+      const rhythm = pick(CHORD_RHYTHMS)
+      const beatsPerChord = Math.max(1, Math.floor(steps / prog.length))
+      // Clear all steps first
+      for (let s = 0; s < steps; s++) c.trigs[s].active = false
+      // Place chords according to rhythm template
+      for (let ci = 0; ci < prog.length; ci++) {
+        const base = ci * beatsPerChord
+        const degree = prog[ci]
+        const chord = buildChord(degree, chordOctave, useSeventh)
+        if (chord.length === 0) continue
+        for (const [off, dur, vel] of rhythm) {
+          const s = base + off
+          if (s >= steps) break
+          c.trigs[s].active   = true
+          c.trigs[s].note     = chord[0]
+          c.trigs[s].notes    = chord
+          c.trigs[s].velocity = vel + Math.random() * 0.15
+          c.trigs[s].duration = dur === 0
+            ? Math.min(beatsPerChord, steps - s)
+            : Math.min(dur, steps - s)
+        }
+      }
     } else {
-      const isBass  = c.voiceId === 'Bass303' || c.voiceId === 'Analog'
-      const pool    = isBass
+      // ── Mono melodic: scale-aware melody/bass ──
+      const isBass = c.voiceId === 'Bass303' || c.voiceId === 'Analog'
+      const pool   = isBass
         ? (lowNotes.length  > 0 ? lowNotes  : allNotes)
         : (highNotes.length > 0 ? highNotes : allNotes)
-      const density = isBass ? 0.30 : 0.27
 
-      for (let s = 0; s < steps; s++) {
-        const active = Math.random() < density
-        c.trigs[s].active   = active
-        c.trigs[s].note     = active
-          ? pool[Math.floor(Math.random() * pool.length)]
-          : c.trigs[s].note
-        c.trigs[s].velocity = active ? 0.55 + Math.random() * 0.45 : c.trigs[s].velocity
+      if (isBass) {
+        // Bass follows chord roots on downbeats, fills with scale tones
+        const beatsPerChord = Math.max(1, Math.floor(steps / prog.length))
+        for (let s = 0; s < steps; s++) {
+          const chordIdx = Math.min(Math.floor(s / beatsPerChord), prog.length - 1)
+          const rootNote = PIANO_ROLL_MIN + DIATONIC[prog[chordIdx]]
+          const isDownbeat = s % beatsPerChord === 0
+          const active = isDownbeat ? true : Math.random() < 0.25
+          c.trigs[s].active   = active
+          c.trigs[s].note     = active
+            ? (isDownbeat ? rootNote : pick(pool))
+            : c.trigs[s].note
+          c.trigs[s].velocity = active ? 0.6 + Math.random() * 0.4 : c.trigs[s].velocity
+        }
+      } else {
+        // Melody: stepwise motion with occasional leaps, biased to chord tones
+        let prevNote = pick(pool)
+        const density = 0.27
+        for (let s = 0; s < steps; s++) {
+          const active = Math.random() < density
+          c.trigs[s].active = active
+          if (active) {
+            // 70% stepwise (±1-2 scale tones), 30% leap
+            if (Math.random() < 0.7 && pool.length > 1) {
+              const idx = pool.indexOf(prevNote)
+              const nearIdx = idx >= 0
+                ? Math.max(0, Math.min(pool.length - 1, idx + (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 2))))
+                : Math.floor(Math.random() * pool.length)
+              prevNote = pool[nearIdx]
+            } else {
+              prevNote = pick(pool)
+            }
+            c.trigs[s].note     = prevNote
+            c.trigs[s].velocity = 0.55 + Math.random() * 0.45
+          }
+        }
       }
     }
   }

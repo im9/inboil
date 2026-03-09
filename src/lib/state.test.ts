@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+// @ts-expect-error no @types/node
 import { readFileSync } from 'node:fs'
 
 /**
@@ -46,7 +47,7 @@ function firstModuleLevelCall(): number {
 
 /** Find all $state variable names referenced inside savePrefs function body */
 function stateVarsInSavePrefs(): string[] {
-  const fnStart = lines.findIndex(l => /^function savePrefs/.test(l))
+  const fnStart = lines.findIndex((l: string) => /^function savePrefs/.test(l))
   if (fnStart === -1) return []
   let depth = 0
   let fnEnd = fnStart
@@ -59,7 +60,7 @@ function stateVarsInSavePrefs(): string[] {
   }
   const body = lines.slice(fnStart, fnEnd + 1).join('\n')
   const stateVarNames: string[] = []
-  lines.forEach((l) => {
+  lines.forEach((l: string) => {
     const m = l.match(/^export\s+const\s+(\w+)\s*=\s*\$state/)
     if (m) stateVarNames.push(m[1])
   })
@@ -75,7 +76,7 @@ describe('state module init order (TDZ guard)', () => {
     expect(vars.length, 'savePrefs should reference at least one $state var').toBeGreaterThan(0)
 
     for (const name of vars) {
-      const declLine = lines.findIndex(l =>
+      const declLine = lines.findIndex((l: string) =>
         new RegExp(`^export\\s+const\\s+${name}\\s*=\\s*\\$state`).test(l)
       )
       expect(
