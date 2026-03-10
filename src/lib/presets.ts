@@ -101,6 +101,36 @@ const IDEATH_PRESETS: SynthPreset[] = [
     lfo2Rate: 0.1, lfo2Shape: 0,
     mod0Src: 0, mod0Dst: 4, mod0Amt: 0.6,
   }},
+  { name: 'Sync Bass', voiceId: 'iDEATH', category: 'bass', params: {
+    oscAPos: 0.5, oscBPos: 0.5, oscBSemi: 7, oscMix: 0.5, combine: 2,
+    cutoffBase: 350, envMod: 3500, resonance: 2.5, filterMode: 0, drive: 0.5,
+    attack: 0.001, decay: 0.3, sustain: 0.5, release: 0.1, modDecay: 0.15,
+    lfo1Rate: 0.1, lfo1Shape: 0, lfo2Rate: 0.1, lfo2Shape: 0,
+  }},
+  { name: 'Distort Bass', voiceId: 'iDEATH', category: 'bass', params: {
+    oscAPos: 0.5, oscBPos: 0.5, oscBSemi: 0, oscMix: 0.0, combine: 0,
+    cutoffBase: 500, envMod: 2500, resonance: 2.0, filterMode: 0, drive: 1.0,
+    attack: 0.001, decay: 0.35, sustain: 0.6, release: 0.1, modDecay: 0.15,
+    lfo1Rate: 0.1, lfo1Shape: 0, lfo2Rate: 0.1, lfo2Shape: 0,
+  }},
+  { name: 'Pluck Bass', voiceId: 'iDEATH', category: 'bass', params: {
+    oscAPos: 0.5, oscBPos: 0.3, oscBSemi: 0, oscMix: 0.3, combine: 0,
+    cutoffBase: 600, envMod: 5000, resonance: 2.0, filterMode: 0,
+    attack: 0.001, decay: 0.15, sustain: 0.0, release: 0.08, modDecay: 0.06,
+    lfo1Rate: 0.1, lfo1Shape: 0, lfo2Rate: 0.1, lfo2Shape: 0,
+  }},
+  { name: 'Octave Bass', voiceId: 'iDEATH', category: 'bass', params: {
+    oscAPos: 0.0, oscBPos: 0.5, oscBSemi: 12, oscMix: 0.4, combine: 0,
+    cutoffBase: 250, envMod: 1500, resonance: 1.5, filterMode: 0,
+    attack: 0.005, decay: 0.4, sustain: 0.7, release: 0.12, modDecay: 0.2,
+    lfo1Rate: 0.1, lfo1Shape: 0, lfo2Rate: 0.1, lfo2Shape: 0,
+  }},
+  { name: 'Dub Bass', voiceId: 'iDEATH', category: 'bass', params: {
+    oscAPos: 0.0, oscBPos: 0.0, oscBSemi: 0, oscMix: 0.0, combine: 0,
+    cutoffBase: 80, envMod: 400, resonance: 1.0, filterMode: 0,
+    attack: 0.01, decay: 0.6, sustain: 0.9, release: 0.2, modDecay: 0.3,
+    lfo1Rate: 0.1, lfo1Shape: 0, lfo2Rate: 0.1, lfo2Shape: 0,
+  }},
   // ── Pad ────────────────────────────────────────────
   { name: 'Warm Pad', voiceId: 'iDEATH', category: 'pad', params: {
     oscAPos: 0.3, oscBPos: 0.4, oscBSemi: 7, oscMix: 0.5, combine: 0,
@@ -275,6 +305,15 @@ const BASS303_PRESETS: SynthPreset[] = [
   { name: 'Round', voiceId: 'Bass303', params: {
     cutoffBase: 250, envMod: 2000, resonance: 4.0, decay: 0.25, drive: 1.2,
   }},
+  { name: 'Rubber', voiceId: 'Bass303', params: {
+    cutoffBase: 120, envMod: 3500, resonance: 6.0, decay: 0.30, drive: 1.5,
+  }},
+  { name: 'Donk', voiceId: 'Bass303', params: {
+    cutoffBase: 200, envMod: 6000, resonance: 8.0, decay: 0.08, drive: 2.2,
+  }},
+  { name: 'Buzz', voiceId: 'Bass303', params: {
+    cutoffBase: 60, envMod: 4500, resonance: 11.0, decay: 0.20, drive: 2.8,
+  }},
 ]
 
 // ── MoogLead presets ─────────────────────────────────────────────────
@@ -294,6 +333,18 @@ const MOOG_PRESETS: SynthPreset[] = [
   { name: 'Screamer', voiceId: 'MoogLead', params: {
     cutoffBase: 200, envMod: 9000, resonance: 3.0, filterDecay: 0.15,
     ampAttack: 0.001, ampDecay: 0.3, ampSustain: 0.6, ampRelease: 0.15,
+  }},
+  { name: 'Mono Bass', voiceId: 'MoogLead', params: {
+    cutoffBase: 150, envMod: 4000, resonance: 2.5, filterDecay: 0.2,
+    ampAttack: 0.001, ampDecay: 0.35, ampSustain: 0.7, ampRelease: 0.1,
+  }},
+  { name: 'Punch Bass', voiceId: 'MoogLead', params: {
+    cutoffBase: 250, envMod: 7000, resonance: 1.8, filterDecay: 0.12,
+    ampAttack: 0.001, ampDecay: 0.2, ampSustain: 0.4, ampRelease: 0.08,
+  }},
+  { name: 'Warm Bass', voiceId: 'MoogLead', params: {
+    cutoffBase: 400, envMod: 2000, resonance: 1.2, filterDecay: 0.4,
+    ampAttack: 0.005, ampDecay: 0.5, ampSustain: 0.85, ampRelease: 0.2,
   }},
 ]
 
@@ -457,6 +508,15 @@ const ANALOG_PRESETS: SynthPreset[] = [
   }},
   { name: 'Smooth', voiceId: 'Analog', params: {
     cutoffBase: 1200, envMod: 3000, resonance: 1.5, decay: 0.40,
+  }},
+  { name: 'Growl', voiceId: 'Analog', params: {
+    cutoffBase: 350, envMod: 5500, resonance: 4.5, decay: 0.18,
+  }},
+  { name: 'Tight', voiceId: 'Analog', params: {
+    cutoffBase: 800, envMod: 4000, resonance: 2.5, decay: 0.12,
+  }},
+  { name: 'Dark', voiceId: 'Analog', params: {
+    cutoffBase: 250, envMod: 1200, resonance: 1.0, decay: 0.45,
   }},
 ]
 

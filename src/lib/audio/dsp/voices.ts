@@ -1571,7 +1571,7 @@ export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Crash', 'Ride', 'Sampler',
 ])
 
-export type VoiceCategory = 'drum' | 'bass' | 'lead' | 'sampler'
+export type VoiceCategory = 'drum' | 'synth' | 'sampler'
 
 export interface VoiceMeta {
   id: VoiceId
@@ -1595,11 +1595,11 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Shaker',   label: 'SHKR',  fullName: 'Shaker',     category: 'drum' },
   { id: 'Crash',    label: 'CRSH',  fullName: 'Crash',      category: 'drum' },
   { id: 'Ride',     label: 'RIDE',  fullName: 'Ride',       category: 'drum' },
-  { id: 'Bass303',  label: '303',   fullName: 'Bass 303',   category: 'bass' },
-  { id: 'Analog',   label: 'ANA',   fullName: 'Analog',     category: 'bass' },
-  { id: 'MoogLead', label: 'ANLG',  fullName: 'Analog Synth', category: 'lead' },
-  { id: 'FM',       label: 'FM',    fullName: 'FM Synth',   category: 'lead' },
-  { id: 'iDEATH',   label: 'SYNTH', fullName: 'Wavetable',  category: 'lead' },
+  { id: 'Bass303',  label: 'BASS',  fullName: 'Bass 303',    category: 'synth' },
+  { id: 'Analog',   label: 'BASS',  fullName: 'Analog Bass', category: 'synth' },
+  { id: 'MoogLead', label: 'LEAD',  fullName: 'Analog Synth', category: 'synth' },
+  { id: 'FM',       label: 'FM',    fullName: 'FM Synth',    category: 'synth' },
+  { id: 'iDEATH',   label: 'WAVE',  fullName: 'Wavetable',   category: 'synth' },
   { id: 'Sampler',  label: 'SMPL',  fullName: 'Sampler',    category: 'sampler' },
 ]
 

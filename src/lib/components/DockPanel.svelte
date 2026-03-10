@@ -152,8 +152,7 @@
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
     { id: 'drum', label: 'DRUM' },
-    { id: 'bass', label: 'BASS' },
-    { id: 'lead', label: 'LEAD' },
+    { id: 'synth', label: 'SYNTH' },
     { id: 'sampler', label: 'SMPL' },
   ]
 
@@ -195,8 +194,33 @@
   $effect(() => { cell?.voiceId; presetCategory = null })
   // Derive preset name from cell (persisted in Cell.presetName)
   const currentPreset = $derived(cell?.presetName ?? '')
+
+  // ── Recently used presets (session only, per voice) ──
+  const recentPresetsMap = new Map<string, string[]>() // voiceId → preset names (max 4)
+  let recentVersion = $state(0)
+  const recentPresets = $derived.by(() => {
+    recentVersion // reactive dependency
+    const vid = cell?.voiceId
+    if (!vid) return [] as { name: string; params: Record<string, number> }[]
+    const names = recentPresetsMap.get(vid) ?? []
+    const all = getPresets(vid, null)
+    return names
+      .map(n => all.find(p => p.name === n))
+      .filter((p): p is NonNullable<typeof p> => p != null)
+  })
+
+  function trackRecent(voiceId: string, presetName: string) {
+    const list = recentPresetsMap.get(voiceId) ?? []
+    const filtered = list.filter(n => n !== presetName)
+    filtered.unshift(presetName)
+    if (filtered.length > 4) filtered.pop()
+    recentPresetsMap.set(voiceId, filtered)
+    recentVersion++
+  }
+
   function selectPreset(preset: { name: string; params: Record<string, number> }) {
     applyPreset(ui.selectedTrack, preset.params, preset.name)
+    if (cell?.voiceId) trackRecent(cell.voiceId, preset.name)
     presetOpen = false
   }
 
@@ -681,6 +705,16 @@
                   {/each}
                 </div>
                 {/if}
+                {#if recentPresets.length > 0}
+                <div class="picker-recent">
+                  <span class="picker-recent-label">RECENT</span>
+                  {#each recentPresets as preset}
+                    <button class="picker-recent-btn" class:selected={currentPreset === preset.name}
+                      onpointerdown={() => selectPreset(preset)}
+                    >{preset.name}</button>
+                  {/each}
+                </div>
+                {/if}
                 <div class="picker-list">
                   {#each presetListAll as preset}
                     {#if isUserPreset(preset) && renamingId === preset.id}
@@ -1133,6 +1167,41 @@
     background: var(--color-olive);
     border-color: var(--color-olive);
     color: var(--color-bg);
+  }
+  .picker-recent {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 2px;
+    flex-wrap: wrap;
+  }
+  .picker-recent-label {
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(var(--dk-cream), 0.25);
+    margin-right: 2px;
+  }
+  .picker-recent-btn {
+    border: 1px solid rgba(var(--dk-cream), 0.12);
+    background: rgba(var(--dk-cream), 0.04);
+    color: rgba(var(--dk-cream), 0.55);
+    font-size: var(--dk-fs-xs);
+    padding: 2px 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+  }
+  .picker-recent-btn:hover {
+    background: var(--dk-bg-hover);
+    color: rgba(var(--dk-cream), 0.8);
+  }
+  .picker-recent-btn.selected {
+    background: rgba(108,119,68,0.2);
+    color: rgba(var(--dk-cream), 0.9);
+    border-color: rgba(108,119,68,0.4);
   }
   .picker-list {
     max-height: 160px;
