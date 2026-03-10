@@ -1,6 +1,6 @@
 # ADR 075: FX / EQ / Master Improvements
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
