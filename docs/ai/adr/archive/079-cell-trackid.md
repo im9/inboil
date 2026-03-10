@@ -1,6 +1,6 @@
 # ADR 079 — Explicit Cell.trackId (decouple cell position from track identity)
 
-**Status**: Proposed → Implementing
+**Status**: Implemented
 **Date**: 2026-03-11
 
 ## Context
