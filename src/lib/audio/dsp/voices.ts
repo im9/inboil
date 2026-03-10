@@ -498,8 +498,9 @@ class FMCore {
       case 6: { const s4 = o4.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
       case 7: { out = o4.tick(f, sr, 0) + o3.tick(f, sr, 0) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
     }
-    const carrierCount = this.algorithm >= 7 ? 4 : this.algorithm >= 5 ? 3 : 2
-    return out / carrierCount * this.vel * 0.55
+    // Carrier count per algorithm: 0=1, 1-4=2, 5-6=3, 7=4
+    const carrierCount = this.algorithm === 0 ? 1 : this.algorithm >= 7 ? 4 : this.algorithm >= 5 ? 3 : 2
+    return out / carrierCount * this.vel * 0.85
   }
 }
 
