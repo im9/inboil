@@ -170,7 +170,7 @@
         onpointerdown={handleSystem}
         aria-label="System settings"
         data-tip="System settings" data-tip-ja="システム設定"
-      >SYSTEM{#if project.dirty}<span class="dirty-dot">●</span>{/if}</button>
+      ><span class="btn-nav-inner">SYSTEM{#if project.dirty}<span class="dirty-dot"></span>{/if}</span></button>
     </div>
   </div>
 
@@ -243,11 +243,17 @@
     color: rgba(237,232,220,0.90);
     border-color: rgba(237,232,220,0.50);
   }
+  .btn-nav-inner {
+    position: relative;
+  }
   .dirty-dot {
-    color: var(--color-olive);
-    font-size: 6px;
-    margin-left: 3px;
-    vertical-align: top;
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-olive);
   }
 
   /* ── Sub header (controls) ── */
