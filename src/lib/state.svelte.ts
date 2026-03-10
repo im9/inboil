@@ -618,7 +618,7 @@ export const masterPad = $state({
   ret:  { ...DEFAULT_MASTER_PAD.ret },
 })
 
-export const masterLevels = $state({ peakL: 0, peakR: 0, gr: 1.0 })
+export const masterLevels = $state({ peakL: 0, peakR: 0, gr: 1.0, cpu: 0 })
 
 export const vkbd = $state({
   enabled: false,

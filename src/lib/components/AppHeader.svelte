@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, project, toggleSidebar } from '../state.svelte.ts'
+  import { song, playback, ui, project, masterLevels, toggleSidebar } from '../state.svelte.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -77,6 +77,16 @@
       <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
     </svg>
     <span class="app-name">INBOIL</span>
+    {#if masterLevels.cpu > 0}
+      {@const cpu = masterLevels.cpu}
+      {@const dots = Math.min(6, Math.round(cpu / 100 * 6))}
+      <span class="cpu-meter" class:warn={cpu > 60} class:crit={cpu > 85}
+        data-tip="Audio CPU load" data-tip-ja="オーディオCPU負荷">
+        <span class="cpu-label">CPU</span>
+        <span class="cpu-dots">{#each {length: 6} as _, i}<span class="cpu-dot" class:lit={i < dots} class:hi={i >= 4}></span>{/each}</span>
+        <!-- <span class="cpu-val">{Math.round(cpu)}%</span> -->
+      </span>
+    {/if}
   </header>
 
   <!-- Sub header: BPM, transport, perf controls, pattern -->
@@ -214,6 +224,48 @@
     text-transform: uppercase;
     position: relative;
     z-index: 1;
+  }
+
+  .cpu-meter {
+    position: relative;
+    z-index: 1;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.35);
+    font-variant-numeric: tabular-nums;
+  }
+  .cpu-label { flex-shrink: 0; }
+  .cpu-dots {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .cpu-dot {
+    width: 4px;
+    height: 8px;
+    border-radius: 1px;
+    background: rgba(237,232,220,0.12);
+    transition: background 120ms linear;
+  }
+  .cpu-dot.lit { background: rgba(163,161,69,0.55); }
+  .cpu-dot.lit.hi { background: rgba(220,180,50,0.7); }
+  .cpu-meter.crit .cpu-dot.lit.hi { background: rgba(220,80,60,0.85); }
+  .cpu-val {
+    display: inline-block;
+    min-width: 3ch;
+    text-align: right;
+    color: rgba(163,161,69,0.5);
+  }
+  .cpu-meter.warn .cpu-val { color: rgba(220,180,50,0.85); }
+  .cpu-meter.crit .cpu-val { color: rgba(220,80,60,0.9); }
+  .cpu-meter.crit { animation: cpu-blink 0.6s ease-in-out infinite alternate; }
+  @keyframes cpu-blink {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
   }
 
   .header-nav {

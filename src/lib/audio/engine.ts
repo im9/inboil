@@ -65,7 +65,7 @@ export class GrooveboxEngine {
     this.analyser.connect(this.ctx.destination)
     this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
       if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
-      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR; masterLevels.gr = e.data.gr }
+      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR; masterLevels.gr = e.data.gr; masterLevels.cpu = e.data.cpu ?? 0 }
     }
   }
 

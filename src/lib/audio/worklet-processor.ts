@@ -222,11 +222,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private meterGrMin     = 1.0  // min gain reduction (most compressed) in meter window
   private meterCount     = 0
   private meterInterval  = Math.round(sampleRate / 60)
+  // CPU metering (EMA-smoothed)
+  private cpuEma         = 0
+  private readonly budgetMs: number
 
   constructor(opts?: AudioWorkletNodeOptions) {
     super(opts)
     this.samplesPerStep = this._calcSps()
     this.currentThreshold = this.samplesPerStep
+    this.budgetMs = 128 / sampleRate * 1000  // render quantum budget
     this.delay.setTime(375)
     this.reverb.setSize(0.72); this.reverb.setDamp(0.5)
 
@@ -545,6 +549,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+    const t0 = Date.now()
     const outL = outputs[0]?.[0]
     const outR = outputs[0]?.[1] ?? outputs[0]?.[0]
     if (!outL) return true
@@ -730,9 +735,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       if (absR > this.meterPeakR) this.meterPeakR = absR
     }
 
+    // CPU timing (EMA smoothing — Date.now() is integer ms, so we smooth)
+    const cpuMs = Date.now() - t0
+    this.cpuEma += (cpuMs - this.cpuEma) * 0.15
+
     this.meterCount += outL.length
     if (this.meterCount >= this.meterInterval) {
-      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR, gr: this.meterGrMin })
+      const cpu = (this.cpuEma / this.budgetMs) * 100
+      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR, gr: this.meterGrMin, cpu })
       this.meterPeakL = 0
       this.meterPeakR = 0
       this.meterGrMin = 1.0

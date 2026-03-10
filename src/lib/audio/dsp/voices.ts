@@ -440,7 +440,7 @@ class FMLFO {
   }
 }
 
-/** 4-op FM core — single voice instance used by FMVoice poly wrapper. */
+/** 4-op FM core — single voice instance used by FMVoice poly wrapper (12 cores max). */
 class FMCore {
   freq = 440; vel = 1
   ops: FMOp[]
@@ -504,80 +504,160 @@ class FMCore {
 }
 
 /**
- * 4-operator FM synth with 4-voice polyphony (ADR 068).
- * Mono/poly switchable via polyMode param, same pattern as iDEATH.
+ * 4-operator FM synth with MEGAfm-style poly modes (ADR 068).
+ * polyMode: 0=MONO, 1=POLY12, 2=WIDE6, 3=UNISON
  */
 export class FMVoice implements Voice {
   private cores: FMCore[]
-  private polyMode = false
+  private polyMode = 0  // 0=mono, 1=poly12, 2=wide6, 3=unison
   private nextVoice = 0
-  private activeNotes = new Int8Array(4).fill(-1)
+  private activeNotes = new Int8Array(12).fill(-1)
+  private unisonDetune = 0.008  // detune spread for unison/wide modes
 
   constructor(sr: number) {
-    this.cores = Array.from({ length: 4 }, () => new FMCore(sr))
+    this.cores = Array.from({ length: 12 }, () => new FMCore(sr))
   }
 
   noteOn(note: number, v: number) {
-    if (!this.polyMode) {
-      this.cores[0].noteOn(note, v)
-      return
-    }
-    // Retrigger if same note is already playing
-    for (let i = 0; i < 4; i++) {
-      if (this.activeNotes[i] === note) {
-        this.cores[i].noteOn(note, v)
+    switch (this.polyMode) {
+      case 0: // MONO
+        this.cores[0].noteOn(note, v)
+        return
+      case 1: { // POLY12
+        // Retrigger if same note is already playing
+        for (let i = 0; i < 12; i++) {
+          if (this.activeNotes[i] === note) {
+            this.cores[i].noteOn(note, v)
+            return
+          }
+        }
+        const idx = this.nextVoice
+        this.nextVoice = (this.nextVoice + 1) % 12
+        this.activeNotes[idx] = note
+        this.cores[idx].noteOn(note, v)
         return
       }
+      case 2: { // WIDE6 — 6 pairs, each pair detuned L/R
+        for (let i = 0; i < 6; i++) {
+          if (this.activeNotes[i] === note) {
+            this._wideNoteOn(i, note, v)
+            return
+          }
+        }
+        const idx = this.nextVoice % 6
+        this.nextVoice = (this.nextVoice + 1) % 6
+        this.activeNotes[idx] = note
+        this._wideNoteOn(idx, note, v)
+        return
+      }
+      case 3: // UNISON — all 12 cores on one note, detuned
+        for (let i = 0; i < 12; i++) {
+          const detune = (i - 5.5) / 5.5 * this.unisonDetune
+          this.cores[i].noteOn(note, v)
+          this.cores[i].freq *= (1 + detune)
+        }
+        this.activeNotes[0] = note
+        return
     }
-    const idx = this.nextVoice
-    this.nextVoice = (this.nextVoice + 1) & 3
-    this.activeNotes[idx] = note
-    this.cores[idx].noteOn(note, v)
+  }
+
+  private _wideNoteOn(pair: number, note: number, v: number) {
+    const coreL = this.cores[pair * 2]
+    const coreR = this.cores[pair * 2 + 1]
+    coreL.noteOn(note, v)
+    coreR.noteOn(note, v)
+    coreL.freq *= (1 - this.unisonDetune * 0.5)
+    coreR.freq *= (1 + this.unisonDetune * 0.5)
   }
 
   noteOff() {
-    if (!this.polyMode) {
+    if (this.polyMode === 0) {
       this.cores[0].noteOff()
       return
     }
-    for (let i = 0; i < 4; i++) {
+    const count = this.polyMode === 2 ? 12 : this.polyMode === 1 ? 12 : 12
+    for (let i = 0; i < count; i++) {
       this.cores[i].noteOff()
       this.activeNotes[i] = -1
     }
   }
 
   slideNote(note: number, v: number) {
-    if (!this.polyMode) {
-      this.cores[0].noteOn(note, v) // FM doesn't have portamento, retrigger
+    if (this.polyMode === 0) {
+      this.cores[0].noteOn(note, v)
       return
     }
-    const prev = (this.nextVoice - 1 + 4) & 3
+    if (this.polyMode === 3) {
+      // Unison slide: retrigger all
+      this.noteOn(note, v)
+      return
+    }
+    if (this.polyMode === 2) {
+      const prev = ((this.nextVoice - 1 + 6) % 6)
+      this.activeNotes[prev] = note
+      this._wideNoteOn(prev, note, v)
+      return
+    }
+    // Poly12
+    const prev = (this.nextVoice - 1 + 12) % 12
     this.cores[prev].noteOn(note, v)
     this.activeNotes[prev] = note
   }
 
   reset() {
-    for (let i = 0; i < 4; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
+    for (let i = 0; i < 12; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
     this.nextVoice = 0
   }
 
   tick(): number {
-    if (!this.polyMode) return this.cores[0].tick()
+    if (this.polyMode === 0) return this.cores[0].tick()
+    if (this.polyMode === 2) {
+      // Wide6: sum for mono output (tickStereo used for stereo)
+      let sum = 0
+      for (let i = 0; i < 12; i++) sum += this.cores[i].tick()
+      return sum / 6
+    }
     let sum = 0
-    for (let i = 0; i < 4; i++) sum += this.cores[i].tick()
-    return sum * 0.5
+    const n = this.polyMode === 3 ? 12 : 12
+    for (let i = 0; i < n; i++) sum += this.cores[i].tick()
+    return this.polyMode === 3 ? sum / 12 : sum / 6
+  }
+
+  tickStereo(out: Float32Array) {
+    if (this.polyMode !== 2) {
+      // Non-wide modes: mono output to both channels
+      const m = this.tick()
+      out[0] = m; out[1] = m
+      return
+    }
+    // WIDE6: L cores are even indices, R cores are odd
+    let sumL = 0, sumR = 0
+    for (let p = 0; p < 6; p++) {
+      sumL += this.cores[p * 2].tick()
+      sumR += this.cores[p * 2 + 1].tick()
+    }
+    out[0] = sumL / 3; out[1] = sumR / 3
   }
 
   setParam(key: string, value: number) {
     if (key === 'polyMode') {
-      this.polyMode = value >= 0.5
-      if (!this.polyMode) {
-        for (let i = 1; i < 4; i++) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
+      const newMode = Math.round(value)
+      if (newMode !== this.polyMode) {
+        // Silence non-primary cores when switching modes
+        for (let i = (newMode === 0 ? 1 : 0); i < 12; i++) {
+          if (newMode === 0 && i > 0) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
+        }
+        this.polyMode = newMode
+        this.nextVoice = 0
       }
       return
     }
-    // Apply param to all 4 cores
-    for (let i = 0; i < 4; i++) {
+    if (key === 'unisonDetune') {
+      this.unisonDetune = value
+      return
+    }
+    // Apply param to all 12 cores
+    for (let i = 0; i < 12; i++) {
       const core = this.cores[i]
       if (key === 'algorithm') { core.algorithm = Math.round(value); continue }
 

@@ -1223,13 +1223,21 @@
           <div class="knob-grid">
             {#each params as p, i}
               {#if p.key === 'polyMode'}
-                {@const isOn = (knobValue(p) ?? p.default) >= 0.5}
+                {@const modeVal = Math.round(knobValue(p) ?? p.default)}
+                {@const fmModeLabels = ['MONO', 'POLY 12', 'WIDE 6', 'UNISON']}
+                {@const isFm = cell?.voiceId === 'FM'}
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div class="mode-row" onpointerdown={() => knobChange(p, isOn ? 0 : 1)}
+                <div class="mode-row" onpointerdown={() => {
+                  if (isFm) {
+                    knobChange(p, (modeVal + 1) % 4)
+                  } else {
+                    knobChange(p, modeVal >= 1 ? 0 : 1)
+                  }
+                }}
                   data-tip={p.tip} data-tip-ja={p.tipJa}>
-                  <span class="mode-label">{isOn ? 'POLY (4-VOICE)' : 'MONO'}</span>
-                  <span class="mode-switch" class:on={isOn}><span class="mode-switch-thumb"></span></span>
+                  <span class="mode-label">{isFm ? fmModeLabels[modeVal] : (modeVal >= 1 ? 'POLY (4-VOICE)' : 'MONO')}</span>
+                  <span class="mode-switch" class:on={modeVal >= 1}><span class="mode-switch-thumb"></span></span>
                 </div>
               {:else if p.key === 'reverse'}
                 {@const isOn = (knobValue(p) ?? p.default) >= 0.5}

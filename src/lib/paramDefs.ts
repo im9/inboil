@@ -56,7 +56,7 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'arpOct',     label: 'AOCT',  group: 'arp',    tip: 'Arp octave range (1=off, 2–4)',    tipJa: 'アルペジオ範囲 (1=オフ, 2–4)',   min: 1,     max: 4,    step: 1, default: 1     },
   ],
   FM: [
-    { key: 'polyMode',   label: 'POLY', group: 'osc',    tip: 'Polyphony mode (4-voice)',        tipJa: 'ポリフォニーモード (4声)',     min: 0, max: 1, step: 1, default: 0 },
+    { key: 'polyMode',   label: 'POLY', group: 'osc',    tip: 'MONO → POLY12 → WIDE6 → UNISON', tipJa: 'MONO → POLY12 → WIDE6 → UNISON', min: 0, max: 3, step: 1, default: 0 },
     { key: 'algorithm',  label: 'ALG',  group: 'osc',    tip: 'Algorithm (operator routing)',     tipJa: 'アルゴリズム (接続パターン)', min: 0, max: 7, step: 1, default: 0 },
     { key: 'op1Fb',      label: 'FB',   group: 'osc',    tip: 'OP1 feedback',                    tipJa: 'OP1 フィードバック',          min: 0.0, max: 1.0, default: 0.15 },
     { key: 'op1Ratio',   label: 'R1',   group: 'ratio',  tip: 'OP1 frequency ratio',             tipJa: 'OP1 周波数比',                min: 0.5, max: 16.0, default: 1.0 },
