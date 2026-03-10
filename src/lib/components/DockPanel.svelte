@@ -10,9 +10,9 @@
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import type { VoiceId } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
-  import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator, sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze } from '../sceneActions.ts'
+  import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator, sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneSetSeed, sceneApplyGenerativePreset } from '../sceneActions.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
-  import { SCALE_NAMES } from '../generative.ts'
+  import { SCALE_NAMES, GENERATIVE_PRESETS } from '../generative.ts'
   import { PATTERN_COLORS, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
@@ -1172,6 +1172,42 @@
                       onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer' }}
                     >{m.toUpperCase().slice(0, 3)}</button>
                   {/each}
+                </div>
+                <!-- Seed control (ADR 078 Phase 4) -->
+                <div class="gen-seed-row">
+                  <span class="gen-range-label">SEED</span>
+                  {#if gen.seed != null}
+                    <span class="gen-seed-val">{gen.seed}</span>
+                    <button class="gen-seed-btn" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
+                      onpointerdown={() => sceneSetSeed(sceneGenerativeNode.id, Math.floor(Math.random() * 100000))}
+                    >⟳</button>
+                    <button class="gen-seed-btn" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
+                      onpointerdown={() => sceneSetSeed(sceneGenerativeNode.id, undefined)}
+                    >✕</button>
+                  {:else}
+                    <span class="gen-seed-val" style="opacity:0.4">off</span>
+                    <button class="gen-seed-btn" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
+                      onpointerdown={() => sceneSetSeed(sceneGenerativeNode.id, Math.floor(Math.random() * 100000))}
+                    >+</button>
+                  {/if}
+                </div>
+                <!-- Presets (ADR 078 Phase 4) -->
+                <div class="gen-scale-row">
+                  <span class="gen-range-label">PRESET</span>
+                  <select class="gen-scale-select"
+                    onchange={e => {
+                      const sel = (e.target as HTMLSelectElement)
+                      const presets = GENERATIVE_PRESETS.filter(p => p.engine === gen.engine)
+                      const idx = parseInt(sel.value)
+                      if (idx >= 0 && presets[idx]) sceneApplyGenerativePreset(sceneGenerativeNode.id, presets[idx].params)
+                      sel.value = '-1'
+                    }}
+                  >
+                    <option value="-1" selected>—</option>
+                    {#each GENERATIVE_PRESETS.filter(p => p.engine === gen.engine) as preset, i}
+                      <option value={i}>{preset.name}</option>
+                    {/each}
+                  </select>
                 </div>
                 <!-- Action buttons -->
                 {#if gen.outputMode === 'write'}
@@ -2655,6 +2691,33 @@
     border: 1px solid rgba(237, 232, 220, 0.2);
     color: inherit;
     padding: 2px 4px;
+  }
+  .gen-seed-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .gen-seed-val {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-sm);
+    min-width: 32px;
+  }
+  .gen-seed-btn {
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(237, 232, 220, 0.2);
+    background: transparent;
+    color: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+  }
+  .gen-seed-btn:hover {
+    background: rgba(237, 232, 220, 0.1);
   }
   .tonnetz-seq-editor {
     display: flex;

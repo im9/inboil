@@ -259,6 +259,37 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   return trigs
 }
 
+// ── Factory Presets (ADR 078 Phase 4) ──
+
+export interface GenerativePreset {
+  name: string
+  engine: string
+  params: Record<string, unknown>
+}
+
+export const GENERATIVE_PRESETS: GenerativePreset[] = [
+  // Turing Machine presets
+  { name: 'Evolving Melody', engine: 'turing', params: { engine: 'turing', length: 8, lock: 0.6, range: [48, 72], mode: 'note', density: 0.8 } },
+  { name: 'Locked Loop', engine: 'turing', params: { engine: 'turing', length: 8, lock: 1.0, range: [48, 72], mode: 'note', density: 0.9 } },
+  { name: 'Random Gate', engine: 'turing', params: { engine: 'turing', length: 16, lock: 0.3, range: [48, 72], mode: 'gate', density: 0.5 } },
+  { name: 'Hi-Hat Pattern', engine: 'turing', params: { engine: 'turing', length: 16, lock: 0.7, range: [60, 60], mode: 'gate', density: 0.6 } },
+  { name: 'Velocity Drift', engine: 'turing', params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'velocity', density: 0.7 } },
+  { name: 'Ambient Random', engine: 'turing', params: { engine: 'turing', length: 16, lock: 0.4, range: [36, 84], mode: 'note', density: 0.4 } },
+  { name: 'Bass Drift', engine: 'turing', params: { engine: 'turing', length: 4, lock: 0.7, range: [36, 48], mode: 'note', density: 0.9 } },
+  // Quantizer presets
+  { name: 'C Minor Pent', engine: 'quantizer', params: { engine: 'quantizer', scale: 'minor-pent', root: 0, octaveRange: [3, 5] } },
+  { name: 'D Dorian', engine: 'quantizer', params: { engine: 'quantizer', scale: 'dorian', root: 2, octaveRange: [3, 5] } },
+  { name: 'A Blues', engine: 'quantizer', params: { engine: 'quantizer', scale: 'blues', root: 9, octaveRange: [3, 5] } },
+  { name: 'Whole Tone', engine: 'quantizer', params: { engine: 'quantizer', scale: 'whole', root: 0, octaveRange: [3, 6] } },
+  { name: 'Pentatonic Wide', engine: 'quantizer', params: { engine: 'quantizer', scale: 'pentatonic', root: 0, octaveRange: [2, 6] } },
+  // Tonnetz presets
+  { name: 'Classic P·L·R', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' } },
+  { name: 'Cinematic', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 52, 55], sequence: ['L', 'P', 'R', 'L'], stepsPerChord: 8, voicing: 'spread' } },
+  { name: 'Jazz Tonnetz', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['PL', 'R', 'L', 'PR'], stepsPerChord: 4, voicing: 'drop2' } },
+  { name: 'Minimal Shift', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P'], stepsPerChord: 8, voicing: 'close' } },
+  { name: 'Dark Chords', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 51, 55], sequence: ['R', 'L', 'P'], stepsPerChord: 4, voicing: 'spread' } },
+]
+
 // ── Seeded PRNG (simple mulberry32) ──
 
 function seededRng(seed: number): () => number {

@@ -310,6 +310,26 @@ function applyGeneratedTrigs(
   }
 }
 
+/** Set or randomize the seed for deterministic generation */
+export function sceneSetSeed(nodeId: string, seed: number | undefined): void {
+  pushUndo('Set seed')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return
+  node.generative.seed = seed
+}
+
+/** Apply a factory preset to a generative node */
+export function sceneApplyGenerativePreset(nodeId: string, params: Record<string, unknown>): void {
+  pushUndo('Apply generative preset')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return
+  const cloned: Record<string, unknown> = {}
+  for (const k of Object.keys(params)) {
+    cloned[k] = Array.isArray(params[k]) ? [...(params[k] as unknown[])] : params[k]
+  }
+  node.generative.params = cloned as unknown as typeof node.generative.params
+}
+
 /** Toggle outputMode between write and live */
 export function sceneToggleOutputMode(nodeId: string): void {
   pushUndo('Toggle output mode')
