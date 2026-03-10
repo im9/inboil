@@ -216,6 +216,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private granular       = new GranularProcessor(sampleRate)
   // DJ Filter (XY pad sweep)
   private djFilter       = new DJFilter(sampleRate)
+  // Anti-click crossfade on pattern reset (128 samples ≈ 2.7ms @ 48kHz)
+  private xfadeLen       = 128
+  private xfadeRemain    = 0
   // Peak metering (~60fps)
   private meterPeakL     = 0
   private meterPeakR     = 0
@@ -409,6 +412,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.swingPhase = 0
             this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
             this.accumulator = this.currentThreshold  // trigger step 0 on next sample
+            this.xfadeRemain = this.xfadeLen          // fade-in to suppress click
           }
           break
         }
@@ -720,6 +724,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       this.gateEnv += (gateTarget - this.gateEnv) * 0.03
       fL *= this.gateEnv
       fR *= this.gateEnv
+
+      // Anti-click fade-in after pattern reset
+      if (this.xfadeRemain > 0) {
+        const g = 1 - this.xfadeRemain / this.xfadeLen
+        fL *= g; fR *= g
+        this.xfadeRemain--
+      }
 
       // Master gain + peak limiter
       fL *= this.masterGain * 0.8
