@@ -1353,9 +1353,14 @@ export function randomizePattern(): void {
 
 // ── Project persistence (ADR 020) ────────────────────────────────────
 
-import { saveProject, loadProject, listProjects, deleteProject, saveSample, loadSamples, deleteSamples, type StoredProject } from './storage.ts'
+import type { StoredProject } from './storage.ts'
 export type { StoredProject }
-export { listProjects, deleteProject }
+
+const storage = () => import('./storage.ts')
+
+export async function listProjects() {
+  return (await storage()).listProjects()
+}
 
 // ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────
 
@@ -1371,20 +1376,20 @@ export const samplesByTrack = $state<Record<number, SampleMeta>>({})
 /** Store a loaded sample in memory + persist to IndexedDB */
 export function setSample(trackId: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
   samplesByTrack[trackId] = { name, waveform, rawBuffer }
-  if (project.id) void saveSample(project.id, trackId, name, rawBuffer)
+  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, name, rawBuffer))
 }
 
 /** Persist any pending samples after project gets an id (called from projectSaveAs) */
 async function persistPendingSamples(projectId: string): Promise<void> {
   for (const [tid, meta] of Object.entries(samplesByTrack)) {
-    await saveSample(projectId, Number(tid), meta.name, meta.rawBuffer)
+    await (await storage()).saveSample(projectId, Number(tid), meta.name, meta.rawBuffer)
   }
 }
 
 /** Restore samples from IndexedDB — decode + cache in engine (sent on next sendPattern) */
 export async function restoreSamples(projectId: string): Promise<void> {
   clearSamples()
-  const stored = await loadSamples(projectId)
+  const stored = await (await storage()).loadSamples(projectId)
   if (stored.length === 0) return
   const { engine } = await import('./audio/engine.ts')
   for (const s of stored) {
@@ -1410,7 +1415,7 @@ export async function projectSaveAs(name: string): Promise<string> {
   song.name = name
   const id = crypto.randomUUID()
   const now = Date.now()
-  await saveProject(buildStoredProject(id, name, now))
+  await (await storage()).saveProject(buildStoredProject(id, name, now))
   project.id = id
   project.dirty = false
   project.lastSavedAt = now
@@ -1425,16 +1430,17 @@ export async function projectSave(): Promise<void> {
     await projectSaveAs(song.name || 'Untitled')
     return
   }
-  const existing = await loadProject(project.id)
+  const s = await storage()
+  const existing = await s.loadProject(project.id)
   const now = Date.now()
-  await saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
+  await s.saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
   project.dirty = false
   project.lastSavedAt = now
 }
 
 /** Load a project by id and replace current state */
 export async function projectLoad(id: string): Promise<boolean> {
-  const proj = await loadProject(id)
+  const proj = await (await storage()).loadProject(id)
   if (!proj) return false
   // Migrate: ensure song.name matches project name
   if (!proj.song.name) proj.song.name = proj.name
@@ -1475,8 +1481,9 @@ export function projectNew(): void {
 
 /** Delete a project and reset to new if it was current */
 export async function projectDelete(id: string): Promise<void> {
-  await deleteProject(id)
-  await deleteSamples(id)
+  const s = await storage()
+  await s.deleteProject(id)
+  await s.deleteSamples(id)
   if (project.id === id) projectNew()
 }
 
@@ -1523,12 +1530,13 @@ export async function projectRestore(): Promise<void> {
 export async function projectRename(name: string): Promise<void> {
   song.name = name
   if (project.id) {
-    const existing = await loadProject(project.id)
+    const s = await storage()
+    const existing = await s.loadProject(project.id)
     if (existing) {
       existing.name = name
       existing.song.name = name
       existing.updatedAt = Date.now()
-      await saveProject(existing)
+      await s.saveProject(existing)
     }
   }
 }

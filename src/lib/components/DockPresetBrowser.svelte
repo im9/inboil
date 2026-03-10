@@ -1,0 +1,455 @@
+<script lang="ts">
+  import { activeCell, ui } from '../state.svelte.ts'
+  import { applyPreset } from '../stepActions.ts'
+  import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, loadUserPresetsIntoCache, isUserPresetsLoaded, addUserPresetToCache, removeUserPresetFromCache, renameUserPresetInCache, type UserPreset } from '../presets.ts'
+
+  const { onopen }: {
+    onopen?: () => void
+  } = $props()
+
+  const cell = $derived(ui.selectedTrack >= 0 ? activeCell(ui.selectedTrack) : null)
+  const showPresets = $derived(cell ? hasPresets(cell.voiceId) : false)
+  const currentPreset = $derived(cell?.presetName ?? '')
+
+  let presetCategory = $state<string | null>(null)
+  let presetOpen = $state(false)
+  $effect(() => { cell?.voiceId; presetCategory = null })
+
+  // Close when parent requests (e.g. voice picker opened)
+  export function close() { presetOpen = false }
+
+  // ── Recently used presets (session only, per voice) ──
+  const recentPresetsMap = new Map<string, string[]>()
+  let recentVersion = $state(0)
+  const recentPresets = $derived.by(() => {
+    recentVersion
+    const vid = cell?.voiceId
+    if (!vid) return [] as { name: string; params: Record<string, number> }[]
+    const names = recentPresetsMap.get(vid) ?? []
+    const all = getPresets(vid, null)
+    return names
+      .map(n => all.find(p => p.name === n))
+      .filter((p): p is NonNullable<typeof p> => p != null)
+  })
+
+  function trackRecent(voiceId: string, presetName: string) {
+    const list = recentPresetsMap.get(voiceId) ?? []
+    const filtered = list.filter(n => n !== presetName)
+    filtered.unshift(presetName)
+    if (filtered.length > 4) filtered.pop()
+    recentPresetsMap.set(voiceId, filtered)
+    recentVersion++
+  }
+
+  function selectPreset(preset: { name: string; params: Record<string, number> }) {
+    applyPreset(ui.selectedTrack, preset.params, preset.name)
+    if (cell?.voiceId) trackRecent(cell.voiceId, preset.name)
+    presetOpen = false
+  }
+
+  // ── User preset save/delete ──
+  let saveMode = $state(false)
+  let saveName = $state('')
+  let saveInput = $state<HTMLInputElement>(null!)
+  let userPresetVersion = $state(0)
+
+  $effect(() => {
+    if (!isUserPresetsLoaded()) void loadUserPresetsIntoCache().then(() => { userPresetVersion++ })
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  const presetListAll = $derived.by(() => {
+    userPresetVersion
+    return cell ? getPresets(cell.voiceId, presetCategory) : []
+  })
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  const presetCatsAll = $derived.by(() => {
+    userPresetVersion
+    return cell ? getPresetCategories(cell.voiceId) : []
+  })
+
+  function startSavePreset() {
+    saveMode = true
+    saveName = ''
+    requestAnimationFrame(() => saveInput?.focus())
+  }
+
+  let saving = false
+  async function commitSavePreset() {
+    if (saving) return
+    const name = saveName.trim()
+    const voiceId = cell?.voiceId
+    const params = cell ? { ...cell.voiceParams } : null
+    saveMode = false
+    if (!name || !voiceId || !params) return
+    saving = true
+    try {
+      const { saveUserPreset } = await import('../storage.ts')
+      const id = await saveUserPreset(voiceId, name, params)
+      addUserPresetToCache(voiceId, name, params, id)
+      userPresetVersion++
+      if (cell) cell.presetName = name
+    } finally {
+      saving = false
+    }
+  }
+
+  function cancelSavePreset() {
+    if (saving) return
+    saveMode = false
+  }
+
+  async function handleDeletePreset(preset: UserPreset) {
+    const { deleteUserPreset } = await import('../storage.ts')
+    await deleteUserPreset(preset.id)
+    removeUserPresetFromCache(preset.voiceId, preset.id)
+    userPresetVersion++
+    if (cell?.presetName === preset.name) {
+      cell.presetName = undefined
+    }
+  }
+
+  function isUserPreset(preset: unknown): preset is UserPreset {
+    return typeof preset === 'object' && preset !== null && 'isUser' in preset
+  }
+
+  // ── User preset rename (double-tap) ──
+  let renamingId = $state<number | null>(null)
+  let renameName = $state('')
+  let renameInput = $state<HTMLInputElement>(null!)
+  let lastTapId = $state<number | null>(null)
+  let lastTapTime = $state(0)
+
+  function handlePresetTap(preset: UserPreset) {
+    const now = Date.now()
+    if (lastTapId === preset.id && now - lastTapTime < 400) {
+      lastTapId = null
+      renamingId = preset.id
+      renameName = preset.name
+      requestAnimationFrame(() => renameInput?.focus())
+    } else {
+      lastTapId = preset.id
+      lastTapTime = now
+      selectPreset(preset)
+    }
+  }
+
+  let renaming = false
+  async function commitRename(preset: UserPreset) {
+    if (renaming) return
+    const name = renameName.trim()
+    const id = renamingId
+    renamingId = null
+    if (!name || !id || name === preset.name) return
+    renaming = true
+    try {
+      const { renameUserPreset } = await import('../storage.ts')
+      await renameUserPreset(id, name)
+      renameUserPresetInCache(preset.voiceId, id, name)
+      userPresetVersion++
+      if (cell?.presetName === preset.name) {
+        cell.presetName = name.slice(0, 16)
+      }
+    } finally {
+      renaming = false
+    }
+  }
+
+  function cancelRename() {
+    if (renaming) return
+    renamingId = null
+  }
+</script>
+
+{#if showPresets}
+  <div class="preset-section">
+    <div class="preset-header">
+      <button class="voice-current" onpointerdown={() => { presetOpen = !presetOpen; if (presetOpen) onopen?.() }}
+        data-tip="Browse presets" data-tip-ja="プリセットを選択"
+      >
+        <span class="voice-current-name">{currentPreset || 'PRESETS'}</span>
+        <span class="voice-current-arrow">{presetOpen ? '▾' : '▸'}</span>
+      </button>
+      {#if presetOpen}
+        <button class="btn-save-preset" onpointerdown={startSavePreset}
+          data-tip="Save current sound as preset" data-tip-ja="現在の音色をプリセットとして保存"
+        >SAVE</button>
+      {/if}
+    </div>
+    {#if presetOpen}
+      {#if saveMode}
+        <div class="preset-save-row">
+          <input
+            bind:this={saveInput}
+            class="preset-save-input"
+            type="text"
+            maxlength="16"
+            placeholder="Preset name"
+            bind:value={saveName}
+            onkeydown={(e) => { if (e.key === 'Enter') commitSavePreset(); if (e.key === 'Escape') cancelSavePreset() }}
+            onblur={cancelSavePreset}
+          />
+        </div>
+      {/if}
+      {#if presetCatsAll.length > 0}
+      <div class="picker-cats">
+        <button class="cat-btn" class:active={presetCategory === null}
+          onpointerdown={() => presetCategory = null}>ALL</button>
+        {#each presetCatsAll as cat}
+          <button class="cat-btn" class:active={presetCategory === cat}
+            onpointerdown={() => presetCategory = cat}>{CATEGORY_LABELS[cat] ?? cat.toUpperCase()}</button>
+        {/each}
+      </div>
+      {/if}
+      {#if recentPresets.length > 0}
+      <div class="picker-recent">
+        <span class="picker-recent-label">RECENT</span>
+        {#each recentPresets as preset}
+          <button class="picker-recent-btn" class:selected={currentPreset === preset.name}
+            onpointerdown={() => selectPreset(preset)}
+          >{preset.name}</button>
+        {/each}
+      </div>
+      {/if}
+      <div class="picker-list">
+        {#each presetListAll as preset}
+          {#if isUserPreset(preset) && renamingId === preset.id}
+            <div class="picker-item renaming">
+              {#if preset.category}<span class="picker-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
+              <input
+                bind:this={renameInput}
+                class="preset-rename-input"
+                type="text"
+                maxlength="16"
+                bind:value={renameName}
+                onkeydown={(e) => { if (e.key === 'Enter') commitRename(preset); if (e.key === 'Escape') cancelRename() }}
+                onblur={() => cancelRename()}
+              />
+            </div>
+          {:else}
+            <button class="picker-item" class:selected={currentPreset === preset.name}
+              onpointerdown={() => isUserPreset(preset) ? handlePresetTap(preset) : selectPreset(preset)}
+            >
+              {#if preset.category}<span class="picker-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
+              <span class="picker-name">{preset.name}</span>
+              {#if isUserPreset(preset)}
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <span class="preset-del" onpointerdown={(e) => { e.stopPropagation(); handleDeletePreset(preset) }}
+                  data-tip="Delete preset" data-tip-ja="プリセットを削除"
+                >✕</span>
+              {/if}
+            </button>
+          {/if}
+        {/each}
+      </div>
+    {/if}
+  </div>
+{/if}
+
+<style>
+  .preset-section {
+    margin-bottom: 8px;
+  }
+  .preset-header {
+    display: flex;
+    gap: 4px;
+    align-items: stretch;
+  }
+  .voice-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: border-color 80ms;
+  }
+  .voice-current:hover {
+    border-color: var(--dk-border-mid);
+  }
+  .voice-current-name {
+    text-transform: uppercase;
+  }
+  .voice-current-arrow {
+    font-size: 9px;
+    opacity: 0.4;
+  }
+  .picker-cats {
+    display: flex;
+    gap: 2px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .cat-btn {
+    flex: 1;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text-dim);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 6px 5px;
+    cursor: pointer;
+  }
+  .cat-btn.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .picker-recent {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 2px;
+    flex-wrap: wrap;
+  }
+  .picker-recent-label {
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(var(--dk-cream), 0.25);
+    margin-right: 2px;
+  }
+  .picker-recent-btn {
+    border: 1px solid rgba(var(--dk-cream), 0.12);
+    background: rgba(var(--dk-cream), 0.04);
+    color: rgba(var(--dk-cream), 0.55);
+    font-size: var(--dk-fs-xs);
+    padding: 2px 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+  }
+  .picker-recent-btn:hover {
+    background: var(--dk-bg-hover);
+    color: rgba(var(--dk-cream), 0.8);
+  }
+  .picker-recent-btn.selected {
+    background: rgba(108,119,68,0.2);
+    color: rgba(var(--dk-cream), 0.9);
+    border-color: rgba(108,119,68,0.4);
+  }
+  .picker-list {
+    max-height: 160px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-top: 4px;
+    border: 1px solid rgba(var(--dk-cream), 0.1);
+  }
+  .picker-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--dk-bg-faint);
+    background: transparent;
+    color: rgba(var(--dk-cream), 0.65);
+    font-size: var(--dk-fs-md);
+    padding: 5px 6px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .picker-item:hover {
+    background: var(--dk-bg-hover);
+    color: rgba(var(--dk-cream), 0.9);
+  }
+  .picker-item:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .picker-item.selected {
+    background: rgba(108,119,68,0.2);
+    color: rgba(var(--dk-cream), 0.95);
+  }
+  .picker-item.selected .picker-cat-tag {
+    color: var(--color-olive);
+  }
+  .picker-cat-tag {
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(var(--dk-cream), 0.35);
+    min-width: 28px;
+    flex-shrink: 0;
+  }
+  .picker-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-save-preset {
+    border: 1px solid rgba(108,119,68,0.5);
+    background: transparent;
+    color: var(--color-olive);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 60ms, color 60ms;
+  }
+  .btn-save-preset:hover {
+    background: rgba(108,119,68,0.15);
+  }
+  .btn-save-preset:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .preset-save-row {
+    margin-top: 4px;
+  }
+  .preset-save-input {
+    width: 100%;
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-md);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(var(--dk-cream), 0.9);
+    background: rgba(var(--dk-cream), 0.08);
+    border: 1px solid var(--color-olive);
+    padding: 4px 6px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .preset-del {
+    font-size: 8px;
+    color: rgba(var(--dk-cream), 0.3);
+    flex-shrink: 0;
+    padding: 2px 4px;
+    cursor: pointer;
+    transition: color 60ms;
+  }
+  .preset-del:hover {
+    color: rgba(220, 80, 80, 0.8);
+  }
+  .picker-item.renaming {
+    background: var(--dk-bg-hover);
+  }
+  .preset-rename-input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-md);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(var(--dk-cream), 0.9);
+    background: rgba(var(--dk-cream), 0.08);
+    border: 1px solid var(--color-olive);
+    padding: 2px 4px;
+    outline: none;
+    box-sizing: border-box;
+  }
+</style>
