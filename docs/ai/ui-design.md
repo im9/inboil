@@ -300,6 +300,7 @@ Dark zone. Contains:
 - BPM display (SplitFlap, editable)
 - Transport: Play/Stop/Random buttons
 - Pattern navigation: `◄ PAT:01 ►` (SplitFlap display)
+- CPU meter: 6-dot VU-style gauge (olive → yellow → red), EMA-smoothed, shown when CPU > 0
 - ⚙ system button (top-right, opens SYSTEM sidebar)
 - Pending pattern: when queued switch is active, shows target PAT with blinking animation (400ms pulse)
 

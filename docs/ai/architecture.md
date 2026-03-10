@@ -81,7 +81,7 @@ Communication:   MessagePort (postMessage) — bidirectional
 The AudioWorklet has no access to the DOM.
 All communication crosses the thread boundary via `MessagePort`:
 - **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `loadSample`
-- **Worklet → UI:** `step` event with playhead positions array
+- **Worklet → UI:** `step` event with playhead positions array, `levels` event with peak/GR/CPU metering
 
 No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (up to 16 tracks × 64 steps max).
 
@@ -141,7 +141,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
-│   │   ├── presets.ts            ← Factory presets for WT synth (22 presets, 6 categories)
+│   │   ├── presets.ts            ← Factory presets for WT (22 presets) and FM (20 presets)
 │   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt

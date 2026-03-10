@@ -113,10 +113,10 @@ interface WorkletTrig {
 ```typescript
 type WorkletEvent =
   | { type: 'step'; playheads: number[]; cycle: boolean }   // current step position per track; cycle=true on pattern loop
-  | { type: 'levels'; peakL: number; peakR: number }        // master output peak levels for VU meter
+  | { type: 'levels'; peakL: number; peakR: number; gr: number; cpu?: number }  // master output levels + gain reduction + CPU load
 ```
 
-The `step` event fires on every step advance and carries the current playhead position for all tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching). The `levels` event provides master output peak levels for VU metering.
+The `step` event fires on every step advance and carries the current playhead position for all tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching). The `levels` event provides master output peak levels for VU metering, gain reduction (`gr`) for compressor visualization, and optional CPU load percentage (EMA-smoothed).
 
 ## Parameter Application Timing
 

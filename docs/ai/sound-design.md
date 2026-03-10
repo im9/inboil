@@ -112,12 +112,12 @@ Parameters:
 
 ### FMVoice (4-operator FM synth — ADR 068)
 
-4-operator FM synth with 8 algorithm topologies, per-operator envelopes, tempo-sync LFO, and mono/poly mode (4-voice polyphony). AlgoGraph visualization in DockPanel. 20 factory presets.
+4-operator FM synth with 8 algorithm topologies, per-operator envelopes, tempo-sync LFO, and MEGAfm-style poly modes (12-voice polyphony: MONO/POLY12/WIDE6/UNISON). √N scaling for voice summing. AlgoGraph visualization in DockPanel. 20 factory presets.
 
 Parameters:
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| polyMode | POLY | 0–1 (step 1) | 0 | Polyphony: MONO/POLY(4) |
+| polyMode | POLY | 0–3 (step 1) | 0 | Polyphony: MONO/POLY12/WIDE6/UNISON |
 | algorithm | ALG | 0–7 (step 1) | 0 | FM algorithm topology |
 | op1Fb | FB | 0.0–1.0 | 0.15 | Op1 self-feedback |
 | op1Ratio | R1 | 0.5–16.0 | 1.0 | Op1 frequency ratio |
@@ -157,12 +157,12 @@ Wavetable synth engine (formerly iDEATH). VoiceId: `'WT'`. Class: `WTSynth`.
 
 Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, unison, filter drive, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
 
-Mono/poly mode switchable via `polyMode` parameter (0=mono, 1=4-voice poly with round-robin allocation and oldest-note stealing). Poly mode supports chord input via `trig.notes[]` field.
+MEGAfm-style poly modes switchable via `polyMode` parameter (0=MONO, 1=POLY8 with round-robin allocation and oldest-note stealing, 2=WIDE4 stereo pairs, 3=UNISON 8-voice stack). √N scaling for voice summing. Poly mode supports chord input via `trig.notes[]` field.
 
 Parameters (via `paramDefs.ts`):
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| polyMode | POLY | 0–1 (step 1) | 0 | Polyphony: MONO/POLY(4) |
+| polyMode | POLY | 0–3 (step 1) | 0 | Polyphony: MONO/POLY8/WIDE4/UNISON |
 | oscAPos | WV-A | 0.0–1.0 | 0.0 | Osc A wavetable position |
 | oscBPos | WV-B | 0.0–1.0 | 0.25 | Osc B wavetable position |
 | oscBSemi | SEMI | -24–24 (step 1) | 0 | Osc B semitone offset |

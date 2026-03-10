@@ -39,14 +39,14 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **EG** | Envelope Generator. Produces a time-varying control signal for VCF or VCA. |
 | **Ladder filter** | A specific VCF topology (Moog-style) with 4-pole rolloff. Emulated via two cascaded biquads. |
 | **FM synthesis** | Frequency Modulation synthesis. One oscillator modulates the frequency of another. |
-| **Operator** | A single oscillator unit in FM synthesis. This app uses 4-operator FM with 8 algorithm topologies (ADR 068). |
+| **Operator** | A single oscillator unit in FM synthesis. This app uses 4-operator FM with 8 algorithm topologies, 12-voice polyphony (MONO/POLY12/WIDE6/UNISON) (ADR 068). |
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
 | **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
-| **WT** | Wavetable synth (formerly iDEATH). Mono/poly via polyMode param. 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
+| **WT** | Wavetable synth (formerly iDEATH). 8-voice with MEGAfm-style poly modes (MONO/POLY8/WIDE4/UNISON). 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
 | **SamplerVoice** | Sample playback voice (ADR 012). Used by Crash, Ride (drum category), and user Sampler. |
-| **Factory preset** | Named parameter snapshot. WT: 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets (ADR 068). |
+| **Factory preset** | Named parameter snapshot. WT: 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |

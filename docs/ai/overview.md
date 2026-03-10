@@ -36,7 +36,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 
 The TypeScript AudioWorklet implementation is fully functional with:
 - Variable track count (up to 16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
-- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM with 8 algorithms — ADR 068), 1 wavetable synth (WT — mono/poly via polyMode param), 1 user sampler
+- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM 12-voice with 8 algorithms and MEGAfm-style poly modes — ADR 068), 1 wavetable synth (WT — 8-voice with MONO/POLY8/WIDE4/UNISON poly modes), 1 user sampler
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
@@ -50,8 +50,8 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Lead arpeggiator (5 modes, chord types, octave range)
-- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for WT poly mode
-- Factory preset browser (22 presets across 6 categories) for WT synth
+- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for WT/FM poly mode
+- Factory preset browser (22 WT presets across 6 categories, 20 FM presets across 6 categories)
 - Master view with VU meter and audio-reactive visuals (ADR 035)
 - Virtual MIDI keyboard (PC keyboard audition, Phase 1)
 - Undo/redo (snapshot-based, Ctrl+Z)
