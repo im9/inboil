@@ -25,7 +25,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 012 | Sampler | Implemented | SamplerVoice + user sample loading; Crash/Ride in drum category |
 | 023 | Oscilloscope Display | Implemented | |
 | 075 | FX / EQ / Master Improvements | Implemented | FX flavours (tape delay, stutter, shimmer), EQ Q control, compressor attack/release, dock controls |
-| 076 | Per-Pattern FX Flavours | Proposed | Flavour overrides per Section/Scene decorator, DockPanel editing |
+| 076 | Per-Pattern FX Flavours | Implemented | SceneDecorator flavourOverrides, DockPanel cycle UI, applyDecorators integration |
 | 077 | Per-Track Insert FX | Proposed | Insert FX slot per track (verb/delay/glitch), CPU meter, lazy instantiation |
 
 ## Sequencer / Pattern
@@ -54,7 +54,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 037 | ChainView Redesign | Superseded | Replaced by 042+044 |
 | 040 | Drill-Down Navigation | Superseded | Replaced by 041+044 |
 | 041 | Unified Navigation | Superseded | Replaced by 045+046 (decouple playback + simplify toggle) |
-| 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model |
+| 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model. *Section/SectionNav deprecated — superseded by Scene graph (044)* |
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar |
 | 049 | Pattern Identity | Implemented | Rename UI + color picker, reflected in Matrix & Scene |
 | 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |

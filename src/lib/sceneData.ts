@@ -13,6 +13,7 @@ function cloneDecorator(d: SceneDecorator): SceneDecorator {
     const ap = d.automationParams
     clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
   }
+  if (d.flavourOverrides) clone.flavourOverrides = { ...d.flavourOverrides }
   return clone
 }
 

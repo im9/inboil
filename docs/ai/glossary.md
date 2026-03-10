@@ -70,7 +70,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **TrackerView** | M8-style vertical single-track step editor. NOTE/VEL/DUR/SLD/CHN columns. Rendered in pattern overlay sheet. |
 | **SceneView** | Node-based scene graph canvas. Always the main view (ADR 054). Arrangement editor with pattern and function nodes. |
 | **MatrixView** | Pattern pool browser sidebar (desktop). Grid of 24×24px cells showing pattern density and selection. |
-| **SectionNav** | Section strip + metadata editor. Two-row navigator for section selection and parameter editing. |
+| **SectionNav** | *(deprecated)* Linear section strip. Superseded by Scene graph (ADR 044). Retained for mobile layout only. |
 | **FilterView** | EQ/filter XY pad rendered as overlay sheet (ADR 054). FILTER + 3-band EQ nodes. |
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |

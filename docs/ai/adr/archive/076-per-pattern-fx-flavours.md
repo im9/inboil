@@ -1,6 +1,6 @@
 # ADR 076: Per-Pattern FX Flavours
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -80,7 +80,7 @@ Add flavour application to `applyDecorators()` in `state.svelte.ts`:
 }
 ```
 
-#### applySection (Linear)
+#### applySection (Linear) — *deprecated, Section superseded by Scene graph*
 
 Add flavour application to `applySection()`:
 

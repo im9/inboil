@@ -89,6 +89,29 @@
     sceneUpdateDecorator(nodeId, idx, p)
   }
 
+  function cycleDecFlavour(nodeId: string, idx: number, dec: SceneDecorator, fxKey: string) {
+    const options = FX_FLAVOURS[fxKey as keyof typeof FX_FLAVOURS]
+    if (!options) return
+    const current = dec.flavourOverrides?.[fxKey as keyof typeof dec.flavourOverrides]
+    const ids = options.map((o: { id: string }) => o.id)
+    // Cycle: unset → first → second → third → unset
+    const curIdx = current ? ids.indexOf(current) : -1
+    const nextIdx = curIdx + 1
+    pushUndo('Change FX flavour')
+    const node = song.scene.nodes.find(n => n.id === nodeId)
+    if (!node?.decorators?.[idx]) return
+    if (nextIdx >= ids.length) {
+      // Back to unset — remove this key from overrides
+      if (dec.flavourOverrides) {
+        const fo = { ...dec.flavourOverrides }
+        delete fo[fxKey as keyof typeof fo]
+        node.decorators[idx].flavourOverrides = Object.keys(fo).length ? fo : undefined
+      }
+    } else {
+      node.decorators[idx].flavourOverrides = { ...dec.flavourOverrides, [fxKey]: ids[nextIdx] }
+    }
+  }
+
   // ── Scene Navigator (ADR 070) ──
   // Show pattern header when no pattern sheet and no overlay — either scene node selected or current pattern
   const showPatternHeader = $derived(!ui.patternSheet && !isOverlaySheet)
@@ -943,13 +966,19 @@
                       />
                     </div>
                   {:else if dec.type === 'fx'}
-                    <div class="dec-card-body dec-fx-row">
+                    <div class="dec-card-body dec-fx-grid">
                       {#each [['verb', 'VRB'], ['delay', 'DLY'], ['glitch', 'GLT'], ['granular', 'GRN']] as [key, label]}
                         <button
                           class="btn-toggle"
                           class:active={dec.params[key]}
                           onpointerdown={() => toggleDecFx(scenePatternNode.id, i, dec, key)}
                         >{label}</button>
+                        <button
+                          class="btn-flavour"
+                          class:has-override={!!dec.flavourOverrides?.[key as FxFlavourKey]}
+                          onpointerdown={() => cycleDecFlavour(scenePatternNode.id, i, dec, key)}
+                          data-tip="Cycle flavour override (tap to change)" data-tip-ja="フレーバーを切替 (タップで変更)"
+                        >{dec.flavourOverrides?.[key as FxFlavourKey]?.toUpperCase() ?? '—'}</button>
                       {/each}
                     </div>
                   {:else if dec.type === 'automation'}
@@ -2220,8 +2249,29 @@
     align-items: center;
     gap: 8px;
   }
-  .dec-fx-row {
-    gap: 4px;
+  .dec-fx-grid {
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    gap: 3px 4px;
+    align-items: center;
+  }
+  .btn-flavour {
+    border: 1px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-muted);
+    font-size: var(--dk-fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-align: center;
+    min-width: 0;
+  }
+  .btn-flavour.has-override {
+    color: var(--color-olive);
+    border-color: var(--color-olive);
+    background: rgba(108,119,68,0.12);
   }
   .dec-mode {
     font-size: var(--dk-fs-xs) !important;
@@ -2288,14 +2338,18 @@
       min-width: 40px !important;
       height: 28px !important;
     }
-    .dec-fx-row {
-      gap: 6px;
+    .dec-fx-grid {
+      gap: 4px 6px;
     }
-    .dec-fx-row .btn-toggle {
+    .dec-fx-grid .btn-toggle {
       padding: 6px 10px;
       font-size: var(--dk-fs-sm);
       min-width: 44px;
       height: 28px;
+    }
+    .btn-flavour {
+      font-size: var(--dk-fs-sm);
+      padding: 4px 6px;
     }
     .btn-dec-add {
       font-size: var(--dk-fs-sm);

@@ -100,7 +100,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── TrackerView.svelte ← M8-style vertical tracker editor
 │   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
 │   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
-│   │   │   ├── SectionNav.svelte ← Section strip + metadata editor
+│   │   │   ├── SectionNav.svelte ← (deprecated) Linear section strip, mobile only
 │   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)

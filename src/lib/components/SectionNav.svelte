@@ -1,3 +1,5 @@
+<!-- @deprecated Linear section navigator (ADR 042). Superseded by Scene graph (ADR 044).
+     Retained for mobile layout only; no new features should target this component. -->
 <script lang="ts">
   import {
     song, playback, ui,

@@ -46,7 +46,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Scene graph: node-based directed graph for arrangement (pattern/transpose/tempo/repeat/probability/fx nodes, decorators via ADR 066)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
-- SectionNav: section strip with metadata (repeats, key, oct, FX)
+- SectionNav: *(deprecated)* linear section strip — superseded by Scene graph
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Lead arpeggiator (5 modes, chord types, octave range)

@@ -59,7 +59,8 @@ export interface Pattern {
   cells: Cell[]           // one per track (up to 16)
 }
 
-/** Arrangement slot referencing a Pattern (ADR 044) */
+/** @deprecated Linear arrangement slot (ADR 042). Superseded by Scene graph (ADR 044).
+ *  Retained for backwards compatibility with saved data; no new features should target Section. */
 export interface Section {
   patternIndex: number    // index into Song.patterns
   repeats: number         // 1–16
@@ -71,6 +72,7 @@ export interface Section {
   delay?: ChainFx
   glitch?: ChainFx
   granular?: ChainFx
+  flavours?: Partial<FxFlavours>  // per-section flavour override (ADR 076)
 }
 
 /** Track = instrument config only (ADR 042, no phrases/chains) */
@@ -95,6 +97,7 @@ export interface SceneDecorator {
   type: 'transpose' | 'tempo' | 'repeat' | 'fx' | 'automation'
   params: Record<string, number>
   automationParams?: AutomationParams  // for type === 'automation'
+  flavourOverrides?: Partial<FxFlavours>  // for type === 'fx' (ADR 076)
 }
 
 /** Automation curve point (ADR 053) */
@@ -221,6 +224,7 @@ function cloneSection(s: Section): Section {
     ...(s.delay ? { delay: { ...s.delay } } : {}),
     ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
     ...(s.granular ? { granular: { ...s.granular } } : {}),
+    ...(s.flavours ? { flavours: { ...s.flavours } } : {}),
   }
 }
 
@@ -307,6 +311,7 @@ function restoreSong(src: Song): void {
     ...(s.delay ? { delay: { ...s.delay } } : {}),
     ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
     ...(s.granular ? { granular: { ...s.granular } } : {}),
+    ...(s.flavours ? { flavours: { ...s.flavours } } : {}),
   }))
   song.scene = restoreScene(src.scene)
   const fx = src.effects ?? DEFAULT_EFFECTS
@@ -765,6 +770,13 @@ function applyDecorators(node: SceneNode): void {
       fxPad.delay    = { ...fxPad.delay,    on: !!dec.params.delay }
       fxPad.glitch   = { ...fxPad.glitch,   on: !!dec.params.glitch }
       fxPad.granular = { ...fxPad.granular, on: !!dec.params.granular }
+      // ADR 076: apply per-decorator flavour overrides
+      if (dec.flavourOverrides) {
+        if (dec.flavourOverrides.verb)     fxFlavours.verb     = dec.flavourOverrides.verb
+        if (dec.flavourOverrides.delay)    fxFlavours.delay    = dec.flavourOverrides.delay
+        if (dec.flavourOverrides.glitch)   fxFlavours.glitch   = dec.flavourOverrides.glitch
+        if (dec.flavourOverrides.granular) fxFlavours.granular = dec.flavourOverrides.granular
+      }
     } else if (dec.type === 'automation' && dec.automationParams) {
       playback.activeAutomations.push(dec.automationParams)
     }
@@ -1011,7 +1023,7 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
   }
 }
 
-/** Apply FX and key/oct for a section (called on section advance) */
+/** @deprecated Apply FX and key/oct for a section (linear playback). Scene graph supersedes this. */
 export function applySection(sec: Section) {
   if (sec.key != null) perf.rootNote = sec.key
   if (sec.oct != null) perf.octave = sec.oct
@@ -1027,6 +1039,13 @@ export function applySection(sec: Section) {
   fxPad.granular = sec.granular?.on
     ? { on: true, x: sec.granular.x, y: sec.granular.y }
     : { ...fxPad.granular, on: false }
+  // ADR 076: apply per-section flavour overrides
+  if (sec.flavours) {
+    if (sec.flavours.verb)     fxFlavours.verb     = sec.flavours.verb
+    if (sec.flavours.delay)    fxFlavours.delay    = sec.flavours.delay
+    if (sec.flavours.glitch)   fxFlavours.glitch   = sec.flavours.glitch
+    if (sec.flavours.granular) fxFlavours.granular = sec.flavours.granular
+  }
 }
 
 /** Apply perf on last repeat of a section */
