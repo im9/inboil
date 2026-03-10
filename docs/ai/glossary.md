@@ -42,11 +42,11 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Operator** | A single oscillator unit in FM synthesis. This app uses 4-operator FM with 8 algorithm topologies (ADR 068). |
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
-| **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by iDEATH synth. |
-| **iDEATH** | Wavetable synth (named after Brautigan's "In Watermelon Sugar"). Mono/poly via polyMode param. 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'iDEATH'`. |
+| **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
+| **WT** | Wavetable synth (formerly iDEATH). Mono/poly via polyMode param. 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
 | **SamplerVoice** | Sample playback voice (ADR 012). Used by Crash, Ride (drum category), and user Sampler. |
-| **Factory preset** | Named parameter snapshot. iDEATH: 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets (ADR 068). |
+| **Factory preset** | Named parameter snapshot. WT: 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets (ADR 068). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |

@@ -21,7 +21,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 002 | TypeScript AudioWorklet | Implemented | Current DSP runtime |
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |
-| 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, iDEATH/iPOLY (ADR 063), factory presets |
+| 011 | Full Synth Engines | Implemented | Wavetable osc, SVF, WT synth (ADR 063), factory presets |
 | 012 | Sampler | Implemented | SamplerVoice + user sample loading; Crash/Ride in drum category |
 | 023 | Oscilloscope Display | Implemented | |
 | 075 | FX / EQ / Master Improvements | Implemented | FX flavours (tape delay, stutter, shimmer), EQ Q control, compressor attack/release, dock controls |
@@ -95,7 +95,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 010 | Unified Drum Machine Voice | Implemented | Single DrumMachine class with tone/noise/metal sections, 11 factory presets |
 | 015 | Named Instrument Presets | Implemented | Built-in presets for all voices, user presets (IDB), pattern templates |
 | 056 | Variable Track Count | Implemented | Up to 16 tracks, nullable voiceId, dynamic worklet arrays, StepGrid scroll, DockPanel 2-row selector |
-| 063 | iDEATH Synth Engine | Implemented | Rename InboilSynth → iDEATH, unison, tempo-sync LFO, drive, wobble bass presets |
+| 063 | WT Synth Engine | Implemented | Wavetable synth (formerly iDEATH), unison, tempo-sync LFO, drive, wobble bass presets |
 | 068 | 4-Operator FM Synth | Implemented | 4-op, 8 algorithms, per-op ADSR, tempo-sync LFO, 4-poly, AlgoGraph, 20 presets |
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |

@@ -67,7 +67,7 @@ Cell {
 Track {
   id:          number
   name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  voiceId:     VoiceId | null  // null = unassigned (ADR 056). VoiceId: 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'iDEATH' | 'Crash' | 'Ride' | 'Sampler'
+  voiceId:     VoiceId | null  // null = unassigned (ADR 056). VoiceId: 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'WT' | 'Crash' | 'Ride' | 'Sampler'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0

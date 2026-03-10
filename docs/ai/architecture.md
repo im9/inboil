@@ -67,7 +67,7 @@ See [adr/](./adr/) for full rationale.
 - **Pattern toolbar** (IMPLEMENTED) — RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header. → [adr/057-pattern-toolbar.md](./adr/057-pattern-toolbar.md)
 - **Cross-category voice assignment** (IMPLEMENTED) — Any voice on any track, drill-down picker. → [adr/058-cross-category-voice.md](./adr/058-cross-category-voice.md)
 - **Sampler** (IMPLEMENTED) — SamplerVoice + user sample loading; Crash/Ride in drum category. → [adr/012-sampler.md](./adr/012-sampler.md)
-- **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, iDEATH synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
+- **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 
 ## Threading Model
@@ -141,7 +141,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
-│   │   ├── presets.ts            ← Factory presets for iDEATH synth (22 presets, 6 categories)
+│   │   ├── presets.ts            ← Factory presets for WT synth (22 presets, 6 categories)
 │   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt

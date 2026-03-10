@@ -1224,19 +1224,17 @@
             {#each params as p, i}
               {#if p.key === 'polyMode'}
                 {@const modeVal = Math.round(knobValue(p) ?? p.default)}
-                {@const fmModeLabels = ['MONO', 'POLY 12', 'WIDE 6', 'UNISON']}
-                {@const isFm = cell?.voiceId === 'FM'}
+                {@const maxMode = Math.round(p.max)}
+                {@const modeLabels = cell?.voiceId === 'FM'
+                  ? ['MONO', 'POLY 12', 'WIDE 6', 'UNISON']
+                  : cell?.voiceId === 'WT'
+                    ? ['MONO', 'POLY 8', 'WIDE 4', 'UNISON']
+                    : ['MONO', 'POLY']}
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div class="mode-row" onpointerdown={() => {
-                  if (isFm) {
-                    knobChange(p, (modeVal + 1) % 4)
-                  } else {
-                    knobChange(p, modeVal >= 1 ? 0 : 1)
-                  }
-                }}
+                <div class="mode-row" onpointerdown={() => knobChange(p, (modeVal + 1) % (maxMode + 1))}
                   data-tip={p.tip} data-tip-ja={p.tipJa}>
-                  <span class="mode-label">{isFm ? fmModeLabels[modeVal] : (modeVal >= 1 ? 'POLY (4-VOICE)' : 'MONO')}</span>
+                  <span class="mode-label">{modeLabels[modeVal] ?? 'MONO'}</span>
                   <span class="mode-switch" class:on={modeVal >= 1}><span class="mode-switch-thumb"></span></span>
                 </div>
               {:else if p.key === 'reverse'}
@@ -1260,9 +1258,9 @@
                     {groupLabels[p.group!] ?? p.group!.toUpperCase()}
                   </div>
                   {#if !collapsedGroups.has(p.group!)}
-                    {#if cell?.voiceId === 'iDEATH' && p.group === 'osc'}
+                    {#if cell?.voiceId === 'WT' && p.group === 'osc'}
                       <WaveGraph position={cell.voiceParams.oscAPos ?? 0} />
-                    {:else if cell?.voiceId === 'iDEATH' && p.group === 'env'}
+                    {:else if cell?.voiceId === 'WT' && p.group === 'env'}
                       <EnvGraph
                         attack={cell.voiceParams.attack ?? 0.005}
                         decay={cell.voiceParams.decay ?? 0.3}

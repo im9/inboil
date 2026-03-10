@@ -151,9 +151,9 @@ Parameters:
 | resonance | RESO | 0.5–6.0 | 3.5 | Filter Q |
 | decay | DCY | 0.1–0.5 s | 0.25 | Amplitude decay |
 
-### iDEATH (wavetable synth — mono/poly)
+### WT (wavetable synth — mono/poly)
 
-Named after the central commune in Richard Brautigan's "In Watermelon Sugar". VoiceId: `'iDEATH'`. Class: `IdeathSynth`.
+Wavetable synth engine (formerly iDEATH). VoiceId: `'WT'`. Class: `WTSynth`.
 
 Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, unison, filter drive, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
 
@@ -189,7 +189,7 @@ Parameters (via `paramDefs.ts`):
 | lfo2Rate | LF2R | 0.1–20.0 Hz | 0.5 | LFO 2 rate |
 | lfo2Shape | LF2S | 0–4 (step 1) | 0 | LFO 2: SIN/TRI/SAW/SQR/S&H |
 
-Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (iDEATH only).
+Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (WT only).
 
 ## DSP Building Blocks
 
@@ -199,7 +199,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 |---|---|---|
 | filters.ts | ResonantLP | 2-pole resonant low-pass biquad (12 dB/oct). Used for 303 filter, snare noise, clap. |
 | filters.ts | BiquadHP | 2-pole high-pass biquad (12 dB/oct). Used for metallic percussion. |
-| filters.ts | SVFilter | Trapezoidal-integrated state variable filter. LP/HP/BP/Notch modes. Used by iDEATH synth. |
+| filters.ts | SVFilter | Trapezoidal-integrated state variable filter. LP/HP/BP/Notch modes. Used by WT synth. |
 | filters.ts | DJFilter | Combined LP/HP sweep filter. X = LP←0.5→HP, Y = resonance. Used for master filter. |
 | filters.ts | PeakingEQ | Parametric peaking EQ band. Used for 3-band master EQ. |
 | filters.ts | ADSR | 4-stage envelope generator (attack/decay/sustain/release). |
@@ -212,7 +212,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
 | voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. FMVoice is 4-op (ADR 068). |
-| voices.ts | IdeathSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
+| voices.ts | WTSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
 | voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. |
 | voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
 | voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |

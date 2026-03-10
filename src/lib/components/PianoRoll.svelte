@@ -11,7 +11,7 @@
   let { trackId }: Props = $props()
 
   const ph = $derived(activeCell(trackId))
-  const isPoly = $derived((ph.voiceId === 'iDEATH' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5)
+  const isPoly = $derived((ph.voiceId === 'WT' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5)
   const playheadCol = $derived(isViewingPlayingPattern() ? playback.playheads[trackId] : -1)
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──

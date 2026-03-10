@@ -402,7 +402,7 @@ class FMOp {
 
 const TAU = 2 * Math.PI
 
-/** LFO shape enum for FM voice (mirrors iDEATH LFOShape) */
+/** LFO shape enum for FM voice (mirrors WT LFOShape) */
 const enum FMLFOShape { Sine, Triangle, Saw, Square, SampleHold }
 
 /** Simple LFO for FM voice — supports free and tempo-sync modes. */
@@ -609,23 +609,21 @@ export class FMVoice implements Voice {
     this.nextVoice = 0
   }
 
+  // √N scaling so chords don't lose too much volume
+  private static readonly POLY_SCALE  = 1 / Math.sqrt(12)  // ≈0.29
+  private static readonly WIDE_SCALE  = 1 / Math.sqrt(6)   // ≈0.41
+  private static readonly UNI_SCALE   = 1 / Math.sqrt(12)  // ≈0.29
+
   tick(): number {
     if (this.polyMode === 0) return this.cores[0].tick()
-    if (this.polyMode === 2) {
-      // Wide6: sum for mono output (tickStereo used for stereo)
-      let sum = 0
-      for (let i = 0; i < 12; i++) sum += this.cores[i].tick()
-      return sum / 6
-    }
     let sum = 0
-    const n = this.polyMode === 3 ? 12 : 12
-    for (let i = 0; i < n; i++) sum += this.cores[i].tick()
-    return this.polyMode === 3 ? sum / 12 : sum / 6
+    for (let i = 0; i < 12; i++) sum += this.cores[i].tick()
+    return sum * (this.polyMode === 2 ? FMVoice.WIDE_SCALE
+      : this.polyMode === 3 ? FMVoice.UNI_SCALE : FMVoice.POLY_SCALE)
   }
 
   tickStereo(out: Float32Array) {
     if (this.polyMode !== 2) {
-      // Non-wide modes: mono output to both channels
       const m = this.tick()
       out[0] = m; out[1] = m
       return
@@ -636,7 +634,8 @@ export class FMVoice implements Voice {
       sumL += this.cores[p * 2].tick()
       sumR += this.cores[p * 2 + 1].tick()
     }
-    out[0] = sumL / 3; out[1] = sumR / 3
+    const s = FMVoice.WIDE_SCALE
+    out[0] = sumL * s; out[1] = sumR * s
   }
 
   setParam(key: string, value: number) {
@@ -898,7 +897,7 @@ class ModMatrix {
   }
 }
 
-// ── iDEATH — unified wavetable synth engine (ADR 011, 063) ─────────
+// ── WT — unified wavetable synth engine (ADR 011, 063) ──────────────
 
 /**
  * 2-osc wavetable synth with SVF filter, dual ADSR, 2× LFO, mod matrix.
@@ -909,7 +908,7 @@ const enum OscCombine { Mix, FM, Ring }
 
 const MAX_UNISON = 7
 
-class IdeathCore {
+class WTCore {
   // Center voice (always active)
   oscA: WavetableOsc
   oscB: WavetableOsc
@@ -1013,7 +1012,11 @@ class IdeathCore {
       default: {
         const a = oA.tick(freqA)
         const b = oB.tick(freqB)
-        return a * (1 - this.oscMix) + b * this.oscMix
+        // Equal-power crossfade — avoids 50% mix dip
+        const mixB = this.oscMix
+        const gainA = Math.sqrt(1 - mixB)
+        const gainB = Math.sqrt(mixB)
+        return a * gainA + b * gainB
       }
     }
   }
@@ -1056,6 +1059,9 @@ class IdeathCore {
 
     let sig = this._renderPair(this.oscA, this.oscB, freqA, freqB, wtPosMod, effectiveFmIndex, menv)
 
+    // Pre-filter saturation — adds body and presence (like analog oscillators)
+    sig = Math.tanh(sig * 1.4)
+
     // Filter
     const fc = Math.min(
       Math.max(20, this.cutoffBase + this.envMod * menv + cutMod * 4000),
@@ -1071,7 +1077,7 @@ class IdeathCore {
       sig = Math.tanh(sig * amt) / Math.tanh(amt)
     }
 
-    const vol = Math.max(0, 0.65 + volMod * 0.3)
+    const vol = Math.max(0, 1.5 + volMod * 0.3)
     const out = sig * aenv * this.vel * vol
     if (out !== out) { this.filter.reset(); return 0 }
     return out
@@ -1138,8 +1144,8 @@ class IdeathCore {
       sumL += sigNeg * (1 + pan); sumR += sigNeg * (1 - pan)
     }
 
-    let sigL = sumL * gain * 0.5
-    let sigR = sumR * gain * 0.5
+    let sigL = Math.tanh(sumL * gain * 0.5 * 1.4)
+    let sigR = Math.tanh(sumR * gain * 0.5 * 1.4)
 
     // Filter (shared, applied to L and R)
     const fc = Math.min(
@@ -1162,7 +1168,7 @@ class IdeathCore {
       sigR = Math.tanh(sigR * amt) / tanhAmt
     }
 
-    const vol = Math.max(0, 0.65 + volMod * 0.3)
+    const vol = Math.max(0, 1.5 + volMod * 0.3)
     out[0] = sigL * aenv * this.vel * vol
     out[1] = sigR * aenv * this.vel * vol
     if (out[0] !== out[0] || out[1] !== out[1]) { this.filter.reset(); out[0] = 0; out[1] = 0 }
@@ -1179,95 +1185,171 @@ class IdeathCore {
   }
 }
 
-/** iDEATH synth — mono/poly switchable via polyMode param. */
-export class IdeathSynth implements Voice {
-  private cores: IdeathCore[]
-  private polyMode = false
+/**
+ * WT synth — 8-core wavetable with MEGAfm-style poly modes.
+ * polyMode: 0=MONO, 1=POLY8, 2=WIDE4, 3=UNISON
+ */
+export class WTSynth implements Voice {
+  private cores: WTCore[]
+  private polyMode = 0  // 0=mono, 1=poly8, 2=wide4, 3=unison
   private nextVoice = 0
-  private activeNotes = new Int8Array(4).fill(-1)
+  private activeNotes = new Int8Array(8).fill(-1)
   private _stereoTmp = new Float32Array(2)
+  private wideDetune = 0.006
 
   constructor(sr: number) {
-    this.cores = Array.from({ length: 4 }, () => new IdeathCore(sr))
+    this.cores = Array.from({ length: 8 }, () => new WTCore(sr))
   }
 
   noteOn(note: number, v: number) {
-    if (!this.polyMode) {
-      this.cores[0].noteOn(note, v)
-      return
-    }
-    // Poly: check retrigger
-    for (let i = 0; i < 4; i++) {
-      if (this.activeNotes[i] === note) {
-        this.cores[i].noteOn(note, v)
+    switch (this.polyMode) {
+      case 0: // MONO
+        this.cores[0].noteOn(note, v)
+        return
+      case 1: { // POLY8
+        for (let i = 0; i < 8; i++) {
+          if (this.activeNotes[i] === note) {
+            this.cores[i].noteOn(note, v)
+            return
+          }
+        }
+        const idx = this.nextVoice
+        this.nextVoice = (this.nextVoice + 1) % 8
+        this.activeNotes[idx] = note
+        this.cores[idx].noteOn(note, v)
         return
       }
+      case 2: { // WIDE4 — 4 stereo-detuned pairs
+        for (let i = 0; i < 4; i++) {
+          if (this.activeNotes[i] === note) {
+            this._wideNoteOn(i, note, v)
+            return
+          }
+        }
+        const idx = this.nextVoice % 4
+        this.nextVoice = (this.nextVoice + 1) % 4
+        this.activeNotes[idx] = note
+        this._wideNoteOn(idx, note, v)
+        return
+      }
+      case 3: // UNISON — all 8 cores on one note
+        for (let i = 0; i < 8; i++) {
+          const detune = (i - 3.5) / 3.5 * this.wideDetune
+          this.cores[i].noteOn(note, v)
+          this.cores[i].freq *= (1 + detune)
+        }
+        this.activeNotes[0] = note
+        return
     }
-    const idx = this.nextVoice
-    this.nextVoice = (this.nextVoice + 1) & 3
-    this.activeNotes[idx] = note
-    this.cores[idx].noteOn(note, v)
+  }
+
+  private _wideNoteOn(pair: number, note: number, v: number) {
+    const cL = this.cores[pair * 2]
+    const cR = this.cores[pair * 2 + 1]
+    cL.noteOn(note, v)
+    cR.noteOn(note, v)
+    cL.freq *= (1 - this.wideDetune * 0.5)
+    cR.freq *= (1 + this.wideDetune * 0.5)
   }
 
   noteOff() {
-    if (!this.polyMode) {
+    if (this.polyMode === 0) {
       this.cores[0].noteOff()
       return
     }
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
       this.cores[i].noteOff()
       this.activeNotes[i] = -1
     }
   }
 
   slideNote(note: number, v: number) {
-    if (!this.polyMode) {
+    if (this.polyMode === 0) {
       this.cores[0].slideNoteTo(note, v)
       return
     }
-    const prev = (this.nextVoice - 1 + 4) & 3
+    if (this.polyMode === 3) {
+      this.noteOn(note, v)
+      return
+    }
+    if (this.polyMode === 2) {
+      const prev = ((this.nextVoice - 1 + 4) % 4)
+      this.activeNotes[prev] = note
+      this._wideNoteOn(prev, note, v)
+      return
+    }
+    // Poly8
+    const prev = (this.nextVoice - 1 + 8) % 8
     this.cores[prev].slideNoteTo(note, v)
     this.activeNotes[prev] = note
   }
 
   reset() {
-    for (let i = 0; i < 4; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
+    for (let i = 0; i < 8; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
     this.nextVoice = 0
   }
 
+  // √N scaling so chords don't lose too much volume
+  private static readonly POLY_SCALE = 1 / Math.sqrt(8)   // ≈0.35
+  private static readonly WIDE_SCALE = 1 / Math.sqrt(4)   // 0.5
+  private static readonly UNI_SCALE  = 1 / Math.sqrt(8)   // ≈0.35
+
   tick(): number {
-    if (!this.polyMode) return this.cores[0].tick()
+    if (this.polyMode === 0) return this.cores[0].tick()
     let sum = 0
-    for (let i = 0; i < 4; i++) sum += this.cores[i].tick()
-    return sum * 0.5
+    for (let i = 0; i < 8; i++) sum += this.cores[i].tick()
+    return sum * (this.polyMode === 2 ? WTSynth.WIDE_SCALE
+      : this.polyMode === 3 ? WTSynth.UNI_SCALE : WTSynth.POLY_SCALE)
   }
 
   tickStereo(out: Float32Array) {
-    if (!this.polyMode) {
+    if (this.polyMode === 0) {
       this.cores[0].tickStereo(out)
       return
     }
+    if (this.polyMode === 2) {
+      // WIDE4: even=L, odd=R
+      let sumL = 0, sumR = 0
+      for (let p = 0; p < 4; p++) {
+        this.cores[p * 2].tickStereo(this._stereoTmp)
+        sumL += this._stereoTmp[0]
+        this.cores[p * 2 + 1].tickStereo(this._stereoTmp)
+        sumR += this._stereoTmp[1]
+      }
+      const s = WTSynth.WIDE_SCALE
+      out[0] = sumL * s; out[1] = sumR * s
+      return
+    }
+    // Poly8 / Unison: sum stereo from all cores
     let sumL = 0, sumR = 0
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
       this.cores[i].tickStereo(this._stereoTmp)
       sumL += this._stereoTmp[0]; sumR += this._stereoTmp[1]
     }
-    out[0] = sumL * 0.5; out[1] = sumR * 0.5
+    const s = this.polyMode === 3 ? WTSynth.UNI_SCALE : WTSynth.POLY_SCALE
+    out[0] = sumL * s; out[1] = sumR * s
   }
 
   setParam(key: string, value: number) {
     if (key === 'polyMode') {
-      this.polyMode = value >= 0.5
-      if (!this.polyMode) {
-        // Switching to mono: silence poly voices
-        for (let i = 1; i < 4; i++) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
+      const newMode = Math.round(value)
+      if (newMode !== this.polyMode) {
+        for (let i = (newMode === 0 ? 1 : 0); i < 8; i++) {
+          if (newMode === 0 && i > 0) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
+        }
+        this.polyMode = newMode
+        this.nextVoice = 0
       }
       return
     }
+    if (key === 'wideDetune') {
+      this.wideDetune = value
+      return
+    }
     // Cap unison in poly mode (ADR 063 mitigation)
-    if (key === 'unisonVoices' && this.polyMode) value = Math.min(value, 3)
-    // Apply param to all 4 cores (so poly mode works immediately when toggled)
-    const n = 4
+    if (key === 'unisonVoices' && this.polyMode > 0) value = Math.min(value, 3)
+    // Apply param to all 8 cores
+    const n = 8
     for (let i = 0; i < n; i++) {
       const c = this.cores[i]
       switch (key) {
@@ -1619,7 +1701,7 @@ export type VoiceId =
   | 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
   | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
-  | 'iDEATH'
+  | 'WT'
   | 'Crash' | 'Ride'
   | 'Sampler'
 
@@ -1639,7 +1721,7 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   MoogLead: sr => new MoogVoice(sr),
   Analog:   sr => new AnalogVoice(sr),
   FM:       sr => new FMVoice(sr),
-  iDEATH:      sr => new IdeathSynth(sr),
+  WT:          sr => new WTSynth(sr),
   Crash: sr => new SamplerVoice(sr),
   Ride:  sr => new SamplerVoice(sr),
   Sampler:     sr => new SamplerVoice(sr),
@@ -1679,7 +1761,7 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Analog',   label: 'BASS',  fullName: 'Analog Bass', category: 'synth' },
   { id: 'MoogLead', label: 'LEAD',  fullName: 'Analog Synth', category: 'synth' },
   { id: 'FM',       label: 'FM',    fullName: 'FM Synth',    category: 'synth' },
-  { id: 'iDEATH',   label: 'WAVE',  fullName: 'Wavetable',   category: 'synth' },
+  { id: 'WT',       label: 'WAVE',  fullName: 'Wavetable',   category: 'synth' },
   { id: 'Sampler',  label: 'SMPL',  fullName: 'Sampler',    category: 'sampler' },
 ]
 

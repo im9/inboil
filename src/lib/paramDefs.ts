@@ -84,8 +84,8 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',             min: 0.5,   max: 6.0,  default: 3.5  },
     { key: 'decay',      label: 'DCY',   group: 'amp',    tip: 'Amplitude decay',            tipJa: '音量ディケイ',           min: 0.1,   max: 0.5,  default: 0.25 },
   ],
-  iDEATH: [
-    { key: 'polyMode',   label: 'POLY',  group: 'osc',    tip: 'Polyphony: MONO → POLY(4)',  tipJa: 'ポリフォニー: モノ → ポリ(4)', min: 0, max: 1, step: 1, default: 0 },
+  WT: [
+    { key: 'polyMode',   label: 'POLY',  group: 'osc',    tip: 'MONO → POLY8 → WIDE4 → UNISON', tipJa: 'MONO → POLY8 → WIDE4 → UNISON', min: 0, max: 3, step: 1, default: 0 },
     { key: 'oscAPos',    label: 'WV-A',  group: 'osc',    tip: 'Osc A wavetable position',   tipJa: 'オシレータA波形位置',     min: 0.0,  max: 1.0,  default: 0.0   },
     { key: 'oscBPos',    label: 'WV-B',  group: 'osc',    tip: 'Osc B wavetable position',   tipJa: 'オシレータB波形位置',     min: 0.0,  max: 1.0,  default: 0.25  },
     { key: 'oscBSemi',   label: 'SEMI',  group: 'osc',    tip: 'Osc B semitone offset',      tipJa: 'オシレータB半音オフセット', min: -24, max: 24,   step: 1, default: 0    },

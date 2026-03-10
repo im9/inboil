@@ -273,7 +273,7 @@ Contents:
 - **Selected track name**: Shows current track's voice name between track bar and voice picker
 - **Voice category tabs**: DRUM/BASS/LEAD/SAMPLER for voice selection
 - **Voice list**: Voices in selected category, click to change
-- **Preset browser** (iDEATH only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
+- **Preset browser** (WT only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
 - **Sample loader** (Sampler/Crash/Ride): File input for loading user samples
 - **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
 - **Synth knob grid**: Voice parameters from `paramDefs.ts`
