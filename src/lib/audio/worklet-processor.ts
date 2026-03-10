@@ -195,6 +195,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   // Fill PRNG
   private fillSeed       = 12321
   // Glitch DSP state
+  private glitchRedux    = false   // ADR 075: Redux flavour (S&H only, no bit quantize)
   private glitchHoldL    = 0
   private glitchHoldR    = 0
   private glitchCounter  = 0
@@ -340,8 +341,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.pendingBreaking  = p.perf.breaking
           this.pendingFilling   = p.perf.filling
           this.pendingReversing = p.perf.reversing
-          this.glitchX   = p.perf.glitchX
-          this.glitchY   = p.perf.glitchY
+          this.glitchX      = p.perf.glitchX
+          this.glitchY      = p.perf.glitchY
+          this.glitchRedux  = p.perf.glitchRedux ?? false
           this.granular.setParams(p.perf.granularX, p.perf.granularY)
           this.granular.setParams2(p.perf.granularPitch, p.perf.granularScatter)
           this.granular.setActive(p.perf.granularOn)
@@ -624,9 +626,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchCounter = Math.max(1, holdMax - ((this.glitchSeed >>> 16) % Math.max(1, holdMax >> 1)))
         }
         this.glitchCounter--
-        const levels = Math.floor(4 + (1 - this.glitchY) * 252)
-        gltL = Math.round(this.glitchHoldL * levels) / levels
-        gltR = Math.round(this.glitchHoldR * levels) / levels
+        if (this.glitchRedux) {
+          // Redux: aggressive S&H only, no bit quantization
+          gltL = this.glitchHoldL
+          gltR = this.glitchHoldR
+        } else {
+          // Bitcrush: S&H + bit quantization
+          const levels = Math.floor(4 + (1 - this.glitchY) * 252)
+          gltL = Math.round(this.glitchHoldL * levels) / levels
+          gltR = Math.round(this.glitchHoldR * levels) / levels
+        }
       }
 
       // Sidechain: duck rest + FX returns; source tracks punch through untouched (ADR 064)

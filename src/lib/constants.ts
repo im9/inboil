@@ -43,6 +43,48 @@ export const COLORS_RGB = {
   cream:  { r: 237, g: 232, b: 220 },
 } as const
 
+// ── FX Flavours (ADR 075) ─────────────────────────────────────────────────
+export type ReverbFlavour   = 'room' | 'hall'
+export type DelayFlavour    = 'digital' | 'dotted'
+export type GlitchFlavour   = 'bitcrush' | 'redux'
+export type GranularFlavour = 'cloud' | 'freeze' | 'stretch'
+
+export type FxFlavourKey = 'verb' | 'delay' | 'glitch' | 'granular'
+
+export const FX_FLAVOURS = {
+  verb: [
+    { id: 'room'  as const, label: 'ROOM',  tip: 'Room — short, tight reverb', tipJa: 'ルーム — 短くタイトなリバーブ' },
+    { id: 'hall'  as const, label: 'HALL',  tip: 'Hall — large, diffuse reverb', tipJa: 'ホール — 広く拡散したリバーブ' },
+  ],
+  delay: [
+    { id: 'digital' as const, label: 'DIGI',  tip: 'Digital — clean ping-pong', tipJa: 'デジタル — クリーンなピンポン' },
+    { id: 'dotted'  as const, label: 'DOT.8', tip: 'Dotted 8th — tempo-synced', tipJa: '付点8分 — テンポ同期' },
+  ],
+  glitch: [
+    { id: 'bitcrush' as const, label: 'CRUSH', tip: 'Bitcrush — sample & hold + quantize', tipJa: 'ビットクラッシュ — S&H + 量子化' },
+    { id: 'redux'    as const, label: 'REDUX', tip: 'Redux — aggressive downsample only', tipJa: 'Redux — 強力なダウンサンプリング' },
+  ],
+  granular: [
+    { id: 'cloud'   as const, label: 'CLOUD', tip: 'Cloud — default grain shower', tipJa: 'クラウド — 通常のグレインシャワー' },
+    { id: 'freeze'  as const, label: 'FREEZE', tip: 'Freeze — auto-engage freeze', tipJa: 'フリーズ — 自動フリーズ' },
+    { id: 'stretch' as const, label: 'STRCH',  tip: 'Stretch — time-stretch large grains', tipJa: 'ストレッチ — タイムストレッチ' },
+  ],
+} as const
+
+export interface FxFlavours {
+  verb: ReverbFlavour
+  delay: DelayFlavour
+  glitch: GlitchFlavour
+  granular: GranularFlavour
+}
+
+export const DEFAULT_FX_FLAVOURS: FxFlavours = {
+  verb: 'room',
+  delay: 'digital',
+  glitch: 'bitcrush',
+  granular: 'cloud',
+}
+
 // ── Default state values ────────────────────────────────────────────────────
 // Used by both initial $state declarations and factoryReset()
 

@@ -3,7 +3,9 @@ import {
   SCALE_DEGREES_SET,
   PIANO_ROLL_MIN, PIANO_ROLL_MAX,
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
+  DEFAULT_FX_FLAVOURS,
 } from './constants.ts'
+import type { FxFlavours } from './constants.ts'
 import {
   DRUM_VOICES, makeDefaultSong, makeEmptySong, makeEmptyCell,
   SECTION_COUNT,
@@ -161,6 +163,7 @@ export interface Song {
   sections: Section[]     // arrangement slots referencing patterns
   scene: Scene            // arrangement graph (ADR 044, data-only in Phase 1a)
   effects: Effects        // global send/bus effects (ADR 020)
+  flavours?: FxFlavours   // FX flavour variants (ADR 075), optional for backwards compat
 }
 
 /** Resolve the Pattern referenced by a section index */
@@ -237,6 +240,7 @@ function cloneSong(): Song {
       ducker: { ...song.effects.ducker },
       comp: { ...song.effects.comp },
     },
+    flavours: { ...fxFlavours },
   }
 }
 
@@ -309,6 +313,12 @@ function restoreSong(src: Song): void {
     ducker: { ...fx.ducker },
     comp: { ...fx.comp },
   }
+  // Restore FX flavours (ADR 075) — defaults for old saves without flavours
+  const fl = src.flavours
+  fxFlavours.verb     = (fl?.verb     ?? 'room')     as FxFlavours['verb']
+  fxFlavours.delay    = (fl?.delay    ?? 'digital')   as FxFlavours['delay']
+  fxFlavours.glitch   = (fl?.glitch   ?? 'bitcrush')  as FxFlavours['glitch']
+  fxFlavours.granular = (fl?.granular ?? 'cloud')     as FxFlavours['granular']
 }
 
 export function undo(): boolean {
@@ -598,6 +608,8 @@ export const fxPad = $state({
   eqHigh:   { ...DEFAULT_FX_PAD.eqHigh },
 })
 
+export const fxFlavours = $state<FxFlavours>({ ...DEFAULT_FX_FLAVOURS })
+
 export const masterPad = $state({
   comp: { ...DEFAULT_MASTER_PAD.comp },
   duck: { ...DEFAULT_MASTER_PAD.duck },
@@ -649,6 +661,8 @@ export function factoryReset(): void {
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
   // effects are reset by restoreSong above
+  // Reset FX flavours
+  Object.assign(fxFlavours, DEFAULT_FX_FLAVOURS)
   // Reset FX pad
   fxPad.verb = { ...DEFAULT_FX_PAD.verb }
   fxPad.delay = { ...DEFAULT_FX_PAD.delay }

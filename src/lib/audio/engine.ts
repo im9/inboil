@@ -3,7 +3,7 @@
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Song } from '../state.svelte.ts'
-import { ui, masterPad, masterLevels } from '../state.svelte.ts'
+import { ui, masterPad, masterLevels, fxFlavours } from '../state.svelte.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 import crashUrl from './samples/tr909_crash.webm'
@@ -219,14 +219,63 @@ function patternToWorklet(
 
 import type { Pattern } from '../state.svelte.ts'
 
+/** Compute granular params adjusted by flavour (ADR 075) */
+function granularFlavourParams(
+  fxPad?: FxPadState, perf?: PerfState,
+): { granularX: number; granularY: number; granularPitch: number; granularScatter: number; granularFreeze: boolean } {
+  const gx = fxPad?.granular.x ?? 0.5
+  const gy = fxPad?.granular.y ?? 0.3
+  const pitch   = perf?.granularPitch   ?? 0.5
+  const scatter = perf?.granularScatter ?? 0.67
+  const freeze  = perf?.granularFreeze  ?? false
+
+  switch (fxFlavours.granular) {
+    case 'freeze':
+      // Auto-engage freeze when granular is ON
+      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter,
+               granularFreeze: fxPad?.granular.on ?? false }
+    case 'stretch':
+      // Large grains, low density, no scatter, no pitch shift
+      return { granularX: 0.5 + gx * 0.5, granularY: 0.05 + gy * 0.25,
+               granularPitch: 0.5, granularScatter: 0.0, granularFreeze: freeze }
+    default: // 'cloud'
+      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter, granularFreeze: freeze }
+  }
+}
+
 function buildWorkletPattern(
   s: Song, pat: Pattern, perf?: PerfState, fxPad?: FxPadState,
 ): WorkletPattern {
   const fx = s.effects
-  const reverbSize = fxPad?.verb.on ? 0.4 + fxPad.verb.x * 0.59 : fx.reverb.size
-  const reverbDamp = fxPad?.verb.on ? 1.0 - fxPad.verb.y : fx.reverb.damp
-  const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
+
+  // ── Reverb flavour (ADR 075) ──
+  let reverbSize: number, reverbDamp: number
+  if (fxPad?.verb.on) {
+    if (fxFlavours.verb === 'hall') {
+      // Hall: large diffuse — size 0.82–0.99, damp 0–0.3
+      reverbSize = 0.82 + fxPad.verb.x * 0.17
+      reverbDamp = (1.0 - fxPad.verb.y) * 0.3
+    } else {
+      // Room (default): size 0.4–0.99, damp 0–1.0
+      reverbSize = 0.4 + fxPad.verb.x * 0.59
+      reverbDamp = 1.0 - fxPad.verb.y
+    }
+  } else {
+    reverbSize = fx.reverb.size
+    reverbDamp = fx.reverb.damp
+  }
+
+  // ── Delay flavour (ADR 075) ──
+  let delayTimeMs: number
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
+  const quarterMs = 60000 / s.bpm
+  if (fxPad?.delay.on && fxFlavours.delay === 'dotted') {
+    // Dotted 8th = 3/4 of a quarter note — time locked to tempo
+    delayTimeMs = quarterMs * 0.75
+  } else {
+    const delayTimeFrac = fxPad?.delay.on ? 0.125 + fxPad.delay.x * 0.875 : fx.delay.time
+    delayTimeMs = quarterMs * delayTimeFrac
+  }
 
   // Master pad → comp/ducker/return (denormalize from 0–1)
   const mc = masterPad.comp
@@ -237,7 +286,7 @@ function buildWorkletPattern(
     bpm: s.bpm,
     fx:  {
       reverb: { size: reverbSize, damp: reverbDamp },
-      delay:  { time: (60000 / s.bpm) * delayTimeFrac, feedback: delayFb },
+      delay:  { time: delayTimeMs, feedback: delayFb },
       ducker: md.on ? { depth: md.x, release: 20 + md.y * 480 } : { ...fx.ducker },
       comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup } : { ...fx.comp },
       verbReturn: mr.on ? mr.x * 2.0 : 1.0,
@@ -264,12 +313,9 @@ function buildWorkletPattern(
       reversing:  perf?.reversing  ?? false,
       glitchX:    fxPad?.glitch.on ? fxPad.glitch.x : 0.5,
       glitchY:    fxPad?.glitch.on ? fxPad.glitch.y : 0.5,
+      glitchRedux: fxFlavours.glitch === 'redux',
       granularOn:      fxPad?.granular.on ?? false,
-      granularX:       fxPad?.granular.x  ?? 0.5,
-      granularY:       fxPad?.granular.y  ?? 0.3,
-      granularPitch:   perf?.granularPitch   ?? 0.5,
-      granularScatter: perf?.granularScatter ?? 0.67,
-      granularFreeze:  perf?.granularFreeze  ?? false,
+      ...granularFlavourParams(fxPad, perf),
       swing:           perf?.swing       ?? 0,
     },
     tracks: s.tracks.map((t, i) => {

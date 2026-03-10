@@ -43,6 +43,7 @@ export interface WorkletPattern {
     granularScatter: number
     granularFreeze: boolean
     swing: number
+    glitchRedux: boolean  // ADR 075: Redux flavour skips bit quantize
   }
 }
 

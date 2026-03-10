@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { fxPad, perf, ui } from '../state.svelte.ts'
+  import { fxPad, perf, ui, fxFlavours } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
-  import { PAD_INSET, COLORS_RGB } from '../constants.ts'
+  import { PAD_INSET, COLORS_RGB, FX_FLAVOURS } from '../constants.ts'
+  import type { FxFlavourKey } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
   import TrackSelector from './TrackSelector.svelte'
+  import FxBubbleMenu from './FxBubbleMenu.svelte'
 
   const nodes = [
     { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)',  tip: 'Reverb — adds space and depth', tipJa: 'リバーブ — 空間と奥行きを付加' },
@@ -19,17 +21,33 @@
   let dragRect: DOMRect | null = null
   let granularMode2 = $state(false)
   let longPressTimer: ReturnType<typeof setTimeout> | null = null
+  let bubbleMenu: { key: FxFlavourKey; pos: { x: number; y: number } } | null = $state(null)
+  let bubbleContainerSize = $state({ w: 0, h: 0 })
 
   function startDrag(e: PointerEvent, key: typeof nodes[number]['key']) {
     e.preventDefault()
+    if (bubbleMenu) return  // don't start drag while menu is open
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
     dragRect = padEl?.getBoundingClientRect() ?? null
-    if (key === 'granular' && fxPad.granular.on) {
-      longPressTimer = setTimeout(() => { granularMode2 = true; longPressTimer = null }, 400)
-    }
+    // Long-press: granular mode2 (if ON) or flavour menu (all nodes)
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null
+      if (key === 'granular' && fxPad.granular.on) {
+        granularMode2 = true
+      } else {
+        // Open flavour bubble menu
+        const rect = padEl?.getBoundingClientRect()
+        if (rect) {
+          bubbleContainerSize = { w: rect.width, h: rect.height }
+          bubbleMenu = { key, pos: { x: e.clientX - rect.left, y: e.clientY - rect.top } }
+        }
+        dragging = null
+        dragRect = null
+      }
+    }, 400)
   }
 
   function toNorm(e: PointerEvent) {
@@ -67,6 +85,26 @@
     granularMode2 = false
     dragging = null
     dragRect = null
+  }
+
+  function pickFlavour(id: string) {
+    if (!bubbleMenu) return
+    const key = bubbleMenu.key
+    // Type-safe assignment per key
+    if (key === 'verb')          fxFlavours.verb = id as typeof fxFlavours.verb
+    else if (key === 'delay')    fxFlavours.delay = id as typeof fxFlavours.delay
+    else if (key === 'glitch')   fxFlavours.glitch = id as typeof fxFlavours.glitch
+    else if (key === 'granular') fxFlavours.granular = id as typeof fxFlavours.granular
+    bubbleMenu = null
+  }
+
+  function closeBubble() { bubbleMenu = null }
+
+  /** Flavour label for a node — always returns current flavour label */
+  function flavourLabel(key: FxFlavourKey): string {
+    const cur = fxFlavours[key]
+    const item = FX_FLAVOURS[key].find((f: { id: string }) => f.id === cur)
+    return item?.label ?? key.toUpperCase()
   }
 
   // ── Audio Visualizer ──────────────────────────────────────────────
@@ -506,9 +544,20 @@
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
-        <span class="node-label">{node.key === 'granular' && perf.granularFreeze ? 'FRZ' : node.key === 'granular' && granularMode2 ? 'M2' : node.label}</span>
+        <span class="node-label">{node.key === 'granular' && perf.granularFreeze ? 'FRZ' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
       </button>
     {/each}
+
+    {#if bubbleMenu}
+      <FxBubbleMenu
+        fxKey={bubbleMenu.key}
+        pos={bubbleMenu.pos}
+        containerWidth={bubbleContainerSize.w}
+        containerHeight={bubbleContainerSize.h}
+        onpick={pickFlavour}
+        onclose={closeBubble}
+      />
+    {/if}
   </div>
 
   <TrackSelector />
@@ -596,5 +645,6 @@
     letter-spacing: 0.1em;
     pointer-events: none;
   }
+
 
 </style>
