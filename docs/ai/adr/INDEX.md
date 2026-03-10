@@ -42,7 +42,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 028 | Step Probability | Implemented | Shift+drag on velocity bars |
 | 029 | Undo / Redo | Implemented | Desktop only (Ctrl+Z / Ctrl+Shift+Z) |
 | 033 | Mobile Velocity / Chance Editing | Implemented | 3-mode tabs (STEP/VEL/CHNC) with drag editing |
-| 067 | Piano Roll Drawing & Chord Brush | Proposed | Pen draw, chord/strum brush, eraser modes for fluid note entry |
+| 067 | Piano Roll Drawing & Chord Brush | Implemented | Pen draw + drag legato, chord/strum brush with drag duration, eraser with continuation cell support |
 
 ## Song Structure / Arrangement
 

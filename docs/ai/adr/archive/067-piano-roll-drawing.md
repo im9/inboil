@@ -1,6 +1,6 @@
 # ADR 067: Piano Roll Drawing & Chord Brush Mode
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
