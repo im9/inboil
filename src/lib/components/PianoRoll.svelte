@@ -12,6 +12,7 @@
 
   const ph = $derived(activeCell(trackId))
   const isPoly = $derived((ph.voiceId === 'iDEATH' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5)
+  const playheadCol = $derived(isViewingPlayingPattern() ? playback.playheads[trackId] : -1)
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
@@ -24,6 +25,20 @@
     if (next < 2 || next > 7) return
     scrollDir = dir === 1 ? 'up' : 'down'
     vkbd.octave = next
+  }
+
+  let wheelAccum = 0
+  function onOctWheel(e: WheelEvent) {
+    e.preventDefault()
+    wheelAccum += e.deltaY
+    const threshold = 60
+    if (wheelAccum >= threshold) {
+      shiftOctave(-1)    // scroll down → lower octave
+      wheelAccum = 0
+    } else if (wheelAccum <= -threshold) {
+      shiftOctave(1)     // scroll up → higher octave
+      wheelAccum = 0
+    }
   }
 
   const rollMax = $derived(PIANO_ROLL_MAX + octaveOffset * 12)
@@ -522,7 +537,8 @@
   })
 </script>
 
-<div class="piano-roll" data-scroll={scrollDir} onanimationend={() => scrollDir = null}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="piano-roll" data-scroll={scrollDir} onanimationend={() => scrollDir = null} onwheel={onOctWheel}>
   <!-- Left spacer to align grid with step columns -->
   <div class="piano-spacer">
     <div class="brush-bar">
@@ -591,7 +607,8 @@
       class="grid"
       data-brush={activeBrush}
       role="application"
-      style="--steps: {ph.steps}"
+      class:has-playhead={playheadCol >= 0}
+      style="--steps: {ph.steps}; --ph-col: {playheadCol}"
       data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
       onpointermove={noteOnMove}
       onpointerup={noteEndDrag}
@@ -600,13 +617,11 @@
       {#each NOTES as note}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
           {#each ph.trigs as _trig, stepIdx}
-            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
             {@const state = getCellState(stepIdx, note)}
             <button
               class="cell"
               class:active={state === 'head'}
               class:continuation={state === 'continuation'}
-              class:playhead={isPlayhead}
               aria-label="Step {stepIdx + 1} note {note}"
               onpointerdown={(e) => noteStartDrag(e, stepIdx, snapToScale(note))}
             >
@@ -761,6 +776,7 @@
     background: var(--color-olive);
     color: var(--color-bg);
   }
+  .grid { cursor: pointer; }
   .grid[data-brush="draw"] { cursor: crosshair; }
   .grid[data-brush="draw"] .cell { cursor: crosshair; }
   .grid[data-brush="eraser"] { cursor: pointer; }
@@ -795,9 +811,6 @@
     opacity: 0.2;
     cursor: pointer;
   }
-  .row.disabled .cell.playhead {
-    opacity: 1;
-  }
 
   .cell {
     position: relative;
@@ -831,11 +844,21 @@
     background: rgba(0,0,0,0.15);
     border-radius: 0 1px 1px 0;
   }
-  .cell.playhead {
-    background: rgba(68,114,180,0.15) !important;
+  /* ── Playhead column overlay ── */
+  .grid {
+    position: relative;
   }
-  .cell.active.playhead {
-    background: var(--color-blue) !important;
+  .grid.has-playhead::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    /* 24px cell + 2px gap = 26px per step */
+    left: calc(var(--ph-col) * 26px);
+    width: 24px;
+    background: rgba(68,114,180,0.13);
+    pointer-events: none;
+    z-index: 1;
   }
 
   /* ── Octave scroll animation (~100ms, matching SplitFlap tempo) ── */
