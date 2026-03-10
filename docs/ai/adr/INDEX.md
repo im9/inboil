@@ -25,6 +25,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 012 | Sampler | Implemented | SamplerVoice + user sample loading; Crash/Ride in drum category |
 | 023 | Oscilloscope Display | Implemented | |
 | 075 | FX / EQ / Master Improvements | Implemented | FX flavours (tape delay, stutter, shimmer), EQ Q control, compressor attack/release, dock controls |
+| 076 | Per-Pattern FX Flavours | Proposed | Flavour overrides per Section/Scene decorator, DockPanel editing |
+| 077 | Per-Track Insert FX | Proposed | Insert FX slot per track (verb/delay/glitch), CPU meter, lazy instantiation |
 
 ## Sequencer / Pattern
 
@@ -117,3 +119,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 020 | Data Persistence & Storage | Proposed | |
 | 030 | Audio & MIDI Export | Proposed | |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
+| 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
+| 072 | Landing Page, Docs & Tutorial | Proposed | Astro + Starlight, LP demo, getting-started tutorial |
+| 073 | Desktop App | Proposed | Tauri WebView wrapper, native file I/O, donation dialog |
+| 074 | Mobile App (iOS Native) | Proposed | Swift/SwiftUI + C++ DSP port to Core Audio |
