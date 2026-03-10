@@ -1597,9 +1597,9 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Ride',     label: 'RIDE',  fullName: 'Ride',       category: 'drum' },
   { id: 'Bass303',  label: '303',   fullName: 'Bass 303',   category: 'bass' },
   { id: 'Analog',   label: 'ANA',   fullName: 'Analog',     category: 'bass' },
-  { id: 'MoogLead', label: 'MOOG',  fullName: 'Moog Lead',  category: 'lead' },
+  { id: 'MoogLead', label: 'ANLG',  fullName: 'Analog Synth', category: 'lead' },
   { id: 'FM',       label: 'FM',    fullName: 'FM Synth',   category: 'lead' },
-  { id: 'iDEATH',   label: 'SYNTH', fullName: 'iDEATH',    category: 'lead' },
+  { id: 'iDEATH',   label: 'SYNTH', fullName: 'Wavetable',  category: 'lead' },
   { id: 'Sampler',  label: 'SMPL',  fullName: 'Sampler',    category: 'sampler' },
 ]
 
