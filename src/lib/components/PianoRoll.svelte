@@ -1,6 +1,6 @@
 <script lang="ts">
   import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo, isViewingPlayingPattern } from '../state.svelte.ts'
-  import type { BrushMode } from '../state.svelte.ts'
+  import type { BrushMode, ChordShape } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { ICON } from '../icons.ts'
@@ -89,6 +89,34 @@
       if (!isOutOfScale(note + d)) return note + d
     }
     return note
+  }
+
+  // ── Chord generation (ADR 067 Phase 2) ──
+  const CHORD_DEGS: Record<ChordShape, number[]> = {
+    triad: [0, 2, 4],
+    '7th': [0, 2, 4, 6],
+    sus2:  [0, 1, 4],
+    sus4:  [0, 3, 4],
+  }
+
+  function chordNotesFromRoot(rootNote: number): number[] {
+    const root = perf.rootNote
+    const scale = SCALE_TEMPLATES[root] ?? SCALE_TEMPLATES[0]
+    const pc = ((rootNote % 12) - root + 12) % 12
+    let baseDeg = 0
+    for (let d = 0; d < 7; d++) {
+      if (scale[d] <= pc) baseDeg = d
+    }
+    const baseOctave = Math.floor(rootNote / 12)
+    const degOffsets = CHORD_DEGS[ui.chordShape]
+    const notes: number[] = []
+    for (const dOff of degOffsets) {
+      const deg = baseDeg + dOff
+      const octShift = Math.floor(deg / 7)
+      const scaleDeg = ((deg % 7) + 7) % 7
+      notes.push(root + scale[scaleDeg] + (baseOctave + octShift) * 12)
+    }
+    return notes
   }
 
   /** Returns cell visual state for duration rendering */
@@ -301,32 +329,43 @@
   let brushConstrainNote = -1
   let brushHeadStep = -1       // start step of current legato note
   let brushLastNote = -1       // last drawn pitch (for legato detection)
+  let brushStrumStart = -1     // first step of strum placement
+  let brushStrumLen = 0        // number of strum notes placed
 
   function toggleBrush(mode: BrushMode) {
     ui.brushMode = ui.brushMode === mode ? 'default' : mode
   }
 
   function brushPlaceNote(stepIdx: number, note: number) {
-    const trig = ph.trigs[stepIdx]
-    if (isPoly) {
-      const existing = trig.notes ?? (trig.active ? [trig.note] : [])
-      if (existing.includes(note)) return
-      existing.push(note)
-      existing.sort((a, b) => a - b)
-      trig.notes = existing
-      trig.note = existing[0]
-      trig.active = true
-    } else {
-      trig.active = true
-      trig.note = note
-      trig.duration = trig.duration || 1
-      delete trig.notes
+    // Truncate any prior note whose duration overlaps this step
+    for (let d = 1; d <= 16; d++) {
+      const prev = stepIdx - d
+      if (prev < 0) break
+      const pt = ph.trigs[prev]
+      if (pt.active) {
+        if ((pt.duration ?? 1) > d) pt.duration = d
+        break
+      }
     }
+    const trig = ph.trigs[stepIdx]
+    // Draw brush always places single notes (mono behavior)
+    trig.active = true
+    trig.note = note
+    trig.duration = 1
+    delete trig.notes
   }
 
   function brushEraseNote(stepIdx: number, note: number) {
     const trig = ph.trigs[stepIdx]
-    if (!trig.active) return
+    if (!trig.active) {
+      // Continuation cell — erase the parent head
+      const headStep = findNoteHead(trackId, stepIdx, note)
+      if (headStep >= 0) {
+        if (isPoly) removeNoteFromStep(trackId, headStep, note)
+        else ph.trigs[headStep].active = false
+      }
+      return
+    }
     if (isPoly && trig.notes) {
       const idx = trig.notes.indexOf(note)
       if (idx < 0) return
@@ -339,12 +378,56 @@
     }
   }
 
+  /** Place a full chord at a single step (chord brush mode) */
+  function brushChordPlace(stepIdx: number, note: number) {
+    const chordNotes = chordNotesFromRoot(note)
+    const trig = ph.trigs[stepIdx]
+    trig.active = true
+    if (isPoly) {
+      const existing = trig.notes ?? (trig.active ? [trig.note] : [])
+      for (const cn of chordNotes) {
+        if (!existing.includes(cn)) existing.push(cn)
+      }
+      existing.sort((a, b) => a - b)
+      trig.notes = existing
+      trig.note = existing[0]
+    } else {
+      trig.note = chordNotes[0]
+      trig.duration = 1
+      delete trig.notes
+    }
+  }
+
+  /** Place chord notes with strum offset across consecutive steps */
+  function brushStrumPlace(stepIdx: number, note: number) {
+    const chordNotes = chordNotesFromRoot(note)
+    for (let i = 0; i < chordNotes.length && stepIdx + i < ph.steps; i++) {
+      const t = ph.trigs[stepIdx + i]
+      t.active = true
+      if (isPoly) {
+        const existing = t.notes ?? (t.active ? [t.note] : [])
+        if (!existing.includes(chordNotes[i])) existing.push(chordNotes[i])
+        existing.sort((a, b) => a - b)
+        t.notes = existing
+        t.note = existing[0]
+      } else {
+        t.note = chordNotes[i]
+        t.duration = 1
+        delete t.notes
+      }
+    }
+  }
+
   function brushStart(e: PointerEvent, stepIdx: number, note: number) {
     const mode = activeBrush
     if (mode === 'default') return false
     e.preventDefault()
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
-    pushUndo(mode === 'draw' ? 'Draw notes' : 'Erase notes')
+    const labels: Record<string, string> = {
+      draw: 'Draw notes', eraser: 'Erase notes',
+      chord: 'Chord brush', strum: 'Strum brush',
+    }
+    pushUndo(labels[mode] ?? 'Brush')
     brushDragging = true
     brushVisited.clear()
     brushConstrainNote = note
@@ -354,7 +437,15 @@
     const key = `${stepIdx}:${note}`
     brushVisited.add(key)
     if (mode === 'draw') brushPlaceNote(stepIdx, note)
-    else brushEraseNote(stepIdx, note)
+    else if (mode === 'eraser') brushEraseNote(stepIdx, note)
+    else if (mode === 'chord') brushChordPlace(stepIdx, note)
+    else if (mode === 'strum') {
+      brushStrumPlace(stepIdx, note)
+      const chordLen = Math.min(CHORD_DEGS[ui.chordShape].length, ph.steps - stepIdx)
+      brushStrumStart = stepIdx
+      brushStrumLen = chordLen
+      brushHeadStep = stepIdx + chordLen - 1
+    }
     return true
   }
 
@@ -367,39 +458,34 @@
     let note = getNoteFromY(relY)
     if (note < 0) return
     note = snapToScale(note)
-    if (e.shiftKey && activeBrush === 'draw') note = brushConstrainNote
+    // Draw brush: lock Y to initial pitch so horizontal drag = legato
+    // (9px rows make Y-drift inevitable; without this, legato never fires)
+    if (activeBrush === 'draw') note = brushConstrainNote
     const key = `${stepIdx}:${note}`
     if (brushVisited.has(key)) return
     brushVisited.add(key)
-    if (activeBrush === 'draw') {
-      if (!isPoly && note === brushLastNote && stepIdx > brushHeadStep) {
-        // Same pitch → extend duration (legato)
-        const dur = stepIdx - brushHeadStep + 1
-        ph.trigs[brushHeadStep].duration = Math.min(16, dur)
-        // Clear intermediate steps so they show as continuation
-        for (let s = brushHeadStep + 1; s <= stepIdx; s++) {
-          ph.trigs[s].active = false
-        }
-      } else if (stepIdx > brushHeadStep) {
-        // Different pitch → auto-extend previous note to fill gap, then new head
-        if (!isPoly && brushHeadStep >= 0) {
-          const gap = stepIdx - brushHeadStep
-          ph.trigs[brushHeadStep].duration = Math.min(16, gap)
-          for (let s = brushHeadStep + 1; s < stepIdx; s++) {
-            ph.trigs[s].active = false
-          }
-        }
-        brushPlaceNote(stepIdx, note)
-        brushHeadStep = stepIdx
-        brushLastNote = note
-      } else {
-        // Backward or same step — just place
-        brushPlaceNote(stepIdx, note)
-        brushHeadStep = stepIdx
-        brushLastNote = note
+    if (activeBrush === 'eraser') {
+      brushEraseNote(stepIdx, note)
+    } else if (activeBrush === 'strum' && brushStrumLen > 0) {
+      // Strum: extend all strum notes' duration equally
+      if (stepIdx <= brushHeadStep) return
+      const extra = stepIdx - brushHeadStep
+      for (let i = 0; i < brushStrumLen; i++) {
+        const s = brushStrumStart + i
+        ph.trigs[s].duration = Math.min(16, 1 + extra)
+      }
+      // Clear steps between strum end and drag position
+      for (let s = brushHeadStep + 1; s <= stepIdx; s++) {
+        ph.trigs[s].active = false
       }
     } else {
-      brushEraseNote(stepIdx, note)
+      // draw / chord: forward drag extends duration (legato)
+      if (stepIdx <= brushHeadStep) return
+      const dur = stepIdx - brushHeadStep + 1
+      ph.trigs[brushHeadStep].duration = Math.min(16, dur)
+      for (let s = brushHeadStep + 1; s <= stepIdx; s++) {
+        ph.trigs[s].active = false
+      }
     }
   }
 
@@ -409,6 +495,8 @@
     brushConstrainNote = -1
     brushHeadStep = -1
     brushLastNote = -1
+    brushStrumStart = -1
+    brushStrumLen = 0
   }
 
   // D/E modifier key shortcuts (disabled when vkbd is active)
@@ -418,10 +506,12 @@
       if (vkbd.enabled || e.repeat) return
       if (e.key === 'd' || e.key === 'D') heldBrush = 'draw'
       else if (e.key === 'e' || e.key === 'E') heldBrush = 'eraser'
+      else if (e.key === 'c' || e.key === 'C') heldBrush = 'chord'
     }
     function onKeyUp(e: KeyboardEvent) {
       if ((e.key === 'd' || e.key === 'D') && heldBrush === 'draw') heldBrush = null
       else if ((e.key === 'e' || e.key === 'E') && heldBrush === 'eraser') heldBrush = null
+      else if ((e.key === 'c' || e.key === 'C') && heldBrush === 'chord') heldBrush = null
     }
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
@@ -452,6 +542,33 @@
           <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.eraser}</svg></span>
           <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.eraser}</svg></span>
         </span></button>
+      <button
+        class="brush-btn flip-host"
+        data-tip="Chord brush (hold C)" data-tip-ja="コードブラシ (C長押し)"
+        onclick={() => toggleBrush('chord')}
+      ><span class="flip-card" class:flipped={activeBrush === 'chord'}>
+          <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.chord}</svg></span>
+          <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.chord}</svg></span>
+        </span></button>
+      <button
+        class="brush-btn flip-host"
+        data-tip="Strum brush" data-tip-ja="ストラムブラシ"
+        onclick={() => toggleBrush('strum')}
+      ><span class="flip-card" class:flipped={activeBrush === 'strum'}>
+          <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.strum}</svg></span>
+          <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.strum}</svg></span>
+        </span></button>
+      {#if activeBrush === 'chord' || activeBrush === 'strum'}
+        <select class="chord-select" name="chord-shape"
+          value={ui.chordShape}
+          onchange={(e) => { ui.chordShape = (e.currentTarget as HTMLSelectElement).value as ChordShape }}
+          data-tip="Chord type" data-tip-ja="コードタイプ">
+          <option value="triad">Triad</option>
+          <option value="7th">7th</option>
+          <option value="sus2">Sus2</option>
+          <option value="sus4">Sus4</option>
+        </select>
+      {/if}
     </div>
     <!-- Octave shift buttons + Piano keys -->
     <div class="oct-keys">
@@ -599,12 +716,25 @@
     flex-shrink: 0;
   }
   .brush-bar {
-    display: flex;
-    align-items: flex-start;
-    gap: 3px;
+    display: grid;
+    grid-template-columns: 20px 20px;
+    gap: 2px;
     flex: 1;
     min-width: 0;
     padding-top: 8px;
+    align-content: start;
+  }
+  .chord-select {
+    grid-column: 1 / -1;
+    width: 100%;
+    font-size: 9px;
+    border: 1px solid var(--color-olive);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border-radius: 3px;
+    padding: 1px 0;
+    text-align: center;
+    cursor: pointer;
   }
   .brush-btn {
     border: none;
@@ -635,6 +765,10 @@
   .grid[data-brush="draw"] .cell { cursor: crosshair; }
   .grid[data-brush="eraser"] { cursor: pointer; }
   .grid[data-brush="eraser"] .cell { cursor: pointer; }
+  .grid[data-brush="chord"] { cursor: cell; }
+  .grid[data-brush="chord"] .cell { cursor: cell; }
+  .grid[data-brush="strum"] { cursor: cell; }
+  .grid[data-brush="strum"] .cell { cursor: cell; }
   .grid {
     flex: 1;
     min-height: 0;

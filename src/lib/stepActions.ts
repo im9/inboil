@@ -80,6 +80,16 @@ export function placeNoteBar(trackId: number, startStep: number, note: number, d
   pushUndo('Place note')
   maybeAutoColor()
   const c = activeCell(trackId)
+  // Truncate any prior note whose duration overlaps this step
+  for (let d = 1; d <= 16; d++) {
+    const prev = startStep - d
+    if (prev < 0) break
+    const pt = c.trigs[prev]
+    if (pt.active) {
+      if ((pt.duration ?? 1) > d) pt.duration = d
+      break
+    }
+  }
   const dur = Math.max(1, Math.min(c.steps - startStep, Math.min(16, duration)))
   c.trigs[startStep].active = true
   c.trigs[startStep].note = note

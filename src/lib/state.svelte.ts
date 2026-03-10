@@ -17,7 +17,8 @@ export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
 export type { VoiceId } from './audio/dsp/voices.ts'
 import type { VoiceId } from './audio/dsp/voices.ts'
 
-export type BrushMode = 'default' | 'draw' | 'eraser'
+export type BrushMode = 'default' | 'draw' | 'eraser' | 'chord' | 'strum'
+export type ChordShape = 'triad' | '7th' | 'sus2' | 'sus4'
 
 export interface Trig {
   active: boolean
@@ -388,6 +389,7 @@ export const ui = $state<{
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
   brushMode: BrushMode
+  chordShape: ChordShape
 }>({
   selectedTrack: 0,
   currentSection: 0,
@@ -407,6 +409,7 @@ export const ui = $state<{
   editingAutomationDecorator: null,
   focusSceneNodeId: null,
   brushMode: 'default' as BrushMode,
+  chordShape: 'triad' as ChordShape,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */

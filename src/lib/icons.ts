@@ -70,6 +70,16 @@ export const ICON = {
     + `M5.6 12H4.6L2.4 9.7 2.4 9 4 7.5 7 10.4z`
     + `" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>`,
 
+  /** Chord brush — stacked notes (three horizontal bars) */
+  chord: `<rect x="2" y="2" width="10" height="2.5" rx="1" fill="currentColor"/>`
+    + `<rect x="2" y="5.8" width="10" height="2.5" rx="1" fill="currentColor"/>`
+    + `<rect x="2" y="9.5" width="10" height="2.5" rx="1" fill="currentColor"/>`,
+
+  /** Strum brush — staggered chord notes (diagonal stair pattern) */
+  strum: `<rect x="1" y="2" width="6" height="2" rx="0.8" fill="currentColor"/>`
+    + `<rect x="4" y="5.5" width="6" height="2" rx="0.8" fill="currentColor"/>`
+    + `<rect x="7" y="9" width="6" height="2" rx="0.8" fill="currentColor"/>`,
+
   /** viewBox 0 0 16 16 – sidebar-right panel with chevron (collapse) */
   sidebarRightClose: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
     + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`
