@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "deploy": "vite build && npx wrangler pages deploy dist --project-name=inboil",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tauri": "cargo tauri",
+    "tauri:dev": "cargo tauri dev",
+    "tauri:build": "cargo tauri build"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

@@ -121,5 +121,5 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
 | 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Proposed | Astro + Starlight, LP demo, getting-started tutorial |
-| 073 | Desktop App | Proposed | Tauri WebView wrapper, native file I/O, donation dialog |
+| 073 | Desktop App | Proposed | Tauri v2 shell (Phase 1 done); Phase 2: CI, auto-update, code signing |
 | 074 | Mobile App (iOS Native) | Proposed | Swift/SwiftUI + C++ DSP port to Core Audio |
