@@ -2,7 +2,7 @@
   import { song, playback, ui } from '../state.svelte.ts'
   import type { AutomationPoint } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, FN_HALF_W, FN_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, FN_HALF_W, FN_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -128,7 +128,7 @@
       const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
       const to = toPixel(toNode.x, toNode.y, WORLD_W, WORLD_H)
       const isSel = ui.selectedSceneEdge === edge.id
-      const b = bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern')
+      const b = bezierEdge(from, to, nodeSizeKind(fromNode), nodeSizeKind(toNode))
 
       drawBezier(ctx, b,
         isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
@@ -147,7 +147,7 @@
       if (!fn || !tn) continue
       const fp = toPixel(fn.x, fn.y, WORLD_W, WORLD_H)
       const tp = toPixel(tn.x, tn.y, WORLD_W, WORLD_H)
-      const b = bezierEdge(fp, tp, fn.type !== 'pattern', tn.type !== 'pattern')
+      const b = bezierEdge(fp, tp, nodeSizeKind(fn), nodeSizeKind(tn))
       // Badge at bezier midpoint
       const mid = bezierAt(b, 0.5)
       const mx = mid.x, my = mid.y
@@ -170,7 +170,7 @@
         const rect = viewEl.getBoundingClientRect()
         const toX = (edgeCursor.x - rect.left - panX) / zoom
         const toY = (edgeCursor.y - rect.top - panY) / zoom
-        const tb = bezierEdge(from, { x: toX, y: toY }, srcNode.type !== 'pattern', false)
+        const tb = bezierEdge(from, { x: toX, y: toY }, nodeSizeKind(srcNode), 'pattern')
 
         ctx.setLineDash([4, 4])
         drawBezier(ctx, tb,

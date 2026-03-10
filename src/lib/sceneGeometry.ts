@@ -5,6 +5,7 @@ import { PAD_INSET } from './constants.ts'
 
 export const PAT_HALF_W = 36, PAT_HALF_H = 17
 export const FN_HALF_W = 24, FN_HALF_H = 12
+export const GEN_HALF_W = 60, GEN_HALF_H = 36  // generative node faceplate (ADR 078)
 
 /** Fixed scene world size (independent of viewport) */
 export const WORLD_W = 1600, WORLD_H = 1000
@@ -17,16 +18,24 @@ export function toPixel(nx: number, ny: number, w: number, h: number) {
   }
 }
 
+/** Node size category for edge computation */
+export type NodeSizeKind = 'pattern' | 'fn' | 'generative'
+
+function halfSize(kind: NodeSizeKind): { w: number; h: number } {
+  if (kind === 'generative') return { w: GEN_HALF_W, h: GEN_HALF_H }
+  if (kind === 'fn') return { w: FN_HALF_W, h: FN_HALF_H }
+  return { w: PAT_HALF_W, h: PAT_HALF_H }
+}
+
 /** Compute bezier edge endpoints offset from node centers by half-size toward direction */
-export function bezierEdge(from: Pt, to: Pt, fromFn = false, toFn = false): BezierEdge {
+export function bezierEdge(from: Pt, to: Pt, fromKind: NodeSizeKind = 'pattern', toKind: NodeSizeKind = 'pattern'): BezierEdge {
   const dx = to.x - from.x, dy = to.y - from.y
   const dist = Math.hypot(dx, dy)
   if (dist < 1) return { p0: from, cp: from, p1: to }
   const nx = dx / dist, ny = dy / dist
-  const hw0 = fromFn ? FN_HALF_W : PAT_HALF_W
-  const hh0 = fromFn ? FN_HALF_H : PAT_HALF_H
-  const hw1 = toFn ? FN_HALF_W : PAT_HALF_W
-  const hh1 = toFn ? FN_HALF_H : PAT_HALF_H
+  const s0 = halfSize(fromKind), s1 = halfSize(toKind)
+  const hw0 = s0.w, hh0 = s0.h
+  const hw1 = s1.w, hh1 = s1.h
   // Exit/enter at node edge along the line direction
   const r0 = Math.min(hw0 / Math.max(Math.abs(nx), 0.01), hh0 / Math.max(Math.abs(ny), 0.01))
   const r1 = Math.min(hw1 / Math.max(Math.abs(nx), 0.01), hh1 / Math.max(Math.abs(ny), 0.01))
@@ -93,10 +102,12 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
     const pat = patterns.find(p => p.id === node.patternId)
     return pat?.name || '---'
   }
+  if (node.type === 'generative' && node.generative) {
+    return generativeLabel(node.generative)
+  }
+  // Legacy function node labels (migration support)
   if (node.type === 'transpose') {
-    if (node.params?.mode === 1) {
-      return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
-    }
+    if (node.params?.mode === 1) return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
     const s = node.params?.semitones ?? 0
     return `T${s >= 0 ? '+' : ''}${s}`
   }
@@ -116,6 +127,24 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
     return '~' + automationTargetLabel(node.automationParams?.target)
   }
   return '?'
+}
+
+/** Compact label for a generative node (ADR 078) */
+function generativeLabel(gen: NonNullable<SceneNode['generative']>): string {
+  switch (gen.engine) {
+    case 'turing': {
+      const p = gen.params as import('./state.svelte.ts').TuringParams
+      return `TM ${p.length}×${p.lock.toFixed(1)}`
+    }
+    case 'quantizer': {
+      const p = gen.params as import('./state.svelte.ts').QuantizerParams
+      return `Q ${NOTE_NAMES[p.root]}${p.scale.slice(0, 3)}`
+    }
+    case 'tonnetz': {
+      const p = gen.params as import('./state.svelte.ts').TonnetzParams
+      return `T ${p.sequence.slice(0, 3).join('·')}`
+    }
+  }
 }
 
 /** Short label for an automation target */
@@ -153,9 +182,26 @@ export function decoratorLabel(dec: SceneDecorator): string {
   return '?'
 }
 
-/** Get color hex for a pattern node (function nodes return null) */
+/** Accent colors per generative engine (ADR 078) */
+const GEN_COLORS: Record<string, string> = {
+  turing: '#787845',    // olive
+  quantizer: '#458078', // teal
+  tonnetz: '#785a87',   // purple
+}
+
+/** Get color hex for a pattern node, or engine accent for generative */
 export function nodeColor(node: SceneNode, patterns: Pattern[]): string | null {
+  if (node.type === 'generative' && node.generative) {
+    return GEN_COLORS[node.generative.engine] ?? null
+  }
   if (node.type !== 'pattern') return null
   const pat = patterns.find(p => p.id === node.patternId)
   return PATTERN_COLORS[pat?.color ?? 0]
+}
+
+/** Get the NodeSizeKind for a scene node */
+export function nodeSizeKind(node: SceneNode): NodeSizeKind {
+  if (node.type === 'pattern') return 'pattern'
+  if (node.type === 'generative') return 'generative'
+  return 'fn'
 }

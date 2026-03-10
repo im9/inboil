@@ -71,6 +71,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 066 | Scene Node Decorators | Implemented | Snap-attach function nodes to patterns as decorators, edge branching = probabilistic routing |
 | 069 | Dock Panel Decorator Editor | Implemented | Full-size Knob/toggle editing in DockPanel, Add dropdown, SceneNodePopup read-only labels |
 | 070 | Scene Navigator | Implemented | Pattern list in DockPanel, tap-to-select, BPM-synced playback pulse, context-aware display for EQ/Master/FX sheets |
+| 078 | Generative Scene Nodes | Proposed | Repurpose function nodes → generative (Quantizer/Tonnetz/Random), write+live modes, Freeze, node consolidation |
 
 ## UI / Layout
 
@@ -106,7 +107,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 |---|-------|--------|-------|
 | 026 | Auto-Performance | Proposed | Auto Fill/Break/Reverse |
 | 031 | Virtual MIDI Keyboard | Implemented | Phase 1: audition mode, octave synced with piano roll |
-| 038 | Custom Functions | Proposed | User-defined FX/filter macros, keyboard/bubble triggers |
+| 038 | Custom Functions | Superseded | Replaced by decorators (ADR 066/076) + generative nodes (ADR 078) |
 | 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 
 ## Data / Infrastructure

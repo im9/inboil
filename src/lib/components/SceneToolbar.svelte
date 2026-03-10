@@ -6,11 +6,8 @@
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
 
   const ADD_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
-    { type: 'transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
-    { type: 'tempo', tip: 'Tempo', tipJa: 'テンポ' },
-    { type: 'repeat', tip: 'Repeat', tipJa: 'リピート' },
-    { type: 'probability', tip: 'Probability', tipJa: '確率' },
-    { type: 'fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
+    { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -65,16 +62,22 @@
       data-tip={item.tip} data-tip-ja={item.tipJa}
       onpointerdown={() => onadd?.(item.type)}
     >
-      {#if item.type === 'transpose'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
-      {:else if item.type === 'tempo'}
-        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true">{@html ICON.tempo}</svg>
-      {:else if item.type === 'repeat'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.repeat}</svg>
-      {:else if item.type === 'probability'}
-        <svg viewBox="0 0 14 14" width="13" height="13" aria-hidden="true">{@html ICON.probability}</svg>
-      {:else if item.type === 'fx'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
+      {#if item.type === 'turing'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="5" width="2" height="4" rx="0.5"/>
+          <rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+          <rect x="7" y="5" width="2" height="4" rx="0.5"/>
+          <rect x="10" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+          <rect x="1" y="10" width="11" height="1.5" rx="0.5" opacity="0.3"/>
+        </svg>
+      {:else if item.type === 'quantizer'}
+        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
+          <rect x="2" y="9" width="2" height="3" rx="0.5"/>
+          <rect x="5" y="6" width="2" height="6" rx="0.5"/>
+          <rect x="8" y="3" width="2" height="9" rx="0.5"/>
+          <rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
+          <rect x="1" y="2" width="12" height="1" rx="0.5" opacity="0.2"/>
+        </svg>
       {:else if item.type === 'label'}
         <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
       {/if}

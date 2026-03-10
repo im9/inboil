@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { cloneSceneNode, cloneScene, restoreScene, hasMigratableFnNodes, migrateFnToDecorators } from './sceneData.ts'
-import type { SceneNode, SceneEdge, Scene } from './state.svelte.ts'
+import { cloneSceneNode, cloneScene, restoreScene, hasMigratableFnNodes, migrateFnToDecorators, purgeStandaloneFnNodes } from './sceneData.ts'
+import type { SceneNode, SceneEdge, Scene, GenerativeConfig } from './state.svelte.ts'
 
 // ── Helpers ──
 
@@ -222,5 +222,86 @@ describe('migrateFnToDecorators', () => {
     const p2 = result.nodes.find(n => n.id === 'p2')!
     p2.decorators![0].params.semitones = 99
     expect(origParams.semitones).toBe(7)
+  })
+})
+
+// ── Generative nodes (ADR 078) ──
+
+function genNode(id: string): SceneNode {
+  const gen: GenerativeConfig = {
+    engine: 'turing',
+    outputMode: 'write',
+    mergeMode: 'replace',
+    params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72] as [number, number], mode: 'note' as const, density: 0.7 },
+  }
+  return { id, type: 'generative', x: 0.5, y: 0.5, root: false, generative: gen }
+}
+
+describe('cloneSceneNode (generative)', () => {
+  it('deep clones generative config', () => {
+    const orig = genNode('g1')
+    const cloned = cloneSceneNode(orig)
+    ;(cloned.generative!.params as any).length = 16
+    expect((orig.generative!.params as any).length).toBe(8)
+  })
+
+  it('preserves engine type', () => {
+    const cloned = cloneSceneNode(genNode('g1'))
+    expect(cloned.generative!.engine).toBe('turing')
+    expect(cloned.type).toBe('generative')
+  })
+})
+
+// ── purgeStandaloneFnNodes ──
+
+describe('purgeStandaloneFnNodes', () => {
+  it('removes orphan legacy fn nodes', () => {
+    const nodes = [patNode('p1'), fnNode('f1'), patNode('p2')]
+    const edges = [edge('p1', 'f1'), edge('f1', 'p2')]
+    const result = purgeStandaloneFnNodes(nodes, edges)
+    expect(result.removed).toBe(1)
+    expect(result.nodes.find(n => n.id === 'f1')).toBeUndefined()
+    // Edges referencing f1 should be removed
+    expect(result.edges.every(e => e.from !== 'f1' && e.to !== 'f1')).toBe(true)
+  })
+
+  it('preserves generative nodes', () => {
+    const nodes = [patNode('p1'), genNode('g1')]
+    const edges = [edge('p1', 'g1')]
+    const result = purgeStandaloneFnNodes(nodes, edges)
+    expect(result.removed).toBe(0)
+    expect(result.nodes).toHaveLength(2)
+  })
+
+  it('preserves pattern nodes', () => {
+    const nodes = [patNode('p1'), patNode('p2')]
+    const edges = [edge('p1', 'p2')]
+    const result = purgeStandaloneFnNodes(nodes, edges)
+    expect(result.removed).toBe(0)
+  })
+})
+
+describe('restoreScene (ADR 078 migration)', () => {
+  it('purges legacy fn nodes during restore', () => {
+    const src: Scene = {
+      name: 'Test',
+      nodes: [patNode('p1'), fnNode('f1'), patNode('p2')],
+      edges: [edge('p1', 'f1'), edge('f1', 'p2')],
+      labels: [],
+    }
+    const restored = restoreScene(src)
+    expect(restored.nodes.find(n => n.id === 'f1')).toBeUndefined()
+  })
+
+  it('preserves generative nodes during restore', () => {
+    const src: Scene = {
+      name: 'Test',
+      nodes: [patNode('p1'), genNode('g1')],
+      edges: [edge('p1', 'g1')],
+      labels: [],
+    }
+    const restored = restoreScene(src)
+    expect(restored.nodes.find(n => n.id === 'g1')).toBeDefined()
+    expect(restored.nodes.find(n => n.id === 'g1')!.generative!.engine).toBe('turing')
   })
 })

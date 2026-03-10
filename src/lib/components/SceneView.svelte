@@ -1,10 +1,12 @@
 <script lang="ts">
   import { song, playback, ui, primarySelectedNode, selectPattern, hasScenePlayback, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddFunctionNode, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddGenerativeNode, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, decoratorLabel } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind, decoratorLabel } from '../sceneGeometry.ts'
+  import type { GenerativeEngine } from '../state.svelte.ts'
+  import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
   import SceneBubbleMenu from './SceneBubbleMenu.svelte'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
@@ -287,25 +289,8 @@
         } else {
           sceneUpdateNode(dragging, pos.x, pos.y)
         }
-        // Snap detection: function node near a pattern node? (ADR 062)
-        const dragNode = song.scene.nodes.find(n => n.id === dragging)
-        if (dragNode && dragNode.type !== 'pattern' && dragNode.type !== 'probability') {
-          const dragPx = toPixel(pos.x, pos.y, WORLD_W, WORLD_H)
-          let closest: string | null = null
-          let closestDist = Infinity
-          for (const n of song.scene.nodes) {
-            if (n.type !== 'pattern' || n.id === dragging) continue
-            const np = toPixel(n.x, n.y, WORLD_W, WORLD_H)
-            const dist = Math.hypot(dragPx.x - np.x, dragPx.y - np.y)
-            if (dist < 60 && dist < closestDist) {
-              closest = n.id
-              closestDist = dist
-            }
-          }
-          snapTarget = closest
-        } else {
-          snapTarget = null
-        }
+        // Snap detection disabled — legacy fn nodes no longer created (ADR 078)
+        snapTarget = null
       }
     }
   }
@@ -480,7 +465,7 @@
       if (!fromNode || !toNode) continue
       const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
       const to = toPixel(toNode.x, toNode.y, WORLD_W, WORLD_H)
-      const d = bezierDist(px, py, bezierEdge(from, to, fromNode.type !== 'pattern', toNode.type !== 'pattern'))
+      const d = bezierDist(px, py, bezierEdge(from, to, nodeSizeKind(fromNode), nodeSizeKind(toNode)))
       if (d < bestDist) {
         bestDist = d
         hitEdge = edge.id
@@ -610,6 +595,12 @@
     pickerOpen = true
   }
 
+  /** Check if a pitch class is in a given scale */
+  function isScaleDegree(root: number, scale: string, pc: number): boolean {
+    const intervals = SCALE_MAP[scale] ?? SCALE_MAP.major
+    return intervals.includes((pc - root + 12) % 12)
+  }
+
   function pickBubbleItem(type: BubblePickType) {
     // Convert picker pixel position to normalized coords (accounting for zoom/pan)
     const canvasX = (pickerPos.x - panX) / zoom
@@ -621,7 +612,7 @@
       ui.selectedSceneNodes = {}
       requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
     } else {
-      const id = sceneAddFunctionNode(type, nx, ny)
+      const id = sceneAddGenerativeNode(type as GenerativeEngine, nx, ny)
       ui.selectedSceneNodes = {}
       ui.selectedSceneNodes[id] = true
     }
@@ -643,7 +634,7 @@
       ui.selectedSceneNodes = {}
       requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
     } else {
-      const id = sceneAddFunctionNode(type, nx, ny)
+      const id = sceneAddGenerativeNode(type as GenerativeEngine, nx, ny)
       ui.selectedSceneNodes = {}
       ui.selectedSceneNodes[id] = true
     }
@@ -736,7 +727,8 @@
   <!-- Transform container for nodes (zoom/pan) -->
   <div class="scene-transform" style="width: {WORLD_W}px; height: {WORLD_H}px; transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
     {#each song.scene.nodes as node (node.id)}
-      {@const isFn = node.type !== 'pattern'}
+      {@const isFn = node.type !== 'pattern' && node.type !== 'generative'}
+      {@const isGen = node.type === 'generative'}
       {@const isRoot = node.root}
       {@const isSelected = ui.selectedSceneNodes[node.id]}
       {@const isDragging = dragging === node.id}
@@ -746,9 +738,11 @@
       {@const isBouncing = justAttached === node.id}
       {@const decs = node.decorators ?? []}
       {@const nc = nodeColor(node, song.patterns)}
+      {@const handleOffset = isGen ? GEN_HALF_W : isFn ? FN_HALF_W : PAT_HALF_W}
       <button
         class="scene-node"
         class:fn={isFn}
+        class:gen={isGen}
         class:root={isRoot}
         class:selected={isSelected}
         class:dragging={isDragging}
@@ -765,34 +759,83 @@
         onpointerdown={e => startDrag(e, node.id)}
         onpointerup={e => endNodeDrag(e, node.id)}
       >
-        {#if node.type === 'transpose'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
-          <span class="node-label">{nodeName(node, song.patterns)}</span>
-        {:else if node.type === 'tempo'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.tempo}</svg>
-          <span class="node-label">{nodeName(node, song.patterns)}</span>
-        {:else if node.type === 'repeat'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.repeat}</svg>
-          <span class="node-label">{nodeName(node, song.patterns)}</span>
-        {:else if node.type === 'probability'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.probability}</svg>
-        {:else if node.type === 'fx'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">{@html ICON.fx}</svg>
-          <span class="node-label">{nodeName(node, song.patterns)}</span>
-        {:else if node.type === 'automation'}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="12" height="12" aria-hidden="true">{@html ICON.automation}</svg>
-          <span class="node-label">{nodeName(node, song.patterns)}</span>
+        {#if isGen && node.generative}
+          <!-- Generative node faceplate (ADR 078) -->
+          {#if node.generative.engine === 'turing'}
+            {@const tp = node.generative.params}
+            <div class="gen-faceplate turing">
+              <div class="turing-bits">
+                {#each Array(tp.engine === 'turing' ? (tp as import('../state.svelte.ts').TuringParams).length : 8) as _, i}
+                  <span class="turing-bit" class:on={i % 3 === 0}></span>
+                {/each}
+              </div>
+              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-controls">
+                <!-- svelte-ignore node_invalid_placement_ssr -->
+                <span class="gen-mode-toggle" role="button" tabindex="-1"
+                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
+                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
+                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
+                {#if node.generative.outputMode === 'write'}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn" role="button" tabindex="-1"
+                    data-tip="Generate" data-tip-ja="生成"
+                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                  >GEN</span>
+                {:else}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
+                    data-tip="Freeze" data-tip-ja="フリーズ"
+                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
+                  >FRZ</span>
+                {/if}
+              </div>
+            </div>
+          {:else if node.generative.engine === 'quantizer'}
+            {@const qp = node.generative.params as import('../state.svelte.ts').QuantizerParams}
+            <div class="gen-faceplate quantizer">
+              <div class="quant-keys">
+                {#each [0,1,2,3,4,5,6,7,8,9,10,11] as pc}
+                  {@const isBlack = [1,3,6,8,10].includes(pc)}
+                  <span class="quant-key" class:black={isBlack} class:active={isScaleDegree(qp.root, qp.scale, pc)}></span>
+                {/each}
+              </div>
+              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-controls">
+                <!-- svelte-ignore node_invalid_placement_ssr -->
+                <span class="gen-mode-toggle" role="button" tabindex="-1"
+                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
+                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
+                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
+                {#if node.generative.outputMode === 'write'}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn" role="button" tabindex="-1"
+                    data-tip="Generate" data-tip-ja="生成"
+                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                  >GEN</span>
+                {:else}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
+                    data-tip="Freeze" data-tip-ja="フリーズ"
+                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
+                  >FRZ</span>
+                {/if}
+              </div>
+            </div>
+          {:else}
+            <span class="node-label">{nodeName(node, song.patterns)}</span>
+          {/if}
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
-        {#if !isFn && decs.length > 0}
+        {#if !isFn && !isGen && decs.length > 0}
           <span class="dec-row">
             {#each decs as dec}
               <span class="dec-tag">{decoratorLabel(dec)}</span>
             {/each}
           </span>
         {/if}
-        {#if isPlaying && !isFn && decs.some(d => d.type === 'automation' && d.automationParams)}
+        {#if isPlaying && !isFn && !isGen && decs.some(d => d.type === 'automation' && d.automationParams)}
           {@const autoDecs = decs.filter(d => d.type === 'automation' && d.automationParams)}
           <span class="auto-mini-row">
             {#each autoDecs as ad}
@@ -808,8 +851,9 @@
       <div
         class="edge-handle"
         class:fn={isFn}
+        class:gen={isGen}
         style="
-          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + {isFn ? FN_HALF_W : PAT_HALF_W}px);
+          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + {handleOffset}px);
           top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
         "
         onpointerdown={e => startEdgeDraw(e, node.id)}
@@ -825,7 +869,7 @@
         class:playing={playback.mode === 'scene' && playback.playing}
         class:active={playback.mode === 'scene'}
         style="
-          left: calc({PAD_INSET}px + {rootNode.x} * (100% - {PAD_INSET * 2}px) - {rootNode.type === 'pattern' ? 52 : 40}px);
+          left: calc({PAD_INSET}px + {rootNode.x} * (100% - {PAD_INSET * 2}px) - {rootNode.type === 'pattern' ? 52 : rootNode.type === 'generative' ? 76 : 40}px);
           top: calc({PAD_INSET}px + {rootNode.y} * (100% - {PAD_INSET * 2}px));
         "
         onpointerdown={e => {
@@ -1131,15 +1175,119 @@
   .scene-node.fn .node-label {
     font-size: 8px;
   }
-  .fn-icon {
-    flex-shrink: 0;
-    pointer-events: none;
-    opacity: 0.85;
-  }
   .scene-node.fn.selected {
     color: var(--color-bg);
     outline: 1.5px dashed var(--color-fg);
     outline-offset: 2px;
+  }
+
+  /* ── Generative node faceplate (ADR 078) ── */
+  .scene-node.gen {
+    width: 120px;
+    height: 72px;
+    border-radius: 8px;
+    background: var(--nc, var(--color-fg));
+    color: rgba(237, 232, 220, 0.9);
+    border: 1.5px dashed rgba(237, 232, 220, 0.3);
+    padding: 6px 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  .scene-node.gen.selected {
+    outline: 2px solid rgba(237, 232, 220, 0.8);
+    outline-offset: 2px;
+  }
+  .gen-faceplate {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    height: 100%;
+  }
+  .gen-label {
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.9;
+  }
+  .gen-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .gen-run-btn {
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border: 1px solid rgba(237, 232, 220, 0.3);
+    border-radius: 3px;
+    background: rgba(237, 232, 220, 0.1);
+    color: rgba(237, 232, 220, 0.8);
+    cursor: pointer;
+  }
+  .gen-run-btn:hover {
+    background: rgba(237, 232, 220, 0.25);
+    color: white;
+  }
+  .gen-run-btn:active {
+    transform: scale(0.95);
+  }
+  /* Turing Machine bits */
+  .turing-bits {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+  .turing-bit {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: rgba(237, 232, 220, 0.2);
+    flex-shrink: 0;
+  }
+  .turing-bit.on {
+    background: rgba(237, 232, 220, 0.85);
+  }
+  /* Quantizer mini keyboard */
+  .quant-keys {
+    display: flex;
+    gap: 1px;
+    height: 16px;
+  }
+  .quant-key {
+    flex: 1;
+    border-radius: 1px;
+    background: rgba(237, 232, 220, 0.15);
+  }
+  .quant-key.black {
+    background: rgba(237, 232, 220, 0.08);
+    margin-top: 2px;
+  }
+  .quant-key.active {
+    background: rgba(237, 232, 220, 0.75);
+  }
+  .quant-key.black.active {
+    background: rgba(237, 232, 220, 0.6);
+  }
+  /* Mode toggle (clickable) */
+  .gen-mode-toggle {
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    cursor: pointer;
+  }
+  .gen-mode-toggle:hover {
+    opacity: 1;
+  }
+  .gen-run-btn.freeze {
+    border-color: rgba(120, 120, 69, 0.5);
+    color: rgba(120, 120, 69, 0.9);
   }
 
   .scene-node.playing {
@@ -1318,7 +1466,6 @@
       gap: 4px;
     }
     .scene-node.fn .node-label { font-size: 9px; }
-    .fn-icon { width: 14px; height: 14px; }
     .node-label { font-size: 11px; }
     .scene-play-btn { width: 34px; height: 34px; }
   }

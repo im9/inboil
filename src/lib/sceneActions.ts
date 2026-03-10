@@ -4,8 +4,9 @@
  */
 
 import { song, ui, pushUndo } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, Trig } from './state.svelte.ts'
 import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
+import { turingGenerate, quantizeTrigs } from './generative.ts'
 
 // ── ID generation ──
 
@@ -137,15 +138,7 @@ export function sceneResizeLabel(labelId: string, delta: number): void {
   label.size = Math.max(0.5, Math.min(4, (label.size ?? 1) + delta))
 }
 
-// ── Function nodes ──
-
-const FUNCTION_DEFAULTS: Record<string, Record<string, number>> = {
-  transpose: { mode: 0, semitones: 0, key: 0 },
-  tempo: { bpm: 120 },
-  repeat: { count: 2 },
-  probability: {},
-  fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
-}
+// ── Generative nodes (ADR 078) ──
 
 const DEFAULT_AUTOMATION_PARAMS: AutomationParams = {
   target: { kind: 'global', param: 'tempo' },
@@ -153,30 +146,200 @@ const DEFAULT_AUTOMATION_PARAMS: AutomationParams = {
   interpolation: 'linear',
 }
 
-/** Add a function node */
-export function sceneAddFunctionNode(
-  type: 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation',
-  x: number, y: number
-): string {
-  pushUndo('Add function node')
-  const id = nextSceneId('sn')
-  if (type === 'automation') {
-    song.scene.nodes.push({
-      id, type, x, y,
-      root: false,
-      automationParams: structuredClone(DEFAULT_AUTOMATION_PARAMS),
-    })
-  } else {
-    song.scene.nodes.push({
-      id, type, x, y,
-      root: false,
-      params: { ...FUNCTION_DEFAULTS[type] },
-    })
+/** Default configs per generative engine */
+function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generative'] {
+  switch (engine) {
+    case 'turing': return {
+      engine: 'turing',
+      outputMode: 'write',
+      mergeMode: 'replace',
+      params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note' as const, density: 0.7 },
+    }
+    case 'quantizer': return {
+      engine: 'quantizer',
+      outputMode: 'write',
+      mergeMode: 'replace',
+      params: { engine: 'quantizer', scale: 'minor', root: 0, octaveRange: [3, 5] as [number, number] },
+    }
+    case 'tonnetz': return {
+      engine: 'tonnetz',
+      outputMode: 'write',
+      mergeMode: 'replace',
+      params: { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' as const },
+    }
   }
+}
+
+/** Add a generative node */
+export function sceneAddGenerativeNode(engine: GenerativeEngine, x: number, y: number): string {
+  pushUndo('Add generative node')
+  const id = nextSceneId('sn')
+  song.scene.nodes.push({
+    id, type: 'generative', x, y,
+    root: false,
+    generative: defaultGenerativeConfig(engine),
+  })
   return id
 }
 
-/** Update a function node's params */
+/** Update generative node params */
+export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<TuringParams | QuantizerParams>): void {
+  pushUndo('Update generative params')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return
+  Object.assign(node.generative.params, params)
+}
+
+/** Run generative engine (write mode): generate notes and write to target pattern.
+ *  Supports chaining: Turing → Quantizer → Pattern.
+ *  Finds the first pattern node connected via outgoing edges. */
+export function sceneGenerateWrite(nodeId: string): boolean {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative || node.generative.outputMode !== 'write') return false
+
+  // Find target pattern by following outgoing edges (collecting gen chain)
+  const targetPatNode = findTargetPattern(nodeId)
+  if (!targetPatNode) return false
+
+  const pat = song.patterns.find(p => p.id === targetPatNode.patternId)
+  if (!pat || pat.cells.length === 0) return false
+
+  pushUndo('Generate sequence')
+
+  const cell = pat.cells[0]
+  const steps = cell.steps
+
+  // Collect the generative chain from this node to the target pattern
+  const chain = collectGenChain(nodeId)
+
+  // Execute the chain: first node generates, subsequent nodes transform
+  let trigs: Trig[] | null = null
+  for (const genNode of chain) {
+    const gen = genNode.generative!
+    if (gen.engine === 'turing') {
+      // Turing generates from scratch
+      trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
+    } else if (gen.engine === 'quantizer') {
+      // Quantizer transforms existing trigs (or creates from pattern data)
+      const input = trigs ?? cell.trigs.map(t => ({ ...t }))
+      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+    }
+  }
+
+  if (trigs) {
+    // Use mergeMode from the last node in the chain
+    const lastGen = chain[chain.length - 1].generative!
+    applyGeneratedTrigs(cell.trigs, trigs, lastGen.mergeMode)
+  }
+
+  return true
+}
+
+/** Collect generative nodes along outgoing edges until we hit a pattern node.
+ *  Returns ordered list starting from the given node. */
+function collectGenChain(fromId: string): SceneNode[] {
+  const chain: SceneNode[] = []
+  const visited = new Set<string>()
+  let currentId = fromId
+
+  while (true) {
+    if (visited.has(currentId)) break
+    visited.add(currentId)
+    const node = song.scene.nodes.find(n => n.id === currentId)
+    if (!node) break
+    if (node.type === 'generative' && node.generative) {
+      chain.push(node)
+    }
+    if (node.type === 'pattern') break
+    // Follow first outgoing edge
+    const outEdge = song.scene.edges.find(e => e.from === currentId)
+    if (!outEdge) break
+    currentId = outEdge.to
+  }
+  return chain
+}
+
+/** Find first pattern node reachable via outgoing edges (BFS) */
+function findTargetPattern(fromId: string): SceneNode | null {
+  const visited = new Set<string>()
+  const queue = [fromId]
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    if (visited.has(id)) continue
+    visited.add(id)
+    const outEdges = song.scene.edges.filter(e => e.from === id)
+    for (const edge of outEdges) {
+      const target = song.scene.nodes.find(n => n.id === edge.to)
+      if (!target) continue
+      if (target.type === 'pattern') return target
+      queue.push(target.id)
+    }
+  }
+  return null
+}
+
+/** Apply generated trigs to existing trigs based on merge mode */
+function applyGeneratedTrigs(
+  existing: import('./state.svelte.ts').Trig[],
+  generated: import('./state.svelte.ts').Trig[],
+  mode: string,
+): void {
+  const len = Math.min(existing.length, generated.length)
+  for (let i = 0; i < len; i++) {
+    if (mode === 'replace') {
+      existing[i] = generated[i]
+    } else if (mode === 'merge') {
+      // Fill empty steps only
+      if (!existing[i].active) {
+        existing[i] = generated[i]
+      }
+    } else if (mode === 'layer') {
+      // Add generated notes as chord on active steps
+      if (generated[i].active) {
+        if (existing[i].active) {
+          const existingNotes = existing[i].notes ?? [existing[i].note]
+          const newNote = generated[i].note
+          if (!existingNotes.includes(newNote)) {
+            existing[i].notes = [...existingNotes, newNote]
+          }
+        } else {
+          existing[i] = generated[i]
+        }
+      }
+    }
+  }
+}
+
+/** Toggle outputMode between write and live */
+export function sceneToggleOutputMode(nodeId: string): void {
+  pushUndo('Toggle output mode')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return
+  node.generative.outputMode = node.generative.outputMode === 'write' ? 'live' : 'write'
+}
+
+/** Freeze: snapshot live output → write to pattern → switch to write mode.
+ *  Runs the generative chain once, writes result, and sets mode to 'write'. */
+export function sceneFreeze(nodeId: string): boolean {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return false
+
+  // Temporarily force write mode for generation
+  const wasLive = node.generative.outputMode === 'live'
+  node.generative.outputMode = 'write'
+
+  const ok = sceneGenerateWrite(nodeId)
+
+  if (!ok && wasLive) {
+    // Revert if generation failed
+    node.generative.outputMode = 'live'
+    return false
+  }
+  // Stay in write mode (freeze keeps it in write)
+  return ok
+}
+
+/** Update a function node's params (legacy, kept for decorator use) */
 export function sceneUpdateNodeParams(nodeId: string, params: Record<string, number>): void {
   pushUndo('Update node params')
   const node = song.scene.nodes.find(n => n.id === nodeId)
@@ -186,48 +349,25 @@ export function sceneUpdateNodeParams(nodeId: string, params: Record<string, num
 
 // ── Decorators (ADR 066) ──
 
-/** Attach a function node as a decorator on a pattern node */
+/** Attach a legacy function node as a decorator on a pattern node (migration support) */
 export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): boolean {
   const fnNode = song.scene.nodes.find(n => n.id === fnNodeId)
   const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
   if (!fnNode || !patNode || patNode.type !== 'pattern') return false
-  if (fnNode.type === 'pattern' || fnNode.type === 'probability') return false
+  if (fnNode.type === 'pattern' || fnNode.type === 'probability' || fnNode.type === 'generative') return false
   pushUndo('Attach decorator')
   let dec: SceneDecorator
   if (fnNode.type === 'automation') {
     const ap = fnNode.automationParams ?? DEFAULT_AUTOMATION_PARAMS
     dec = { type: 'automation', params: {}, automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation } }
   } else {
-    dec = { type: fnNode.type, params: { ...(fnNode.params ?? {}) } }
+    dec = { type: fnNode.type as SceneDecorator['type'], params: { ...(fnNode.params ?? {}) } }
   }
   patNode.decorators ??= []
   patNode.decorators.push(dec)
   song.scene.edges = song.scene.edges.filter(e => e.from !== fnNodeId && e.to !== fnNodeId)
   song.scene.nodes = song.scene.nodes.filter(n => n.id !== fnNodeId)
   return true
-}
-
-/** Detach a decorator from a pattern node back into a standalone function node */
-export function sceneDetachDecorator(patternNodeId: string, decoratorIndex: number): string | null {
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
-  if (!patNode || !patNode.decorators || decoratorIndex >= patNode.decorators.length) return null
-  pushUndo('Detach decorator')
-  const dec = patNode.decorators.splice(decoratorIndex, 1)[0]
-  const id = nextSceneId('sn')
-  const node: SceneNode = {
-    id,
-    type: dec.type,
-    x: Math.min(1, patNode.x + 0.05),
-    y: Math.min(1, patNode.y + 0.05),
-    root: false,
-    params: { ...dec.params },
-  }
-  if (dec.type === 'automation' && dec.automationParams) {
-    const ap = dec.automationParams
-    node.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
-  }
-  song.scene.nodes.push(node)
-  return id
 }
 
 /** Remove a decorator from a pattern node (ADR 069) */
@@ -246,6 +386,13 @@ export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: numb
   patNode.decorators[decoratorIndex].params = { ...params }
 }
 
+const DECORATOR_DEFAULTS: Record<string, Record<string, number>> = {
+  transpose: { mode: 0, semitones: 0, key: 0 },
+  tempo: { bpm: 120 },
+  repeat: { count: 2 },
+  fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
+}
+
 /** Add a decorator directly to a pattern node (ADR 069) */
 export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['type']): void {
   const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
@@ -260,7 +407,7 @@ export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['t
       automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation },
     })
   } else {
-    patNode.decorators.push({ type, params: { ...FUNCTION_DEFAULTS[type] } })
+    patNode.decorators.push({ type, params: { ...DECORATOR_DEFAULTS[type] } })
   }
 }
 

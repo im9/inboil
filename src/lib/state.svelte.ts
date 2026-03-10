@@ -6,6 +6,7 @@ import {
   DEFAULT_FX_FLAVOURS,
 } from './constants.ts'
 import type { FxFlavours } from './constants.ts'
+import { turingGenerate, quantizeTrigs } from './generative.ts'
 import {
   DRUM_VOICES, makeDefaultSong, makeEmptySong, makeEmptyCell,
   SECTION_COUNT,
@@ -121,17 +122,60 @@ export interface AutomationParams {
   interpolation: 'linear' | 'smooth'
 }
 
-/** Node on the scene canvas (ADR 044) */
+/** Generative engine type (ADR 078) */
+export type GenerativeEngine = 'turing' | 'quantizer' | 'tonnetz'
+
+/** Generative node configuration (ADR 078) */
+export interface GenerativeConfig {
+  engine: GenerativeEngine
+  outputMode: 'write' | 'live'
+  mergeMode: 'replace' | 'merge' | 'layer'
+  seed?: number
+  params: TuringParams | QuantizerParams | TonnetzParams
+}
+
+/** Turing Machine / shift-register random (ADR 078) */
+export interface TuringParams {
+  engine: 'turing'
+  length: number           // register length (2–32 steps)
+  lock: number             // 0.0 = fully random, 1.0 = fully locked loop
+  range: [number, number]  // output note range (MIDI note numbers)
+  mode: 'note' | 'gate' | 'velocity'
+  density: number          // 0.0–1.0 — probability of a step being active (gate mode)
+}
+
+/** Quantizer — scale-constrained note mapping (ADR 078, Phase 2) */
+export interface QuantizerParams {
+  engine: 'quantizer'
+  scale: string            // e.g. 'major', 'minor', 'dorian', 'pentatonic'
+  root: number             // 0–11 (C=0)
+  octaveRange: [number, number]
+}
+
+/** Tonnetz / neo-Riemannian chord transform (ADR 078, Phase 3) */
+export interface TonnetzParams {
+  engine: 'tonnetz'
+  startChord: [number, number, number]
+  sequence: string[]       // 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
+  stepsPerChord: number
+  voicing: 'close' | 'spread' | 'drop2'
+}
+
+/** Legacy function node types — kept for migration only */
+type LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+
+/** Node on the scene canvas (ADR 044, updated ADR 078) */
 export interface SceneNode {
   id: string
-  type: 'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+  type: 'pattern' | 'generative' | LegacyFnType
   x: number               // canvas position (normalized 0–1)
   y: number
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
   params?: Record<string, number>
-  automationParams?: AutomationParams  // for type === 'automation' (ADR 053)
+  automationParams?: AutomationParams  // for type === 'automation' (legacy)
   decorators?: SceneDecorator[]  // function decorators attached to pattern nodes (ADR 062)
+  generative?: GenerativeConfig  // for type === 'generative' (ADR 078)
 }
 
 /** Directed edge between nodes (ADR 044) */
@@ -783,6 +827,84 @@ function applyDecorators(node: SceneNode): void {
   }
 }
 
+/** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2).
+ *  Walks backward from the pattern node to find upstream generative chains. */
+function applyLiveGenerative(patternNode: SceneNode): void {
+  if (patternNode.type !== 'pattern') return
+  const pat = song.patterns.find(p => p.id === patternNode.patternId)
+  if (!pat || pat.cells.length === 0) return
+
+  // Find generative nodes that have edges pointing to this pattern node
+  const incomingEdges = song.scene.edges.filter(e => e.to === patternNode.id)
+  for (const edge of incomingEdges) {
+    const srcNode = song.scene.nodes.find(n => n.id === edge.from)
+    if (!srcNode?.generative || srcNode.generative.outputMode !== 'live') continue
+
+    // Collect the chain backwards from this node
+    const chain = collectLiveChain(srcNode.id)
+    if (chain.length === 0) continue
+
+    const cell = pat.cells[0]
+    const steps = cell.steps
+    let trigs: Trig[] | null = null
+
+    for (const genNode of chain) {
+      const gen = genNode.generative!
+      if (gen.engine === 'turing') {
+        trigs = turingGenerate(gen.params as TuringParams, steps)
+      } else if (gen.engine === 'quantizer') {
+        const input = trigs ?? cell.trigs.map(t => ({ ...t }))
+        trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+      }
+    }
+
+    if (trigs) {
+      const lastGen = chain[chain.length - 1].generative!
+      const mode = lastGen.mergeMode
+      const len = Math.min(cell.trigs.length, trigs.length)
+      for (let i = 0; i < len; i++) {
+        if (mode === 'replace') {
+          cell.trigs[i] = trigs[i]
+        } else if (mode === 'merge') {
+          if (!cell.trigs[i].active) cell.trigs[i] = trigs[i]
+        } else if (mode === 'layer' && trigs[i].active) {
+          if (cell.trigs[i].active) {
+            const existing = cell.trigs[i].notes ?? [cell.trigs[i].note]
+            if (!existing.includes(trigs[i].note)) {
+              cell.trigs[i].notes = [...existing, trigs[i].note]
+            }
+          } else {
+            cell.trigs[i] = trigs[i]
+          }
+        }
+      }
+    }
+  }
+}
+
+/** Collect generative chain following incoming edges backward, then return in forward order */
+function collectLiveChain(startId: string): SceneNode[] {
+  const chain: SceneNode[] = []
+  const visited = new Set<string>()
+  let currentId = startId
+
+  // Walk backward to find the chain root
+  while (true) {
+    if (visited.has(currentId)) break
+    visited.add(currentId)
+    const node = song.scene.nodes.find(n => n.id === currentId)
+    if (!node?.generative) break
+    chain.unshift(node) // prepend — building forward order
+    // Find incoming generative edge
+    const inEdge = song.scene.edges.find(e => e.to === currentId)
+    if (!inEdge) break
+    const src = song.scene.nodes.find(n => n.id === inEdge.from)
+    if (!src?.generative) break
+    currentId = src.id
+  }
+  return chain
+}
+
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
@@ -793,37 +915,21 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   }
   playback.activeAutomations = []
   if (node.type === 'pattern') {
-    // Snapshot values before automation/decorators modify them
     playback.automationSnapshot = snapshotAutomationTargets()
     applyDecorators(node)
-    // Collect automation nodes connected to this pattern
-    collectAutomationsForPattern(node.id)
+    applyLiveGenerative(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
-  // Root is a function node — follow its edges
-  if (node.type === 'automation' && node.automationParams) {
-    playback.activeAutomations.push(node.automationParams)
-  }
+  // Generative or legacy node — follow outgoing edges
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
     const pick = edges[Math.floor(Math.random() * edges.length)]
     return walkToNode(pick)
   }
   return { advanced: false, patternIndex: -1, stop: true }
-}
-
-/** Collect automation nodes that have edges pointing to a pattern node */
-function collectAutomationsForPattern(patternNodeId: string): void {
-  const inEdges = song.scene.edges.filter(e => e.to === patternNodeId)
-  for (const edge of inEdges) {
-    const srcNode = song.scene.nodes.find(n => n.id === edge.from)
-    if (srcNode?.type === 'automation' && srcNode.automationParams) {
-      playback.activeAutomations.push(srcNode.automationParams)
-    }
-  }
 }
 
 function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number; stop?: boolean } {
@@ -833,20 +939,18 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
   while (true) {
     const node = song.scene.nodes.find(n => n.id === currentEdge.to)
     if (!node || visited.has(node.id)) {
-      // Missing or cycle — stop playback
       return { advanced: false, patternIndex: -1, stop: true }
     }
     visited.add(node.id)
 
     if (node.type === 'pattern') {
-      // Restore previous automation snapshot before applying new decorators
       if (playback.automationSnapshot) {
         restoreAutomationSnapshot(playback.automationSnapshot)
       }
       playback.activeAutomations = []
       playback.automationSnapshot = snapshotAutomationTargets()
       applyDecorators(node)
-      collectAutomationsForPattern(node.id)
+      applyLiveGenerative(node)
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
@@ -855,40 +959,12 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       return { advanced: true, patternIndex: idx }
     }
 
-    // Process function node
-    if (node.type === 'transpose') {
-      if (node.params?.mode === 1) {
-        // Absolute mode: set key directly
-        playback.sceneAbsoluteKey = node.params?.key ?? 0
-      } else {
-        // Relative mode: accumulate semitone offset
-        playback.sceneTranspose += (node.params?.semitones ?? 0)
-      }
-    } else if (node.type === 'tempo') {
-      song.bpm = node.params?.bpm ?? 120
-    } else if (node.type === 'repeat') {
-      playback.sceneRepeatLeft = (node.params?.count ?? 2) - 1
-    } else if (node.type === 'fx') {
-      const p = node.params ?? {}
-      if (p.verb)     fxPad.verb     = { ...fxPad.verb, on: true }
-      else            fxPad.verb     = { ...fxPad.verb, on: false }
-      if (p.delay)    fxPad.delay    = { ...fxPad.delay, on: true }
-      else            fxPad.delay    = { ...fxPad.delay, on: false }
-      if (p.glitch)   fxPad.glitch   = { ...fxPad.glitch, on: true }
-      else            fxPad.glitch   = { ...fxPad.glitch, on: false }
-      if (p.granular) fxPad.granular = { ...fxPad.granular, on: true }
-      else            fxPad.granular = { ...fxPad.granular, on: false }
-    } else if (node.type === 'automation' && node.automationParams) {
-      playback.activeAutomations.push(node.automationParams)
-    }
-
-    // Follow this function node's outgoing edges (random pick)
-    const fnEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
-    if (fnEdges.length === 0) {
-      // Dead end in function chain — stop playback
+    // Generative or legacy node — follow outgoing edges (random pick at forks)
+    const outEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
+    if (outEdges.length === 0) {
       return { advanced: false, patternIndex: -1, stop: true }
     }
-    currentEdge = fnEdges[Math.floor(Math.random() * fnEdges.length)]
+    currentEdge = outEdges[Math.floor(Math.random() * outEdges.length)]
   }
 }
 

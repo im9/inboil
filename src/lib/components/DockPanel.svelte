@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, activeCell, ui, playback, samplesByTrack, setSample, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
-  import type { SceneDecorator, SceneNode } from '../state.svelte.ts'
+  import type { SceneDecorator, SceneNode, TuringParams, QuantizerParams } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -10,8 +10,9 @@
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import type { VoiceId } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
-  import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator } from '../sceneActions.ts'
+  import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator, sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze } from '../sceneActions.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
+  import { SCALE_NAMES } from '../generative.ts'
   import { PATTERN_COLORS, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
@@ -31,6 +32,14 @@
     if (selected.length !== 1) return null
     const node = song.scene.nodes.find(n => n.id === selected[0])
     return (node?.type === 'pattern') ? node : null
+  })
+
+  const sceneGenerativeNode = $derived.by(() => {
+    if (ui.patternSheet || isOverlaySheet) return null
+    const selected = Object.keys(ui.selectedSceneNodes)
+    if (selected.length !== 1) return null
+    const node = song.scene.nodes.find(n => n.id === selected[0])
+    return (node?.type === 'generative' && node.generative) ? node : null
   })
 
   let addMenuOpen = $state(false)
@@ -996,6 +1005,126 @@
               {/if}
             </div>
             <div class="section-divider" aria-hidden="true"></div>
+          {/if}
+
+          <!-- Generative node editor (ADR 078) -->
+          {#if sceneGenerativeNode}
+            {@const gen = sceneGenerativeNode.generative}
+            {#if gen}
+              <div class="dec-section">
+                <div class="dec-section-header">
+                  <span class="section-label">{gen.engine.toUpperCase()}</span>
+                  <button class="gen-mode-badge" onpointerdown={() => sceneToggleOutputMode(sceneGenerativeNode.id)}
+                    data-tip="Toggle write/live mode" data-tip-ja="書込/ライブモード切替"
+                  >{gen.outputMode === 'live' ? 'LIVE' : 'WRITE'}</button>
+                </div>
+                {#if gen.engine === 'turing'}
+                  {@const tp = gen.params as TuringParams}
+                  <div class="gen-param-grid">
+                    <Knob
+                      value={(tp.length - 2) / 30}
+                      label="LEN"
+                      displayValue={String(tp.length)}
+                      size={36}
+                      onchange={v => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { length: Math.round(v * 30 + 2) })}
+                    />
+                    <Knob
+                      value={tp.lock}
+                      label="LOCK"
+                      displayValue={tp.lock.toFixed(2)}
+                      size={36}
+                      onchange={v => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { lock: v })}
+                    />
+                    <Knob
+                      value={tp.density}
+                      label="DENS"
+                      displayValue={tp.density.toFixed(2)}
+                      size={36}
+                      onchange={v => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { density: v })}
+                    />
+                  </div>
+                  <div class="gen-range-row">
+                    <span class="gen-range-label">RANGE</span>
+                    <span class="gen-range-val">{tp.range[0]}–{tp.range[1]}</span>
+                  </div>
+                  <div class="gen-mode-row">
+                    {#each ['note', 'gate', 'velocity'] as m}
+                      <button
+                        class="btn-toggle gen-mode-btn"
+                        class:active={tp.mode === m}
+                        onpointerdown={() => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { mode: m as TuringParams['mode'] })}
+                      >{m.toUpperCase().slice(0, 3)}</button>
+                    {/each}
+                  </div>
+                {:else if gen.engine === 'quantizer'}
+                  {@const qp = gen.params as QuantizerParams}
+                  <div class="gen-param-grid">
+                    <Knob
+                      value={qp.root / 11}
+                      label="ROOT"
+                      displayValue={NOTE_NAMES[qp.root]}
+                      size={36}
+                      steps={12}
+                      onchange={v => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { root: Math.round(v * 11) })}
+                    />
+                    <Knob
+                      value={qp.octaveRange[0] / 9}
+                      label="OCT LO"
+                      displayValue={String(qp.octaveRange[0])}
+                      size={36}
+                      steps={10}
+                      onchange={v => {
+                        const lo = Math.round(v * 9)
+                        sceneUpdateGenerativeParams(sceneGenerativeNode.id, { octaveRange: [lo, Math.max(lo, qp.octaveRange[1])] as [number, number] })
+                      }}
+                    />
+                    <Knob
+                      value={qp.octaveRange[1] / 9}
+                      label="OCT HI"
+                      displayValue={String(qp.octaveRange[1])}
+                      size={36}
+                      steps={10}
+                      onchange={v => {
+                        const hi = Math.round(v * 9)
+                        sceneUpdateGenerativeParams(sceneGenerativeNode.id, { octaveRange: [Math.min(qp.octaveRange[0], hi), hi] as [number, number] })
+                      }}
+                    />
+                  </div>
+                  <div class="gen-scale-row">
+                    <span class="gen-range-label">SCALE</span>
+                    <select class="gen-scale-select"
+                      onchange={e => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { scale: (e.target as HTMLSelectElement).value })}
+                    >
+                      {#each SCALE_NAMES as s}
+                        <option value={s} selected={qp.scale === s}>{s}</option>
+                      {/each}
+                    </select>
+                  </div>
+                {/if}
+                <!-- Common: merge mode -->
+                <div class="gen-merge-row">
+                  <span class="gen-range-label">MERGE</span>
+                  {#each ['replace', 'merge', 'layer'] as m}
+                    <button
+                      class="btn-toggle gen-mode-btn"
+                      class:active={gen.mergeMode === m}
+                      onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer' }}
+                    >{m.toUpperCase().slice(0, 3)}</button>
+                  {/each}
+                </div>
+                <!-- Action buttons -->
+                {#if gen.outputMode === 'write'}
+                  <button class="btn-gen-run" onpointerdown={() => sceneGenerateWrite(sceneGenerativeNode.id)}
+                    data-tip="Generate notes into target pattern" data-tip-ja="ターゲットパターンにノートを生成"
+                  >Generate ▸</button>
+                {:else}
+                  <button class="btn-gen-run freeze" onpointerdown={() => sceneFreeze(sceneGenerativeNode.id)}
+                    data-tip="Freeze live output to pattern" data-tip-ja="ライブ出力をパターンにフリーズ"
+                  >Freeze ▸</button>
+                {/if}
+              </div>
+              <div class="section-divider" aria-hidden="true"></div>
+            {/if}
           {/if}
 
           <!-- Scene Navigator (ADR 070) -->
@@ -2372,6 +2501,99 @@
     .dec-auto-label {
       font-size: var(--dk-fs-md);
     }
+  }
+
+  /* ── Generative node editor (ADR 078) ── */
+  .gen-mode-badge {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.5;
+  }
+  .gen-param-grid {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .gen-range-row, .gen-merge-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .gen-range-label {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    min-width: 40px;
+  }
+  .gen-range-val {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-sm);
+  }
+  .gen-mode-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .gen-mode-btn {
+    font-size: var(--dk-fs-xs) !important;
+    padding: 2px 6px !important;
+  }
+  .btn-gen-run {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--color-olive);
+    background: rgba(108,119,68,0.1);
+    color: var(--color-olive);
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn-gen-run:hover {
+    background: rgba(108,119,68,0.25);
+  }
+  .btn-gen-run:active {
+    transform: scale(0.98);
+  }
+  .btn-gen-run.freeze {
+    border-color: rgba(120, 120, 69, 0.5);
+    color: rgba(120, 120, 69, 0.9);
+    background: rgba(120, 120, 69, 0.08);
+  }
+  .btn-gen-run.freeze:hover {
+    background: rgba(120, 120, 69, 0.2);
+  }
+  .gen-mode-badge {
+    cursor: pointer;
+    border: 1px solid rgba(108,119,68,0.3);
+    background: transparent;
+    padding: 1px 6px;
+  }
+  .gen-mode-badge:hover {
+    background: rgba(108,119,68,0.15);
+  }
+  .gen-scale-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .gen-scale-select {
+    flex: 1;
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-sm);
+    background: transparent;
+    border: 1px solid rgba(237, 232, 220, 0.2);
+    color: inherit;
+    padding: 2px 4px;
   }
 
 </style>
