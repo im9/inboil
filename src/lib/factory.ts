@@ -111,9 +111,10 @@ export function getTemplate(id?: string): PatternTemplate {
   return PATTERN_TEMPLATES.find(t => t.id === id) ?? PATTERN_TEMPLATES[0]
 }
 
-export function makeEmptyCell(_trackId: number, name: string, voiceId: VoiceId | null, note: number, steps = 16): Cell {
+export function makeEmptyCell(trackId: number, name: string, voiceId: VoiceId | null, note: number, steps = 16): Cell {
   const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
   return {
+    trackId,
     name,
     voiceId,
     steps,
@@ -497,6 +498,7 @@ function buildFactoryCell(
   }
 
   return {
+    trackId: trackIdx,
     name,
     voiceId,
     steps,

@@ -34,6 +34,7 @@ export interface Trig {
 
 /** Inline step data for one track in one section (ADR 042, replaces Phrase) */
 export interface Cell {
+  trackId: number          // stable reference to Track.id (ADR 079)
   name: string            // per-pattern track name (ADR 062)
   voiceId: VoiceId | null  // per-pattern instrument (null = unassigned)
   steps: number           // 1–64
@@ -130,6 +131,7 @@ export interface GenerativeConfig {
   engine: GenerativeEngine
   outputMode: 'write' | 'live'
   mergeMode: 'replace' | 'merge' | 'layer'
+  targetTrack: number            // target cell index in the pattern (0-based)
   seed?: number
   params: TuringParams | QuantizerParams | TonnetzParams
 }
@@ -221,9 +223,24 @@ export function sectionPattern(sectionIndex: number): Pattern {
   return song.patterns[song.sections[sectionIndex].patternIndex]
 }
 
-/** Get the active cell for a track in the currently selected pattern */
+/** Find a cell by trackId in a pattern (ADR 079). */
+export function cellForTrack(pat: Pattern, trackId: number): Cell | undefined {
+  return pat.cells.find(c => c.trackId === trackId)
+}
+
+/** Get the active cell for a track in the currently selected pattern. */
 export function activeCell(trackId: number): Cell {
-  return song.patterns[ui.currentPattern].cells[trackId]
+  return cellForTrack(song.patterns[ui.currentPattern], trackId)!
+}
+
+/** Ensure a pattern has cells for all global tracks (call before mutation). */
+export function ensureCells(pat: Pattern): void {
+  const existing = new Set(pat.cells.map(c => c.trackId))
+  for (const t of song.tracks) {
+    if (!existing.has(t.id)) {
+      pat.cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
+    }
+  }
 }
 
 // ── Undo ─────────────────────────────────────────────────────────────
@@ -241,6 +258,7 @@ function cloneTrig(tr: Trig): Trig {
 
 function cloneCell(c: Cell): Cell {
   return {
+    trackId: c.trackId,
     name: c.name,
     voiceId: c.voiceId,
     steps: c.steps,
@@ -316,9 +334,10 @@ export function pushUndo(label: string): void {
   scheduleAutoSave()
 }
 
-function restoreCell(c: Cell): Cell {
+function restoreCell(c: Cell, fallbackTrackId: number): Cell {
   return {
     ...c,
+    trackId: c.trackId ?? fallbackTrackId,  // migration: legacy saves lack trackId
     voiceParams: { ...c.voiceParams },
     trigs: c.trigs.map(tr => ({
       ...tr,
@@ -335,13 +354,14 @@ function restoreSong(src: Song): void {
   song.rootNote = src.rootNote ?? 0
   song.tracks = src.tracks.map(t => ({ ...t }))
   song.patterns = src.patterns.map(p => {
-    const cells = p.cells.map(restoreCell)
-    // Reconcile cells count with tracks (ADR 056)
-    while (cells.length < song.tracks.length) {
-      const t = song.tracks[cells.length]
-      cells.push(makeEmptyCell(cells.length, t.name, t.voiceId, 60))
+    const cells = p.cells.map((c, i) => restoreCell(c, i))
+    // Ensure cells for all global tracks exist (pad if needed, never truncate)
+    const existing = new Set(cells.map(c => c.trackId))
+    for (const t of song.tracks) {
+      if (!existing.has(t.id)) {
+        cells.push(makeEmptyCell(t.id, t.name, t.voiceId, 60))
+      }
     }
-    if (cells.length > song.tracks.length) cells.length = song.tracks.length
     return { id: p.id, name: p.name, color: p.color ?? 0, cells }
   })
   song.sections = src.sections.map(s => ({
@@ -473,6 +493,11 @@ export function primarySelectedNode(): string | null {
 export function selectPattern(patternIndex: number): void {
   if (patternIndex < 0 || patternIndex >= song.patterns.length) return
   ui.currentPattern = patternIndex
+  // If selected track has no cell in this pattern, pick first available
+  const pat = song.patterns[patternIndex]
+  if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
+    ui.selectedTrack = pat.cells.length > 0 ? pat.cells[0].trackId : -1
+  }
 }
 
 /** Switch to a section for editing — also syncs currentPattern to section's pattern */
@@ -844,7 +869,8 @@ function applyLiveGenerative(patternNode: SceneNode): void {
     const chain = collectLiveChain(srcNode.id)
     if (chain.length === 0) continue
 
-    const cell = pat.cells[0]
+    const trackIdx = srcNode.generative.targetTrack ?? 0
+    const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
     const steps = cell.steps
     let trigs: Trig[] | null = null
 
@@ -1088,7 +1114,7 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
     case 'send': {
       const pat = playback.playingPattern != null ? song.patterns[playback.playingPattern] : null
       if (!pat) break
-      const cell = pat.cells[target.trackIndex]
+      const cell = cellForTrack(pat, target.trackIndex)
       if (!cell) break
       switch (target.param) {
         case 'reverbSend':   cell.reverbSend = v; break
@@ -1234,8 +1260,8 @@ export function randomizePattern(): void {
   const useSeventh = Math.random() < 0.3
   const chordOctave = 4 // C4=60 region
 
-  for (let t = 0; t < song.tracks.length; t++) {
-    const c = activeCell(t)
+  const currentPat = song.patterns[ui.currentPattern]
+  for (const c of currentPat.cells) {
     const steps = c.steps
     const isPoly = (c.voiceId === 'WT' || c.voiceId === 'FM') && (c.voiceParams?.polyMode ?? 0) >= 0.5
 

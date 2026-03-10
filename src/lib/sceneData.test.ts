@@ -232,6 +232,7 @@ function genNode(id: string): SceneNode {
     engine: 'turing',
     outputMode: 'write',
     mergeMode: 'replace',
+    targetTrack: 0,
     params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72] as [number, number], mode: 'note' as const, density: 0.7 },
   }
   return { id, type: 'generative', x: 0.5, y: 0.5, root: false, generative: gen }

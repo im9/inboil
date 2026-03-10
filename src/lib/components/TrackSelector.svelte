@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { song, ui, activeCell } from '../state.svelte.ts'
+  import { song, ui } from '../state.svelte.ts'
 </script>
 
 <div class="track-bar" class:hide-desktop={true}>
   <div class="track-dots" data-tip="Select track" data-tip-ja="トラックを選択">
-    {#each song.tracks as _t, i}
+    {#each song.patterns[ui.currentPattern].cells as c}
       <button
         class="dot"
-        class:active={i === ui.selectedTrack}
-        onpointerdown={() => { ui.selectedTrack = i }}
-        aria-label="Track {activeCell(i).name}"
-      >{activeCell(i).name.slice(0, 2)}</button>
+        class:active={c.trackId === ui.selectedTrack}
+        onpointerdown={() => { ui.selectedTrack = c.trackId }}
+        aria-label="Track {c.name}"
+      >{c.name.slice(0, 2)}</button>
     {/each}
   </div>
 </div>

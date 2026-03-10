@@ -282,6 +282,46 @@ Contents:
 
 FX/EQ are rendered as overlay sheets (ADR 054). Help/System are in the Sidebar (ADR 055).
 
+#### DockPanel Styling Rules
+
+DockPanel and its sub-components (DockDecoratorEditor, DockGenerativeEditor, DockPresetBrowser) share CSS custom properties defined on the `.dock` root element. **All new Dock sub-components must use these tokens — never hardcode font sizes, colors, or opacities.**
+
+**Font size tokens** (minimum 9px for readability):
+```
+--dk-fs-xs:  9px   — category tags, secondary labels
+--dk-fs-sm: 10px   — button text, param values
+--dk-fs-md: 11px   — list items, input fields
+--dk-fs-lg: 12px   — section headers
+```
+
+**Color tokens** (cream-on-dark context):
+```
+--dk-text:      rgba(var(--dk-cream), 0.85)   — primary text
+--dk-text-mid:  rgba(var(--dk-cream), 0.65)   — secondary text, inactive buttons
+--dk-text-dim:  rgba(var(--dk-cream), 0.45)   — labels, hints
+--dk-border:    rgba(var(--dk-cream), 0.15)    — default borders
+--dk-border-mid: rgba(var(--dk-cream), 0.3)   — hover/active borders
+--dk-bg-hover:  rgba(var(--dk-cream), 0.08)   — hover background
+--dk-bg-active: rgba(var(--dk-cream), 0.12)   — active/selected background
+```
+
+**Button classes** — use one of these, never create one-off button styles:
+
+| Class | Use case | Style |
+|---|---|---|
+| `.btn-toggle` | Mode switches (WRITE/LIVE, REP/MER/LAY, NOT/GAT/VEL) | `--dk-border` border, `--dk-text-mid` text. `.active`: `--dk-bg-active` bg, bright text |
+| `.voice-current` | Expandable section toggle (preset browser, voice picker) | Full-width, `--dk-border` border, arrow indicator |
+| `.btn-save-preset` | Accent action (SAVE) | `--color-olive` border+text, transparent bg |
+| `.btn-gen-run` | Primary action (Generate, Freeze) | Full-width, `--color-olive` border, olive-tinted bg |
+| `.cat-btn` | Category filter pills (ALL/LEAD/BASS...) | `flex:1`, olive fill when `.active` |
+| `.btn-icon` | Small icon buttons (seed ⟳/✕, tonnetz +/−) | 22×22px, `--dk-border`, `--dk-text-mid`. Prefer inline SVG (12×12, `stroke-width="1.5"`) over Unicode glyphs |
+
+**Rules:**
+- Never use `opacity` on buttons for dimming — use the `--dk-text-*` color tokens instead
+- Never use raw `rgba()` colors — use `var(--dk-*)` tokens or `var(--color-*)` palette
+- Minimum touch target: 22px height for buttons
+- All labels: `text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700`
+
 ### PianoRoll — DECIDED
 
 DAW-style note bar editor for melodic tracks (6–7). Always visible for melodic tracks (no toggle). Positioned between StepGrid and DockPanel.

@@ -150,14 +150,15 @@
 
 <div class="step-grid">
 <div class="step-grid-scroll" bind:this={scrollEl}>
-  {#each song.tracks as track, trackId}
+  {#each song.patterns[ui.currentPattern].cells as ph}
+    {@const trackId = ph.trackId}
+    {@const track = song.tracks[trackId]}
     {@const selected = ui.selectedTrack === trackId}
-    {@const ph = activeCell(trackId)}
 
     <div
       class="track-row"
       class:selected
-      class:muted={track.muted}
+      class:muted={track?.muted}
       class:solo-muted={ui.soloTracks.size > 0 && !ui.soloTracks.has(trackId)}
     >
       <div class="track-head">
@@ -199,7 +200,7 @@
           onpointerdown={() => toggleMute(trackId)}
           data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
         >
-          <span class="flip-card" class:flipped={track.muted}>
+          <span class="flip-card" class:flipped={track?.muted}>
             <span class="flip-face mute-off">M</span>
             <span class="flip-face back mute-on">M</span>
           </span>

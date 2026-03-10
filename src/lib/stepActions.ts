@@ -275,25 +275,27 @@ export function addTrack(voiceId: VoiceId | null = null): number | null {
   const name = meta?.label ?? (voiceId ? voiceId.toUpperCase().slice(0, 4) : `TR${idx + 1}`)
   const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
   song.tracks.push(makeTrack(idx, name, voiceId, 0))
-  for (const pat of song.patterns) {
-    pat.cells.push(makeEmptyCell(idx, name, voiceId, drum ? 60 : 48))
+  // Add cell to current pattern only — other patterns get cells lazily via ensureCell
+  const currentPat = song.patterns[ui.currentPattern]
+  if (currentPat) {
+    currentPat.cells.push(makeEmptyCell(idx, name, voiceId, drum ? 60 : 48))
   }
   ui.selectedTrack = idx
   return idx
 }
 
-export function removeTrack(idx: number): boolean {
-  if (song.tracks.length === 0) return false
+export function removeTrack(trackId: number): boolean {
+  const pat = song.patterns[ui.currentPattern]
+  if (!pat) return false
+  const cellIdx = pat.cells.findIndex(c => c.trackId === trackId)
+  if (cellIdx < 0) return false
   pushUndo('Remove track')
-  song.tracks.splice(idx, 1)
-  song.tracks.forEach((t, i) => t.id = i)
-  for (const pat of song.patterns) {
-    pat.cells.splice(idx, 1)
-  }
-  if (song.tracks.length === 0) {
+  // Remove cell from current pattern only — song.tracks and other patterns untouched
+  pat.cells.splice(cellIdx, 1)
+  if (pat.cells.length === 0) {
     ui.selectedTrack = -1
-  } else if (ui.selectedTrack >= song.tracks.length) {
-    ui.selectedTrack = song.tracks.length - 1
+  } else if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
+    ui.selectedTrack = pat.cells[Math.min(cellIdx, pat.cells.length - 1)].trackId
   }
   return true
 }

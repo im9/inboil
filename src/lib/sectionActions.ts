@@ -238,9 +238,9 @@ export function sectionSetFxSend(index: number, fx: SongFxKey, value: number) {
 export function patternClear(patternIndex: number): void {
   pushUndo('Clear pattern')
   const pat = song.patterns[patternIndex]
-  pat.cells = pat.cells.map((c, i) => {
+  pat.cells = pat.cells.map((c) => {
     const note = c.trigs.find(t => t.active)?.note ?? 60
-    return makeEmptyCell(i, c.name, c.voiceId, note)
+    return makeEmptyCell(c.trackId, c.name, c.voiceId, note)
   })
 }
 
@@ -249,7 +249,7 @@ export function patternApplyTemplate(patternIndex: number, templateId: string): 
   pushUndo('Apply template')
   const tmpl = getTemplate(templateId)
   const pat = song.patterns[patternIndex]
-  pat.cells = tmpl.tracks.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note))
+  pat.cells = tmpl.tracks.map((d, i) => makeEmptyCell(song.tracks[i]?.id ?? i, d.name, d.voiceId, d.note))
 }
 
 /** Rename a pattern (max 8 chars, uppercase) */

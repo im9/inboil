@@ -731,16 +731,16 @@
             data-tip-ja="トラックを選択して音源・パラメータ・センドを編集"
           >TRACKS</span>
           <div class="track-bar">
-            {#each song.tracks as _t, i}
-              {@const c = activeCell(i)}
+            {#each song.patterns[ui.currentPattern].cells as c}
+              {@const t = song.tracks[c.trackId]}
               <button
                 class="track-btn"
-                class:active={i === ui.selectedTrack}
-                class:muted={_t.muted}
-                onpointerdown={() => { ui.selectedTrack = i }}
-                data-tip="Track {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
-                data-tip-ja="トラック {i + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
-              ><span class="track-num">{i + 1}</span><span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
+                class:active={c.trackId === ui.selectedTrack}
+                class:muted={t?.muted}
+                onpointerdown={() => { ui.selectedTrack = c.trackId }}
+                data-tip="Track {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
+                data-tip-ja="トラック {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
+              ><span class="track-num">{c.trackId + 1}</span><span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
             {/each}
           </div>
 
@@ -947,10 +947,10 @@
     --dk-bg-hover: rgba(var(--dk-cream), 0.08);
     --dk-bg-faint: rgba(var(--dk-cream), 0.06);
     --dk-bg-active: rgba(var(--dk-cream), 0.12);
-    --dk-fs-xs: 8px;
-    --dk-fs-sm: 9px;
-    --dk-fs-md: 10px;
-    --dk-fs-lg: 11px;
+    --dk-fs-xs: 9px;
+    --dk-fs-sm: 10px;
+    --dk-fs-md: 11px;
+    --dk-fs-lg: 12px;
 
     position: relative;
     width: 280px;

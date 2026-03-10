@@ -3,7 +3,7 @@
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
 import type { Song } from '../state.svelte.ts'
-import { ui, masterPad, masterLevels, fxFlavours } from '../state.svelte.ts'
+import { ui, masterPad, masterLevels, fxFlavours, cellForTrack } from '../state.svelte.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import workletUrl from './worklet-processor.ts?worker&url'
 import crashUrl from './samples/tr909_crash.webm'
@@ -328,8 +328,8 @@ function buildWorkletPattern(
       ...granularFlavourParams(fxPad, perf),
       swing:           perf?.swing       ?? 0,
     },
-    tracks: s.tracks.map((t, i) => {
-      const cell = pat.cells[i]
+    tracks: s.tracks.map((t) => {
+      const cell = cellForTrack(pat, t.id)
       if (!cell) return {
         steps: 16, muted: true, voiceId: '', sidechainSource: false,
         volume: 0, pan: 0, reverbSend: 0, delaySend: 0, glitchSend: 0, granularSend: 0,
@@ -337,7 +337,7 @@ function buildWorkletPattern(
       }
       return {
         steps:       cell.steps,
-        muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(i) : t.muted,
+        muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(t.id) : t.muted,
         voiceId:     cell.voiceId ?? '',
         sidechainSource: cell.voiceId ? isSidechainSource(cell.voiceId) : false,
         volume:      t.volume,

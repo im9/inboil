@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for modularity.
  */
 
-import { song, ui, pushUndo } from './state.svelte.ts'
+import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
 import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig } from './state.svelte.ts'
 import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
@@ -153,18 +153,21 @@ function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generativ
       engine: 'turing',
       outputMode: 'write',
       mergeMode: 'replace',
+      targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note' as const, density: 0.7 },
     }
     case 'quantizer': return {
       engine: 'quantizer',
       outputMode: 'write',
       mergeMode: 'replace',
+      targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'quantizer', scale: 'minor', root: 0, octaveRange: [3, 5] as [number, number] },
     }
     case 'tonnetz': return {
       engine: 'tonnetz',
       outputMode: 'write',
       mergeMode: 'replace',
+      targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' as const },
     }
   }
@@ -206,7 +209,8 @@ export function sceneGenerateWrite(nodeId: string): boolean {
 
   pushUndo('Generate sequence')
 
-  const cell = pat.cells[0]
+  const trackIdx = node.generative.targetTrack ?? 0
+  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
   const steps = cell.steps
 
   // Collect the generative chain from this node to the target pattern
@@ -308,6 +312,14 @@ function applyGeneratedTrigs(
       }
     }
   }
+}
+
+/** Set target track index for generative output */
+export function sceneSetTargetTrack(nodeId: string, trackIdx: number): void {
+  pushUndo('Set target track')
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return
+  node.generative.targetTrack = trackIdx
 }
 
 /** Set or randomize the seed for deterministic generation */

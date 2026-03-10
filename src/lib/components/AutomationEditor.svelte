@@ -84,16 +84,16 @@
       },
     ]
 
-    // Determine which track indices to show
+    // Determine which track IDs to show
     const trackIndices: number[] = []
     if (hostPattern) {
       // Context-aware: only tracks with assigned voiceId in this pattern
-      for (let i = 0; i < hostPattern.cells.length; i++) {
-        if (hostPattern.cells[i]?.voiceId) trackIndices.push(i)
+      for (const c of hostPattern.cells) {
+        if (c.voiceId) trackIndices.push(c.trackId)
       }
     } else {
       // Standalone mode: all tracks
-      for (let i = 0; i < song.tracks.length; i++) trackIndices.push(i)
+      for (const t of song.tracks) trackIndices.push(t.id)
     }
 
     // Track params
@@ -136,7 +136,7 @@
 
   function getVoiceLabel(trackIndex: number): string {
     // In decorator mode, use the pattern's cell voiceId; otherwise use track voiceId
-    const vid = hostPattern?.cells[trackIndex]?.voiceId ?? song.tracks[trackIndex]?.voiceId
+    const vid = hostPattern?.cells.find(c => c.trackId === trackIndex)?.voiceId ?? song.tracks[trackIndex]?.voiceId
     if (!vid) return ''
     const meta = VOICE_LIST.find(v => v.id === vid)
     return meta?.label ?? vid.slice(0, 4).toUpperCase()

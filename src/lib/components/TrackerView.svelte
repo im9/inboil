@@ -250,21 +250,24 @@
 <div class="tracker-view">
   <!-- Track selector -->
   <div class="track-bar">
-    {#each song.tracks as t, i}
+    {#each song.patterns[ui.currentPattern].cells as c}
+      {@const t = song.tracks[c.trackId]}
+      {#if t}
       <div
         class="track-btn"
-        class:selected={i === trackId}
+        class:selected={c.trackId === trackId}
         class:muted={t.muted}
-        class:soloed={ui.soloTracks.has(i)}
+        class:soloed={ui.soloTracks.has(c.trackId)}
       >
-        <button class="track-label" onpointerdown={() => { ui.selectedTrack = i; cursorRow = Math.min(cursorRow, activeCell(i).steps - 1) }}>{activeCell(i).name}</button>
-        <button class="track-act" onpointerdown={() => toggleMute(i)}
+        <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{c.name}</button>
+        <button class="track-act" onpointerdown={() => toggleMute(c.trackId)}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>
-        <button class="track-act" class:active={ui.soloTracks.has(i)} onpointerdown={() => toggleSolo(i)}
+        <button class="track-act" class:active={ui.soloTracks.has(c.trackId)} onpointerdown={() => toggleSolo(c.trackId)}
           data-tip="Solo" data-tip-ja="ソロ"
         >S</button>
       </div>
+      {/if}
     {/each}
   </div>
 

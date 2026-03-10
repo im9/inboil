@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SceneNode, TuringParams, QuantizerParams, TonnetzParams } from '../state.svelte.ts'
-  import { pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneSetSeed, sceneApplyGenerativePreset } from '../sceneActions.ts'
+  import { song, pushUndo } from '../state.svelte.ts'
+  import { sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset } from '../sceneActions.ts'
   import { SCALE_NAMES, GENERATIVE_PRESETS } from '../generative.ts'
   import Knob from './Knob.svelte'
 
@@ -20,12 +20,34 @@
 
   const gen = $derived(node.generative!)
   const nodeId = $derived(node.id)
+
+  // Resolve target pattern's cells for track selector
+  const targetPatCells = $derived.by(() => {
+    // Follow outgoing edges to find the connected pattern node
+    const visited = new Set<string>()
+    const queue = [nodeId]
+    while (queue.length > 0) {
+      const id = queue.shift()!
+      if (visited.has(id)) continue
+      visited.add(id)
+      for (const edge of song.scene.edges.filter(e => e.from === id)) {
+        const target = song.scene.nodes.find(n => n.id === edge.to)
+        if (!target) continue
+        if (target.type === 'pattern' && target.patternId) {
+          const pat = song.patterns.find(p => p.id === target.patternId)
+          return pat?.cells ?? []
+        }
+        queue.push(target.id)
+      }
+    }
+    return []
+  })
 </script>
 
 <div class="dec-section">
   <div class="dec-section-header">
     <span class="section-label">{gen.engine.toUpperCase()}</span>
-    <button class="gen-mode-badge" onpointerdown={() => sceneToggleOutputMode(nodeId)}
+    <button class="btn-toggle active" onpointerdown={() => sceneToggleOutputMode(nodeId)}
       data-tip="Toggle write/live mode" data-tip-ja="書込/ライブモード切替"
     >{gen.outputMode === 'live' ? 'LIVE' : 'WRITE'}</button>
   </div>
@@ -153,11 +175,11 @@
             {/each}
           </select>
         {/each}
-        <button class="tonnetz-add-op" onpointerdown={() => {
+        <button class="btn-icon" onpointerdown={() => {
           sceneUpdateGenerativeParams(nodeId, { sequence: [...tnp.sequence, 'P'] } as any)
         }}>+</button>
         {#if tnp.sequence.length > 1}
-          <button class="tonnetz-add-op" onpointerdown={() => {
+          <button class="btn-icon" onpointerdown={() => {
             sceneUpdateGenerativeParams(nodeId, { sequence: tnp.sequence.slice(0, -1) } as any)
           }}>−</button>
         {/if}
@@ -175,22 +197,40 @@
       >{m.toUpperCase().slice(0, 3)}</button>
     {/each}
   </div>
+  <!-- Target track selector -->
+  {#if targetPatCells.length > 0}
+    <div class="gen-scale-row">
+      <span class="gen-range-label">TARGET</span>
+      <select class="gen-scale-select"
+        onchange={e => sceneSetTargetTrack(nodeId, parseInt((e.target as HTMLSelectElement).value))}
+      >
+        {#each targetPatCells as cell}
+          <option value={cell.trackId} selected={(gen.targetTrack ?? 0) === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
+        {/each}
+      </select>
+    </div>
+  {:else}
+    <div class="gen-scale-row">
+      <span class="gen-range-label">TARGET</span>
+      <span class="gen-range-val" style="color: var(--dk-text-dim)">no target</span>
+    </div>
+  {/if}
   <!-- Seed control (ADR 078 Phase 4) -->
   <div class="gen-seed-row">
     <span class="gen-range-label">SEED</span>
     {#if gen.seed != null}
       <span class="gen-seed-val">{gen.seed}</span>
-      <button class="gen-seed-btn" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
+      <button class="btn-icon" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
         onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
-      >⟳</button>
-      <button class="gen-seed-btn" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
+      ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 3A5 5 0 1 1 1 6.5"/><path d="M1 1v2.5h2.5"/></svg></button>
+      <button class="btn-icon" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
         onpointerdown={() => sceneSetSeed(nodeId, undefined)}
-      >✕</button>
+      ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
     {:else}
-      <span class="gen-seed-val" style="opacity:0.4">off</span>
-      <button class="gen-seed-btn" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
+      <span class="gen-seed-val" style="color: var(--dk-text-dim)">off</span>
+      <button class="btn-icon" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
         onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
-      >+</button>
+      ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg></button>
     {/if}
   </div>
   <!-- Presets (ADR 078 Phase 4) -->
@@ -263,20 +303,6 @@
     background: var(--dk-bg-active);
     color: rgba(var(--dk-cream), 0.9);
     border-color: var(--dk-text-dim);
-  }
-  .gen-mode-badge {
-    font-family: var(--font-data);
-    font-size: var(--dk-fs-xs);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    opacity: 0.5;
-    cursor: pointer;
-    border: 1px solid rgba(108,119,68,0.3);
-    background: transparent;
-    padding: 1px 6px;
-  }
-  .gen-mode-badge:hover {
-    background: rgba(108,119,68,0.15);
   }
   .gen-param-grid {
     display: flex;
@@ -364,21 +390,21 @@
     font-size: var(--dk-fs-sm);
     min-width: 32px;
   }
-  .gen-seed-btn {
-    width: 20px;
-    height: 20px;
-    border: 1px solid rgba(237, 232, 220, 0.2);
+  .btn-icon {
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--dk-border);
     background: transparent;
-    color: inherit;
-    font-size: 11px;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 3px;
   }
-  .gen-seed-btn:hover {
-    background: rgba(237, 232, 220, 0.1);
+  .btn-icon:hover {
+    background: var(--dk-bg-hover);
+    color: var(--dk-text);
   }
   .tonnetz-seq-editor {
     display: flex;
@@ -390,24 +416,9 @@
     font-family: var(--font-data);
     font-size: var(--dk-fs-xs);
     background: transparent;
-    border: 1px solid rgba(237, 232, 220, 0.2);
+    border: 1px solid var(--dk-border);
     color: inherit;
     padding: 1px 2px;
     width: 36px;
-  }
-  .tonnetz-add-op {
-    width: 20px;
-    height: 20px;
-    border: 1px solid rgba(237, 232, 220, 0.2);
-    background: transparent;
-    color: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .tonnetz-add-op:hover {
-    background: rgba(237, 232, 220, 0.1);
   }
 </style>

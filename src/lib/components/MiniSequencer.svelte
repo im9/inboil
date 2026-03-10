@@ -13,15 +13,15 @@
 <div class="mini-seq" onpointerdown={onTap}>
   <span class="mini-label">{patName}</span>
   <div class="mini-grid">
-    {#each pat.cells as cell, ti}
-      {@const track = song.tracks[ti]}
+    {#each pat.cells as cell}
+      {@const track = song.tracks[cell.trackId]}
       {#if track && !track.muted}
         <div class="mini-track">
           {#each cell.trigs as trig, si}
             <span
               class="mini-step"
               class:on={trig.active}
-              class:head={playback.playing && playback.playheads[ti] === si}
+              class:head={playback.playing && playback.playheads[cell.trackId] === si}
             ></span>
           {/each}
         </div>
