@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { masterPad, perf, effects, masterLevels, playback, song } from '../state.svelte.ts'
+  import { masterPad, masterLevels, playback, song } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
 
@@ -83,60 +83,6 @@
     return `calc(${PAD_INSET}px + ${v} * (100% - ${PAD_INSET * 2}px))`
   }
 
-  // ── Fader state ──
-  type FaderKey = 'gain' | 'mkp' | 'swg'
-  const faders: { key: FaderKey; label: string; tip: string; tipJa: string }[] = [
-    { key: 'gain', label: 'GAIN', tip: 'Master output volume', tipJa: 'マスター出力音量' },
-    { key: 'mkp',  label: 'MKP',  tip: 'Compressor makeup gain', tipJa: 'コンプレッサーメイクアップゲイン' },
-    { key: 'swg',  label: 'SWG',  tip: 'Swing amount (shuffle feel)', tipJa: 'スウィング量 (シャッフル感)' },
-  ]
-
-  function getFaderValue(key: FaderKey): number {
-    if (key === 'gain') return perf.masterGain
-    if (key === 'mkp') return (effects.comp.makeup - 1) / 3
-    return perf.swing
-  }
-
-  function setFaderValue(key: FaderKey, v: number) {
-    if (key === 'gain') perf.masterGain = v
-    else if (key === 'mkp') effects.comp.makeup = 1 + v * 3
-    else perf.swing = v
-  }
-
-  let faderDragging: FaderKey | null = $state(null)
-  let faderRect: DOMRect | null = null
-  const FADER_PAD = 8
-
-  function faderToNorm(e: PointerEvent): number {
-    if (!faderRect) return 0
-    return Math.max(0, Math.min(1, 1 - (e.clientY - faderRect.top - FADER_PAD) / (faderRect.height - FADER_PAD * 2)))
-  }
-
-  function startFaderDrag(key: FaderKey, e: PointerEvent) {
-    e.preventDefault()
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    faderDragging = key
-    const track = (e.currentTarget as HTMLElement).querySelector('.fader-track')
-    faderRect = track?.getBoundingClientRect() ?? null
-    setFaderValue(key, faderToNorm(e))
-  }
-
-  function onFaderMove(e: PointerEvent) {
-    if (!faderDragging) return
-    setFaderValue(faderDragging, faderToNorm(e))
-  }
-
-  function endFaderDrag() {
-    faderDragging = null
-    faderRect = null
-  }
-
-  function faderDisplay(key: FaderKey): string {
-    const v = getFaderValue(key)
-    if (key === 'mkp') return `${(1 + v * 3).toFixed(1)}`
-    return `${Math.round(v * 100)}`
-  }
-
   // ── VU Meter (vertical dot matrix) ──
   const VU_DOTS = 20  // number of dots per channel
 
@@ -179,6 +125,16 @@
   const clipR = $derived(masterLevels.peakR >= 0.95)
   const levelL = $derived(peakToDots(masterLevels.peakL))
   const levelR = $derived(peakToDots(masterLevels.peakR))
+
+  // GR meter: convert linear gain to dot count (inverted: top-down)
+  const GR_DOTS = 12
+  function grToDots(gr: number): number {
+    if (gr >= 1.0) return 0
+    const dB = -20 * Math.log10(gr)  // positive dB of reduction
+    return Math.min(GR_DOTS, dB / 24 * GR_DOTS)  // 24dB max range
+  }
+  const grLevel = $derived(grToDots(masterLevels.gr))
+  const grIndices = Array.from({ length: GR_DOTS }, (_, i) => i)
 
   // Dot color: olive (low) → blue (mid) → salmon (high)
   const CLIP_RED = '#ff4444'
@@ -334,34 +290,22 @@
           {/each}
         </div>
       </div>
+      <!-- GR meter (top-down, orange) -->
+      <div class="vu-dot-col gr-col" data-tip="Gain reduction" data-tip-ja="ゲインリダクション">
+        <span class="vu-ch">GR</span>
+        <div class="vu-dot-track">
+          {#each grIndices as i}
+            {@const lit = i < grLevel}
+            <div
+              class="vu-dot gr-dot"
+              class:lit
+            ></div>
+          {/each}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Fader strip -->
-  <div class="fader-strip">
-    {#each faders as fader}
-      {@const val = getFaderValue(fader.key)}
-      {@const active = faderDragging === fader.key}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="fader"
-        class:active
-        data-tip={fader.tip}
-        data-tip-ja={fader.tipJa}
-        onpointerdown={(e) => startFaderDrag(fader.key, e)}
-        onpointermove={onFaderMove}
-        onpointerup={endFaderDrag}
-        onpointercancel={endFaderDrag}
-      >
-        <span class="fader-label">{fader.label}</span>
-        <div class="fader-track">
-          <div class="fader-fill" style="height: {val * 100}%;"></div>
-          <div class="fader-thumb" style="bottom: {val * 100}%;"></div>
-        </div>
-        <span class="fader-val">{faderDisplay(fader.key)}</span>
-      </div>
-    {/each}
-  </div>
 </div>
 
 <style>
@@ -600,90 +544,19 @@
     0%   { transform: scale(1); }
     100% { transform: scale(1.4); }
   }
+  /* GR meter (orange, top-down) */
+  .gr-col { margin-left: 2px; }
+  .gr-dot {
+    --dot-color: var(--color-salmon);
+    background: color-mix(in srgb, var(--color-salmon) 12%, transparent);
+  }
+  .gr-dot.lit {
+    background: var(--color-salmon);
+    box-shadow: 0 0 4px color-mix(in srgb, var(--color-salmon) 40%, transparent);
+  }
   .master-pad.clipping .vu-ch {
     color: #ff4444;
     transition: color 60ms;
   }
 
-  /* ── Fader strip ── */
-  .fader-strip {
-    display: flex;
-    flex-direction: row;
-    gap: 0;
-    background: var(--color-fg);
-    border-left: 1px solid rgba(237,232,220,0.08);
-  }
-
-  .fader {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 10px 8px;
-    width: 36px;
-    touch-action: none;
-    user-select: none;
-    cursor: ns-resize;
-  }
-
-  .fader-label {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: rgba(237,232,220,0.40);
-  }
-
-  .fader-track {
-    flex: 1;
-    width: 4px;
-    background: rgba(237,232,220,0.08);
-    border-radius: 2px;
-    position: relative;
-    min-height: 40px;
-    max-height: 120px;
-    pointer-events: none;
-  }
-
-  .fader-fill {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(237,232,220,0.20);
-    border-radius: 2px;
-    transition: height 40ms linear;
-  }
-  .fader.active .fader-fill {
-    background: rgba(237,232,220,0.35);
-    transition: none;
-  }
-
-  .fader-thumb {
-    position: absolute;
-    left: 50%;
-    width: 14px;
-    height: 6px;
-    transform: translate(-50%, 50%);
-    background: rgba(237,232,220,0.65);
-    border-radius: 2px;
-    transition: bottom 40ms linear;
-    pointer-events: none;
-  }
-  .fader.active .fader-thumb {
-    background: rgba(237,232,220,0.90);
-    box-shadow: 0 0 8px rgba(237,232,220,0.25);
-    transition: none;
-  }
-
-  .fader-val {
-    font-size: 8px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: rgba(237,232,220,0.35);
-    min-width: 20px;
-    text-align: center;
-  }
-  .fader.active .fader-val {
-    color: rgba(237,232,220,0.70);
-  }
 </style>

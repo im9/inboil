@@ -21,11 +21,12 @@ export interface WorkletPattern {
     reverb:  { size: number; damp: number }
     delay:   { time: number; feedback: number }
     ducker:  { depth: number; release: number }
-    comp:    { threshold: number; ratio: number; makeup: number }
+    comp:    { threshold: number; ratio: number; makeup: number; attack: number; release: number }
     verbReturn: number
     dlyReturn:  number
     filter:  { on: boolean; x: number; y: number }
-    eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }
+    eq:      { bands: Array<{ on: boolean; freq: number; gain: number; q: number; shelf?: boolean }> }
+    shimmerAmount: number   // 0 = off, >0 = shimmer reverb pitch-shift feedback level
   }
   perf: {
     rootNote: number
@@ -43,7 +44,9 @@ export interface WorkletPattern {
     granularScatter: number
     granularFreeze: boolean
     swing: number
-    glitchRedux: boolean  // ADR 075: Redux flavour skips bit quantize
+    glitchRedux: boolean    // ADR 075: Redux flavour skips bit quantize
+    delayTape: boolean      // ADR 075: Tape delay flavour (LP + wow/flutter)
+    glitchStutter: boolean  // ADR 075: Stutter glitch flavour (buffer repeat)
   }
 }
 
@@ -69,4 +72,4 @@ export interface WorkletTrig {
 
 export type WorkletEvent =
   | { type: 'step'; playheads: number[]; cycle: boolean }
-  | { type: 'levels'; peakL: number; peakR: number }
+  | { type: 'levels'; peakL: number; peakR: number; gr: number }

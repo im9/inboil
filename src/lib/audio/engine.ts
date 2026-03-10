@@ -30,9 +30,10 @@ type PerfState = {
 }
 
 type FxNode = { on: boolean; x: number; y: number }
+type EqNode = FxNode & { q: number; shelf?: boolean }
 type FxPadState = {
   verb: FxNode; delay: FxNode; glitch: FxNode; granular: FxNode; filter: FxNode
-  eqLow: FxNode; eqMid: FxNode; eqHigh: FxNode
+  eqLow: EqNode; eqMid: EqNode; eqHigh: EqNode
 }
 
 export class GrooveboxEngine {
@@ -64,7 +65,7 @@ export class GrooveboxEngine {
     this.analyser.connect(this.ctx.destination)
     this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
       if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
-      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR }
+      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR; masterLevels.gr = e.data.gr }
     }
   }
 
@@ -249,9 +250,15 @@ function buildWorkletPattern(
   const fx = s.effects
 
   // ── Reverb flavour (ADR 075) ──
-  let reverbSize: number, reverbDamp: number
+  let reverbSize: number, reverbDamp: number, shimmerAmount = 0
   if (fxPad?.verb.on) {
-    if (fxFlavours.verb === 'hall') {
+    if (fxFlavours.verb === 'shimmer') {
+      // Shimmer: large reverb + octave-up pitch shift feedback
+      // X = size (0.7–0.99), Y = shimmer amount (0–0.6), damp low for bright reflections
+      reverbSize = 0.7 + fxPad.verb.x * 0.29
+      reverbDamp = 0.15
+      shimmerAmount = fxPad.verb.y * 0.6
+    } else if (fxFlavours.verb === 'hall') {
       // Hall: large diffuse — size 0.82–0.99, damp 0–0.3
       reverbSize = 0.82 + fxPad.verb.x * 0.17
       reverbDamp = (1.0 - fxPad.verb.y) * 0.3
@@ -288,7 +295,7 @@ function buildWorkletPattern(
       reverb: { size: reverbSize, damp: reverbDamp },
       delay:  { time: delayTimeMs, feedback: delayFb },
       ducker: md.on ? { depth: md.x, release: 20 + md.y * 480 } : { ...fx.ducker },
-      comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup } : { ...fx.comp },
+      comp:   mc.on ? { threshold: 0.1 + mc.x * 0.9, ratio: 1 + mc.y * 19, makeup: fx.comp.makeup, attack: fx.comp.attack, release: fx.comp.release } : { ...fx.comp },
       verbReturn: mr.on ? mr.x * 2.0 : 1.0,
       dlyReturn:  mr.on ? mr.y * 2.0 : 1.0,
       filter: {
@@ -298,11 +305,12 @@ function buildWorkletPattern(
       },
       eq: {
         bands: [
-          { on: fxPad?.eqLow.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqLow.x  ?? 0.33), gain: ((fxPad?.eqLow.y  ?? 0.5) - 0.5) * 24 },
-          { on: fxPad?.eqMid.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqMid.x  ?? 0.57), gain: ((fxPad?.eqMid.y  ?? 0.5) - 0.5) * 24 },
-          { on: fxPad?.eqHigh.on ?? true, freq: 20 * Math.pow(1000, fxPad?.eqHigh.x ?? 0.87), gain: ((fxPad?.eqHigh.y ?? 0.5) - 0.5) * 24 },
+          { on: fxPad?.eqLow.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqLow.x  ?? 0.33), gain: ((fxPad?.eqLow.y  ?? 0.5) - 0.5) * 24, q: fxPad?.eqLow.q  ?? 1.5, shelf: fxPad?.eqLow.shelf },
+          { on: fxPad?.eqMid.on  ?? true, freq: 20 * Math.pow(1000, fxPad?.eqMid.x  ?? 0.57), gain: ((fxPad?.eqMid.y  ?? 0.5) - 0.5) * 24, q: fxPad?.eqMid.q  ?? 1.5 },
+          { on: fxPad?.eqHigh.on ?? true, freq: 20 * Math.pow(1000, fxPad?.eqHigh.x ?? 0.87), gain: ((fxPad?.eqHigh.y ?? 0.5) - 0.5) * 24, q: fxPad?.eqHigh.q ?? 1.5, shelf: fxPad?.eqHigh.shelf },
         ],
       },
+      shimmerAmount,
     },
     perf: {
       rootNote:   perf?.rootNote   ?? 0,
@@ -313,7 +321,9 @@ function buildWorkletPattern(
       reversing:  perf?.reversing  ?? false,
       glitchX:    fxPad?.glitch.on ? fxPad.glitch.x : 0.5,
       glitchY:    fxPad?.glitch.on ? fxPad.glitch.y : 0.5,
-      glitchRedux: fxFlavours.glitch === 'redux',
+      glitchRedux:  fxFlavours.glitch === 'redux',
+      delayTape:    fxFlavours.delay  === 'tape',
+      glitchStutter: fxFlavours.glitch === 'stutter',
       granularOn:      fxPad?.granular.on ?? false,
       ...granularFlavourParams(fxPad, perf),
       swing:           perf?.swing       ?? 0,

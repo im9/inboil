@@ -33,8 +33,8 @@ declare function registerProcessor(name: string, ctor: new (opts?: AudioWorkletN
 declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
-import { DJFilter, PeakingEQ } from './dsp/filters.ts'
-import { SimpleReverb, PingPongDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor } from './dsp/effects.ts'
+import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
+import { SimpleReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES, SamplerVoice } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletEvent } from './dsp/types.ts'
@@ -146,8 +146,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private delay  = new PingPongDelay(1000, sampleRate)
   private ducker = new SidechainDucker(sampleRate)
   private comp   = new BusCompressor(sampleRate)
-  // 3-band parametric EQ (peaking filters in series)
+  // 3-band parametric EQ (peaking filters in series, with shelf alternatives for low/high)
   private peakEq = [new PeakingEQ(sampleRate), new PeakingEQ(sampleRate), new PeakingEQ(sampleRate)]
+  private shelfEq = [new ShelfEQ(sampleRate, true), new ShelfEQ(sampleRate, false)]  // [0]=low-shelf, [1]=high-shelf
+  private eqShelfMode = [false, false]  // [0]=low uses shelf, [1]=high uses shelf
 
   // Param cache
   private delayFeedback  = 0.42
@@ -194,6 +196,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private arpSeed      = new Uint32Array(8).fill(77777)
   // Fill PRNG
   private fillSeed       = 12321
+  // Tape delay (ADR 075 Phase 2)
+  private tapeDelay      = new TapeDelay(1000, sampleRate)
+  private delayTape      = false
+  // Shimmer reverb (ADR 075 Phase 2)
+  private octShifter     = new OctaveShifter(sampleRate)
+  private shimmerAmount  = 0
+  private shimmerPrev    = 0       // one-sample feedback from reverb output
+  // Stutter glitch (ADR 075 Phase 2)
+  private stutter        = new StutterBuffer(sampleRate)
+  private glitchStutter  = false
   // Glitch DSP state
   private glitchRedux    = false   // ADR 075: Redux flavour (S&H only, no bit quantize)
   private glitchHoldL    = 0
@@ -207,6 +219,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   // Peak metering (~60fps)
   private meterPeakL     = 0
   private meterPeakR     = 0
+  private meterGrMin     = 1.0  // min gain reduction (most compressed) in meter window
   private meterCount     = 0
   private meterInterval  = Math.round(sampleRate / 60)
 
@@ -328,12 +341,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.reverb.setSize(p.fx.reverb.size)
           this.reverb.setDamp(p.fx.reverb.damp)
           this.delay.setTime(p.fx.delay.time)
+          this.tapeDelay.setTime(p.fx.delay.time)
           this.delayFeedback = p.fx.delay.feedback
           this.duckDepth     = p.fx.ducker.depth
           this.ducker.setRelease(p.fx.ducker.release)
           this.compThreshold = p.fx.comp.threshold
           this.compRatio     = p.fx.comp.ratio
           this.compMakeup    = p.fx.comp.makeup
+          this.comp.setAttackRelease(p.fx.comp.attack, p.fx.comp.release)
           this.verbReturn    = p.fx.verbReturn ?? 1.0
           this.dlyReturn     = p.fx.dlyReturn  ?? 1.0
           this.pendingRootNote  = p.perf.rootNote
@@ -343,7 +358,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.pendingReversing = p.perf.reversing
           this.glitchX      = p.perf.glitchX
           this.glitchY      = p.perf.glitchY
-          this.glitchRedux  = p.perf.glitchRedux ?? false
+          if (this.glitchStutter) this.stutter.setSlice(p.perf.glitchX)
+          this.glitchRedux   = p.perf.glitchRedux ?? false
+          this.delayTape     = p.perf.delayTape ?? false
+          this.glitchStutter = p.perf.glitchStutter ?? false
+          this.shimmerAmount = p.fx.shimmerAmount ?? 0
           this.granular.setParams(p.perf.granularX, p.perf.granularY)
           this.granular.setParams2(p.perf.granularPitch, p.perf.granularScatter)
           this.granular.setActive(p.perf.granularOn)
@@ -351,8 +370,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.djFilter.set(p.fx.filter.x, p.fx.filter.y, p.fx.filter.on)
           for (let i = 0; i < p.fx.eq.bands.length && i < 3; i++) {
             const b = p.fx.eq.bands[i]
-            this.peakEq[i].set(b.freq, b.gain, 1.5, sampleRate)
+            const q = b.q ?? 1.5
+            this.peakEq[i].set(b.freq, b.gain, q, sampleRate)
             this.peakEq[i].setActive(b.on)
+            // Low (i=0) and High (i=2) can use shelf mode
+            if (i === 0) {
+              this.eqShelfMode[0] = !!b.shelf
+              this.shelfEq[0].set(b.freq, b.gain, q, sampleRate)
+              this.shelfEq[0].setActive(b.on)
+            } else if (i === 2) {
+              this.eqShelfMode[1] = !!b.shelf
+              this.shelfEq[1].set(b.freq, b.gain, q, sampleRate)
+              this.shelfEq[1].setActive(b.on)
+            }
           }
           this.masterGain = p.perf.masterGain
           // Pattern switch: reset notes and rewind playheads so step 0 replays
@@ -611,13 +641,28 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
-      const rev = this.reverb.process(reverbIn)
-      const del = this.delay.process(delayIn, delayIn, this.delayFeedback)
+      // Shimmer: pitch-shift reverb output and feed back into reverb input
+      let shimReverbIn = reverbIn
+      if (this.shimmerAmount > 0) {
+        shimReverbIn += Math.tanh(this.octShifter.process(this.shimmerPrev)) * this.shimmerAmount
+      }
+      const rev = this.reverb.process(shimReverbIn)
+      if (this.shimmerAmount > 0) {
+        this.shimmerPrev = (rev[0] + rev[1]) * 0.5
+      }
+      // Delay: tape or digital
+      const del = this.delayTape
+        ? this.tapeDelay.process(delayIn, delayIn, this.delayFeedback)
+        : this.delay.process(delayIn, delayIn, this.delayFeedback)
       const grn = this.granular.process(granularIn, granularIn)
 
-      // Glitch send: downsample + bitcrush on send bus
+      // Glitch send: stutter, downsample, or bitcrush on send bus
       let gltL = 0, gltR = 0
-      if (glitchIn !== 0 || this.glitchHoldL !== 0 || this.glitchHoldR !== 0) {
+      if (this.glitchStutter) {
+        // Stutter: buffer-repeat loop
+        const st = this.stutter.process(glitchIn)
+        gltL = st; gltR = st
+      } else if (glitchIn !== 0 || this.glitchHoldL !== 0 || this.glitchHoldR !== 0) {
         const holdMax = Math.floor(2 + this.glitchX * 30)
         if (this.glitchCounter <= 0) {
           this.glitchHoldL = glitchIn
@@ -645,13 +690,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
+      if (this.comp.gr < this.meterGrMin) this.meterGrMin = this.comp.gr
 
-      // ── 3-band parametric EQ (peaking filters in series) ──────────
+      // ── 3-band EQ (peaking or shelf per band) ──────────
       let fL = cmp[0], fR = cmp[1]
-      for (let i = 0; i < 3; i++) {
-        const eq = this.peakEq[i].process(fL, fR)
-        fL = eq[0]; fR = eq[1]
-      }
+      // Low band: shelf or peaking
+      const eqLow = this.eqShelfMode[0] ? this.shelfEq[0].process(fL, fR) : this.peakEq[0].process(fL, fR)
+      fL = eqLow[0]; fR = eqLow[1]
+      // Mid band: always peaking
+      const eqMid = this.peakEq[1].process(fL, fR)
+      fL = eqMid[0]; fR = eqMid[1]
+      // High band: shelf or peaking
+      const eqHigh = this.eqShelfMode[1] ? this.shelfEq[1].process(fL, fR) : this.peakEq[2].process(fL, fR)
+      fL = eqHigh[0]; fR = eqHigh[1]
 
       // ── DJ Filter (XY pad sweep) ────────────────────────────────
       const filt = this.djFilter.process(fL, fR)
@@ -681,9 +732,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
     this.meterCount += outL.length
     if (this.meterCount >= this.meterInterval) {
-      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR })
+      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR, gr: this.meterGrMin })
       this.meterPeakL = 0
       this.meterPeakR = 0
+      this.meterGrMin = 1.0
       this.meterCount -= this.meterInterval
     }
 

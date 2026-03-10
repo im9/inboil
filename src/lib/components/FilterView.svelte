@@ -10,13 +10,22 @@
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
   let dragRect: DOMRect | null = null
+  let lastTapTime: Record<string, number> = {}
 
   // ── Node definitions ───────────────────────────────────────────
+  function eqLabel(key: 'eqLow' | 'eqMid' | 'eqHigh'): string {
+    const band = fxPad[key]
+    if (!band.on) return 'OFF'
+    const base = key === 'eqLow' ? 'LOW' : key === 'eqMid' ? 'MID' : 'HIGH'
+    if ('shelf' in band && band.shelf) return key === 'eqLow' ? 'L.SH' : 'H.SH'
+    return base
+  }
+
   const nodes = [
     { key: 'filter' as const, label: () => filtLabel, color: 'var(--color-teal)',   tip: 'Filter — sweep between low-pass and high-pass', tipJa: 'フィルター — ローパスとハイパスをスイープ' },
-    { key: 'eqLow'  as const, label: () => fxPad.eqLow.on  ? 'LOW'  : 'OFF', color: 'var(--color-olive)',  tip: 'Low EQ — boost or cut low frequencies', tipJa: '低域EQ — 低音域のブースト/カット' },
-    { key: 'eqMid'  as const, label: () => fxPad.eqMid.on  ? 'MID'  : 'OFF', color: 'var(--color-blue)',   tip: 'Mid EQ — boost or cut mid frequencies', tipJa: '中域EQ — 中音域のブースト/カット' },
-    { key: 'eqHigh' as const, label: () => fxPad.eqHigh.on ? 'HIGH' : 'OFF', color: 'var(--color-salmon)', tip: 'High EQ — boost or cut high frequencies', tipJa: '高域EQ — 高音域のブースト/カット' },
+    { key: 'eqLow'  as const, label: () => eqLabel('eqLow'),  color: 'var(--color-olive)',  tip: 'Low EQ — drag: freq/gain, scroll: Q, double-tap: shelf toggle', tipJa: '低域EQ — ドラッグ: 周波数/ゲイン, スクロール: Q, ダブルタップ: シェルフ切替' },
+    { key: 'eqMid'  as const, label: () => eqLabel('eqMid'),  color: 'var(--color-blue)',   tip: 'Mid EQ — drag: freq/gain, scroll: Q', tipJa: '中域EQ — ドラッグ: 周波数/ゲイン, スクロール: Q' },
+    { key: 'eqHigh' as const, label: () => eqLabel('eqHigh'), color: 'var(--color-salmon)', tip: 'High EQ — drag: freq/gain, scroll: Q, double-tap: shelf toggle', tipJa: '高域EQ — ドラッグ: 周波数/ゲイン, スクロール: Q, ダブルタップ: シェルフ切替' },
   ] as const
 
   const filtLabel = $derived(
@@ -52,35 +61,41 @@
 
   function endDrag() {
     if (!dragging) return
-    if (!dragMoved) fxPad[dragging].on = !fxPad[dragging].on
+    if (!dragMoved) {
+      const key = dragging
+      const now = performance.now()
+      const lastTap = lastTapTime[key] ?? 0
+      if (now - lastTap < 350 && (key === 'eqLow' || key === 'eqHigh')) {
+        // Double-tap: toggle shelf mode
+        fxPad[key].shelf = !fxPad[key].shelf
+      } else {
+        fxPad[key].on = !fxPad[key].on
+      }
+      lastTapTime[key] = now
+    }
     dragging = null
     dragRect = null
+  }
+
+  /** Scroll wheel on EQ node adjusts Q (0.3–8.0) */
+  function onWheel(e: WheelEvent, key: 'eqLow' | 'eqMid' | 'eqHigh') {
+    e.preventDefault()
+    const band = fxPad[key]
+    const delta = e.deltaY > 0 ? -0.2 : 0.2
+    band.q = Math.round(Math.max(0.3, Math.min(8.0, band.q + delta)) * 10) / 10
   }
 
   // ── EQ curve computation (biquad frequency response) ───────────
   const EQ_CURVE_POINTS = 128
   const SR = 44100
-  const EQ_Q = 1.5
   const DB_RANGE = 12  // ±12 dB
 
   // Logarithmic frequency mapping: t ∈ [0,1] → freq ∈ [20, 20000]
   function tToFreq(t: number): number { return 20 * Math.pow(1000, t) }
   function freqToT(f: number): number { return Math.log(f / 20) / Math.log(1000) }
 
-  function peakingResponse(freq: number, centerFreq: number, dBgain: number): number {
-    if (dBgain === 0) return 1
-    const fc = Math.max(1, Math.min(centerFreq, SR * 0.49))
-    const A = Math.pow(10, dBgain / 40)
-    const w0 = 2 * Math.PI * fc / SR
-    const sinw = Math.sin(w0)
-    const cosw = Math.cos(w0)
-    const alpha = sinw / (2 * EQ_Q)
-    const a0 = 1 + alpha / A
-    const b0 = (1 + alpha * A) / a0
-    const b1 = (-2 * cosw) / a0
-    const b2 = (1 - alpha * A) / a0
-    const a1 = b1
-    const a2 = (1 - alpha / A) / a0
+  /** Compute biquad magnitude response from coefficients */
+  function biquadMagnitude(freq: number, b0: number, b1: number, b2: number, a1: number, a2: number): number {
     const w = 2 * Math.PI * freq / SR
     const cw = Math.cos(w); const c2w = Math.cos(2 * w)
     const sw = Math.sin(w); const s2w = Math.sin(2 * w)
@@ -89,6 +104,64 @@
     const denR = 1 + a1 * cw + a2 * c2w
     const denI = -(a1 * sw + a2 * s2w)
     return Math.sqrt((numR * numR + numI * numI) / (denR * denR + denI * denI))
+  }
+
+  function peakingResponse(freq: number, centerFreq: number, dBgain: number, Q: number): number {
+    if (dBgain === 0) return 1
+    const fc = Math.max(1, Math.min(centerFreq, SR * 0.49))
+    const A = Math.pow(10, dBgain / 40)
+    const w0 = 2 * Math.PI * fc / SR
+    const sinw = Math.sin(w0)
+    const cosw = Math.cos(w0)
+    const alpha = sinw / (2 * Math.max(0.1, Q))
+    const a0 = 1 + alpha / A
+    const b0 = (1 + alpha * A) / a0
+    const b1 = (-2 * cosw) / a0
+    const b2 = (1 - alpha * A) / a0
+    const a1 = b1
+    const a2 = (1 - alpha / A) / a0
+    return biquadMagnitude(freq, b0, b1, b2, a1, a2)
+  }
+
+  function shelfResponse(freq: number, centerFreq: number, dBgain: number, Q: number, low: boolean): number {
+    if (dBgain === 0) return 1
+    const fc = Math.max(1, Math.min(centerFreq, SR * 0.49))
+    const A = Math.pow(10, dBgain / 40)
+    const w0 = 2 * Math.PI * fc / SR
+    const sinw = Math.sin(w0)
+    const cosw = Math.cos(w0)
+    const alpha = sinw / (2 * Math.max(0.1, Q))
+    const twoSqrtAAlpha = 2 * Math.sqrt(A) * alpha
+    let b0: number, b1: number, b2: number, a1: number, a2: number
+    if (low) {
+      const a0 = (A + 1) + (A - 1) * cosw + twoSqrtAAlpha
+      b0 = A * ((A + 1) - (A - 1) * cosw + twoSqrtAAlpha) / a0
+      b1 = 2 * A * ((A - 1) - (A + 1) * cosw) / a0
+      b2 = A * ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) / a0
+      a1 = -2 * ((A - 1) + (A + 1) * cosw) / a0
+      a2 = ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) / a0
+    } else {
+      const a0 = (A + 1) - (A - 1) * cosw + twoSqrtAAlpha
+      b0 = A * ((A + 1) + (A - 1) * cosw + twoSqrtAAlpha) / a0
+      b1 = -2 * A * ((A - 1) + (A + 1) * cosw) / a0
+      b2 = A * ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) / a0
+      a1 = 2 * ((A - 1) - (A + 1) * cosw) / a0
+      a2 = ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) / a0
+    }
+    return biquadMagnitude(freq, b0, b1, b2, a1, a2)
+  }
+
+  /** Compute EQ band response (peaking or shelf depending on mode) */
+  function bandResponse(freq: number, key: 'eqLow' | 'eqMid' | 'eqHigh'): number {
+    const band = fxPad[key]
+    if (!band.on) return 1
+    const centerFreq = tToFreq(band.x)
+    const gain = (band.y - 0.5) * 24
+    const q = band.q
+    if ('shelf' in band && band.shelf) {
+      return shelfResponse(freq, centerFreq, gain, q, key === 'eqLow')
+    }
+    return peakingResponse(freq, centerFreq, gain, q)
   }
 
   // ── Colors (raw RGB for canvas) ────────────────────────────────
@@ -353,24 +426,24 @@
     }
 
     // ── 3. Individual band curves (colored, subtle) ──
-    const eqBands = [
-      { state: fxPad.eqLow,  col: COL_OLIVE },
-      { state: fxPad.eqMid,  col: COL_BLUE },
-      { state: fxPad.eqHigh, col: COL_SALMON },
+    const eqBandDefs = [
+      { key: 'eqLow'  as const, col: COL_OLIVE },
+      { key: 'eqMid'  as const, col: COL_BLUE },
+      { key: 'eqHigh' as const, col: COL_SALMON },
     ]
 
-    for (const band of eqBands) {
-      if (!band.state.on) continue
-      const freq = tToFreq(band.state.x)
-      const gain = (band.state.y - 0.5) * 24
+    for (const bd of eqBandDefs) {
+      const band = fxPad[bd.key]
+      if (!band.on) continue
+      const gain = (band.y - 0.5) * 24
       if (Math.abs(gain) < 0.1) continue
 
-      const c = band.col
+      const c = bd.col
       ctx.beginPath()
       for (let i = 0; i < EQ_CURVE_POINTS; i++) {
         const t = i / (EQ_CURVE_POINTS - 1)
         const f = tToFreq(t)
-        const mag = peakingResponse(f, freq, gain)
+        const mag = bandResponse(f, bd.key)
         const dB = 20 * Math.log10(mag)
         const x = tToX(t)
         const y = dBToY(dB)
@@ -386,7 +459,7 @@
       for (let i = 0; i < EQ_CURVE_POINTS; i++) {
         const t = i / (EQ_CURVE_POINTS - 1)
         const f = tToFreq(t)
-        const mag = peakingResponse(f, freq, gain)
+        const mag = bandResponse(f, bd.key)
         const dB = 20 * Math.log10(mag)
         if (i === 0) ctx.moveTo(tToX(t), dBToY(dB))
         else ctx.lineTo(tToX(t), dBToY(dB))
@@ -399,23 +472,16 @@
     }
 
     // ── 5. Combined EQ curve (bright, with gradient fill) ──
-    const activeBands: { freq: number; gain: number }[] = []
-    for (const band of eqBands) {
-      if (!band.state.on) continue
-      activeBands.push({
-        freq: tToFreq(band.state.x),
-        gain: (band.state.y - 0.5) * 24,
-      })
-    }
+    const activeKeys = eqBandDefs.filter(bd => fxPad[bd.key].on).map(bd => bd.key)
 
-    if (activeBands.length > 0) {
+    if (activeKeys.length > 0) {
       const curveX: number[] = []
       const curveY: number[] = []
       for (let i = 0; i < EQ_CURVE_POINTS; i++) {
         const t = i / (EQ_CURVE_POINTS - 1)
         const f = tToFreq(t)
         let totalMag = 1
-        for (const b of activeBands) totalMag *= peakingResponse(f, b.freq, b.gain)
+        for (const key of activeKeys) totalMag *= bandResponse(f, key)
         const dB = 20 * Math.log10(totalMag)
         curveX.push(tToX(t))
         curveY.push(dBToY(dB))
@@ -500,10 +566,14 @@
           --node-color: {node.color};
         "
         onpointerdown={(e) => startDrag(node.key, e)}
+        onwheel={(e) => { if (node.key !== 'filter') onWheel(e, node.key as 'eqLow' | 'eqMid' | 'eqHigh') }}
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
         <span class="node-label">{node.label()}</span>
+        {#if node.key !== 'filter' && fxPad[node.key].q !== 1.5}
+          <span class="q-label">Q{fxPad[node.key].q.toFixed(1)}</span>
+        {/if}
       </button>
     {/each}
   </div>
@@ -574,6 +644,19 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
+    pointer-events: none;
+  }
+
+  .q-label {
+    position: absolute;
+    bottom: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    font-weight: 600;
+    color: var(--node-color);
+    opacity: 0.6;
+    white-space: nowrap;
     pointer-events: none;
   }
 

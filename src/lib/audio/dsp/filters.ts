@@ -215,6 +215,75 @@ export class PeakingEQ {
 }
 
 /**
+ * Stereo biquad shelf EQ — low-shelf or high-shelf.
+ * RBJ cookbook formulas. Smooth crossfade like PeakingEQ.
+ */
+export class ShelfEQ {
+  private x1L = 0; private x2L = 0; private y1L = 0; private y2L = 0
+  private x1R = 0; private x2R = 0; private y1R = 0; private y2R = 0
+  private b0 = 1; private b1 = 0; private b2 = 0; private a1 = 0; private a2 = 0
+  private _active = true
+  private _wet = 1
+  private _fadeRate: number
+  private out = new Float64Array(2)
+
+  constructor(sr: number, private _low = true) {
+    this._fadeRate = 1 - Math.exp(-1 / (0.03 * sr))
+  }
+
+  set(freq: number, dBgain: number, Q: number, sr: number) {
+    if (dBgain === 0) { this.b0 = 1; this.b1 = 0; this.b2 = 0; this.a1 = 0; this.a2 = 0; return }
+    const fc = Math.max(1, Math.min(freq, sr * 0.49))
+    const A = Math.pow(10, dBgain / 40)
+    const w0 = 2 * Math.PI * fc / sr
+    const sinw = Math.sin(w0)
+    const cosw = Math.cos(w0)
+    const alpha = sinw / (2 * Math.max(0.1, Q))
+    const twoSqrtAAlpha = 2 * Math.sqrt(A) * alpha
+
+    if (this._low) {
+      const a0inv = 1 / ((A + 1) + (A - 1) * cosw + twoSqrtAAlpha)
+      this.b0 = A * ((A + 1) - (A - 1) * cosw + twoSqrtAAlpha) * a0inv
+      this.b1 = 2 * A * ((A - 1) - (A + 1) * cosw) * a0inv
+      this.b2 = A * ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) * a0inv
+      this.a1 = -2 * ((A - 1) + (A + 1) * cosw) * a0inv
+      this.a2 = ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) * a0inv
+    } else {
+      const a0inv = 1 / ((A + 1) - (A - 1) * cosw + twoSqrtAAlpha)
+      this.b0 = A * ((A + 1) + (A - 1) * cosw + twoSqrtAAlpha) * a0inv
+      this.b1 = -2 * A * ((A - 1) + (A + 1) * cosw) * a0inv
+      this.b2 = A * ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) * a0inv
+      this.a1 = 2 * ((A - 1) - (A + 1) * cosw) * a0inv
+      this.a2 = ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) * a0inv
+    }
+  }
+
+  setActive(on: boolean) { this._active = on }
+
+  process(inL: number, inR: number): Float64Array {
+    const target = this._active ? 1 : 0
+    this._wet += (target - this._wet) * this._fadeRate
+    if (this._wet < 0.0005) {
+      this._wet = 0
+      this.out[0] = inL; this.out[1] = inR
+      return this.out
+    }
+    const yL = this.b0*inL + this.b1*this.x1L + this.b2*this.x2L
+                            - this.a1*this.y1L - this.a2*this.y2L
+    this.x2L = this.x1L; this.x1L = inL
+    this.y2L = this.y1L; this.y1L = yL
+    const yR = this.b0*inR + this.b1*this.x1R + this.b2*this.x2R
+                            - this.a1*this.y1R - this.a2*this.y2R
+    this.x2R = this.x1R; this.x1R = inR
+    this.y2R = this.y1R; this.y1R = yR
+    const w = this._wet
+    this.out[0] = inL + (yL - inL) * w
+    this.out[1] = inR + (yR - inR) * w
+    return this.out
+  }
+}
+
+/**
  * State Variable Filter (Trapezoidal Integrated SVF) — mono, multi-mode.
  * Supports LP, HP, BP, Notch modes at 12dB/oct.
  * Cascade two for 24dB/oct (call process twice in series).

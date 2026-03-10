@@ -1,6 +1,6 @@
 /**
  * Send/bus effects: reverb, delay, sidechain ducker, bus compressor,
- * peak limiter, granular processor.
+ * peak limiter, granular processor, tape delay, stutter, shimmer pitch shift.
  */
 
 // ── Reverb internals ────────────────────────────────────────────────
@@ -106,11 +106,19 @@ export class SidechainDucker {
  */
 export class BusCompressor {
   private env = 0
+  private sr: number
   private aCoeff: number
   private rCoeff: number
+  /** Linear gain reduction (1.0 = no reduction, <1.0 = compressing) */
+  gr = 1.0
   constructor(sr: number) {
+    this.sr = sr
     this.aCoeff = Math.exp(-1 / (0.0008 * sr))   // 0.8 ms attack
     this.rCoeff = Math.exp(-1 / (0.060  * sr))   // 60 ms release
+  }
+  setAttackRelease(attackMs: number, releaseMs: number) {
+    this.aCoeff = Math.exp(-1 / (attackMs * 0.001 * this.sr))
+    this.rCoeff = Math.exp(-1 / (releaseMs * 0.001 * this.sr))
   }
   private out = new Float64Array(2)
   process(L: number, R: number, threshold: number, ratio: number, makeup: number): Float64Array {
@@ -122,6 +130,7 @@ export class BusCompressor {
       const desired = threshold + (this.env - threshold) / ratio
       gain = desired / this.env
     }
+    this.gr = gain
     this.out[0] = L * gain * makeup; this.out[1] = R * gain * makeup
     return this.out
   }
@@ -298,5 +307,166 @@ export class GranularProcessor {
       this.grainActive[i] = true
       return
     }
+  }
+}
+
+// ── Tape Delay (ADR 075 Phase 2) ────────────────────────────────────
+
+/**
+ * Tape-style ping-pong delay.
+ * Feedback path: one-pole LP (~2kHz) → tanh saturation → cross-feed.
+ * Sine LFO modulates read position for wow/flutter (±3 samples, ~1.2Hz).
+ */
+export class TapeDelay {
+  private bL: Float32Array; private bR: Float32Array
+  private pL = 0; private pR = 0; private ds = 0
+  private lpL = 0; private lpR = 0
+  private lpCoeff: number
+  private lfoPhase = 0
+  private lfoInc: number
+
+  constructor(maxMs: number, private sr: number) {
+    const max = Math.ceil(maxMs * sr / 1000)
+    this.bL = new Float32Array(max); this.bR = new Float32Array(max)
+    // One-pole LP at ~2kHz — 6dB/oct, gentle analog rolloff
+    this.lpCoeff = Math.exp(-2 * Math.PI * 2000 / sr)
+    // LFO ~1.2Hz wow/flutter
+    this.lfoInc = 1.2 / sr
+  }
+
+  setTime(ms: number) {
+    this.ds = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length - 8)
+  }
+
+  private _readInterp(buf: Float32Array, pos: number): number {
+    const len = buf.length
+    const p = ((pos % len) + len) % len
+    const i0 = p | 0
+    const frac = p - i0
+    return buf[i0] + (buf[(i0 + 1) % len] - buf[i0]) * frac
+  }
+
+  private out = new Float64Array(2)
+  process(iL: number, iR: number, fb: number): Float64Array {
+    if (this.ds <= 0) { this.out[0] = 0; this.out[1] = 0; return this.out }
+    const len = this.bL.length
+
+    // Wow/flutter: sine LFO modulates read offset ±3 samples
+    this.lfoPhase += this.lfoInc
+    if (this.lfoPhase >= 1) this.lfoPhase -= 1
+    const lfo = Math.sin(6.283185 * this.lfoPhase) * 3
+
+    const oL = this._readInterp(this.bL, this.pL - this.ds + lfo)
+    const oR = this._readInterp(this.bR, this.pR - this.ds - lfo)
+
+    // LP filter on feedback (cross-feed for ping-pong)
+    this.lpL = oR + (this.lpL - oR) * this.lpCoeff
+    this.lpR = oL + (this.lpR - oL) * this.lpCoeff
+
+    // Soft saturation (tape compression)
+    this.bL[this.pL] = iL + Math.tanh(this.lpL * 1.2) * fb
+    this.bR[this.pR] = iR + Math.tanh(this.lpR * 1.2) * fb
+    if (++this.pL >= len) this.pL = 0
+    if (++this.pR >= len) this.pR = 0
+
+    this.out[0] = oL; this.out[1] = oR
+    return this.out
+  }
+}
+
+// ── Stutter Buffer (ADR 075 Phase 2) ────────────────────────────────
+
+/**
+ * Buffer-repeat stutter effect for glitch send bus.
+ * Captures audio into a ring buffer; loops a latched slice with crossfade.
+ * X controls slice length (10–200ms).
+ */
+export class StutterBuffer {
+  private buf: Float32Array
+  private bufLen: number
+  private wp = 0
+  private rp = 0
+  private sliceStart = 0
+  private sliceLen: number
+  private xfade: number
+  private needsLatch = true
+
+  constructor(private sr: number) {
+    this.bufLen = Math.ceil(sr * 0.5)   // 500ms max capture
+    this.buf = new Float32Array(this.bufLen)
+    this.sliceLen = Math.ceil(sr * 0.05) // 50ms default
+    this.xfade = Math.ceil(sr * 0.002)   // 2ms crossfade
+  }
+
+  setSlice(x: number) {
+    const newLen = Math.max(this.xfade * 4, Math.floor((10 + x * 190) * this.sr / 1000))
+    if (newLen !== this.sliceLen) {
+      this.sliceLen = newLen
+      this.needsLatch = true
+    }
+  }
+
+  process(input: number): number {
+    // Always capture
+    this.buf[this.wp] = input
+    if (++this.wp >= this.bufLen) this.wp = 0
+
+    // Latch on first nonzero input (or after param change)
+    if (this.needsLatch && input !== 0) {
+      this.sliceStart = (this.wp - this.sliceLen + this.bufLen) % this.bufLen
+      this.rp = 0
+      this.needsLatch = false
+    }
+
+    if (this.needsLatch) return input  // passthrough until latched
+
+    // Read from latched slice with crossfade at loop boundaries
+    const idx = (this.sliceStart + this.rp) % this.bufLen
+    let env = 1.0
+    if (this.rp < this.xfade) env = this.rp / this.xfade
+    else if (this.rp >= this.sliceLen - this.xfade) env = (this.sliceLen - 1 - this.rp) / this.xfade
+    env = Math.max(0, Math.min(1, env))
+
+    const out = this.buf[idx] * env
+    if (++this.rp >= this.sliceLen) this.rp = 0
+    return out
+  }
+}
+
+// ── Octave Shifter (ADR 075 Phase 2) ────────────────────────────────
+
+/**
+ * Simple +12st (octave-up) pitch shifter for shimmer reverb.
+ * Two overlapping Hann-windowed grains reading at 2× speed.
+ * Constant-power crossfade (two offset Hann windows sum to 1.0).
+ */
+export class OctaveShifter {
+  private buf: Float32Array
+  private len: number
+  private wp = 0
+  private phase = 0
+
+  constructor(sr: number) {
+    this.len = Math.round(sr * 0.04)  // 40ms grain window
+    this.buf = new Float32Array(this.len)
+  }
+
+  process(x: number): number {
+    this.buf[this.wp] = x
+    if (++this.wp >= this.len) this.wp = 0
+
+    // Phase ramps 0→1 over len samples (one full grain cycle)
+    this.phase += 1 / this.len
+    if (this.phase >= 1) this.phase -= 1
+
+    let out = 0
+    for (let g = 0; g < 2; g++) {
+      const ph = (this.phase + g * 0.5) % 1.0
+      const rp = (this.wp + Math.round(ph * this.len)) % this.len
+      const env = 0.5 - 0.5 * Math.cos(6.283185 * ph)
+      out += this.buf[rp] * env
+    }
+
+    return out
   }
 }

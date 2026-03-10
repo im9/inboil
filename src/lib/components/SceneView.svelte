@@ -340,7 +340,7 @@
           ui.patternSheet = true
         } else if (dblNode?.type === 'automation') {
           // Double-click on automation node → ensure dock is open for editing
-          ui.dockMinimized = false
+          // dock is always visible (no minimize)
         } else {
           // Double-click on function node → set root
           sceneSetRoot(nodeId)

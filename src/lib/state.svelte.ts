@@ -84,7 +84,7 @@ export interface Effects {
   reverb: { size: number; damp: number }
   delay:  { time: number; feedback: number }
   ducker: { depth: number; release: number }
-  comp:   { threshold: number; ratio: number; makeup: number }
+  comp:   { threshold: number; ratio: number; makeup: number; attack: number; release: number }
 }
 
 /** Function decorator attached to a pattern node (ADR 062) */
@@ -311,7 +311,7 @@ function restoreSong(src: Song): void {
     reverb: { ...fx.reverb },
     delay: { ...fx.delay },
     ducker: { ...fx.ducker },
-    comp: { ...fx.comp },
+    comp: { ...DEFAULT_EFFECTS.comp, ...fx.comp },
   }
   // Restore FX flavours (ADR 075) — defaults for old saves without flavours
   const fl = src.flavours
@@ -382,7 +382,6 @@ export const ui = $state<{
   lockMode: boolean
   selectedStep: number | null
   soloTracks: Set<number>
-  dockMinimized: boolean
   mobileOverlay: boolean
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
@@ -401,7 +400,6 @@ export const ui = $state<{
   lockMode: false,
   selectedStep: null,
   soloTracks: new Set<number>(),
-  dockMinimized: false,
   mobileOverlay: false,
   editingAutomationDecorator: null,
   focusSceneNodeId: null,
@@ -502,7 +500,6 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
-  dockMinimized: boolean
   patternEditor: 'grid' | 'tracker'
   showGuide: boolean
   lastProjectId: string | null
@@ -511,7 +508,7 @@ interface StoredPrefs {
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, dockMinimized: false, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -536,7 +533,6 @@ function savePrefs(): void {
     lang: lang.value,
     visited: prefs.visited,
     scaleMode: prefs.scaleMode,
-    dockMinimized: ui.dockMinimized,
     patternEditor: prefs.patternEditor,
     showGuide: prefs.showGuide,
     lastProjectId: project.id,
@@ -555,8 +551,6 @@ export const prefs = $state({
   patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
   showGuide: initialPrefs.showGuide,
 })
-
-ui.dockMinimized = initialPrefs.dockMinimized
 
 /** Project tracking state */
 export const project = $state({
@@ -586,10 +580,6 @@ export function togglePatternEditor(): void {
   prefs.patternEditor = prefs.patternEditor === 'grid' ? 'tracker' : 'grid'
   savePrefs()
 }
-export function toggleDockMinimized(): void {
-  ui.dockMinimized = !ui.dockMinimized
-  savePrefs()
-}
 export function toggleShowGuide(): void {
   prefs.showGuide = !prefs.showGuide
   savePrefs()
@@ -616,7 +606,7 @@ export const masterPad = $state({
   ret:  { ...DEFAULT_MASTER_PAD.ret },
 })
 
-export const masterLevels = $state({ peakL: 0, peakR: 0 })
+export const masterLevels = $state({ peakL: 0, peakR: 0, gr: 1.0 })
 
 export const vkbd = $state({
   enabled: false,
@@ -652,7 +642,6 @@ export function factoryReset(): void {
   ui.sidebar = null
   ui.lockMode = false
   ui.selectedStep = null
-  ui.dockMinimized = false
   ui.mobileOverlay = false
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null

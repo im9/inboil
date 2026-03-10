@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, activeCell, ui, playback, toggleDockMinimized, samplesByTrack, setSample, selectPattern } from '../state.svelte.ts'
+  import { song, activeCell, ui, playback, samplesByTrack, setSample, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
   import type { SceneDecorator, SceneNode } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
@@ -12,7 +12,8 @@
   import { engine } from '../audio/engine.ts'
   import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator } from '../sceneActions.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
-  import { PATTERN_COLORS } from '../constants.ts'
+  import { PATTERN_COLORS, FX_FLAVOURS } from '../constants.ts'
+  import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
   import EnvGraph from './EnvGraph.svelte'
   import WaveGraph from './WaveGraph.svelte'
@@ -94,6 +95,214 @@
   // Navigator: show when no pattern sheet and no scene node selected (including overlay sheets)
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
+
+  // ── EQ Dock Controls ──
+  const EQ_BANDS = [
+    { key: 'eqLow' as const, label: 'LOW', hasShelf: true },
+    { key: 'eqMid' as const, label: 'MID', hasShelf: false },
+    { key: 'eqHigh' as const, label: 'HIGH', hasShelf: true },
+  ]
+
+  function eqQNorm(q: number): number { return (q - 0.3) / (8.0 - 0.3) }
+  function eqQDenorm(v: number): number { return 0.3 + v * (8.0 - 0.3) }
+  function eqQDisplay(q: number): string { return q.toFixed(1) }
+
+  function eqFreqDisplay(x: number): string {
+    const f = 20 * Math.pow(1000, x)
+    return f >= 1000 ? `${(f / 1000).toFixed(1)}k` : `${Math.round(f)}`
+  }
+  function eqGainDisplay(y: number): string {
+    const dB = (y - 0.5) * 24
+    return `${dB >= 0 ? '+' : ''}${dB.toFixed(1)}`
+  }
+
+  function setEqQ(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    const q = Math.round(eqQDenorm(v) * 10) / 10
+    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, q }
+    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, q }
+    else fxPad.eqHigh = { ...fxPad.eqHigh, q }
+  }
+  function setEqX(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, x: v }
+    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, x: v }
+    else fxPad.eqHigh = { ...fxPad.eqHigh, x: v }
+  }
+  function setEqY(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, y: v }
+    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, y: v }
+    else fxPad.eqHigh = { ...fxPad.eqHigh, y: v }
+  }
+  function toggleEqShelf(bandKey: 'eqLow' | 'eqHigh') {
+    pushUndo('Toggle EQ shelf')
+    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, shelf: !fxPad.eqLow.shelf }
+    else fxPad.eqHigh = { ...fxPad.eqHigh, shelf: !fxPad.eqHigh.shelf }
+  }
+  function getEqShelf(bandKey: 'eqLow' | 'eqMid' | 'eqHigh'): boolean {
+    if (bandKey === 'eqMid') return false
+    return (fxPad[bandKey] as { shelf?: boolean }).shelf ?? false
+  }
+
+  // ── FX Dock Controls ──
+  const FX_NODES = [
+    { key: 'verb'     as const, label: 'VERB',  flavourKey: 'verb'     as const },
+    { key: 'delay'    as const, label: 'DLY',   flavourKey: 'delay'    as const },
+    { key: 'glitch'   as const, label: 'GLT',   flavourKey: 'glitch'   as const },
+    { key: 'granular' as const, label: 'GRN',   flavourKey: 'granular' as const },
+    { key: 'filter'   as const, label: 'FLTR',  flavourKey: null },
+  ] as const
+
+  type FxKey = typeof FX_NODES[number]['key']
+
+  function fxXLabel(key: FxKey): string {
+    if (key === 'verb') return fxFlavours.verb === 'shimmer' ? 'SIZE' : 'SIZE'
+    if (key === 'delay') return fxFlavours.delay === 'dotted' ? 'TIME' : 'TIME'
+    if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? 'SLICE' : 'RATE'
+    if (key === 'granular') return 'SIZE'
+    return 'FREQ'
+  }
+
+  function fxYLabel(key: FxKey): string {
+    if (key === 'verb') return fxFlavours.verb === 'shimmer' ? 'SHIM' : 'DAMP'
+    if (key === 'delay') return 'FB'
+    if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? '—' : 'BITS'
+    if (key === 'granular') return 'DENS'
+    return 'RESO'
+  }
+
+  function fxXDisplay(key: FxKey, x: number): string {
+    if (key === 'verb') return `${Math.round(x * 100)}%`
+    if (key === 'delay') return `${Math.round(x * 100)}%`
+    if (key === 'glitch') {
+      if (fxFlavours.glitch === 'stutter') return `${Math.round(10 + x * 190)}ms`
+      return `${Math.round(x * 100)}%`
+    }
+    if (key === 'granular') return `${Math.round(10 + x * 190)}ms`
+    if (key === 'filter') {
+      const f = x <= 0.5 ? 80 * Math.pow(250, x / 0.5) : 20 * Math.pow(400, (x - 0.5) / 0.5)
+      return f >= 1000 ? `${(f / 1000).toFixed(1)}k` : `${Math.round(f)}`
+    }
+    return `${Math.round(x * 100)}%`
+  }
+
+  function fxYDisplay(key: FxKey, y: number): string {
+    if (key === 'verb') {
+      if (fxFlavours.verb === 'shimmer') return `${Math.round(y * 60)}%`
+      return `${Math.round((1 - y) * 100)}%`
+    }
+    if (key === 'delay') return `${Math.round(y * 85)}%`
+    if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? '—' : `${Math.round((1 - y) * 100)}%`
+    if (key === 'granular') return `${Math.round(y * 100)}%`
+    if (key === 'filter') return `${Math.round(y * 100)}%`
+    return `${Math.round(y * 100)}%`
+  }
+
+  function setFxX(key: FxKey, v: number) {
+    if (key === 'verb') fxPad.verb = { ...fxPad.verb, x: v }
+    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, x: v }
+    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, x: v }
+    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, x: v }
+    else fxPad.filter = { ...fxPad.filter, x: v }
+  }
+
+  function setFxY(key: FxKey, v: number) {
+    if (key === 'verb') fxPad.verb = { ...fxPad.verb, y: v }
+    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, y: v }
+    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, y: v }
+    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, y: v }
+    else fxPad.filter = { ...fxPad.filter, y: v }
+  }
+
+  function toggleFxOn(key: FxKey) {
+    if (key === 'verb') fxPad.verb = { ...fxPad.verb, on: !fxPad.verb.on }
+    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, on: !fxPad.delay.on }
+    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, on: !fxPad.glitch.on }
+    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, on: !fxPad.granular.on }
+    else fxPad.filter = { ...fxPad.filter, on: !fxPad.filter.on }
+  }
+
+  function fxFlavourKey(key: FxKey): FxFlavourKey | null {
+    if (key === 'verb' || key === 'delay' || key === 'glitch' || key === 'granular') return key
+    return null
+  }
+
+  function setFlavour(fKey: FxFlavourKey, id: string) {
+    if (fKey === 'verb') fxFlavours.verb = id as typeof fxFlavours.verb
+    else if (fKey === 'delay') fxFlavours.delay = id as typeof fxFlavours.delay
+    else if (fKey === 'glitch') fxFlavours.glitch = id as typeof fxFlavours.glitch
+    else if (fKey === 'granular') fxFlavours.granular = id as typeof fxFlavours.granular
+  }
+
+  function currentFlavourId(fKey: FxFlavourKey): string {
+    return fxFlavours[fKey]
+  }
+
+  // ── Master Dock Controls ──
+  type MasterKnobKey = 'gain' | 'mkp' | 'atk' | 'rel' | 'swg'
+  const MASTER_KNOBS: { key: MasterKnobKey; label: string; tip: string; tipJa: string }[] = [
+    { key: 'gain', label: 'GAIN', tip: 'Master output volume', tipJa: 'マスター出力音量' },
+    { key: 'mkp',  label: 'MKP',  tip: 'Compressor makeup gain (1–4×)', tipJa: 'コンプレッサーメイクアップゲイン (1–4×)' },
+    { key: 'atk',  label: 'ATK',  tip: 'Compressor attack (0.1–30ms)', tipJa: 'コンプレッサーアタック (0.1–30ms)' },
+    { key: 'rel',  label: 'REL',  tip: 'Compressor release (10–300ms)', tipJa: 'コンプレッサーリリース (10–300ms)' },
+    { key: 'swg',  label: 'SWG',  tip: 'Swing amount (shuffle feel)', tipJa: 'スウィング量 (シャッフル感)' },
+  ]
+
+  function getMasterKnobValue(key: MasterKnobKey): number {
+    if (key === 'gain') return perf.masterGain
+    if (key === 'mkp') return (effects.comp.makeup - 1) / 3
+    if (key === 'atk') return (effects.comp.attack - 0.1) / 29.9
+    if (key === 'rel') return (effects.comp.release - 10) / 290
+    return perf.swing
+  }
+
+  function setMasterKnobValue(key: MasterKnobKey, v: number) {
+    if (key === 'gain') perf.masterGain = v
+    else if (key === 'mkp') effects.comp.makeup = 1 + v * 3
+    else if (key === 'atk') effects.comp.attack = 0.1 + v * 29.9
+    else if (key === 'rel') effects.comp.release = 10 + v * 290
+    else perf.swing = v
+  }
+
+  function masterKnobDisplay(key: MasterKnobKey): string {
+    if (key === 'gain') return `${Math.round(perf.masterGain * 100)}%`
+    if (key === 'mkp') return `${effects.comp.makeup.toFixed(1)}×`
+    if (key === 'atk') return `${effects.comp.attack.toFixed(1)}ms`
+    if (key === 'rel') return `${Math.round(effects.comp.release)}ms`
+    return `${Math.round(perf.swing * 100)}%`
+  }
+
+  // Master XY pad node labels
+  type MasterPadKey = 'comp' | 'duck' | 'ret'
+  const MASTER_PAD_NODES: { key: MasterPadKey; label: string; xLabel: string; yLabel: string; tip: string; tipJa: string }[] = [
+    { key: 'comp', label: 'COMP', xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — threshold / ratio', tipJa: 'コンプレッサー — スレッショルド / レシオ' },
+    { key: 'duck', label: 'DUCK', xLabel: 'DPT', yLabel: 'REL', tip: 'Sidechain ducker — depth / release', tipJa: 'サイドチェインダッカー — 深さ / リリース' },
+    { key: 'ret',  label: 'RET',  xLabel: 'VRB', yLabel: 'DLY', tip: 'FX returns — reverb / delay level', tipJa: 'FXリターン — リバーブ / ディレイレベル' },
+  ]
+
+  function masterPadXDisplay(key: MasterPadKey): string {
+    const st = masterPad[key]
+    if (key === 'comp') return `${Math.round((0.1 + st.x * 0.9) * 100)}%`
+    if (key === 'duck') return `${Math.round(st.x * 100)}%`
+    return `${Math.round(st.x * 200)}%`
+  }
+
+  function masterPadYDisplay(key: MasterPadKey): string {
+    const st = masterPad[key]
+    if (key === 'comp') return `1:${Math.round(1 + st.y * 19)}`
+    if (key === 'duck') return `${Math.round(20 + st.y * 480)}ms`
+    return `${Math.round(st.y * 200)}%`
+  }
+
+  function setMasterPadX(key: MasterPadKey, v: number) {
+    masterPad[key].x = v
+  }
+
+  function setMasterPadY(key: MasterPadKey, v: number) {
+    masterPad[key].y = v
+  }
+
+  function toggleMasterPadOn(key: MasterPadKey) {
+    masterPad[key].on = !masterPad[key].on
+  }
 
   // BFS from root to order patterns by playback traversal; unreachable nodes appended at end
   type NavEntry = { node: SceneNode; depth: number }
@@ -434,15 +643,201 @@
   })
 </script>
 
-<div class="dock-panel" class:minimized={ui.dockMinimized}>
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="dock-handle"
-    onpointerdown={toggleDockMinimized}
-    data-tip={ui.dockMinimized ? 'Expand dock' : 'Minimize dock'}
-    data-tip-ja={ui.dockMinimized ? 'ドックを展開' : 'ドックを最小化'}
-  ><span class="handle-bar"></span></div>
-  {#if !ui.dockMinimized}
+<div class="dock-panel" class:split={isOverlaySheet}>
+  {#if isOverlaySheet}
+  <!-- Split layout: scene navigator (upper) + overlay controls (lower) -->
+  <div class="dock-body dock-split">
+    <div class="dock-upper">
+      <div class="param-content">
+        <!-- Scene Navigator (ADR 070) -->
+        {#if showNavigator}
+          <div class="nav-section">
+            <span class="section-label">SCENE</span>
+            <div class="nav-list">
+              {#each placedPatternNodes as entry}
+                {@const node = entry.node}
+                {@const pat = song.patterns.find(p => p.id === node.patternId)}
+                {@const unreachable = !sceneBfs.reachable.has(node.id)}
+                {#if pat}
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="nav-item"
+                    class:selected={ui.selectedSceneNodes[node.id]}
+                    class:playing={playback.playing && playback.sceneNodeId === node.id}
+                    class:unreachable
+                    onpointerdown={() => selectSceneNode(node.id)}
+                    style="padding-left: {4 + Math.min(entry.depth, 2) * 10}px;{playback.playing && playback.sceneNodeId === node.id ? ` --pulse-dur: ${60 / (song.bpm || 120)}s` : ''}"
+                  >
+                    <span class="nav-color" style="background: {PATTERN_COLORS[pat.color ?? 0]}"></span>
+                    {#if node.root}<span class="nav-root">★</span>{/if}
+                    <span class="nav-name">{pat.name}</span>
+                    {#if node.decorators?.length}
+                      <span class="nav-decs">
+                        {#each node.decorators as dec}
+                          <span class="nav-dec-tag">{decoratorLabel(dec)}</span>
+                        {/each}
+                      </span>
+                    {/if}
+                  </div>
+                {/if}
+              {/each}
+              {#if !placedPatternNodes.length}
+                <div class="dec-empty">No patterns in scene</div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </div>
+    </div>
+    <div class="dock-lower">
+      <div class="param-content">
+        {#if ui.phraseView === 'fx'}
+          <span class="section-label">FX CONTROLS</span>
+          <div class="fx-dock-grid">
+            {#each FX_NODES as node}
+              {@const pad = fxPad[node.key]}
+              {@const fKey = fxFlavourKey(node.key)}
+              <div class="fx-dock-band" class:disabled={!pad.on}>
+                <div class="fx-dock-header">
+                  <button
+                    class="fx-dock-toggle"
+                    class:active={pad.on}
+                    onpointerdown={() => toggleFxOn(node.key)}
+                  >{node.label}</button>
+                  {#if fKey}
+                    <div class="fx-dock-flavours">
+                      {#each FX_FLAVOURS[fKey] as fl}
+                        <button
+                          class="fx-flv-btn"
+                          class:active={currentFlavourId(fKey) === fl.id}
+                          onpointerdown={() => setFlavour(fKey, fl.id)}
+                          data-tip={fl.tip}
+                          data-tip-ja={fl.tipJa}
+                        >{fl.label}</button>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+                <div class="fx-dock-knobs">
+                  <Knob
+                    value={pad.x}
+                    label={fxXLabel(node.key)}
+                    size={32}
+                    displayValue={fxXDisplay(node.key, pad.x)}
+                    onchange={v => setFxX(node.key, v)}
+                  />
+                  <Knob
+                    value={pad.y}
+                    label={fxYLabel(node.key)}
+                    size={32}
+                    displayValue={fxYDisplay(node.key, pad.y)}
+                    onchange={v => setFxY(node.key, v)}
+                  />
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else if ui.phraseView === 'eq'}
+          <span class="section-label">EQ CONTROLS</span>
+          <div class="eq-dock-grid">
+            {#each EQ_BANDS as band}
+              {@const pad = fxPad[band.key]}
+              {@const shelf = getEqShelf(band.key)}
+              <div class="eq-dock-band" class:disabled={!pad.on}>
+                <span class="eq-dock-label">{band.label}{shelf ? ' SH' : ''}</span>
+                <div class="eq-dock-knobs">
+                  <span data-tip="Frequency" data-tip-ja="周波数">
+                    <Knob
+                      value={pad.x}
+                      label="FREQ"
+                      size={32}
+                      displayValue={eqFreqDisplay(pad.x)}
+                      onchange={v => setEqX(band.key, v)}
+                    />
+                  </span>
+                  <span data-tip="Gain (dB)" data-tip-ja="ゲイン (dB)">
+                    <Knob
+                      value={pad.y}
+                      label="GAIN"
+                      size={32}
+                      displayValue={eqGainDisplay(pad.y)}
+                      onchange={v => setEqY(band.key, v)}
+                    />
+                  </span>
+                  <span data-tip="Q (resonance) — scroll wheel on EQ node also works" data-tip-ja="Q (レゾナンス) — EQノード上のスクロールでも変更可能">
+                    <Knob
+                      value={eqQNorm(pad.q ?? 1.5)}
+                      label="Q"
+                      size={32}
+                      displayValue={eqQDisplay(pad.q ?? 1.5)}
+                      onchange={v => setEqQ(band.key, v)}
+                    />
+                  </span>
+                </div>
+                {#if band.hasShelf}
+                  <button
+                    class="btn-shelf"
+                    class:active={shelf}
+                    onpointerdown={() => toggleEqShelf(band.key as 'eqLow' | 'eqHigh')}
+                    data-tip={shelf ? 'Switch to peaking EQ' : 'Switch to shelf EQ'}
+                    data-tip-ja={shelf ? 'ピーキングEQに切替' : 'シェルフEQに切替'}
+                  >{shelf ? 'SHELF' : 'PEAK'}</button>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else if ui.phraseView === 'master'}
+          <span class="section-label">MASTER</span>
+          <div class="master-dock-knobs">
+            {#each MASTER_KNOBS as mk}
+              <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
+                <Knob
+                  value={getMasterKnobValue(mk.key)}
+                  label={mk.label}
+                  size={32}
+                  displayValue={masterKnobDisplay(mk.key)}
+                  onchange={v => setMasterKnobValue(mk.key, v)}
+                />
+              </span>
+            {/each}
+          </div>
+          <span class="section-label mst-sub">XY PAD</span>
+          <div class="master-dock-grid">
+            {#each MASTER_PAD_NODES as node}
+              {@const st = masterPad[node.key]}
+              <div class="master-dock-band" class:disabled={!st.on}>
+                <button
+                  class="fx-dock-toggle"
+                  class:active={st.on}
+                  onpointerdown={() => toggleMasterPadOn(node.key)}
+                  data-tip={node.tip}
+                  data-tip-ja={node.tipJa}
+                >{node.label}</button>
+                <div class="fx-dock-knobs">
+                  <Knob
+                    value={st.x}
+                    label={node.xLabel}
+                    size={32}
+                    displayValue={masterPadXDisplay(node.key)}
+                    onchange={v => setMasterPadX(node.key, v)}
+                  />
+                  <Knob
+                    value={st.y}
+                    label={node.yLabel}
+                    size={32}
+                    displayValue={masterPadYDisplay(node.key)}
+                    onchange={v => setMasterPadY(node.key, v)}
+                  />
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+  {:else}
+  <!-- Normal single-scroll layout -->
   <div class="dock-body">
         <div class="param-content">
           <!-- Pattern header (ADR 069/070) -->
@@ -898,7 +1293,7 @@
           {/if}
         </div>
     </div>
-  {/if}
+  {/if}<!-- close isOverlaySheet if/else -->
 </div>
 
 <style>
@@ -927,39 +1322,6 @@
     flex-direction: column;
     border-left: 1px solid rgba(var(--dk-cream), 0.08);
     overflow: hidden;
-    transition: width 120ms ease-out;
-  }
-
-  /* ── Minimized dock ── */
-  .dock-panel.minimized {
-    width: 16px;
-  }
-
-  /* ── Left-edge handle (border-line grip) ── */
-  .dock-handle {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1;
-  }
-  .dock-handle:hover .handle-bar {
-    background: rgba(var(--dk-cream), 0.35);
-  }
-  .handle-bar {
-    width: 3px;
-    height: 28px;
-    border-radius: 1.5px;
-    background: var(--dk-bg-active);
-    transition: background 80ms;
-  }
-  .dock-panel.minimized .handle-bar {
-    background: rgba(var(--dk-cream), 0.25);
   }
 
   /* ── Body ── */
@@ -968,9 +1330,160 @@
     overflow-y: auto;
     overscroll-behavior: contain;
   }
+  /* ── Split layout (overlay sheets: scene top, controls bottom) ── */
+  .dock-body.dock-split {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .dock-upper {
+    flex: 1 1 50%;
+    min-height: 80px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-bottom: 1px solid var(--dk-border);
+  }
+  .dock-lower {
+    flex: 1 1 50%;
+    min-height: 80px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  /* ── EQ Dock Controls ── */
+  /* ── FX dock controls ── */
+  .fx-dock-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .fx-dock-band {
+    padding: 6px 8px;
+    border: 1px solid var(--dk-border);
+    border-radius: 4px;
+  }
+  .fx-dock-band.disabled {
+    opacity: 0.35;
+  }
+  .fx-dock-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .fx-dock-toggle {
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 1px 6px;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .fx-dock-toggle.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .fx-dock-flavours {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .fx-flv-btn {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 4px;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .fx-flv-btn.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .fx-dock-knobs {
+    display: flex;
+    gap: 4px;
+  }
+  /* ── EQ dock controls ── */
+  .eq-dock-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .eq-dock-band {
+    padding: 6px 8px;
+    border: 1px solid var(--dk-border);
+    border-radius: 4px;
+  }
+  .eq-dock-band.disabled {
+    opacity: 0.35;
+  }
+  .eq-dock-label {
+    display: block;
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--dk-text-mid);
+    margin-bottom: 4px;
+  }
+  .eq-dock-knobs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .btn-shelf {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .btn-shelf.active {
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-bg);
+  }
+  /* ── Master dock controls ── */
+  .master-dock-knobs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .mst-sub {
+    margin-top: 4px;
+  }
+  .master-dock-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .master-dock-band {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .master-dock-band.disabled {
+    opacity: 0.35;
+  }
   /* ── PARAM tab ── */
   .param-content {
-    padding: 10px 12px 10px 16px;
+    padding: 10px 12px;
   }
   /* ── Track selector bar ── */
   .track-bar-label {

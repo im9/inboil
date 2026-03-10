@@ -48,4 +48,14 @@ export const ICON = {
     + `<line x1="5.5" y1="1" x2="5.5" y2="9"/><line x1="9.5" y1="1" x2="9.5" y2="9"/>`
     + `<line x1="14.5" y1="1" x2="14.5" y2="9"/><line x1="18.5" y1="1" x2="18.5" y2="9"/>`
     + `<line x1="12" y1="1" x2="12" y2="15"/>`,
+  // ── Dock toggle (viewBox 0 0 16 16) ──
+
+  /** viewBox 0 0 16 16 – sidebar-right panel (expand) */
+  sidebarRight: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
+    + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`,
+
+  /** viewBox 0 0 16 16 – sidebar-right panel with chevron (collapse) */
+  sidebarRightClose: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
+    + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`
+    + `<polyline points="6,6.5 8,8 6,9.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>`,
 } as const

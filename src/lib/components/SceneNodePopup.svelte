@@ -79,7 +79,7 @@
   // ── Decorator read-only display (ADR 069: editing moved to DockPanel) ──
   function focusDecorator(e: PointerEvent) {
     e.stopPropagation()
-    ui.dockMinimized = false
+    // dock is always visible (no minimize)
   }
 </script>
 

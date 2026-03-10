@@ -44,9 +44,9 @@ export const COLORS_RGB = {
 } as const
 
 // ── FX Flavours (ADR 075) ─────────────────────────────────────────────────
-export type ReverbFlavour   = 'room' | 'hall'
-export type DelayFlavour    = 'digital' | 'dotted'
-export type GlitchFlavour   = 'bitcrush' | 'redux'
+export type ReverbFlavour   = 'room' | 'hall' | 'shimmer'
+export type DelayFlavour    = 'digital' | 'dotted' | 'tape'
+export type GlitchFlavour   = 'bitcrush' | 'redux' | 'stutter'
 export type GranularFlavour = 'cloud' | 'freeze' | 'stretch'
 
 export type FxFlavourKey = 'verb' | 'delay' | 'glitch' | 'granular'
@@ -54,15 +54,18 @@ export type FxFlavourKey = 'verb' | 'delay' | 'glitch' | 'granular'
 export const FX_FLAVOURS = {
   verb: [
     { id: 'room'  as const, label: 'ROOM',  tip: 'Room — short, tight reverb', tipJa: 'ルーム — 短くタイトなリバーブ' },
-    { id: 'hall'  as const, label: 'HALL',  tip: 'Hall — large, diffuse reverb', tipJa: 'ホール — 広く拡散したリバーブ' },
+    { id: 'hall'    as const, label: 'HALL',  tip: 'Hall — large, diffuse reverb', tipJa: 'ホール — 広く拡散したリバーブ' },
+    { id: 'shimmer' as const, label: 'SHIM',  tip: 'Shimmer — octave-up pitch shift in reverb feedback', tipJa: 'シマー — オクターブ上ピッチシフトのリバーブ' },
   ],
   delay: [
     { id: 'digital' as const, label: 'DIGI',  tip: 'Digital — clean ping-pong', tipJa: 'デジタル — クリーンなピンポン' },
     { id: 'dotted'  as const, label: 'DOT.8', tip: 'Dotted 8th — tempo-synced', tipJa: '付点8分 — テンポ同期' },
+    { id: 'tape'    as const, label: 'TAPE',  tip: 'Tape — warm LP-filtered with wow/flutter', tipJa: 'テープ — ウォームなLPフィルター + ワウフラッター' },
   ],
   glitch: [
     { id: 'bitcrush' as const, label: 'CRUSH', tip: 'Bitcrush — sample & hold + quantize', tipJa: 'ビットクラッシュ — S&H + 量子化' },
     { id: 'redux'    as const, label: 'REDUX', tip: 'Redux — aggressive downsample only', tipJa: 'Redux — 強力なダウンサンプリング' },
+    { id: 'stutter'  as const, label: 'STTR',  tip: 'Stutter — rhythmic buffer repeat', tipJa: 'スタッター — リズミックなバッファーリピート' },
   ],
   granular: [
     { id: 'cloud'   as const, label: 'CLOUD', tip: 'Cloud — default grain shower', tipJa: 'クラウド — 通常のグレインシャワー' },
@@ -92,7 +95,7 @@ export const DEFAULT_EFFECTS = {
   reverb: { size: 0.72, damp: 0.5 },
   delay:  { time: 0.75, feedback: 0.42 },
   ducker: { depth: 0.85, release: 120 },
-  comp:   { threshold: 0.30, ratio: 6, makeup: 2.2 },
+  comp:   { threshold: 0.30, ratio: 6, makeup: 2.2, attack: 0.8, release: 60 },
 }
 
 export const DEFAULT_MASTER_PAD = {
@@ -107,9 +110,9 @@ export const DEFAULT_FX_PAD = {
   glitch:   { on: false, x: 0.45, y: 0.15 },
   granular: { on: false, x: 0.50, y: 0.30 },
   filter:   { on: false, x: 0.50, y: 0.30 },
-  eqLow:    { on: true,  x: 0.33, y: 0.50 },
-  eqMid:    { on: true,  x: 0.57, y: 0.50 },
-  eqHigh:   { on: true,  x: 0.87, y: 0.50 },
+  eqLow:    { on: true,  x: 0.33, y: 0.50, q: 1.5, shelf: false },
+  eqMid:    { on: true,  x: 0.57, y: 0.50, q: 1.5 },
+  eqHigh:   { on: true,  x: 0.87, y: 0.50, q: 1.5, shelf: false },
 }
 
 export const DEFAULT_PERF = {
