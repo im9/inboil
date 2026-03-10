@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { activeCell, playback, perf, prefs, vkbd, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo, isViewingPlayingPattern } from '../state.svelte.ts'
+  import type { BrushMode } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
+  import { ICON } from '../icons.ts'
 
   interface Props {
     trackId: number
@@ -130,6 +132,8 @@
   }
 
   function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
+    // Brush mode intercepts before default behavior
+    if (activeBrush !== 'default' && brushStart(e, stepIdx, note)) return
     e.preventDefault()
     const state = getCellState(stepIdx, note)
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
@@ -203,6 +207,7 @@
   }
 
   function noteOnMove(e: PointerEvent) {
+    if (brushDragging) { brushMove(e); return }
     if (!noteGridEl) return
 
     // Cancel long-press timer only if pointer moves beyond tolerance
@@ -251,6 +256,7 @@
   }
 
   function noteEndDrag() {
+    if (brushDragging) { brushEnd(); noteGridEl = null; return }
     if (moveTimer !== null) {
       clearTimeout(moveTimer)
       moveTimer = null
@@ -285,11 +291,168 @@
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
     noteGridEl?.setPointerCapture(e.pointerId)
   }
+
+  // ── Brush mode (ADR 067 Phase 1) ──
+  let heldBrush = $state<BrushMode | null>(null)
+  const activeBrush = $derived(heldBrush ?? ui.brushMode)
+
+  let brushDragging = $state(false)
+  let brushVisited = new Set<string>()
+  let brushConstrainNote = -1
+  let brushHeadStep = -1       // start step of current legato note
+  let brushLastNote = -1       // last drawn pitch (for legato detection)
+
+  function toggleBrush(mode: BrushMode) {
+    ui.brushMode = ui.brushMode === mode ? 'default' : mode
+  }
+
+  function brushPlaceNote(stepIdx: number, note: number) {
+    const trig = ph.trigs[stepIdx]
+    if (isPoly) {
+      const existing = trig.notes ?? (trig.active ? [trig.note] : [])
+      if (existing.includes(note)) return
+      existing.push(note)
+      existing.sort((a, b) => a - b)
+      trig.notes = existing
+      trig.note = existing[0]
+      trig.active = true
+    } else {
+      trig.active = true
+      trig.note = note
+      trig.duration = trig.duration || 1
+      delete trig.notes
+    }
+  }
+
+  function brushEraseNote(stepIdx: number, note: number) {
+    const trig = ph.trigs[stepIdx]
+    if (!trig.active) return
+    if (isPoly && trig.notes) {
+      const idx = trig.notes.indexOf(note)
+      if (idx < 0) return
+      trig.notes.splice(idx, 1)
+      if (trig.notes.length === 0) { trig.active = false; delete trig.notes }
+      else if (trig.notes.length === 1) { trig.note = trig.notes[0]; delete trig.notes }
+      else trig.note = trig.notes[0]
+    } else {
+      if (trigHasNote(trig, note)) trig.active = false
+    }
+  }
+
+  function brushStart(e: PointerEvent, stepIdx: number, note: number) {
+    const mode = activeBrush
+    if (mode === 'default') return false
+    e.preventDefault()
+    noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
+    pushUndo(mode === 'draw' ? 'Draw notes' : 'Erase notes')
+    brushDragging = true
+    brushVisited.clear()
+    brushConstrainNote = note
+    brushHeadStep = stepIdx
+    brushLastNote = note
+    noteGridEl?.setPointerCapture(e.pointerId)
+    const key = `${stepIdx}:${note}`
+    brushVisited.add(key)
+    if (mode === 'draw') brushPlaceNote(stepIdx, note)
+    else brushEraseNote(stepIdx, note)
+    return true
+  }
+
+  function brushMove(e: PointerEvent) {
+    if (!brushDragging || !noteGridEl) return
+    const rect = noteGridEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+    const relY = e.clientY - rect.top
+    const stepIdx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    let note = getNoteFromY(relY)
+    if (note < 0) return
+    note = snapToScale(note)
+    if (e.shiftKey && activeBrush === 'draw') note = brushConstrainNote
+    const key = `${stepIdx}:${note}`
+    if (brushVisited.has(key)) return
+    brushVisited.add(key)
+    if (activeBrush === 'draw') {
+      if (!isPoly && note === brushLastNote && stepIdx > brushHeadStep) {
+        // Same pitch → extend duration (legato)
+        const dur = stepIdx - brushHeadStep + 1
+        ph.trigs[brushHeadStep].duration = Math.min(16, dur)
+        // Clear intermediate steps so they show as continuation
+        for (let s = brushHeadStep + 1; s <= stepIdx; s++) {
+          ph.trigs[s].active = false
+        }
+      } else if (stepIdx > brushHeadStep) {
+        // Different pitch → auto-extend previous note to fill gap, then new head
+        if (!isPoly && brushHeadStep >= 0) {
+          const gap = stepIdx - brushHeadStep
+          ph.trigs[brushHeadStep].duration = Math.min(16, gap)
+          for (let s = brushHeadStep + 1; s < stepIdx; s++) {
+            ph.trigs[s].active = false
+          }
+        }
+        brushPlaceNote(stepIdx, note)
+        brushHeadStep = stepIdx
+        brushLastNote = note
+      } else {
+        // Backward or same step — just place
+        brushPlaceNote(stepIdx, note)
+        brushHeadStep = stepIdx
+        brushLastNote = note
+      }
+    } else {
+      brushEraseNote(stepIdx, note)
+    }
+  }
+
+  function brushEnd() {
+    brushDragging = false
+    brushVisited.clear()
+    brushConstrainNote = -1
+    brushHeadStep = -1
+    brushLastNote = -1
+  }
+
+  // D/E modifier key shortcuts (disabled when vkbd is active)
+  $effect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (vkbd.enabled || e.repeat) return
+      if (e.key === 'd' || e.key === 'D') heldBrush = 'draw'
+      else if (e.key === 'e' || e.key === 'E') heldBrush = 'eraser'
+    }
+    function onKeyUp(e: KeyboardEvent) {
+      if ((e.key === 'd' || e.key === 'D') && heldBrush === 'draw') heldBrush = null
+      else if ((e.key === 'e' || e.key === 'E') && heldBrush === 'eraser') heldBrush = null
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+    }
+  })
 </script>
 
 <div class="piano-roll" data-scroll={scrollDir} onanimationend={() => scrollDir = null}>
   <!-- Left spacer to align grid with step columns -->
   <div class="piano-spacer">
+    <div class="brush-bar">
+      <button
+        class="brush-btn flip-host"
+        data-tip="Draw mode (hold D)" data-tip-ja="描画モード (D長押し)"
+        onclick={() => toggleBrush('draw')}
+      ><span class="flip-card" class:flipped={activeBrush === 'draw'}>
+          <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.pen}</svg></span>
+          <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.pen}</svg></span>
+        </span></button>
+      <button
+        class="brush-btn flip-host"
+        data-tip="Eraser mode (hold E)" data-tip-ja="消しゴムモード (E長押し)"
+        onclick={() => toggleBrush('eraser')}
+      ><span class="flip-card" class:flipped={activeBrush === 'eraser'}>
+          <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.eraser}</svg></span>
+          <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.eraser}</svg></span>
+        </span></button>
+    </div>
     <!-- Octave shift buttons + Piano keys -->
     <div class="oct-keys">
       <button class="oct-btn" disabled={vkbd.octave >= 7} onclick={() => shiftOctave(1)}>▲</button>
@@ -309,6 +472,7 @@
     <div class="grid-cap"></div>
     <div
       class="grid"
+      data-brush={activeBrush}
       role="application"
       style="--steps: {ph.steps}"
       data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
@@ -434,6 +598,43 @@
     height: 14px;
     flex-shrink: 0;
   }
+  .brush-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    padding-top: 8px;
+  }
+  .brush-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    line-height: 0;
+    position: relative;
+    padding: 0;
+    perspective: 60px;
+  }
+  .brush-btn :global(.flip-card) {
+    position: absolute;
+    inset: 0;
+  }
+  .brush-off {
+    border: 1.5px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+  }
+  .brush-on {
+    border: 1.5px solid var(--color-olive);
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .grid[data-brush="draw"] { cursor: crosshair; }
+  .grid[data-brush="draw"] .cell { cursor: crosshair; }
+  .grid[data-brush="eraser"] { cursor: pointer; }
+  .grid[data-brush="eraser"] .cell { cursor: pointer; }
   .grid {
     flex: 1;
     min-height: 0;

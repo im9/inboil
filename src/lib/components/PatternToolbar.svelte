@@ -313,21 +313,19 @@
     flex-shrink: 0;
   }
   .btn-tmpl {
-    border: 1px solid rgba(30,32,40,0.20);
+    border: 1.5px solid var(--color-olive);
     background: transparent;
-    color: rgba(30,32,40,0.45);
+    color: var(--color-olive);
     padding: 4px 8px;
     font-family: var(--font-data);
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;
-    transition: background 60ms, color 60ms, border-color 60ms;
   }
-  .btn-tmpl:hover, .btn-tmpl.open {
-    background: rgba(30,32,40,0.06);
-    color: rgba(30,32,40,0.70);
-    border-color: rgba(30,32,40,0.30);
+  .btn-tmpl.open {
+    background: var(--color-olive);
+    color: var(--color-bg);
   }
   .tmpl-backdrop {
     position: fixed;
@@ -379,9 +377,9 @@
   /* ── Loop button ── */
   .btn-loop {
     margin-left: auto;
-    border: 1px solid rgba(30,32,40,0.20);
+    border: 1.5px solid var(--color-olive);
     background: transparent;
-    color: rgba(30,32,40,0.35);
+    color: var(--color-olive);
     width: 28px;
     height: 28px;
     display: flex;
@@ -389,9 +387,6 @@
     justify-content: center;
     flex-shrink: 0;
     transition: color 60ms, background 60ms, border-color 60ms;
-  }
-  .btn-loop:active {
-    background: rgba(30,32,40,0.08);
   }
   .btn-loop.active {
     color: var(--color-olive);
@@ -411,9 +406,9 @@
   }
 
   .btn-close {
-    border: 1px solid rgba(30,32,40,0.20);
+    border: 1.5px solid var(--color-fg);
     background: transparent;
-    color: rgba(30,32,40,0.40);
+    color: var(--color-fg);
     width: 24px;
     height: 24px;
     font-size: 12px;
@@ -421,11 +416,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: color 60ms, background 60ms;
-  }
-  .btn-close:active {
-    background: rgba(30,32,40,0.08);
-    color: rgba(30,32,40,0.70);
   }
 
   .toolbar-group {
@@ -499,9 +489,9 @@
     margin-left: 8px;
   }
   .oct-adj {
-    border: 1px solid rgba(30,32,40,0.20);
+    border: 1.5px solid var(--color-olive);
     background: transparent;
-    color: rgba(30,32,40,0.50);
+    color: var(--color-olive);
     width: 20px;
     height: 20px;
     font-size: 12px;
@@ -510,7 +500,6 @@
     justify-content: center;
     flex-shrink: 0;
   }
-  .oct-adj:active { background: rgba(30,32,40,0.08); }
   .oct-value {
     font-family: var(--font-display);
     font-size: 22px;
@@ -530,14 +519,13 @@
 
   /* ── RAND ── */
   .btn-rand {
-    border: 1px solid var(--color-olive);
+    border: 1.5px solid var(--color-olive);
     background: transparent;
     color: var(--color-olive);
     padding: 4px 10px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    transition: background 60ms linear, color 60ms linear;
     flex-shrink: 0;
   }
   .btn-rand:active {
@@ -625,15 +613,14 @@
     .oct-adj-m {
       width: 22px;
       height: 16px;
-      border: 1px solid rgba(30,32,40,0.18);
+      border: 1.5px solid var(--color-olive);
       background: transparent;
-      color: rgba(30,32,40,0.45);
+      color: var(--color-olive);
       font-size: 9px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .oct-adj-m:active { background: rgba(30,32,40,0.08); }
     .oct-val-m {
       font-family: var(--font-data);
       font-size: 11px;

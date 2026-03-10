@@ -54,6 +54,22 @@ export const ICON = {
   sidebarRight: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
     + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`,
 
+  // ── Piano Roll brush modes (viewBox 0 0 14 14) ──
+
+  /** Pen / draw mode — scaled from Pencil.svg 512×512 (fill-rule evenodd, widened cutouts) */
+  pen: `<path fill-rule="evenodd" d="`
+    + `M13.8 2.4L11.5 0.2 1.3 9.3 0 13.3 4.6 12.8 13.8 3.1z`
+    + `M1.5 13.1L0.9 12.1 1.7 9.5 3.5 10.5 4.3 12.3z`
+    + `M12.8 2.5L4.6 10.7 3.4 9.5 11.6 1.3z`
+    + `" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>`,
+
+  /** Eraser mode — scaled from Eraser.svg 1000×1000 (fill-rule evenodd, widened cutouts) */
+  eraser: `<path fill-rule="evenodd" d="`
+    + `M7.5 11L7.7 11.2 13 5.8 8.6 1.3 3.2 6.7 3.4 6.9 1.8 8.5 1.8 10 4.4 12.6H10.6V12H6.4z`
+    + `M8.8 2.5L12 5.8 7.5 10 4.2 6.7z`
+    + `M5.6 12H4.6L2.4 9.7 2.4 9 4 7.5 7 10.4z`
+    + `" fill="currentColor" stroke="currentColor" stroke-width="0.5" stroke-linejoin="round"/>`,
+
   /** viewBox 0 0 16 16 – sidebar-right panel with chevron (collapse) */
   sidebarRightClose: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
     + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`

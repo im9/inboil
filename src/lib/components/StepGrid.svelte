@@ -532,11 +532,11 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--color-muted);
+    color: var(--color-fg);
     text-transform: uppercase;
     cursor: pointer;
     user-select: none;
-    border: 1px solid var(--color-muted);
+    border: 1px solid var(--color-fg);
     padding: 2px 6px;
     background: transparent;
     transition: color 150ms, border-color 150ms;
@@ -552,19 +552,15 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    border: 1px solid var(--color-olive);
+    border: 1px solid var(--color-fg);
     background: transparent;
-    color: var(--color-olive);
+    color: var(--color-fg);
     font-size: 8px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-  }
-  .btn-steps:active {
-    background: var(--color-olive);
-    color: var(--color-bg);
   }
   .vel-bars {
     flex: 1;

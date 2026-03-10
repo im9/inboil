@@ -15,6 +15,31 @@ Treats the UI as graphic design first — geometric shapes, bold typography, and
 6. **Color is reserved for state** — Olive for active trigs, blue for playhead, salmon for alerts.
 7. **Geometric elements as texture** — Decorative shapes in zones for visual rhythm.
 
+## Button Border System — DECIDED
+
+Two tiers based on function:
+
+### Olive tier (1.5px solid `--color-olive`)
+Tool and function buttons: TMPL, RND, KBD, Loop, brush (pen/eraser), OCT ▲▼.
+- Default: olive border + olive text/icon, transparent background.
+- Active/on: olive background + cream text/icon (filled).
+- Toggle buttons use **flip-card** animation (`rotateY(180deg)`, 180ms ease-out, `perspective: 60px`). Press-down: `scale(0.85)`.
+
+### FG tier (1px solid `--color-fg`)
+Track-level controls: Solo, Mute, Steps, VEL/CHNC, Close (✕).
+- Default: fg border + fg text, transparent background.
+- Active/on: Solo → olive fill (flip-card), Mute → fg fill (flip-card).
+
+### Performance tier (1.5px, distinct colors)
+Press-hold buttons with semantic colors:
+- FILL, REV: `--color-blue`
+- BRK: `--color-salmon`
+
+### Rules
+- **No hover states** on rapid-fire buttons (steps, solo, mute) — flicker during fast interaction is distracting.
+- **No gradients, no shadows** — consistent with Principle 4.
+- SVG icon stroke weight should visually match the button border weight (e.g. `stroke-width="1.5"` for olive-tier icon buttons).
+
 ## Color Palette — DECIDED
 
 ```css

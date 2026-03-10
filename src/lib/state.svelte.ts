@@ -17,6 +17,8 @@ export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
 export type { VoiceId } from './audio/dsp/voices.ts'
 import type { VoiceId } from './audio/dsp/voices.ts'
 
+export type BrushMode = 'default' | 'draw' | 'eraser'
+
 export interface Trig {
   active: boolean
   note: number      // MIDI note (60 = C4) — primary / mono note
@@ -385,6 +387,7 @@ export const ui = $state<{
   mobileOverlay: boolean
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
+  brushMode: BrushMode
 }>({
   selectedTrack: 0,
   currentSection: 0,
@@ -403,6 +406,7 @@ export const ui = $state<{
   mobileOverlay: false,
   editingAutomationDecorator: null,
   focusSceneNodeId: null,
+  brushMode: 'default' as BrushMode,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
