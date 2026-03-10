@@ -7,6 +7,7 @@
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
     { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
     { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
+    { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -83,6 +84,15 @@
         <rect x="8" y="3" width="2" height="9" rx="0.5"/>
         <rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
         <rect x="1" y="2" width="12" height="1" rx="0.5" opacity="0.2"/>
+      </svg>
+    {:else if item.type === 'tonnetz'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <circle cx="3" cy="3" r="1.5" opacity="0.4"/>
+        <circle cx="11" cy="3" r="1.5" opacity="0.4"/>
+        <circle cx="7" cy="11" r="1.5"/>
+        <line x1="3" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+        <line x1="3" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+        <line x1="11" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
       </svg>
     {:else if item.type === 'label'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>

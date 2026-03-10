@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { turingGenerate, quantizeTrigs, SCALE_MAP } from './generative.ts'
-import type { TuringParams, QuantizerParams, Trig } from './state.svelte.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate, SCALE_MAP } from './generative.ts'
+import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './state.svelte.ts'
 
 describe('turingGenerate', () => {
   const baseParams: TuringParams = {
@@ -139,6 +139,96 @@ describe('quantizeTrigs', () => {
     expect(result[0].notes).toBeDefined()
     for (const n of result[0].notes!) {
       expect(SCALE_MAP.major).toContain(n % 12)
+    }
+  })
+})
+
+// ── Tonnetz ──
+
+describe('tonnetzGenerate', () => {
+  const baseParams: TonnetzParams = {
+    engine: 'tonnetz',
+    startChord: [60, 64, 67], // C major
+    sequence: ['P', 'L', 'R'],
+    stepsPerChord: 4,
+    voicing: 'close',
+  }
+
+  it('generates the requested number of steps', () => {
+    const trigs = tonnetzGenerate(baseParams, 16)
+    expect(trigs).toHaveLength(16)
+  })
+
+  it('all trigs have poly notes (chords)', () => {
+    const trigs = tonnetzGenerate(baseParams, 16)
+    for (const t of trigs) {
+      expect(t.notes).toBeDefined()
+      expect(t.notes!.length).toBe(3)
+    }
+  })
+
+  it('first chord matches startChord', () => {
+    const trigs = tonnetzGenerate(baseParams, 4)
+    // First chord should be C major [60, 64, 67] in close voicing
+    expect(trigs[0].notes).toEqual([60, 64, 67])
+  })
+
+  it('P transform flips major to minor', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerChord: 4 }
+    const trigs = tonnetzGenerate(params, 8)
+    // Step 4 should be C minor (P of C major): root stays, third moves
+    const chord2 = trigs[4].notes!
+    // C minor = [60, 63, 67] (but may be normalized)
+    const intervals = [chord2[1] - chord2[0], chord2[2] - chord2[1]]
+    expect(intervals).toEqual([3, 4]) // minor triad
+  })
+
+  it('chords change at stepsPerChord boundaries', () => {
+    const trigs = tonnetzGenerate(baseParams, 12)
+    // Steps 0-3: same chord, steps 4-7: different chord
+    expect(trigs[0].notes).toEqual(trigs[1].notes)
+    expect(trigs[0].notes).toEqual(trigs[3].notes)
+    // After transform, chord should differ
+    expect(trigs[0].notes).not.toEqual(trigs[4].notes)
+  })
+
+  it('accents on chord changes', () => {
+    const trigs = tonnetzGenerate(baseParams, 8)
+    expect(trigs[0].velocity).toBeGreaterThan(trigs[1].velocity)
+    expect(trigs[4].velocity).toBeGreaterThan(trigs[5].velocity)
+  })
+
+  it('spread voicing raises middle note', () => {
+    const params: TonnetzParams = { ...baseParams, voicing: 'spread' }
+    const trigs = tonnetzGenerate(params, 4)
+    const notes = trigs[0].notes!
+    // Spread: [root, middle+12, fifth]
+    expect(notes[1] - notes[0]).toBeGreaterThan(12)
+  })
+
+  it('drop2 voicing reorders voices', () => {
+    const params: TonnetzParams = { ...baseParams, voicing: 'drop2' }
+    const trigs = tonnetzGenerate(params, 4)
+    const notes = trigs[0].notes!
+    // Drop2: [root, fifth, middle+12]
+    expect(notes[2]).toBeGreaterThan(notes[1])
+    expect(notes[2] - notes[0]).toBeGreaterThan(12)
+  })
+
+  it('all trigs are active', () => {
+    const trigs = tonnetzGenerate(baseParams, 16)
+    expect(trigs.every(t => t.active)).toBe(true)
+  })
+
+  it('MIDI notes stay in reasonable range', () => {
+    // Long sequence to test range doesn't drift
+    const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L', 'R', 'PL', 'PR', 'LR'], stepsPerChord: 2 }
+    const trigs = tonnetzGenerate(params, 64)
+    for (const t of trigs) {
+      for (const n of t.notes!) {
+        expect(n).toBeGreaterThanOrEqual(0)
+        expect(n).toBeLessThanOrEqual(127)
+      }
     }
   })
 })

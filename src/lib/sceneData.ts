@@ -28,7 +28,16 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
     clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
   }
   if (n.generative) {
-    clone.generative = structuredClone(n.generative)
+    clone.generative = {
+      ...n.generative,
+      params: { ...n.generative.params },
+    }
+    // Deep-clone array/tuple fields in params
+    const p = n.generative.params as unknown as Record<string, unknown>
+    const cp = clone.generative.params as unknown as Record<string, unknown>
+    for (const k of Object.keys(p)) {
+      if (Array.isArray(p[k])) cp[k] = [...(p[k] as unknown[])]
+    }
   }
   return clone
 }

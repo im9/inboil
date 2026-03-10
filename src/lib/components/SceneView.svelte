@@ -822,6 +822,36 @@
                 {/if}
               </div>
             </div>
+          {:else if node.generative.engine === 'tonnetz'}
+            {@const tnp = node.generative.params as import('../state.svelte.ts').TonnetzParams}
+            <div class="gen-faceplate tonnetz">
+              <div class="tonnetz-ops">
+                {#each tnp.sequence.slice(0, 5) as op}
+                  <span class="tonnetz-op">{op}</span>
+                {/each}
+              </div>
+              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-controls">
+                <!-- svelte-ignore node_invalid_placement_ssr -->
+                <span class="gen-mode-toggle" role="button" tabindex="-1"
+                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
+                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
+                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
+                {#if node.generative.outputMode === 'write'}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn" role="button" tabindex="-1"
+                    data-tip="Generate" data-tip-ja="生成"
+                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                  >GEN</span>
+                {:else}
+                  <!-- svelte-ignore node_invalid_placement_ssr -->
+                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
+                    data-tip="Freeze" data-tip-ja="フリーズ"
+                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
+                  >FRZ</span>
+                {/if}
+              </div>
+            </div>
           {:else}
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
@@ -1288,6 +1318,20 @@
   .gen-run-btn.freeze {
     border-color: rgba(120, 120, 69, 0.5);
     color: rgba(120, 120, 69, 0.9);
+  }
+  /* Tonnetz transform ops */
+  .tonnetz-ops {
+    display: flex;
+    gap: 3px;
+  }
+  .tonnetz-op {
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 2px;
+    background: rgba(237, 232, 220, 0.2);
+    color: rgba(237, 232, 220, 0.85);
   }
 
   .scene-node.playing {

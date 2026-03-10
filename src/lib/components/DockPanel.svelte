@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, activeCell, ui, playback, samplesByTrack, setSample, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
-  import type { SceneDecorator, SceneNode, TuringParams, QuantizerParams } from '../state.svelte.ts'
+  import type { SceneDecorator, SceneNode, TuringParams, QuantizerParams, TonnetzParams } from '../state.svelte.ts'
   import { clearAllParamLocks, setTrackSend, applyPreset, changeVoice, removeTrack } from '../stepActions.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -22,6 +22,15 @@
 
   // ── Scene decorator editing (ADR 069) ──
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+  function chordQuality(chord: [number, number, number]): string {
+    const i1 = chord[1] - chord[0], i2 = chord[2] - chord[1]
+    if (i1 === 4 && i2 === 3) return 'maj'
+    if (i1 === 3 && i2 === 4) return 'min'
+    if (i1 === 3 && i2 === 3) return 'dim'
+    if (i1 === 4 && i2 === 4) return 'aug'
+    return ''
+  }
 
   // FX/EQ/Master sheets override decorator editor → show navigator instead
   const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
@@ -1099,6 +1108,58 @@
                         <option value={s} selected={qp.scale === s}>{s}</option>
                       {/each}
                     </select>
+                  </div>
+                {:else if gen.engine === 'tonnetz'}
+                  {@const tnp = gen.params as TonnetzParams}
+                  <div class="gen-param-grid">
+                    <Knob
+                      value={tnp.stepsPerChord / 16}
+                      label="STEPS"
+                      displayValue={String(tnp.stepsPerChord)}
+                      size={36}
+                      steps={16}
+                      onchange={v => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { stepsPerChord: Math.max(1, Math.round(v * 16)) })}
+                    />
+                  </div>
+                  <div class="gen-scale-row">
+                    <span class="gen-range-label">VOICING</span>
+                    <select class="gen-scale-select"
+                      onchange={e => sceneUpdateGenerativeParams(sceneGenerativeNode.id, { voicing: (e.target as HTMLSelectElement).value as TonnetzParams['voicing'] })}
+                    >
+                      {#each ['close', 'spread', 'drop2'] as v}
+                        <option value={v} selected={tnp.voicing === v}>{v}</option>
+                      {/each}
+                    </select>
+                  </div>
+                  <div class="gen-scale-row">
+                    <span class="gen-range-label">CHORD</span>
+                    <span class="gen-range-label" style="font-size:9px; opacity:0.7">{NOTE_NAMES[tnp.startChord[0] % 12]}{chordQuality(tnp.startChord)}</span>
+                  </div>
+                  <div class="gen-scale-row">
+                    <span class="gen-range-label">OPS</span>
+                    <div class="tonnetz-seq-editor">
+                      {#each tnp.sequence as op, i}
+                        <select class="tonnetz-op-select"
+                          onchange={e => {
+                            const newSeq = [...tnp.sequence]
+                            newSeq[i] = (e.target as HTMLSelectElement).value
+                            sceneUpdateGenerativeParams(sceneGenerativeNode.id, { sequence: newSeq } as any)
+                          }}
+                        >
+                          {#each ['P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR'] as o}
+                            <option value={o} selected={op === o}>{o}</option>
+                          {/each}
+                        </select>
+                      {/each}
+                      <button class="tonnetz-add-op" onpointerdown={() => {
+                        sceneUpdateGenerativeParams(sceneGenerativeNode.id, { sequence: [...tnp.sequence, 'P'] } as any)
+                      }}>+</button>
+                      {#if tnp.sequence.length > 1}
+                        <button class="tonnetz-add-op" onpointerdown={() => {
+                          sceneUpdateGenerativeParams(sceneGenerativeNode.id, { sequence: tnp.sequence.slice(0, -1) } as any)
+                        }}>−</button>
+                      {/if}
+                    </div>
                   </div>
                 {/if}
                 <!-- Common: merge mode -->
@@ -2594,6 +2655,36 @@
     border: 1px solid rgba(237, 232, 220, 0.2);
     color: inherit;
     padding: 2px 4px;
+  }
+  .tonnetz-seq-editor {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tonnetz-op-select {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    background: transparent;
+    border: 1px solid rgba(237, 232, 220, 0.2);
+    color: inherit;
+    padding: 1px 2px;
+    width: 36px;
+  }
+  .tonnetz-add-op {
+    width: 20px;
+    height: 20px;
+    border: 1px solid rgba(237, 232, 220, 0.2);
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tonnetz-add-op:hover {
+    background: rgba(237, 232, 220, 0.1);
   }
 
 </style>

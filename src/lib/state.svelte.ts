@@ -6,7 +6,7 @@ import {
   DEFAULT_FX_FLAVOURS,
 } from './constants.ts'
 import type { FxFlavours } from './constants.ts'
-import { turingGenerate, quantizeTrigs } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 import {
   DRUM_VOICES, makeDefaultSong, makeEmptySong, makeEmptyCell,
   SECTION_COUNT,
@@ -855,6 +855,8 @@ function applyLiveGenerative(patternNode: SceneNode): void {
       } else if (gen.engine === 'quantizer') {
         const input = trigs ?? cell.trigs.map(t => ({ ...t }))
         trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+      } else if (gen.engine === 'tonnetz') {
+        trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
       }
     }
 

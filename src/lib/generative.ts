@@ -3,7 +3,7 @@
  * Pure functions — no state imports. Caller handles undo + pattern writes.
  */
 
-import type { Trig, TuringParams, QuantizerParams } from './state.svelte.ts'
+import type { Trig, TuringParams, QuantizerParams, TonnetzParams } from './state.svelte.ts'
 
 // ── Turing Machine (shift-register random) ──
 
@@ -154,6 +154,109 @@ export function quantizeTrigs(trigs: Trig[], params: QuantizerParams): Trig[] {
     }
     return result
   })
+}
+
+// ── Tonnetz (neo-Riemannian chord transforms) ──
+
+type Triad = [number, number, number]
+
+/** Parallel transform: flip the third (major ↔ minor) */
+function nrP(chord: Triad): Triad {
+  const [a, b, c] = chord
+  const i1 = b - a, i2 = c - b
+  // Major (4,3) → minor (3,4) and vice versa
+  if (i1 === 4 && i2 === 3) return [a, a + 3, c]
+  if (i1 === 3 && i2 === 4) return [a, a + 4, c]
+  return chord // not a triad we recognize
+}
+
+/** Leading-tone transform: move root (major) or fifth (minor) */
+function nrL(chord: Triad): Triad {
+  const [a, b, c] = chord
+  const i1 = b - a, i2 = c - b
+  if (i1 === 4 && i2 === 3) return [b, c, a + 12]  // major → minor (1st inv context)
+  if (i1 === 3 && i2 === 4) return [c - 12, a, b]   // minor → major
+  return chord
+}
+
+/** Relative transform: move fifth (major) or root (minor) */
+function nrR(chord: Triad): Triad {
+  const [a, b, c] = chord
+  const i1 = b - a, i2 = c - b
+  if (i1 === 4 && i2 === 3) return [c - 12, a, b] // C maj → A min (relative minor, shifted down)
+  if (i1 === 3 && i2 === 4) return [b, c, a + 12] // A min → C maj
+  return chord
+}
+
+/** Normalize triad to close voicing within a reasonable range */
+function normalizeTriad(chord: Triad): Triad {
+  // Sort and compact to close position
+  const sorted = [...chord].sort((a, b) => a - b) as Triad
+  // Keep within MIDI range and compact intervals
+  while (sorted[2] - sorted[0] > 12) {
+    sorted[2] -= 12
+    sorted.sort((a, b) => a - b)
+  }
+  // Keep in reasonable range (don't drift too far)
+  while (sorted[0] < 36) { sorted[0] += 12; sorted[1] += 12; sorted[2] += 12 }
+  while (sorted[0] > 84) { sorted[0] -= 12; sorted[1] -= 12; sorted[2] -= 12 }
+  return sorted as Triad
+}
+
+/** Apply a named neo-Riemannian operation (single or compound) */
+function applyTonnetzOp(chord: Triad, op: string): Triad {
+  let result = chord
+  for (const ch of op) {
+    if (ch === 'P') result = nrP(result)
+    else if (ch === 'L') result = nrL(result)
+    else if (ch === 'R') result = nrR(result)
+  }
+  return normalizeTriad(result)
+}
+
+/** Apply voicing to a triad */
+function applyVoicing(chord: Triad, voicing: TonnetzParams['voicing']): number[] {
+  const [a, b, c] = chord
+  switch (voicing) {
+    case 'close': return [a, b, c]
+    case 'spread': return [a, b + 12, c] // spread middle voice up an octave
+    case 'drop2': return [a, c, b + 12]  // drop 2nd voice down, move to top
+  }
+}
+
+/**
+ * Generate a chord sequence by walking the Tonnetz lattice.
+ * Each step in `sequence` transforms the current chord; each chord is held for `stepsPerChord` steps.
+ */
+export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
+  const trigs: Trig[] = []
+  let chord: Triad = [...params.startChord] as Triad
+  const seq = params.sequence
+  let seqIdx = 0
+
+  for (let step = 0; step < steps; step++) {
+    const chordStep = Math.floor(step / params.stepsPerChord)
+    const isNewChord = step % params.stepsPerChord === 0
+
+    // Apply next transform at each new chord boundary (skip first chord)
+    if (isNewChord && chordStep > 0) {
+      const op = seq[(seqIdx) % seq.length]
+      chord = applyTonnetzOp(chord, op)
+      seqIdx++
+    }
+
+    const voiced = applyVoicing(chord, params.voicing)
+    trigs.push({
+      active: true,
+      note: voiced[0],  // root as primary note
+      notes: voiced,     // full chord as poly notes
+      velocity: isNewChord ? 0.9 : 0.7,  // accent on chord changes
+      duration: 1,
+      slide: false,
+    })
+  }
+
+  return trigs
 }
 
 // ── Seeded PRNG (simple mulberry32) ──

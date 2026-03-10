@@ -4,9 +4,9 @@
  */
 
 import { song, ui, pushUndo } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, Trig } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig } from './state.svelte.ts'
 import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
-import { turingGenerate, quantizeTrigs } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 
 // ── ID generation ──
 
@@ -183,7 +183,7 @@ export function sceneAddGenerativeNode(engine: GenerativeEngine, x: number, y: n
 }
 
 /** Update generative node params */
-export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<TuringParams | QuantizerParams>): void {
+export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<TuringParams | QuantizerParams | TonnetzParams>): void {
   pushUndo('Update generative params')
   const node = song.scene.nodes.find(n => n.id === nodeId)
   if (!node?.generative) return
@@ -217,12 +217,12 @@ export function sceneGenerateWrite(nodeId: string): boolean {
   for (const genNode of chain) {
     const gen = genNode.generative!
     if (gen.engine === 'turing') {
-      // Turing generates from scratch
       trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
     } else if (gen.engine === 'quantizer') {
-      // Quantizer transforms existing trigs (or creates from pattern data)
       const input = trigs ?? cell.trigs.map(t => ({ ...t }))
       trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+    } else if (gen.engine === 'tonnetz') {
+      trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
     }
   }
 
