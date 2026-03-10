@@ -71,7 +71,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 066 | Scene Node Decorators | Implemented | Snap-attach function nodes to patterns as decorators, edge branching = probabilistic routing |
 | 069 | Dock Panel Decorator Editor | Implemented | Full-size Knob/toggle editing in DockPanel, Add dropdown, SceneNodePopup read-only labels |
 | 070 | Scene Navigator | Implemented | Pattern list in DockPanel, tap-to-select, BPM-synced playback pulse, context-aware display for EQ/Master/FX sheets |
-| 078 | Generative Scene Nodes | Proposed | Repurpose function nodes → generative (Quantizer/Tonnetz/Random), write+live modes, Freeze, node consolidation |
+| 078 | Generative Scene Nodes | Implemented | Generative nodes (Quantizer/Tonnetz/Turing Machine), write+live modes, Freeze, presets+seed, DockPanel editing |
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |
 
 ## UI / Layout

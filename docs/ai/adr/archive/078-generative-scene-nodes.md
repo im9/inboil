@@ -1,6 +1,6 @@
 # ADR 078: Generative Scene Nodes
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
