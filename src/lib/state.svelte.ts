@@ -630,6 +630,22 @@ export const vkbd = $state({
   heldKeys: new Set<string>(),
 })
 
+export interface MidiDevice {
+  id: string
+  name: string
+  manufacturer: string
+  connected: boolean
+}
+
+export const midiIn = $state({
+  available: false,
+  enabled: false,
+  devices: [] as MidiDevice[],
+  activeDeviceId: '',
+  channel: 0 as number,
+  receiving: false,
+})
+
 /** @deprecated Use song.effects directly — kept as re-export for migration convenience */
 export const effects = {
   get reverb() { return song.effects.reverb },

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, project, song, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
   import { exportAndDownloadMidi } from '../midiExport.ts'
   import { startCapture, stopCapture } from '../wavExport.ts'
   import { downloadBlob } from '../midiExport.ts'
   import { engine } from '../audio/engine.ts'
+  import { startListening, stopListening } from '../midi.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -498,6 +499,60 @@
             </div>
           </div>
 
+          <!-- MIDI Input (ADR 081) -->
+          {#if midiIn.available}
+          <div class="settings-section">
+            <div class="setting-row">
+              <div class="setting-row-text">
+                <span class="setting-row-label">{L === 'ja' ? 'MIDI入力' : 'MIDI INPUT'}</span>
+                <span class="setting-row-desc">{L === 'ja'
+                  ? '外部MIDIキーボードで演奏'
+                  : 'Play with external MIDI keyboard'}</span>
+              </div>
+              <button class="btn-toggle" class:on={midiIn.enabled} onpointerdown={() => {
+                midiIn.enabled = !midiIn.enabled
+                if (midiIn.enabled) startListening(); else stopListening()
+              }}>
+                {midiIn.enabled ? 'ON' : 'OFF'}
+              </button>
+            </div>
+            {#if midiIn.enabled}
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'デバイス' : 'DEVICE'}</span>
+                </div>
+                <select class="midi-select" bind:value={midiIn.activeDeviceId}>
+                  <option value="">{L === 'ja' ? 'すべて' : 'All'}</option>
+                  {#each midiIn.devices.filter(d => d.connected) as dev}
+                    <option value={dev.id}>{dev.name}</option>
+                  {/each}
+                </select>
+              </div>
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'チャンネル' : 'CHANNEL'}</span>
+                </div>
+                <select class="midi-select" bind:value={midiIn.channel}>
+                  <option value={0}>Omni</option>
+                  {#each Array.from({ length: 16 }, (_, i) => i + 1) as ch}
+                    <option value={ch}>{ch}</option>
+                  {/each}
+                </select>
+              </div>
+              {#if midiIn.devices.length > 0}
+                <div class="midi-devices">
+                  {#each midiIn.devices as dev}
+                    <div class="midi-device" class:offline={!dev.connected}>
+                      <span class="midi-dot" class:on={dev.connected}></span>
+                      <span class="midi-device-name">{dev.name}</span>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </div>
+          {/if}
+
           <div class="setting-group about">
             <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
           </div>
@@ -813,6 +868,35 @@
     color: var(--color-olive);
   }
   .btn-toggle:active { opacity: 0.7; }
+
+  /* ── MIDI (ADR 081) ── */
+  .midi-select {
+    background: transparent;
+    border: 1px solid rgba(237,232,220,0.3);
+    color: rgba(237,232,220,0.7);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    outline: none;
+  }
+  .midi-select option { background: var(--color-bg); }
+  .midi-devices { padding: 4px 0 0; }
+  .midi-device {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+    font-size: 10px;
+    color: rgba(237,232,220,0.55);
+  }
+  .midi-device.offline { opacity: 0.4; }
+  .midi-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(237,232,220,0.25);
+    flex-shrink: 0;
+  }
+  .midi-dot.on { background: var(--color-olive); }
 
   /* ── Mobile: fullscreen overlay ── */
   @media (max-width: 639px) {

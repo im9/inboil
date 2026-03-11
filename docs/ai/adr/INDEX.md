@@ -109,7 +109,9 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 026 | Auto-Performance | Proposed | Auto Fill/Break/Reverse |
 | 031 | Virtual MIDI Keyboard | Implemented | Phase 1: audition mode, octave synced with piano roll |
 | 038 | Custom Functions | Superseded | Replaced by decorators (ADR 066/076) + generative nodes (ADR 078) |
-| 081 | Hardware MIDI Keyboard Input | Proposed | Web MIDI API, USB + BLE MIDI, Chrome/desktop only, feeds vkbd pipeline |
+| 081 | Hardware MIDI Keyboard Input | Implemented | Web MIDI API, USB + BLE MIDI, per-note release, CC1→DJ Filter |
+| 083 | MIDI Learn & Pitch Bend | Proposed | setVoiceParam worklet command, pitch bend, CC learn mode for DockPanel knobs |
+| 084 | MIDI Step & Live Record | Proposed | Step input + live record from MIDI/vkbd, shared pipeline (originally ADR 081 Phase 4) |
 | 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 
 ## Data / Infrastructure

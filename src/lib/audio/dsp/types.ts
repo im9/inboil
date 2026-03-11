@@ -3,7 +3,7 @@
  */
 
 export interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'loadSample'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean

@@ -1,6 +1,6 @@
 # ADR 081: Hardware MIDI Keyboard Input (Web MIDI API)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -213,10 +213,10 @@ Latency: BLE MIDI adds ~10–20ms delay. Acceptable for step input and audition.
 
 ## Implementation Phases
 
-1. **Phase 1: Basic Input** — `initMidi()`, `handleMessage()`, noteOn/Off → existing `engine.triggerNote/releaseNote`. Sidebar UI (enable toggle + device list). ~100 LOC.
-2. **Phase 2: Per-Note Release** — `releaseNoteByPitch` worklet command. Polyphonic support.
-3. **Phase 3: CC Mapping** — Modulation wheel (CC1) → filter cutoff, pitch bend → detune. Learn mode (receive CC → auto-assign to parameter).
-4. **Phase 4: Step/Live Record** — Shared with ADR 031 Phase 2/3. Integration of MIDI input into step-record and live-record modes.
+1. **Phase 1: Basic Input** — Done. `initMidi()`, `handleMessage()`, noteOn/Off → existing `engine.triggerNote/releaseNote`. Sidebar UI (enable toggle + device list).
+2. **Phase 2: Per-Note Release** — Done. `releaseNoteByPitch` worklet command. Polyphonic support.
+3. **Phase 3: CC Mapping** — Partial. CC1 → DJ Filter implemented. Pitch bend and MIDI Learn → ADR 083.
+4. **Phase 4: Step/Live Record** → ADR 084.
 
 ## Considerations
 

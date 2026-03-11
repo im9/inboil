@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, isViewingPlayingPattern, song, fxPad, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, NOTE_NAMES } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import { engine } from '../audio/engine.ts'
@@ -233,6 +233,11 @@
     ><svg class="kbd-icon" viewBox="0 0 24 16" width="20" height="13" fill="none" stroke="currentColor" stroke-width="1.5">{@html ICON.keyboard}</svg></button>
     {#if vkbd.enabled}
       <span class="vkbd-info">C{vkbd.octave}</span>
+    {/if}
+    {#if midiIn.enabled}
+      <span class="midi-indicator" class:active={midiIn.receiving}
+        data-tip="MIDI input active" data-tip-ja="MIDI入力中"
+      >MIDI</span>
     {/if}
   </div>
 
@@ -555,6 +560,17 @@
     letter-spacing: 0.08em;
     color: rgba(30,32,40,0.50);
     white-space: nowrap;
+  }
+
+  .midi-indicator {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(30,32,40,0.35);
+    white-space: nowrap;
+  }
+  .midi-indicator.active {
+    color: var(--color-olive);
   }
 
   /* ── Mobile ── */

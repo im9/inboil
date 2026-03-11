@@ -163,6 +163,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private accumulator = 0
   private patternLen = 16   // max step count across all tracks
   private patternPos = 0    // global position within pattern cycle
+  private auditionNote: Record<number, number> = {}  // trackId → last triggered MIDI note
 
   // FX
   private reverb = new SimpleReverb(sampleRate)
@@ -300,12 +301,23 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const t = cmd.trackId ?? 0
           const v = this.voices[t]
           if (v) v.noteOn(cmd.note ?? 60, cmd.velocity ?? 0.8)
+          this.auditionNote[t] = cmd.note ?? 60
           break
         }
         case 'releaseNote': {
           const t = cmd.trackId ?? 0
           const v = this.voices[t]
           if (v) v.noteOff()
+          delete this.auditionNote[t]
+          break
+        }
+        case 'releaseNoteByPitch': {
+          const t = cmd.trackId ?? 0
+          if (this.auditionNote[t] === cmd.note) {
+            const v = this.voices[t]
+            if (v) v.noteOff()
+            delete this.auditionNote[t]
+          }
           break
         }
         case 'loadSample': {

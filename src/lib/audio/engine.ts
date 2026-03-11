@@ -124,6 +124,10 @@ export class GrooveboxEngine {
     this._post({ type: 'releaseNote', trackId })
   }
 
+  releaseNoteByPitch(trackId: number, note: number): void {
+    this._post({ type: 'releaseNoteByPitch', trackId, note })
+  }
+
   stop(): void {
     this._post({ type: 'stop' })
     // Suspend context after FX tails have fully decayed

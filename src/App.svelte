@@ -17,12 +17,13 @@
   import { song, playback, ui, prefs, randomizePattern, perf, fxPad, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine } from './lib/audio/engine.ts'
+  import { initMidi } from './lib/midi.ts'
   import { fade, fly } from 'svelte/transition'
 
   // ── Project restore (once) + save on page hide ───────────────────
   let restored = false
   $effect(() => {
-    if (!restored) { restored = true; void projectRestore() }
+    if (!restored) { restored = true; void projectRestore(); void initMidi() }
     const onVisChange = () => { if (document.visibilityState === 'hidden') void projectAutoSave() }
     const onBeforeUnload = () => { void projectAutoSave() }
     document.addEventListener('visibilitychange', onVisChange)
