@@ -131,6 +131,13 @@ export interface AutomationParams {
   interpolation: 'linear' | 'smooth'
 }
 
+/** Snapshot of values that decorators may mutate, so they can be restored after scene playback */
+export interface AutomationSnapshot {
+  values: Record<string, number>
+  fxPad: typeof DEFAULT_FX_PAD
+  fxFlavours: FxFlavours
+}
+
 /** Generative engine type (ADR 078) */
 export type GenerativeEngine = 'turing' | 'quantizer' | 'tonnetz'
 
@@ -370,7 +377,7 @@ export const playback = $state({
   playingPattern: null as number | null,
   // ADR 053: active automation curves during scene playback
   activeAutomations: [] as AutomationParams[],
-  automationSnapshot: null as Record<string, number> | null,
+  automationSnapshot: null as AutomationSnapshot | null,
 })
 
 export const ui = $state<{
@@ -1000,25 +1007,40 @@ function evaluateAutomation(points: AutomationPoint[], t: number, interpolation:
 }
 
 /** Snapshot current values of all automation targets so they can be restored later */
-function snapshotAutomationTargets(): Record<string, number> {
-  const snap: Record<string, number> = {}
-  snap['global:tempo'] = song.bpm
-  snap['global:masterVolume'] = perf.masterGain
+function snapshotAutomationTargets(): AutomationSnapshot {
+  const values: Record<string, number> = {}
+  values['global:tempo'] = song.bpm
+  values['global:masterVolume'] = perf.masterGain
   for (let i = 0; i < song.tracks.length; i++) {
-    snap[`track:${i}:volume`] = song.tracks[i].volume
-    snap[`track:${i}:pan`] = song.tracks[i].pan
+    values[`track:${i}:volume`] = song.tracks[i].volume
+    values[`track:${i}:pan`] = song.tracks[i].pan
   }
-  return snap
+  return {
+    values,
+    fxPad: JSON.parse(JSON.stringify(fxPad)),
+    fxFlavours: { ...fxFlavours },
+  }
 }
 
 /** Restore values from a snapshot taken before automation was applied */
-export function restoreAutomationSnapshot(snap: Record<string, number>): void {
-  if (snap['global:tempo'] != null) song.bpm = snap['global:tempo']
-  if (snap['global:masterVolume'] != null) perf.masterGain = snap['global:masterVolume']
+export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
+  const v = snap.values
+  if (v['global:tempo'] != null) song.bpm = v['global:tempo']
+  if (v['global:masterVolume'] != null) perf.masterGain = v['global:masterVolume']
   for (let i = 0; i < song.tracks.length; i++) {
-    if (snap[`track:${i}:volume`] != null) song.tracks[i].volume = snap[`track:${i}:volume`]
-    if (snap[`track:${i}:pan`] != null) song.tracks[i].pan = snap[`track:${i}:pan`]
+    if (v[`track:${i}:volume`] != null) song.tracks[i].volume = v[`track:${i}:volume`]
+    if (v[`track:${i}:pan`] != null) song.tracks[i].pan = v[`track:${i}:pan`]
   }
+  // Restore FX pad & flavours mutated by decorators
+  Object.assign(fxPad.verb, snap.fxPad.verb)
+  Object.assign(fxPad.delay, snap.fxPad.delay)
+  Object.assign(fxPad.glitch, snap.fxPad.glitch)
+  Object.assign(fxPad.granular, snap.fxPad.granular)
+  Object.assign(fxPad.filter, snap.fxPad.filter)
+  Object.assign(fxPad.eqLow, snap.fxPad.eqLow)
+  Object.assign(fxPad.eqMid, snap.fxPad.eqMid)
+  Object.assign(fxPad.eqHigh, snap.fxPad.eqHigh)
+  Object.assign(fxFlavours, snap.fxFlavours)
 }
 
 /** Apply active automations at current step progress. Called from App.svelte onStep. */
