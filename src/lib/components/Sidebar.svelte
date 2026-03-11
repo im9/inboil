@@ -98,6 +98,7 @@
     savingAs = false
     const name = saveAsName.trim() || 'Untitled'
     await projectSaveAs(name)
+    project.dirty = false
     await refreshProjects()
   }
 

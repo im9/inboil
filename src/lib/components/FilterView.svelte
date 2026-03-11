@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fxPad, ui } from '../state.svelte.ts'
+  import { fxPad, ui, pushUndo } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
@@ -41,6 +41,7 @@
   function startDrag(key: typeof nodes[number]['key'], e: PointerEvent) {
     e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    pushUndo('EQ pad')
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
@@ -51,6 +52,7 @@
     if (!dragging) return
     if (!dragMoved && movedPastTap(e, startPos)) dragMoved = true
     if (dragMoved) {
+      pushUndo('EQ pad')
       const pos = toNorm(e)
       if (pos) {
         fxPad[dragging].x = pos.x
@@ -62,6 +64,7 @@
   function endDrag() {
     if (!dragging) return
     if (!dragMoved) {
+      pushUndo('EQ toggle')
       const key = dragging
       const now = performance.now()
       const lastTap = lastTapTime[key] ?? 0
@@ -80,6 +83,7 @@
   /** Scroll wheel on EQ node adjusts Q (0.3–8.0) */
   function onWheel(e: WheelEvent, key: 'eqLow' | 'eqMid' | 'eqHigh') {
     e.preventDefault()
+    pushUndo('EQ Q')
     const band = fxPad[key]
     const delta = e.deltaY > 0 ? -0.2 : 0.2
     band.q = Math.round(Math.max(0.3, Math.min(8.0, band.q + delta)) * 10) / 10

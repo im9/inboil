@@ -224,6 +224,10 @@ export interface Song {
   scene: Scene            // arrangement graph (ADR 044, data-only in Phase 1a)
   effects: Effects        // global send/bus effects (ADR 020)
   flavours?: FxFlavours   // FX flavour variants (ADR 075), optional for backwards compat
+  fxPadState?: Record<string, Record<string, number | boolean>>     // FX/EQ pad state
+  masterPadState?: Record<string, Record<string, number | boolean>> // master bus pad state
+  masterGain?: number   // master output volume (0–1), persisted per project
+  swing?: number        // swing amount (0–1), persisted per project
 }
 
 /** Resolve the Pattern referenced by a section index */
@@ -319,6 +323,10 @@ function cloneSong(): Song {
       comp: { ...song.effects.comp },
     },
     flavours: { ...fxFlavours },
+    fxPadState: JSON.parse(JSON.stringify(fxPad)),
+    masterPadState: JSON.parse(JSON.stringify(masterPad)),
+    masterGain: perf.masterGain,
+    swing: perf.swing,
   }
 }
 
@@ -331,6 +339,9 @@ let lastPushLabel = ''
 
 export function pushUndo(label: string): void {
   const now = Date.now()
+  // Always mark dirty + schedule save, even if undo snapshot is debounced
+  project.dirty = true
+  scheduleAutoSave()
   if (label === lastPushLabel && now - lastPushTime < 500) {
     return
   }
@@ -339,8 +350,6 @@ export function pushUndo(label: string): void {
   redoStack.length = 0
   lastPushTime = now
   lastPushLabel = label
-  project.dirty = true
-  scheduleAutoSave()
 }
 
 function restoreCell(c: Cell, fallbackTrackId: number): Cell {
@@ -406,6 +415,39 @@ function restoreSong(src: Song): void {
   fxFlavours.delay    = (fl?.delay    ?? 'digital')   as FxFlavours['delay']
   fxFlavours.glitch   = (fl?.glitch   ?? 'bitcrush')  as FxFlavours['glitch']
   fxFlavours.granular = (fl?.granular ?? 'cloud')     as FxFlavours['granular']
+  // Restore FX/EQ pad state — defaults for old saves
+  if (src.fxPadState) {
+    fxPad.verb     = { ...DEFAULT_FX_PAD.verb,     ...src.fxPadState.verb }
+    fxPad.delay    = { ...DEFAULT_FX_PAD.delay,    ...src.fxPadState.delay }
+    fxPad.glitch   = { ...DEFAULT_FX_PAD.glitch,   ...src.fxPadState.glitch }
+    fxPad.granular = { ...DEFAULT_FX_PAD.granular, ...src.fxPadState.granular }
+    fxPad.filter   = { ...DEFAULT_FX_PAD.filter,   ...src.fxPadState.filter }
+    fxPad.eqLow    = { ...DEFAULT_FX_PAD.eqLow,   ...src.fxPadState.eqLow }
+    fxPad.eqMid    = { ...DEFAULT_FX_PAD.eqMid,   ...src.fxPadState.eqMid }
+    fxPad.eqHigh   = { ...DEFAULT_FX_PAD.eqHigh,  ...src.fxPadState.eqHigh }
+  } else {
+    fxPad.verb     = { ...DEFAULT_FX_PAD.verb }
+    fxPad.delay    = { ...DEFAULT_FX_PAD.delay }
+    fxPad.glitch   = { ...DEFAULT_FX_PAD.glitch }
+    fxPad.granular = { ...DEFAULT_FX_PAD.granular }
+    fxPad.filter   = { ...DEFAULT_FX_PAD.filter }
+    fxPad.eqLow    = { ...DEFAULT_FX_PAD.eqLow }
+    fxPad.eqMid    = { ...DEFAULT_FX_PAD.eqMid }
+    fxPad.eqHigh   = { ...DEFAULT_FX_PAD.eqHigh }
+  }
+  // Restore master pad state
+  if (src.masterPadState) {
+    masterPad.comp = { ...DEFAULT_MASTER_PAD.comp, ...src.masterPadState.comp }
+    masterPad.duck = { ...DEFAULT_MASTER_PAD.duck, ...src.masterPadState.duck }
+    masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret,  ...src.masterPadState.ret }
+  } else {
+    masterPad.comp = { ...DEFAULT_MASTER_PAD.comp }
+    masterPad.duck = { ...DEFAULT_MASTER_PAD.duck }
+    masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret }
+  }
+  // Restore master gain & swing
+  if (src.masterGain != null) perf.masterGain = src.masterGain
+  if (src.swing != null) perf.swing = src.swing
 }
 
 export function undo(): boolean {
@@ -429,7 +471,7 @@ export function redo(): boolean {
 // ── Reactive state ───────────────────────────────────────────────────
 
 export const song = $state<Song>(makeEmptySong())
-// Restore project name synchronously to avoid flash of "Untitled"
+// Restore project name + BPM synchronously to avoid flash before async IDB load
 try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch {}
 
 export const playback = $state({
@@ -1458,7 +1500,6 @@ export async function projectSaveAs(name: string): Promise<string> {
   const now = Date.now()
   await (await storage()).saveProject(buildStoredProject(id, name, now))
   project.id = id
-  project.dirty = false
   project.lastSavedAt = now
   await persistPendingSamples(id)
   savePrefs()
@@ -1475,7 +1516,6 @@ export async function projectSave(): Promise<void> {
   const existing = await s.loadProject(project.id)
   const now = Date.now()
   await s.saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
-  project.dirty = false
   project.lastSavedAt = now
 }
 
@@ -1528,26 +1568,23 @@ export async function projectDelete(id: string): Promise<void> {
   if (project.id === id) projectNew()
 }
 
-/** Auto-save: immediate on every mutation */
-let autoSaveRunning = false
+/** Auto-save: debounced 500ms after last mutation */
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleAutoSave() {
-  if (autoSaveRunning) return
-  void doAutoSave()
-}
-
-async function doAutoSave(): Promise<void> {
-  if (autoSaveRunning || !project.dirty) return
-  autoSaveRunning = true
-  try {
-    if (!project.id) {
-      await projectSaveAs(song.name || 'Untitled')
-    } else {
-      await projectSave()
-    }
-  } finally {
-    autoSaveRunning = false
-  }
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null
+    if (!project.dirty) return
+    const doSave = project.id
+      ? projectSave()
+      : projectSaveAs(song.name || 'Untitled')
+    doSave.then(() => {
+      project.dirty = false
+    }).catch(e => {
+      console.error('[autoSave] ERROR:', e)
+    })
+  }, 500)
 }
 
 /** Immediate auto-save (for beforeunload) */
@@ -1558,6 +1595,7 @@ export async function projectAutoSave(): Promise<void> {
   } else {
     await projectSave()
   }
+  project.dirty = false
 }
 
 /** Restore last project on app startup */

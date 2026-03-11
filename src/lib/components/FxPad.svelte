@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fxPad, perf, ui, fxFlavours } from '../state.svelte.ts'
+  import { fxPad, perf, ui, fxFlavours, pushUndo } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
@@ -28,6 +28,7 @@
     e.preventDefault()
     if (bubbleMenu) return  // don't start drag while menu is open
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    pushUndo('FX pad')
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
@@ -61,6 +62,7 @@
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
     }
     if (dragMoved) {
+      pushUndo('FX pad')
       const pos = toNorm(e)
       if (pos) {
         if (dragging === 'granular' && granularMode2) {

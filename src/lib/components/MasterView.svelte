@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { masterPad, masterLevels, playback, song } from '../state.svelte.ts'
+  import { masterPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
 
@@ -45,6 +45,7 @@
   function startDrag(key: NodeKey, e: PointerEvent) {
     e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    pushUndo('Master pad')
     dragging = key
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
@@ -55,6 +56,7 @@
     if (!dragging) return
     if (!dragMoved && movedPastTap(e, startPos)) dragMoved = true
     if (dragMoved) {
+      pushUndo('Master pad')
       const pos = toNorm(e)
       if (pos) {
         masterPad[dragging].x = pos.x

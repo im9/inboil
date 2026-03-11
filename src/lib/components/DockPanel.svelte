@@ -68,17 +68,20 @@
   }
 
   function setEqQ(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    pushUndo('EQ')
     const q = Math.round(eqQDenorm(v) * 10) / 10
     if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, q }
     else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, q }
     else fxPad.eqHigh = { ...fxPad.eqHigh, q }
   }
   function setEqX(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    pushUndo('EQ')
     if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, x: v }
     else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, x: v }
     else fxPad.eqHigh = { ...fxPad.eqHigh, x: v }
   }
   function setEqY(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
+    pushUndo('EQ')
     if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, y: v }
     else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, y: v }
     else fxPad.eqHigh = { ...fxPad.eqHigh, y: v }
@@ -206,6 +209,7 @@
   }
 
   function setMasterKnobValue(key: MasterKnobKey, v: number) {
+    pushUndo('Master knob')
     if (key === 'gain') perf.masterGain = v
     else if (key === 'mkp') effects.comp.makeup = 1 + v * 3
     else if (key === 'atk') effects.comp.attack = 0.1 + v * 29.9
@@ -244,14 +248,17 @@
   }
 
   function setMasterPadX(key: MasterPadKey, v: number) {
+    pushUndo('Master')
     masterPad[key].x = v
   }
 
   function setMasterPadY(key: MasterPadKey, v: number) {
+    pushUndo('Master')
     masterPad[key].y = v
   }
 
   function toggleMasterPadOn(key: MasterPadKey) {
+    pushUndo('Master toggle')
     masterPad[key].on = !masterPad[key].on
   }
 
