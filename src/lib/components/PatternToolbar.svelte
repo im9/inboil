@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
-  import { engine } from '../audio/engine.ts'
+  import { engine, type EngineContext } from '../audio/engine.ts'
   import { PATTERN_TEMPLATES } from '../factory.ts'
   import { patternApplyTemplate } from '../sectionActions.ts'
 
@@ -96,10 +96,14 @@
 
   let vkbdReady = false
 
+  function getCtx(): EngineContext {
+    return { fxFlavours, masterPad, soloTracks: ui.soloTracks }
+  }
+
   async function ensureEngine() {
     if (vkbdReady) return
-    await engine.init()
-    engine.sendPattern(song, perf, fxPad)
+    await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
+    engine.sendPattern(song, perf, fxPad, getCtx())
     vkbdReady = true
   }
 

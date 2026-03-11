@@ -2,9 +2,21 @@
  * engine.ts — main thread audio engine API.
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
-import type { Song } from '../state.svelte.ts'
-import { ui, masterPad, masterLevels, fxFlavours, cellForTrack } from '../state.svelte.ts'
+import type { Song, Pattern, Cell } from '../state.svelte.ts'
+import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
+
+/** External state passed by callers — engine never imports reactive state (ADR 086) */
+export interface EngineContext {
+  fxFlavours: FxFlavours
+  masterPad: { comp: { on: boolean; x: number; y: number }; duck: { on: boolean; x: number; y: number }; ret: { on: boolean; x: number; y: number } }
+  soloTracks: Set<number>
+}
+
+/** Callbacks injected at init time (ADR 086) */
+export interface EngineCallbacks {
+  onLevels(peakL: number, peakR: number, gr: number, cpu: number): void
+}
 import workletUrl from './worklet-processor.ts?worker&url'
 import crashUrl from './samples/tr909_crash.webm'
 import rideUrl from './samples/tr909_ride.webm'
@@ -41,6 +53,7 @@ export class GrooveboxEngine {
   private node: AudioWorkletNode | null = null
   private analyser: AnalyserNode | null = null
   private _onStep: ((playheads: number[], cycle: boolean) => void) | null = null
+  private _onLevels: EngineCallbacks['onLevels'] | null = null
   private suspendTimer: ReturnType<typeof setTimeout> | null = null
   /** Tracks current voiceId per track to detect changes and reload samples */
   private trackVoiceIds: string[] = []
@@ -54,7 +67,8 @@ export class GrooveboxEngine {
   /** The analyser node is the last node before ctx.destination — use as capture tap */
   getCaptureSource(): AudioNode | null { return this.analyser }
 
-  async init(): Promise<void> {
+  async init(callbacks?: EngineCallbacks): Promise<void> {
+    if (callbacks) this._onLevels = callbacks.onLevels
     if (this.ctx) return
     this.ctx = new AudioContext()
     await this.ctx.audioWorklet.addModule(workletUrl)
@@ -68,22 +82,22 @@ export class GrooveboxEngine {
     this.analyser.connect(this.ctx.destination)
     this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
       if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
-      else if (e.data.type === 'levels') { masterLevels.peakL = e.data.peakL; masterLevels.peakR = e.data.peakR; masterLevels.gr = e.data.gr; masterLevels.cpu = e.data.cpu ?? 0 }
+      else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
     }
   }
 
-  sendPattern(song: Song, perf?: PerfState, fxPad?: FxPadState, reset = false, sectionIndex = 0): void {
+  sendPattern(song: Song, perf: PerfState | undefined, fxPad: FxPadState | undefined, ctx: EngineContext, reset = false, sectionIndex = 0): void {
     if (!this.node) return
-    const wp = patternToWorklet(song, perf, fxPad, sectionIndex)
+    const wp = patternToWorklet(song, perf, fxPad, ctx, sectionIndex)
     this._post({ type: 'setPattern', pattern: wp, reset })
     this._autoLoadSamples(wp)
   }
 
-  sendPatternByIndex(song: Song, perf?: PerfState, fxPad?: FxPadState, reset = false, patternIndex = 0): void {
+  sendPatternByIndex(song: Song, perf: PerfState | undefined, fxPad: FxPadState | undefined, ctx: EngineContext, reset = false, patternIndex = 0): void {
     if (!this.node) return
     const pat = song.patterns[patternIndex]
     if (!pat) return
-    const wp = buildWorkletPattern(song, pat, perf, fxPad)
+    const wp = buildWorkletPattern(song, pat, perf, fxPad, ctx)
     this._post({ type: 'setPattern', pattern: wp, reset })
     this._autoLoadSamples(wp)
   }
@@ -219,17 +233,15 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
 }
 
 function patternToWorklet(
-  s: Song, perf?: PerfState, fxPad?: FxPadState, sectionIndex = 0,
+  s: Song, perf?: PerfState, fxPad?: FxPadState, ctx?: EngineContext, sectionIndex = 0,
 ): WorkletPattern {
   const sec = s.sections[sectionIndex]
-  return buildWorkletPattern(s, s.patterns[sec.patternIndex], perf, fxPad)
+  return buildWorkletPattern(s, s.patterns[sec.patternIndex], perf, fxPad, ctx)
 }
-
-import type { Pattern } from '../state.svelte.ts'
 
 /** Compute granular params adjusted by flavour (ADR 075) */
 function granularFlavourParams(
-  fxPad?: FxPadState, perf?: PerfState,
+  fxPad?: FxPadState, perf?: PerfState, flavours?: FxFlavours,
 ): { granularX: number; granularY: number; granularPitch: number; granularScatter: number; granularFreeze: boolean } {
   const gx = fxPad?.granular.x ?? 0.5
   const gy = fxPad?.granular.y ?? 0.3
@@ -237,7 +249,7 @@ function granularFlavourParams(
   const scatter = perf?.granularScatter ?? 0.67
   const freeze  = perf?.granularFreeze  ?? false
 
-  switch (fxFlavours.granular) {
+  switch (flavours?.granular ?? 'cloud') {
     case 'freeze':
       // Auto-engage freeze when granular is ON
       return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter,
@@ -252,20 +264,20 @@ function granularFlavourParams(
 }
 
 function buildWorkletPattern(
-  s: Song, pat: Pattern, perf?: PerfState, fxPad?: FxPadState,
+  s: Song, pat: Pattern, perf?: PerfState, fxPad?: FxPadState, ctx?: EngineContext,
 ): WorkletPattern {
   const fx = s.effects
 
   // ── Reverb flavour (ADR 075) ──
   let reverbSize: number, reverbDamp: number, shimmerAmount = 0
   if (fxPad?.verb.on) {
-    if (fxFlavours.verb === 'shimmer') {
+    if (ctx?.fxFlavours.verb === 'shimmer') {
       // Shimmer: large reverb + octave-up pitch shift feedback
       // X = size (0.7–0.99), Y = shimmer amount (0–0.6), damp low for bright reflections
       reverbSize = 0.7 + fxPad.verb.x * 0.29
       reverbDamp = 0.15
       shimmerAmount = fxPad.verb.y * 0.6
-    } else if (fxFlavours.verb === 'hall') {
+    } else if (ctx?.fxFlavours.verb === 'hall') {
       // Hall: large diffuse — size 0.82–0.99, damp 0–0.3
       reverbSize = 0.82 + fxPad.verb.x * 0.17
       reverbDamp = (1.0 - fxPad.verb.y) * 0.3
@@ -283,7 +295,7 @@ function buildWorkletPattern(
   let delayTimeMs: number
   const delayFb = fxPad?.delay.on ? fxPad.delay.y * 0.85 : fx.delay.feedback
   const quarterMs = 60000 / s.bpm
-  if (fxPad?.delay.on && fxFlavours.delay === 'dotted') {
+  if (fxPad?.delay.on && ctx?.fxFlavours.delay === 'dotted') {
     // Dotted 8th = 3/4 of a quarter note — time locked to tempo
     delayTimeMs = quarterMs * 0.75
   } else {
@@ -292,9 +304,10 @@ function buildWorkletPattern(
   }
 
   // Master pad → comp/ducker/return (denormalize from 0–1)
-  const mc = masterPad.comp
-  const md = masterPad.duck
-  const mr = masterPad.ret
+  const mp = ctx?.masterPad
+  const mc = mp?.comp ?? { on: false, x: 0, y: 0 }
+  const md = mp?.duck ?? { on: false, x: 0, y: 0 }
+  const mr = mp?.ret ?? { on: false, x: 0, y: 0 }
 
   return {
     bpm: s.bpm,
@@ -328,23 +341,24 @@ function buildWorkletPattern(
       reversing:  perf?.reversing  ?? false,
       glitchX:    fxPad?.glitch.on ? fxPad.glitch.x : 0.5,
       glitchY:    fxPad?.glitch.on ? fxPad.glitch.y : 0.5,
-      glitchRedux:  fxFlavours.glitch === 'redux',
-      delayTape:    fxFlavours.delay  === 'tape',
-      glitchStutter: fxFlavours.glitch === 'stutter',
+      glitchRedux:  ctx?.fxFlavours.glitch === 'redux',
+      delayTape:    ctx?.fxFlavours.delay  === 'tape',
+      glitchStutter: ctx?.fxFlavours.glitch === 'stutter',
       granularOn:      fxPad?.granular.on ?? false,
-      ...granularFlavourParams(fxPad, perf),
+      ...granularFlavourParams(fxPad, perf, ctx?.fxFlavours),
       swing:           perf?.swing       ?? 0,
     },
     tracks: s.tracks.map((t) => {
-      const cell = cellForTrack(pat, t.id)
+      const cell = pat.cells.find((c: Cell) => c.trackId === t.id)
       if (!cell) return {
         steps: 16, muted: true, voiceId: '', sidechainSource: false,
         volume: 0, pan: 0, reverbSend: 0, delaySend: 0, glitchSend: 0, granularSend: 0,
         voiceParams: {}, trigs: [],
       }
+      const soloTracks = ctx?.soloTracks
       return {
         steps:       cell.steps,
-        muted:       ui.soloTracks.size > 0 ? !ui.soloTracks.has(t.id) : t.muted,
+        muted:       soloTracks && soloTracks.size > 0 ? !soloTracks.has(t.id) : t.muted,
         voiceId:     cell.voiceId ?? '',
         sidechainSource: cell.voiceId ? isSidechainSource(cell.voiceId) : false,
         volume:      t.volume,

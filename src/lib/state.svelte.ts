@@ -1370,7 +1370,7 @@ export async function restoreSamples(projectId: string): Promise<void> {
   clearSamples()
   const stored = await (await storage()).loadSamples(projectId)
   if (stored.length === 0) return
-  const { engine } = await import('./audio/engine.ts')
+  const { engine } = await import('./audio/engine.ts')  // lazy: engine.init() may not have been called yet
   for (const s of stored) {
     const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer)
     if (waveform) {

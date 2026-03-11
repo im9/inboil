@@ -72,9 +72,9 @@ See [adr/](./adr/) for full rationale.
 
 ## Module Dependency Notes
 
-`state.svelte.ts` and `audio/engine.ts` have a **circular dependency**: `engine.ts` statically imports from `state.svelte.ts` (for `ui`, `masterPad`, `fxFlavours`, etc.), and `state.svelte.ts` needs `engine` for sample operations. To break the cycle, `state.svelte.ts` uses a **dynamic import** (`await import('./audio/engine.ts')`) in `restoreSamples()`. This is intentional — do not convert it to a static import.
+**engine.ts is decoupled from reactive state (ADR 086).** `engine.ts` imports only types from `state.svelte.ts` — all reactive state (`fxFlavours`, `masterPad`, `soloTracks`, `masterLevels`) is passed via `EngineContext` arguments and `EngineCallbacks` at init time.
 
-Vite emits a warning about `engine.ts` being both dynamically and statically imported. This is expected and harmless: since other modules already statically import `engine.ts`, it stays in the main chunk regardless.
+`state.svelte.ts` uses a dynamic import for `engine.ts` in `restoreSamples()` — this is intentional for lazy loading (engine may not be initialized at restore time). Vite emits a warning about mixed dynamic/static imports; this is harmless since other modules statically import `engine.ts` into the main chunk.
 
 ## Threading Model
 

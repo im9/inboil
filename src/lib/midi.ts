@@ -1,17 +1,20 @@
-import { midiIn, song, perf, fxPad } from './state.svelte.ts'
-import { ui } from './state.svelte.ts'
-import { engine } from './audio/engine.ts'
+import { midiIn, song, perf, fxPad, fxFlavours, masterPad, masterLevels, ui } from './state.svelte.ts'
+import { engine, type EngineContext } from './audio/engine.ts'
 
 let access: MIDIAccess | null = null
 let receiveTimer = 0
 let engineReady = false
 let enginePending = false
 
+function getCtx(): EngineContext {
+  return { fxFlavours, masterPad, soloTracks: ui.soloTracks }
+}
+
 async function ensureEngine() {
   if (engineReady || enginePending) return
   enginePending = true
-  await engine.init()
-  engine.sendPattern(song, perf, fxPad)
+  await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
+  engine.sendPattern(song, perf, fxPad, getCtx())
   engineReady = true
   enginePending = false
 }

@@ -14,9 +14,15 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
-  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
-  import { engine } from './lib/audio/engine.ts'
+  import { engine, type EngineContext } from './lib/audio/engine.ts'
+
+  const engineCtx: EngineContext = $derived({
+    fxFlavours,
+    masterPad,
+    soloTracks: ui.soloTracks,
+  })
   import { initMidi } from './lib/midi.ts'
   import { fade, fly } from 'svelte/transition'
 
@@ -52,14 +58,14 @@
     rafId = requestAnimationFrame(() => {
       const soloIdx = soloPatternIndex()
       if (soloIdx != null) {
-        engine.sendPatternByIndex(song, perf, fxPad, false, soloIdx)
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx)
       } else if (playback.mode === 'scene' && hasScenePlayback()) {
         if (playback.playingPattern == null) return
-        engine.sendPatternByIndex(song, perf, fxPad, false, playback.playingPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, playback.playingPattern)
       } else if (playback.mode === 'scene' && hasArrangement()) {
-        engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
       } else {
-        engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
       }
     })
     return () => cancelAnimationFrame(rafId)
@@ -82,7 +88,7 @@
       if (cycle && playback.soloNodeId !== soloSent) {
         soloSent = playback.soloNodeId
         const idx = soloPatternIndex()
-        if (idx != null) engine.sendPatternByIndex(song, perf, fxPad, true, idx)
+        if (idx != null) engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, idx)
       }
       return
     }
@@ -96,7 +102,7 @@
         if (shouldStop) { stop(); return }
         if (advanced) {
           perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
-          engine.sendPatternByIndex(song, perf, fxPad, true, patternIndex)
+          engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, patternIndex)
           // Check if we just arrived at the solo target
           if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
             soloSent = playback.soloNodeId
@@ -109,14 +115,14 @@
       if (hasArrangement()) {
         if (sectionAdvanced) applySection(song.sections[playback.currentSection])
         updateSectionPerf(heads[0])
-        engine.sendPattern(song, perf, fxPad, true, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, engineCtx, true, playback.currentSection)
         return
       }
     }
     if (hasArrangement() && !hasScenePlayback()) {
       const changed = updateSectionPerf(heads[0])
       if (changed) {
-        engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
+        engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
       }
     }
   }
@@ -125,11 +131,11 @@
 
   async function play() {
     if (playback.playing) return
-    await engine.init()
+    await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
     const soloIdx2 = soloPatternIndex()
     if (soloIdx2 != null) {
       soloSent = playback.soloNodeId
-      engine.sendPatternByIndex(song, perf, fxPad, false, soloIdx2)
+      engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx2)
       engine.play()
       playback.playing = true
       return
@@ -146,13 +152,13 @@
       const { patternIndex, stop: shouldStop } = advanceSceneNode()
       if (shouldStop) return
       perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
-      engine.sendPatternByIndex(song, perf, fxPad, false, patternIndex)
+      engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else if (playback.mode === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
-      engine.sendPattern(song, perf, fxPad, false, playback.currentSection)
+      engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
     } else {
-      engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
+      engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
     }
     engine.play()
     playback.playing = true
@@ -201,7 +207,7 @@
       playback.soloNodeId = null
       playback.playingPattern = null
       if (playback.playing) {
-        engine.sendPatternByIndex(song, perf, fxPad, false, ui.currentPattern)
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
       }
     }
   }
