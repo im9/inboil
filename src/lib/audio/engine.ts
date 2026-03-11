@@ -50,6 +50,9 @@ export class GrooveboxEngine {
   set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
   getAnalyser(): AnalyserNode | null { return this.analyser }
+  getContext(): AudioContext | null { return this.ctx }
+  /** The analyser node is the last node before ctx.destination — use as capture tap */
+  getCaptureSource(): AudioNode | null { return this.analyser }
 
   async init(): Promise<void> {
     if (this.ctx) return

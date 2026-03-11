@@ -1,6 +1,6 @@
 # ADR 077: Per-Track Insert FX
 
-## Status: Proposed
+## Status: Implemented (Phase 0–3)
 
 ## Context
 
@@ -301,31 +301,32 @@ export interface WorkletTrack {
 
 ## Implementation Order
 
-1. **Phase 0: CPU Meter (can be implemented independently)**
-   - `performance.now()` measurement in worklet `process()`
-   - Add `masterLevels.cpu` state
-   - CPU indicator in PerfBar
-   - Useful without Insert FX — recommended to implement first
+1. **Phase 0: CPU Meter** ✅ (pre-existing)
+   - `Date.now()` measurement in worklet `process()` with EMA smoothing
+   - `masterLevels.cpu` state + `levels` message from worklet
+   - CPU dot indicator in AppHeader (6 dots, green/yellow/red)
 
-2. **Phase 1: DSP + Data Structures**
-   - Add `CellInsertFx` interface
-   - Add `WorkletInsertFx`
-   - `InsertFxSlot` instance pool (verb / delay / glitch only, up to 16 tracks)
-   - Insert processing path in `process()`
-   - Insert parameter assembly in `buildWorkletPattern()`
+2. **Phase 1: DSP + Data Structures** ✅
+   - `CellInsertFx` interface in `state.svelte.ts`
+   - `WorkletInsertFx` interface in `dsp/types.ts`
+   - `InsertFxSlot` with lazy instantiation in `worklet-processor.ts`
+   - Insert processing in `process()` loop (playing + audition paths)
+   - `buildWorkletPattern()` assembles `cell.insertFx` → `WorkletInsertFx`
+   - `cloneCell()` spread-clones `insertFx`
 
-3. **Phase 2: UI**
-   - Insert FX section in DockPanel track parameters
-   - Type / flavour selector (tap-to-cycle or dropdown)
-   - Mix / x / y sliders (reuse existing DockPanel knob components)
-   - MatrixView track header indicator
-   - CPU meter warning levels (built on Phase 0)
+3. **Phase 2: UI** ✅
+   - INSERT FX section in DockPanel (type/flavour `<select>` + MIX/X/Y knobs)
+   - Verb (room/hall), Delay (digital/dotted/tape), Glitch (bitcrush/redux)
+   - ◆ indicator on DockPanel track selector when insert FX active
+   - `setInsertFxType/Flavour/Param/clearInsertFx` helpers in `stepActions.ts`
+   - CPU tooltip warns at 85%+ and 100%+ thresholds (bilingual)
 
-4. **Phase 3: Optimization**
-   - `LiteReverb` lightweight reverb implementation (halves CPU)
-   - Tooltip warnings when CPU threshold exceeded
+4. **Phase 3: Optimization** ✅
+   - `LiteReverb` (comb×2 + allpass×1 per channel, ~half CPU of SimpleReverb)
+   - Insert reverb uses `LiteReverb` instead of `SimpleReverb`
+   - CPU meter tooltip shows context-aware warnings for Insert FX
 
-5. **Phase 4: Extensions**
+5. **Phase 4: Extensions** (deferred — evaluate after real-world usage)
    - Insert P-Lock (per-step mix / x / y overrides)
    - Multiple slot chains (max 2)
    - Integration with ADR 076 per-pattern flavours
@@ -335,10 +336,10 @@ export interface WorkletTrack {
 - **Why exclude Granular from Insert**: ring buffer (0.75s × 2ch × 4bytes ≈ 270KB/instance) × 16 = ~4.3MB — memory is fine, but 10 grains × 16 tracks = 160 grains of per-sample computation is very heavy. Sharing a single instance on the send bus is practical
 - **Memory is not a concern**: Even 16 tracks of PingPongDelay (heaviest) is only ~5.6MB. AudioWorklet heap reserves hundreds of MB. The bottleneck is CPU only
 - **Insert vs Send usage guidance**: Insert = track-specific character (bitcrush on drums, delay on bass). Send = shared spatial effects (reverb/delay across everything). Both can be used simultaneously
-- **LiteReverb trade-off**: comb×4 reduces density and can sound metallic. However, for insert use cases ("adding character"), lo-fi quality is acceptable
+- **LiteReverb trade-off**: comb×2 (not ×4 as originally proposed) reduces density and can sound metallic. However, for insert use cases ("adding character"), lo-fi quality is acceptable
 - **Tail on pattern transition**: Insert FX switching will cut reverb/delay tails. Phase 1 accepts instant switching; tail fade (50ms) to be considered in the future
 - **Relationship with ADR 075 flavours**: Insert FX flavours are stored directly in Cell, independent of global `fxFlavours`. Send bus flavours are global; Insert flavours are per-track
-- **Priority vs 12poly expansion**: FM/Wavetable 4→12poly expansion is planned. 12poly roughly triples voice processing CPU cost, so it should be implemented before Insert FX, with CPU meter measurements to inform Insert FX scope. Measurement results will determine acceptable slot counts and whether LiteReverb is necessary
+- **Priority vs 12poly expansion**: FM 12poly / Wavetable 8poly expansion was completed before Insert FX. CPU meter confirmed acceptable headroom, so Insert FX was implemented with LiteReverb as default
 
 ## Future Extensions
 

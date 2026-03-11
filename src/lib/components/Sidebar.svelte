@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { ui, lang, prefs, project, song, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
+  import { exportAndDownloadMidi } from '../midiExport.ts'
+  import { startCapture, stopCapture } from '../wavExport.ts'
+  import { downloadBlob } from '../midiExport.ts'
+  import { engine } from '../audio/engine.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -25,6 +29,23 @@
   }
 
   let confirmReset = $state(false)
+  let recording = $state(false)
+
+  async function handleBounceWav() {
+    const ctx = engine.getContext()
+    const source = engine.getCaptureSource()
+    if (!ctx || !source) return
+    recording = true
+    const blob = await startCapture(ctx, source)
+    recording = false
+    const pat = song.patterns[ui.currentPattern]
+    const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
+    downloadBlob(blob, `${name}.wav`)
+  }
+
+  function handleStopBounce() {
+    stopCapture()
+  }
 
   function handleReset() {
     factoryReset()
@@ -410,6 +431,25 @@
               {/each}
             </div>
           {/if}
+
+          <!-- Export (ADR 030) -->
+          <div class="export-section">
+            <span class="proj-list-label">{L === 'ja' ? 'エクスポート' : 'EXPORT'}</span>
+            <div class="export-buttons">
+              <button class="btn-export" onpointerdown={exportAndDownloadMidi}
+                data-tip="Export current pattern as MIDI file" data-tip-ja="現在のパターンをMIDIファイルとしてエクスポート"
+              >{L === 'ja' ? 'MIDI 書出し' : 'MIDI'}</button>
+              {#if recording}
+                <button class="btn-export btn-rec-active" onpointerdown={handleStopBounce}
+                  data-tip="Stop recording and save WAV" data-tip-ja="録音を停止してWAVを保存"
+                >● {L === 'ja' ? '録音停止' : 'STOP REC'}</button>
+              {:else}
+                <button class="btn-export" onpointerdown={handleBounceWav}
+                  data-tip="Record audio output to WAV — press Play, then Stop when done" data-tip-ja="音声出力をWAVに録音 — 再生後、完了時にストップ"
+                >{L === 'ja' ? 'WAV 録音' : 'WAV REC'}</button>
+              {/if}
+            </div>
+          </div>
 
           <!-- Settings -->
           <div class="settings-section">
@@ -962,6 +1002,40 @@
   }
 
   /* ── Settings rows ── */
+  .export-section {
+    padding: 8px 16px;
+    border-top: 1px solid rgba(237,232,220,0.08);
+  }
+  .export-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .btn-export {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(237,232,220,0.15);
+    border-radius: 4px;
+    background: rgba(237,232,220,0.06);
+    color: rgba(237,232,220,0.7);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .btn-export:active {
+    background: rgba(237,232,220,0.15);
+  }
+  .btn-rec-active {
+    color: rgba(220,80,60,0.9);
+    border-color: rgba(220,80,60,0.4);
+    animation: rec-blink 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes rec-blink {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+  }
   .settings-section {
     padding: 4px 16px;
     border-top: 1px solid rgba(237,232,220,0.08);

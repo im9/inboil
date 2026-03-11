@@ -1,6 +1,6 @@
 # ADR 030: Audio & MIDI Export
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

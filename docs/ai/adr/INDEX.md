@@ -26,7 +26,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 023 | Oscilloscope Display | Implemented | |
 | 075 | FX / EQ / Master Improvements | Implemented | FX flavours (tape delay, stutter, shimmer), EQ Q control, compressor attack/release, dock controls |
 | 076 | Per-Pattern FX Flavours | Implemented | SceneDecorator flavourOverrides, DockPanel cycle UI, applyDecorators integration |
-| 077 | Per-Track Insert FX | Proposed | Phase 0 (CPU meter) done; Insert FX slot per track (verb/delay/glitch) still proposed |
+| 077 | Per-Track Insert FX | Implemented | LiteReverb, insert verb/delay/glitch per track, DockPanel UI, CPU meter warnings |
 
 ## Sequencer / Pattern
 
@@ -119,7 +119,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 016 | VST Plugin / MIDI | Proposed | |
 | 019 | Multi-Device Collaboration | Proposed | |
 | 020 | Data Persistence & Storage | Proposed | |
-| 030 | Audio & MIDI Export | Proposed | |
+| 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
 | 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Proposed | Astro + Starlight, LP demo, getting-started tutorial |
