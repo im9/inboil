@@ -24,25 +24,47 @@
     toggleSidebar('system')
   }
 
-
-
   // ── WAV recording (ADR 085) ──
-  let recording = $state(false)
+  // States: idle → armed (REC pressed, waiting for play) → recording (capturing audio)
+  let recState: 'idle' | 'armed' | 'recording' = $state('idle')
 
-  async function handleRec() {
-    if (recording) {
-      stopCapture()
-      return
+  function handleRec() {
+    if (recState === 'idle') {
+      // Arm recording — wait for play
+      recState = 'armed'
+    } else if (recState === 'armed') {
+      // Cancel arming
+      recState = 'idle'
+    } else {
+      // Stop recording + save
+      finishRecording()
     }
-    const ctx = engine.getContext()
-    const source = engine.getCaptureSource()
-    if (!ctx || !source) return
-    recording = true
-    const blob = await startCapture(ctx, source)
-    recording = false
-    const pat = song.patterns[ui.currentPattern]
-    const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
-    downloadBlob(blob, `${name}.wav`)
+  }
+
+  function wrappedPlay() {
+    onPlay()
+    if (recState === 'armed') {
+      const ctx = engine.getContext()
+      const source = engine.getCaptureSource()
+      if (!ctx || !source) { recState = 'idle'; return }
+      recState = 'recording'
+      startCapture(ctx, source).then(blob => {
+        recState = 'idle'
+        const pat = song.patterns[ui.currentPattern]
+        const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
+        downloadBlob(blob, `${name}.wav`)
+      })
+    }
+  }
+
+  function wrappedStop() {
+    onStop()
+    // Recording continues after stop — user captures reverb tail, then presses REC to finish
+  }
+
+  function finishRecording() {
+    stopCapture()
+    // blob resolves via the startCapture promise in wrappedPlay
   }
 
   // ── Inline BPM edit ──
@@ -142,24 +164,25 @@
       <button
         class="btn-transport"
         class:active={playback.playing}
-        onpointerdown={onPlay}
+        onpointerdown={wrappedPlay}
         aria-label="Play"
         data-tip="Play pattern" data-tip-ja="パターンを再生"
       >▶</button>
       <button
         class="btn-transport"
-        onpointerdown={onStop}
+        onpointerdown={wrappedStop}
         aria-label="Stop"
         data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>
       <button
         class="btn-rec"
-        class:active={recording}
+        class:armed={recState === 'armed'}
+        class:active={recState === 'recording'}
         onpointerdown={handleRec}
-        aria-label={recording ? 'Stop recording' : 'Record'}
-        data-tip={recording ? 'Stop recording and save WAV' : 'Record audio output to WAV'}
-        data-tip-ja={recording ? '録音を停止してWAVを保存' : '音声出力をWAVに録音'}
-      >REC</button>
+        aria-label={recState === 'recording' ? 'Stop recording' : recState === 'armed' ? 'Cancel record' : 'Arm recording'}
+        data-tip={recState === 'recording' ? 'Stop recording and save WAV' : recState === 'armed' ? 'Cancel recording standby' : 'Arm recording (starts on play)'}
+        data-tip-ja={recState === 'recording' ? '録音を停止してWAVを保存' : recState === 'armed' ? '録音待機を解除' : '録音待機 (再生で開始)'}
+      >● REC</button>
     </div>
 
     <div class="sep" aria-hidden="true"></div>
@@ -433,11 +456,21 @@
     background: rgba(237,232,220,0.08);
     color: rgba(237,232,220,0.70);
   }
+  .btn-rec.armed {
+    color: var(--color-salmon);
+    border-color: color-mix(in srgb, var(--color-salmon) 50%, transparent);
+    background: transparent;
+    animation: rec-blink 1s step-end infinite;
+  }
   .btn-rec.active {
-    color: rgba(220,80,60,0.95);
-    border-color: rgba(220,80,60,0.5);
-    background: rgba(220,80,60,0.1);
+    color: var(--color-salmon);
+    border-color: color-mix(in srgb, var(--color-salmon) 50%, transparent);
+    background: color-mix(in srgb, var(--color-salmon) 10%, transparent);
     animation: rec-pulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes rec-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
   }
   @keyframes rec-pulse {
     from { opacity: 1; }
