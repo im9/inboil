@@ -3,7 +3,7 @@
   import { song, ui, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateDecorator, sceneRemoveDecorator, sceneAddDecorator } from '../sceneActions.ts'
   import { decoratorLabel } from '../sceneGeometry.ts'
-  import { FX_FLAVOURS } from '../constants.ts'
+  import { FX_FLAVOURS, BPM_MIN, BPM_MAX } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
 
@@ -26,7 +26,7 @@
       if (dec.params.mode === 1) return (dec.params.key ?? 0) / 11
       return ((dec.params.semitones ?? 0) + 12) / 24
     }
-    if (dec.type === 'tempo') return ((dec.params.bpm ?? 120) - 60) / 240
+    if (dec.type === 'tempo') return ((dec.params.bpm ?? 120) - BPM_MIN) / (BPM_MAX - BPM_MIN)
     if (dec.type === 'repeat') return ((dec.params.count ?? 2) - 1) / 15
     return 0
   }
@@ -48,7 +48,7 @@
       if (p.mode === 1) p.key = Math.round(v * 11)
       else p.semitones = Math.round(v * 24 - 12)
     } else if (dec.type === 'tempo') {
-      p.bpm = Math.round((v * 240 + 60) / 5) * 5
+      p.bpm = Math.round((v * (BPM_MAX - BPM_MIN) + BPM_MIN) / 5) * 5
     } else if (dec.type === 'repeat') {
       p.count = Math.round(v * 15) + 1
     }

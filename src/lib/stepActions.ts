@@ -189,15 +189,12 @@ export function isDrum(trackOrCell: { voiceId: VoiceId | null }): boolean {
 /** Change instrument voice for the active cell (ADR 062, was track-level) */
 export function changeVoice(trackIdx: number, newVoiceId: VoiceId) {
   pushUndo('Change instrument')
-  const track = song.tracks[trackIdx]
   const c = activeCell(trackIdx)
   const wasDrum = c.voiceId ? DRUM_VOICES.has(c.voiceId) : false
   c.voiceId = newVoiceId
   c.voiceParams = defaultVoiceParams(newVoiceId)
   const meta = VOICE_LIST.find(v => v.id === newVoiceId)
   if (meta) c.name = meta.label
-  // Keep track-level voiceId in sync as template default
-  track.voiceId = newVoiceId
   // Reset sends when switching between drum and melodic (ADR 058 Phase 2)
   const nowDrum = DRUM_VOICES.has(newVoiceId)
   if (wasDrum !== nowDrum) {
@@ -309,7 +306,7 @@ export function addTrack(voiceId: VoiceId | null = null): number | null {
   const meta = voiceId ? VOICE_LIST.find(v => v.id === voiceId) : null
   const name = meta?.label ?? (voiceId ? voiceId.toUpperCase().slice(0, 4) : `TR${idx + 1}`)
   const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
-  song.tracks.push(makeTrack(idx, name, voiceId, 0))
+  song.tracks.push(makeTrack(idx))
   // Add cell to current pattern only — other patterns get cells lazily via ensureCell
   const currentPat = song.patterns[ui.currentPattern]
   if (currentPat) {

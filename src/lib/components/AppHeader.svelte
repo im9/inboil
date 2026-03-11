@@ -1,5 +1,6 @@
 <script lang="ts">
   import { song, playback, ui, project, masterLevels, toggleSidebar } from '../state.svelte.ts'
+  import { BPM_MIN, BPM_MAX } from '../constants.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -48,7 +49,7 @@
   let bpmRepeatInterval: ReturnType<typeof setInterval> | null = null
 
   function bpmStep(dir: -1 | 1) {
-    song.bpm = Math.max(40, Math.min(240, song.bpm + dir))
+    song.bpm = Math.max(BPM_MIN, Math.min(BPM_MAX, song.bpm + dir))
   }
 
   function startBpmRepeat(dir: -1 | 1) {

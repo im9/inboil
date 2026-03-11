@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui } from '../state.svelte.ts'
+  import { song, ui, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel } from '../sceneActions.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { WORLD_W, WORLD_H } from '../sceneGeometry.ts'
@@ -77,6 +77,7 @@
       "
       onpointerdown={(e: PointerEvent) => {
         e.stopPropagation()
+        pushUndo('Move label')
         ui.selectedSceneNodes = {}
         ui.selectedSceneEdge = null
         ui.selectedSceneLabel = label.id
@@ -115,6 +116,7 @@
           class="label-resize-handle"
           onpointerdown={(e: PointerEvent) => {
             e.stopPropagation()
+            pushUndo('Resize label')
             resizingLabel = label.id
             resizeStartY = e.clientY
             resizeStartSize = label.size ?? 1

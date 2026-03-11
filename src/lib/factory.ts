@@ -18,13 +18,8 @@ function makeTrigs(steps: number, activeSteps: number[], note = 60): Trig[] {
   return Array.from({ length: steps }, (_, i) => makeTrig(activeSteps.includes(i + 1), note))
 }
 
-export function makeTrack(
-  id: number,
-  name: string,
-  voiceId: VoiceId | null,
-  pan = 0,
-): Track {
-  return { id, name, voiceId, muted: false, volume: 0.8, pan }
+export function makeTrack(id: number, pan = 0): Track {
+  return { id, muted: false, volume: 0.8, pan }
 }
 
 // ── Pattern templates (ADR 015 §C) ──────────────────────────────────
@@ -621,7 +616,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
 export function makeEmptySong(templateId?: string): Song {
   const tmpl = getTemplate(templateId)
   const tracks: Track[] = tmpl.tracks.map((d, trackIdx) =>
-    makeTrack(trackIdx, d.name, d.voiceId, d.pan)
+    makeTrack(trackIdx, d.pan)
   )
   const patterns: Pattern[] = []
   const sections: Section[] = []
@@ -653,7 +648,7 @@ export function makeEmptySong(templateId?: string): Song {
  */
 export function makeDefaultSong(): Song {
   const tracks: Track[] = TRACK_DEFAULTS.map((d, trackIdx) =>
-    makeTrack(trackIdx, d.name, d.voiceId, d.pan)
+    makeTrack(trackIdx, d.pan)
   )
 
   const patterns: Pattern[] = []

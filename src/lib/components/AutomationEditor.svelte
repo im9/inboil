@@ -135,8 +135,8 @@
   })
 
   function getVoiceLabel(trackIndex: number): string {
-    // In decorator mode, use the pattern's cell voiceId; otherwise use track voiceId
-    const vid = hostPattern?.cells.find(c => c.trackId === trackIndex)?.voiceId ?? song.tracks[trackIndex]?.voiceId
+    const pat = hostPattern ?? song.patterns[ui.currentPattern]
+    const vid = pat?.cells.find(c => c.trackId === trackIndex)?.voiceId
     if (!vid) return ''
     const meta = VOICE_LIST.find(v => v.id === vid)
     return meta?.label ?? vid.slice(0, 4).toUpperCase()

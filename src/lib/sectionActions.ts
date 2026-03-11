@@ -106,6 +106,7 @@ export const SONG_PRESETS: {
 export function songLoadPreset(index: number) {
   const preset = SONG_PRESETS[index]
   if (!preset) return
+  pushUndo('Load preset')
   // Deduplicate: map each unique sectionIndex to a pattern slot
   const seen = new Map<number, number>()  // sectionIndex → patternIndex in pool
   for (const entry of preset.entries) {
@@ -182,11 +183,13 @@ export function songLoadPreset(index: number) {
 // ── Section operations ──
 
 export function sectionStepRepeats(index: number, dir: -1 | 1) {
+  pushUndo('Section repeats')
   const s = song.sections[index]
   s.repeats = Math.max(1, Math.min(8, s.repeats + dir))
 }
 
 export function sectionCycleKey(index: number) {
+  pushUndo('Section key')
   const s = song.sections[index]
   if (s.key == null) { s.key = 0 }
   else if (s.key >= 11) { s.key = undefined }
@@ -194,10 +197,12 @@ export function sectionCycleKey(index: number) {
 }
 
 export function sectionSetKey(index: number, key: number | undefined) {
+  pushUndo('Section key')
   song.sections[index].key = key
 }
 
 export function sectionCycleOct(index: number) {
+  pushUndo('Section octave')
   const s = song.sections[index]
   if (s.oct == null) { s.oct = -2 }
   else if (s.oct >= 2) { s.oct = undefined }
@@ -205,18 +210,21 @@ export function sectionCycleOct(index: number) {
 }
 
 export function sectionCyclePerf(index: number) {
+  pushUndo('Section perf')
   song.sections[index].perf = ((song.sections[index].perf ?? 0) + 1) % 4
 }
 
 const PERF_LEN_OPTIONS = [16, 8, 4, 1] as const
 
 export function sectionCyclePerfLen(index: number) {
+  pushUndo('Section perf length')
   const s = song.sections[index]
   const cur = PERF_LEN_OPTIONS.indexOf((s.perfLen ?? 16) as 16 | 8 | 4 | 1)
   s.perfLen = PERF_LEN_OPTIONS[(cur + 1) % PERF_LEN_OPTIONS.length]
 }
 
 export function sectionToggleFx(index: number, fx: SongFxKey) {
+  pushUndo('Section FX')
   const s = song.sections[index]
   const current = s[fx]
   if (current) {
@@ -227,6 +235,7 @@ export function sectionToggleFx(index: number, fx: SongFxKey) {
 }
 
 export function sectionSetFxSend(index: number, fx: SongFxKey, value: number) {
+  pushUndo('Section FX send')
   const s = song.sections[index]
   if (!s[fx]) s[fx] = { on: true, x: value, y: 0.5 }
   else s[fx]!.x = value
@@ -244,24 +253,34 @@ export function patternClear(patternIndex: number): void {
   })
 }
 
-/** Apply a pattern template — adjusts track count and overwrites cells (ADR 015 §C) */
+/** Apply a pattern template — overwrites cells for this pattern only (ADR 015 §C) */
 export function patternApplyTemplate(patternIndex: number, templateId: string): void {
   pushUndo('Apply template')
   const tmpl = getTemplate(templateId)
   const pat = song.patterns[patternIndex]
 
-  // Ensure song has enough tracks for the template
+  // Ensure song has enough tracks
   while (song.tracks.length < tmpl.tracks.length) {
     const id = song.tracks.length > 0 ? Math.max(...song.tracks.map(t => t.id)) + 1 : 0
-    song.tracks.push(makeTrack(id, '', null, 0))
+    song.tracks.push(makeTrack(id))
   }
 
-  // Build cells matching template tracks → song tracks
+  // Build cells using existing track IDs — only this pattern is affected
   pat.cells = tmpl.tracks.map((d, i) => {
-    const track = song.tracks[i]
-    track.pan = d.pan
-    return makeEmptyCell(track.id, d.name, d.voiceId, d.note)
+    return makeEmptyCell(song.tracks[i].id, d.name, d.voiceId, d.note)
   })
+
+  // Remove orphaned tracks (no cells in any pattern)
+  pruneOrphanedTracks()
+}
+
+/** Remove song.tracks entries that have no cells in any pattern */
+function pruneOrphanedTracks(): void {
+  const usedIds = new Set<number>()
+  for (const pat of song.patterns) {
+    for (const cell of pat.cells) usedIds.add(cell.trackId)
+  }
+  song.tracks = song.tracks.filter(t => usedIds.has(t.id))
 }
 
 /** Rename a pattern (max 8 chars, uppercase) */

@@ -11,7 +11,7 @@ interface TestSong {
 
 function makeTestSong(patternCount: number, trackCount: number): TestSong {
   const tracks = Array.from({ length: trackCount }, (_, i) =>
-    makeTrack(i, `TR${i + 1}`, null, 0)
+    makeTrack(i)
   )
   const patterns = Array.from({ length: patternCount }, (_, pi) => ({
     id: `pat_${String(pi).padStart(2, '0')}`,
@@ -43,7 +43,7 @@ function removeTrack(s: TestSong, currentPattern: number, trackId: number): bool
 
 function addTrack(s: TestSong, currentPattern: number): number {
   const idx = s.tracks.length
-  s.tracks.push(makeTrack(idx, `TR${idx + 1}`, null, 0))
+  s.tracks.push(makeTrack(idx))
   // Only add to current pattern
   const pat = s.patterns[currentPattern]
   if (pat) {

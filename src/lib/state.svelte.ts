@@ -5,7 +5,7 @@ import {
   DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
   DEFAULT_FX_FLAVOURS,
 } from './constants.ts'
-import type { FxFlavours } from './constants.ts'
+import { BPM_MIN, BPM_MAX, type FxFlavours } from './constants.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 import {
   DRUM_VOICES, makeDefaultSong, makeEmptySong, makeEmptyCell,
@@ -87,11 +87,9 @@ export interface Section {
   flavours?: Partial<FxFlavours>  // per-section flavour override (ADR 076)
 }
 
-/** Track = instrument config only (ADR 042, no phrases/chains) */
+/** Track = mixer channel (ADR 080: name/voiceId moved to Cell per ADR 062) */
 export interface Track {
   id: number
-  name: string
-  voiceId: VoiceId | null  // null = unassigned
   muted: boolean
   volume: number
   pan: number
@@ -248,7 +246,7 @@ export function ensureCells(pat: Pattern): void {
   const existing = new Set(pat.cells.map(c => c.trackId))
   for (const t of song.tracks) {
     if (!existing.has(t.id)) {
-      pat.cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
+      pat.cells.push(makeEmptyCell(t.id, `TR${t.id + 1}`, null, 60))
     }
   }
 }
@@ -302,7 +300,7 @@ function cloneSection(s: Section): Section {
 }
 
 function cloneTrack(t: Track): Track {
-  return { id: t.id, name: t.name, voiceId: t.voiceId, muted: t.muted, volume: t.volume, pan: t.pan }
+  return { id: t.id, muted: t.muted, volume: t.volume, pan: t.pan }
 }
 
 import { cloneScene, restoreScene } from './sceneData.ts'
@@ -356,6 +354,7 @@ function restoreCell(c: Cell, fallbackTrackId: number): Cell {
       slide: tr.slide ?? false,
       ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
     })),
+    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
   }
 }
 
@@ -363,14 +362,19 @@ function restoreSong(src: Song): void {
   song.name = src.name || 'Untitled'
   song.bpm = src.bpm
   song.rootNote = src.rootNote ?? 0
-  song.tracks = src.tracks.map(t => ({ ...t }))
+  // Strip legacy name/voiceId from tracks (ADR 080: moved to Cell per ADR 062)
+  song.tracks = src.tracks.map((t: Track & { name?: string; voiceId?: VoiceId | null }) => ({
+    id: t.id, muted: t.muted, volume: t.volume, pan: t.pan,
+  }))
+  // Keep legacy track data for cell migration
+  const legacyTrackData = src.tracks as (Track & { name?: string; voiceId?: VoiceId | null })[]
   song.patterns = src.patterns.map(p => {
     const cells = p.cells.map((c, i) => restoreCell(c, i))
     // Ensure cells for all global tracks exist (pad if needed, never truncate)
     const existing = new Set(cells.map(c => c.trackId))
-    for (const t of song.tracks) {
+    for (const t of legacyTrackData) {
       if (!existing.has(t.id)) {
-        cells.push(makeEmptyCell(t.id, t.name, t.voiceId, 60))
+        cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
       }
     }
     return { id: p.id, name: p.name, color: p.color ?? 0, cells }
@@ -1094,7 +1098,7 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
   switch (target.kind) {
     case 'global':
       if (target.param === 'tempo') {
-        song.bpm = Math.round(60 + v * 240)  // 60–300 BPM
+        song.bpm = Math.round(BPM_MIN + v * (BPM_MAX - BPM_MIN))
       } else if (target.param === 'masterVolume') {
         perf.masterGain = v
       }

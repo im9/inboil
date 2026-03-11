@@ -14,6 +14,10 @@ export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A',
 export const SCALE_DEGREES = [0, 2, 4, 5, 7, 9, 11] as const
 export const SCALE_DEGREES_SET: Set<number> = new Set(SCALE_DEGREES)
 
+// ── BPM range ────────────────────────────────────────────────────────────────
+export const BPM_MIN = 40
+export const BPM_MAX = 240
+
 // ── Piano roll range ────────────────────────────────────────────────────────
 export const PIANO_ROLL_MIN = 48  // C3
 export const PIANO_ROLL_MAX = 71  // B4
