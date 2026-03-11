@@ -839,7 +839,7 @@
                 {@const modeLabels = cell?.voiceId === 'FM'
                   ? ['MONO', 'POLY 12', 'WIDE 6', 'UNISON']
                   : cell?.voiceId === 'WT'
-                    ? ['MONO', 'POLY 8', 'WIDE 4', 'UNISON']
+                    ? ['MONO', 'POLY 16', 'WIDE 8', 'UNISON']
                     : ['MONO', 'POLY']}
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <!-- svelte-ignore a11y_no_static_element_interactions -->

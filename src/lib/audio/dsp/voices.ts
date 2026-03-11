@@ -1061,7 +1061,7 @@ class WTCore {
     let sig = this._renderPair(this.oscA, this.oscB, freqA, freqB, wtPosMod, effectiveFmIndex, menv)
 
     // Pre-filter saturation — adds body and presence (like analog oscillators)
-    sig = Math.tanh(sig * 1.4)
+    sig = Math.tanh(sig * 1.8)
 
     // Filter
     const fc = Math.min(
@@ -1145,8 +1145,8 @@ class WTCore {
       sumL += sigNeg * (1 + pan); sumR += sigNeg * (1 - pan)
     }
 
-    let sigL = Math.tanh(sumL * gain * 0.5 * 1.4)
-    let sigR = Math.tanh(sumR * gain * 0.5 * 1.4)
+    let sigL = Math.tanh(sumL * gain * 0.5 * 1.8)
+    let sigR = Math.tanh(sumR * gain * 0.5 * 1.8)
 
     // Filter (shared, applied to L and R)
     const fc = Math.min(
@@ -1187,19 +1187,19 @@ class WTCore {
 }
 
 /**
- * WT synth — 8-core wavetable with MEGAfm-style poly modes.
- * polyMode: 0=MONO, 1=POLY8, 2=WIDE4, 3=UNISON
+ * WT synth — 16-core wavetable with MEGAfm-style poly modes.
+ * polyMode: 0=MONO, 1=POLY16, 2=WIDE8, 3=UNISON
  */
 export class WTSynth implements Voice {
   private cores: WTCore[]
-  private polyMode = 0  // 0=mono, 1=poly8, 2=wide4, 3=unison
+  private polyMode = 0  // 0=mono, 1=poly16, 2=wide8, 3=unison
   private nextVoice = 0
-  private activeNotes = new Int8Array(8).fill(-1)
+  private activeNotes = new Int8Array(16).fill(-1)
   private _stereoTmp = new Float32Array(2)
   private wideDetune = 0.006
 
   constructor(sr: number) {
-    this.cores = Array.from({ length: 8 }, () => new WTCore(sr))
+    this.cores = Array.from({ length: 16 }, () => new WTCore(sr))
   }
 
   noteOn(note: number, v: number) {
@@ -1207,35 +1207,35 @@ export class WTSynth implements Voice {
       case 0: // MONO
         this.cores[0].noteOn(note, v)
         return
-      case 1: { // POLY8
-        for (let i = 0; i < 8; i++) {
+      case 1: { // POLY16
+        for (let i = 0; i < 16; i++) {
           if (this.activeNotes[i] === note) {
             this.cores[i].noteOn(note, v)
             return
           }
         }
         const idx = this.nextVoice
-        this.nextVoice = (this.nextVoice + 1) % 8
+        this.nextVoice = (this.nextVoice + 1) % 16
         this.activeNotes[idx] = note
         this.cores[idx].noteOn(note, v)
         return
       }
-      case 2: { // WIDE4 — 4 stereo-detuned pairs
-        for (let i = 0; i < 4; i++) {
+      case 2: { // WIDE8 — 8 stereo-detuned pairs
+        for (let i = 0; i < 8; i++) {
           if (this.activeNotes[i] === note) {
             this._wideNoteOn(i, note, v)
             return
           }
         }
-        const idx = this.nextVoice % 4
-        this.nextVoice = (this.nextVoice + 1) % 4
+        const idx = this.nextVoice % 8
+        this.nextVoice = (this.nextVoice + 1) % 8
         this.activeNotes[idx] = note
         this._wideNoteOn(idx, note, v)
         return
       }
-      case 3: // UNISON — all 8 cores on one note
-        for (let i = 0; i < 8; i++) {
-          const detune = (i - 3.5) / 3.5 * this.wideDetune
+      case 3: // UNISON — all 16 cores on one note
+        for (let i = 0; i < 16; i++) {
+          const detune = (i - 7.5) / 7.5 * this.wideDetune
           this.cores[i].noteOn(note, v)
           this.cores[i].freq *= (1 + detune)
         }
@@ -1258,7 +1258,7 @@ export class WTSynth implements Voice {
       this.cores[0].noteOff()
       return
     }
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 16; i++) {
       this.cores[i].noteOff()
       this.activeNotes[i] = -1
     }
@@ -1274,31 +1274,31 @@ export class WTSynth implements Voice {
       return
     }
     if (this.polyMode === 2) {
-      const prev = ((this.nextVoice - 1 + 4) % 4)
+      const prev = ((this.nextVoice - 1 + 8) % 8)
       this.activeNotes[prev] = note
       this._wideNoteOn(prev, note, v)
       return
     }
-    // Poly8
-    const prev = (this.nextVoice - 1 + 8) % 8
+    // Poly16
+    const prev = (this.nextVoice - 1 + 16) % 16
     this.cores[prev].slideNoteTo(note, v)
     this.activeNotes[prev] = note
   }
 
   reset() {
-    for (let i = 0; i < 8; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
+    for (let i = 0; i < 16; i++) { this.cores[i].reset(); this.activeNotes[i] = -1 }
     this.nextVoice = 0
   }
 
-  // √N scaling so chords don't lose too much volume
+  // √N scaling — based on typical simultaneous notes, not max polyphony
   private static readonly POLY_SCALE = 1 / Math.sqrt(8)   // ≈0.35
-  private static readonly WIDE_SCALE = 1 / Math.sqrt(4)   // 0.5
-  private static readonly UNI_SCALE  = 1 / Math.sqrt(8)   // ≈0.35
+  private static readonly WIDE_SCALE = 1 / Math.sqrt(8)   // ≈0.35
+  private static readonly UNI_SCALE  = 1 / Math.sqrt(16)  // 0.25
 
   tick(): number {
     if (this.polyMode === 0) return this.cores[0].tick()
     let sum = 0
-    for (let i = 0; i < 8; i++) sum += this.cores[i].tick()
+    for (let i = 0; i < 16; i++) sum += this.cores[i].tick()
     return sum * (this.polyMode === 2 ? WTSynth.WIDE_SCALE
       : this.polyMode === 3 ? WTSynth.UNI_SCALE : WTSynth.POLY_SCALE)
   }
@@ -1309,9 +1309,9 @@ export class WTSynth implements Voice {
       return
     }
     if (this.polyMode === 2) {
-      // WIDE4: even=L, odd=R
+      // WIDE8: even=L, odd=R
       let sumL = 0, sumR = 0
-      for (let p = 0; p < 4; p++) {
+      for (let p = 0; p < 8; p++) {
         this.cores[p * 2].tickStereo(this._stereoTmp)
         sumL += this._stereoTmp[0]
         this.cores[p * 2 + 1].tickStereo(this._stereoTmp)
@@ -1321,9 +1321,9 @@ export class WTSynth implements Voice {
       out[0] = sumL * s; out[1] = sumR * s
       return
     }
-    // Poly8 / Unison: sum stereo from all cores
+    // Poly16 / Unison: sum stereo from all cores
     let sumL = 0, sumR = 0
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 16; i++) {
       this.cores[i].tickStereo(this._stereoTmp)
       sumL += this._stereoTmp[0]; sumR += this._stereoTmp[1]
     }
@@ -1335,7 +1335,7 @@ export class WTSynth implements Voice {
     if (key === 'polyMode') {
       const newMode = Math.round(value)
       if (newMode !== this.polyMode) {
-        for (let i = (newMode === 0 ? 1 : 0); i < 8; i++) {
+        for (let i = (newMode === 0 ? 1 : 0); i < 16; i++) {
           if (newMode === 0 && i > 0) { this.cores[i].noteOff(); this.activeNotes[i] = -1 }
         }
         this.polyMode = newMode
@@ -1349,8 +1349,8 @@ export class WTSynth implements Voice {
     }
     // Cap unison in poly mode (ADR 063 mitigation)
     if (key === 'unisonVoices' && this.polyMode > 0) value = Math.min(value, 3)
-    // Apply param to all 8 cores
-    const n = 8
+    // Apply param to all 16 cores
+    const n = 16
     for (let i = 0; i < n; i++) {
       const c = this.cores[i]
       switch (key) {
