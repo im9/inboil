@@ -70,6 +70,12 @@ See [adr/](./adr/) for full rationale.
 - **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 
+## Module Dependency Notes
+
+`state.svelte.ts` and `audio/engine.ts` have a **circular dependency**: `engine.ts` statically imports from `state.svelte.ts` (for `ui`, `masterPad`, `fxFlavours`, etc.), and `state.svelte.ts` needs `engine` for sample operations. To break the cycle, `state.svelte.ts` uses a **dynamic import** (`await import('./audio/engine.ts')`) in `restoreSamples()`. This is intentional — do not convert it to a static import.
+
+Vite emits a warning about `engine.ts` being both dynamically and statically imported. This is expected and harmless: since other modules already statically import `engine.ts`, it stays in the main chunk regardless.
+
 ## Threading Model
 
 ```

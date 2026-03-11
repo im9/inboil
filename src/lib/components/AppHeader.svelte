@@ -287,14 +287,6 @@
   .cpu-dot.lit { background: rgba(163,161,69,0.55); }
   .cpu-dot.lit.hi { background: rgba(220,180,50,0.7); }
   .cpu-meter.crit .cpu-dot.lit.hi { background: rgba(220,80,60,0.85); }
-  .cpu-val {
-    display: inline-block;
-    min-width: 3ch;
-    text-align: right;
-    color: rgba(163,161,69,0.5);
-  }
-  .cpu-meter.warn .cpu-val { color: rgba(220,180,50,0.85); }
-  .cpu-meter.crit .cpu-val { color: rgba(220,80,60,0.9); }
   .cpu-meter.crit { animation: cpu-blink 0.6s ease-in-out infinite alternate; }
   @keyframes cpu-blink {
     from { opacity: 1; }

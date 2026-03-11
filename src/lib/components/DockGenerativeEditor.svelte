@@ -220,15 +220,15 @@
     <span class="gen-range-label">SEED</span>
     {#if gen.seed != null}
       <span class="gen-seed-val">{gen.seed}</span>
-      <button class="btn-icon" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
+      <button class="btn-icon" title="Randomize seed" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
         onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 3A5 5 0 1 1 1 6.5"/><path d="M1 1v2.5h2.5"/></svg></button>
-      <button class="btn-icon" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
+      <button class="btn-icon" title="Remove seed" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
         onpointerdown={() => sceneSetSeed(nodeId, undefined)}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
     {:else}
       <span class="gen-seed-val" style="color: var(--dk-text-dim)">off</span>
-      <button class="btn-icon" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
+      <button class="btn-icon" title="Set random seed" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
         onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg></button>
     {/if}
