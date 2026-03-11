@@ -171,6 +171,11 @@ export async function loadAllUserPresets(): Promise<StoredPreset[]> {
   return req(store.getAll())
 }
 
+/** Reset module state (test only) */
+export function _resetForTest(): void {
+  dbPromise = null
+}
+
 /** Delete a user preset by id */
 export async function deleteUserPreset(id: number): Promise<void> {
   const store = await tx(PRESET_STORE, 'readwrite')

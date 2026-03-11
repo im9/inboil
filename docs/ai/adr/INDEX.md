@@ -127,3 +127,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 073 | Desktop App | Proposed | Tauri v2 shell (Phase 1 done); Phase 2: CI, auto-update, code signing |
 | 074 | Mobile App (iOS Native) | Proposed | Swift/SwiftUI + C++ DSP port to Core Audio |
 | 080 | Pre-Launch Structural Audit | Implemented | Track→mixer-only, BPM constants, insertFx clone fix, undo coverage |
+| 082 | Test Strategy | Implemented | 129 unit tests (vitest), 18 E2E tests (Playwright): persistence, storage, scene, voice, P-LOCK |

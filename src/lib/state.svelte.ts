@@ -2,7 +2,7 @@
 import {
   SCALE_DEGREES_SET,
   PIANO_ROLL_MIN, PIANO_ROLL_MAX,
-  DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
+  DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
   DEFAULT_FX_FLAVOURS,
 } from './constants.ts'
 import { BPM_MIN, BPM_MAX, type FxFlavours } from './constants.ts'
@@ -257,77 +257,18 @@ export function ensureCells(pat: Pattern): void {
 
 // ── Undo ─────────────────────────────────────────────────────────────
 
-function cloneTrig(tr: Trig): Trig {
-  return {
-    active: tr.active, note: tr.note, velocity: tr.velocity,
-    duration: tr.duration, slide: tr.slide,
-    ...(tr.chance != null ? { chance: tr.chance } : {}),
-    ...(tr.notes && tr.notes.length > 0 ? { notes: [...tr.notes] } : {}),
-    ...(tr.paramLocks && Object.keys(tr.paramLocks).length > 0
-      ? { paramLocks: { ...tr.paramLocks } } : {}),
-  }
-}
+// Clone helpers moved to songClone.ts (ADR 082)
 
-function cloneCell(c: Cell): Cell {
-  return {
-    trackId: c.trackId,
-    name: c.name,
-    voiceId: c.voiceId,
-    steps: c.steps,
-    voiceParams: { ...c.voiceParams },
-    ...(c.presetName ? { presetName: c.presetName } : {}),
-    reverbSend: c.reverbSend, delaySend: c.delaySend,
-    glitchSend: c.glitchSend, granularSend: c.granularSend,
-    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
-    trigs: c.trigs.map(cloneTrig),
-  }
-}
-
-function clonePattern(p: Pattern): Pattern {
-  return { id: p.id, name: p.name, color: p.color, cells: p.cells.map(cloneCell) }
-}
-
-function cloneSection(s: Section): Section {
-  return {
-    patternIndex: s.patternIndex,
-    repeats: s.repeats,
-    ...(s.key != null ? { key: s.key } : {}),
-    ...(s.oct != null ? { oct: s.oct } : {}),
-    ...(s.perf != null ? { perf: s.perf } : {}),
-    ...(s.perfLen != null ? { perfLen: s.perfLen } : {}),
-    ...(s.verb ? { verb: { ...s.verb } } : {}),
-    ...(s.delay ? { delay: { ...s.delay } } : {}),
-    ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
-    ...(s.granular ? { granular: { ...s.granular } } : {}),
-    ...(s.flavours ? { flavours: { ...s.flavours } } : {}),
-  }
-}
-
-function cloneTrack(t: Track): Track {
-  return { id: t.id, muted: t.muted, volume: t.volume, pan: t.pan }
-}
-
-import { cloneScene, restoreScene } from './sceneData.ts'
+import { cloneSongPure, restoreSongPure } from './songClone.ts'
 
 function cloneSong(): Song {
-  return {
-    name: song.name, bpm: song.bpm, rootNote: song.rootNote,
-    tracks: song.tracks.map(cloneTrack),
-    patterns: song.patterns.map(clonePattern),
-    sections: song.sections.map(cloneSection),
-    scene: cloneScene(song.scene),
-    effects: {
-      reverb: { ...song.effects.reverb },
-      delay: { ...song.effects.delay },
-      ducker: { ...song.effects.ducker },
-      comp: { ...song.effects.comp },
-    },
-    flavours: { ...fxFlavours },
-    fxPadState: JSON.parse(JSON.stringify(fxPad)),
-    masterPadState: JSON.parse(JSON.stringify(masterPad)),
+  return cloneSongPure(song, {
+    fxPad: JSON.parse(JSON.stringify(fxPad)),
+    masterPad: JSON.parse(JSON.stringify(masterPad)),
+    fxFlavours: { ...fxFlavours },
     masterGain: perf.masterGain,
     swing: perf.swing,
-  }
+  })
 }
 
 interface UndoEntry { snapshot: Song; label: string }
@@ -352,102 +293,38 @@ export function pushUndo(label: string): void {
   lastPushLabel = label
 }
 
-function restoreCell(c: Cell, fallbackTrackId: number): Cell {
-  return {
-    ...c,
-    trackId: c.trackId ?? fallbackTrackId,  // migration: legacy saves lack trackId
-    voiceParams: { ...c.voiceParams },
-    trigs: c.trigs.map(tr => ({
-      ...tr,
-      duration: tr.duration ?? 1,
-      slide: tr.slide ?? false,
-      ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
-    })),
-    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
-  }
-}
-
 function restoreSong(src: Song): void {
-  song.name = src.name || 'Untitled'
-  song.bpm = src.bpm
-  song.rootNote = src.rootNote ?? 0
-  // Strip legacy name/voiceId from tracks (ADR 080: moved to Cell per ADR 062)
-  song.tracks = src.tracks.map((t: Track & { name?: string; voiceId?: VoiceId | null }) => ({
-    id: t.id, muted: t.muted, volume: t.volume, pan: t.pan,
-  }))
-  // Keep legacy track data for cell migration
-  const legacyTrackData = src.tracks as (Track & { name?: string; voiceId?: VoiceId | null })[]
-  song.patterns = src.patterns.map(p => {
-    const cells = p.cells.map((c, i) => restoreCell(c, i))
-    // Ensure cells for all global tracks exist (pad if needed, never truncate)
-    const existing = new Set(cells.map(c => c.trackId))
-    for (const t of legacyTrackData) {
-      if (!existing.has(t.id)) {
-        cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
-      }
-    }
-    return { id: p.id, name: p.name, color: p.color ?? 0, cells }
-  })
-  song.sections = src.sections.map(s => ({
-    patternIndex: s.patternIndex,
-    repeats: s.repeats,
-    ...(s.key != null ? { key: s.key } : {}),
-    ...(s.oct != null ? { oct: s.oct } : {}),
-    ...(s.perf != null ? { perf: s.perf } : {}),
-    ...(s.perfLen != null ? { perfLen: s.perfLen } : {}),
-    ...(s.verb ? { verb: { ...s.verb } } : {}),
-    ...(s.delay ? { delay: { ...s.delay } } : {}),
-    ...(s.glitch ? { glitch: { ...s.glitch } } : {}),
-    ...(s.granular ? { granular: { ...s.granular } } : {}),
-    ...(s.flavours ? { flavours: { ...s.flavours } } : {}),
-  }))
-  song.scene = restoreScene(src.scene)
-  const fx = src.effects ?? DEFAULT_EFFECTS
-  song.effects = {
-    reverb: { ...fx.reverb },
-    delay: { ...fx.delay },
-    ducker: { ...fx.ducker },
-    comp: { ...DEFAULT_EFFECTS.comp, ...fx.comp },
-  }
-  // Restore FX flavours (ADR 075) — defaults for old saves without flavours
-  const fl = src.flavours
-  fxFlavours.verb     = (fl?.verb     ?? 'room')     as FxFlavours['verb']
-  fxFlavours.delay    = (fl?.delay    ?? 'digital')   as FxFlavours['delay']
-  fxFlavours.glitch   = (fl?.glitch   ?? 'bitcrush')  as FxFlavours['glitch']
-  fxFlavours.granular = (fl?.granular ?? 'cloud')     as FxFlavours['granular']
-  // Restore FX/EQ pad state — defaults for old saves
-  if (src.fxPadState) {
-    fxPad.verb     = { ...DEFAULT_FX_PAD.verb,     ...src.fxPadState.verb }
-    fxPad.delay    = { ...DEFAULT_FX_PAD.delay,    ...src.fxPadState.delay }
-    fxPad.glitch   = { ...DEFAULT_FX_PAD.glitch,   ...src.fxPadState.glitch }
-    fxPad.granular = { ...DEFAULT_FX_PAD.granular, ...src.fxPadState.granular }
-    fxPad.filter   = { ...DEFAULT_FX_PAD.filter,   ...src.fxPadState.filter }
-    fxPad.eqLow    = { ...DEFAULT_FX_PAD.eqLow,   ...src.fxPadState.eqLow }
-    fxPad.eqMid    = { ...DEFAULT_FX_PAD.eqMid,   ...src.fxPadState.eqMid }
-    fxPad.eqHigh   = { ...DEFAULT_FX_PAD.eqHigh,  ...src.fxPadState.eqHigh }
-  } else {
-    fxPad.verb     = { ...DEFAULT_FX_PAD.verb }
-    fxPad.delay    = { ...DEFAULT_FX_PAD.delay }
-    fxPad.glitch   = { ...DEFAULT_FX_PAD.glitch }
-    fxPad.granular = { ...DEFAULT_FX_PAD.granular }
-    fxPad.filter   = { ...DEFAULT_FX_PAD.filter }
-    fxPad.eqLow    = { ...DEFAULT_FX_PAD.eqLow }
-    fxPad.eqMid    = { ...DEFAULT_FX_PAD.eqMid }
-    fxPad.eqHigh   = { ...DEFAULT_FX_PAD.eqHigh }
-  }
-  // Restore master pad state
-  if (src.masterPadState) {
-    masterPad.comp = { ...DEFAULT_MASTER_PAD.comp, ...src.masterPadState.comp }
-    masterPad.duck = { ...DEFAULT_MASTER_PAD.duck, ...src.masterPadState.duck }
-    masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret,  ...src.masterPadState.ret }
-  } else {
-    masterPad.comp = { ...DEFAULT_MASTER_PAD.comp }
-    masterPad.duck = { ...DEFAULT_MASTER_PAD.duck }
-    masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret }
-  }
-  // Restore master gain & swing
-  if (src.masterGain != null) perf.masterGain = src.masterGain
-  if (src.swing != null) perf.swing = src.swing
+  const r = restoreSongPure(src)
+  // Apply to reactive state
+  song.name = r.song.name
+  song.bpm = r.song.bpm
+  song.rootNote = r.song.rootNote
+  song.tracks = r.song.tracks
+  song.patterns = r.song.patterns
+  song.sections = r.song.sections
+  song.scene = r.song.scene
+  song.effects = r.song.effects
+  // FX flavours
+  fxFlavours.verb     = r.fxFlavours.verb
+  fxFlavours.delay    = r.fxFlavours.delay
+  fxFlavours.glitch   = r.fxFlavours.glitch
+  fxFlavours.granular = r.fxFlavours.granular
+  // FX pad
+  fxPad.verb     = r.fxPad.verb     as typeof fxPad.verb
+  fxPad.delay    = r.fxPad.delay    as typeof fxPad.delay
+  fxPad.glitch   = r.fxPad.glitch   as typeof fxPad.glitch
+  fxPad.granular = r.fxPad.granular as typeof fxPad.granular
+  fxPad.filter   = r.fxPad.filter   as typeof fxPad.filter
+  fxPad.eqLow    = r.fxPad.eqLow   as typeof fxPad.eqLow
+  fxPad.eqMid    = r.fxPad.eqMid   as typeof fxPad.eqMid
+  fxPad.eqHigh   = r.fxPad.eqHigh  as typeof fxPad.eqHigh
+  // Master pad
+  masterPad.comp = r.masterPad.comp as typeof masterPad.comp
+  masterPad.duck = r.masterPad.duck as typeof masterPad.duck
+  masterPad.ret  = r.masterPad.ret  as typeof masterPad.ret
+  // Master gain & swing
+  perf.masterGain = r.masterGain
+  perf.swing = r.swing
 }
 
 export function undo(): boolean {

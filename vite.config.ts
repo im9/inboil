@@ -6,4 +6,7 @@ export default defineConfig({
   server: {
     strictPort: true,
   },
+  test: {
+    exclude: ['e2e/**', 'node_modules/**'],
+  },
 })

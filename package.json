@@ -12,12 +12,16 @@
     "deploy": "vite build && npx wrangler pages deploy dist --project-name=inboil",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test",
     "tauri": "cargo tauri",
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "fake-indexeddb": "^6.2.5",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "typescript": "^5.6.0",

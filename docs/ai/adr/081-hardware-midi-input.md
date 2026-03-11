@@ -4,19 +4,19 @@
 
 ## Context
 
-ADR 031 で PC キーボードによるバーチャルキーボードを実装済み。`PatternToolbar.svelte` の `handleVkbdKeyDown` → `engine.triggerNote()` パイプラインが稼働中。しかし外部 MIDI キーボード（USB MIDI、Bluetooth MIDI）からの入力には未対応。
+ADR 031 implemented a virtual keyboard via PC keys. The `PatternToolbar.svelte` `handleVkbdKeyDown` → `engine.triggerNote()` pipeline is operational. However, external MIDI keyboards (USB MIDI, Bluetooth MIDI) are not yet supported.
 
-Web MIDI API (`navigator.requestMIDIAccess()`) は Chrome / Edge / Opera で完全サポートされており、USB MIDI デバイスはプラグ＆プレイ、Bluetooth MIDI は OS 側でペアリング済みなら同じ API で認識される。Firefox は実験的フラグのみ、Safari は未対応。
+The Web MIDI API (`navigator.requestMIDIAccess()`) is fully supported in Chrome / Edge / Opera. USB MIDI devices are plug-and-play, and Bluetooth MIDI devices paired at the OS level are recognized through the same API. Firefox has experimental flag support only; Safari is unsupported.
 
 ### Scope
 
-ADR 016 の Phase 2（MIDI Input）と重複するが、本 ADR は **入力のみ** にスコープを限定：
+Overlaps with ADR 016 Phase 2 (MIDI Input), but this ADR is scoped to **input only**:
 
-- MIDI Output (→ 外部シンセ) → ADR 016 Phase 1
+- MIDI Output (→ external synths) → ADR 016 Phase 1
 - MIDI Clock sync → ADR 016 Phase 3
 - VST/AU Bridge → ADR 016 Phase 4–5
 
-Chrome + デスクトップアプリ (Tauri, ADR 073) 限定機能として割り切る。
+Accepted as a Chrome + desktop app (Tauri, ADR 073) only feature.
 
 ## Decision
 
@@ -37,12 +37,12 @@ BLE MIDI (OS paired)┘                          │
 PC keyboard → keyToMidi() ──→ vkbd pipeline (engine.triggerNote / releaseNote)
 ```
 
-MIDI 入力は既存の vkbd パイプラインに合流。`engine.triggerNote()` / `engine.releaseNote()` を共有し、audition / step-record / live-record モードも ADR 031 と同じロジックを使う。
+MIDI input merges into the existing vkbd pipeline. Shares `engine.triggerNote()` / `engine.releaseNote()` and reuses the same audition / step-record / live-record modes from ADR 031.
 
 ### State
 
 ```typescript
-// src/lib/state.svelte.ts — vkbd に隣接
+// src/lib/state.svelte.ts — adjacent to vkbd
 export const midiIn = $state({
   available: false,         // Web MIDI API detected
   enabled: false,           // user toggle
@@ -134,11 +134,11 @@ function handleMessage(e: MIDIMessageEvent) {
 | Octave shift | Z/X keys | Not needed (hardware has full range) |
 | NoteOff | All-release model | Individual noteOff per key |
 
-Phase 1 では既存の mono releaseNote をそのまま使う。Phase 2 で per-note noteOff をワークレットに追加。
+Phase 1 reuses the existing mono releaseNote as-is. Phase 2 adds per-note noteOff to the worklet.
 
 ### Per-Note Release (Phase 2)
 
-現在 `engine.releaseNote(trackId)` はトラック全体のリリース。MIDI キーボードでは個別の noteOff が必要：
+Currently `engine.releaseNote(trackId)` releases the entire track. Hardware MIDI keyboards require individual noteOff per key:
 
 ```typescript
 // engine.ts — new method
@@ -158,7 +158,7 @@ case 'releaseNoteByPitch': {
 
 ### UI: Sidebar SYSTEM Panel
 
-Sidebar の SYSTEM セクションに MIDI 設定を追加：
+Add MIDI settings to the Sidebar SYSTEM section:
 
 ```
 ┌─────────────────────────────────┐
@@ -175,20 +175,20 @@ Sidebar の SYSTEM セクションに MIDI 設定を追加：
 └─────────────────────────────────┘
 ```
 
-- Enable トグル: `midiIn.enabled` を切替、`startListening()` / `stopListening()` を呼ぶ
-- Device ドロップダウン: `All` (全デバイス受信) or 特定デバイス
-- Channel ドロップダウン: `Omni` (全チャンネル) or 1–16
-- デバイスリスト: 接続状態をリアルタイム表示（`onstatechange` で自動更新）
+- Enable toggle: switches `midiIn.enabled`, calls `startListening()` / `stopListening()`
+- Device dropdown: `All` (receive from all devices) or specific device
+- Channel dropdown: `Omni` (all channels) or 1–16
+- Device list: real-time connection status (auto-updated via `onstatechange`)
 
 ### PatternToolbar Integration
 
-vkbd ボタンの隣に MIDI インジケータを追加：
+Add a MIDI indicator next to the vkbd button:
 
 ```
 [⌨ C4]  [MIDI ●]     ← ● = receiving, ○ = enabled but idle
 ```
 
-MIDI メッセージ受信中はドットが点滅（CSS animation）。
+The dot blinks (CSS animation) while MIDI messages are being received.
 
 ### Browser Compatibility & Fallback
 
@@ -207,27 +207,27 @@ if (!navigator.requestMIDIAccess) {
 
 ### Bluetooth MIDI
 
-特別な API は不要。macOS の Audio MIDI 設定 / Windows の Bluetooth 設定で BLE MIDI デバイスをペアリングすると、OS が通常の MIDI デバイスとして公開し、Web MIDI API から自動で見える。追加コード不要。
+No special API needed. When a BLE MIDI device is paired via macOS Audio MIDI Setup / Windows Bluetooth settings, the OS exposes it as a standard MIDI device, automatically visible through the Web MIDI API. No additional code required.
 
-レイテンシ: BLE MIDI は ~10–20ms の遅延。ステップ入力やオーディション用途なら問題なし。リアルタイムレコーディングではクオンタイズで吸収。
+Latency: BLE MIDI adds ~10–20ms delay. Acceptable for step input and audition. For real-time recording, quantization absorbs the latency.
 
 ## Implementation Phases
 
 1. **Phase 1: Basic Input** — `initMidi()`, `handleMessage()`, noteOn/Off → existing `engine.triggerNote/releaseNote`. Sidebar UI (enable toggle + device list). ~100 LOC.
-2. **Phase 2: Per-Note Release** — `releaseNoteByPitch` worklet command. ポリフォニック対応。
-3. **Phase 3: CC Mapping** — モジュレーションホイール (CC1) → filter cutoff, ピッチベンド → detune. Learn mode (CC 受信 → パラメータ自動割当).
-4. **Phase 4: Step/Live Record** — ADR 031 Phase 2/3 と共通。MIDI 入力からステップレコード・リアルタイムレコードへの統合。
+2. **Phase 2: Per-Note Release** — `releaseNoteByPitch` worklet command. Polyphonic support.
+3. **Phase 3: CC Mapping** — Modulation wheel (CC1) → filter cutoff, pitch bend → detune. Learn mode (receive CC → auto-assign to parameter).
+4. **Phase 4: Step/Live Record** — Shared with ADR 031 Phase 2/3. Integration of MIDI input into step-record and live-record modes.
 
 ## Considerations
 
-- **HTTPS 必須**: Web MIDI API は secure context (HTTPS or localhost) でのみ利用可能。Vite dev server (`localhost`) と Cloudflare Pages (HTTPS) は問題なし
-- **パーミッション**: ブラウザが MIDI アクセス許可プロンプトを表示。sysex を要求しなければワンクリック許可
-- **レイテンシ**: USB MIDI は < 1ms、BLE MIDI は ~10–20ms。AudioWorklet の処理遅延 (128 samples ≈ 2.7ms @48kHz) と合わせても許容範囲
-- **セキュリティ**: `sysex: false` で要求すれば SysEx メッセージは送受信不可。一般的な noteOn/noteOff/CC のみ
+- **HTTPS required**: Web MIDI API requires a secure context (HTTPS or localhost). Vite dev server (`localhost`) and Cloudflare Pages (HTTPS) are both fine
+- **Permission prompt**: Browser shows a MIDI access permission prompt. One-click approval when `sysex: false`
+- **Latency**: USB MIDI < 1ms, BLE MIDI ~10–20ms. Combined with AudioWorklet processing delay (128 samples ≈ 2.7ms @48kHz), still within acceptable range
+- **Security**: Requesting with `sysex: false` prevents SysEx message send/receive. Only standard noteOn/noteOff/CC messages
 
 ## Future Extensions
 
-- MIDI Output (ADR 016 Phase 1): トラックのトリガーを外部シンセに送信
-- MIDI Clock (ADR 016 Phase 3): 外部機器とのテンポ同期
-- MIDI Learn for all knobs: DockPanel のノブに CC 番号を割当
-- MPE (MIDI Polyphonic Expression): Roli Seaboard 等の表現力の高いコントローラ対応
+- MIDI Output (ADR 016 Phase 1): send track triggers to external synths
+- MIDI Clock (ADR 016 Phase 3): tempo sync with external gear
+- MIDI Learn for all knobs: assign CC numbers to DockPanel knobs
+- MPE (MIDI Polyphonic Expression): support for expressive controllers like Roli Seaboard

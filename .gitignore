@@ -45,6 +45,10 @@ vite.config.js.timestamp-*
 .vscode/settings.json
 .vscode/launch.json
 
+# Playwright
+test-results/
+playwright-report/
+
 # Logs
 logs/
 *.log
