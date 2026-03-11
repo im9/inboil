@@ -2,9 +2,6 @@
   import { onMount } from 'svelte'
   import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
   import { exportAndDownloadMidi } from '../midiExport.ts'
-  import { startCapture, stopCapture } from '../wavExport.ts'
-  import { downloadBlob } from '../midiExport.ts'
-  import { engine } from '../audio/engine.ts'
   import { startListening, stopListening } from '../midi.ts'
 
   const mode = $derived(ui.sidebar)
@@ -30,23 +27,6 @@
   }
 
   let confirmReset = $state(false)
-  let recording = $state(false)
-
-  async function handleBounceWav() {
-    const ctx = engine.getContext()
-    const source = engine.getCaptureSource()
-    if (!ctx || !source) return
-    recording = true
-    const blob = await startCapture(ctx, source)
-    recording = false
-    const pat = song.patterns[ui.currentPattern]
-    const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
-    downloadBlob(blob, `${name}.wav`)
-  }
-
-  function handleStopBounce() {
-    stopCapture()
-  }
 
   function handleReset() {
     factoryReset()
@@ -309,6 +289,12 @@
         <button class="btn-close" onpointerdown={() => { ui.sidebar = null }}>&times;</button>
       </div>
     </div>
+    {#if visibleMode === 'system'}
+      <div class="system-tabs">
+        <button class="system-tab" class:active={ui.systemTab === 'project'} onpointerdown={() => { ui.systemTab = 'project' }}>PROJECT</button>
+        <button class="system-tab" class:active={ui.systemTab === 'settings'} onpointerdown={() => { ui.systemTab = 'settings' }}>SETTINGS</button>
+      </div>
+    {/if}
 
       <div class="sidebar-body">
         {#if visibleMode === 'help'}
@@ -338,229 +324,222 @@
             {/if}
           {/each}
         {:else}
-          <!-- Project actions -->
-          <div class="proj-primary">
-            <button class="btn-proj-primary" onpointerdown={handleNew}
-              data-tip="New project" data-tip-ja="新規プロジェクト">
-              {L === 'ja' ? '新規プロジェクト' : 'NEW PROJECT'}
-            </button>
-            <button class="btn-proj-primary outline" onpointerdown={handleSaveAs}
-              data-tip="Save as new project" data-tip-ja="別名で保存">
-              {L === 'ja' ? '別名で保存' : 'SAVE AS'}
-            </button>
-          </div>
+          {#if ui.systemTab === 'project'}
+            <!-- ── PROJECT tab ── -->
+            <div class="proj-primary">
+              <button class="btn-proj-primary" onpointerdown={handleNew}
+                data-tip="New project" data-tip-ja="新規プロジェクト">
+                NEW PROJECT
+              </button>
+              <button class="btn-proj-primary outline" onpointerdown={handleSaveAs}
+                data-tip="Save as new project" data-tip-ja="別名で保存">
+                SAVE AS
+              </button>
+            </div>
 
-          <!-- Rename current project -->
-          <div class="proj-rename">
-            <span class="proj-rename-label">{L === 'ja' ? 'プロジェクト名' : 'PROJECT NAME'}</span>
-            {#if renamingProject}
-              <div class="proj-rename-row">
+            <div class="proj-rename">
+              <span class="proj-rename-label">{L === 'ja' ? 'プロジェクト名' : 'PROJECT NAME'}</span>
+              {#if renamingProject}
+                <div class="proj-rename-row">
+                  <input
+                    bind:this={renameInput}
+                    class="proj-name-input"
+                    type="text"
+                    maxlength="20"
+                    bind:value={renameName}
+                    onkeydown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { renamingProject = false } }}
+                  />
+                  <button class="btn-proj-primary" onpointerdown={commitRename}>OK</button>
+                </div>
+              {:else}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <span class="proj-rename-value" onclick={startRename}
+                  data-tip="Click to rename" data-tip-ja="クリックで名前変更">
+                  {song.name || 'Untitled'}
+                </span>
+              {/if}
+            </div>
+            {#if confirmNew}
+              <div class="proj-confirm">
+                <span class="proj-confirm-text">{L === 'ja' ? '未保存の変更があります。破棄しますか？' : 'Discard unsaved changes?'}</span>
+                <div class="proj-confirm-actions">
+                  <button class="btn-proj-primary danger" onpointerdown={doNew}>DISCARD</button>
+                  <button class="btn-proj-primary outline" onpointerdown={() => { confirmNew = false }}>CANCEL</button>
+                </div>
+              </div>
+            {/if}
+            {#if savingAs}
+              <div class="proj-save-as">
                 <input
-                  bind:this={renameInput}
+                  bind:this={saveAsInput}
                   class="proj-name-input"
                   type="text"
                   maxlength="20"
-                  bind:value={renameName}
-                  onkeydown={(e) => { if (e.key === 'Enter') commitRename(); if (e.key === 'Escape') { renamingProject = false } }}
+                  placeholder={L === 'ja' ? 'プロジェクト名...' : 'Project name...'}
+                  bind:value={saveAsName}
+                  onkeydown={(e) => { if (e.key === 'Enter') void commitSaveAs(); if (e.key === 'Escape') savingAs = false }}
                 />
-                <button class="btn-proj-primary" onpointerdown={commitRename}>OK</button>
+                <button class="btn-proj-primary" onpointerdown={() => void commitSaveAs()}>OK</button>
               </div>
-            {:else}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <span class="proj-rename-value" onclick={startRename}
-                data-tip="Click to rename" data-tip-ja="クリックで名前変更">
-                {song.name || 'Untitled'}
-              </span>
             {/if}
-          </div>
-          {#if confirmNew}
-            <div class="proj-confirm">
-              <span class="proj-confirm-text">{L === 'ja' ? '未保存の変更があります。破棄しますか？' : 'Discard unsaved changes?'}</span>
-              <div class="proj-confirm-actions">
-                <button class="btn-proj-primary danger" onpointerdown={doNew}>{L === 'ja' ? '破棄' : 'DISCARD'}</button>
-                <button class="btn-proj-primary outline" onpointerdown={() => { confirmNew = false }}>{L === 'ja' ? 'キャンセル' : 'CANCEL'}</button>
+
+            <!-- Export MIDI (ADR 030) -->
+            <div class="export-section">
+              <span class="proj-list-label">{L === 'ja' ? 'エクスポート' : 'EXPORT'}</span>
+              <div class="export-buttons">
+                <button class="btn-export" onpointerdown={exportAndDownloadMidi}
+                  data-tip="Export current pattern as MIDI file" data-tip-ja="現在のパターンをMIDIファイルとしてエクスポート"
+                >EXPORT MIDI</button>
               </div>
             </div>
-          {/if}
-          {#if savingAs}
-            <div class="proj-save-as">
-              <input
-                bind:this={saveAsInput}
-                class="proj-name-input"
-                type="text"
-                maxlength="20"
-                placeholder={L === 'ja' ? 'プロジェクト名...' : 'Project name...'}
-                bind:value={saveAsName}
-                onkeydown={(e) => { if (e.key === 'Enter') void commitSaveAs(); if (e.key === 'Escape') savingAs = false }}
-              />
-              <button class="btn-proj-primary" onpointerdown={() => void commitSaveAs()}>OK</button>
-            </div>
-          {/if}
 
-          <!-- Project list -->
-          <div class="proj-list">
-            <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
-            <div class="proj-item">
-              <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
-                Factory Demo
-              </button>
-              <span class="proj-item-date">built-in</span>
-            </div>
-          </div>
-          {#if projectList.length > 0}
+            <!-- Project list -->
             <div class="proj-list">
-              <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
-              {#each projectList as p}
-                <div class="proj-item" class:current={p.id === project.id}>
-                  <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
-                    {p.name}
-                  </button>
-                  <span class="proj-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
-                  {#if confirmDeleteId === p.id}
-                    <button class="proj-item-del confirm" onpointerdown={() => void handleDelete(p.id)}>
-                      {L === 'ja' ? '削除' : 'DEL'}
+              <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
+              <div class="proj-item">
+                <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
+                  Factory Demo
+                </button>
+                <span class="proj-item-date">built-in</span>
+              </div>
+            </div>
+            {#if projectList.length > 0}
+              <div class="proj-list">
+                <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
+                {#each projectList as p}
+                  <div class="proj-item" class:current={p.id === project.id}>
+                    <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
+                      {p.name}
                     </button>
-                    <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = null }}>
-                      ✕
-                    </button>
-                  {:else}
-                    <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = p.id }}>
-                      ✕
-                    </button>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          {/if}
-
-          <!-- Export (ADR 030) -->
-          <div class="export-section">
-            <span class="proj-list-label">{L === 'ja' ? 'エクスポート' : 'EXPORT'}</span>
-            <div class="export-buttons">
-              <button class="btn-export" onpointerdown={exportAndDownloadMidi}
-                data-tip="Export current pattern as MIDI file" data-tip-ja="現在のパターンをMIDIファイルとしてエクスポート"
-              >{L === 'ja' ? 'MIDI 書出し' : 'MIDI'}</button>
-              {#if recording}
-                <button class="btn-export btn-rec-active" onpointerdown={handleStopBounce}
-                  data-tip="Stop recording and save WAV" data-tip-ja="録音を停止してWAVを保存"
-                >● {L === 'ja' ? '録音停止' : 'STOP REC'}</button>
-              {:else}
-                <button class="btn-export" onpointerdown={handleBounceWav}
-                  data-tip="Record audio output to WAV — press Play, then Stop when done" data-tip-ja="音声出力をWAVに録音 — 再生後、完了時にストップ"
-                >{L === 'ja' ? 'WAV 録音' : 'WAV REC'}</button>
-              {/if}
-            </div>
-          </div>
-
-          <!-- Settings -->
-          <div class="settings-section">
-            <div class="setting-row">
-              <div class="setting-row-text">
-                <span class="setting-row-label">{L === 'ja' ? 'パターン入力' : 'PATTERN INPUT'}</span>
-                <span class="setting-row-desc">{L === 'ja'
-                  ? (prefs.patternEditor === 'grid' ? 'グリッド — タップでリズム入力' : 'トラッカー — 数値で精密入力')
-                  : (prefs.patternEditor === 'grid' ? 'Grid — tap to edit rhythm' : 'Tracker — precise numeric entry')}</span>
+                    <span class="proj-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span>
+                    {#if confirmDeleteId === p.id}
+                      <button class="proj-item-del confirm" onpointerdown={() => void handleDelete(p.id)}>
+                        DEL
+                      </button>
+                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = null }}>
+                        ✕
+                      </button>
+                    {:else}
+                      <button class="proj-item-del" onpointerdown={() => { confirmDeleteId = p.id }}>
+                        ✕
+                      </button>
+                    {/if}
+                  </div>
+                {/each}
               </div>
-              <button class="btn-toggle" onpointerdown={togglePatternEditor}>
-                {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-row-text">
-                <span class="setting-row-label">{L === 'ja' ? 'スケール制限' : 'SCALE LOCK'}</span>
-                <span class="setting-row-desc">{L === 'ja'
-                  ? 'ピアノロールでキー外のノートを無効化'
-                  : 'Disable out-of-key notes in piano roll'}</span>
-              </div>
-              <button class="btn-toggle" class:on={prefs.scaleMode} onpointerdown={toggleScaleMode}>
-                {prefs.scaleMode ? 'ON' : 'OFF'}
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-row-text">
-                <span class="setting-row-label">{L === 'ja' ? 'ホバーガイド' : 'HOVER GUIDE'}</span>
-                <span class="setting-row-desc">{L === 'ja'
-                  ? 'UIにカーソルを合わせると説明を表示'
-                  : 'Show tooltip when hovering UI elements'}</span>
-              </div>
-              <button class="btn-toggle" class:on={prefs.showGuide} onpointerdown={toggleShowGuide}>
-                {prefs.showGuide ? 'ON' : 'OFF'}
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-row-text">
-                <span class="setting-row-label">{L === 'ja' ? '表示言語' : 'LANGUAGE'}</span>
-                <span class="setting-row-desc">{L === 'ja' ? '日本語 ↔ English' : 'English ↔ 日本語'}</span>
-              </div>
-              <button class="btn-toggle" onpointerdown={toggleLang}>
-                {L === 'ja' ? 'EN' : 'JP'}
-              </button>
-            </div>
-          </div>
-
-          <!-- MIDI Input (ADR 081) -->
-          {#if midiIn.available}
-          <div class="settings-section">
-            <div class="setting-row">
-              <div class="setting-row-text">
-                <span class="setting-row-label">{L === 'ja' ? 'MIDI入力' : 'MIDI INPUT'}</span>
-                <span class="setting-row-desc">{L === 'ja'
-                  ? '外部MIDIキーボードで演奏'
-                  : 'Play with external MIDI keyboard'}</span>
-              </div>
-              <button class="btn-toggle" class:on={midiIn.enabled} onpointerdown={() => {
-                midiIn.enabled = !midiIn.enabled
-                if (midiIn.enabled) startListening(); else stopListening()
-              }}>
-                {midiIn.enabled ? 'ON' : 'OFF'}
-              </button>
-            </div>
-            {#if midiIn.enabled}
-              <div class="setting-row">
-                <div class="setting-row-text">
-                  <span class="setting-row-label">{L === 'ja' ? 'デバイス' : 'DEVICE'}</span>
-                </div>
-                <select class="midi-select" bind:value={midiIn.activeDeviceId}>
-                  <option value="">{L === 'ja' ? 'すべて' : 'All'}</option>
-                  {#each midiIn.devices.filter(d => d.connected) as dev}
-                    <option value={dev.id}>{dev.name}</option>
-                  {/each}
-                </select>
-              </div>
-              <div class="setting-row">
-                <div class="setting-row-text">
-                  <span class="setting-row-label">{L === 'ja' ? 'チャンネル' : 'CHANNEL'}</span>
-                </div>
-                <select class="midi-select" bind:value={midiIn.channel}>
-                  <option value={0}>Omni</option>
-                  {#each Array.from({ length: 16 }, (_, i) => i + 1) as ch}
-                    <option value={ch}>{ch}</option>
-                  {/each}
-                </select>
-              </div>
-              {#if midiIn.devices.length > 0}
-                <div class="midi-devices">
-                  {#each midiIn.devices as dev}
-                    <div class="midi-device" class:offline={!dev.connected}>
-                      <span class="midi-dot" class:on={dev.connected}></span>
-                      <span class="midi-device-name">{dev.name}</span>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
             {/if}
-          </div>
+
+          {:else}
+            <!-- ── SETTINGS tab ── -->
+            <div class="settings-section">
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'パターン入力' : 'PATTERN INPUT'}</span>
+                  <span class="setting-row-desc">{L === 'ja'
+                    ? (prefs.patternEditor === 'grid' ? 'グリッド — タップでリズム入力' : 'トラッカー — 数値で精密入力')
+                    : (prefs.patternEditor === 'grid' ? 'Grid — tap to edit rhythm' : 'Tracker — precise numeric entry')}</span>
+                </div>
+                <button class="btn-toggle" onpointerdown={togglePatternEditor}>
+                  {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
+                </button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'スケール制限' : 'SCALE LOCK'}</span>
+                  <span class="setting-row-desc">{L === 'ja'
+                    ? 'ピアノロールでキー外のノートを無効化'
+                    : 'Disable out-of-key notes in piano roll'}</span>
+                </div>
+                <button class="btn-toggle" class:on={prefs.scaleMode} onpointerdown={toggleScaleMode}>
+                  {prefs.scaleMode ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'ホバーガイド' : 'HOVER GUIDE'}</span>
+                  <span class="setting-row-desc">{L === 'ja'
+                    ? 'UIにカーソルを合わせると説明を表示'
+                    : 'Show tooltip when hovering UI elements'}</span>
+                </div>
+                <button class="btn-toggle" class:on={prefs.showGuide} onpointerdown={toggleShowGuide}>
+                  {prefs.showGuide ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? '表示言語' : 'LANGUAGE'}</span>
+                  <span class="setting-row-desc">{L === 'ja' ? '日本語 ↔ English' : 'English ↔ 日本語'}</span>
+                </div>
+                <button class="btn-toggle" onpointerdown={toggleLang}>
+                  {L === 'ja' ? 'EN' : 'JP'}
+                </button>
+              </div>
+            </div>
+
+            <!-- MIDI Input (ADR 081) -->
+            {#if midiIn.available}
+            <div class="settings-section">
+              <div class="setting-row">
+                <div class="setting-row-text">
+                  <span class="setting-row-label">{L === 'ja' ? 'MIDI入力' : 'MIDI INPUT'}</span>
+                  <span class="setting-row-desc">{L === 'ja'
+                    ? '外部MIDIキーボードで演奏'
+                    : 'Play with external MIDI keyboard'}</span>
+                </div>
+                <button class="btn-toggle" class:on={midiIn.enabled} onpointerdown={() => {
+                  midiIn.enabled = !midiIn.enabled
+                  if (midiIn.enabled) startListening(); else stopListening()
+                }}>
+                  {midiIn.enabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              {#if midiIn.enabled}
+                <div class="setting-row">
+                  <div class="setting-row-text">
+                    <span class="setting-row-label">{L === 'ja' ? 'デバイス' : 'DEVICE'}</span>
+                  </div>
+                  <select class="midi-select" bind:value={midiIn.activeDeviceId}>
+                    <option value="">{L === 'ja' ? 'すべて' : 'All'}</option>
+                    {#each midiIn.devices.filter(d => d.connected) as dev}
+                      <option value={dev.id}>{dev.name}</option>
+                    {/each}
+                  </select>
+                </div>
+                <div class="setting-row">
+                  <div class="setting-row-text">
+                    <span class="setting-row-label">{L === 'ja' ? 'チャンネル' : 'CHANNEL'}</span>
+                  </div>
+                  <select class="midi-select" bind:value={midiIn.channel}>
+                    <option value={0}>Omni</option>
+                    {#each Array.from({ length: 16 }, (_, i) => i + 1) as ch}
+                      <option value={ch}>{ch}</option>
+                    {/each}
+                  </select>
+                </div>
+                {#if midiIn.devices.length > 0}
+                  <div class="midi-devices">
+                    {#each midiIn.devices as dev}
+                      <div class="midi-device" class:offline={!dev.connected}>
+                        <span class="midi-dot" class:on={dev.connected}></span>
+                        <span class="midi-device-name">{dev.name}</span>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+              {/if}
+            </div>
+            {/if}
+
+            <div class="setting-group about">
+              <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
+            </div>
+
           {/if}
-
-          <div class="setting-group about">
-            <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
-          </div>
-
         {/if}
       </div>
 
-    {#if visibleMode === 'system'}
+    {#if visibleMode === 'system' && ui.systemTab === 'settings'}
       <div class="sidebar-footer">
         <span class="setting-label">{L === 'ja' ? 'リセット' : 'RESET'}</span>
         {#if confirmReset}
@@ -569,15 +548,15 @@
             : 'All patterns and settings will be reset.'}</p>
           <div class="reset-actions">
             <button class="btn-reset-confirm" onpointerdown={handleReset}>
-              {L === 'ja' ? '実行' : 'OK'}
+              OK
             </button>
             <button class="btn-reset-cancel" onpointerdown={() => { confirmReset = false }}>
-              {L === 'ja' ? 'キャンセル' : 'CANCEL'}
+              CANCEL
             </button>
           </div>
         {:else}
           <button class="btn-reset" onpointerdown={() => { confirmReset = true }}>
-            {L === 'ja' ? 'ファクトリーリセット' : 'FACTORY RESET'}
+            FACTORY RESET
           </button>
         {/if}
       </div>
@@ -669,6 +648,35 @@
     background: rgba(237,232,220,0.15);
   }
 
+
+  /* ── System tabs ── */
+  .system-tabs {
+    display: flex;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(237,232,220,0.1);
+  }
+  .system-tab {
+    flex: 1;
+    padding: 8px 0;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(237,232,220,0.35);
+    cursor: pointer;
+    transition: color 40ms linear, border-color 40ms linear;
+  }
+  .system-tab:hover {
+    color: rgba(237,232,220,0.55);
+  }
+  .system-tab.active {
+    color: rgba(237,232,220,0.9);
+    border-bottom-color: var(--color-olive);
+  }
 
   .sidebar-body {
     flex: 1;
@@ -861,7 +869,9 @@
     color: rgba(237,232,220,0.55);
     font-size: 10px;
     letter-spacing: 0.06em;
-    padding: 6px 16px;
+    padding: 6px 0;
+    min-width: 52px;
+    text-align: center;
   }
   .btn-toggle.on {
     border-color: var(--color-olive);
@@ -1111,15 +1121,6 @@
   }
   .btn-export:active {
     background: rgba(237,232,220,0.15);
-  }
-  .btn-rec-active {
-    color: rgba(220,80,60,0.9);
-    border-color: rgba(220,80,60,0.4);
-    animation: rec-blink 0.6s ease-in-out infinite alternate;
-  }
-  @keyframes rec-blink {
-    from { opacity: 1; }
-    to { opacity: 0.5; }
   }
   .settings-section {
     padding: 4px 16px;

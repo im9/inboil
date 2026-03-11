@@ -385,6 +385,7 @@ export const ui = $state<{
   selectedSceneEdge: string | null
   selectedSceneLabel: string | null
   sidebar: 'help' | 'system' | null
+  systemTab: 'project' | 'settings'
   lockMode: boolean
   selectedStep: number | null
   soloTracks: Set<number>
@@ -405,6 +406,7 @@ export const ui = $state<{
   selectedSceneEdge: null,
   selectedSceneLabel: null,
   sidebar: null,
+  systemTab: 'project' as const,
   lockMode: false,
   selectedStep: null,
   soloTracks: new Set<number>(),
@@ -586,6 +588,7 @@ export function toggleLang(): void {
 }
 export function toggleSidebar(panel: 'help' | 'system'): void {
   ui.sidebar = ui.sidebar === panel ? null : panel
+  if (panel === 'system' && ui.sidebar === 'system') ui.systemTab = 'project'
 }
 export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode

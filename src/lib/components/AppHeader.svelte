@@ -1,6 +1,9 @@
 <script lang="ts">
   import { song, playback, ui, project, masterLevels, toggleSidebar, pushUndo } from '../state.svelte.ts'
   import { BPM_MIN, BPM_MAX } from '../constants.ts'
+  import { startCapture, stopCapture } from '../wavExport.ts'
+  import { downloadBlob } from '../midiExport.ts'
+  import { engine } from '../audio/engine.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -22,6 +25,25 @@
   }
 
 
+
+  // ── WAV recording (ADR 085) ──
+  let recording = $state(false)
+
+  async function handleRec() {
+    if (recording) {
+      stopCapture()
+      return
+    }
+    const ctx = engine.getContext()
+    const source = engine.getCaptureSource()
+    if (!ctx || !source) return
+    recording = true
+    const blob = await startCapture(ctx, source)
+    recording = false
+    const pat = song.patterns[ui.currentPattern]
+    const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
+    downloadBlob(blob, `${name}.wav`)
+  }
 
   // ── Inline BPM edit ──
   let editingBpm = $state(false)
@@ -130,6 +152,14 @@
         aria-label="Stop"
         data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>
+      <button
+        class="btn-rec"
+        class:active={recording}
+        onpointerdown={handleRec}
+        aria-label={recording ? 'Stop recording' : 'Record'}
+        data-tip={recording ? 'Stop recording and save WAV' : 'Record audio output to WAV'}
+        data-tip-ja={recording ? '録音を停止してWAVを保存' : '音声出力をWAVに録音'}
+      >REC</button>
     </div>
 
     <div class="sep" aria-hidden="true"></div>
@@ -394,6 +424,32 @@
   .btn-transport.active {
     background: var(--color-bg);
     color: var(--color-fg);
+  }
+
+  /* ── REC button (ADR 085) ── */
+  .btn-rec {
+    border: 1px solid rgba(237,232,220,0.45);
+    background: transparent;
+    color: rgba(237,232,220,0.55);
+    padding: 4px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    transition: background 60ms linear, color 60ms linear, border-color 60ms linear;
+  }
+  .btn-rec:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.70);
+  }
+  .btn-rec.active {
+    color: rgba(220,80,60,0.95);
+    border-color: rgba(220,80,60,0.5);
+    background: rgba(220,80,60,0.1);
+    animation: rec-pulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes rec-pulse {
+    from { opacity: 1; }
+    to { opacity: 0.6; }
   }
 
   /* ── Separator ── */

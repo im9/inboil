@@ -85,6 +85,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 036 | Remove Footer / Dockable Panel | Implemented | Right-side param dock with minimize toggle (ADR 055) |
 | 047 | FX / EQ as Main Views | Superseded | Replaced by 054 (overlay sheets) |
 | 057 | Pattern Toolbar | Implemented | RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header |
+| 085 | System Sidebar Tabs & REC Button | Implemented | PROJECT/SETTINGS tabs in sidebar, REC ● button in sub-header, MIDI export in PROJECT tab |
 
 ## Instruments / Sound Design
 
