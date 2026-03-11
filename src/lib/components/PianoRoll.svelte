@@ -175,78 +175,7 @@
   }
 
   function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
-    // Brush mode intercepts before default behavior
-    if (activeBrush !== 'default' && brushStart(e, stepIdx, note)) return
-    e.preventDefault()
-    const state = getCellState(stepIdx, note)
-    noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
-
-    if (state === 'head') {
-      if (isPoly) {
-        // Poly mode: tap on head → remove this note from chord
-        removeNoteFromStep(trackId, stepIdx, note)
-        barDragging = false
-        return
-      }
-      // Long-press → move mode; short tap → delete
-      moveStep = stepIdx
-      movePointerId = e.pointerId
-      moveFromHead = true
-      moveTapNote = note
-      moveStartX = e.clientX
-      moveStartY = e.clientY
-      moveTimer = window.setTimeout(() => {
-        moveTimer = null
-        moveDragging = true
-        noteGridEl?.setPointerCapture(movePointerId)
-      }, 180)
-    } else if (state === 'continuation') {
-      // Click on continuation → delete the parent note
-      const headStep = findNoteHead(trackId, stepIdx, note)
-      if (headStep >= 0) {
-        if (isPoly) {
-          removeNoteFromStep(trackId, headStep, note)
-        } else {
-          ph.trigs[headStep].active = false
-        }
-      }
-      barDragging = false
-    } else {
-      // Empty cell — check if this step already has an active note
-      const trig = ph.trigs[stepIdx]
-      if (trig?.active) {
-        if (isPoly) {
-          // Poly mode: add this note to the chord
-          addNoteToStep(trackId, stepIdx, note)
-          barDragging = false
-          return
-        }
-        // Step has a note: long-press → move mode, short tap → move note to tapped pitch
-        moveStep = stepIdx
-        movePointerId = e.pointerId
-        moveFromHead = false
-        moveTapNote = note
-        moveStartX = e.clientX
-        moveStartY = e.clientY
-        moveTimer = window.setTimeout(() => {
-          moveTimer = null
-          moveDragging = true
-          noteGridEl?.setPointerCapture(movePointerId)
-        }, 180)
-      } else {
-        // Truly empty step → place a new note and start bar drag
-        if (isPoly) {
-          addNoteToStep(trackId, stepIdx, note)
-          barDragging = false
-        } else {
-          placeNoteBar(trackId, stepIdx, note, 1)
-          barDragging = true
-          barStartStep = stepIdx
-          barNote = note
-          noteGridEl?.setPointerCapture(e.pointerId)
-        }
-      }
-    }
+    brushStart(e, stepIdx, note)
   }
 
   function noteOnMove(e: PointerEvent) {
@@ -346,9 +275,10 @@
   let brushLastNote = -1       // last drawn pitch (for legato detection)
   let brushStrumStart = -1     // first step of strum placement
   let brushStrumLen = 0        // number of strum notes placed
+  let brushRightClick = false  // right-click in draw mode → erase
 
   function toggleBrush(mode: BrushMode) {
-    ui.brushMode = ui.brushMode === mode ? 'default' : mode
+    ui.brushMode = ui.brushMode === mode ? 'draw' : mode
   }
 
   function brushPlaceNote(stepIdx: number, note: number) {
@@ -434,8 +364,9 @@
   }
 
   function brushStart(e: PointerEvent, stepIdx: number, note: number) {
-    const mode = activeBrush
-    if (mode === 'default') return false
+    let mode = activeBrush
+    // Right-click in draw mode → erase
+    if (mode === 'draw' && e.button === 2) mode = 'eraser'
     e.preventDefault()
     noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
     const labels: Record<string, string> = {
@@ -448,6 +379,7 @@
     brushConstrainNote = note
     brushHeadStep = stepIdx
     brushLastNote = note
+    brushRightClick = e.button === 2
     noteGridEl?.setPointerCapture(e.pointerId)
     const key = `${stepIdx}:${note}`
     brushVisited.add(key)
@@ -479,7 +411,7 @@
     const key = `${stepIdx}:${note}`
     if (brushVisited.has(key)) return
     brushVisited.add(key)
-    if (activeBrush === 'eraser') {
+    if (activeBrush === 'eraser' || brushRightClick) {
       brushEraseNote(stepIdx, note)
     } else if (activeBrush === 'strum' && brushStrumLen > 0) {
       // Strum: extend all strum notes' duration equally
@@ -512,6 +444,7 @@
     brushLastNote = -1
     brushStrumStart = -1
     brushStrumLen = 0
+    brushRightClick = false
   }
 
   // D/E modifier key shortcuts (disabled when vkbd is active)
@@ -613,6 +546,7 @@
       onpointermove={noteOnMove}
       onpointerup={noteEndDrag}
       onpointercancel={noteEndDrag}
+      oncontextmenu={(e) => e.preventDefault()}
     >
       {#each NOTES as note}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>

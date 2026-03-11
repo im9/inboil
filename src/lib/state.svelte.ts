@@ -18,7 +18,7 @@ export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
 export type { VoiceId } from './audio/dsp/voices.ts'
 import type { VoiceId } from './audio/dsp/voices.ts'
 
-export type BrushMode = 'default' | 'draw' | 'eraser' | 'chord' | 'strum'
+export type BrushMode = 'draw' | 'eraser' | 'chord' | 'strum'
 export type ChordShape = 'triad' | '7th' | 'sus2' | 'sus4'
 
 export interface Trig {
@@ -420,7 +420,7 @@ export const ui = $state<{
   mobileOverlay: false,
   editingAutomationDecorator: null,
   focusSceneNodeId: null,
-  brushMode: 'default' as BrushMode,
+  brushMode: 'draw' as BrushMode,
   chordShape: 'triad' as ChordShape,
 })
 

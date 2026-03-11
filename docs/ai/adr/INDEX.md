@@ -73,6 +73,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 070 | Scene Navigator | Implemented | Pattern list in DockPanel, tap-to-select, BPM-synced playback pulse, context-aware display for EQ/Master/FX sheets |
 | 078 | Generative Scene Nodes | Implemented | Generative nodes (Quantizer/Tonnetz/Turing Machine), write+live modes, Freeze, presets+seed, DockPanel editing |
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |
+| 089 | Generative Auto-Mode | Proposed | Auto write/live based on playback context, generate button in step sequencer, path to microtiming/microtonality |
 
 ## UI / Layout
 
