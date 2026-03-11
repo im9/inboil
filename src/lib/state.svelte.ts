@@ -641,7 +641,7 @@ export interface MidiDevice {
 }
 
 export const midiIn = $state({
-  available: false,
+  available: !!navigator.requestMIDIAccess,
   enabled: false,
   devices: [] as MidiDevice[],
   activeDeviceId: '',

@@ -20,10 +20,10 @@ async function ensureEngine() {
 }
 
 export async function initMidi(): Promise<boolean> {
+  if (access) return true  // already initialized
   if (!navigator.requestMIDIAccess) return false
   try {
     access = await navigator.requestMIDIAccess({ sysex: false })
-    midiIn.available = true
     refreshDeviceList()
     access.onstatechange = refreshDeviceList
     return true

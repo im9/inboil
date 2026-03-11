@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
   import { exportAndDownloadMidi } from '../midiExport.ts'
-  import { startListening, stopListening } from '../midi.ts'
+  import { initMidi, startListening, stopListening } from '../midi.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -487,9 +487,9 @@
                     ? '外部MIDIキーボードで演奏'
                     : 'Play with external MIDI keyboard'}</span>
                 </div>
-                <button class="btn-toggle" class:on={midiIn.enabled} onpointerdown={() => {
+                <button class="btn-toggle" class:on={midiIn.enabled} onpointerdown={async () => {
                   midiIn.enabled = !midiIn.enabled
-                  if (midiIn.enabled) startListening(); else stopListening()
+                  if (midiIn.enabled) { await initMidi(); startListening() } else stopListening()
                 }}>
                   {midiIn.enabled ? 'ON' : 'OFF'}
                 </button>

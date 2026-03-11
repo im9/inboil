@@ -23,13 +23,12 @@
     masterPad,
     soloTracks: ui.soloTracks,
   })
-  import { initMidi } from './lib/midi.ts'
   import { fade, fly } from 'svelte/transition'
 
   // ── Project restore (once) + save on page hide ───────────────────
   let restored = false
   $effect(() => {
-    if (!restored) { restored = true; void projectRestore(); void initMidi() }
+    if (!restored) { restored = true; void projectRestore() }
     const onVisChange = () => { if (document.visibilityState === 'hidden') void projectAutoSave() }
     const onBeforeUnload = () => { void projectAutoSave() }
     document.addEventListener('visibilitychange', onVisChange)
