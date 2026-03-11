@@ -307,6 +307,43 @@ describe('song round-trip: deep clone isolation', () => {
   })
 })
 
+describe('template switch + restore', () => {
+  it('does not pad empty cells for tracks removed by template switch', () => {
+    // Simulate: start with 8-track song, then apply a 4-track template to pattern[0]
+    const song = makeDefaultSong()
+    const originalTrackCount = song.tracks.length // e.g. 8
+
+    // Simulate applying a smaller template to pattern[0]:
+    // keep only the first 4 cells
+    song.patterns[0].cells = song.patterns[0].cells.slice(0, 4)
+
+    // Other patterns still reference all original tracks, so song.tracks stays large
+    expect(song.tracks.length).toBe(originalTrackCount)
+
+    // Round-trip through clone → restore (simulates IndexedDB save/load)
+    const r = roundTrip(song)
+
+    // Pattern[0] should still have only 4 cells, not padded back to originalTrackCount
+    expect(r.song.patterns[0].cells.length).toBe(4)
+  })
+
+  it('still pads cells for legacy saves without trackId', () => {
+    const song = makeDefaultSong()
+    const trackCount = song.tracks.length
+
+    // Remove trackId from pattern[0] cells to simulate legacy save
+    song.patterns[0].cells = song.patterns[0].cells.slice(0, 4)
+    for (const cell of song.patterns[0].cells) {
+      delete (cell as unknown as Record<string, unknown>).trackId
+    }
+
+    const r = roundTrip(song)
+
+    // Legacy pattern SHOULD be padded to full track count
+    expect(r.song.patterns[0].cells.length).toBe(trackCount)
+  })
+})
+
 describe('legacy migration', () => {
   it('assigns trackId when missing from cells', () => {
     const song = makeEmptySong()

@@ -133,11 +133,15 @@ export function restoreSongPure(src: Song): RestoredState {
   const legacyTrackData = src.tracks as (Track & { name?: string; voiceId?: VoiceId | null })[]
 
   const patterns = src.patterns.map(p => {
+    const isLegacy = p.cells.some((c: unknown) => (c as Record<string, unknown>).trackId == null)
     const cells = p.cells.map((c, i) => restoreCellPure(c, i))
-    const existing = new Set(cells.map(c => c.trackId))
-    for (const t of legacyTrackData) {
-      if (!existing.has(t.id)) {
-        cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
+    // Only pad missing cells for legacy saves (pre-ADR 079) where cells lack trackId
+    if (isLegacy) {
+      const existing = new Set(cells.map(c => c.trackId))
+      for (const t of legacyTrackData) {
+        if (!existing.has(t.id)) {
+          cells.push(makeEmptyCell(t.id, t.name ?? `TR${t.id + 1}`, t.voiceId ?? null, 60))
+        }
       }
     }
     return { id: p.id, name: p.name, color: p.color ?? 0, cells }
