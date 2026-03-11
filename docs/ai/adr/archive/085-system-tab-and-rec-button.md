@@ -1,6 +1,6 @@
 # ADR 085 — System Sidebar Tabs & REC Button in Sub-Header
 
-**Status**: Proposed → Implementing
+**Status**: Implemented
 **Created**: 2026-03-11
 
 ## Context
