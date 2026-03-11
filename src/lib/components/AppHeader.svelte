@@ -81,7 +81,8 @@
       {@const cpu = masterLevels.cpu}
       {@const dots = Math.min(6, Math.round(cpu / 100 * 6))}
       <span class="cpu-meter" class:warn={cpu > 60} class:crit={cpu > 85}
-        data-tip="Audio CPU load" data-tip-ja="オーディオCPU負荷">
+        data-tip={cpu > 100 ? 'CPU overload — reduce Insert FX or tracks' : cpu > 85 ? 'CPU high — consider reducing Insert FX' : `Audio CPU ${Math.round(cpu)}%`}
+        data-tip-ja={cpu > 100 ? 'CPU過負荷 — Insert FXやトラック数を減らしてください' : cpu > 85 ? 'CPU高負荷 — Insert FXの削減を検討' : `オーディオCPU ${Math.round(cpu)}%`}>
         <span class="cpu-label">CPU</span>
         <span class="cpu-dots">{#each {length: 6} as _, i}<span class="cpu-dot" class:lit={i < dots} class:hi={i >= 4}></span>{/each}</span>
         <!-- <span class="cpu-val">{Math.round(cpu)}%</span> -->

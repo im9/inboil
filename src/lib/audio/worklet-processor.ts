@@ -34,10 +34,10 @@ declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
-import { SimpleReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter } from './dsp/effects.ts'
+import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES, SamplerVoice } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
-import type { WorkletCommand, WorkletTrack, WorkletEvent } from './dsp/types.ts'
+import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
 
 // Re-export types for engine.ts
 export type { WorkletCommand, WorkletPattern, WorkletTrack, WorkletEvent } from './dsp/types.ts'
@@ -127,6 +127,29 @@ function generateArpNotes(base: number, mode: number, chord: number, oct: number
   return notes
 }
 
+// ── Insert FX slot (ADR 077) ──────────────────────────────────────────────────
+
+interface InsertFxSlot {
+  type: 'verb' | 'delay' | 'glitch'
+  reverb?: LiteReverb
+  delay?: PingPongDelay
+  tapeDelay?: TapeDelay
+  // Glitch S&H state (per-slot, no shared instance needed)
+  glitchHoldL: number
+  glitchHoldR: number
+  glitchCounter: number
+  glitchSeed: number
+  // Params
+  mix: number
+  x: number
+  y: number
+  // Flavour flags
+  hall: boolean
+  dotted: boolean
+  tape: boolean
+  redux: boolean
+}
+
 // ── Processor ─────────────────────────────────────────────────────────────────
 
 class GrooveboxProcessor extends AudioWorkletProcessor {
@@ -212,6 +235,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchHoldR    = 0
   private glitchCounter  = 0
   private glitchSeed     = 55555
+  // Insert FX slots (ADR 077) — lazy per-track, null = bypass
+  private insertSlots: (InsertFxSlot | null)[] = []
+  private insertOut      = new Float64Array(2)  // reusable output buffer
   // Granular DSP
   private granular       = new GranularProcessor(sampleRate)
   // DJ Filter (XY pad sweep)
@@ -316,6 +342,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.arpTickSize  = new Int32Array(n)
             this.arpVel       = new Float64Array(n)
             this.arpSeed      = new Uint32Array(n).fill(77777)
+            this.insertSlots  = new Array(n).fill(null)
           } else {
             // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
             for (let i = 0; i < p.tracks.length; i++) {
@@ -391,6 +418,23 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               this.shelfEq[1].setActive(b.on)
             }
           }
+          // Insert FX slots (ADR 077) — lazy instantiation
+          if (this.insertSlots.length !== n) {
+            this.insertSlots = new Array(n).fill(null)
+          }
+          for (let i = 0; i < n; i++) {
+            const ins = p.tracks[i].insertFx
+            if (!ins || !ins.type) {
+              this.insertSlots[i] = null
+              continue
+            }
+            const prev = this.insertSlots[i]
+            if (!prev || prev.type !== ins.type) {
+              this.insertSlots[i] = this._createInsertSlot(ins)
+            } else {
+              this._updateInsertParams(prev, ins)
+            }
+          }
           this.masterGain = p.perf.masterGain
           // Pattern switch: reset notes and rewind playheads so step 0 replays
           // with new data. Only when reset flag is set (not on normal param tweaks).
@@ -421,6 +465,93 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   }
 
   private _calcSps() { return (60 / this.bpm / 4) * sampleRate }
+
+  // ── Insert FX helpers (ADR 077) ────────────────────────────────────────────
+
+  private _createInsertSlot(ins: WorkletInsertFx): InsertFxSlot {
+    const slot: InsertFxSlot = {
+      type: ins.type!,
+      mix: ins.mix, x: ins.x, y: ins.y,
+      hall: !!ins.hall, dotted: !!ins.dotted, tape: !!ins.tape, redux: !!ins.redux,
+      glitchHoldL: 0, glitchHoldR: 0, glitchCounter: 0, glitchSeed: 55555,
+    }
+    if (ins.type === 'verb') {
+      slot.reverb = new LiteReverb(sampleRate)
+      const size = ins.hall ? 0.82 + ins.x * 0.17 : 0.4 + ins.x * 0.59
+      const damp = ins.hall ? (1 - ins.y) * 0.3 : 1 - ins.y
+      slot.reverb!.setSize(size)
+      slot.reverb!.setDamp(damp)
+    } else if (ins.type === 'delay') {
+      if (ins.tape) {
+        slot.tapeDelay = new TapeDelay(1000, sampleRate)
+        const ms = ins.dotted ? 60000 / this.bpm * 0.75 : 50 + ins.x * 450
+        slot.tapeDelay.setTime(ms)
+      } else {
+        slot.delay = new PingPongDelay(1000, sampleRate)
+        const ms = ins.dotted ? 60000 / this.bpm * 0.75 : 50 + ins.x * 450
+        slot.delay.setTime(ms)
+      }
+    }
+    // glitch needs no pre-allocation
+    return slot
+  }
+
+  private _updateInsertParams(slot: InsertFxSlot, ins: WorkletInsertFx): void {
+    slot.mix = ins.mix; slot.x = ins.x; slot.y = ins.y
+    slot.hall = !!ins.hall; slot.dotted = !!ins.dotted
+    slot.tape = !!ins.tape; slot.redux = !!ins.redux
+    if (slot.type === 'verb' && slot.reverb) {
+      const size = ins.hall ? 0.82 + ins.x * 0.17 : 0.4 + ins.x * 0.59
+      const damp = ins.hall ? (1 - ins.y) * 0.3 : 1 - ins.y
+      slot.reverb.setSize(size)
+      slot.reverb.setDamp(damp)
+    } else if (slot.type === 'delay') {
+      const ms = ins.dotted ? 60000 / this.bpm * 0.75 : 50 + ins.x * 450
+      if (slot.tapeDelay) slot.tapeDelay.setTime(ms)
+      if (slot.delay) slot.delay.setTime(ms)
+    }
+    // glitch params applied inline in process()
+  }
+
+  /** Process insert FX for a single sample. Returns [L, R] via this.insertOut. */
+  private _processInsert(slot: InsertFxSlot, inL: number, inR: number): Float64Array {
+    let wetL = 0, wetR = 0
+    if (slot.type === 'verb' && slot.reverb) {
+      const mono = (inL + inR) * 0.5
+      const rv = slot.reverb.process(mono)
+      wetL = rv[0]; wetR = rv[1]
+    } else if (slot.type === 'delay') {
+      const fb = slot.y * 0.85
+      if (slot.tape && slot.tapeDelay) {
+        const d = slot.tapeDelay.process(inL, inR, fb)
+        wetL = d[0]; wetR = d[1]
+      } else if (slot.delay) {
+        const d = slot.delay.process(inL, inR, fb)
+        wetL = d[0]; wetR = d[1]
+      }
+    } else if (slot.type === 'glitch') {
+      // S&H downsampler (per-track state)
+      const holdMax = Math.floor(2 + slot.x * 30)
+      if (slot.glitchCounter <= 0) {
+        slot.glitchHoldL = inL
+        slot.glitchHoldR = inR
+        slot.glitchSeed = (slot.glitchSeed * 1664525 + 1013904223) >>> 0
+        slot.glitchCounter = Math.max(1, holdMax - ((slot.glitchSeed >>> 16) % Math.max(1, holdMax >> 1)))
+      }
+      slot.glitchCounter--
+      if (slot.redux) {
+        wetL = slot.glitchHoldL; wetR = slot.glitchHoldR
+      } else {
+        const levels = Math.floor(4 + (1 - slot.y) * 252)
+        wetL = Math.round(slot.glitchHoldL * levels) / levels
+        wetR = Math.round(slot.glitchHoldR * levels) / levels
+      }
+    }
+    const dry = 1 - slot.mix
+    this.insertOut[0] = inL * dry + wetL * slot.mix
+    this.insertOut[1] = inR * dry + wetR * slot.mix
+    return this.insertOut
+  }
 
   private _advanceStep() {
     if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
@@ -602,26 +733,28 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const voice = this.voices[t]
           if (!voice) continue
           const gain = this.muteGains[t] * (track?.volume ?? 0.8)
+          let sL: number, sR: number
           if (voice.tickStereo) {
             voice.tickStereo(this._stereoTmp)
-            const sL = this._stereoTmp[0] * gain
-            const sR = this._stereoTmp[1] * gain
-            if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
-            else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
-            const sendMono = (sL + sR) * 0.5
-            reverbIn   += sendMono * (track?.reverbSend   ?? 0)
-            delayIn    += sendMono * (track?.delaySend    ?? 0)
-            glitchIn   += sendMono * (track?.glitchSend   ?? 0)
-            granularIn += sendMono * (track?.granularSend ?? 0)
+            sL = this._stereoTmp[0] * gain
+            sR = this._stereoTmp[1] * gain
           } else {
             const sig = voice.tick() * gain
-            if (this.scSource[t]) { sourceDry += sig }
-            else { restL += sig * this.panGainsL[t]; restR += sig * this.panGainsR[t] }
-            reverbIn   += sig * (track?.reverbSend   ?? 0)
-            delayIn    += sig * (track?.delaySend    ?? 0)
-            glitchIn   += sig * (track?.glitchSend   ?? 0)
-            granularIn += sig * (track?.granularSend ?? 0)
+            sL = sig; sR = sig
           }
+          // Insert FX (ADR 077): process after voice output, before pan/send
+          const ins = this.insertSlots[t]
+          if (ins) {
+            const io = this._processInsert(ins, sL, sR)
+            sL = io[0]; sR = io[1]
+          }
+          if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
+          else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
+          const sendMono = (sL + sR) * 0.5
+          reverbIn   += sendMono * (track?.reverbSend   ?? 0)
+          delayIn    += sendMono * (track?.delaySend    ?? 0)
+          glitchIn   += sendMono * (track?.glitchSend   ?? 0)
+          granularIn += sendMono * (track?.granularSend ?? 0)
         }
       } else {
         // Not playing — still tick voices for triggerNote audition
@@ -630,22 +763,26 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const voice = this.voices[t]
           if (!voice) continue
           const vol = track?.volume ?? 0.8
+          let sL: number, sR: number
           if (voice.tickStereo) {
             voice.tickStereo(this._stereoTmp)
-            const sL = this._stereoTmp[0] * vol
-            const sR = this._stereoTmp[1] * vol
-            if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
-            else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
-            reverbIn   += (sL + sR) * 0.5 * (track?.reverbSend   ?? 0)
-            delayIn    += (sL + sR) * 0.5 * (track?.delaySend    ?? 0)
+            sL = this._stereoTmp[0] * vol
+            sR = this._stereoTmp[1] * vol
           } else {
             const sig = voice.tick()
             if (!sig) continue
-            if (this.scSource[t]) { sourceDry += sig * vol }
-            else { restL += sig * vol * this.panGainsL[t]; restR += sig * vol * this.panGainsR[t] }
-            reverbIn   += sig * vol * (track?.reverbSend   ?? 0)
-            delayIn    += sig * vol * (track?.delaySend    ?? 0)
+            sL = sig * vol; sR = sig * vol
           }
+          // Insert FX (ADR 077)
+          const ins = this.insertSlots[t]
+          if (ins) {
+            const io = this._processInsert(ins, sL, sR)
+            sL = io[0]; sR = io[1]
+          }
+          if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
+          else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
+          reverbIn   += (sL + sR) * 0.5 * (track?.reverbSend   ?? 0)
+          delayIn    += (sL + sR) * 0.5 * (track?.delaySend    ?? 0)
         }
       }
 

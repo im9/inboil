@@ -4,7 +4,7 @@
  */
 
 import { song, ui, pushUndo, activeCell } from './state.svelte.ts'
-import type { Trig, VoiceId } from './state.svelte.ts'
+import type { Trig, VoiceId, CellInsertFx } from './state.svelte.ts'
 import { PATTERN_COLORS } from './constants.ts'
 import { makeTrig, makeTrack, makeEmptyCell, DRUM_VOICES } from './factory.ts'
 import { VOICE_LIST } from './audio/dsp/voices.ts'
@@ -236,6 +236,41 @@ export function setTrackSteps(trackId: number, newSteps: number) {
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
   pushUndo('Set send')
   activeCell(trackId)[send] = Math.min(1, Math.max(0, v))
+}
+
+// ── Insert FX (ADR 077) ─────────────────────────────────────────────────────
+
+const DEFAULT_INSERT_FX: CellInsertFx = { type: null, flavour: 'room', mix: 0.5, x: 0.5, y: 0.5 }
+
+function ensureInsertFx(trackId: number): CellInsertFx {
+  const cell = activeCell(trackId)
+  if (!cell.insertFx) cell.insertFx = { ...DEFAULT_INSERT_FX }
+  return cell.insertFx
+}
+
+export function setInsertFxType(trackId: number, type: CellInsertFx['type']) {
+  pushUndo('Set insert FX type')
+  const fx = ensureInsertFx(trackId)
+  fx.type = type
+  // Reset flavour to default for new type
+  if (type === 'verb') fx.flavour = 'room'
+  else if (type === 'delay') fx.flavour = 'digital'
+  else if (type === 'glitch') fx.flavour = 'bitcrush'
+}
+
+export function setInsertFxFlavour(trackId: number, flavour: string) {
+  pushUndo('Set insert FX flavour')
+  ensureInsertFx(trackId).flavour = flavour
+}
+
+export function setInsertFxParam(trackId: number, param: 'mix' | 'x' | 'y', v: number) {
+  pushUndo('Set insert FX param')
+  ensureInsertFx(trackId)[param] = Math.min(1, Math.max(0, v))
+}
+
+export function clearInsertFx(trackId: number) {
+  pushUndo('Clear insert FX')
+  activeCell(trackId).insertFx = undefined
 }
 
 export function setVoiceParam(trackId: number, key: string, value: number) {

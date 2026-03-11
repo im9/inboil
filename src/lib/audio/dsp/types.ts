@@ -50,6 +50,19 @@ export interface WorkletPattern {
   }
 }
 
+/** Per-track insert FX slot (ADR 077) */
+export interface WorkletInsertFx {
+  type: 'verb' | 'delay' | 'glitch' | null
+  mix: number
+  x: number
+  y: number
+  // flavour-specific flags
+  hall?: boolean      // reverb: hall flavour
+  dotted?: boolean    // delay: dotted flavour
+  tape?: boolean      // delay: tape flavour
+  redux?: boolean     // glitch: redux flavour
+}
+
 export interface WorkletTrack {
   steps: number; trigs: WorkletTrig[]
   muted: boolean; voiceId: string
@@ -59,6 +72,7 @@ export interface WorkletTrack {
   reverbSend: number; delaySend: number
   glitchSend: number; granularSend: number
   voiceParams: Record<string, number>
+  insertFx?: WorkletInsertFx  // ADR 077: per-track insert FX
 }
 
 export interface WorkletTrig {

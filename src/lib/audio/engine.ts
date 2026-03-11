@@ -347,6 +347,16 @@ function buildWorkletPattern(
         glitchSend:    Math.min(1, cell.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
         granularSend:  Math.min(1, cell.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
         voiceParams: { ...cell.voiceParams },
+        insertFx: cell.insertFx?.type ? {
+          type: cell.insertFx.type,
+          mix: cell.insertFx.mix,
+          x: cell.insertFx.x,
+          y: cell.insertFx.y,
+          hall:   cell.insertFx.flavour === 'hall',
+          dotted: cell.insertFx.flavour === 'dotted',
+          tape:   cell.insertFx.flavour === 'tape',
+          redux:  cell.insertFx.flavour === 'redux',
+        } : undefined,
         trigs:       cell.trigs.map(trig => mapTrig(trig)),
       }
     }),

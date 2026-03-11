@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, activeCell, ui, playback, samplesByTrack, setSample, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
   import type { SceneNode } from '../state.svelte.ts'
-  import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack } from '../stepActions.ts'
+  import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
@@ -740,7 +740,7 @@
                 onpointerdown={() => { ui.selectedTrack = c.trackId }}
                 data-tip="Track {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
                 data-tip-ja="トラック {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
-              ><span class="track-num">{c.trackId + 1}</span><span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
+              ><span class="track-num">{c.trackId + 1}</span>{#if c.insertFx?.type}<span class="insert-dot" aria-label="Insert FX active">◆</span>{/if}<span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
             {/each}
           </div>
 
@@ -892,6 +892,74 @@
               {/if}
             {/each}
           </div>
+
+          <!-- Insert FX (ADR 077) -->
+          <div class="section-divider" aria-hidden="true"></div>
+          <div class="section-label">INSERT FX</div>
+          {@const insFx = cell.insertFx}
+          <div class="insert-fx-row">
+            <select
+              class="insert-select"
+              value={insFx?.type ?? ''}
+              onchange={e => {
+                const v = (e.target as HTMLSelectElement).value
+                setInsertFxType(ui.selectedTrack, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
+              }}
+              data-tip="Insert FX type" data-tip-ja="インサートFXタイプ"
+            >
+              <option value="">OFF</option>
+              <option value="verb">REVERB</option>
+              <option value="delay">DELAY</option>
+              <option value="glitch">GLITCH</option>
+            </select>
+            {#if insFx?.type === 'verb'}
+              <select
+                class="insert-select"
+                value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
+                data-tip="Reverb flavour" data-tip-ja="リバーブフレーバー"
+              >
+                <option value="room">Room</option>
+                <option value="hall">Hall</option>
+              </select>
+            {:else if insFx?.type === 'delay'}
+              <select
+                class="insert-select"
+                value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
+                data-tip="Delay flavour" data-tip-ja="ディレイフレーバー"
+              >
+                <option value="digital">Digital</option>
+                <option value="dotted">Dotted</option>
+                <option value="tape">Tape</option>
+              </select>
+            {:else if insFx?.type === 'glitch'}
+              <select
+                class="insert-select"
+                value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
+                data-tip="Glitch flavour" data-tip-ja="グリッチフレーバー"
+              >
+                <option value="bitcrush">Bitcrush</option>
+                <option value="redux">Redux</option>
+              </select>
+            {/if}
+          </div>
+          {#if insFx?.type}
+            <div class="knob-grid">
+              <span data-tip="Insert dry/wet mix" data-tip-ja="インサート ドライ/ウェット">
+                <Knob value={insFx.mix} label="MIX" size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'mix', v)} />
+              </span>
+              <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : 'S&H rate'}
+                    data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : 'S&Hレート'}>
+                <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'x', v)} />
+              </span>
+              <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : 'Bit depth'}
+                    data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : 'ビット深度'}>
+                <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'y', v)} />
+              </span>
+            </div>
+          {/if}
 
           <!-- Send + Mixer -->
           <div class="section-divider" aria-hidden="true"></div>
@@ -1156,6 +1224,12 @@
   .track-num {
     font-size: 8px;
     opacity: 0.5;
+  }
+  .insert-dot {
+    font-size: 5px;
+    color: var(--color-cyan, #6ee);
+    margin-left: 1px;
+    vertical-align: super;
   }
   .track-voice {
     font-size: 7px;
@@ -1422,6 +1496,21 @@
     display: block;
   }
 
+  .insert-fx-row {
+    display: flex;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .insert-select {
+    flex: 1;
+    font-size: 10px;
+    padding: 3px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border, #444);
+    background: var(--bg-input, #1a1a1a);
+    color: var(--fg, #eee);
+    cursor: pointer;
+  }
   .knob-grid {
     display: flex;
     flex-wrap: wrap;

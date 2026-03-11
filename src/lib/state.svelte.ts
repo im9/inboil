@@ -32,6 +32,15 @@ export interface Trig {
   paramLocks?: Record<string, number>  // per-step voice param overrides (P-Lock)
 }
 
+/** Per-track insert FX slot (ADR 077) */
+export interface CellInsertFx {
+  type: 'verb' | 'delay' | 'glitch' | null  // null = bypass
+  flavour: string       // 'room', 'hall', 'dotted', 'tape', 'bitcrush', 'redux', etc.
+  mix: number           // 0.0–1.0 dry/wet
+  x: number             // 0.0–1.0 param1 (type-dependent)
+  y: number             // 0.0–1.0 param2 (type-dependent)
+}
+
 /** Inline step data for one track in one section (ADR 042, replaces Phrase) */
 export interface Cell {
   trackId: number          // stable reference to Track.id (ADR 079)
@@ -45,6 +54,7 @@ export interface Cell {
   delaySend: number
   glitchSend: number
   granularSend: number
+  insertFx?: CellInsertFx  // per-track insert FX (ADR 077)
 }
 
 export interface ChainFx {
@@ -266,6 +276,7 @@ function cloneCell(c: Cell): Cell {
     ...(c.presetName ? { presetName: c.presetName } : {}),
     reverbSend: c.reverbSend, delaySend: c.delaySend,
     glitchSend: c.glitchSend, granularSend: c.granularSend,
+    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
     trigs: c.trigs.map(cloneTrig),
   }
 }

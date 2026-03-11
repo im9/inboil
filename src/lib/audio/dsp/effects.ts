@@ -62,6 +62,36 @@ export class SimpleReverb {
   }
 }
 
+/**
+ * Lightweight reverb for per-track insert FX (ADR 077 Phase 3).
+ * comb×2 + allpass×1 per channel — roughly half the CPU of SimpleReverb.
+ * Trades density for efficiency; lo-fi character is acceptable for inserts.
+ */
+export class LiteReverb {
+  private combsL: CombFilter[]; private combsR: CombFilter[]
+  private apL: AllpassFilter;   private apR: AllpassFilter
+  constructor(sr: number) {
+    const k = sr / 44100, sp = Math.round(23 * k)
+    const cL = [1116, 1356].map(n => Math.round(n * k))
+    this.combsL = cL.map(n => new CombFilter(n,      0.84, 0.2))
+    this.combsR = cL.map(n => new CombFilter(n + sp, 0.84, 0.2))
+    this.apL = new AllpassFilter(Math.round(556 * k))
+    this.apR = new AllpassFilter(Math.round(556 * k) + sp)
+  }
+  setSize(s: number) { const fb = 0.60 + s * 0.36; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
+  setDamp(d: number) { const v = d * 0.4;  [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
+  private out = new Float64Array(2)
+  process(x: number): Float64Array {
+    const g = 0.015; let L = 0, R = 0
+    for (const c of this.combsL) L += c.process(x * g)
+    for (const c of this.combsR) R += c.process(x * g)
+    L = this.apL.process(L)
+    R = this.apR.process(R)
+    this.out[0] = L; this.out[1] = R
+    return this.out
+  }
+}
+
 export class PingPongDelay {
   private bL: Float32Array; private bR: Float32Array
   private pL = 0; private pR = 0; private ds = 0
