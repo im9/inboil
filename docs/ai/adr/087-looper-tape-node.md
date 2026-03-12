@@ -91,14 +91,21 @@ Pattern Node output
 
 ### Scene graph behavior
 
-- Edge from pattern node → looper: captures that pattern's output
-- Edge from looper → downstream pattern node: mixes loop audio into output
+Edge-based connections (not decorators), since the looper has persistent audio state and a reversed data flow — patterns send audio *to* the looper, rather than the looper modifying a pattern.
+
+- Edge from pattern node → looper: "capture this pattern's output"
+- Looper output mixes directly into master (no outgoing edge to another pattern)
 - Accepts input from multiple pattern nodes (layered recording)
+- Looper is **not part of scene traversal** — it runs alongside patterns, not in sequence
 
 ```
-[Drums] ──→ [Looper] ──→ [Bass Pattern]
-[Synth] ──↗            (loop audio plays alongside Bass)
+[Drums] ──→ [Looper] ──→ (master mix)
+[Synth] ──↗
+                          [Bass Pattern] plays independently
+                          (looper audio heard alongside Bass)
 ```
+
+This differs from decorators (which live in `node.decorators[]` and modify pattern behavior) and from generative nodes (which feed *into* patterns). The looper is a sink/peripheral that patterns route audio to. Edge connections remain the correct model for this kind of inter-node relationship.
 
 ### DockPanel UI
 
