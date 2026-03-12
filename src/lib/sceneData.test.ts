@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { cloneSceneNode, cloneScene, restoreScene, hasMigratableFnNodes, migrateFnToDecorators, purgeStandaloneFnNodes } from './sceneData.ts'
-import type { SceneNode, SceneEdge, Scene, GenerativeConfig } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, Scene, GenerativeConfig } from './types.ts'
 
 // ── Helpers ──
 

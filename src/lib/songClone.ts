@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for testability (ADR 082).
  */
 
-import type { Trig, Cell, Pattern, Section, Track, Song, Effects, VoiceId } from './state.svelte.ts'
+import type { Trig, Cell, Pattern, Section, Track, Song, Effects, VoiceId } from './types.ts'
 import type { FxFlavours } from './constants.ts'
 import { DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
 import { cloneScene, restoreScene } from './sceneData.ts'

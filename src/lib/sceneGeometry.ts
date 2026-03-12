@@ -91,7 +91,7 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, SceneDecorator, Pattern, AutomationTarget } from './state.svelte.ts'
+import type { SceneNode, SceneDecorator, Pattern, AutomationTarget } from './types.ts'
 import { PATTERN_COLORS } from './constants.ts'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']

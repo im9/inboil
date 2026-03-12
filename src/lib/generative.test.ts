@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate, SCALE_MAP } from './generative.ts'
-import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './state.svelte.ts'
+import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './types.ts'
 
 describe('turingGenerate', () => {
   const baseParams: TuringParams = {

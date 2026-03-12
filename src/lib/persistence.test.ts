@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest'
 import { makeDefaultSong, makeEmptySong, makeTrig } from './factory.ts'
 import { cloneSongPure, restoreSongPure, type ExternalState } from './songClone.ts'
 import { DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
-import type { Song } from './state.svelte.ts'
+import type { Song } from './types.ts'
 
 // ── Helpers ──
 

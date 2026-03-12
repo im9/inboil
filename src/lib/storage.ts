@@ -3,7 +3,7 @@
  * Stores projects (song + effects) as named snapshots.
  * Stores user samples as raw audio buffers per project+track.
  */
-import type { Song } from './state.svelte.ts'
+import type { Song } from './types.ts'
 
 export interface StoredProject {
   id: string

@@ -3,7 +3,7 @@
  * Pure functions — no state imports. Caller handles undo + pattern writes.
  */
 
-import type { Trig, TuringParams, QuantizerParams, TonnetzParams } from './state.svelte.ts'
+import type { Trig, TuringParams, QuantizerParams, TonnetzParams } from './types.ts'
 
 // ── Turing Machine (shift-register random) ──
 

@@ -1,5 +1,5 @@
 // Factory presets for all voices (ADR 015)
-import type { VoiceId } from './state.svelte.ts'
+import type { VoiceId } from './types.ts'
 
 export interface SynthPreset {
   name: string

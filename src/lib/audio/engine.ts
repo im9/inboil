@@ -2,7 +2,7 @@
  * engine.ts — main thread audio engine API.
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
-import type { Song, Pattern, Cell } from '../state.svelte.ts'
+import type { Song, Pattern, Cell } from '../types.ts'
 import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 

@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 
-import type { SceneNode, SceneEdge, Scene, SceneDecorator } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, Scene, SceneDecorator } from './types.ts'
 
 // ── Clone helpers ──
 

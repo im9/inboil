@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { makeEmptyCell, makeTrack } from './factory.ts'
-import type { Pattern, Track, Cell } from './state.svelte.ts'
+import type { Pattern, Track, Cell } from './types.ts'
 
 // ── Simulate the actual app state structure ──
 

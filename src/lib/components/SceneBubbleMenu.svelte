@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GenerativeEngine } from '../state.svelte.ts'
+  import type { GenerativeEngine } from '../types.ts'
   import { ICON } from '../icons.ts'
 
   export type BubblePickType = GenerativeEngine | 'label'

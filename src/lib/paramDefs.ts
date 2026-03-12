@@ -1,4 +1,4 @@
-import type { VoiceId } from './state.svelte.ts'
+import type { VoiceId } from './types.ts'
 import { DRUM_PRESETS } from './audio/dsp/voices.ts'
 
 export interface ParamDef {

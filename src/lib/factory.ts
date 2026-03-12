@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, VoiceId } from './state.svelte.ts'
+import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, VoiceId } from './types.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
 
