@@ -1,0 +1,65 @@
+---
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <meta name="description" content="A groove box that lives in your browser. No install. No signup. Just play." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style is:global>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --color-bg: #0a0a0f;
+      --color-bg-subtle: #12121a;
+      --color-text: #e8e4dc;
+      --color-text-muted: #7a7870;
+      --color-accent: #5B8FD4;
+      --color-accent-light: #7BA4DD;
+      --color-teal: #4A9B9B;
+      --color-violet: #9B6BA0;
+      --color-salmon: #E8A090;
+
+      --font-display: 'Bebas Neue', sans-serif;
+      --font-body: 'Space Grotesk', 'Noto Sans JP', sans-serif;
+    }
+
+    html {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: var(--color-accent);
+      color: var(--color-bg);
+    }
+  </style>
+</head>
+<body>
+  <slot />
+</body>
+</html>
