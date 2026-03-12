@@ -34,7 +34,8 @@ Alternatives rejected:
 
 ```
 inboil/
-├── src/              ← app (existing Svelte + Vite)
+├── src/              ← app source (existing Svelte + Vite)
+├── dist/             ← app build output (Vite → here)
 ├── site/
 │   ├── astro.config.mjs
 │   ├── src/
@@ -42,51 +43,112 @@ inboil/
 │   │   │   └── index.astro     ← Landing Page
 │   │   └── content/
 │   │       └── docs/           ← Starlight docs (Markdown)
+│   ├── dist/                   ← site build output (Astro → here)
 │   └── package.json            ← separate dependencies
-├── dist/             ← app build output
-└── package.json      ← root (workspaces)
+└── package.json                ← root (pnpm workspaces)
 ```
+
+Build outputs are strictly separated:
+- `pnpm build` → `dist/` (app only)
+- `pnpm --filter site build` → `site/dist/` (LP + docs only)
+- Each output maps to a separate Cloudflare Pages project (see Hosting below)
 
 ### URL Structure
 
 ```
-inboil.app/           ← Landing Page
-inboil.app/app/       ← Main app (current build output)
-inboil.app/docs/      ← Docs + Tutorial
+inboil.app/           ← Landing Page (Astro)
+inboil.app/docs/      ← Docs + Tutorial (Starlight, same Astro build)
+app.inboil.app/       ← Main app (separate CF Pages project)
 ```
 
 ### 1. Landing Page (LP)
 
-First impression page. Demo showcase + call to action.
+Single-page design. The first view must immediately communicate brand, concept, and "this is alive."
+
+#### First View (Hero)
+
+The hero section has three jobs in under 3 seconds:
+1. **Brand recognition** — logo + "inboil" name, prominent and animated
+2. **Concept** — one-line catchphrase that says what this is and why it's exciting
+3. **It's alive** — something is already moving when the page loads
+
+```
+┌──────────────────────────────────────────┐
+│                                          │
+│  ┌─┬─┬─┐                                │
+│  ├─┼─┼─┤  inboil         [OPEN APP →]   │
+│  └─┴─┴─┘                                │
+│  (logo with flap animation)             │
+│                                          │
+│  No install. No signup. Just play.       │  ← catchphrase
+│  A groove box that lives in your browser │  ← sub-line
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  ○──○──○     ○                     │  │
+│  │     │  └──○──┘   (generative       │  │
+│  │  ○──┘            scene canvas      │  │
+│  │        ○──○──○    animation)       │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+└──────────────────────────────────────────┘
+```
+
+**Logo**: Grid cells flap-animate on page load, re-trigger on hover.
+
+**Scene canvas animation**: Full-bleed background or hero-inset. Reuses SceneCanvas drawing logic to render floating nodes and Bezier edges in a generative loop. Purely visual (no audio). Nodes drift, connect, and pulse — communicates "graph-based music" without explanation. Click/tap on a node triggers a ripple. This is approach B (Canvas animation), chosen over live audio demo (too heavy for first load) or video loop (not interactive).
+
+**Catchphrase candidates** (decide during implementation):
+- "No install. No signup. Just play."
+- "A groove box that lives in your browser."
+- "Sequence everything."
+
+#### Page Flow
 
 ```
 ┌──────────────────────────────────┐
-│  inboil                          │
-│  Browser-based groove box        │
-│                                  │
-│  [▶ DEMO]          [OPEN APP →]  │  ← hero section
+│  Hero (above)                    │  ← 3 seconds: brand + concept + motion
 ├──────────────────────────────────┤
-│  ♫ ♫ ♫   Demo area    ♫ ♫ ♫     │  ← one-click demo or visual
-│  (visualizer / sequencer embed)  │
-├──────────────────────────────────┤
-│  Features                        │
+│  Features (3 cards, 1 line each) │  ← scannable, icons with hover bounce
 │  • Synth & Drum Machine          │
 │  • Scene Graph Sequencer         │
-│  • Zero Dependencies, Lightweight│
+│  • Desktop & Browser             │
 ├──────────────────────────────────┤
-│  Download Desktop (future)       │
+│  Try It / Demo                   │  ← CTA to app, or embedded mini-demo
+├──────────────────────────────────┤
+│  Story + Support                 │  ← personal dev story → donate
+│  (Knob-style amount selector,    │
+│   particle + sound on complete)  │
+├──────────────────────────────────┤
+│  Download Desktop                │
 │  [macOS]  [Windows]  [Linux]     │
 ├──────────────────────────────────┤
-│  Docs & Tutorial →               │
-│  ♡ Support This Project →        │
-│  GitHub →                        │
+│  Footer: Docs, GitHub, SNS       │
 └──────────────────────────────────┘
 ```
 
-**Demo approach:**
-- One-click playback of a built-in demo song (Web Audio API) — reuse app's Svelte audio components via Astro
-- Fallback: GIF / video showing sequencer in action (lighter)
-- No autoplay (browser policy + UX)
+Each section is one viewport tall with generous whitespace. Sections fade-in on scroll (subtle, not distracting).
+
+#### Micro-interactions
+
+The LP should feel like the app itself — playful, responsive, musical.
+
+| Element | Interaction |
+|---|---|
+| Logo grid | Flap animation on load + hover |
+| Scene canvas background | Nodes drift, click → ripple |
+| Feature icons | Hover bounce / pulse |
+| CTA "Open App" | Hover glow sweep |
+| Donate amount | Knob-style selector (reuse Knob.svelte) |
+| Donate complete | Particle burst + short sound |
+| Scroll | Per-section fade-in (once, not repeating) |
+
+**Guideline**: micro-interactions respond to user actions (hover, click, scroll arrival). Nothing chases attention or interrupts. Donate animations celebrate the action, never guilt-trip.
+
+#### Demo approach
+
+- Primary: Canvas animation in hero (no audio, instant load)
+- Secondary: "Try It" section links to app, optionally with an embedded MiniSequencer (`client:visible`)
+- No autoplay audio (browser policy + UX)
 
 ### 2. Docs
 
@@ -121,6 +183,13 @@ docs/
 - Step-by-step format with screenshots or short GIFs
 - No standalone tutorial screen (reduces maintenance cost)
 
+**Interactive embeds (Phase 2+):**
+- Docs pages embed live Svelte components via `client:visible` — not just static screenshots
+- Reusable candidates: MiniSequencer, SceneCanvas, Knob, SceneRibbon
+- Each tutorial step provides a JSON snapshot that can be copy-pasted into the real app (ADR 020 export format)
+- Function node playground: SceneCanvas + DockDecoratorEditor sandbox for hands-on experimentation (Phase 3)
+- Components need a props-only mode or mini-state injection to work outside the app's global state (see Considerations)
+
 ### 3. Relationship with In-App Help
 
 ```
@@ -135,21 +204,53 @@ Quick lookup during use         Sit down and learn
 - Each Help section gets a `→ Docs` link pointing to the detailed page
 - Minimize content duplication (Help = what, Docs = how & why)
 
+**App → Docs onboarding:**
+- First launch: optional banner or tooltip suggesting the tutorial ("New here? Try the tutorial →")
+- Contextual hints: when a user first encounters a complex feature (e.g. adding a function node), show a one-time tooltip linking to the relevant docs page
+- Help sidebar: permanent "Full Tutorial →" link at the top
+
 ## Considerations
 
 - **Custom domain**: acquire a custom domain (e.g. `inboil.app`) before public launch. A `.pages.dev` URL looks like a hobby project and undermines trust — especially when asking for donations (ADR 071). Custom domain is ~$10–15/year and significantly improves perceived credibility. Use `.pages.dev` during development, switch to custom domain for launch
 - **Domain structure** (with custom domain):
-  - `inboil.app` → LP
-  - `app.inboil.app` → Main app
-  - `docs.inboil.app` → Docs
+  - `inboil.app` → LP + Docs (single Astro project, path-based routing)
+  - `inboil.app/docs/` → Docs (Starlight, same build output as LP)
+  - `app.inboil.app` → Main app (separate CF Pages project)
+  - Docs use path-based routing, not a subdomain — keeps SEO domain authority unified with LP and avoids splitting the Astro build
 - **Demo weight**: a Web Audio demo is compelling but increases LP load time. Astro's partial hydration (`client:visible`) helps — only load the audio engine when the demo section scrolls into view
 - **Bilingual docs**: doubles the writing effort. Start with one language, expand based on demand
-- **Hosting**: Cloudflare Pages for all three (LP, app, docs). Can be separate Pages projects with custom subdomains, or a single project with subpath routing during development
+- **Hosting**: Two Cloudflare Pages projects:
+  - `inboil-app` → deploys `dist/` → `app.inboil.app`
+  - `inboil-site` → deploys `site/dist/` → `inboil.app` (LP at `/`, docs at `/docs/`)
+  - Separate projects keep build caches independent. During development, use `.pages.dev` URLs
 - **Component reuse boundary**: LP demo can import Svelte components from `../src/lib/`, but should only pull UI — not the entire state management layer
+- **Playground state isolation**: Interactive embeds (Phase 2–3) cannot depend on the app's global state (`song`, `ui`, `playback`). Options: (a) props-only mode on existing components, (b) a lightweight `PlaygroundState` context that provides a 1-pattern / few-track sandbox. This is the main technical cost of interactive docs
+- **Docs offline caching**: not in scope. Docs are an online learning resource; offline reference needs are served by in-app Help. Revisit only if PWA scope expands to include the docs subdomain
+
+## Phases
+
+### Phase 1 — LP + Static Docs (shippable independently)
+- Astro + Starlight setup in `site/`
+- Landing page with hero animation (SceneCanvas-based), logo flap, micro-interactions
+- Donate section with Knob selector and celebration animation (ADR 071)
+- Docs: Markdown pages with screenshots / GIFs
+- In-app Help `→ Docs` links
+- Desktop download links (if ready)
+
+### Phase 2 — Interactive Docs
+- Embed lightweight Svelte components in docs pages (MiniSequencer, SceneRibbon, Knob)
+- Props-only mode or mini-state injection for embedded components
+- Tutorial step snapshots as copy-pasteable JSON
+
+### Phase 3 — Function Node Playground + Onboarding
+- SceneCanvas + DockDecoratorEditor sandbox in docs
+- Full PlaygroundState context (1-pattern sandbox with audio)
+- Copy-paste from playground to app via ADR 020 JSON export
+- First-launch onboarding banner in app
+- Contextual feature hints (one-time tooltips → docs links)
 
 ## Future Extensions
 
-- Interactive tutorial: embed a mini sequencer in docs pages for hands-on experience
 - Blog / changelog section: release notes and dev diary
 - Community: Discord link, user creation gallery
 - SEO / OGP: embed demo song audio preview in OGP tags for rich social sharing
