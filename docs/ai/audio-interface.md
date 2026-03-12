@@ -32,12 +32,12 @@ The `AnalyserNode` (fftSize=1024, smoothingTimeConstant=0.8) is inserted between
 
 ```typescript
 interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'loadSample'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
   trackId?: number          // for triggerNote / releaseNote / loadSample
-  note?: number             // for triggerNote
+  note?: number             // for triggerNote / releaseNoteByPitch
   velocity?: number         // for triggerNote
   buffer?: Float32Array     // loadSample: mono sample data
   sampleRate?: number       // loadSample: original sample rate
@@ -56,11 +56,12 @@ interface WorkletPattern {
     reverb:  { size: number; damp: number }
     delay:   { time: number; feedback: number }    // time in ms (computed from beat fraction × BPM)
     ducker:  { depth: number; release: number }
-    comp:    { threshold: number; ratio: number; makeup: number }
+    comp:    { threshold: number; ratio: number; makeup: number; attack: number; release: number }
     verbReturn: number                               // reverb return level
     dlyReturn:  number                               // delay return level
     filter:  { on: boolean; x: number; y: number }  // master filter sweep
-    eq:      { bands: Array<{ on: boolean; freq: number; gain: number }> }  // 3-band EQ
+    eq:      { bands: Array<{ on: boolean; freq: number; gain: number; q: number; shelf?: boolean }> }  // 3-band EQ
+    shimmerAmount: number                            // shimmer reverb depth (0–1)
   }
   perf: {
     rootNote: number        // 0–11 chromatic key (0=C)
@@ -72,6 +73,9 @@ interface WorkletPattern {
     swing: number           // 0.0–1.0 (mapped to 0.50–0.67 in worklet)
     glitchX: number         // FxPad: glitch downsample rate (0–1)
     glitchY: number         // FxPad: glitch bit crush depth (0–1)
+    glitchRedux: boolean    // FxPad: redux flavour active
+    glitchStutter: boolean  // FxPad: stutter flavour active
+    delayTape: boolean      // tape delay flavour active
     granularOn: boolean     // FxPad: granular grain spawning active
     granularX: number       // FxPad: grain size (0–1, maps to 10–200ms)
     granularY: number       // FxPad: grain density (0–1, sparse→dense)
@@ -94,6 +98,7 @@ interface WorkletTrack {
   glitchSend: number        // 0.0–1.0
   granularSend: number      // 0.0–1.0
   voiceParams: Record<string, number>
+  insertFx?: { type: 'verb' | 'delay' | 'glitch' | null; flavour: string; mix: number; x: number; y: number }
 }
 
 interface WorkletTrig {
@@ -135,22 +140,25 @@ Located at `src/lib/audio/engine.ts`.
 
 ```typescript
 class GrooveboxEngine {
-  async init(): Promise<void>                                                    // Create AudioContext + load worklet + AnalyserNode
-  sendPattern(song, perf?, fxPad?, reset?, sectionIndex?): void                   // Serialize section's pattern & post
-  sendPatternByIndex(song, perf?, fxPad?, reset?, patternIndex?): void            // Serialize pattern by index & post
+  async init(callbacks?: EngineCallbacks): Promise<void>                          // Create AudioContext + load worklet + AnalyserNode
+  sendPattern(song, perf?, fxPad?, ctx?, reset?, sectionIndex?): void             // Serialize section's pattern & post
+  sendPatternByIndex(song, perf?, fxPad?, ctx?, reset?, patternIndex?): void      // Serialize pattern by index & post
   play(): void                                                                   // Resume AudioContext + post play
   stop(): void                                                                   // Post stop (suspends context after 8s idle)
-  triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD audition)
+  triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD/MIDI audition)
   releaseNote(trackId): void                                                     // Release triggered note
+  releaseNoteByPitch(trackId, note): void                                        // Release specific pitch (MIDI per-note release)
   async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load TR-909 Crash/Ride sample
   async loadUserSample(trackId, file): Promise<{waveform, rawBuffer} | null>     // Load user audio file (ADR 012)
   async loadSampleFromBuffer(trackId, rawBuffer): Promise<Float32Array | null>   // Reload stored buffer (ADR 020 §I)
   set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback
   getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
+  getContext(): AudioContext | null                                               // Current AudioContext
+  getCaptureSource(): AudioNode | null                                           // Pre-destination node for WAV capture
 }
 ```
 
-`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode. Effects are read from `song.effects` internally (no separate effects parameter).
+`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad`, and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
 
 ## State Serialization
 

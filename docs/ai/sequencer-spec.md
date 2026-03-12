@@ -22,13 +22,19 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 
 ```typescript
 Song {
-  name:      string
-  bpm:       number            // 20–300
-  rootNote:  number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
-  tracks:    Track[]           // up to 16 (instrument config only, ADR 056)
-  patterns:  Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)
-  sections:  Section[]         // arrangement slots referencing patterns
-  scene:     Scene             // arrangement graph (ADR 044)
+  name:            string
+  bpm:             number            // 20–300
+  rootNote:        number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
+  tracks:          Track[]           // up to 16 (mixer-only, ADR 056/080)
+  patterns:        Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)
+  sections:        Section[]         // arrangement slots referencing patterns
+  scene:           Scene             // arrangement graph (ADR 044)
+  effects:         Effects           // global send/bus FX params
+  flavours?:       FxFlavours        // per-song FX flavour selection (ADR 075)
+  fxPadState?:     FxPadState        // persisted FxPad node positions
+  masterPadState?: MasterPadState    // persisted master pad positions
+  masterGain?:     number            // 0–1 master volume
+  swing?:          number            // 0–1 swing amount
 }
 ```
 
@@ -49,15 +55,26 @@ The song maintains a pool of 100 pattern slots. Slots 0–20 are factory pattern
 
 ```typescript
 Cell {
+  trackId:      number         // stable reference to Track.id (ADR 079)
   name:         string         // per-pattern track name (ADR 062)
   voiceId:      VoiceId | null  // per-pattern instrument (null = unassigned, ADR 056/062)
   steps:        number         // 1–64
   trigs:        Trig[]         // length === steps
   voiceParams:  Record<string, number>  // per-voice tunable parameters (see paramDefs.ts)
+  presetName?:  string         // applied preset name (display only)
   reverbSend:   number         // 0.0–1.0 send level to reverb
   delaySend:    number         // 0.0–1.0 send level to delay
   glitchSend:   number         // 0.0–1.0 send level to glitch
   granularSend: number         // 0.0–1.0 send level to granular
+  insertFx?:    CellInsertFx   // per-track insert effect (ADR 077)
+}
+
+CellInsertFx {
+  type:    'verb' | 'delay' | 'glitch' | null
+  flavour: string             // e.g. 'room', 'hall', 'tape', 'bitcrush'
+  mix:     number             // 0.0–1.0
+  x:       number             // 0.0–1.0 param1
+  y:       number             // 0.0–1.0 param2
 }
 ```
 
@@ -66,16 +83,15 @@ Cell {
 ```typescript
 Track {
   id:          number
-  name:        string          // ALL CAPS display name (e.g. "KICK", "BASS")
-  voiceId:     VoiceId | null  // null = unassigned (ADR 056). VoiceId: 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal' | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker' | 'Bass303' | 'MoogLead' | 'Analog' | 'FM' | 'WT' | 'Crash' | 'Ride' | 'Sampler'
   muted:       boolean
   volume:      number          // 0.0–1.0
   pan:         number          // -1.0 to 1.0
 }
 ```
 
-Track is instrument config only. Step data (trigs, voiceParams, sends) lives in Cell.
-Voice can be changed per-track via VoicePicker bubble menu (ADR 009).
+Track is mixer-only (ADR 080). Name and voiceId moved to Cell for per-pattern assignment (ADR 062).
+Step data (trigs, voiceParams, sends) lives in Cell.
+Voice can be changed per-pattern via VoicePicker in DockPanel (ADR 009).
 
 ## Section — DECIDED
 
@@ -116,10 +132,13 @@ AutomationPoint {
 }
 
 AutomationTarget =
-  | { kind: 'global'; param: 'tempo' | 'masterVolume' }
+  | { kind: 'global'; param: 'tempo' | 'masterVolume' | 'swing' | 'compThreshold' | 'compRatio'
+                            | 'compMakeup' | 'compAttack' | 'compRelease' | 'duckDepth' | 'duckRelease'
+                            | 'retVerb' | 'retDelay' }
   | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
   | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
                             | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'eq';     band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
   | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
 
 AutomationParams {
@@ -130,7 +149,9 @@ AutomationParams {
 
 SceneNode {
   id:                string
-  type:              'pattern' | 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+  type:              'pattern' | 'generative' | LegacyFnType
+                     // LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+                     // Legacy fn types retained for backwards compat; new nodes use decorators (ADR 066)
   x:                 number           // canvas position (normalized 0–1)
   y:                 number
   root:              boolean          // true = playback entry point (exactly one)
@@ -138,6 +159,7 @@ SceneNode {
   params?:           Record<string, number>
   automationParams?: AutomationParams // for type === 'automation' (ADR 053)
   decorators?:       SceneDecorator[] // function decorators attached to pattern nodes (ADR 066)
+  generative?:       GenerativeConfig // for type === 'generative' (ADR 078)
 }
 
 SceneEdge {
@@ -158,7 +180,19 @@ SceneLabel {
 }
 ```
 
-See ADR 044 for scene graph design and playback traversal, ADR 053 for automation, ADR 066 for decorators.
+### Generative Config (ADR 078/089)
+
+```typescript
+GenerativeConfig {
+  engine:      GenerativeEngine  // 'turing' | 'quantizer' | 'tonnetz'
+  mergeMode:   'replace' | 'merge' | 'layer'
+  targetTrack: number
+  seed?:       number
+  params:      TuringParams | QuantizerParams | TonnetzParams
+}
+```
+
+See ADR 044 for scene graph design and playback traversal, ADR 053 for automation, ADR 066 for decorators, ADR 078 for generative nodes.
 
 ## Trig — DECIDED
 

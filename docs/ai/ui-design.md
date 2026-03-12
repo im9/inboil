@@ -256,13 +256,24 @@ App-level fixed right drawer (280px width, dark zone, z-index 110) for help and 
 - Collapsible accordion sections (12 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, Grid, FX Pad, EQ, Chain)
 - GUIDE footer: shows contextual description when user hovers over `data-tip` elements (desktop only)
 
-**System mode:**
+**System mode** (ADR 085):
+Two sub-tabs: PROJECT / SETTINGS.
+
+PROJECT tab:
+- Project list (tap to load, rename, delete)
+- SAVE AS / SAVE buttons
+- Demo projects section
+- FILE section: Export/Import JSON, Export MIDI
+
+SETTINGS tab:
 - Scale Mode toggle (ON/OFF)
 - Language toggle (JP/EN)
 - About section (version info)
 - Factory Reset with two-step confirmation (footer)
 
-See ADR 017 and ADR 018 for details.
+**REC button** (in AppHeader sub-header): Armed-then-record WAV capture via MediaRecorder (ADR 085).
+
+See ADR 017, ADR 018, and ADR 085 for details.
 
 ### DockPanel — DECIDED
 
@@ -325,7 +336,8 @@ DockPanel and its sub-components (DockDecoratorEditor, DockGenerativeEditor, Doc
 ### PianoRoll — DECIDED
 
 DAW-style note bar editor for melodic tracks (6–7). Always visible for melodic tracks (no toggle). Positioned between StepGrid and DockPanel.
-24-note range (C3–B4). Click empty cell to place note, drag right to extend duration (note bar).
+24-note range (C3–B4). Four brush modes (ADR 067): **pen** (draw + drag legato), **eraser** (delete with continuation support), **chord** (triad/7th/sus2/sus4 shapes), **strum** (chord with velocity decay).
+Click empty cell to place note, drag right to extend duration (note bar).
 Click head to delete, click continuation to delete parent note. Resize handle on head's right edge for post-placement adjustment.
 Connected bars = auto-legato, gaps = retrigger. Playhead column shown when playing.
 

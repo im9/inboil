@@ -53,7 +53,7 @@ See [adr/](./adr/) for full rationale.
 - **Pattern copy & paste** (IMPLEMENTED) — CPY/PST/CLR operations. → [adr/025-pattern-copy-paste.md](./adr/025-pattern-copy-paste.md)
 - **Step probability** (IMPLEMENTED) — Per-step chance (0–100%). → [adr/028-step-probability.md](./adr/028-step-probability.md)
 - **Undo / redo** (IMPLEMENTED) — Snapshot-based undo (Ctrl+Z / Cmd+Z). → [adr/029-undo-redo.md](./adr/029-undo-redo.md)
-- **Audio & MIDI export** (PROPOSED) — Offline bounce, real-time recording, MIDI file export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
+- **Audio & MIDI export** (IMPLEMENTED) — WAV recording via MediaRecorder, MIDI Type 1 export. → [adr/030-audio-midi-export.md](./adr/030-audio-midi-export.md)
 - **Virtual MIDI keyboard** (IMPLEMENTED, Phase 1) — PC keyboard audition mode. → [adr/031-virtual-keyboard.md](./adr/031-virtual-keyboard.md)
 - **Mobile velocity/chance editing** (IMPLEMENTED) — 3-mode tabs (STEP/VEL/CHNC). → [adr/033-mobile-velocity-editing.md](./adr/033-mobile-velocity-editing.md)
 - **Dockable panel** (IMPLEMENTED) — Right-side param dock with minimize toggle. → [adr/036-remove-footer-dockable-panel.md](./adr/036-remove-footer-dockable-panel.md)
@@ -69,6 +69,17 @@ See [adr/](./adr/) for full rationale.
 - **Sampler** (IMPLEMENTED) — SamplerVoice + user sample loading; Crash/Ride in drum category. → [adr/012-sampler.md](./adr/012-sampler.md)
 - **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
+- **Per-pattern voice assignment** (IMPLEMENTED) — voiceId + name moved from Track to Cell. → [adr/062-per-pattern-voice.md](./adr/062-per-pattern-voice.md)
+- **Scene node decorators** (IMPLEMENTED) — Snap-attach function nodes to patterns as decorators. → [adr/066-scene-decorators.md](./adr/066-scene-decorators.md)
+- **Piano roll drawing & chord brush** (IMPLEMENTED) — Pen draw, chord/strum brush, eraser. → [adr/067-piano-roll-drawing.md](./adr/067-piano-roll-drawing.md)
+- **4-operator FM synth** (IMPLEMENTED) — 4-op, 8 algorithms, 12-voice poly. → [adr/068-fm-synth.md](./adr/068-fm-synth.md)
+- **FX flavours** (IMPLEMENTED) — Tape delay, shimmer, stutter, per-pattern FX variant. → [adr/075-fx-improvements.md](./adr/075-fx-improvements.md)
+- **Per-track insert FX** (IMPLEMENTED) — LiteReverb, insert verb/delay/glitch per track. → [adr/077-per-track-insert-fx.md](./adr/077-per-track-insert-fx.md)
+- **Generative scene nodes** (IMPLEMENTED) — Turing Machine, Quantizer, Tonnetz. → [adr/078-generative-nodes.md](./adr/078-generative-nodes.md)
+- **Cell.trackId** (IMPLEMENTED) — Explicit trackId on Cell, decouples array position from identity. → [adr/079-cell-trackid.md](./adr/079-cell-trackid.md)
+- **Hardware MIDI input** (IMPLEMENTED) — Web MIDI API, USB + BLE MIDI. → [adr/081-midi-input.md](./adr/081-midi-input.md)
+- **System sidebar tabs & REC** (IMPLEMENTED) — PROJECT/SETTINGS tabs, REC button, MIDI export. → [adr/085-system-sidebar-rec.md](./adr/085-system-sidebar-rec.md)
+- **Engine–state decoupling** (IMPLEMENTED) — Engine receives all state via args, not imports. → [adr/086-engine-state-decoupling.md](./adr/086-engine-state-decoupling.md)
 
 ## Module Dependency Notes
 
@@ -110,7 +121,6 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
-│   │   │   ├── PerfBar.svelte    ← Perf controls (KEY, OCT, SWG, FILL/REV/BRK, VKBD)
 │   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
 │   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
@@ -131,10 +141,16 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── SceneNodePopup.svelte ← Node detail popup (rename, params)
 │   │   │   ├── AlgoGraph.svelte ← FM algorithm topology visualization (ADR 068)
 │   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
+│   │   │   ├── DockAutomationEditor.svelte ← Dock inline automation editor
+│   │   │   ├── DockDecoratorEditor.svelte ← Dock decorator knobs (ADR 069)
+│   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
+│   │   │   ├── DockPresetBrowser.svelte ← Factory preset browser (WT/FM)
+│   │   │   ├── DockTrackEditor.svelte ← Track param knobs, send/mixer
 │   │   │   ├── EnvGraph.svelte  ← ADSR envelope visualization
+│   │   │   ├── FxBubbleMenu.svelte ← FX node radial menu
+│   │   │   ├── WaveGraph.svelte ← Wavetable preview visualization
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
-│   │   │   ├── SceneRibbon.svelte ← Playback scrubber (unused, future mobile)
-│   │   │   └── WaveGraph.svelte ← Wavetable preview visualization
+│   │   │   └── SceneRibbon.svelte ← Playback scrubber (unused, future mobile)
 │   │   ├── audio/
 │   │   │   ├── engine.ts         ← Main-thread audio engine API
 │   │   │   ├── worklet-processor.ts ← AudioWorklet entry point + sequencer
@@ -148,7 +164,14 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
 │   │   ├── presets.ts            ← Factory presets for WT (22 presets) and FM (20 presets)
-│   │   └── constants.ts          ← Default values (DEFAULT_PERF, etc.)
+│   │   ├── constants.ts          ← Default values (DEFAULT_PERF, etc.)
+│   │   ├── sceneActions.ts       ← Scene graph CRUD, layout, clipboard
+│   │   ├── sceneData.ts          ← Scene clone/restore, migration helpers
+│   │   ├── sectionActions.ts     ← Pattern/section operations, duplicate, copy/paste
+│   │   ├── songClone.ts          ← Pure data clone/restore for Song serialization
+│   │   ├── generative.ts         ← Turing Machine, Quantizer, Tonnetz algorithms
+│   │   ├── midiInput.ts          ← Web MIDI API integration (ADR 081)
+│   │   └── storage.ts            ← IndexedDB access layer (ADR 020)
 │   └── dsp/                      ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt
 │       ├── engine/               ← C++ sequencer + voice manager

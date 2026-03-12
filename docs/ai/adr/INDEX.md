@@ -74,6 +74,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 078 | Generative Scene Nodes | Implemented | Generative nodes (Quantizer/Tonnetz/Turing Machine), write+live modes, Freeze, presets+seed, DockPanel editing |
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |
 | 089 | Generative Auto-Mode | Implemented | Auto write/live removed, sparkle arm-then-play in PatternToolbar, Tonnetz legato + startChord UI |
+| 090 | Worklet-Side Generative | Proposed | Move generative computation from main thread to AudioWorklet for timing accuracy |
 
 ## UI / Layout
 
@@ -124,7 +125,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 007 | Pattern Persistence | Superseded | Replaced by 020 (Data Persistence) |
 | 016 | VST Plugin / MIDI | Proposed | |
 | 019 | Multi-Device Collaboration | Proposed | |
-| 020 | Data Persistence & Storage | Proposed | |
+| 020 | Data Persistence & Storage | Proposed | Local persistence (IndexedDB + localStorage) done; cloud sync not yet implemented |
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
 | 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |

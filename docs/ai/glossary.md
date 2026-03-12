@@ -9,10 +9,10 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Song** | Top-level container. Holds BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
 | **Pattern** | A reusable unit of music: string id + name + N cells (one per track, up to 16). Stored in Song.patterns pool. |
 | **Cell** | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX send levels. Per-pattern instrument assignment (ADR 062). |
-| **Track** | Instrument configuration only: id, name, voiceId, muted, volume, pan. No step data — that's in Cell. |
+| **Track** | Mixer channel only: id, muted, volume, pan (ADR 080). Name and voiceId moved to Cell (ADR 062). |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
-| **SceneNode** | A node on the scene canvas: pattern, transpose, tempo, repeat, probability, or fx type. |
+| **SceneNode** | A node on the scene canvas: pattern, generative, or legacy function type (transpose/tempo/repeat/probability/fx/automation). |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **SceneDecorator** | Function decorator (transpose/tempo/repeat/fx/automation) attached to a pattern node (ADR 066). Snap-attaches visually. |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
@@ -27,6 +27,10 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Duration** | Note gate length in steps (1–16). Controls how long a voice sustains before `noteOff()`. |
 | **Slide** | Legato connection between consecutive notes. TB303: 60ms glide. MoogVoice: instant pitch change. |
 | **Undo** | Snapshot-based undo/redo stack (max 50). `pushUndo()` before mutations, debounced 500ms. |
+| **Generative Node** | Scene node running algorithmic composition: Turing Machine, Quantizer, or Tonnetz (ADR 078). |
+| **FX Flavours** | 3 variants per send effect (e.g. reverb: room/hall/shimmer). Per-song default, per-pattern via decorators (ADR 075/076). |
+| **Insert FX** | Per-track inline effect (verb/delay/glitch) with independent mix/params. Processed before send bus (ADR 077). |
+| **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 
 ## Synthesis Terms
 
@@ -75,9 +79,12 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
-| **VoicePicker** | Voice selection UI in DockPanel for changing a track's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list. |
+| **VoicePicker** | Voice selection UI in DockPanel for changing a cell's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list (ADR 009/058). |
 | **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
+| **Hardware MIDI** | Web MIDI API integration for USB + BLE MIDI keyboards. Per-note release, CC1→DJ Filter (ADR 081). |
+| **WAV Recording** | MediaRecorder-based capture from pre-destination node. Armed-then-record with reverb tail (ADR 085). |
+| **Chord Brush** | Piano roll drawing mode: triad/7th/sus2/sus4 shapes. Strum variant adds velocity decay (ADR 067). |
 
 ## Performance Terms
 

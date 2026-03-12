@@ -209,6 +209,11 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | effects.ts | BusCompressor | Peak-detecting compressor (0.8ms attack, 60ms release). |
 | effects.ts | PeakLimiter | Lookahead (~2.5ms) brickwall limiter at 0.92 ceiling. |
 | effects.ts | GranularProcessor | Ring buffer (~0.75s stereo) + grain pool (max 10). Send effect. |
+| effects.ts | TapeDelay | Tape delay with wow/flutter modulation (ADR 075 tape flavour). |
+| effects.ts | LiteReverb | Lightweight 2-comb reverb for per-track insert FX (ADR 077). |
+| effects.ts | StutterBuffer | Loop capture buffer for stutter glitch flavour (ADR 075). |
+| effects.ts | OctaveShifter | Pitch-shift octave effect for redux glitch flavour (ADR 075). |
+| filters.ts | ShelfEQ | High/low shelf EQ filter. Used for EQ band shelf mode. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
 | voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. FMVoice is 4-op (ADR 068). |
@@ -256,7 +261,7 @@ Each track feeds into the mix bus with:
 - `glitchSend` 0.0–1.0
 - `granularSend` 0.0–1.0
 
-All four sends are accumulated as separate buses per sample frame, then processed through their respective effects and summed. Kick (track 0) is separated from the mix and added back **after** the sidechain ducker so it punches through untouched.
+All four sends are accumulated as separate buses per sample frame, then processed through their respective effects and summed. Sidechain source tracks (any voice with `sidechainSource: true` in VOICE_LIST, e.g. Kick/Kick808 — ADR 064) are separated from the mix and added back **after** the sidechain ducker so they punch through untouched.
 
 ### SimpleReverb
 
@@ -286,12 +291,14 @@ Parameters (global):
 
 ### BusCompressor
 
-Peak-detecting compressor with fast attack (0.8ms) and medium release (60ms).
+Peak-detecting compressor with configurable attack/release.
 
 Parameters (global):
 - `threshold` 0.0–1.0 (default 0.30)
 - `ratio` (default 6)
 - `makeup` gain (default 2.2)
+- `attack` ms (default 0.8)
+- `release` ms (default 60)
 
 ### 3-Band DJ EQ
 
@@ -328,6 +335,26 @@ Controlled via FxPad GLT node XY position:
 - **Y axis** → bit crush depth (5-bit quantization, 32 amplitude levels)
 
 Also toggleable via PerfBar GLT press-hold button.
+
+### FX Flavours — DECIDED (ADR 075/076)
+
+Each send effect has 3 flavour variants, selectable per-song and overridable per-pattern via decorators:
+
+| Effect | Flavour 1 (default) | Flavour 2 | Flavour 3 |
+|--------|---------------------|-----------|-----------|
+| Reverb | **room** (SimpleReverb) | **hall** (longer tail) | **shimmer** (octave-shifted feedback) |
+| Delay | **digital** (PingPongDelay) | **dotted** (dotted-8th timing) | **tape** (TapeDelay with wow/flutter) |
+| Glitch | **bitcrush** (S&H + quantize) | **redux** (OctaveShifter pitch shift) | **stutter** (StutterBuffer loop capture) |
+| Granular | **cloud** (standard grains) | **freeze** (frozen buffer position) | **stretch** (time-stretch mode) |
+
+### Per-Track Insert FX — DECIDED (ADR 077)
+
+Each track can have one insert effect (`cell.insertFx`) with independent type, flavour, mix, and XY params:
+- **verb**: LiteReverb (lightweight 2-comb reverb)
+- **delay**: PingPongDelay or TapeDelay (per flavour)
+- **glitch**: Sample-and-hold downsample
+
+Insert FX are processed inline per-track before the send bus. They do not affect send levels.
 
 ### PeakLimiter
 

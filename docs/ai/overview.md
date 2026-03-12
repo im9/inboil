@@ -19,7 +19,6 @@ The goal is a focused, expressive tool for composing and performing electronic m
 
 - Cloud sync / user accounts
 - Collaboration features
-- MIDI controller support (deferred)
 
 ## Constraints
 
@@ -43,23 +42,29 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
 - Song model: pattern pool (100 patterns: 21 factory + 79 user), sections, scene graph
-- Scene graph: node-based directed graph for arrangement (pattern/transpose/tempo/repeat/probability/fx nodes, decorators via ADR 066)
+- Scene graph: node-based directed graph for arrangement (pattern nodes + decorators via ADR 066)
+- Generative scene nodes: Turing Machine, Quantizer, Tonnetz neo-Riemannian transforms (ADR 078/089)
+- Graphic score automation: per-node parameter curves with linear/smooth interpolation (ADR 026/053)
+- FX flavours: 3 variants per send effect — reverb (room/hall/shimmer), delay (digital/dotted/tape), glitch (bitcrush/redux/stutter), granular (cloud/freeze/stretch) (ADR 075/076)
+- Per-track insert FX: LiteReverb, delay, glitch per track (ADR 077)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
-- SectionNav: *(deprecated)* linear section strip — superseded by Scene graph
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
+- Piano roll with chord brush (pen/eraser/chord/strum), drag legato, poly chord input (ADR 067)
 - Lead arpeggiator (5 modes, chord types, octave range)
-- Note bar editor (PianoRoll) with auto-legato for melodic tracks, poly chord input for WT/FM poly mode
 - Factory preset browser (22 WT presets across 6 categories, 20 FM presets across 6 categories)
 - Master view with VU meter and audio-reactive visuals (ADR 035)
+- Hardware MIDI keyboard input: USB + BLE MIDI, per-note release, CC1→DJ Filter (ADR 081)
 - Virtual MIDI keyboard (PC keyboard audition, Phase 1)
+- WAV recording via MediaRecorder with reverb tail capture (ADR 085)
+- MIDI Type 1 multi-track export + JSON project export/import (ADR 030/020)
 - Undo/redo (snapshot-based, Ctrl+Z)
 - Pattern copy/paste/clear
 - Oscilloscope waveform display
 - Per-track solo (additive, via DockPanel or MobileParamOverlay)
-- DockPanel (right, minimizable): synth param knobs, send/mixer knobs
-- Sidebar (fixed right drawer): Help/System settings (ADR 055)
+- DockPanel (right, minimizable): synth param knobs, send/mixer, decorator editor, generative editor
+- Sidebar (fixed right drawer): Help + System (PROJECT/SETTINGS tabs, REC button) (ADR 055/085)
 - Desktop + mobile responsive UI (with mobile velocity/chance editing tabs)
 
 The C++ DSP core (`src/dsp/`) is being developed in parallel but is not yet integrated into the web build.
