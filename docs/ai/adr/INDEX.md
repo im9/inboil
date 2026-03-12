@@ -118,6 +118,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 084 | MIDI Step & Live Record | Proposed | Step input + live record from MIDI/vkbd, shared pipeline (originally ADR 081 Phase 4) |
 | 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 | 087 | Looper / Tape Node | Proposed | OP-1 Field style tape looper as scene function node, 4-track overdub, BPM-synced |
+| 093 | Cross-Node Automation | Proposed | Automation decorators that span multiple chained pattern nodes, gradual parameter transitions |
 
 ## Data / Infrastructure
 
