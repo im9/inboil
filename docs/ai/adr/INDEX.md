@@ -88,6 +88,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 047 | FX / EQ as Main Views | Superseded | Replaced by 054 (overlay sheets) |
 | 057 | Pattern Toolbar | Implemented | RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header |
 | 085 | System Sidebar Tabs & REC Button | Implemented | PROJECT/SETTINGS tabs in sidebar, REC ● button in sub-header, MIDI export in PROJECT tab |
+| 092 | DockPanel Tab — Scene & Tracks | Implemented | TRACKS/SCENE tab switcher in DockPanel, decorators + generative nodes accessible from pattern sheet |
 
 ## Instruments / Sound Design
 

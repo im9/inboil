@@ -50,6 +50,25 @@
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
 
+  // Find scene node for current pattern (for DECO tab when pattern sheet is open)
+  const currentPatternSceneNode = $derived.by(() => {
+    if (!ui.patternSheet) return null
+    const patId = song.patterns[ui.currentPattern]?.id
+    if (!patId) return null
+    return song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === patId) ?? null
+  })
+  // Find generative nodes connected to current pattern's scene node (incoming edges)
+  const connectedGenerativeNodes = $derived.by(() => {
+    if (!currentPatternSceneNode) return []
+    const inEdges = song.scene.edges.filter(e => e.to === currentPatternSceneNode.id)
+    return inEdges
+      .map(e => song.scene.nodes.find(n => n.id === e.from))
+      .filter((n): n is SceneNode => n?.type === 'generative' && !!n.generative)
+  })
+  const decoCount = $derived(
+    (currentPatternSceneNode?.decorators ?? []).length + connectedGenerativeNodes.length
+  )
+
   const GLOBAL_PARAM_LABELS: Record<string, string> = {
     tempo: 'Tempo', masterVolume: 'Vol', swing: 'Swing',
     compThreshold: 'Comp THR', compRatio: 'Comp RAT', compMakeup: 'Comp MKP',
@@ -678,7 +697,43 @@
           {/if}
 
           {#if showTrackParams}
-            <DockTrackEditor />
+            <!-- Tab bar (ADR 092) -->
+            <div class="dock-tabs">
+              <button
+                class="dock-tab"
+                class:active={ui.dockTab === 'tracks'}
+                onpointerdown={() => ui.dockTab = 'tracks'}
+              >TRACKS</button>
+              <button
+                class="dock-tab"
+                class:active={ui.dockTab === 'scene'}
+                onpointerdown={() => ui.dockTab = 'scene'}
+              >SCENE{#if decoCount > 0}<span class="dock-tab-badge">{decoCount}</span>{/if}</button>
+            </div>
+
+            {#if ui.dockTab === 'tracks'}
+              <DockTrackEditor />
+            {:else if ui.dockTab === 'scene'}
+              {#if currentPatternSceneNode}
+                <DockDecoratorEditor node={currentPatternSceneNode} />
+                {#if ui.editingAutomationInline?.nodeId === currentPatternSceneNode.id}
+                  <DockAutomationEditor
+                    nodeId={ui.editingAutomationInline.nodeId}
+                    decoratorIndex={ui.editingAutomationInline.decoratorIndex}
+                  />
+                {/if}
+                {#if connectedGenerativeNodes.length > 0}
+                  <div class="section-divider" aria-hidden="true"></div>
+                  {#each connectedGenerativeNodes as genNode}
+                    <DockGenerativeEditor node={genNode} />
+                  {/each}
+                {/if}
+              {:else}
+                <div class="dec-empty">
+                  Place this pattern in the scene graph to add decorators.
+                </div>
+              {/if}
+            {/if}
           {/if}
         </div>
     </div>
@@ -870,6 +925,54 @@
   .master-dock-band.disabled {
     opacity: 0.35;
   }
+  /* ── Dock Tabs (ADR 092) ── */
+  .dock-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 8px;
+    border: 1px solid var(--dk-border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .dock-tab {
+    flex: 1;
+    font-family: var(--font-data, inherit);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    transition: background 60ms, color 60ms;
+    position: relative;
+  }
+  .dock-tab:not(:last-child) {
+    border-right: 1px solid var(--dk-border);
+  }
+  .dock-tab:hover {
+    background: var(--dk-bg-hover);
+    color: var(--dk-text-mid);
+  }
+  .dock-tab.active {
+    background: var(--dk-bg-active);
+    color: var(--dk-text);
+  }
+  .dock-tab-badge {
+    font-size: 8px;
+    font-weight: 700;
+    vertical-align: super;
+    margin-left: 1px;
+    color: var(--color-olive);
+  }
+  .dec-empty {
+    font-size: var(--dk-fs-sm);
+    color: var(--dk-text-dim);
+    padding: 12px 0;
+    font-style: italic;
+  }
+
   /* ── PARAM tab ── */
   .param-content {
     padding: 10px 12px;

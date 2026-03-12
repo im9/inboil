@@ -469,6 +469,8 @@ export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['t
   } else {
     patNode.decorators.push({ type, params: { ...DECORATOR_DEFAULTS[type] } })
   }
+  // Auto-switch to DECO tab when adding from pattern sheet (ADR 092)
+  if (ui.patternSheet) ui.dockTab = 'scene'
 }
 
 /** Add an automation decorator directly to a pattern node */

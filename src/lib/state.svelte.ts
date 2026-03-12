@@ -192,6 +192,7 @@ export const ui = $state<{
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   editingAutomationInline: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
+  dockTab: 'tracks' | 'scene'
   brushMode: BrushMode
   chordShape: ChordShape
 }>({
@@ -214,6 +215,7 @@ export const ui = $state<{
   editingAutomationDecorator: null,
   editingAutomationInline: null,
   focusSceneNodeId: null,
+  dockTab: 'tracks' as const,
   brushMode: 'draw' as BrushMode,
   chordShape: 'triad' as ChordShape,
 })
@@ -230,6 +232,7 @@ export function primarySelectedNode(): string | null {
 export function selectPattern(patternIndex: number): void {
   if (patternIndex < 0 || patternIndex >= song.patterns.length) return
   ui.currentPattern = patternIndex
+  ui.dockTab = 'tracks'  // reset tab on pattern change (ADR 092)
   // If selected track has no cell in this pattern, pick first available
   const pat = song.patterns[patternIndex]
   if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
