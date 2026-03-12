@@ -4,6 +4,7 @@
  * Stores user samples as raw audio buffers per project+track.
  */
 import type { Song } from './types.ts'
+import { showToast } from './toast.svelte.ts'
 
 export interface StoredProject {
   id: string
@@ -58,7 +59,7 @@ function open(): Promise<IDBDatabase> {
         ps.createIndex('voiceId', 'voiceId', { unique: false })
       }
     }
-    req.onblocked = () => { console.warn('[inboil] DB upgrade blocked — close other tabs and reload') }
+    req.onblocked = () => { showToast('DB upgrade blocked — close other tabs and reload', 'warn') }
     req.onsuccess = () => {
       const db = req.result
       // When another tab opens a newer DB version, close this connection

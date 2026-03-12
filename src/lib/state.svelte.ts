@@ -28,6 +28,7 @@ import type {
   AutomationParams, AutomationSnapshot,
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
+import { showToast } from './toast.svelte.ts'
 
 /** Resolve the Pattern referenced by a section index */
 export function sectionPattern(sectionIndex: number): Pattern {
@@ -682,6 +683,7 @@ function scheduleAutoSave() {
       project.dirty = false
     }).catch(e => {
       console.error('[autoSave] ERROR:', e)
+      showToast('Auto-save failed. Export your project to avoid data loss.', 'error')
     })
   }, 500)
 }

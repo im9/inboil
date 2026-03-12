@@ -5,6 +5,7 @@ import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-pro
 import type { Song, Pattern, Cell } from '../types.ts'
 import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
+import { showToast } from '../toast.svelte.ts'
 
 /** External state passed by callers — engine never imports reactive state (ADR 086) */
 export interface EngineContext {
@@ -70,19 +71,24 @@ export class GrooveboxEngine {
   async init(callbacks?: EngineCallbacks): Promise<void> {
     if (callbacks) this._onLevels = callbacks.onLevels
     if (this.ctx) return
-    this.ctx = new AudioContext()
-    await this.ctx.audioWorklet.addModule(workletUrl)
-    this.node = new AudioWorkletNode(this.ctx, 'groovebox-processor', {
-      numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
-    })
-    this.analyser = this.ctx.createAnalyser()
-    this.analyser.fftSize = 1024
-    this.analyser.smoothingTimeConstant = 0.8
-    this.node.connect(this.analyser)
-    this.analyser.connect(this.ctx.destination)
-    this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
-      if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
-      else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
+    try {
+      this.ctx = new AudioContext()
+      await this.ctx.audioWorklet.addModule(workletUrl)
+      this.node = new AudioWorkletNode(this.ctx, 'groovebox-processor', {
+        numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
+      })
+      this.analyser = this.ctx.createAnalyser()
+      this.analyser.fftSize = 1024
+      this.analyser.smoothingTimeConstant = 0.8
+      this.node.connect(this.analyser)
+      this.analyser.connect(this.ctx.destination)
+      this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
+        if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
+        else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
+      }
+    } catch (e) {
+      showToast('Audio not available. Check browser permissions.', 'error')
+      throw e
     }
   }
 
@@ -155,7 +161,13 @@ export class GrooveboxEngine {
   /** Decode audio to mono Float32Array */
   private async _decodeToMono(arrayBuf: ArrayBuffer): Promise<{ mono: Float32Array; sampleRate: number } | null> {
     if (!this.ctx) return null
-    const audioBuf = await this.ctx.decodeAudioData(arrayBuf)
+    let audioBuf: AudioBuffer
+    try {
+      audioBuf = await this.ctx.decodeAudioData(arrayBuf)
+    } catch {
+      showToast('Could not decode audio sample', 'error')
+      return null
+    }
     let mono: Float32Array
     if (audioBuf.numberOfChannels === 1) {
       mono = audioBuf.getChannelData(0)
@@ -182,10 +194,15 @@ export class GrooveboxEngine {
   async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
     const url = DRUM_SAMPLES[voiceId]
     if (!url || !this.ctx) return
-    const resp = await fetch(url)
-    const result = await this._decodeToMono(await resp.arrayBuffer())
-    if (!result) return
-    this._sendSample(trackId, result.mono, result.sampleRate)
+    try {
+      const resp = await fetch(url)
+      if (!resp.ok) { showToast(`Failed to load sample: ${voiceId}`, 'warn'); return }
+      const result = await this._decodeToMono(await resp.arrayBuffer())
+      if (!result) return
+      this._sendSample(trackId, result.mono, result.sampleRate)
+    } catch {
+      showToast(`Failed to load sample: ${voiceId}`, 'warn')
+    }
   }
 
   /** Decode a user-provided File and send to worklet. Returns waveform + raw buffer for persistence. (ADR 012 Phase 2) */

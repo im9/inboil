@@ -14,6 +14,7 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import PerfBubble from './lib/components/PerfBubble.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
+  import ErrorToast from './lib/components/ErrorToast.svelte'
   import { song, playback, ui, prefs, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
@@ -342,6 +343,7 @@
     </div>
   {/if}
   <Sidebar />
+  <ErrorToast />
 </div>
 
 <style>

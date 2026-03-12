@@ -1,5 +1,6 @@
 import { midiIn, song, perf, fxPad, fxFlavours, masterPad, masterLevels, ui } from './state.svelte.ts'
 import { engine, type EngineContext } from './audio/engine.ts'
+import { showToast } from './toast.svelte.ts'
 
 let access: MIDIAccess | null = null
 let receiveTimer = 0
@@ -28,18 +29,25 @@ export async function initMidi(): Promise<boolean> {
     access.onstatechange = refreshDeviceList
     return true
   } catch {
+    showToast('MIDI access denied or unavailable', 'warn')
     return false
   }
 }
 
-function refreshDeviceList() {
+function refreshDeviceList(e?: Event) {
   if (!access) return
+  const prev = new Set(midiIn.devices.filter(d => d.connected).map(d => d.id))
   midiIn.devices = [...access.inputs.values()].map(input => ({
     id: input.id,
     name: input.name ?? 'Unknown',
     manufacturer: input.manufacturer ?? '',
     connected: input.state === 'connected',
   }))
+  // Notify on disconnect
+  if (e && (e as MIDIConnectionEvent).port?.state === 'disconnected') {
+    const port = (e as MIDIConnectionEvent).port
+    if (prev.has(port.id)) showToast(`MIDI device disconnected: ${port.name ?? 'Unknown'}`, 'warn')
+  }
 }
 
 export function startListening() {

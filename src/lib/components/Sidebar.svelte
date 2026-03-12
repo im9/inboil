@@ -170,8 +170,8 @@
       category: 0,
       title: L === 'ja' ? 'プロジェクト' : 'PROJECTS',
       body: L === 'ja'
-        ? '自動保存 — 編集するたびに即時保存\nSYSTEM → NEW / SAVE AS で管理\nプロジェクト一覧からタップで切替、長押しで削除\nREC ● — WAV録音 (サブヘッダー)\nEXPORT/IMPORT — JSON / MIDI エクスポート'
-        : 'Auto-saved on every edit\nSYSTEM → NEW / SAVE AS to manage\nTap to switch, long-press to delete\nREC ● — WAV recording (sub-header)\nEXPORT/IMPORT — JSON / MIDI export',
+        ? '⚠ プロジェクトはこのブラウザにローカル保存されます。バックアップにはエクスポートを使用してください\n自動保存 — 編集するたびに即時保存\nSYSTEM → NEW / SAVE AS で管理\nプロジェクト一覧からタップで切替、長押しで削除\nREC ● — WAV録音 (サブヘッダー)\nEXPORT/IMPORT — JSON / MIDI エクスポート'
+        : '⚠ Projects are saved locally in this browser. Use Export to back up.\nAuto-saved on every edit\nSYSTEM → NEW / SAVE AS to manage\nTap to switch, long-press to delete\nREC ● — WAV recording (sub-header)\nEXPORT/IMPORT — JSON / MIDI export',
     },
     {
       category: 0,
@@ -418,7 +418,7 @@
             </div>
             {#if projectList.length > 0}
               <div class="proj-list">
-                <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'}</div>
+                <div class="proj-list-label">{L === 'ja' ? 'プロジェクト' : 'PROJECTS'} <span class="local-badge" data-tip="Saved locally in this browser" data-tip-ja="このブラウザにローカル保存">(local)</span></div>
                 {#each projectList as p}
                   <div class="proj-item" class:current={p.id === project.id}>
                     <button class="proj-item-name" onpointerdown={() => void handleLoad(p.id)}>
@@ -1080,6 +1080,11 @@
     color: rgba(237,232,220,0.4);
     text-transform: uppercase;
     padding: 8px 0 4px;
+  }
+  .local-badge {
+    font-weight: 400;
+    opacity: 0.7;
+    text-transform: lowercase;
   }
   .proj-item {
     display: flex;
