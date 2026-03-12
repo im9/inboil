@@ -80,6 +80,10 @@ export const ICON = {
     + `<rect x="4" y="5.5" width="6" height="2" rx="0.8" fill="currentColor"/>`
     + `<rect x="7" y="9" width="6" height="2" rx="0.8" fill="currentColor"/>`,
 
+  /** Sparkle / generative — 4-point star (viewBox 0 0 14 14) */
+  sparkle: `<path d="M7 0.5L8.2 5.2 13 6.5 8.2 7.8 7 12.5 5.8 7.8 1 6.5 5.8 5.2Z" fill="currentColor"/>`
+    + `<path d="M11.5 1L12 3 13.5 3.5 12 4 11.5 6 11 4 9.5 3.5 11 3Z" fill="currentColor" opacity="0.6"/>`,
+
   /** viewBox 0 0 16 16 – sidebar-right panel with chevron (collapse) */
   sidebarRightClose: `<rect x="1" y="2" width="14" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>`
     + `<line x1="10" y1="2" x2="10" y2="14" stroke="currentColor" stroke-width="1.3"/>`

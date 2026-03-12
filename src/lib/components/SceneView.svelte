@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, playback, ui, primarySelectedNode, selectPattern, hasScenePlayback, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddGenerativeNode, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
@@ -772,23 +772,10 @@
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
-                <span class="gen-mode-toggle" role="button" tabindex="-1"
-                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
-                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
-                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
-                {#if node.generative.outputMode === 'write'}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn" role="button" tabindex="-1"
-                    data-tip="Generate" data-tip-ja="生成"
-                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
-                  >GEN</span>
-                {:else}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
-                    data-tip="Freeze" data-tip-ja="フリーズ"
-                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
-                  >FRZ</span>
-                {/if}
+                <span class="gen-run-btn" role="button" tabindex="-1"
+                  data-tip="Generate" data-tip-ja="生成"
+                  onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                >GEN</span>
               </div>
             </div>
           {:else if node.generative.engine === 'quantizer'}
@@ -803,23 +790,10 @@
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
-                <span class="gen-mode-toggle" role="button" tabindex="-1"
-                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
-                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
-                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
-                {#if node.generative.outputMode === 'write'}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn" role="button" tabindex="-1"
-                    data-tip="Generate" data-tip-ja="生成"
-                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
-                  >GEN</span>
-                {:else}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
-                    data-tip="Freeze" data-tip-ja="フリーズ"
-                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
-                  >FRZ</span>
-                {/if}
+                <span class="gen-run-btn" role="button" tabindex="-1"
+                  data-tip="Generate" data-tip-ja="生成"
+                  onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                >GEN</span>
               </div>
             </div>
           {:else if node.generative.engine === 'tonnetz'}
@@ -833,23 +807,10 @@
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
-                <span class="gen-mode-toggle" role="button" tabindex="-1"
-                  data-tip="Toggle write/live" data-tip-ja="書込/ライブ切替"
-                  onpointerdown={e => { e.stopPropagation(); sceneToggleOutputMode(node.id) }}
-                >{node.generative.outputMode === 'live' ? 'LIVE' : 'WRT'}</span>
-                {#if node.generative.outputMode === 'write'}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn" role="button" tabindex="-1"
-                    data-tip="Generate" data-tip-ja="生成"
-                    onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
-                  >GEN</span>
-                {:else}
-                  <!-- svelte-ignore node_invalid_placement_ssr -->
-                  <span class="gen-run-btn freeze" role="button" tabindex="-1"
-                    data-tip="Freeze" data-tip-ja="フリーズ"
-                    onpointerdown={e => { e.stopPropagation(); sceneFreeze(node.id) }}
-                  >FRZ</span>
-                {/if}
+                <span class="gen-run-btn" role="button" tabindex="-1"
+                  data-tip="Generate" data-tip-ja="生成"
+                  onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
+                >GEN</span>
               </div>
             </div>
           {:else}
@@ -1302,22 +1263,6 @@
   }
   .quant-key.black.active {
     background: rgba(237, 232, 220, 0.6);
-  }
-  /* Mode toggle (clickable) */
-  .gen-mode-toggle {
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    opacity: 0.6;
-    cursor: pointer;
-  }
-  .gen-mode-toggle:hover {
-    opacity: 1;
-  }
-  .gen-run-btn.freeze {
-    border-color: rgba(120, 120, 69, 0.5);
-    color: rgba(120, 120, 69, 0.9);
   }
   /* Tonnetz transform ops */
   .tonnetz-ops {

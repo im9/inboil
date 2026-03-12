@@ -141,10 +141,9 @@ export interface AutomationSnapshot {
 /** Generative engine type (ADR 078) */
 export type GenerativeEngine = 'turing' | 'quantizer' | 'tonnetz'
 
-/** Generative node configuration (ADR 078) */
+/** Generative node configuration (ADR 078, auto-mode ADR 089) */
 export interface GenerativeConfig {
   engine: GenerativeEngine
-  outputMode: 'write' | 'live'
   mergeMode: 'replace' | 'merge' | 'layer'
   targetTrack: number            // target cell index in the pattern (0-based)
   seed?: number
@@ -823,7 +822,7 @@ function applyLiveGenerative(patternNode: SceneNode): void {
   const incomingEdges = song.scene.edges.filter(e => e.to === patternNode.id)
   for (const edge of incomingEdges) {
     const srcNode = song.scene.nodes.find(n => n.id === edge.from)
-    if (!srcNode?.generative || srcNode.generative.outputMode !== 'live') continue
+    if (!srcNode?.generative) continue
 
     // Collect the chain backwards from this node
     const chain = collectLiveChain(srcNode.id)

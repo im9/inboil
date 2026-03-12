@@ -159,9 +159,9 @@ describe('tonnetzGenerate', () => {
     expect(trigs).toHaveLength(16)
   })
 
-  it('all trigs have poly notes (chords)', () => {
+  it('active trigs have poly notes (chords)', () => {
     const trigs = tonnetzGenerate(baseParams, 16)
-    for (const t of trigs) {
+    for (const t of trigs.filter(t => t.active)) {
       expect(t.notes).toBeDefined()
       expect(t.notes!.length).toBe(3)
     }
@@ -185,17 +185,21 @@ describe('tonnetzGenerate', () => {
 
   it('chords change at stepsPerChord boundaries', () => {
     const trigs = tonnetzGenerate(baseParams, 12)
-    // Steps 0-3: same chord, steps 4-7: different chord
-    expect(trigs[0].notes).toEqual(trigs[1].notes)
-    expect(trigs[0].notes).toEqual(trigs[3].notes)
-    // After transform, chord should differ
+    // Step 0: active chord trig, steps 1-3: inactive (legato)
+    expect(trigs[0].active).toBe(true)
+    expect(trigs[1].active).toBe(false)
+    expect(trigs[3].active).toBe(false)
+    // Step 4: new chord (different)
+    expect(trigs[4].active).toBe(true)
     expect(trigs[0].notes).not.toEqual(trigs[4].notes)
   })
 
-  it('accents on chord changes', () => {
-    const trigs = tonnetzGenerate(baseParams, 8)
-    expect(trigs[0].velocity).toBeGreaterThan(trigs[1].velocity)
-    expect(trigs[4].velocity).toBeGreaterThan(trigs[5].velocity)
+  it('legato duration spans chord steps', () => {
+    const trigs = tonnetzGenerate(baseParams, 16)
+    // Each chord boundary trig should have duration = stepsPerChord
+    expect(trigs[0].duration).toBe(4)
+    expect(trigs[4].duration).toBe(4)
+    expect(trigs[8].duration).toBe(4)
   })
 
   it('spread voicing raises middle note', () => {
@@ -215,16 +219,21 @@ describe('tonnetzGenerate', () => {
     expect(notes[2] - notes[0]).toBeGreaterThan(12)
   })
 
-  it('all trigs are active', () => {
+  it('only chord boundary trigs are active', () => {
     const trigs = tonnetzGenerate(baseParams, 16)
-    expect(trigs.every(t => t.active)).toBe(true)
+    // 16 steps / 4 per chord = 4 active trigs
+    expect(trigs.filter(t => t.active).length).toBe(4)
+    expect(trigs[0].active).toBe(true)
+    expect(trigs[4].active).toBe(true)
+    expect(trigs[8].active).toBe(true)
+    expect(trigs[12].active).toBe(true)
   })
 
   it('MIDI notes stay in reasonable range', () => {
     // Long sequence to test range doesn't drift
     const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L', 'R', 'PL', 'PR', 'LR'], stepsPerChord: 2 }
     const trigs = tonnetzGenerate(params, 64)
-    for (const t of trigs) {
+    for (const t of trigs.filter(t => t.active)) {
       for (const n of t.notes!) {
         expect(n).toBeGreaterThanOrEqual(0)
         expect(n).toBeLessThanOrEqual(127)

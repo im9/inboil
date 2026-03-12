@@ -233,27 +233,35 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   let chord: Triad = [...params.startChord] as Triad
   const seq = params.sequence
   let seqIdx = 0
+  const spc = params.stepsPerChord
 
   for (let step = 0; step < steps; step++) {
-    const chordStep = Math.floor(step / params.stepsPerChord)
-    const isNewChord = step % params.stepsPerChord === 0
+    const isNewChord = step % spc === 0
 
     // Apply next transform at each new chord boundary (skip first chord)
-    if (isNewChord && chordStep > 0) {
-      const op = seq[(seqIdx) % seq.length]
+    if (isNewChord && step > 0) {
+      const op = seq[seqIdx % seq.length]
       chord = applyTonnetzOp(chord, op)
       seqIdx++
     }
 
-    const voiced = applyVoicing(chord, params.voicing)
-    trigs.push({
-      active: true,
-      note: voiced[0],  // root as primary note
-      notes: voiced,     // full chord as poly notes
-      velocity: isNewChord ? 0.9 : 0.7,  // accent on chord changes
-      duration: 1,
-      slide: false,
-    })
+    if (isNewChord) {
+      // Legato: one trig per chord, duration spans until next chord or end
+      const remaining = steps - step
+      const dur = Math.min(spc, remaining)
+      const voiced = applyVoicing(chord, params.voicing)
+      trigs.push({
+        active: true,
+        note: voiced[0],
+        notes: voiced,
+        velocity: 0.9,
+        duration: dur,
+        slide: false,
+      })
+    } else {
+      // Inactive steps within a chord — no retrigger
+      trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
+    }
   }
 
   return trigs

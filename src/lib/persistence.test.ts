@@ -273,7 +273,6 @@ describe('song round-trip: scene graph', () => {
     if (genNode) {
       genNode.generative = {
         engine: 'turing',
-        outputMode: 'live',
         mergeMode: 'replace',
         targetTrack: 0,
         params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note', density: 0.7 },

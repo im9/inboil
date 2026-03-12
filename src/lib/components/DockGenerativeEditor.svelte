@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SceneNode, TuringParams, QuantizerParams, TonnetzParams } from '../state.svelte.ts'
   import { song, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, sceneGenerateWrite, sceneToggleOutputMode, sceneFreeze, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset } from '../sceneActions.ts'
+  import { sceneUpdateGenerativeParams, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset } from '../sceneActions.ts'
   import { SCALE_NAMES, GENERATIVE_PRESETS } from '../generative.ts'
   import Knob from './Knob.svelte'
 
@@ -47,9 +47,6 @@
 <div class="dec-section">
   <div class="dec-section-header">
     <span class="section-label">{gen.engine.toUpperCase()}</span>
-    <button class="btn-toggle active" onpointerdown={() => sceneToggleOutputMode(nodeId)}
-      data-tip="Toggle write/live mode" data-tip-ja="書込/ライブモード切替"
-    >{gen.outputMode === 'live' ? 'LIVE' : 'WRITE'}</button>
   </div>
   {#if gen.engine === 'turing'}
     {@const tp = gen.params as TuringParams}
@@ -157,7 +154,32 @@
     </div>
     <div class="gen-scale-row">
       <span class="gen-range-label">CHORD</span>
-      <span class="gen-range-label" style="font-size:9px; opacity:0.7">{NOTE_NAMES[tnp.startChord[0] % 12]}{chordQuality(tnp.startChord)}</span>
+      <select class="tonnetz-op-select" style="width:44px"
+        onchange={e => {
+          const root = parseInt((e.target as HTMLSelectElement).value)
+          const q = chordQuality(tnp.startChord)
+          const third = q === 'min' ? 3 : 4
+          const fifth = q === 'min' ? 7 : 7
+          sceneUpdateGenerativeParams(nodeId, { startChord: [root, root + third, root + fifth] as [number, number, number] })
+        }}
+      >
+        {#each NOTE_NAMES as name, i}
+          {@const octave = Math.floor(tnp.startChord[0] / 12)}
+          <option value={octave * 12 + i} selected={tnp.startChord[0] % 12 === i}>{name}</option>
+        {/each}
+      </select>
+      <select class="tonnetz-op-select" style="width:44px"
+        onchange={e => {
+          const q = (e.target as HTMLSelectElement).value
+          const root = tnp.startChord[0]
+          const third = q === 'min' ? 3 : 4
+          sceneUpdateGenerativeParams(nodeId, { startChord: [root, root + third, root + 7] as [number, number, number] })
+        }}
+      >
+        {#each ['maj', 'min'] as q}
+          <option value={q} selected={chordQuality(tnp.startChord) === q}>{q}</option>
+        {/each}
+      </select>
     </div>
     <div class="gen-scale-row">
       <span class="gen-range-label">OPS</span>
@@ -251,16 +273,7 @@
       {/each}
     </select>
   </div>
-  <!-- Action buttons -->
-  {#if gen.outputMode === 'write'}
-    <button class="btn-gen-run" onpointerdown={() => sceneGenerateWrite(nodeId)}
-      data-tip="Generate notes into target pattern" data-tip-ja="ターゲットパターンにノートを生成"
-    >Generate ▸</button>
-  {:else}
-    <button class="btn-gen-run freeze" onpointerdown={() => sceneFreeze(nodeId)}
-      data-tip="Freeze live output to pattern" data-tip-ja="ライブ出力をパターンにフリーズ"
-    >Freeze ▸</button>
-  {/if}
+
 </div>
 <div class="section-divider" aria-hidden="true"></div>
 
@@ -336,33 +349,6 @@
   .gen-mode-btn {
     font-size: var(--dk-fs-xs) !important;
     padding: 2px 6px !important;
-  }
-  .btn-gen-run {
-    width: 100%;
-    padding: 6px;
-    border: 1px solid var(--color-olive);
-    background: rgba(108,119,68,0.1);
-    color: var(--color-olive);
-    font-family: var(--font-data);
-    font-size: var(--dk-fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    margin-top: 4px;
-  }
-  .btn-gen-run:hover {
-    background: rgba(108,119,68,0.25);
-  }
-  .btn-gen-run:active {
-    transform: scale(0.98);
-  }
-  .btn-gen-run.freeze {
-    border-color: rgba(120, 120, 69, 0.5);
-    color: rgba(120, 120, 69, 0.9);
-    background: rgba(120, 120, 69, 0.08);
-  }
-  .btn-gen-run.freeze:hover {
-    background: rgba(120, 120, 69, 0.2);
   }
   .gen-scale-row {
     display: flex;

@@ -151,21 +151,18 @@ function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generativ
   switch (engine) {
     case 'turing': return {
       engine: 'turing',
-      outputMode: 'write',
       mergeMode: 'replace',
       targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note' as const, density: 0.7 },
     }
     case 'quantizer': return {
       engine: 'quantizer',
-      outputMode: 'write',
       mergeMode: 'replace',
       targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'quantizer', scale: 'minor', root: 0, octaveRange: [3, 5] as [number, number] },
     }
     case 'tonnetz': return {
       engine: 'tonnetz',
-      outputMode: 'write',
       mergeMode: 'replace',
       targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' as const },
@@ -198,7 +195,7 @@ export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<Turi
  *  Finds the first pattern node connected via outgoing edges. */
 export function sceneGenerateWrite(nodeId: string): boolean {
   const node = song.scene.nodes.find(n => n.id === nodeId)
-  if (!node?.generative || node.generative.outputMode !== 'write') return false
+  if (!node?.generative) return false
 
   // Find target pattern by following outgoing edges (collecting gen chain)
   const targetPatNode = findTargetPattern(nodeId)
@@ -237,6 +234,41 @@ export function sceneGenerateWrite(nodeId: string): boolean {
   }
 
   return true
+}
+
+/** Generate trigs into a buffer without writing to pattern (ADR 089 delayed write).
+ *  Returns null if generation fails, otherwise { trigs, trackId, mergeMode }. */
+export function sceneGenerateBuffer(nodeId: string): { trigs: Trig[]; trackId: number; mergeMode: string } | null {
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  if (!node?.generative) return null
+
+  const targetPatNode = findTargetPattern(nodeId)
+  if (!targetPatNode) return null
+
+  const pat = song.patterns.find(p => p.id === targetPatNode.patternId)
+  if (!pat || pat.cells.length === 0) return null
+
+  const trackIdx = node.generative.targetTrack ?? 0
+  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+  const steps = cell.steps
+
+  const chain = collectGenChain(nodeId)
+  let trigs: Trig[] | null = null
+  for (const genNode of chain) {
+    const gen = genNode.generative!
+    if (gen.engine === 'turing') {
+      trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
+    } else if (gen.engine === 'quantizer') {
+      const input = trigs ?? cell.trigs.map(t => ({ ...t }))
+      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+    } else if (gen.engine === 'tonnetz') {
+      trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
+    }
+  }
+
+  if (!trigs) return null
+  const lastGen = chain[chain.length - 1].generative!
+  return { trigs, trackId: trackIdx, mergeMode: lastGen.mergeMode }
 }
 
 /** Collect generative nodes along outgoing edges until we hit a pattern node.
@@ -342,33 +374,22 @@ export function sceneApplyGenerativePreset(nodeId: string, params: Record<string
   node.generative.params = cloned as unknown as typeof node.generative.params
 }
 
-/** Toggle outputMode between write and live */
-export function sceneToggleOutputMode(nodeId: string): void {
-  pushUndo('Toggle output mode')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
-  if (!node?.generative) return
-  node.generative.outputMode = node.generative.outputMode === 'write' ? 'live' : 'write'
-}
 
-/** Freeze: snapshot live output → write to pattern → switch to write mode.
- *  Runs the generative chain once, writes result, and sets mode to 'write'. */
-export function sceneFreeze(nodeId: string): boolean {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
-  if (!node?.generative) return false
-
-  // Temporarily force write mode for generation
-  const wasLive = node.generative.outputMode === 'live'
-  node.generative.outputMode = 'write'
-
-  const ok = sceneGenerateWrite(nodeId)
-
-  if (!ok && wasLive) {
-    // Revert if generation failed
-    node.generative.outputMode = 'live'
-    return false
+/** Find upstream generative node IDs that feed into a pattern (by pattern index).
+ *  Returns the "leaf" generative node IDs (closest to the pattern node). */
+export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
+  const pat = song.patterns[patternIndex]
+  if (!pat) return []
+  const patNodes = song.scene.nodes.filter(n => n.type === 'pattern' && n.patternId === pat.id)
+  const result: string[] = []
+  for (const pn of patNodes) {
+    const inEdges = song.scene.edges.filter(e => e.to === pn.id)
+    for (const edge of inEdges) {
+      const src = song.scene.nodes.find(n => n.id === edge.from)
+      if (src?.generative) result.push(src.id)
+    }
   }
-  // Stay in write mode (freeze keeps it in write)
-  return ok
+  return result
 }
 
 /** Update a function node's params (legacy, kept for decorator use) */

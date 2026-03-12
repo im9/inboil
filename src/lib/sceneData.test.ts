@@ -230,7 +230,6 @@ describe('migrateFnToDecorators', () => {
 function genNode(id: string): SceneNode {
   const gen: GenerativeConfig = {
     engine: 'turing',
-    outputMode: 'write',
     mergeMode: 'replace',
     targetTrack: 0,
     params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72] as [number, number], mode: 'note' as const, density: 0.7 },

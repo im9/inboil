@@ -404,7 +404,7 @@
     const stepIdx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
     let note = getNoteFromY(relY)
     if (note < 0) return
-    note = snapToScale(note)
+    if (activeBrush !== 'eraser' && !brushRightClick) note = snapToScale(note)
     // Draw brush: lock Y to initial pitch so horizontal drag = legato
     // (9px rows make Y-drift inevitable; without this, legato never fires)
     if (activeBrush === 'draw') note = brushConstrainNote
@@ -557,7 +557,7 @@
               class:active={state === 'head'}
               class:continuation={state === 'continuation'}
               aria-label="Step {stepIdx + 1} note {note}"
-              onpointerdown={(e) => noteStartDrag(e, stepIdx, snapToScale(note))}
+              onpointerdown={(e) => noteStartDrag(e, stepIdx, activeBrush === 'eraser' ? note : snapToScale(note))}
             >
               {#if state === 'head'}
                 <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
@@ -744,6 +744,10 @@
   .row.disabled .cell {
     opacity: 0.2;
     cursor: pointer;
+  }
+  .row.disabled .cell.active,
+  .row.disabled .cell.continuation {
+    opacity: 1;
   }
 
   .cell {

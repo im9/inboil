@@ -1,19 +1,52 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo } from '../state.svelte.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import { engine, type EngineContext } from '../audio/engine.ts'
   import { PATTERN_TEMPLATES } from '../factory.ts'
   import { patternApplyTemplate } from '../sectionActions.ts'
+  import { findUpstreamGenerativeNodes, sceneGenerateBuffer, sceneSetTargetTrack } from '../sceneActions.ts'
+  import { cellForTrack } from '../state.svelte.ts'
 
   let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
 
   const isLooping = $derived(playback.playing && playback.mode === 'loop')
+
+  // Upstream generative nodes for the current pattern (ADR 089)
+  const upstreamGenIds = $derived(findUpstreamGenerativeNodes(ui.currentPattern))
+  const hasGenerative = $derived(upstreamGenIds.length > 0)
+
+  // Arm mode: sparkle toggles armed state, generate fires on loop head
+  let genArmed = $state(false)
+
+  function toggleArm() {
+    genArmed = !genArmed
+  }
+
+  // Disarm when upstream nodes disappear (e.g. pattern change)
+  $effect(() => {
+    if (!hasGenerative) genArmed = false
+  })
+
   const isViewingPlaying = $derived(isViewingPlayingPattern())
 
   const pat = $derived(song.patterns[ui.currentPattern])
   const patName = $derived(pat?.name || `PAT ${String(ui.currentPattern).padStart(2, '0')}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
+
+  // Resolve target pattern cells for track selector
+  const targetPatCells = $derived(pat?.cells ?? [])
+
+  // Current targetTrack from first upstream generative node
+  const currentTargetTrack = $derived.by(() => {
+    if (upstreamGenIds.length === 0) return 0
+    const node = song.scene.nodes.find(n => n.id === upstreamGenIds[0])
+    return node?.generative?.targetTrack ?? 0
+  })
+
+  function setTargetTrack(trackId: number) {
+    for (const id of upstreamGenIds) sceneSetTargetTrack(id, trackId)
+  }
 
   // ── Template picker ──
   let tmplOpen = $state(false)
@@ -35,8 +68,34 @@
   let prevHead0 = 0
   $effect(() => {
     const h = playback.playheads[0]
-    if (h === 0 && prevHead0 !== 0) appliedOctave = perf.octave
+    const isLoopHead = h === 0 && prevHead0 !== 0
+    if (isLoopHead) appliedOctave = perf.octave
     if (!playback.playing) appliedOctave = perf.octave
+    // ADR 089: generate at loop head, write all trigs at once for correct duration/legato
+    if (isLoopHead && genArmed && playback.playing && pat) {
+      pushUndo('Generate sequence')
+      for (const id of upstreamGenIds) {
+        const buf = sceneGenerateBuffer(id)
+        if (!buf) continue
+        const cell = cellForTrack(pat, buf.trackId) ?? pat.cells[0]
+        if (!cell) continue
+        for (let s = 0; s < Math.min(buf.trigs.length, cell.trigs.length); s++) {
+          const src = buf.trigs[s]
+          if (buf.mergeMode === 'replace') {
+            cell.trigs[s] = src
+          } else if (buf.mergeMode === 'merge') {
+            if (!cell.trigs[s].active) cell.trigs[s] = src
+          } else if (buf.mergeMode === 'layer' && src.active) {
+            if (cell.trigs[s].active) {
+              const existing = cell.trigs[s].notes ?? [cell.trigs[s].note]
+              if (!existing.includes(src.note)) cell.trigs[s].notes = [...existing, src.note]
+            } else {
+              cell.trigs[s] = src
+            }
+          }
+        }
+      }
+    }
     prevHead0 = h
   })
   const octDisplay = $derived(perf.octave > 0 ? `+${perf.octave}` : `${perf.octave}`)
@@ -223,6 +282,27 @@
     aria-label="Randomize"
     data-tip="Randomize pattern" data-tip-ja="パターンをランダム生成"
   >RND</button>
+
+  <!-- Generate arm (ADR 089) — only visible when upstream generative nodes exist -->
+  {#if hasGenerative}
+    <button
+      class="btn-gen"
+      class:armed={genArmed}
+      onpointerdown={toggleArm}
+      aria-label={genArmed ? 'Disarm generative' : 'Arm generative'}
+      data-tip={genArmed ? 'Disarm — stop generating on loop' : 'Arm — generate on next loop head'}
+      data-tip-ja={genArmed ? '解除 — ループ生成を停止' : 'アーム — 次のループ頭で生成'}
+    ><svg class="gen-icon" viewBox="0 0 14 14" width="13" height="13" fill="currentColor">{@html ICON.sparkle}</svg></button>
+    <select
+      class="gen-track-select"
+      onchange={e => setTargetTrack(parseInt((e.target as HTMLSelectElement).value))}
+      data-tip="Target track for generation" data-tip-ja="生成対象トラック"
+    >
+      {#each targetPatCells as cell}
+        <option value={cell.trackId} selected={currentTargetTrack === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
+      {/each}
+    </select>
+  {/if}
 
   <div class="sep" aria-hidden="true"></div>
 
@@ -532,6 +612,7 @@
     background: transparent;
     color: var(--color-olive);
     padding: 4px 10px;
+    height: 24px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -540,6 +621,46 @@
   .btn-rand:active {
     background: var(--color-olive);
     color: var(--color-bg);
+  }
+
+  /* ── Generate (ADR 089) ── */
+  .btn-gen {
+    border: 1.5px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+    padding: 4px 8px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-gen:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .btn-gen.armed {
+    background: rgba(120,120,69,0.12);
+    border-color: var(--color-olive);
+    animation: gen-pulse 800ms ease-in-out infinite;
+  }
+  @keyframes gen-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+  }
+  .gen-icon { display: block; }
+  .gen-track-select {
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(30,32,40,0.65);
+    background: transparent;
+    border: 1px solid rgba(30,32,40,0.15);
+    padding: 2px 4px;
+    height: 24px;
+    max-width: 72px;
+    flex-shrink: 0;
   }
 
   /* ── VKBD ── */

@@ -1,6 +1,6 @@
 # ADR 089: Generative Auto-Mode & Sequencer Integration
 
-## Status: Proposed
+## Status: Implemented
 
 **Amends**: ADR 078 (Generative Scene Nodes) — replaces explicit write/live mode toggle with context-aware auto-detection and step sequencer integration.
 
