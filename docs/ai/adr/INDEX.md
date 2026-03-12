@@ -134,3 +134,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 080 | Pre-Launch Structural Audit | Implemented | Track→mixer-only, BPM constants, insertFx clone fix, undo coverage |
 | 082 | Test Strategy | Implemented | 129 unit tests (vitest), 18 E2E tests (Playwright): persistence, storage, scene, voice, P-LOCK |
 | 086 | Engine–State Decoupling | Implemented | Remove circular dependency: engine receives all state via args, not imports |
+| 091 | Release Readiness Assessment | Proposed | Pre-launch checklist: error UI, browser compat, LP/tutorial, storage notice |
