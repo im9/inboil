@@ -8,6 +8,33 @@ export { DRUM_VOICES }
 
 export const SECTION_COUNT = 100
 
+// ── Random pattern names (≤8 chars) ─────────────────────────────────
+
+const PATTERN_WORDS = [
+  'DRIFT',  'PULSE',  'HAZE',   'BLOOM',  'GHOST',
+  'SWIRL',  'VAPOR',  'EMBER',  'ORBIT',  'GLINT',
+  'SPARK',  'SHADE',  'FLUX',   'GRAIN',  'MOSS',
+  'DUSK',   'FOAM',   'VOID',   'RIDGE',  'LOOP',
+  'GLOW',   'SILK',   'RUST',   'TIDE',   'FERN',
+  'SWAY',   'PLUCK',  'RUMBLE',  'FLARE',  'CRISP',
+  'MURMUR', 'STONE',  'WIRE',   'FROST',  'BLISS',
+  'SURGE',  'PRISM',  'ECHO',   'DAWN',   'SPORE',
+  'COIL',   'STRATA', 'RIPPLE', 'CRUSH',  'LOOM',
+  'CRUX',   'WARP',   'VELVET', 'PETAL',  'SMOG',
+] as const
+
+export function randomPatternName(existing: string[] = []): string {
+  const pool = PATTERN_WORDS.filter(w => !existing.includes(w))
+  if (pool.length > 0) return pool[Math.floor(Math.random() * pool.length)]
+  // All words used — append number
+  const base = PATTERN_WORDS[Math.floor(Math.random() * PATTERN_WORDS.length)]
+  for (let n = 2; n < 100; n++) {
+    const candidate = `${base}${n}`
+    if (candidate.length <= 8 && !existing.includes(candidate)) return candidate
+  }
+  return base
+}
+
 // ── helpers ─────────────────────────────────────────────────────────
 
 export function makeTrig(active: boolean, note = 60): Trig {

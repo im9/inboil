@@ -7,6 +7,7 @@ import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
 import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
 import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
+import { randomPatternName } from './factory.ts'
 
 // ── Shared generative chain execution ──
 
@@ -55,9 +56,15 @@ export function sceneUpdateNode(nodeId: string, x: number, y: number): void {
   node.y = y
 }
 
-/** Add a pattern node at position */
+/** Add a pattern node at position. Auto-names the pattern if blank. */
 export function sceneAddNode(patternId: string, x: number, y: number): string {
   pushUndo('Add scene node')
+  // Auto-assign a random name if the pattern has none
+  const pat = song.patterns.find(p => p.id === patternId)
+  if (pat && !pat.name) {
+    const usedNames = song.patterns.filter(p => p.name).map(p => p.name)
+    pat.name = randomPatternName(usedNames)
+  }
   const id = nextSceneId('sn')
   const isFirst = song.scene.nodes.length === 0
   song.scene.nodes.push({
