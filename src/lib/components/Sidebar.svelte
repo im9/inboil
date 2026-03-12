@@ -170,8 +170,8 @@
       category: 0,
       title: L === 'ja' ? 'プロジェクト' : 'PROJECTS',
       body: L === 'ja'
-        ? '自動保存 — 編集するたびに即時保存\nSYSTEM → NEW / SAVE AS で管理\nプロジェクト一覧からタップで切替、長押しで削除'
-        : 'Auto-saved on every edit\nSYSTEM → NEW / SAVE AS to manage\nTap to switch, long-press to delete',
+        ? '自動保存 — 編集するたびに即時保存\nSYSTEM → NEW / SAVE AS で管理\nプロジェクト一覧からタップで切替、長押しで削除\nREC ● — WAV録音 (サブヘッダー)\nEXPORT/IMPORT — JSON / MIDI エクスポート'
+        : 'Auto-saved on every edit\nSYSTEM → NEW / SAVE AS to manage\nTap to switch, long-press to delete\nREC ● — WAV recording (sub-header)\nEXPORT/IMPORT — JSON / MIDI export',
     },
     {
       category: 0,
@@ -204,8 +204,8 @@
       category: 1,
       title: L === 'ja' ? 'ピアノロール' : 'PIANO ROLL',
       body: L === 'ja'
-        ? 'メロディトラックで自動表示。タップでノート配置\nSLD — なめらかに音程を繋ぐ\nPoly音色 — 同じステップに複数ノートでコード\nスケールモードで音階制限'
-        : 'Auto-shown for melodic tracks. Tap to place notes\nSLD — smooth pitch glide between notes\nPoly voices — tap multiple notes on same step for chords\nScale mode restricts to key notes',
+        ? 'メロディトラックで自動表示。タップでノート配置\nSLD — なめらかに音程を繋ぐ\nPoly音色 — 同じステップに複数ノートでコード\nスケールモードで音階制限\nChord Brush — triad/7th/sus2/sus4 をワンタップで配置'
+        : 'Auto-shown for melodic tracks. Tap to place notes\nSLD — smooth pitch glide between notes\nPoly voices — tap multiple notes on same step for chords\nScale mode restricts to key notes\nChord Brush — place triad/7th/sus2/sus4 in one tap',
     },
     {
       category: 1,
@@ -219,8 +219,8 @@
       category: 2,
       title: L === 'ja' ? 'トラック & 楽器' : 'TRACKS & VOICES',
       body: L === 'ja'
-        ? '最大16トラック (+で追加、REMOVEで削除)\nドックの DRUM/BASS/LEAD/SMPL から楽器変更\nM ミュート、S ソロ (複数可)'
-        : 'Up to 16 tracks (+ to add, REMOVE to delete)\nDock tabs: DRUM/BASS/LEAD/SMPL\nM mute, S solo (additive)',
+        ? '最大16トラック (+で追加、REMOVEで削除)\nドックの DRUM/BASS/LEAD/SMPL から楽器変更\nM ミュート、S ソロ (複数可)\nInsert FX — トラック毎にverb/delay/glitchを追加'
+        : 'Up to 16 tracks (+ to add, REMOVE to delete)\nDock tabs: DRUM/BASS/LEAD/SMPL\nM mute, S solo (additive)\nInsert FX — per-track verb/delay/glitch',
     },
     {
       category: 2,
@@ -241,8 +241,8 @@
       category: 3,
       title: L === 'ja' ? 'FX パッド' : 'FX PAD',
       body: L === 'ja'
-        ? 'リバーブ/ディレイ/グリッチ/グラニュラーの4エフェクト\nノードをドラッグで調整、タップでON/OFF\nセンドバーで各トラックの送り量を設定'
-        : '4 effects: reverb / delay / glitch / granular\nDrag nodes to adjust, tap to toggle\nSend bar sets per-track levels',
+        ? 'リバーブ/ディレイ/グリッチ/グラニュラーの4エフェクト\nノードをドラッグで調整、タップでON/OFF\nセンドバーで各トラックの送り量を設定\n各FXに3種のフレーバー (例: reverb → room/hall/shimmer)'
+        : '4 effects: reverb / delay / glitch / granular\nDrag nodes to adjust, tap to toggle\nSend bar sets per-track levels\n3 flavours per FX (e.g. reverb: room/hall/shimmer)',
     },
     {
       category: 3,
@@ -270,8 +270,8 @@
       category: 4,
       title: L === 'ja' ? 'シーンビュー' : 'SCENE VIEW',
       body: L === 'ja'
-        ? 'ノードグラフで曲構成。エッジで再生順を定義\nルートから開始、分岐ランダム、末端で停止\nノード: Pattern / Transpose / Tempo / Repeat / Prob / FX / Automation\nデコレーター: パターン付近にドラッグでアタッチ\nドック: ナビゲーター + デコレーター編集'
-        : 'Node graph for arrangement. Edges define playback order\nStarts at root, random at forks, stops at terminals\nNodes: Pattern / Transpose / Tempo / Repeat / Prob / FX / Automation\nDecorators: drag near pattern to attach\nDock: navigator + decorator editing',
+        ? 'ノードグラフで曲構成。エッジで再生順を定義\nルートから開始、分岐ランダム、末端で停止\nノード: Pattern (マトリクスからドラッグ) / Generative (右クリック)\nGenerative: Turing Machine / Quantizer / Tonnetz\nデコレーター (Transpose/Tempo/Repeat/FX/Automation): ドックの Add から追加'
+        : 'Node graph for arrangement. Edges define playback order\nStarts at root, random at forks, stops at terminals\nNodes: Pattern (drag from matrix) / Generative (right-click)\nGenerative: Turing Machine / Quantizer / Tonnetz\nDecorators (Transpose/Tempo/Repeat/FX/Automation): add from Dock',
     },
     // ── 5: PERFORMANCE ──
     {
@@ -292,8 +292,8 @@
       category: 5,
       title: L === 'ja' ? 'キーボード演奏' : 'KEYBOARD PLAY',
       body: L === 'ja'
-        ? 'VKBD ボタンで有効化。PCキーボードで演奏\nA~; で音階、Z/X でオクターブ、1~0 でベロシティ'
-        : 'Enable with VKBD button. Play with PC keyboard\nA–; for notes, Z/X octave, 1–0 velocity',
+        ? 'VKBD ボタンで有効化。PCキーボードで演奏\nA~; で音階、Z/X でオクターブ、1~0 でベロシティ\nUSB/BLE MIDIキーボード対応 (SYSTEM → MIDI)'
+        : 'Enable with VKBD button. Play with PC keyboard\nA–; for notes, Z/X octave, 1–0 velocity\nUSB/BLE MIDI keyboard supported (SYSTEM → MIDI)',
     },
   ])
 </script>
