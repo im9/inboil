@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, type StoredProject } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, exportProjectJSON, importProjectJSON, type StoredProject } from '../state.svelte.ts'
   import { exportAndDownloadMidi } from '../midiExport.ts'
   import { initMidi, startListening, stopListening } from '../midi.ts'
 
@@ -58,7 +58,29 @@
   function commitRename() {
     renamingProject = false
     const name = renameName.trim() || 'Untitled'
-    void projectRename(name)
+    void projectRename(name).then(() => refreshProjects())
+  }
+
+  // ── Import project ──
+  let fileInput: HTMLInputElement | undefined = $state()
+  let importError = $state('')
+
+  function handleImportFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    importError = ''
+    const reader = new FileReader()
+    reader.onload = async () => {
+      try {
+        await importProjectJSON(reader.result as string)
+        await refreshProjects()
+      } catch (err) {
+        importError = (err as Error).message
+      }
+    }
+    reader.readAsText(file)
+    // Reset input so the same file can be re-imported
+    if (fileInput) fileInput.value = ''
   }
 
   let confirmNew = $state(false)
@@ -384,19 +406,9 @@
               </div>
             {/if}
 
-            <!-- Export MIDI (ADR 030) -->
-            <div class="export-section">
-              <span class="proj-list-label">{L === 'ja' ? 'エクスポート' : 'EXPORT'}</span>
-              <div class="export-buttons">
-                <button class="btn-export" onpointerdown={exportAndDownloadMidi}
-                  data-tip="Export current pattern as MIDI file" data-tip-ja="現在のパターンをMIDIファイルとしてエクスポート"
-                >EXPORT MIDI</button>
-              </div>
-            </div>
-
             <!-- Project list -->
             <div class="proj-list">
-              <div class="proj-list-label">{L === 'ja' ? 'サンプル' : 'EXAMPLES'}</div>
+              <div class="proj-list-label">{L === 'ja' ? 'デモ' : 'DEMO'}</div>
               <div class="proj-item">
                 <button class="proj-item-name factory" onpointerdown={projectLoadFactory}>
                   Factory Demo
@@ -429,6 +441,30 @@
                 {/each}
               </div>
             {/if}
+
+            <!-- File: Export / Import (ADR 020 §J, ADR 030) -->
+            <div class="export-section">
+              <span class="proj-list-label">{L === 'ja' ? 'ファイル' : 'FILE'}</span>
+              <span class="export-sub-label">{L === 'ja' ? 'プロジェクト' : 'PROJECT'}</span>
+              <div class="export-buttons">
+                <button class="btn-export" onpointerdown={exportProjectJSON}
+                  data-tip="Export project as JSON" data-tip-ja="プロジェクトをJSONファイルとしてエクスポート"
+                >EXPORT</button>
+                <button class="btn-export" onpointerdown={() => fileInput?.click()}
+                  data-tip="Import project from JSON file" data-tip-ja="JSONファイルからプロジェクトを読み込み"
+                >IMPORT</button>
+              </div>
+              {#if importError}
+                <div class="import-error">{importError}</div>
+              {/if}
+              <input bind:this={fileInput} type="file" accept=".json,.inboil.json" onchange={handleImportFile} style="display:none" />
+              <span class="export-sub-label" style="margin-top: 10px">{L === 'ja' ? 'パターン' : 'PATTERN'}</span>
+              <div class="export-buttons">
+                <button class="btn-export" onpointerdown={exportAndDownloadMidi}
+                  data-tip="Export current pattern as MIDI file" data-tip-ja="現在のパターンをMIDIファイルとしてエクスポート"
+                >EXPORT MIDI</button>
+              </div>
+            </div>
 
           {:else}
             <!-- ── SETTINGS tab ── -->
@@ -1121,6 +1157,19 @@
   }
   .btn-export:active {
     background: rgba(237,232,220,0.15);
+  }
+  .export-sub-label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.3);
+    text-transform: uppercase;
+    margin: 6px 0 4px;
+  }
+  .import-error {
+    font-size: 10px;
+    color: var(--color-salmon);
+    padding: 4px 0 0;
   }
   .settings-section {
     padding: 4px 16px;

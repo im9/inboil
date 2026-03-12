@@ -360,20 +360,79 @@ Directly reference the user's existing sample pool.
 
 ### J. Export / Import (File-Based)
 
-```typescript
-// Export as JSON file (works for all users, including demo)
-async function exportProject(): Promise<string> {
-  const patterns = await db.loadAllPatterns()
-  return JSON.stringify({ v: 1, patterns, effects, exportedAt: Date.now() })
-}
+#### Use Cases
 
-// Import from file
-async function importProject(json: string): Promise<void> {
-  const data = JSON.parse(json)
-  // Version check + validation
-  for (const p of data.patterns) await db.savePattern(p)
+1. **Offline sharing** — exchange projects without cloud storage (email, USB, messaging apps)
+2. **AI-assisted editing** — export a project, paste into an AI conversation for review/tweaking, re-import the modified result. The format just needs to be AI-readable (JSON works, but any structured text is fine)
+3. **Backup** — manual snapshots independent of IndexedDB / browser storage
+
+#### Format
+
+`.inboil.json` — single JSON file containing full project state:
+
+```typescript
+interface ExportedProject {
+  v: 1                          // export schema version
+  name: string                  // project name
+  bpm: number
+  swing: number
+  tracks: Track[]
+  patterns: Pattern[]
+  sceneGraph: SceneGraph        // scene nodes + edges
+  effects: Effects
+  exportedAt: number            // Date.now()
+  appVersion: string            // git hash or semver for compat diagnostics
 }
 ```
+
+#### Export Flow
+
+```typescript
+async function exportProject(song: Song): Promise<void> {
+  const payload: ExportedProject = {
+    v: 1,
+    name: song.name,
+    bpm: song.bpm,
+    swing: song.swing,
+    tracks: song.tracks,
+    patterns: song.patterns,
+    sceneGraph: song.sceneGraph,
+    effects: song.effects,
+    exportedAt: Date.now(),
+    appVersion: __APP_VERSION__,
+  }
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${song.name || 'untitled'}.inboil.json`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+```
+
+#### Import Flow
+
+```typescript
+async function importProject(json: string): Promise<Song> {
+  const data = JSON.parse(json)
+  if (data.v !== 1) throw new Error(`Unsupported export version: ${data.v}`)
+  // Validate required fields
+  // Create new project from imported data (never overwrite current without confirmation)
+  return restoreSong(data)   // reuse existing migration logic
+}
+```
+
+#### UI
+
+- **Export:** button in project management UI (SYSTEM settings) — downloads `.inboil.json`
+- **Import:** button + drag-and-drop on project list — creates new project, does not overwrite current
+- File input accepts `.json` and `.inboil.json`
+
+#### Samples
+
+Samples (ArrayBuffer) are **not** included in JSON export (too large, not JSON-friendly). Instead:
+- Export logs a warning if project uses samples
+- Future: separate `.inboil.zip` format bundling JSON + WAV files (Phase 2)
 
 ## Implementation Order
 
@@ -388,7 +447,7 @@ async function importProject(json: string): Promise<void> {
 9. ~~Factory reset uses empty song (not factory patterns)~~ Done
 10. ~~`lastProjectName` in localStorage for flash-free reload~~ Done
 11. ~~Sample persistence in IndexedDB (Section I, Phase A)~~ Done
-12. ~~Export/Import UI (file-based, works for all users)~~ Deferred — cloud sync is higher priority
+12. ~~Export/Import UI (file-based JSON, works for all users) — share projects without cloud, edit demo presets offline~~ Done
 13. ~~Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers~~ Cancelled — ADR 061 Superseded; no self-hosted auth needed
 14. ~~Cloud sync Worker + KV setup~~ Cancelled — replaced by Dropbox/Google Drive backup (no Cloudflare KV)
 15. ~~R2 sample upload/download (Section I, Phase B)~~ Cancelled — privacy concern with user audio; samples stay local or in user's own cloud storage

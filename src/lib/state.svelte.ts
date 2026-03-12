@@ -716,6 +716,43 @@ export async function projectRename(name: string): Promise<void> {
   }
 }
 
+// ── Export / Import (ADR 020 Section J) ──────────────────────────────
+
+/** Export current project as a downloadable .inboil.json file */
+export function exportProjectJSON(): void {
+  const snapshot = cloneSong()
+  const payload = { v: 1 as const, ...snapshot, exportedAt: Date.now() }
+  const json = JSON.stringify(payload, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `${song.name || 'untitled'}.inboil.json`
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+/** Import a project from JSON string — creates a new unsaved project */
+export async function importProjectJSON(json: string): Promise<void> {
+  const data = JSON.parse(json)
+  if (typeof data !== 'object' || data === null) throw new Error('Invalid project file')
+  // Accept both v:1 export format and raw Song objects
+  const src: Song = data as Song
+  restoreSong(src)
+  clearSamples()
+  project.id = null
+  project.dirty = false
+  ui.currentPattern = 0
+  ui.currentSection = 0
+  ui.selectedTrack = 0
+  ui.patternSheet = false
+  ui.selectedSceneNodes = {}
+  ui.selectedSceneEdge = null
+  undoStack.length = 0
+  redoStack.length = 0
+  // Persist immediately so the imported project isn't lost on page close
+  await projectSaveAs(song.name || 'Untitled')
+}
+
 /** Load factory demo patterns as a new unsaved project */
 export function projectLoadFactory(): void {
   restoreSong(makeDefaultSong())
