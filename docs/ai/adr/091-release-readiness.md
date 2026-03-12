@@ -20,7 +20,7 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 | **I/O** | MIDI hardware input (USB+BLE), WAV recording, MIDI export, JSON project export/import |
 | **Size** | Zero npm dependencies, ~130KB gzip — exceptional for this feature set |
 | **UI** | Responsive (desktop/tablet/mobile), bilingual (EN/JA), 39 components, micro-interactions |
-| **Testing** | 129 unit tests + 18 E2E tests, round-trip serialization coverage |
+| **Testing** | 138 unit tests + 18 E2E tests, round-trip serialization coverage |
 
 ### Competitive Position
 
@@ -37,29 +37,17 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 
 ### P0 — Must Do (Blocks Launch)
 
-#### 1. Error Handling UI
+#### 1. ~~Error Handling UI~~ ✅ Done (2026-03-12)
 
-Currently all errors (IndexedDB, AudioContext, MIDI, sample decode) are `console.warn` only. Users see silent failures.
+ErrorToast component + `showToast()` global store. Wired to: storage (DB blocked), engine (AudioContext init, sample decode, fetch), MIDI (access denied, device disconnect), auto-save failure.
 
-**Required:**
-- Toast / banner component for user-facing error messages
-- IndexedDB quota exceeded → "Storage full. Export your project to free space."
-- AudioContext creation failure → "Audio not available. Check browser permissions."
-- Sample decode failure → "Could not load sample: [filename]"
-- MIDI device error → "MIDI device disconnected"
+- `src/lib/toast.svelte.ts` — store
+- `src/lib/components/ErrorToast.svelte` — component (error/warn/info, 5s auto-dismiss)
+- Catch blocks in `storage.ts`, `engine.ts`, `midi.ts`, `state.svelte.ts`
 
-**Scope:** ~1 new component (ErrorToast), ~10 `catch` blocks across storage.ts, engine.ts, midiInput.ts
+#### 2. ~~Browser Capability Detection~~ ✅ Done (2026-03-12)
 
-#### 2. Browser Capability Detection
-
-App assumes AudioWorklet + IndexedDB + Web Audio. No fallback if missing.
-
-**Required:**
-- On startup, check: `AudioContext`, `AudioWorkletNode`, `indexedDB`
-- If missing → show a static fallback page: "inboil requires a modern browser (Chrome 66+, Firefox 76+, Safari 14.1+)"
-- Safari-specific: test `AudioWorkletNode` constructor (not just `window.AudioWorklet`)
-
-**Scope:** ~30 lines in App.svelte or a `compat.ts` utility
+`src/lib/compat.ts` checks AudioContext, AudioWorkletNode, indexedDB (including Safari constructor check). `main.ts` shows fallback page on failure; App is lazy-loaded via dynamic import so unsupported browsers never download the app bundle.
 
 #### 3. Landing Page & Minimal Tutorial (ADR 072)
 
@@ -72,15 +60,10 @@ First-time users currently land directly in the app with no explanation.
 
 **See ADR 072 for full spec.** This is the largest P0 item.
 
-#### 4. Explicit Storage Scope Notice
+#### 4. ~~Explicit Storage Scope Notice~~ ✅ Done (2026-03-12)
 
-Users may expect cloud sync. Currently local-only (IndexedDB).
-
-**Required:**
-- First-launch notice or Help entry: "Your projects are saved locally in this browser. Use Export to back up."
-- Sidebar PROJECT section: subtle "(local)" label or tooltip
-
-**Scope:** ~5 lines of UI text
+- Help PROJECTS section: ⚠ local storage warning (EN/JA) as first line
+- Sidebar PROJECTS list: `(local)` badge with bilingual tooltip
 
 ### P1 — Should Do (First Week Post-Launch)
 
@@ -125,7 +108,7 @@ Users may expect cloud sync. Currently local-only (IndexedDB).
 ## Success Criteria for Launch
 
 - [ ] All P0 items complete
-- [ ] No `console.warn` / `console.error` for user-recoverable situations (all surfaced in UI)
+- [x] No `console.warn` / `console.error` for user-recoverable situations (all surfaced in UI)
 - [ ] Landing page live at root URL
 - [ ] Getting-started tutorial accessible from LP and in-app Help
 - [ ] Tested in Chrome, Firefox, Safari (desktop + mobile)
