@@ -72,7 +72,7 @@ First impression page. Demo showcase + call to action.
 │  Features                        │
 │  • Synth & Drum Machine          │
 │  • Scene Graph Sequencer         │
-│  • Zero Dependencies, 130KB gz   │
+│  • Zero Dependencies, Lightweight│
 ├──────────────────────────────────┤
 │  Download Desktop (future)       │
 │  [macOS]  [Windows]  [Linux]     │
