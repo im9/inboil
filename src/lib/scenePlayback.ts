@@ -3,12 +3,9 @@
  * Extracted from state.svelte.ts for modularity.
  */
 import { song, playback, ui, fxPad, fxFlavours, cellForTrack, SECTION_COUNT, perf } from './state.svelte.ts'
-import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
-import type {
-  SceneNode, SceneEdge, Section, Trig,
-  TuringParams, QuantizerParams, TonnetzParams,
-} from './types.ts'
+import { executeGenChain, findNode } from './sceneActions.ts'
+import type { SceneNode, SceneEdge, Section } from './types.ts'
 
 // ── Scene graph helpers ─────────────────────────────────────────────
 
@@ -41,7 +38,7 @@ export function isViewingPlayingPattern(): boolean {
 /** Resolve soloNodeId to a pattern index, or null if invalid */
 export function soloPatternIndex(): number | null {
   if (!playback.soloNodeId) return null
-  const node = song.scene.nodes.find(n => n.id === playback.soloNodeId)
+  const node = findNode(playback.soloNodeId)
   if (!node || node.type !== 'pattern') return null
   const idx = song.patterns.findIndex(p => p.id === node.patternId)
   return idx >= 0 ? idx : null
@@ -88,7 +85,7 @@ function applyLiveGenerative(patternNode: SceneNode): void {
 
   const incomingEdges = song.scene.edges.filter(e => e.to === patternNode.id)
   for (const edge of incomingEdges) {
-    const srcNode = song.scene.nodes.find(n => n.id === edge.from)
+    const srcNode = findNode(edge.from)
     if (!srcNode?.generative) continue
 
     const chain = collectLiveChain(srcNode.id)
@@ -97,20 +94,7 @@ function applyLiveGenerative(patternNode: SceneNode): void {
     const trackIdx = srcNode.generative.targetTrack ?? 0
     const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
     const steps = cell.steps
-    let trigs: Trig[] | null = null
-
-    for (const genNode of chain) {
-      const gen = genNode.generative!
-      if (gen.engine === 'turing') {
-        trigs = turingGenerate(gen.params as TuringParams, steps)
-      } else if (gen.engine === 'quantizer') {
-        const input = trigs ?? cell.trigs.map(t => ({ ...t }))
-        trigs = quantizeTrigs(input, gen.params as QuantizerParams)
-      } else if (gen.engine === 'tonnetz') {
-        trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
-      }
-    }
-
+    const trigs = executeGenChain(chain, cell, steps)
     if (trigs) {
       const lastGen = chain[chain.length - 1].generative!
       const mode = lastGen.mergeMode
@@ -144,12 +128,12 @@ function collectLiveChain(startId: string): SceneNode[] {
   while (true) {
     if (visited.has(currentId)) break
     visited.add(currentId)
-    const node = song.scene.nodes.find(n => n.id === currentId)
+    const node = findNode(currentId)
     if (!node?.generative) break
     chain.unshift(node)
     const inEdge = song.scene.edges.find(e => e.to === currentId)
     if (!inEdge) break
-    const src = song.scene.nodes.find(n => n.id === inEdge.from)
+    const src = findNode(inEdge.from)
     if (!src?.generative) break
     currentId = src.id
   }
@@ -188,7 +172,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
   let currentEdge = edge
 
   while (true) {
-    const node = song.scene.nodes.find(n => n.id === currentEdge.to)
+    const node = findNode(currentEdge.to)
     if (!node || visited.has(node.id)) {
       return { advanced: false, patternIndex: -1, stop: true }
     }
@@ -232,7 +216,7 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
     return { advanced: false, patternIndex: -1 }
   }
 
-  const current = song.scene.nodes.find(n => n.id === playback.sceneNodeId)
+  const current = findNode(playback.sceneNodeId!)
   if (!current) return startSceneNode(root)
 
   const outEdges = song.scene.edges

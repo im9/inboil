@@ -65,7 +65,8 @@
   async function loadSampleFile(file: File) {
     if (file.size > MAX_SAMPLE_SIZE) {
       sampleError = `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB, max 10 MB)`
-      setTimeout(() => { sampleError = '' }, 3000)
+      const msg = sampleError
+      setTimeout(() => { if (sampleError === msg) sampleError = '' }, 3000)
       return
     }
     sampleError = ''

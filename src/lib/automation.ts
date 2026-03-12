@@ -52,20 +52,13 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
     if (v[`track:${i}:pan`] != null) song.tracks[i].pan = v[`track:${i}:pan`]
   }
   // Restore FX pad & flavours mutated by decorators
-  Object.assign(fxPad.verb, snap.fxPad.verb)
-  Object.assign(fxPad.delay, snap.fxPad.delay)
-  Object.assign(fxPad.glitch, snap.fxPad.glitch)
-  Object.assign(fxPad.granular, snap.fxPad.granular)
-  Object.assign(fxPad.filter, snap.fxPad.filter)
-  Object.assign(fxPad.eqLow, snap.fxPad.eqLow)
-  Object.assign(fxPad.eqMid, snap.fxPad.eqMid)
-  Object.assign(fxPad.eqHigh, snap.fxPad.eqHigh)
+  const FX_PAD_KEYS = ['verb', 'delay', 'glitch', 'granular', 'filter', 'eqLow', 'eqMid', 'eqHigh'] as const
+  for (const key of FX_PAD_KEYS) Object.assign(fxPad[key], snap.fxPad[key])
   Object.assign(fxFlavours, snap.fxFlavours)
   // Restore master pad & comp
   if (snap.masterPad) {
-    Object.assign(masterPad.comp, snap.masterPad.comp)
-    Object.assign(masterPad.duck, snap.masterPad.duck)
-    Object.assign(masterPad.ret, snap.masterPad.ret)
+    const MASTER_PAD_KEYS = ['comp', 'duck', 'ret'] as const
+    for (const key of MASTER_PAD_KEYS) Object.assign(masterPad[key], snap.masterPad[key])
   }
   if (snap.comp) {
     song.effects.comp.makeup = snap.comp.makeup

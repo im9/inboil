@@ -304,7 +304,8 @@
       const attached = sceneAttachDecorator(nodeId, snapTarget)
       if (attached) {
         justAttached = snapTarget
-        setTimeout(() => { justAttached = null }, 200)
+        const id = snapTarget
+        setTimeout(() => { if (justAttached === id) justAttached = null }, 200)
       }
       snapTarget = null
       dragging = null

@@ -109,6 +109,9 @@
     if (bpmRepeatInterval) { clearInterval(bpmRepeatInterval); bpmRepeatInterval = null }
   }
 
+  // Cleanup timers on component unmount
+  $effect(() => () => stopBpmRepeat())
+
 </script>
 
 <div class="header-wrap" class:compact>

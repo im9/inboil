@@ -205,7 +205,7 @@ type FactoryDef = {
   dur?: Record<number, number[]>
 }
 
-// Track indices: 0=KICK 1=SNARE 2=CLAP 3=C.HH 4=O.HH 5=CYM 6=BASS 7=LEAD
+// Track indices match song.tracks order (see createDefaultTracks in state.svelte.ts)
 const FACTORY: FactoryDef[] = [
   // 00 — Acid house: squelchy 303 bass + acid stab lead, key=E
   { name: '4FLOOR', bpm: 126, key: 4,

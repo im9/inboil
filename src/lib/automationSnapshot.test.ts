@@ -3,7 +3,7 @@
  * survives decorator mutations during scene↔pattern playback transitions.
  */
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_FX_PAD, DEFAULT_FX_FLAVOURS } from './constants.ts'
+import { DEFAULT_FX_PAD, DEFAULT_FX_FLAVOURS, DEFAULT_MASTER_PAD } from './constants.ts'
 import type { FxFlavours } from './constants.ts'
 
 // ── Pure reimplementation of snapshot/restore logic for testability ──
@@ -114,5 +114,47 @@ describe('automation snapshot: FX persistence', () => {
     // Snapshot values should be unchanged
     expect(snap.fxPad.delay.x).toBe(DEFAULT_FX_PAD.delay.x)
     expect(snap.fxFlavours.glitch).toBe('bitcrush')
+  })
+
+  it('restores all 8 fxPad sub-objects (FX_PAD_KEYS coverage)', () => {
+    const pad: FxPad = JSON.parse(JSON.stringify(DEFAULT_FX_PAD))
+    const flavours: FxFlavours = { ...DEFAULT_FX_FLAVOURS }
+    const snap = snapshotFx(pad, flavours)
+
+    // Mutate every sub-object
+    const FX_KEYS = ['verb', 'delay', 'glitch', 'granular', 'filter', 'eqLow', 'eqMid', 'eqHigh'] as const
+    for (const key of FX_KEYS) {
+      ;(pad[key] as Record<string, unknown>).x = 0.99
+    }
+
+    restoreFx(snap, pad, flavours)
+
+    // Verify every key was restored
+    for (const key of FX_KEYS) {
+      expect(pad[key].x, `fxPad.${key}.x should be restored`).toBe(DEFAULT_FX_PAD[key].x)
+    }
+  })
+
+  it('restores all 3 masterPad sub-objects (MASTER_PAD_KEYS coverage)', () => {
+    type MasterPad = typeof DEFAULT_MASTER_PAD
+    const master: MasterPad = JSON.parse(JSON.stringify(DEFAULT_MASTER_PAD))
+    const snapMaster: MasterPad = JSON.parse(JSON.stringify(master))
+
+    // Mutate every sub-object
+    const MASTER_KEYS = ['comp', 'duck', 'ret'] as const
+    for (const key of MASTER_KEYS) {
+      master[key].x = 0.99
+      master[key].y = 0.01
+    }
+
+    // Restore using Object.assign loop (same pattern as automation.ts)
+    for (const key of MASTER_KEYS) {
+      Object.assign(master[key], snapMaster[key])
+    }
+
+    for (const key of MASTER_KEYS) {
+      expect(master[key].x, `masterPad.${key}.x should be restored`).toBe(DEFAULT_MASTER_PAD[key].x)
+      expect(master[key].y, `masterPad.${key}.y should be restored`).toBe(DEFAULT_MASTER_PAD[key].y)
+    }
   })
 })

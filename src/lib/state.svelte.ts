@@ -248,8 +248,6 @@ export function selectSection(index: number): void {
 export function getActivePatternName(): string {
   return song.patterns[ui.currentPattern]?.name ?? ''
 }
-/** @deprecated Use getActivePatternName() */
-export const getActiveSectionName = getActivePatternName
 
 /** Total number of sections */
 export function getSectionCount(): number {

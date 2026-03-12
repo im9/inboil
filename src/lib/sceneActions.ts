@@ -4,9 +4,35 @@
  */
 
 import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
 import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
+
+// ── Shared generative chain execution ──
+
+/** Execute a chain of generative nodes, returning resulting trigs or null */
+export function executeGenChain(chain: SceneNode[], cell: Cell, steps: number): Trig[] | null {
+  let trigs: Trig[] | null = null
+  for (const genNode of chain) {
+    const gen = genNode.generative!
+    if (gen.engine === 'turing') {
+      trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
+    } else if (gen.engine === 'quantizer') {
+      const input = trigs ?? cell.trigs.map(t => ({ ...t }))
+      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+    } else if (gen.engine === 'tonnetz') {
+      trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
+    }
+  }
+  return trigs
+}
+
+// ── Node lookup helper ──
+
+/** Find a scene node by ID */
+export function findNode(nodeId: string): SceneNode | undefined {
+  return song.scene.nodes.find(n => n.id === nodeId)
+}
 
 // ── ID generation ──
 
@@ -23,7 +49,7 @@ function nextSceneId(prefix: 'sn' | 'se'): string {
 
 /** Update a scene node's position (no undo — cosmetic, high frequency) */
 export function sceneUpdateNode(nodeId: string, x: number, y: number): void {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node) return
   node.x = x
   node.y = y
@@ -45,7 +71,7 @@ export function sceneAddNode(patternId: string, x: number, y: number): string {
 /** Delete a node and its connected edges */
 export function sceneDeleteNode(nodeId: string): void {
   pushUndo('Delete scene node')
-  const wasRoot = song.scene.nodes.find(n => n.id === nodeId)?.root
+  const wasRoot = findNode(nodeId)?.root
   song.scene.edges = song.scene.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
   song.scene.nodes = song.scene.nodes.filter(n => n.id !== nodeId)
   if (wasRoot && song.scene.nodes.length > 0) {
@@ -60,7 +86,7 @@ export function sceneDeleteNode(nodeId: string): void {
 
 /** Set a node as root (only pattern nodes can be root) */
 export function sceneSetRoot(nodeId: string): void {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node || node.type !== 'pattern') return
   pushUndo('Set root node')
   for (const n of song.scene.nodes) n.root = n.id === nodeId
@@ -185,7 +211,7 @@ export function sceneAddGenerativeNode(engine: GenerativeEngine, x: number, y: n
 /** Update generative node params */
 export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<TuringParams | QuantizerParams | TonnetzParams>): void {
   pushUndo('Update generative params')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return
   Object.assign(node.generative.params, params)
 }
@@ -194,7 +220,7 @@ export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<Turi
  *  Supports chaining: Turing → Quantizer → Pattern.
  *  Finds the first pattern node connected via outgoing edges. */
 export function sceneGenerateWrite(nodeId: string): boolean {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return false
 
   // Find target pattern by following outgoing edges (collecting gen chain)
@@ -213,22 +239,8 @@ export function sceneGenerateWrite(nodeId: string): boolean {
   // Collect the generative chain from this node to the target pattern
   const chain = collectGenChain(nodeId)
 
-  // Execute the chain: first node generates, subsequent nodes transform
-  let trigs: Trig[] | null = null
-  for (const genNode of chain) {
-    const gen = genNode.generative!
-    if (gen.engine === 'turing') {
-      trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
-    } else if (gen.engine === 'quantizer') {
-      const input = trigs ?? cell.trigs.map(t => ({ ...t }))
-      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
-    } else if (gen.engine === 'tonnetz') {
-      trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
-    }
-  }
-
+  const trigs = executeGenChain(chain, cell, steps)
   if (trigs) {
-    // Use mergeMode from the last node in the chain
     const lastGen = chain[chain.length - 1].generative!
     applyGeneratedTrigs(cell.trigs, trigs, lastGen.mergeMode)
   }
@@ -239,7 +251,7 @@ export function sceneGenerateWrite(nodeId: string): boolean {
 /** Generate trigs into a buffer without writing to pattern (ADR 089 delayed write).
  *  Returns null if generation fails, otherwise { trigs, trackId, mergeMode }. */
 export function sceneGenerateBuffer(nodeId: string): { trigs: Trig[]; trackId: number; mergeMode: string } | null {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return null
 
   const targetPatNode = findTargetPattern(nodeId)
@@ -253,19 +265,7 @@ export function sceneGenerateBuffer(nodeId: string): { trigs: Trig[]; trackId: n
   const steps = cell.steps
 
   const chain = collectGenChain(nodeId)
-  let trigs: Trig[] | null = null
-  for (const genNode of chain) {
-    const gen = genNode.generative!
-    if (gen.engine === 'turing') {
-      trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
-    } else if (gen.engine === 'quantizer') {
-      const input = trigs ?? cell.trigs.map(t => ({ ...t }))
-      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
-    } else if (gen.engine === 'tonnetz') {
-      trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
-    }
-  }
-
+  const trigs = executeGenChain(chain, cell, steps)
   if (!trigs) return null
   const lastGen = chain[chain.length - 1].generative!
   return { trigs, trackId: trackIdx, mergeMode: lastGen.mergeMode }
@@ -281,7 +281,7 @@ function collectGenChain(fromId: string): SceneNode[] {
   while (true) {
     if (visited.has(currentId)) break
     visited.add(currentId)
-    const node = song.scene.nodes.find(n => n.id === currentId)
+    const node = findNode(currentId)
     if (!node) break
     if (node.type === 'generative' && node.generative) {
       chain.push(node)
@@ -305,7 +305,7 @@ function findTargetPattern(fromId: string): SceneNode | null {
     visited.add(id)
     const outEdges = song.scene.edges.filter(e => e.from === id)
     for (const edge of outEdges) {
-      const target = song.scene.nodes.find(n => n.id === edge.to)
+      const target = findNode(edge.to)
       if (!target) continue
       if (target.type === 'pattern') return target
       queue.push(target.id)
@@ -349,7 +349,7 @@ function applyGeneratedTrigs(
 /** Set target track index for generative output */
 export function sceneSetTargetTrack(nodeId: string, trackIdx: number): void {
   pushUndo('Set target track')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return
   node.generative.targetTrack = trackIdx
 }
@@ -357,7 +357,7 @@ export function sceneSetTargetTrack(nodeId: string, trackIdx: number): void {
 /** Set or randomize the seed for deterministic generation */
 export function sceneSetSeed(nodeId: string, seed: number | undefined): void {
   pushUndo('Set seed')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return
   node.generative.seed = seed
 }
@@ -365,7 +365,7 @@ export function sceneSetSeed(nodeId: string, seed: number | undefined): void {
 /** Apply a factory preset to a generative node */
 export function sceneApplyGenerativePreset(nodeId: string, params: Record<string, unknown>): void {
   pushUndo('Apply generative preset')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node?.generative) return
   const cloned: Record<string, unknown> = {}
   for (const k of Object.keys(params)) {
@@ -385,7 +385,7 @@ export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
   for (const pn of patNodes) {
     const inEdges = song.scene.edges.filter(e => e.to === pn.id)
     for (const edge of inEdges) {
-      const src = song.scene.nodes.find(n => n.id === edge.from)
+      const src = findNode(edge.from)
       if (src?.generative) result.push(src.id)
     }
   }
@@ -395,7 +395,7 @@ export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
 /** Update a function node's params (legacy, kept for decorator use) */
 export function sceneUpdateNodeParams(nodeId: string, params: Record<string, number>): void {
   pushUndo('Update node params')
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node) return
   node.params = { ...params }
 }
@@ -404,8 +404,8 @@ export function sceneUpdateNodeParams(nodeId: string, params: Record<string, num
 
 /** Attach a legacy function node as a decorator on a pattern node (migration support) */
 export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): boolean {
-  const fnNode = song.scene.nodes.find(n => n.id === fnNodeId)
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  const fnNode = findNode(fnNodeId)
+  const patNode = findNode(patternNodeId)
   if (!fnNode || !patNode || patNode.type !== 'pattern') return false
   if (fnNode.type === 'pattern' || fnNode.type === 'probability' || fnNode.type === 'generative') return false
   pushUndo('Attach decorator')
@@ -425,7 +425,7 @@ export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): b
 
 /** Remove a decorator from a pattern node (ADR 069) */
 export function sceneRemoveDecorator(patternNodeId: string, decoratorIndex: number): void {
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  const patNode = findNode(patternNodeId)
   if (!patNode?.decorators?.[decoratorIndex]) return
   pushUndo('Remove decorator')
   patNode.decorators.splice(decoratorIndex, 1)
@@ -433,7 +433,7 @@ export function sceneRemoveDecorator(patternNodeId: string, decoratorIndex: numb
 
 /** Update a decorator's params on a pattern node */
 export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: number, params: Record<string, number>): void {
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  const patNode = findNode(patternNodeId)
   if (!patNode?.decorators?.[decoratorIndex]) return
   pushUndo('Update decorator')
   patNode.decorators[decoratorIndex].params = { ...params }
@@ -448,7 +448,7 @@ const DECORATOR_DEFAULTS: Record<string, Record<string, number>> = {
 
 /** Add a decorator directly to a pattern node (ADR 069) */
 export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['type']): void {
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  const patNode = findNode(patternNodeId)
   if (!patNode || patNode.type !== 'pattern') return
   pushUndo('Add decorator')
   patNode.decorators ??= []
@@ -466,7 +466,7 @@ export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['t
 
 /** Add an automation decorator directly to a pattern node */
 export function sceneAddAutomationDecorator(patternNodeId: string): void {
-  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  const patNode = findNode(patternNodeId)
   if (!patNode || patNode.type !== 'pattern') return
   pushUndo('Add automation decorator')
   const ap = DEFAULT_AUTOMATION_PARAMS
@@ -616,7 +616,7 @@ export function hasSceneClipboard(): boolean {
 
 /** Copy a single node to clipboard */
 export function sceneCopyNode(nodeId: string): void {
-  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const node = findNode(nodeId)
   if (!node) return
   sceneClipboard = { nodes: [cloneSceneNode(node)], edges: [] }
 }
@@ -635,7 +635,7 @@ export function sceneCopySelected(nodeIds: Record<string, true>): void {
 
 /** Copy node + all reachable downstream nodes & connecting edges */
 export function sceneCopySubgraph(nodeId: string): void {
-  const startNode = song.scene.nodes.find(n => n.id === nodeId)
+  const startNode = findNode(nodeId)
   if (!startNode) return
   const visited = new Set<string>()
   const queue = [nodeId]
@@ -644,7 +644,7 @@ export function sceneCopySubgraph(nodeId: string): void {
     const id = queue.shift()!
     if (visited.has(id)) continue
     visited.add(id)
-    const node = song.scene.nodes.find(n => n.id === id)
+    const node = findNode(id)
     if (!node) continue
     collectedNodes.push(cloneSceneNode(node))
     for (const edge of song.scene.edges) {
