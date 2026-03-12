@@ -1,0 +1,70 @@
+---
+title: Make Your First Beat
+description: Step-by-step guide to making your first beat in inboil.
+---
+
+import KnobDemo from '../../../../components/KnobDemo.svelte';
+import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
+import PlaygroundPerfButtons from '../../../../components/PlaygroundPerfButtons.svelte';
+
+## 1. Play & Stop
+
+Press **Space** (or tap **▶**) to start playback. Press again to stop. The step cursor scrolls across the grid, triggering every active step.
+
+## 2. Turn a Knob
+
+inboil uses knobs for almost every parameter. **Drag up** to increase, **drag down** to decrease. Try it:
+
+<KnobDemo client:visible />
+
+Knobs respond to fine control — hold **Shift** while dragging for precision. Double-click to reset to default.
+
+## 3. Paint Steps
+
+Tap cells in the step grid to toggle triggers on/off. **Drag to paint** multiple steps in one gesture. Each row is a track — kick, snare, hi-hat, etc.
+
+This grid has a 4-on-the-floor kick and hi-hat pattern pre-loaded. Try adding snare hits or toggling steps:
+
+<PlaygroundStepGrid client:visible />
+
+### Step Count
+
+Each track can have **2–64 steps** independently. Tap the step count number at the right edge of a track to change it. Odd step counts create polyrhythms — try 5 or 7 against a 16-step kick.
+
+## 4. Change Sounds
+
+Select a track by tapping its **label** (KICK, SNARE, etc.). The **Dock panel** on the left opens with that track's voice parameters:
+
+- **VOL** — Track volume
+- **PAN** — Left/right stereo position
+- **TUNE** — Pitch up/down
+- **DECAY** — How long the sound rings out
+
+Each voice type (KICK, SNARE, BASS, LEAD, FM, WAVE) has its own set of parameters. See [Change Sounds](/docs/getting-started/adding-sounds/) for details.
+
+## 5. Randomize
+
+Hit **RAND** to generate a random pattern. Use **Ctrl+Z** to undo if you don't like it. Undo is unlimited — every edit is recorded.
+
+## 6. Performance Controls
+
+Hold the performance buttons for real-time effects during playback:
+
+<PlaygroundPerfButtons client:visible />
+
+- **FILL** — auto drum fill while held
+- **REV** — reverse playback
+- **BRK** — rhythmic break / stutter
+
+Release to restore normal playback instantly.
+
+## 7. Save Your Work
+
+Projects auto-save on every edit to your browser's local storage. Use **SYSTEM → SAVE AS** to create named snapshots, and **EXPORT** to download a JSON backup.
+
+> **Tip**: Projects are stored locally in this browser only. Use Export to back up your work before clearing browser data.
+
+## Next Steps
+
+- [Change Sounds](/docs/getting-started/adding-sounds/) — shape drums and synths with voice parameters
+- [Build a Scene](/docs/getting-started/arrangement/) — arrange patterns into a scene graph

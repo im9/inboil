@@ -1,0 +1,51 @@
+---
+title: Sampler
+description: Load, chop, and pitch audio samples.
+---
+
+## Overview
+
+The **Sampler** voice (SMPL) lets you load audio files and play them as instruments. It's a full-featured sampler with slicing, pitch control, and BPM sync.
+
+Switch any track to Sampler via the **SMPL** tab in the Dock panel.
+
+## Loading Samples
+
+### From File
+Tap the **LOAD** button or **drag and drop** an audio file onto the track. Supported formats: WAV, MP3, OGG, FLAC.
+
+### From Library
+A future update will include a built-in sample library. For now, use your own files.
+
+## Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| **START** | Sample start point |
+| **END** | Sample end point |
+| **PITCH** | Pitch shift (semitones) |
+| **DECAY** | Amplitude decay |
+| **REVERSE** | Play sample backwards |
+
+## Chop Mode
+
+Tap **CHOP** to automatically slice the sample into equal segments. Each step in the pattern triggers a different slice — perfect for breakbeats and drum loops.
+
+Chopping is non-destructive. You can always return to the full sample.
+
+## BPM Sync
+
+Enable **BPM sync** to automatically stretch or compress the sample to match the current tempo. This keeps loops in time regardless of their original BPM.
+
+## Tips
+
+- **Layer samples with synth voices**: Use one track for the sample and another for a synth layer to add body
+- **Reverse fills**: Enable REVERSE on a copied pattern for transition effects
+- **Micro-sampling**: Set START and END very close together for granular textures
+- **One-shots vs loops**: Short samples (kicks, snares) work as one-shots; longer samples loop automatically when the pattern repeats
+
+## Related
+
+- [Voices](/docs/sound/voices/) — all synth engines
+- [Effects](/docs/sound/fx/) — processing chain
+- [Grid Mode](/docs/sequencer/grid-mode/) — triggering samples from the step grid

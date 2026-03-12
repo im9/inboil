@@ -1,0 +1,58 @@
+---
+title: Velocity & Chance
+description: Per-step volume control and trigger probability for dynamic patterns.
+---
+
+import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
+
+## Overview
+
+Below each track in the step grid, there's a mode bar that switches between three views: **STEP**, **VEL**, and **CHNC**. These give you per-step control over dynamics and probability.
+
+<PlaygroundStepGrid client:visible />
+
+## Three Modes
+
+### STEP Mode (default)
+
+The standard view — toggle steps on/off by tapping. This is where you paint your beat.
+
+### VEL Mode (Velocity)
+
+Shows a **vertical bar** for each active step. Drag up/down to set the velocity (volume) of individual hits.
+
+- Higher velocity = louder hit
+- Range: 0–127 (displayed as a percentage)
+- Use velocity variation to add groove and human feel
+
+**Tip**: Accent the downbeats (steps 0, 4, 8, 12) at high velocity and ghost the off-beats at low velocity for a more natural feel.
+
+### CHNC Mode (Chance / Probability)
+
+Shows a **percentage** for each active step. Drag up/down to set the trigger probability.
+
+- **100%** — always triggers (default)
+- **50%** — triggers half the time (coin flip)
+- **0%** — never triggers
+- Any value in between — proportional probability
+
+Chance creates **generative variation** — the same pattern sounds different each loop. Combined with the Scene graph's weighted edges, you can build arrangements that never repeat exactly.
+
+### Practical Uses
+
+| Technique | How |
+|-----------|-----|
+| **Ghost notes** | Set hi-hat off-beats to 30–50% chance |
+| **Random fills** | Add fill hits at 15–25% chance on every step |
+| **Evolving grooves** | Mix 80% and 60% across a pattern |
+| **Sparse textures** | Set all steps to 10–20% for ambient percussion |
+
+## Step Count
+
+Tap the **step count number** at the right edge of any track to change it. The range is **2–64 steps**. Different step counts per track create polyrhythmic patterns.
+
+## Related
+
+- [Grid Mode](/docs/sequencer/grid-mode/) — painting steps
+- [Piano Roll](/docs/sequencer/piano-roll/) — melodic editing
+- [Voices](/docs/sound/voices/) — per-voice parameters affect how velocity is interpreted

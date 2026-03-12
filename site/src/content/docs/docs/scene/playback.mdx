@@ -1,0 +1,84 @@
+---
+title: Playback
+description: How the scene engine traverses the graph during playback.
+---
+
+import PlaygroundSceneView from '../../../../components/PlaygroundSceneView.svelte';
+
+## Playback Modes
+
+inboil has two playback modes:
+
+| Mode | Behavior |
+|------|----------|
+| **Loop** | Plays the current pattern on repeat (default) |
+| **Scene** | Traverses the scene graph starting from the root node |
+
+Tap **▶** to play in Loop mode. **Long-press ▶** (or use the mode toggle) to start Scene playback.
+
+## Scene Playback Flow
+
+<PlaygroundSceneView client:visible />
+
+### Step by Step
+
+1. **Start at the root node** — the node marked with a dot
+2. **Play the pattern** — the pattern referenced by the node plays from start to end
+3. **Apply decorators** — transpose, tempo, repeat, FX, automation are applied during playback
+4. **Repeat** — if a Repeat decorator exists, the pattern loops N times
+5. **Choose next edge** — if the node has outgoing edges, pick one randomly based on weight
+6. **Move to next node** — playback continues at the destination node
+7. **Stop at terminal** — if there are no outgoing edges, playback ends
+
+### Edge Selection
+
+At fork points (nodes with multiple outgoing edges), the engine uses **weighted random selection**:
+
+```
+Weight of edge A: 3
+Weight of edge B: 1
+Weight of edge C: 1
+Total: 5
+
+Probability A = 3/5 = 60%
+Probability B = 1/5 = 20%
+Probability C = 1/5 = 20%
+```
+
+This creates **generative arrangements** — the same scene plays differently every time.
+
+### Loops in the Graph
+
+If edges form a cycle (A → B → C → A), playback loops indefinitely through those nodes. This is the most common scene structure — a set of interconnected patterns that loop with variation.
+
+To stop scene playback, press **Space** or tap **■**.
+
+## Two-Cursor Model
+
+inboil maintains two independent cursors:
+
+| Cursor | Controlled by | Purpose |
+|--------|--------------|---------|
+| **User cursor** (`ui.currentPattern`) | Tapping patterns in Matrix/Scene | Shows which pattern you're editing |
+| **Playback cursor** (`playback.playingPattern`) | Scene engine | Controls which pattern is currently audible |
+
+During scene playback, the playback cursor moves automatically through the graph. Your user cursor stays where you left it — you can edit patterns while the scene plays without disrupting playback.
+
+## Tempo Changes
+
+When playback enters a node with a **Tempo** decorator:
+- The tempo changes immediately (no crossfade)
+- When leaving that node, tempo reverts to the previous value
+- If the next node also has a Tempo decorator, its value takes effect
+
+Tempo changes are node-scoped, not global — they don't permanently alter the project tempo.
+
+## Performance During Scene Playback
+
+The performance buttons (**FILL**, **REV**, **BRK**) work during scene playback. They affect the currently playing pattern in real-time, layering on top of any decorators.
+
+## Related
+
+- [Scene Nodes](/docs/scene/nodes/) — node types and properties
+- [Decorators](/docs/scene/decorators/) — per-node modifiers
+- [Build a Scene](/docs/getting-started/arrangement/) — tutorial

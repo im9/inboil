@@ -1,0 +1,102 @@
+---
+title: Voices
+description: Synth engines and drum machines — every sound source in inboil.
+---
+
+import PlaygroundDockTrackEditor from '../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundEnvGraph from '../../../../components/PlaygroundEnvGraph.svelte';
+import PlaygroundWaveGraph from '../../../../components/PlaygroundWaveGraph.svelte';
+import PlaygroundAlgoGraph from '../../../../components/PlaygroundAlgoGraph.svelte';
+
+## Overview
+
+Every track has a **voice** — the sound engine that produces audio when a step triggers. inboil includes both **drum** and **synth** voices, all synthesized in real-time (no samples, except the Sampler voice).
+
+Select a track and use the **Dock panel** to edit its voice parameters:
+
+<PlaygroundDockTrackEditor client:visible />
+
+## Drum Voices
+
+### KICK
+Analog-style bass drum. Parameters:
+- **TUNE** — Pitch of the drum body
+- **DECAY** — Length of the tail
+- **DRIVE** — Saturation / distortion amount
+- **CLICK** — Transient attack intensity
+
+### SNARE
+Noise + tone mix. Parameters:
+- **TUNE** — Tone pitch
+- **SNAP** — Transient sharpness
+- **DECAY** — Tail length
+- **TONE** — Noise vs tone balance
+
+### CLAP
+Layered handclap. Parameters:
+- **SPREAD** — Timing spread between layers
+- **DECAY** — Tail length
+- **TONE** — Brightness
+
+### C.HH / O.HH (Closed / Open Hi-Hat)
+Paired hi-hat — closed chokes open. Parameters:
+- **TUNE** — Pitch
+- **DECAY** — Ring length (short for closed, long for open)
+- **TONE** — Brightness / metallic character
+
+### CYM (Cymbal)
+606-style noise+sine through a bandpass filter. Parameters:
+- **TUNE** — Center frequency
+- **DECAY** — Sustain length
+- **TONE** — Filter resonance
+
+## Synth Voices
+
+### BASS (303-style Acid Bass)
+Monophonic bass synth inspired by the Roland TB-303. Parameters:
+- **CUTOFF** — Filter cutoff frequency
+- **RESO** — Filter resonance (screaming at high values)
+- **ENV** — Envelope modulation depth on filter
+- **ACCENT** — Velocity-driven filter/amp boost
+- **DECAY** — Amplitude envelope decay
+
+The BASS voice responds to **slide** (SLD) for portamento glides — essential for acid patterns.
+
+### LEAD (Moog-style Lead)
+Monophonic/polyphonic lead synth. Parameters:
+- **CUTOFF** — Low-pass filter
+- **RESO** — Filter resonance
+- **DETUNE** — Oscillator detune (thickens the sound)
+- **ATK/DCY/SUS/REL** — Full ADSR envelope
+
+<PlaygroundEnvGraph client:visible />
+
+### FM (FM Synthesis)
+4-operator FM synth with 8 algorithms. Parameters:
+- **RATIO** — Modulator frequency ratio
+- **MOD** — Modulation index (brightness/complexity)
+- **FEEDBACK** — Operator self-feedback
+- **ALGO** — Routing algorithm (1–8)
+
+<PlaygroundAlgoGraph client:visible />
+
+### WAVE (Wavetable)
+Morphing wavetable synth. Smoothly blends between waveforms:
+
+<PlaygroundWaveGraph client:visible />
+
+- **WAVE** — Morph position (saw → square → tri → sine → pulse)
+- **DETUNE** — Voice detuning
+- **CUTOFF** — Filter cutoff
+
+Poly modes: **MONO** / **POLY8** / **WIDE4** / **UNISON** — set in the Dock panel header.
+
+## Switching Voices
+
+Use the **Dock tabs** (DRUM / BASS / LEAD / SMPL) to change a track's voice type. The voice change takes effect immediately — existing steps keep their triggers but play with the new sound.
+
+## Related
+
+- [Presets & Per-Step Lock](/docs/getting-started/adding-sounds/#presets) — save and recall sounds
+- [Sampler](/docs/sound/sampler/) — sample-based voice
+- [Effects](/docs/sound/fx/) — processing chain

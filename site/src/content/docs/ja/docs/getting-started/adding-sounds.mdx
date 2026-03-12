@@ -1,0 +1,80 @@
+---
+title: 音色を変える
+description: ボイスパラメーターとプリセットでドラムやシンセを作り込む。
+---
+
+import KnobDemo from '../../../../../components/KnobDemo.svelte';
+import PlaygroundDockTrackEditor from '../../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundEnvGraph from '../../../../../components/PlaygroundEnvGraph.svelte';
+import PlaygroundWaveGraph from '../../../../../components/PlaygroundWaveGraph.svelte';
+
+## ボイスパラメーター
+
+各トラックには**ボイス**（ステップがトリガーされたときに鳴る音源）があります。トラックのラベルをタップすると、**Dock パネル**にパラメーターが表示されます。
+
+<PlaygroundDockTrackEditor client:visible />
+
+### ドラムボイス
+
+| ボイス | 特徴 |
+|--------|------|
+| **KICK** | アナログ風バスドラム — tune、decay、drive |
+| **SNARE** | ノイズ＋トーンのミックス — tune、snap、decay |
+| **CLAP** | レイヤードクラップ — spread、decay、tone |
+| **C.HH / O.HH** | クローズ/オープンハイハット — tune、decay、tone |
+| **CYM** | シンバル — tune、decay、tone |
+
+### シンセボイス
+
+| ボイス | 特徴 |
+|--------|------|
+| **BASS** | 303 スタイルのアシッドベース — cutoff、resonance、envelope、accent |
+| **LEAD** | Moog スタイルのリード — filter、envelope、detune |
+| **FM** | FM シンセシス — ratio、modulation index、feedback |
+| **WAVE** | ウェーブテーブル — 波形間をモーフィング |
+
+## ノブを試す
+
+すべてのパラメーターはノブで操作します。上にドラッグで増加、下にドラッグで減少:
+
+<KnobDemo client:visible />
+
+## エンベロープ
+
+シンセボイスでは **ADSR エンベロープ**を使って音の時間変化を設定します。ノブを動かしてエンベロープの形の変化を確認してみましょう:
+
+<PlaygroundEnvGraph client:visible />
+
+- **ATK** (Attack) — 音が最大音量に達するまでの速さ
+- **DCY** (Decay) — サステインレベルまで下がる速さ
+- **SUS** (Sustain) — ノートが押されている間の保持レベル
+- **REL** (Release) — ノートオフ後の余韻の長さ
+
+## ウェーブテーブル
+
+**WAVE** ボイスは波形間をモーフィングします。WAVE ノブを回して、saw、square、triangle、sine、pulse をブレンドできます:
+
+<PlaygroundWaveGraph client:visible />
+
+## プリセット
+
+各ボイスには**ファクトリープリセット**が用意されています。Dock のプリセット名をタップして一覧を表示できます。自分のプリセットも保存可能です — 好みの音を作ったら、プリセット名を**長押し**して保存しましょう。
+
+### ステップロック
+
+Dock で **LOCK ON** を有効にしてからステップを選択し、ノブを回すと、音色の変更が**そのステップにだけ**適用されます。パターンの他のステップは元の音色のまま。フィルタースウィープ、アクセントパターン、音色バリエーションなどを1つのパターン内で作れます。
+
+ステップのロックパラメーターを消去するには **CLR** をタップします。
+
+## トラック
+
+トラックは最大 **16** まで追加できます。**+** をタップして新規追加、**REMOVE** ボタンで削除できます。
+
+- **M** — ミュート（トラックを無音に）
+- **S** — ソロ（ソロにしたトラックだけを再生、複数選択可）
+
+**Dock のタブ**でボイスの種類を切り替えられます: DRUM / BASS / LEAD / SMPL
+
+## センド
+
+各トラックには**リバーブ**と**ディレイ**のセンドがあります。**REV** や **DLY** を上げると、他のトラックに影響を与えず個別に空間を加えられます。センド量はトラックごとに独立 — ウェット/ドライを自由にミックスできます。

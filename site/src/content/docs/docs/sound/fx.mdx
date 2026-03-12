@@ -1,0 +1,93 @@
+---
+title: Effects
+description: FX Pad, EQ, and Master — the processing chain.
+---
+
+import PlaygroundFxPad from '../../../../components/PlaygroundFxPad.svelte';
+import PlaygroundFilterView from '../../../../components/PlaygroundFilterView.svelte';
+import PlaygroundMasterView from '../../../../components/PlaygroundMasterView.svelte';
+
+## FX Pad
+
+The FX Pad provides **4 send effects** arranged as draggable XY pads. Each effect has 3 flavours — tap the effect name to cycle through them.
+
+<PlaygroundFxPad client:visible />
+
+### Effects
+
+| Effect | Flavours |
+|--------|----------|
+| **Reverb** | Room / Hall / Shimmer |
+| **Delay** | Stereo / Ping-pong / Tape |
+| **Glitch** | Stutter / Bitcrush / Repeat |
+| **Granular** | Freeze / Scatter / Cloud |
+
+### Per-Track Sends
+
+Each track has independent send levels for each effect. The **send bar** below the FX Pad sets how much of each track is routed to each effect. Drag up to increase the send amount.
+
+### XY Control
+
+- **X axis** — typically controls time/size (e.g., reverb size, delay time)
+- **Y axis** — typically controls character/feedback (e.g., reverb damping, delay feedback)
+- **Tap** the pad to toggle the effect on/off
+
+## EQ
+
+The EQ provides a **3-band equalizer** plus low-pass and high-pass filters.
+
+<PlaygroundFilterView client:visible />
+
+### Bands
+
+| Band | Range |
+|------|-------|
+| **LOW** | Bass frequencies |
+| **MID** | Mid frequencies |
+| **HIGH** | Treble frequencies |
+| **LP** (left edge) | Low-pass filter cutoff |
+| **HP** (right edge) | High-pass filter cutoff |
+
+Drag the nodes to adjust gain and frequency. Tap a node to toggle it on/off.
+
+## Master
+
+The Master section controls the final output stage.
+
+<PlaygroundMasterView client:visible />
+
+### XY Pads
+
+| Pad | X Axis | Y Axis |
+|-----|--------|--------|
+| **Compressor** | Threshold | Ratio |
+| **Sidechain** | Depth | Release |
+| **FX Return** | Dry/Wet | Feedback |
+
+### Faders
+
+| Fader | Function |
+|-------|----------|
+| **Volume** | Master output level |
+| **Makeup** | Post-compression gain |
+| **Swing** | Timing swing amount (50%–75%) |
+
+### VU Meter
+
+The VU meter shows real-time **L/R peak levels**. Keep peaks below 0 dB to avoid clipping.
+
+## Signal Flow
+
+```
+Track → Voice → Per-Track FX Sends → FX Pad
+                                        ↓
+Track → EQ → Master Compressor → Master Volume → Output
+                                        ↑
+                              FX Return (wet mix)
+```
+
+## Related
+
+- [Voices](/docs/sound/voices/) — sound sources
+- [Velocity & Chance](/docs/sequencer/velocity-chance/) — dynamics before effects
+- [Decorators](/docs/scene/decorators/) — per-node FX automation in scenes

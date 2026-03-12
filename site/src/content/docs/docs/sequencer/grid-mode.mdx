@@ -1,0 +1,54 @@
+---
+title: Grid Mode
+description: The step sequencer grid — paint beats by tapping cells.
+---
+
+import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
+
+## Overview
+
+Grid mode is the default sequencer view. Each row is a track, each column is a step. Tap a cell to toggle it on/off. Drag across cells to paint multiple steps in one gesture.
+
+Select Grid mode from **SYSTEM → GRID** (or it's the default if you haven't changed it).
+
+<PlaygroundStepGrid client:visible />
+
+## Interaction
+
+| Action | Result |
+|--------|--------|
+| **Tap** a cell | Toggle step on/off |
+| **Drag** across cells | Paint multiple steps |
+| **Tap track label** | Select track → opens Dock panel |
+| **Tap step count** (right edge) | Change step count (2–64) |
+
+## Step Count & Polyrhythm
+
+Each track has its own independent step count. The default is 16 steps, but you can set any value from **2 to 64**.
+
+When tracks have different step counts, they loop at different rates — creating **polyrhythms**. For example:
+
+- Kick: 16 steps (standard 4/4)
+- Hi-hat: 12 steps (3/4 against the kick)
+- Percussion: 7 steps (odd loop creates evolving patterns)
+
+The grid visually stretches or compresses to fit each track's step count.
+
+## Pattern Operations
+
+Use the toolbar buttons:
+
+- **PAT ◀▶** — switch between patterns (00–19 are built-in demos)
+- **CPY** — copy current pattern
+- **PST** — paste copied pattern
+- **CLR** — clear all steps in the current pattern
+- **RAND** — randomize all steps
+- **Ctrl+Z** / **Ctrl+Shift+Z** — undo / redo
+
+Click the **pattern name** to rename it. Click the **color dot** to change the pattern's color (visible in Matrix and Scene views).
+
+## Related
+
+- [Tracker Mode](/docs/sequencer/tracker-mode/) — numeric note entry alternative
+- [Velocity & Chance](/docs/sequencer/velocity-chance/) — per-step dynamics
+- [Piano Roll](/docs/sequencer/piano-roll/) — melodic note editing

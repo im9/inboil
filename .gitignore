@@ -6,6 +6,7 @@ node_modules/
 dist/
 build/
 .svelte-kit/
+.astro/
 
 # WASM build artifacts (compiled from C++)
 wasm/*.wasm

@@ -3,4 +3,34 @@ title: inboil Docs
 description: Documentation for inboil — a groove box in your browser.
 ---
 
-Welcome to the inboil documentation.
+Welcome to the **inboil** documentation. inboil is a browser-based groove box and DAW — no install, no signup, just open and play.
+
+## Getting Started
+
+New here? Start with the tutorial:
+
+1. [Make Your First Beat](/docs/getting-started/first-beat/) — play, paint steps, turn knobs
+2. [Change Sounds](/docs/getting-started/adding-sounds/) — shape drums and synths
+3. [Build a Scene](/docs/getting-started/arrangement/) — arrange patterns into a graph
+
+## Deep Dive
+
+### Sequencer
+- [Grid Mode](/docs/sequencer/grid-mode/) — step sequencer basics
+- [Tracker Mode](/docs/sequencer/tracker-mode/) — numeric note entry
+- [Piano Roll](/docs/sequencer/piano-roll/) — melodic editing with scale & chord tools
+- [Velocity & Chance](/docs/sequencer/velocity-chance/) — per-step dynamics and probability
+
+### Sound Design
+- [Voices](/docs/sound/voices/) — synth engines and drum machines
+- [Sampler](/docs/sound/sampler/) — load, chop, and pitch audio samples
+- [Effects](/docs/sound/fx/) — FX Pad, EQ, and Master
+
+### Scene Graph
+- [Nodes](/docs/scene/nodes/) — pattern and generative node types
+- [Decorators](/docs/scene/decorators/) — transpose, tempo, repeat, FX, automation
+- [Playback](/docs/scene/playback/) — how the scene engine traverses the graph
+
+### Reference
+- [Keyboard Shortcuts](/docs/reference/shortcuts/) — every shortcut at a glance
+- [FAQ](/docs/reference/faq/) — common questions and answers

@@ -1,0 +1,90 @@
+---
+title: Scene Nodes
+description: Pattern nodes, generative nodes, and labels in the scene graph.
+---
+
+import PlaygroundSceneView from '../../../../components/PlaygroundSceneView.svelte';
+
+## Overview
+
+The scene graph is made of **nodes** connected by **edges**. Each node represents a musical event that plays when the scene engine reaches it.
+
+<PlaygroundSceneView client:visible />
+
+## Node Types
+
+### Pattern Node
+
+The most common node type. References one of your patterns from the Matrix. When playback reaches a pattern node, it plays that pattern from start to finish, then follows an outgoing edge.
+
+**Adding pattern nodes:**
+- Tap **+** in the Scene toolbar
+- Drag a pattern from the **Matrix** into the scene
+
+**Properties:**
+- **Pattern reference** — which pattern to play (tap to change)
+- **Position** — drag to reposition in the canvas
+- **Root marker** — the starting point for scene playback (one per scene)
+
+### Generative Node
+
+Creates musical material algorithmically in real-time. Right-click (or long-press) empty space in the scene to add one.
+
+| Engine | Behavior |
+|--------|----------|
+| **Turing Machine** | Shift register with probability — generates pseudo-random sequences that evolve over time |
+| **Quantizer** | Takes incoming note data and snaps to a scale — useful after a Turing Machine |
+| **Tonnetz** | Navigates the tone network (a mathematical map of harmonic relationships) to generate chord progressions |
+
+Generative nodes have their own parameters editable in the **Dock panel**. They don't reference a pattern — they create one on the fly.
+
+### Labels
+
+Text annotations in the scene canvas. Use them to organize your graph: "Intro", "Build", "Drop", etc. Labels have no effect on playback — they're purely visual.
+
+Add a label from the right-click (long-press) context menu.
+
+## Edges
+
+Edges are directed connections between nodes. They define the playback path.
+
+| Property | Meaning |
+|----------|---------|
+| **Direction** | From → To (one-way) |
+| **Weight** | Probability of being chosen at forks (default: 1) |
+
+### Weight and Probability
+
+When a node has multiple outgoing edges, the scene engine picks one randomly based on weight. Example:
+
+- Edge A (weight 3) → 75% chance
+- Edge B (weight 1) → 25% chance
+
+Weights are relative — what matters is the ratio, not the absolute value.
+
+### Terminal Nodes
+
+A node with **no outgoing edges** is a terminal. Scene playback stops when it reaches a terminal. This is useful for creating definitive endings or one-shot arrangements.
+
+## The Root Node
+
+Every scene has one **root node** (marked with a dot). This is where scene playback begins. To change the root, right-click a node and select "Set as Root."
+
+## Interaction
+
+| Action | Result |
+|--------|--------|
+| **Click** node | Select it → shows details in Dock |
+| **Drag** node | Reposition |
+| **Click** edge | Select it → shows weight control |
+| **Drag** from node edge | Create new connection |
+| **Right-click** empty space | Add generative node or label |
+| **Delete** key | Remove selected node or edge |
+| **Scroll / pinch** | Zoom |
+| **Middle-drag / two-finger** | Pan canvas |
+
+## Related
+
+- [Decorators](/docs/scene/decorators/) — modify node playback
+- [Playback](/docs/scene/playback/) — how the engine traverses the graph
+- [Build a Scene](/docs/getting-started/arrangement/) — tutorial walkthrough

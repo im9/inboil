@@ -1,0 +1,87 @@
+---
+title: Decorators
+description: Modify playback per-node with transpose, tempo, repeat, FX, and automation.
+---
+
+import PlaygroundDockDecoratorEditor from '../../../../components/PlaygroundDockDecoratorEditor.svelte';
+
+## Overview
+
+**Decorators** are modifiers attached to scene nodes. They change how a pattern plays without modifying the pattern itself. This means the same pattern can sound different at different points in your scene.
+
+Select a scene node and open the **Dock panel** to add and edit decorators:
+
+<PlaygroundDockDecoratorEditor client:visible />
+
+## Decorator Types
+
+### Transpose
+
+Shifts the pitch of all notes in the pattern.
+
+| Mode | Behavior |
+|------|----------|
+| **REL** (Relative) | Shift by N semitones from the pattern's original key |
+| **ABS** (Absolute) | Force all notes to a specific key (ignores original pitch) |
+
+**Use case**: Reuse the same chord pattern at different points in the arrangement by transposing it. A verse pattern transposed +5 becomes a chorus.
+
+### Tempo
+
+Changes the BPM for this node's pattern.
+
+- Value is in BPM (e.g., 120, 140)
+- When playback enters this node, tempo changes immediately
+- When playback leaves, tempo returns to the previous value (or the next node's tempo decorator)
+
+**Use case**: Speed up for a build section, slow down for a breakdown.
+
+### Repeat
+
+Plays this node's pattern N times before following an outgoing edge.
+
+- Value: 1–16 (default 1 = play once)
+- Repeat happens before the edge decision
+
+**Use case**: Play the chorus 4 times before moving to the bridge.
+
+### FX
+
+Enables or modifies effects for this node.
+
+- Toggle individual effects on/off per node
+- Adjust send levels per node
+
+**Use case**: Add heavy reverb only during the ambient breakdown section.
+
+### Automation
+
+Automate **any parameter** over the duration of the pattern. Draw an automation curve that modulates a knob value from start to end of the pattern.
+
+- Select a parameter target (any voice or FX knob)
+- Draw a curve in the automation editor
+- The curve repeats with each repeat cycle
+
+**Use case**: Filter sweep across a 4-bar build, modulation depth ramp during a drop.
+
+## Stacking Decorators
+
+A single node can have **multiple decorators**. They apply in order from top to bottom. For example:
+
+1. **Transpose** +7 (shift up a fifth)
+2. **Tempo** 140 (speed up)
+3. **Repeat** 2 (play twice)
+
+The pattern plays at 140 BPM, transposed up 7 semitones, two times in a row.
+
+## Adding and Removing
+
+- **Add**: Select a node → Dock panel → tap the decorator type button
+- **Remove**: Swipe left on a decorator row, or tap the × button
+- **Reorder**: Drag the handle to change order
+
+## Related
+
+- [Scene Nodes](/docs/scene/nodes/) — node types and edges
+- [Playback](/docs/scene/playback/) — how decorators interact with the engine
+- [Effects](/docs/sound/fx/) — FX Pad details

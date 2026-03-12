@@ -1,0 +1,49 @@
+---
+title: Tracker Mode
+description: Edit notes numerically in a classic tracker-style interface.
+---
+
+import PlaygroundTrackerView from '../../../../components/PlaygroundTrackerView.svelte';
+
+## Overview
+
+Tracker mode presents your pattern as a vertical grid of note data — like a classic Amiga/PC tracker. Each row is a step, and columns show note, velocity, duration, slide, and channel values.
+
+Switch to Tracker from **SYSTEM → TRKR**.
+
+<PlaygroundTrackerView client:visible />
+
+## Columns
+
+| Column | Meaning | Range |
+|--------|---------|-------|
+| **NOTE** | MIDI note name (C-4, D#5, etc.) | C-0 to G-10 |
+| **VEL** | Velocity (volume) | 00–99 |
+| **DUR** | Duration in ticks | 01–99 |
+| **SLD** | Slide/glide to next note | ON/OFF |
+| **CHN** | MIDI channel | 01–16 |
+
+## Navigation
+
+| Key | Action |
+|-----|--------|
+| **Arrow keys** | Move cursor between cells |
+| **Enter** | Edit selected cell |
+| **Escape** | Cancel edit / deselect |
+| **Delete** | Clear cell value |
+| **Tab** | Move to next column |
+
+## When to Use Tracker Mode
+
+Tracker mode is ideal for:
+
+- **Precise note entry** — type exact note values instead of clicking a grid
+- **Detailed velocity control** — set exact velocity numbers
+- **Slide patterns** — easily toggle slide on specific steps for acid bass lines
+- **Quick overview** — see all data for a track at once in a compact format
+
+## Related
+
+- [Grid Mode](/docs/sequencer/grid-mode/) — visual step painting
+- [Piano Roll](/docs/sequencer/piano-roll/) — graphical note editing
+- [Velocity & Chance](/docs/sequencer/velocity-chance/) — per-step dynamics

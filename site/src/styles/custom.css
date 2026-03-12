@@ -1,0 +1,113 @@
+/**
+ * Starlight theme overrides — inboil design system.
+ * Warm Brutalist: cream/navy palette, monospace data font, no gradients/shadows.
+ * Reference: docs/ai/ui-design.md
+ */
+
+/* ── Load inboil fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* ── Dark mode (default) — navy bg, cream text ── */
+:root {
+  --sl-color-white: #EDE8DC;          /* cream — primary text */
+  --sl-color-gray-1: #E2DDD3;         /* surface — headings */
+  --sl-color-gray-2: #9A9680;         /* muted — secondary text */
+  --sl-color-gray-3: #787845;         /* olive — tertiary */
+  --sl-color-gray-4: #504E42;         /* dim borders */
+  --sl-color-gray-5: #2A2830;         /* dark surface */
+  --sl-color-gray-6: #222028;         /* dark bg alt */
+  --sl-color-black: #1E2028;          /* navy — page bg */
+
+  --sl-color-accent-low: hsl(55, 30%, 15%);
+  --sl-color-accent: #787845;         /* olive */
+  --sl-color-accent-high: #a3a145;    /* bright olive */
+
+  --sl-color-text-accent: #a3a145;
+
+  --sl-font: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --sl-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  --sl-text-body: 0.8125rem;          /* 13px — compact like the app */
+  --sl-line-height: 1.6;
+}
+
+/* ── Light mode — cream bg, navy text ── */
+:root[data-theme='light'] {
+  --sl-color-white: #1E2028;          /* navy — primary text */
+  --sl-color-gray-1: #2A2830;
+  --sl-color-gray-2: #504E42;
+  --sl-color-gray-3: #787845;
+  --sl-color-gray-4: #9A9680;
+  --sl-color-gray-5: #E2DDD3;
+  --sl-color-gray-6: #EDE8DC;
+  --sl-color-gray-7: #F5F2EA;
+  --sl-color-black: #EDE8DC;          /* cream — page bg */
+
+  --sl-color-accent-low: hsl(55, 30%, 88%);
+  --sl-color-accent: #787845;
+  --sl-color-accent-high: #5a5830;
+
+  --sl-color-text-accent: #5a5830;
+}
+
+/* ── Typography ── */
+h1, h2, h3, h4, h5, h6,
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+  font-family: "Bebas Neue", "Anton", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── No shadows, no gradients (Principle 4) ── */
+:root,
+:root[data-theme='light'] {
+  --sl-shadow-sm: none;
+  --sl-shadow-md: none;
+  --sl-shadow-lg: none;
+}
+
+/* ── Sidebar styling ── */
+nav.sidebar {
+  font-size: var(--sl-text-xs);
+}
+
+/* ── Links — olive accent ── */
+.sl-markdown-content a {
+  color: var(--sl-color-accent-high);
+  text-decoration-color: var(--sl-color-accent);
+}
+.sl-markdown-content a:hover {
+  color: var(--sl-color-accent);
+}
+
+/* ── Code blocks — dark zone ── */
+.sl-markdown-content pre {
+  background: #1E2028 !important;
+  border: 1px solid #2A2830;
+  border-radius: 4px;
+}
+
+/* ── Tables — clean borders, no zebra ── */
+.sl-markdown-content table {
+  font-size: var(--sl-text-xs);
+}
+.sl-markdown-content th {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+
+/* ── Blockquotes — olive left border ── */
+.sl-markdown-content blockquote {
+  border-left-color: var(--sl-color-accent);
+}
+
+/* ── Site title ── */
+.site-title span {
+  font-family: "Bebas Neue", "Anton", sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 1.25rem !important;
+}

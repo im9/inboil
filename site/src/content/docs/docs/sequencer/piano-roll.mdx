@@ -1,0 +1,68 @@
+---
+title: Piano Roll
+description: Melodic note editing with scale lock, chord brush, and polyphony.
+---
+
+import PlaygroundPianoRoll from '../../../../components/PlaygroundPianoRoll.svelte';
+
+## Overview
+
+The Piano Roll opens automatically for **melodic tracks** (BASS, LEAD, FM, WAVE). It shows a keyboard on the left and a grid where each cell is a note at a specific step and pitch.
+
+<PlaygroundPianoRoll client:visible />
+
+## Interaction
+
+| Action | Result |
+|--------|--------|
+| **Tap** empty cell | Place a note |
+| **Tap** existing note | Remove it |
+| **Drag** a note vertically | Change pitch |
+| **Drag** a note horizontally | Change step position |
+| **Drag note edge** | Change duration |
+
+## Polyphony
+
+Tap multiple notes on the **same step** to create chords. The number of simultaneous notes depends on the voice's poly mode:
+
+- **MONO** — one note at a time (last note wins)
+- **POLY8** — up to 8 simultaneous notes
+- **WIDE4** — 4 voices with stereo spread
+- **UNISON** — all voices on the same note (thick sound)
+
+## Slide (Glide)
+
+Enable **SLD** to create smooth pitch glides between consecutive notes. This is essential for acid bass lines — the 303-style BASS voice responds to slide with its characteristic portamento.
+
+## Scale Mode
+
+When **Scale Mode** is enabled (KEY/SCALE button), the piano roll restricts note placement to the selected scale. Available modes:
+
+| Mode | Pattern |
+|------|---------|
+| **Ionian** (Major) | W-W-H-W-W-W-H |
+| **Dorian** | W-H-W-W-W-H-W |
+| **Phrygian** | H-W-W-W-H-W-W |
+| **Lydian** | W-W-W-H-W-W-H |
+| **Mixolydian** | W-W-H-W-W-H-W |
+| **Aeolian** (Minor) | W-H-W-W-H-W-W |
+| **Locrian** | H-W-W-H-W-W-W |
+
+Non-scale notes are dimmed in the grid but still accessible if you need chromatic passing tones.
+
+## Chord Brush
+
+The **Chord Brush** lets you place entire chords in one tap:
+
+- **Triad** — root + 3rd + 5th
+- **7th** — root + 3rd + 5th + 7th
+- **sus2** — root + 2nd + 5th
+- **sus4** — root + 4th + 5th
+
+Combined with Scale Mode, the Chord Brush automatically uses the correct intervals for the current key — you can't place a wrong chord.
+
+## Related
+
+- [Grid Mode](/docs/sequencer/grid-mode/) — step sequencer for drums
+- [Velocity & Chance](/docs/sequencer/velocity-chance/) — per-step dynamics and probability
+- [Voices](/docs/sound/voices/) — synth voice parameters

@@ -1,0 +1,80 @@
+---
+title: Change Sounds
+description: Shape your drums and synths with voice parameters and presets.
+---
+
+import KnobDemo from '../../../../components/KnobDemo.svelte';
+import PlaygroundDockTrackEditor from '../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundEnvGraph from '../../../../components/PlaygroundEnvGraph.svelte';
+import PlaygroundWaveGraph from '../../../../components/PlaygroundWaveGraph.svelte';
+
+## Voice Parameters
+
+Every track has a **voice** — the instrument that plays when a step triggers. Select a track label to open its parameters in the **Dock panel**.
+
+<PlaygroundDockTrackEditor client:visible />
+
+### Drum Voices
+
+| Voice | Character |
+|-------|-----------|
+| **KICK** | Analog-style bass drum — tune, decay, drive |
+| **SNARE** | Noise + tone mix — tune, snap, decay |
+| **CLAP** | Layered clap — spread, decay, tone |
+| **C.HH / O.HH** | Closed/Open hi-hat — tune, decay, tone |
+| **CYM** | Cymbal — tune, decay, tone |
+
+### Synth Voices
+
+| Voice | Character |
+|-------|-----------|
+| **BASS** | 303-style acid bass — cutoff, resonance, envelope, accent |
+| **LEAD** | Moog-style lead — filter, envelope, detune |
+| **FM** | FM synthesis — ratio, modulation index, feedback |
+| **WAVE** | Wavetable — morph through waveforms |
+
+## Try a Knob
+
+Every parameter is controlled by a knob. Drag up to increase, down to decrease:
+
+<KnobDemo client:visible />
+
+## Envelope
+
+Synth voices use an **ADSR envelope** to shape how the sound evolves over time. Drag the knobs to see the envelope shape change:
+
+<PlaygroundEnvGraph client:visible />
+
+- **ATK** (Attack) — how quickly the sound reaches full volume
+- **DCY** (Decay) — how quickly it drops to sustain level
+- **SUS** (Sustain) — the held level while a note is active
+- **REL** (Release) — how long the tail rings after release
+
+## Wavetable
+
+The **WAVE** voice morphs through waveforms. Turn the WAVE knob to blend between saw, square, triangle, sine, and pulse:
+
+<PlaygroundWaveGraph client:visible />
+
+## Presets
+
+Each voice comes with **factory presets**. Tap the preset name in the Dock to browse. You can also save your own — dial in a sound you like, then **long-press** the preset name to save.
+
+### Per-Step Lock
+
+Enable **LOCK ON** in the Dock, then select a step and turn knobs. Sound changes apply to **that step only** — the rest of the pattern keeps its original sound. This is how you create filter sweeps, accent patterns, and timbral variation within a single pattern.
+
+Tap **CLR** to clear locked parameters from a step.
+
+## Tracks
+
+You can have up to **16 tracks**. Tap **+** to add a new track, or use the **REMOVE** button to delete one.
+
+- **M** — Mute (silence a track)
+- **S** — Solo (hear only soloed tracks; additive)
+
+Switch voice types with the **Dock tabs**: DRUM / BASS / LEAD / SMPL.
+
+## Sends
+
+Each track has **reverb** and **delay** sends. Turn up **REV** or **DLY** to add space to individual tracks without affecting others. Send levels are per-track — mix wet/dry independently.

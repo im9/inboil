@@ -1,0 +1,84 @@
+---
+title: Build a Scene
+description: Arrange patterns into a scene graph for non-linear playback.
+---
+
+import PlaygroundSceneView from '../../../../components/PlaygroundSceneView.svelte';
+import PlaygroundMatrixView from '../../../../components/PlaygroundMatrixView.svelte';
+
+## What is a Scene?
+
+A scene is a **graph of connected patterns**. Instead of a linear timeline, patterns are nodes that connect to each other. When playback reaches the end of a pattern, it follows an edge to the next one.
+
+This lets you create arrangements that branch, loop, and surprise — closer to how a live DJ thinks than a traditional DAW.
+
+## The Pattern Matrix
+
+The **Matrix** on the left side shows your pattern pool. Each cell represents a pattern — brightness indicates density (more active steps = brighter), and tint shows the pattern color.
+
+Tap a pattern to select it. Double-tap to open it in the step editor.
+
+<PlaygroundMatrixView client:visible />
+
+## Scene Graph
+
+The scene view is where you connect patterns into a playback graph. Drag nodes to rearrange. Click a node to select it. Click an edge to select it.
+
+<PlaygroundSceneView client:visible />
+
+## Building Your Scene
+
+### Add Nodes
+
+Tap the **+** button in the Scene toolbar to add a pattern node. Each node references one of your patterns. You can also **drag a pattern from the Matrix** into the scene.
+
+### Connect Nodes
+
+**Drag from one node's edge** to another to create a connection. Edges define where playback can go next.
+
+### Weighted Edges
+
+If a node has multiple outgoing edges, playback chooses randomly based on **weight**. Higher weight = more likely to be chosen. This creates generative, non-repeating arrangements.
+
+### Generative Nodes
+
+Right-click (or long-press) empty space to add a **generative node**:
+
+- **Turing Machine** — probabilistic pattern generation
+- **Quantizer** — pitch quantization to scales
+- **Tonnetz** — harmonic navigation on a tone network
+
+Generative nodes create new musical material in real-time during scene playback.
+
+## Decorators
+
+Nodes can have **decorators** that modify playback behavior:
+
+| Decorator | Effect |
+|-----------|--------|
+| **Transpose** | Shift pitch up/down (relative) or set absolute key |
+| **Tempo** | Change BPM for this pattern |
+| **Repeat** | Play this pattern N times before moving on |
+| **FX** | Enable/disable effects for this section |
+| **Automation** | Automate any parameter over the pattern's duration |
+
+Add decorators from the **Dock panel** when a scene node is selected. See [Decorators](/docs/scene/decorators/) for full details.
+
+## Playback Modes
+
+| Mode | Behavior |
+|------|----------|
+| **Loop** | Loops the current pattern (default) |
+| **Scene** | Follows the scene graph from the root node |
+
+- The **root node** (marked with a dot) is where scene playback starts
+- Playback follows edges, choosing randomly at forks based on weight
+- If a node has no outgoing edges, playback stops (terminal node)
+
+Switch modes with the play button — tap once for loop, long-press for scene playback.
+
+## Next Steps
+
+- [Scene Nodes](/docs/scene/nodes/) — node types and properties
+- [Decorators](/docs/scene/decorators/) — modify playback with decorators
+- [Playback Flow](/docs/scene/playback/) — how the scene engine works

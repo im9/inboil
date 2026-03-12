@@ -1,0 +1,93 @@
+---
+title: エフェクト
+description: FX Pad、EQ、Master — プロセッシングチェーン。
+---
+
+import PlaygroundFxPad from '../../../../../components/PlaygroundFxPad.svelte';
+import PlaygroundFilterView from '../../../../../components/PlaygroundFilterView.svelte';
+import PlaygroundMasterView from '../../../../../components/PlaygroundMasterView.svelte';
+
+## FX Pad
+
+FX Pad は、ドラッグ可能な XY パッドとして配置された **4 つのセンドエフェクト**を提供します。各エフェクトには 3 つのバリエーションがあり、エフェクト名をタップして切り替えられます。
+
+<PlaygroundFxPad client:visible />
+
+### エフェクト一覧
+
+| エフェクト | バリエーション |
+|-----------|---------------|
+| **Reverb** | Room / Hall / Shimmer |
+| **Delay** | Stereo / Ping-pong / Tape |
+| **Glitch** | Stutter / Bitcrush / Repeat |
+| **Granular** | Freeze / Scatter / Cloud |
+
+### トラックごとのセンド
+
+各トラックには、各エフェクトへの独立したセンドレベルがあります。FX Pad の下にある**センドバー**で、各トラックから各エフェクトへのルーティング量を設定します。上にドラッグしてセンド量を増やします。
+
+### XY コントロール
+
+- **X 軸** — 通常はタイム／サイズを制御（例：リバーブサイズ、ディレイタイム）
+- **Y 軸** — 通常はキャラクター／フィードバックを制御（例：リバーブダンピング、ディレイフィードバック）
+- パッドを**タップ**でエフェクトのオン／オフを切り替え
+
+## EQ
+
+EQ は **3 バンドイコライザー**に加え、ローパスフィルターとハイパスフィルターを搭載しています。
+
+<PlaygroundFilterView client:visible />
+
+### バンド
+
+| バンド | 帯域 |
+|--------|------|
+| **LOW** | 低域 |
+| **MID** | 中域 |
+| **HIGH** | 高域 |
+| **LP**（左端） | ローパスフィルターカットオフ |
+| **HP**（右端） | ハイパスフィルターカットオフ |
+
+ノードをドラッグしてゲインと周波数を調整します。ノードをタップしてオン／オフを切り替えます。
+
+## Master
+
+Master セクションは最終出力段を制御します。
+
+<PlaygroundMasterView client:visible />
+
+### XY パッド
+
+| パッド | X 軸 | Y 軸 |
+|--------|------|------|
+| **Compressor** | Threshold | Ratio |
+| **Sidechain** | Depth | Release |
+| **FX Return** | Dry/Wet | Feedback |
+
+### フェーダー
+
+| フェーダー | 機能 |
+|-----------|------|
+| **Volume** | マスター出力レベル |
+| **Makeup** | コンプレッション後のゲイン |
+| **Swing** | タイミングスウィング量（50%〜75%） |
+
+### VU メーター
+
+VU メーターはリアルタイムの **L/R ピークレベル**を表示します。クリッピングを防ぐため、ピークを 0 dB 以下に保ちましょう。
+
+## 信号フロー
+
+```
+Track → Voice → トラックごとの FX Send → FX Pad
+                                           ↓
+Track → EQ → Master Compressor → Master Volume → Output
+                                           ↑
+                                 FX Return（ウェットミックス）
+```
+
+## 関連
+
+- [ボイス](/ja/docs/sound/voices/) — サウンドソース
+- [Velocity & Chance](/ja/docs/sequencer/velocity-chance/) — エフェクト前のダイナミクス
+- [デコレーター](/ja/docs/scene/decorators/) — シーン内のノードごとの FX オートメーション

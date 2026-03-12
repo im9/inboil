@@ -1,0 +1,102 @@
+---
+title: ボイス
+description: シンセエンジンとドラムマシン — inboil のすべてのサウンドソース。
+---
+
+import PlaygroundDockTrackEditor from '../../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundEnvGraph from '../../../../../components/PlaygroundEnvGraph.svelte';
+import PlaygroundWaveGraph from '../../../../../components/PlaygroundWaveGraph.svelte';
+import PlaygroundAlgoGraph from '../../../../../components/PlaygroundAlgoGraph.svelte';
+
+## 概要
+
+各トラックには**ボイス**があります。ボイスとは、ステップがトリガーされたときにオーディオを生成するサウンドエンジンです。inboil には**ドラム**と**シンセ**の両方のボイスがあり、Sampler を除いてすべてリアルタイム合成で音を生成します（サンプルは使いません）。
+
+トラックを選択し、**Dock パネル**でボイスのパラメータを編集できます：
+
+<PlaygroundDockTrackEditor client:visible />
+
+## ドラムボイス
+
+### KICK
+アナログスタイルのバスドラム。パラメータ：
+- **TUNE** — ドラム本体のピッチ
+- **DECAY** — テールの長さ
+- **DRIVE** — サチュレーション／ディストーションの量
+- **CLICK** — トランジェントのアタック強度
+
+### SNARE
+ノイズとトーンのミックス。パラメータ：
+- **TUNE** — トーンのピッチ
+- **SNAP** — トランジェントの鋭さ
+- **DECAY** — テールの長さ
+- **TONE** — ノイズとトーンのバランス
+
+### CLAP
+レイヤードハンドクラップ。パラメータ：
+- **SPREAD** — レイヤー間のタイミングのばらつき
+- **DECAY** — テールの長さ
+- **TONE** — 明るさ
+
+### C.HH / O.HH（クローズド／オープンハイハット）
+ペアのハイハット — クローズがオープンをチョークします。パラメータ：
+- **TUNE** — ピッチ
+- **DECAY** — リングの長さ（クローズは短く、オープンは長く）
+- **TONE** — 明るさ／メタリックな質感
+
+### CYM（シンバル）
+606 スタイルのノイズ＋サイン波をバンドパスフィルターに通す方式。パラメータ：
+- **TUNE** — 中心周波数
+- **DECAY** — サステインの長さ
+- **TONE** — フィルターレゾナンス
+
+## シンセボイス
+
+### BASS（303 スタイルアシッドベース）
+Roland TB-303 にインスパイアされたモノフォニックベースシンセ。パラメータ：
+- **CUTOFF** — フィルターカットオフ周波数
+- **RESO** — フィルターレゾナンス（高い値でスクリーミング）
+- **ENV** — フィルターへのエンベロープモジュレーション深度
+- **ACCENT** — ベロシティに連動するフィルター／アンプのブースト
+- **DECAY** — アンプエンベロープのディケイ
+
+BASS ボイスは**スライド**（SLD）に対応しており、ポルタメントグライドが可能です — アシッドパターンに欠かせない機能です。
+
+### LEAD（Moog スタイルリード）
+モノフォニック／ポリフォニックのリードシンセ。パラメータ：
+- **CUTOFF** — ローパスフィルター
+- **RESO** — フィルターレゾナンス
+- **DETUNE** — オシレーターデチューン（音を太くする）
+- **ATK/DCY/SUS/REL** — フル ADSR エンベロープ
+
+<PlaygroundEnvGraph client:visible />
+
+### FM（FM シンセシス）
+4 オペレーターの FM シンセ、8 種類のアルゴリズム搭載。パラメータ：
+- **RATIO** — モジュレーターの周波数比
+- **MOD** — モジュレーションインデックス（明るさ／複雑さ）
+- **FEEDBACK** — オペレーターのセルフフィードバック
+- **ALGO** — ルーティングアルゴリズム（1〜8）
+
+<PlaygroundAlgoGraph client:visible />
+
+### WAVE（ウェーブテーブル）
+モーフィングウェーブテーブルシンセ。波形間をスムーズにブレンドします：
+
+<PlaygroundWaveGraph client:visible />
+
+- **WAVE** — モーフポジション（saw → square → tri → sine → pulse）
+- **DETUNE** — ボイスデチューン
+- **CUTOFF** — フィルターカットオフ
+
+ポリモード：**MONO** / **POLY8** / **WIDE4** / **UNISON** — Dock パネルのヘッダーで設定します。
+
+## ボイスの切り替え
+
+**Dock タブ**（DRUM / BASS / LEAD / SMPL）を使ってトラックのボイスタイプを変更できます。ボイスの変更は即座に反映されます — 既存のステップはトリガーを保持したまま、新しいサウンドで再生されます。
+
+## 関連
+
+- [プリセットとパーステップロック](/ja/docs/getting-started/adding-sounds/#presets) — サウンドの保存と呼び出し
+- [Sampler](/ja/docs/sound/sampler/) — サンプルベースのボイス
+- [エフェクト](/ja/docs/sound/fx/) — プロセッシングチェーン
