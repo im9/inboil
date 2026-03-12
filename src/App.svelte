@@ -70,6 +70,47 @@
     return () => cancelAnimationFrame(rafId)
   })
 
+  // ── Loop-mode decorator application ──────────────────────────────
+  // Apply scene decorators (transpose, FX) to the current pattern in loop mode
+  // so SCENE tab edits are heard without switching to scene playback.
+  // Skips tempo (user controls BPM directly) and repeat (meaningless in loop).
+  function applyLoopDecorators(): void {
+    const pat = song.patterns[ui.currentPattern]
+    if (!pat) return
+    const node = song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === pat.id)
+    if (!node) {
+      perf.rootNote = song.rootNote
+      return
+    }
+    let transpose = 0
+    let absKey: number | null = null
+    for (const dec of node.decorators ?? []) {
+      if (dec.type === 'transpose') {
+        if (dec.params.mode === 1) absKey = dec.params.key ?? 0
+        else transpose += (dec.params.semitones ?? 0)
+      } else if (dec.type === 'fx') {
+        fxPad.verb.on = !!dec.params.verb
+        fxPad.delay.on = !!dec.params.delay
+        fxPad.glitch.on = !!dec.params.glitch
+        fxPad.granular.on = !!dec.params.granular
+        if (dec.flavourOverrides) {
+          if (dec.flavourOverrides.verb)     fxFlavours.verb     = dec.flavourOverrides.verb
+          if (dec.flavourOverrides.delay)    fxFlavours.delay    = dec.flavourOverrides.delay
+          if (dec.flavourOverrides.glitch)   fxFlavours.glitch   = dec.flavourOverrides.glitch
+          if (dec.flavourOverrides.granular) fxFlavours.granular = dec.flavourOverrides.granular
+        }
+      }
+    }
+    const raw = absKey ?? (song.rootNote + transpose)
+    perf.rootNote = ((raw % 12) + 12) % 12  // clamp to 0–11 for SCALE_TEMPLATES
+  }
+
+  // Reactively apply decorators when playing in loop mode
+  $effect(() => {
+    if (playback.mode !== 'loop' || !playback.playing) return
+    applyLoopDecorators()
+  })
+
   let soloSent: string | null = null // tracks which solo node was last sent to engine
 
   engine.onStep = (heads: number[], cycle: boolean) => {
@@ -100,7 +141,7 @@
         const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
         if (shouldStop) { stop(); return }
         if (advanced) {
-          perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
+          perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
           engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, patternIndex)
           // Check if we just arrived at the solo target
           if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
@@ -150,13 +191,14 @@
       playback.sceneAbsoluteKey = null
       const { patternIndex, stop: shouldStop } = advanceSceneNode()
       if (shouldStop) return
-      perf.rootNote = playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)
+      perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else if (playback.mode === 'scene' && hasArrangement()) {
       playback.repeatCount = 0
       applySection(song.sections[playback.currentSection])
       engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
     } else {
+      applyLoopDecorators()
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
     }
     engine.play()
