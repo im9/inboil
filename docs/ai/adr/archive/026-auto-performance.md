@@ -1,6 +1,6 @@
 # ADR 026: Graphic Score Automation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

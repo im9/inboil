@@ -175,7 +175,7 @@
       {:else if dec.type === 'automation'}
         <div class="dec-card-body">
           <span class="dec-auto-label">{decoratorLabel(dec)}</span>
-          <button class="btn-dec-edit" onpointerdown={() => { ui.editingAutomationDecorator = { nodeId: node.id, decoratorIndex: i } }}
+          <button class="btn-dec-edit" onpointerdown={() => { ui.editingAutomationInline = { nodeId: node.id, decoratorIndex: i } }}
             data-tip="Edit automation curve" data-tip-ja="オートメーションカーブを編集"
           >Edit curve</button>
         </div>

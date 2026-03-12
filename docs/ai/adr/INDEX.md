@@ -108,7 +108,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 026 | Graphic Score Automation | Proposed | 図形楽譜-inspired per-pattern automation in DockPanel, pencil/line/eraser drawing, multi-lane overlay |
+| 026 | Graphic Score Automation | Implemented | Inline editor in DockPanel + overlay docks, EQ/Master/FX automation targets, context-aware filtering, XY pad color-matched curves |
 | 031 | Virtual MIDI Keyboard | Implemented | Phase 1: audition mode, octave synced with piano roll |
 | 038 | Custom Functions | Superseded | Replaced by decorators (ADR 066/076) + generative nodes (ADR 078) |
 | 081 | Hardware MIDI Keyboard Input | Implemented | Web MIDI API, USB + BLE MIDI, per-note release, CC1→DJ Filter |

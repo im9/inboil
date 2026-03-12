@@ -10,11 +10,13 @@
   import { engine } from '../audio/engine.ts'
 
   import { decoratorLabel } from '../sceneGeometry.ts'
+  import { sceneAddDecorator } from '../sceneActions.ts'
 
   import { PATTERN_COLORS, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
   import DockDecoratorEditor from './DockDecoratorEditor.svelte'
+  import DockAutomationEditor from './DockAutomationEditor.svelte'
   import DockPresetBrowser from './DockPresetBrowser.svelte'
   import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import EnvGraph from './EnvGraph.svelte'
@@ -40,12 +42,65 @@
     return (node?.type === 'generative' && node.generative) ? node : null
   })
 
+  // Selected pattern node in overlay mode (for inline automation editor)
+  const overlaySelectedPatternNode = $derived.by(() => {
+    if (!isOverlaySheet) return null
+    const selected = Object.keys(ui.selectedSceneNodes)
+    if (selected.length !== 1) return null
+    const node = song.scene.nodes.find(n => n.id === selected[0])
+    return (node?.type === 'pattern') ? node : null
+  })
+
   // ── Scene Navigator (ADR 070) ──
   // Show pattern header when no pattern sheet and no overlay — either scene node selected or current pattern
   const showPatternHeader = $derived(!ui.patternSheet && !isOverlaySheet)
   // Navigator: show when no pattern sheet and no scene node selected (including overlay sheets)
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
+
+  // ── Automation colors matched to XY pad node colors ──
+  function autoTargetColor(t?: import('../state.svelte.ts').AutomationTarget): string {
+    if (!t) return '#C8A050'
+    if (t.kind === 'fx') {
+      if (t.param.startsWith('reverb')) return '#787845'
+      if (t.param.startsWith('delay')) return '#4472B4'
+      if (t.param.startsWith('glitch')) return '#E8A090'
+      if (t.param.startsWith('granular')) return '#9B6BA0'
+      if (t.param.startsWith('filter')) return '#4A9B9B'
+    }
+    if (t.kind === 'eq') {
+      if (t.band === 'eqLow') return '#787845'
+      if (t.band === 'eqMid') return '#4472B4'
+      if (t.band === 'eqHigh') return '#E8A090'
+    }
+    if (t.kind === 'global') {
+      if (t.param.startsWith('comp')) return '#787845'
+      if (t.param.startsWith('duck')) return '#4472B4'
+      if (t.param.startsWith('ret')) return '#E8A090'
+    }
+    if (t.kind === 'track') return '#4A9B9B'
+    if (t.kind === 'send') {
+      if (t.param === 'reverbSend') return '#787845'
+      if (t.param === 'delaySend') return '#4472B4'
+      if (t.param === 'glitchSend') return '#E8A090'
+      if (t.param === 'granularSend') return '#9B6BA0'
+    }
+    return '#C8A050'
+  }
+  const GLOBAL_PARAM_LABELS: Record<string, string> = {
+    tempo: 'Tempo', masterVolume: 'Vol', swing: 'Swing',
+    compThreshold: 'Comp THR', compRatio: 'Comp RAT', compMakeup: 'Comp MKP',
+    compAttack: 'Comp ATK', compRelease: 'Comp REL',
+    duckDepth: 'Duck DPT', duckRelease: 'Duck REL', retVerb: 'Ret VRB', retDelay: 'Ret DLY',
+  }
+  function autoTargetLabel(t: import('../state.svelte.ts').AutomationTarget): string {
+    if (t.kind === 'global') return GLOBAL_PARAM_LABELS[t.param] ?? t.param
+    if (t.kind === 'track') return `T${t.trackIndex + 1} ${t.param}`
+    if (t.kind === 'fx') return t.param.replace(/([A-Z])/g, ' $1').trim()
+    if (t.kind === 'eq') return `${t.band.replace('eq', '')} ${t.param}`
+    if (t.kind === 'send') return `T${t.trackIndex + 1} ${t.param}`
+    return 'Auto'
+  }
 
   // ── EQ Dock Controls ──
   const EQ_BANDS = [
@@ -480,9 +535,9 @@
                     <span class="nav-color" style="background: {PATTERN_COLORS[pat.color ?? 0]}"></span>
                     {#if node.root}<span class="nav-root">★</span>{/if}
                     <span class="nav-name">{pat.name}</span>
-                    {#if node.decorators?.length}
+                    {#if (node.decorators ?? []).some(d => d.type !== 'automation')}
                       <span class="nav-decs">
-                        {#each node.decorators as dec}
+                        {#each (node.decorators ?? []).filter(d => d.type !== 'automation') as dec}
                           <span class="nav-dec-tag">{decoratorLabel(dec)}</span>
                         {/each}
                       </span>
@@ -495,6 +550,61 @@
               {/if}
             </div>
           </div>
+        {/if}
+        <!-- Automation section in overlay mode (ADR 026) -->
+        {#if overlaySelectedPatternNode}
+          {@const oNode = overlaySelectedPatternNode}
+          {@const allAutoDecorators = (oNode.decorators ?? []).map((d, i) => ({ dec: d, idx: i })).filter(x => x.dec.type === 'automation')}
+          {@const autoDecorators = allAutoDecorators.filter(x => {
+            const kind = x.dec.automationParams?.target.kind
+            if (ui.phraseView === 'fx') return kind === 'fx' || kind === 'send'
+            if (ui.phraseView === 'master') return kind === 'global'
+            if (ui.phraseView === 'eq') return kind === 'eq'
+            return true
+          })}
+          <div class="nav-auto-section">
+            <div class="nav-auto-header">
+              <span class="section-label">AUTOMATION</span>
+              <button class="nav-auto-add" onpointerdown={() => {
+                sceneAddDecorator(oNode.id, 'automation')
+                const node = song.scene.nodes.find(n => n.id === oNode.id)
+                if (node?.decorators) {
+                  ui.editingAutomationInline = { nodeId: oNode.id, decoratorIndex: node.decorators.length - 1 }
+                }
+              }}
+                data-tip="Add automation curve" data-tip-ja="オートメーションカーブを追加"
+              >+ Draw</button>
+            </div>
+            {#if autoDecorators.length > 0}
+              <div class="nav-auto-list">
+                {#each autoDecorators as ad}
+                  {@const ap = ad.dec.automationParams}
+                  {@const isEditing = ui.editingAutomationInline?.nodeId === oNode.id && ui.editingAutomationInline?.decoratorIndex === ad.idx}
+                  <button
+                    class="nav-auto-item"
+                    class:editing={isEditing}
+                    onpointerdown={() => {
+                      if (isEditing) {
+                        ui.editingAutomationInline = null
+                      } else {
+                        ui.editingAutomationInline = { nodeId: oNode.id, decoratorIndex: ad.idx }
+                      }
+                    }}
+                  >
+                    <span class="nav-auto-dot" style="background: {autoTargetColor(ap?.target)}"></span>
+                    <span class="nav-auto-label">{ap ? autoTargetLabel(ap.target) : 'Auto'}</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+          {#if ui.editingAutomationInline?.nodeId === oNode.id}
+            <DockAutomationEditor
+              nodeId={ui.editingAutomationInline.nodeId}
+              decoratorIndex={ui.editingAutomationInline.decoratorIndex}
+              viewContext={ui.phraseView}
+            />
+          {/if}
         {/if}
       </div>
     </div>
@@ -685,6 +795,12 @@
           <!-- Decorator editor (ADR 069) -->
           {#if scenePatternNode}
             <DockDecoratorEditor node={scenePatternNode} />
+            {#if ui.editingAutomationInline?.nodeId === scenePatternNode.id}
+              <DockAutomationEditor
+                nodeId={ui.editingAutomationInline.nodeId}
+                decoratorIndex={ui.editingAutomationInline.decoratorIndex}
+              />
+            {/if}
           {/if}
 
           <!-- Generative node editor (ADR 078) -->
@@ -1704,8 +1820,68 @@
     letter-spacing: 0.04em;
     color: var(--dk-text-dim);
     background: var(--dk-bg-faint);
+    border: none;
     border-radius: 2px;
     padding: 1px 3px;
+    white-space: nowrap;
+  }
+.nav-auto-section {
+    margin-top: 4px;
+  }
+  .nav-auto-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .nav-auto-add {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    padding: 1px 6px;
+    border: 1px solid rgba(237, 232, 220, 0.3);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--dk-text-mid);
+    cursor: pointer;
+  }
+  .nav-auto-add:hover {
+    background: var(--dk-bg-hover);
+    color: var(--dk-text);
+  }
+  .nav-auto-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+  .nav-auto-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    padding: 1px 5px;
+    border: 1px solid rgba(237, 232, 220, 0.15);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--dk-text-mid);
+    cursor: pointer;
+  }
+  .nav-auto-item:hover {
+    background: var(--dk-bg-hover);
+  }
+  .nav-auto-item.editing {
+    background: var(--dk-bg-active);
+    color: rgba(237, 232, 220, 0.9);
+    border-color: var(--dk-text-dim);
+  }
+  .nav-auto-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .nav-auto-label {
     white-space: nowrap;
   }
   @media (max-width: 639px) {

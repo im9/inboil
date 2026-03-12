@@ -151,10 +151,20 @@ function generativeLabel(gen: NonNullable<SceneNode['generative']>): string {
 export function automationTargetLabel(target?: AutomationTarget): string {
   if (!target) return 'AUTO'
   switch (target.kind) {
-    case 'global': return target.param === 'tempo' ? 'TEMPO' : 'VOL'
+    case 'global': {
+      const labels: Record<string, string> = {
+        tempo: 'TEMPO', masterVolume: 'VOL', swing: 'SWG',
+        compThreshold: 'CMP THR', compRatio: 'CMP RAT', compMakeup: 'CMP MKP',
+        compAttack: 'CMP ATK', compRelease: 'CMP REL',
+        duckDepth: 'DCK DPT', duckRelease: 'DCK REL', retVerb: 'RET VRB', retDelay: 'RET DLY',
+      }
+      return labels[target.param] ?? target.param.toUpperCase()
+    }
     case 'track':  return `T${target.trackIndex + 1} ${target.param === 'volume' ? 'VOL' : 'PAN'}`
     case 'fx':     return target.param.replace(/([A-Z])/g, ' $1').trim().toUpperCase().slice(0, 8)
+    case 'eq':     return `${target.band.replace('eq', '').toUpperCase()} ${target.param.toUpperCase()}`
     case 'send':   return `T${target.trackIndex + 1} ${target.param.replace('Send', '').toUpperCase()}`
+    default:       return 'AUTO'
   }
 }
 

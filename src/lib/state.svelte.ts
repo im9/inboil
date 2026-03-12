@@ -118,10 +118,13 @@ export interface AutomationPoint {
 
 /** Automation target parameter (ADR 053) */
 export type AutomationTarget =
-  | { kind: 'global'; param: 'tempo' | 'masterVolume' }
+  | { kind: 'global'; param: 'tempo' | 'masterVolume' | 'swing'
+                            | 'compThreshold' | 'compRatio' | 'compMakeup' | 'compAttack' | 'compRelease'
+                            | 'duckDepth' | 'duckRelease' | 'retVerb' | 'retDelay' }
   | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
   | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
                             | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'eq';     band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
   | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
 
 /** Automation node parameters (ADR 053) */
@@ -136,6 +139,8 @@ export interface AutomationSnapshot {
   values: Record<string, number>
   fxPad: typeof DEFAULT_FX_PAD
   fxFlavours: FxFlavours
+  masterPad: typeof masterPad
+  comp: { makeup: number; attack: number; release: number }
 }
 
 /** Generative engine type (ADR 078) */
@@ -397,6 +402,7 @@ export const ui = $state<{
   soloTracks: Set<number>
   mobileOverlay: boolean
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
+  editingAutomationInline: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
   brushMode: BrushMode
   chordShape: ChordShape
@@ -418,6 +424,7 @@ export const ui = $state<{
   soloTracks: new Set<number>(),
   mobileOverlay: false,
   editingAutomationDecorator: null,
+  editingAutomationInline: null,
   focusSceneNodeId: null,
   brushMode: 'draw' as BrushMode,
   chordShape: 'triad' as ChordShape,
@@ -686,6 +693,7 @@ export function factoryReset(): void {
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
   ui.editingAutomationDecorator = null
+  ui.editingAutomationInline = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
@@ -1010,6 +1018,7 @@ function snapshotAutomationTargets(): AutomationSnapshot {
   const values: Record<string, number> = {}
   values['global:tempo'] = song.bpm
   values['global:masterVolume'] = perf.masterGain
+  values['global:swing'] = perf.swing
   for (let i = 0; i < song.tracks.length; i++) {
     values[`track:${i}:volume`] = song.tracks[i].volume
     values[`track:${i}:pan`] = song.tracks[i].pan
@@ -1018,6 +1027,8 @@ function snapshotAutomationTargets(): AutomationSnapshot {
     values,
     fxPad: JSON.parse(JSON.stringify(fxPad)),
     fxFlavours: { ...fxFlavours },
+    masterPad: JSON.parse(JSON.stringify(masterPad)),
+    comp: { makeup: song.effects.comp.makeup, attack: song.effects.comp.attack, release: song.effects.comp.release },
   }
 }
 
@@ -1040,6 +1051,18 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
   Object.assign(fxPad.eqMid, snap.fxPad.eqMid)
   Object.assign(fxPad.eqHigh, snap.fxPad.eqHigh)
   Object.assign(fxFlavours, snap.fxFlavours)
+  // Restore master pad & comp
+  if (snap.masterPad) {
+    Object.assign(masterPad.comp, snap.masterPad.comp)
+    Object.assign(masterPad.duck, snap.masterPad.duck)
+    Object.assign(masterPad.ret, snap.masterPad.ret)
+  }
+  if (snap.comp) {
+    song.effects.comp.makeup = snap.comp.makeup
+    song.effects.comp.attack = snap.comp.attack
+    song.effects.comp.release = snap.comp.release
+  }
+  if (snap.values['global:swing'] != null) perf.swing = snap.values['global:swing']
 }
 
 /** Apply active automations at current step progress. Called from App.svelte onStep. */
@@ -1060,6 +1083,26 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
         song.bpm = Math.round(BPM_MIN + v * (BPM_MAX - BPM_MIN))
       } else if (target.param === 'masterVolume') {
         perf.masterGain = v
+      } else if (target.param === 'swing') {
+        perf.swing = v
+      } else if (target.param === 'compThreshold') {
+        masterPad.comp = { ...masterPad.comp, x: v }
+      } else if (target.param === 'compRatio') {
+        masterPad.comp = { ...masterPad.comp, y: v }
+      } else if (target.param === 'compMakeup') {
+        song.effects.comp.makeup = 1 + v * 3
+      } else if (target.param === 'compAttack') {
+        song.effects.comp.attack = 0.1 + v * 29.9
+      } else if (target.param === 'compRelease') {
+        song.effects.comp.release = 10 + v * 290
+      } else if (target.param === 'duckDepth') {
+        masterPad.duck = { ...masterPad.duck, x: v }
+      } else if (target.param === 'duckRelease') {
+        masterPad.duck = { ...masterPad.duck, y: v }
+      } else if (target.param === 'retVerb') {
+        masterPad.ret = { ...masterPad.ret, x: v }
+      } else if (target.param === 'retDelay') {
+        masterPad.ret = { ...masterPad.ret, y: v }
       }
       break
     case 'track': {
@@ -1083,6 +1126,22 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
         case 'glitchY':        fxPad.glitch   = { ...fxPad.glitch,   y: v }; break
         case 'granularSize':   fxPad.granular = { ...fxPad.granular, x: v }; break
         case 'granularDensity': fxPad.granular = { ...fxPad.granular, y: v }; break
+      }
+      break
+    case 'eq':
+      if (target.param === 'freq') {
+        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, x: v }
+        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, x: v }
+        else fxPad.eqHigh = { ...fxPad.eqHigh, x: v }
+      } else if (target.param === 'gain') {
+        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, y: v }
+        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, y: v }
+        else fxPad.eqHigh = { ...fxPad.eqHigh, y: v }
+      } else {
+        const q = 0.3 + v * 7.7
+        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, q }
+        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, q }
+        else fxPad.eqHigh = { ...fxPad.eqHigh, q }
       }
       break
     case 'send': {
