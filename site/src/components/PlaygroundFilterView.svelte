@@ -1,8 +1,8 @@
 <script lang="ts">
-  import '../styles/playground.css'
+  import PlaygroundTransport from './PlaygroundTransport.svelte'
   import FilterView from '$app/lib/components/FilterView.svelte'
 </script>
 
-<div class="playground dark-zone" style="height: 280px;">
+<PlaygroundTransport height={280} view="eq">
   <FilterView />
-</div>
+</PlaygroundTransport>

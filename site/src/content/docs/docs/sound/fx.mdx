@@ -20,37 +20,38 @@ The FX Pad provides **4 send effects** arranged as draggable XY pads. Each effec
 | Effect | Flavours |
 |--------|----------|
 | **Reverb** | Room / Hall / Shimmer |
-| **Delay** | Stereo / Ping-pong / Tape |
-| **Glitch** | Stutter / Bitcrush / Repeat |
-| **Granular** | Freeze / Scatter / Cloud |
+| **Delay** | DIGI (ping-pong) / DOT.8 (dotted 8th) / TAPE (warm LP-filtered) |
+| **Glitch** | CRUSH (bitcrush) / REDUX (downsample) / STTR (stutter) |
+| **Granular** | CLOUD (grain shower) / FREEZE (auto-freeze) / STRCH (timestretch) |
 
 ### Per-Track Sends
 
-Each track has independent send levels for each effect. The **send bar** below the FX Pad sets how much of each track is routed to each effect. Drag up to increase the send amount.
+Each track has independent send levels for each effect (VERB, DLY, GLT, GRN knobs in the Dock panel). Drag up to increase the send amount.
 
 ### XY Control
 
-- **X axis** — typically controls time/size (e.g., reverb size, delay time)
-- **Y axis** — typically controls character/feedback (e.g., reverb damping, delay feedback)
+- **X axis** — time/size (reverb size, delay time, grain size)
+- **Y axis** — character/feedback (reverb damping, delay feedback, grain density)
 - **Tap** the pad to toggle the effect on/off
+- **Long-press** (400 ms) any pad to open a **bubble menu** for switching flavours
+- On the Granular pad, long-press toggles **freeze** when the effect is already on
 
 ## EQ
 
-The EQ provides a **3-band equalizer** plus low-pass and high-pass filters.
+The EQ provides a **3-band equalizer** plus a filter sweep node.
 
 <PlaygroundFilterView client:visible />
 
 ### Bands
 
-| Band | Range |
-|------|-------|
-| **LOW** | Bass frequencies |
-| **MID** | Mid frequencies |
-| **HIGH** | Treble frequencies |
-| **LP** (left edge) | Low-pass filter cutoff |
-| **HP** (right edge) | High-pass filter cutoff |
+| Band | Description |
+|------|-------------|
+| **LOW** | Bass — peaking or shelf (double-tap to toggle) |
+| **MID** | Mid — peaking EQ |
+| **HIGH** | Treble — peaking or shelf (double-tap to toggle) |
+| **Filter** | LP/HP sweep |
 
-Drag the nodes to adjust gain and frequency. Tap a node to toggle it on/off.
+Drag the nodes to adjust gain and frequency.
 
 ## Master
 
@@ -62,30 +63,24 @@ The Master section controls the final output stage.
 
 | Pad | X Axis | Y Axis |
 |-----|--------|--------|
-| **Compressor** | Threshold | Ratio |
-| **Sidechain** | Depth | Release |
-| **FX Return** | Dry/Wet | Feedback |
-
-### Faders
-
-| Fader | Function |
-|-------|----------|
-| **Volume** | Master output level |
-| **Makeup** | Post-compression gain |
-| **Swing** | Timing swing amount (50%–75%) |
+| **COMP** | Threshold | Ratio |
+| **DUCK** | Depth | Release |
+| **RET** | Reverb return level | Delay return level |
 
 ### VU Meter
 
-The VU meter shows real-time **L/R peak levels**. Keep peaks below 0 dB to avoid clipping.
+The VU meter shows real-time **L/R peak levels** and gain reduction (GR). Keep peaks below 0 dB to avoid clipping.
 
 ## Signal Flow
 
 ```
-Track → Voice → Per-Track FX Sends → FX Pad
+Voice → Per-Track Sends ──► Reverb / Delay / Glitch / Granular
+                                        │
+                                  FX Return (RET)
                                         ↓
-Track → EQ → Master Compressor → Master Volume → Output
-                                        ↑
-                              FX Return (wet mix)
+Voice ──► Sidechain Ducker ──► Bus Compressor ──► 3-Band EQ
+              ──► DJ Filter ──► Break Gate ──► Master Gain
+              ──► Peak Limiter ──► Output
 ```
 
 ## Related

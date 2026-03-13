@@ -9,11 +9,26 @@ import PlaygroundPianoRoll from '../../../../components/PlaygroundPianoRoll.svel
 
 ## Overview
 
-The Piano Roll opens automatically for **melodic tracks** (BASS, LEAD, FM, WAVE). It shows a keyboard on the left and a grid where each cell is a note at a specific step and pitch.
+The Piano Roll appears automatically below the step grid for **melodic tracks** (BASS, LEAD, FM, WAVE). It shows a keyboard on the left and a grid where each cell is a note at a specific step and pitch.
+
+The visible range is **2 octaves** (C3–B4 by default). Use the **▲ / ▼** buttons or **scroll the mouse wheel** to shift the octave window.
 
 <PlaygroundPianoRoll client:visible />
 
-## Interaction
+## Drawing Modes
+
+The brush bar at the top provides four modes:
+
+| Mode | Shortcut | Behavior |
+|------|----------|----------|
+| **Draw** | **D** | Tap to place/remove notes, drag to move |
+| **Eraser** | **E** | Tap or drag to remove notes |
+| **Chord** | **C** | Tap to place an entire chord |
+| **Strum** | — | Drag to place chord notes across consecutive steps |
+
+Hold the shortcut key to temporarily activate a mode; release to return to the previous mode. In Draw mode, right-click erases without switching.
+
+## Interaction (Draw Mode)
 
 | Action | Result |
 |--------|--------|
@@ -21,15 +36,15 @@ The Piano Roll opens automatically for **melodic tracks** (BASS, LEAD, FM, WAVE)
 | **Tap** existing note | Remove it |
 | **Drag** a note vertically | Change pitch |
 | **Drag** a note horizontally | Change step position |
-| **Drag note edge** | Change duration |
+| **Drag note edge** (right side) | Change duration |
 
 ## Polyphony
 
 Tap multiple notes on the **same step** to create chords. The number of simultaneous notes depends on the voice's poly mode:
 
 - **MONO** — one note at a time (last note wins)
-- **POLY8** — up to 8 simultaneous notes
-- **WIDE4** — 4 voices with stereo spread
+- **POLY** — polyphonic (up to 12 or 16 voices depending on synth)
+- **WIDE** — polyphonic with stereo spread
 - **UNISON** — all voices on the same note (thick sound)
 
 ## Slide (Glide)
@@ -38,7 +53,7 @@ Enable **SLD** to create smooth pitch glides between consecutive notes. This is 
 
 ## Scale Mode
 
-When **Scale Mode** is enabled (KEY/SCALE button), the piano roll restricts note placement to the selected scale. Available modes:
+When **Scale Mode** is enabled (KEY/SCALE button), the piano roll snaps note placement to the selected scale. Available modes:
 
 | Mode | Pattern |
 |------|---------|
@@ -52,16 +67,16 @@ When **Scale Mode** is enabled (KEY/SCALE button), the piano roll restricts note
 
 Non-scale notes are dimmed in the grid but still accessible if you need chromatic passing tones.
 
-## Chord Brush
+## Chord & Strum Brushes
 
-The **Chord Brush** lets you place entire chords in one tap:
+The **Chord Brush** places an entire chord in one tap. The **Strum Brush** spreads chord tones across consecutive steps. Available chord types:
 
 - **Triad** — root + 3rd + 5th
 - **7th** — root + 3rd + 5th + 7th
 - **sus2** — root + 2nd + 5th
 - **sus4** — root + 4th + 5th
 
-Combined with Scale Mode, the Chord Brush automatically uses the correct intervals for the current key — you can't place a wrong chord.
+Combined with Scale Mode, chords automatically use the correct intervals for the current key — you can't place a wrong chord.
 
 ## Related
 

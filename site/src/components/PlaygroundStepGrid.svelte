@@ -20,6 +20,6 @@
   initTutorialState()
 </script>
 
-<div class="playground" style="max-height: 360px;">
+<div class="playground" style="height: 360px;">
   <StepGrid />
 </div>

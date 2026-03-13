@@ -13,38 +13,43 @@ Switch any track to Sampler via the **SMPL** tab in the Dock panel.
 
 ## Loading Samples
 
-### From File
-Tap the **LOAD** button or **drag and drop** an audio file onto the track. Supported formats: WAV, MP3, OGG, FLAC.
-
-### From Library
-A future update will include a built-in sample library. For now, use your own files.
+Tap the **LOAD** button or **drag and drop** an audio file onto the waveform area. Supported formats: WAV, MP3, OGG, FLAC (max 10 MB per sample).
 
 ## Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| **START** | Sample start point |
-| **END** | Sample end point |
-| **PITCH** | Pitch shift (semitones) |
-| **DECAY** | Amplitude decay |
-| **REVERSE** | Play sample backwards |
+| Param | Label | Description |
+|-------|-------|-------------|
+| **STRT** | Start | Sample start point (0.0–1.0) |
+| **END** | End | Sample end point (0.0–1.0) |
+| **PTCH** | Pitch | Pitch shift in semitones (±24) |
+| **DCY** | Decay | Amplitude decay time |
+| **REV** | Reverse | Reverse playback (OFF / ON) |
 
 ## Chop Mode
 
-Tap **CHOP** to automatically slice the sample into equal segments. Each step in the pattern triggers a different slice — perfect for breakbeats and drum loops.
+Slice the sample into equal segments for breakbeats and drum loops.
 
-Chopping is non-destructive. You can always return to the full sample.
+| Param | Label | Description |
+|-------|-------|-------------|
+| **CHOP** | Slices | Slice count: OFF / 8 / 16 / 32 |
+| **MODE** | Mode | **MAP** — note pitch selects slice; **SEQ** — each trigger advances to next slice |
 
-## BPM Sync
+Chopping is non-destructive. Set CHOP back to OFF to return to the full sample.
 
-Enable **BPM sync** to automatically stretch or compress the sample to match the current tempo. This keeps loops in time regardless of their original BPM.
+## BPM Sync & Loop
+
+| Param | Label | Description |
+|-------|-------|-------------|
+| **BPM** | Sample BPM | Original sample tempo (0 = OFF). When set, playback rate auto-scales to match project BPM |
+| **LOOP** | Loop | **1SHT** (one-shot) or **LOOP** (continuous loop) |
+| **STRC** | Stretch | **RPTC** (repitch — changes pitch with tempo) or **WSLA** (WSOLA — preserves pitch) |
 
 ## Tips
 
 - **Layer samples with synth voices**: Use one track for the sample and another for a synth layer to add body
-- **Reverse fills**: Enable REVERSE on a copied pattern for transition effects
-- **Micro-sampling**: Set START and END very close together for granular textures
-- **One-shots vs loops**: Short samples (kicks, snares) work as one-shots; longer samples loop automatically when the pattern repeats
+- **Reverse fills**: Enable REV on a copied pattern for transition effects
+- **Micro-sampling**: Set STRT and END very close together for granular textures
+- **Breakbeat slicing**: Set CHOP to 16 with SEQ mode for classic breakbeat patterns
 
 ## Related
 

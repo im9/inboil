@@ -9,38 +9,33 @@ import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte
 
 ## Overview
 
-Below each track in the step grid, there's a mode bar that switches between three views: **STEP**, **VEL**, and **CHNC**. These give you per-step control over dynamics and probability.
+Tap a **track name** in the step grid to expand the velocity lane below it. The lane shows a vertical bar for each step, and a **VEL / CHNC** toggle button lets you switch between velocity and chance editing.
 
 <PlaygroundStepGrid client:visible />
 
-## Three Modes
+## Velocity
 
-### STEP Mode (default)
+Drag a bar **up/down** to set the velocity (volume) of each hit. The bar height represents the value as a percentage.
 
-The standard view — toggle steps on/off by tapping. This is where you paint your beat.
-
-### VEL Mode (Velocity)
-
-Shows a **vertical bar** for each active step. Drag up/down to set the velocity (volume) of individual hits.
-
-- Higher velocity = louder hit
-- Range: 0–127 (displayed as a percentage)
+- Higher bar = louder hit
+- Range: 5%–100%
 - Use velocity variation to add groove and human feel
 
 **Tip**: Accent the downbeats (steps 0, 4, 8, 12) at high velocity and ghost the off-beats at low velocity for a more natural feel.
 
-### CHNC Mode (Chance / Probability)
+## Chance (Probability)
 
-Shows a **percentage** for each active step. Drag up/down to set the trigger probability.
+Click the **CHNC** button (or **Shift+drag** a bar) to switch to chance mode. Bars turn blue. Drag up/down to set the trigger probability.
 
-- **100%** — always triggers (default)
-- **50%** — triggers half the time (coin flip)
-- **0%** — never triggers
-- Any value in between — proportional probability
+- **100%** — always triggers (default, shown when no chance is set)
+- **50%** — triggers half the time
+- Lower values — proportional probability
+
+Steps with chance set below 100% show a small **blue diamond** in the bottom-left corner of the step cell.
 
 Chance creates **generative variation** — the same pattern sounds different each loop. Combined with the Scene graph's weighted edges, you can build arrangements that never repeat exactly.
 
-### Practical Uses
+## Practical Uses
 
 | Technique | How |
 |-----------|-----|
@@ -48,10 +43,6 @@ Chance creates **generative variation** — the same pattern sounds different ea
 | **Random fills** | Add fill hits at 15–25% chance on every step |
 | **Evolving grooves** | Mix 80% and 60% across a pattern |
 | **Sparse textures** | Set all steps to 10–20% for ambient percussion |
-
-## Step Count
-
-Tap the **step count number** at the right edge of any track to change it. The range is **2–64 steps**. Different step counts per track create polyrhythmic patterns.
 
 ## Related
 

@@ -9,9 +9,9 @@ import PlaygroundTrackerView from '../../../../components/PlaygroundTrackerView.
 
 ## Overview
 
-Tracker mode presents your pattern as a vertical grid of note data — like a classic Amiga/PC tracker. Each row is a step, and columns show note, velocity, duration, slide, and channel values.
+Tracker mode presents your pattern as a vertical grid of note data — like a classic Amiga/PC tracker. Each row is a step, and columns show note, velocity, duration, slide, and chance values.
 
-Switch to Tracker from **SYSTEM → TRKR**.
+You can switch between Grid and Tracker input modes in **Settings → PATTERN INPUT**.
 
 <PlaygroundTrackerView client:visible />
 
@@ -19,21 +19,29 @@ Switch to Tracker from **SYSTEM → TRKR**.
 
 | Column | Meaning | Range |
 |--------|---------|-------|
-| **NOTE** | MIDI note name (C-4, D#5, etc.) | C-0 to G-10 |
-| **VEL** | Velocity (volume) | 00–99 |
-| **DUR** | Duration in ticks | 01–99 |
-| **SLD** | Slide/glide to next note | ON/OFF |
-| **CHN** | MIDI channel | 01–16 |
+| **NOTE** | Note name (C-4, D#5, etc.) — drum tracks show `***` | C-3 to B-4 |
+| **VEL** | Velocity (volume) | 00–99 (00 = 100%) |
+| **DUR** | Duration in steps | 01–16 |
+| **SLD** | Slide/glide to next note | SLD / --- |
+| **CHN** | Chance (probability of firing) | 10%–90% (--- = 100%) |
+
+## Note Entry
+
+Type a letter key (**C D E F G A B**) to enter a note. Add **#** for sharps. The octave is automatically set to match the previous note on the same track.
+
+- **Shift+Up / Shift+Down** — transpose note ±1 octave
 
 ## Navigation
 
 | Key | Action |
 |-----|--------|
-| **Arrow keys** | Move cursor between cells |
-| **Enter** | Edit selected cell |
-| **Escape** | Cancel edit / deselect |
-| **Delete** | Clear cell value |
-| **Tab** | Move to next column |
+| **Arrow Up / Down** | Move cursor row |
+| **Arrow Left / Right** | Move cursor column |
+| **PageUp / PageDown** | Jump ±8 rows |
+| **[ / ]** | Switch to previous / next track |
+| **Enter** | Toggle step on/off (or toggle slide in SLD column) |
+| **Delete / Backspace** | Clear step |
+| **0–9** | Set value directly (VEL, DUR, CHN columns) |
 
 ## When to Use Tracker Mode
 

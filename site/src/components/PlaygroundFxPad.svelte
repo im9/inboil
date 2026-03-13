@@ -1,8 +1,11 @@
 <script lang="ts">
-  import '../styles/playground.css'
+  import PlaygroundTransport from './PlaygroundTransport.svelte'
   import FxPad from '$app/lib/components/FxPad.svelte'
+  import { ui } from '$app/lib/state.svelte.ts'
+
+  ui.phraseView = 'fx'
 </script>
 
-<div class="playground dark-zone" style="height: 320px;">
+<PlaygroundTransport height={320} view="fx">
   <FxPad />
-</div>
+</PlaygroundTransport>

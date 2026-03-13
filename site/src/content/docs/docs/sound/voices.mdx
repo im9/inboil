@@ -20,82 +20,93 @@ Select a track and use the **Dock panel** to edit its voice parameters:
 
 ## Drum Voices
 
-### KICK
-Analog-style bass drum. Parameters:
-- **TUNE** — Pitch of the drum body
-- **DECAY** — Length of the tail
-- **DRIVE** — Saturation / distortion amount
-- **CLICK** — Transient attack intensity
+All drum voices share a common synthesis engine with four parameter groups: **OSC** (tone oscillator), **NOISE**, **METAL** (metallic oscillator), and **AMP**.
 
-### SNARE
-Noise + tone mix. Parameters:
-- **TUNE** — Tone pitch
-- **SNAP** — Transient sharpness
-- **DECAY** — Tail length
-- **TONE** — Noise vs tone balance
+| Label | Voice | Character |
+|-------|-------|-----------|
+| **909K** | 909 Kick | Punchy analog kick |
+| **808K** | 808 Kick | Deep sub bass kick |
+| **SNARE** | Snare | Noise + tone snare |
+| **CLAP** | Clap | Layered handclap (burst mode) |
+| **C.HH** | Closed HH | Short metallic hat — chokes open hat |
+| **O.HH** | Open HH | Ringing metallic hat |
+| **CYM** | Cymbal | 606-style noise+sine through BP filter |
+| **TOM** | Tom | Pitched drum |
+| **RIM** | Rimshot | Sharp transient |
+| **BELL** | Cowbell | Metallic bell |
+| **SHKR** | Shaker | Noise-based shaker |
 
-### CLAP
-Layered handclap. Parameters:
-- **SPREAD** — Timing spread between layers
-- **DECAY** — Tail length
-- **TONE** — Brightness
+### Key Parameters
 
-### C.HH / O.HH (Closed / Open Hi-Hat)
-Paired hi-hat — closed chokes open. Parameters:
-- **TUNE** — Pitch
-- **DECAY** — Ring length (short for closed, long for open)
-- **TONE** — Brightness / metallic character
+| Param | Group | Description |
+|-------|-------|-------------|
+| **PSTRT / PEND** | OSC | Pitch start → end (sweep range) |
+| **PDCY** | OSC | Pitch sweep speed |
+| **TONE** | OSC | Tone oscillator level |
+| **NOIS** | NOISE | Noise level |
+| **FREQ / Q** | NOISE | Noise filter frequency & resonance |
+| **METL / MFRQ** | METAL | Metallic oscillator level & frequency |
+| **DCY** | AMP | Amplitude decay |
+| **DRIV** | AMP | Distortion amount |
+| **CLCK** | AMP | Transient click |
+| **BRST / GAP** | AMP | Burst count & gap (clap layering) |
 
-### CYM (Cymbal)
-606-style noise+sine through a bandpass filter. Parameters:
-- **TUNE** — Center frequency
-- **DECAY** — Sustain length
-- **TONE** — Filter resonance
+Different drum voices use different combinations of these parameters. For example, KICK uses mainly OSC + AMP, while C.HH emphasizes METAL + NOISE.
 
 ## Synth Voices
 
 ### BASS (303-style Acid Bass)
-Monophonic bass synth inspired by the Roland TB-303. Parameters:
-- **CUTOFF** — Filter cutoff frequency
-- **RESO** — Filter resonance (screaming at high values)
-- **ENV** — Envelope modulation depth on filter
-- **ACCENT** — Velocity-driven filter/amp boost
-- **DECAY** — Amplitude envelope decay
+Monophonic bass synth inspired by the Roland TB-303.
+- **CUT** — Filter cutoff
+- **MOD** — Filter envelope depth
+- **RESO** — Filter resonance
+- **DCY** — Amplitude decay
+- **DRIV** — Distortion
 
 The BASS voice responds to **slide** (SLD) for portamento glides — essential for acid patterns.
 
-### LEAD (Moog-style Lead)
-Monophonic/polyphonic lead synth. Parameters:
-- **CUTOFF** — Low-pass filter
-- **RESO** — Filter resonance
-- **DETUNE** — Oscillator detune (thickens the sound)
-- **ATK/DCY/SUS/REL** — Full ADSR envelope
+### LEAD (Analog Synth)
+Polyphonic lead synth with full ADSR envelope and built-in arpeggiator.
+- **CUT / MOD / RESO / FDCY** — Filter section
+- **ATCK / ADCY / SUST / RLS** — Amp ADSR envelope
+- **ARP / RATE / CHRD / AOCT** — Arpeggiator (OFF / UP / DOWN / U-D / RND)
 
 <PlaygroundEnvGraph client:visible />
 
-### FM (FM Synthesis)
-4-operator FM synth with 8 algorithms. Parameters:
-- **RATIO** — Modulator frequency ratio
-- **MOD** — Modulation index (brightness/complexity)
-- **FEEDBACK** — Operator self-feedback
-- **ALGO** — Routing algorithm (1–8)
+### FM (4-Op FM Synth)
+4-operator FM synth with 8 algorithms.
 
 <PlaygroundAlgoGraph client:visible />
 
+- **ALG** — Routing algorithm (8 patterns)
+- **R1–R4** — Operator frequency ratios
+- **L1–L4** — Operator output levels
+- **D1–D4** — Operator decay times
+- **FB** — OP1 self-feedback
+- **ATK / REL** — Carrier attack & release
+- **LFO** — Rate, depth, waveform, destination
+
+Poly modes: **MONO** / **POLY 12** / **WIDE 6** / **UNISON**
+
 ### WAVE (Wavetable)
-Morphing wavetable synth. Smoothly blends between waveforms:
+Dual-oscillator morphing wavetable synth with unison and LFO.
 
 <PlaygroundWaveGraph client:visible />
 
-- **WAVE** — Morph position (saw → square → tri → sine → pulse)
-- **DETUNE** — Voice detuning
-- **CUTOFF** — Filter cutoff
+- **WV-A / WV-B** — Wavetable position for each oscillator
+- **MIX** — Oscillator A/B mix
+- **COMB** — Combine mode (MIX / FM / RING)
+- **CUT / RESO / FTYP** — Filter (LP / HP / BP / NTCH)
+- **DRIV** — Post-filter saturation
+- **UNI / SPRD / WIDE** — Unison voices, detune spread, stereo width
+- **ATCK / DCY / SUST / RLS** — Amp ADSR envelope
+- **LFO 1 / LFO 2** — Two LFOs with tempo sync
 
-Poly modes: **MONO** / **POLY8** / **WIDE4** / **UNISON** — set in the Dock panel header.
+Poly modes: **MONO** / **POLY 16** / **WIDE 8** / **UNISON**
 
 ## Switching Voices
 
-Use the **Dock tabs** (DRUM / BASS / LEAD / SMPL) to change a track's voice type. The voice change takes effect immediately — existing steps keep their triggers but play with the new sound.
+Use the **Dock tabs** (**DRUM** / **SYNTH** / **SMPL**) to change a track's voice category, then select the specific voice. The change takes effect immediately — existing steps keep their triggers but play with the new sound.
 
 ## Related
 

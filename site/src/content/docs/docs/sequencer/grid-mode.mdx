@@ -11,9 +11,20 @@ import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte
 
 Grid mode is the default sequencer view. Each row is a track, each column is a step. Tap a cell to toggle it on/off. Drag across cells to paint multiple steps in one gesture.
 
-Select Grid mode from **SYSTEM → GRID** (or it's the default if you haven't changed it).
+You can switch between Grid and Tracker input modes in **Settings → PATTERN INPUT**.
 
 <PlaygroundStepGrid client:visible />
+
+## Track Header
+
+Each track row has a header on the left with four elements:
+
+| Element | Action |
+|---------|--------|
+| **Track name** | Tap to expand the velocity lane below the track |
+| **Step count** (number) | Tap to cycle through step counts (2–64) |
+| **S** | Solo / unsolo the track |
+| **M** | Mute / unmute the track |
 
 ## Interaction
 
@@ -21,8 +32,9 @@ Select Grid mode from **SYSTEM → GRID** (or it's the default if you haven't ch
 |--------|--------|
 | **Tap** a cell | Toggle step on/off |
 | **Drag** across cells | Paint multiple steps |
-| **Tap track label** | Select track → opens Dock panel |
-| **Tap step count** (right edge) | Change step count (2–64) |
+| **Ctrl+C** / **Ctrl+V** | Copy / paste pattern |
+| **Delete** | Clear all steps in the current pattern |
+| **Ctrl+Z** / **Ctrl+Shift+Z** | Undo / redo |
 
 ## Step Count & Polyrhythm
 
@@ -36,17 +48,18 @@ When tracks have different step counts, they loop at different rates — creatin
 
 The grid visually stretches or compresses to fit each track's step count.
 
-## Pattern Operations
+## Pattern Toolbar
 
-Select a pattern by tapping its cell in the **Matrix** (left panel). Use the toolbar buttons:
+The toolbar at the top of the pattern editor provides these controls:
 
-- **CPY** — copy current pattern
-- **PST** — paste copied pattern
-- **CLR** — clear all steps in the current pattern
-- **RAND** — randomize all steps
-- **Ctrl+Z** / **Ctrl+Shift+Z** — undo / redo
+- **TMPL** — apply a track template
+- **KEY** — select the root note
+- **OCT** — adjust octave offset
+- **RND** — randomize the pattern
+- **VKBD** — toggle virtual keyboard
+- **LOOP** — loop this pattern
 
-Click the **pattern name** to rename it. Click the **color dot** to change the pattern's color (visible in Matrix and Scene views).
+To rename a pattern or change its color, use the **Dock panel** (left side).
 
 ## Related
 
