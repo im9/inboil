@@ -5,10 +5,7 @@ sidebar:
   order: 1
 ---
 
-import KnobDemo from '../../../../components/KnobDemo.svelte';
-import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
 import PlaygroundAudioDemo from '../../../../components/PlaygroundAudioDemo.svelte';
-import PlaygroundDockTrackEditor from '../../../../components/PlaygroundDockTrackEditor.svelte';
 
 ## 1. Paint Steps & Play
 
@@ -22,29 +19,19 @@ This grid has a 4-on-the-floor kick and hi-hat pattern pre-loaded. Hit **▶ Pla
 
 Each track can have **2–64 steps** independently. Tap the step count number at the right edge of a track to change it. Odd step counts create polyrhythms — try 5 or 7 against a 16-step kick.
 
-## 2. Turn a Knob
+## 2. Tweak Sounds
 
-INBOIL uses knobs for almost every parameter. **Drag up** to increase, **drag down** to decrease. Try it:
+Select a track in the grid to see its voice parameters as knobs below. **Drag up** to increase a value, **drag down** to decrease. Hold **Shift** for fine control, double-click to reset.
 
-<KnobDemo client:visible />
+Each voice type (KICK, SNARE, BASS, LEAD, FM, WAVE) has its own parameters — see [Change Sounds](/docs/getting-started/adding-sounds/) to explore all voices and audition them.
 
-Knobs respond to fine control — hold **Shift** while dragging for precision. Double-click to reset to default.
-
-## 3. Change Sounds
-
-In the app, tap a track's **label** (KICK, SNARE, etc.) to open the **Dock panel** on the right with that track's voice parameters. Here's what it looks like — tap a track number to select it, then tweak the knobs:
-
-<PlaygroundDockTrackEditor client:load />
-
-Each voice type (KICK, SNARE, BASS, LEAD, FM, WAVE) has its own set of parameters. See [Change Sounds](/docs/getting-started/adding-sounds/) for details.
-
-## 4. Randomize
+## 3. Randomize
 
 Hit **RAND** to generate a random pattern. Use **Ctrl+Z** to undo if you don't like it. Undo is unlimited — every edit is recorded.
 
 <PlaygroundAudioDemo client:load showRand={true} />
 
-## 5. Performance Controls
+## 4. Performance Controls
 
 Hold the performance buttons (FILL / REV / BRK in the transport bar) for real-time effects during playback:
 
@@ -56,7 +43,7 @@ Hold the performance buttons (FILL / REV / BRK in the transport bar) for real-ti
 
 Release to restore normal playback instantly.
 
-## 6. Save Your Work
+## 5. Save Your Work
 
 Projects auto-save on every edit to your browser's local storage. Use **SYSTEM → SAVE AS** to create named snapshots, and **EXPORT** to download a JSON backup.
 
