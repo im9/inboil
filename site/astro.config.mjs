@@ -22,7 +22,7 @@ export default defineConfig({
         {
           tag: 'script',
           content: `document.addEventListener('DOMContentLoaded',()=>{
-  const a=document.querySelector('a.site-title');if(a)a.href='/docs/';
+  const a=document.querySelector('a.site-title');if(a)a.href='/';
   if(location.pathname.startsWith('/ja/'))document.cookie='lang=en;path=/;max-age=0';
   else if(location.pathname.startsWith('/docs/'))document.cookie='lang=en;path=/;max-age=31536000';
 });`,

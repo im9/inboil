@@ -104,6 +104,19 @@ nav.sidebar {
   border-left-color: var(--sl-color-accent);
 }
 
+/* ── Header — always dark regardless of theme ── */
+:root[data-theme='light'] header.header {
+  background: #1E2028;
+  border-bottom: 1px solid #2A2830;
+  --sl-color-white: #EDE8DC;
+  --sl-color-gray-1: #E2DDD3;
+  --sl-color-gray-2: #9A9680;
+  --sl-color-gray-3: #787845;
+  --sl-color-gray-4: #504E42;
+  --sl-color-gray-5: #2A2830;
+  --sl-color-black: #1E2028;
+}
+
 /* ── Site title — match AppHeader style ── */
 a.site-title.sl-flex {
   gap: 5px !important;
