@@ -18,6 +18,16 @@ export default defineConfig({
       },
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
+      head: [
+        {
+          tag: 'script',
+          content: `document.addEventListener('DOMContentLoaded',()=>{
+  const a=document.querySelector('a.site-title');if(a)a.href='/docs/';
+  if(location.pathname.startsWith('/ja/'))document.cookie='lang=en;path=/;max-age=0';
+  else if(location.pathname.startsWith('/docs/'))document.cookie='lang=en;path=/;max-age=31536000';
+});`,
+        },
+      ],
       defaultLocale: 'root',
       locales: {
         root: { label: 'English', lang: 'en' },

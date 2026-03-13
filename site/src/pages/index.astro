@@ -5,11 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>INBOIL</title>
+  <script is:inline>
+    const isJa = /^ja/i.test(navigator.language);
+    location.replace(isJa ? '/ja/docs/getting-started/first-beat/' : '/docs/getting-started/first-beat/');
+  </script>
 </head>
-<body>
-  <h1>INBOIL</h1>
-  <nav>
-    <a href="/docs/">Docs</a>
-  </nav>
-</body>
+<body></body>
 </html>
