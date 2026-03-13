@@ -1,6 +1,8 @@
 ---
 title: Keyboard Shortcuts
 description: Every keyboard shortcut in inboil at a glance.
+sidebar:
+  order: 2
 ---
 
 ## Global

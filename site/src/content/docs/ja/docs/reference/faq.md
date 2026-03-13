@@ -1,6 +1,8 @@
 ---
 title: よくある質問
 description: inboil に関するよくある質問。
+sidebar:
+  order: 1
 ---
 
 ## 全般

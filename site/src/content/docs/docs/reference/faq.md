@@ -1,6 +1,8 @@
 ---
 title: FAQ
 description: Frequently asked questions about inboil.
+sidebar:
+  order: 1
 ---
 
 ## General
