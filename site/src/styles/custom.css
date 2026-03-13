@@ -1,10 +1,10 @@
 /**
- * Starlight theme overrides — inboil design system.
+ * Starlight theme overrides — INBOIL design system.
  * Warm Brutalist: cream/navy palette, monospace data font, no gradients/shadows.
  * Reference: docs/ai/ui-design.md
  */
 
-/* ── Load inboil fonts ── */
+/* ── Load INBOIL fonts ── */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&display=swap');
 
 /* ── Dark mode (default) — navy bg, cream text ── */

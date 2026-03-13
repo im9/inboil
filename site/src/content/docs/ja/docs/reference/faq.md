@@ -1,17 +1,17 @@
 ---
 title: よくある質問
-description: inboil に関するよくある質問。
+description: INBOIL に関するよくある質問。
 sidebar:
   order: 1
 ---
 
 ## 全般
 
-### inboil とは？
+### INBOIL とは？
 ブラウザベースのグルーブボックス兼 DAW です。ブラウザ上で完全に動作し、ダウンロード、アカウント登録、プラグインは一切不要。アプリを開いたらすぐにビートメイキングを始められます。
 
 ### 対応ブラウザは？
-inboil は **Web Audio API** と **AudioWorklet** をサポートするモダンブラウザが必要です：
+INBOIL は **Web Audio API** と **AudioWorklet** をサポートするモダンブラウザが必要です：
 - Chrome 66+（推奨）
 - Firefox 76+
 - Safari 14.1+
@@ -37,7 +37,7 @@ inboil は **Web Audio API** と **AudioWorklet** をサポートするモダン
 はい — System パネルの **REC ●** ボタンを使います。マスター出力の WAV ファイルを録音します。REC を押して開始、もう一度押して停止しダウンロードします。
 
 ### 外部 MIDI コントローラーは使える？
-はい — USB または BLE MIDI キーボードを接続し、**SYSTEM → MIDI** で設定します。inboil はノート入力、ベロシティ、チャンネルルーティングに対応しています。
+はい — USB または BLE MIDI キーボードを接続し、**SYSTEM → MIDI** で設定します。INBOIL はノート入力、ベロシティ、チャンネルルーティングに対応しています。
 
 ### Export はどんなフォーマットを出力する？
 プロジェクトデータ（全パターン、シーン、設定）は **JSON** 形式。**MIDI** エクスポートは標準的な .mid ファイルを生成。**WAV** 録音はリアルタイムでオーディオ出力をキャプチャします。

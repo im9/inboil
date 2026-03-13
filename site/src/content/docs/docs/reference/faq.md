@@ -1,17 +1,17 @@
 ---
 title: FAQ
-description: Frequently asked questions about inboil.
+description: Frequently asked questions about INBOIL.
 sidebar:
   order: 1
 ---
 
 ## General
 
-### What is inboil?
+### What is INBOIL?
 A browser-based groove box and DAW. It runs entirely in your browser — no download, no account, no plugins required. Open the app and start making beats.
 
 ### What browsers are supported?
-inboil requires a modern browser with **Web Audio API** and **AudioWorklet** support:
+INBOIL requires a modern browser with **Web Audio API** and **AudioWorklet** support:
 - Chrome 66+ (recommended)
 - Firefox 76+
 - Safari 14.1+
@@ -22,7 +22,7 @@ Mobile browsers work but the interface is optimized for desktop.
 ### Is my work saved?
 Yes — projects **auto-save** to your browser's local storage (IndexedDB) on every edit. However, this means your data lives in **this browser only**. Use **EXPORT** to download a JSON backup that you can import anywhere.
 
-### Can I use inboil offline?
+### Can I use INBOIL offline?
 The app works offline after the initial load (it's a PWA). However, the docs site requires an internet connection.
 
 ## Sound & Audio
@@ -37,7 +37,7 @@ The app works offline after the initial load (it's a PWA). However, the docs sit
 Yes — use the **REC ●** button in the System panel. It records a WAV file of the master output. Press REC to start, press again to stop and download.
 
 ### Can I use external MIDI controllers?
-Yes — connect a USB or BLE MIDI keyboard and configure it in **SYSTEM → MIDI**. inboil supports note input, velocity, and channel routing.
+Yes — connect a USB or BLE MIDI keyboard and configure it in **SYSTEM → MIDI**. INBOIL supports note input, velocity, and channel routing.
 
 ### What audio format does Export produce?
 **JSON** for project data (all patterns, scene, settings). **MIDI** export produces a standard .mid file. **WAV** recording captures the audio output in real-time.

@@ -1,6 +1,6 @@
 ---
 title: キーボードショートカット
-description: inboil のすべてのキーボードショートカット一覧。
+description: INBOIL のすべてのキーボードショートカット一覧。
 sidebar:
   order: 2
 ---
