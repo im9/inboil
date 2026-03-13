@@ -8,20 +8,9 @@ sidebar:
 import KnobDemo from '../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
 import PlaygroundAudioDemo from '../../../../components/PlaygroundAudioDemo.svelte';
+import PlaygroundDockTrackEditor from '../../../../components/PlaygroundDockTrackEditor.svelte';
 
-## 1. Play & Stop
-
-Press **Space** (or tap **▶**) to start playback. Press again to stop. The step cursor scrolls across the grid, triggering every active step.
-
-## 2. Turn a Knob
-
-INBOIL uses knobs for almost every parameter. **Drag up** to increase, **drag down** to decrease. Try it:
-
-<KnobDemo client:visible />
-
-Knobs respond to fine control — hold **Shift** while dragging for precision. Double-click to reset to default.
-
-## 3. Paint Steps
+## 1. Paint Steps & Play
 
 Tap cells in the step grid to toggle triggers on/off. **Drag to paint** multiple steps in one gesture. Each row is a track — kick, snare, hi-hat, etc.
 
@@ -33,28 +22,33 @@ This grid has a 4-on-the-floor kick and hi-hat pattern pre-loaded. Hit **▶ Pla
 
 Each track can have **2–64 steps** independently. Tap the step count number at the right edge of a track to change it. Odd step counts create polyrhythms — try 5 or 7 against a 16-step kick.
 
-## 4. Change Sounds
+## 2. Turn a Knob
 
-Select a track by tapping its **label** (KICK, SNARE, etc.). The **Dock panel** on the left opens with that track's voice parameters:
+INBOIL uses knobs for almost every parameter. **Drag up** to increase, **drag down** to decrease. Try it:
 
-- **VOL** — Track volume
-- **PAN** — Left/right stereo position
-- **TUNE** — Pitch up/down
-- **DECAY** — How long the sound rings out
+<KnobDemo client:visible />
+
+Knobs respond to fine control — hold **Shift** while dragging for precision. Double-click to reset to default.
+
+## 3. Change Sounds
+
+In the app, tap a track's **label** (KICK, SNARE, etc.) to open the **Dock panel** on the right with that track's voice parameters. Here's what it looks like — tap a track number to select it, then tweak the knobs:
+
+<PlaygroundDockTrackEditor client:load />
 
 Each voice type (KICK, SNARE, BASS, LEAD, FM, WAVE) has its own set of parameters. See [Change Sounds](/docs/getting-started/adding-sounds/) for details.
 
-## 5. Randomize
+## 4. Randomize
 
 Hit **RAND** to generate a random pattern. Use **Ctrl+Z** to undo if you don't like it. Undo is unlimited — every edit is recorded.
 
 <PlaygroundAudioDemo client:load showRand={true} />
 
-## 6. Performance Controls
+## 5. Performance Controls
 
 Hold the performance buttons (FILL / REV / BRK in the transport bar) for real-time effects during playback:
 
-<PlaygroundAudioDemo client:load showPerf={true} />
+<PlaygroundAudioDemo client:load showPerf={true} showGrid={false} />
 
 - **FILL** — auto drum fill while held
 - **REV** — reverse playback
@@ -62,7 +56,7 @@ Hold the performance buttons (FILL / REV / BRK in the transport bar) for real-ti
 
 Release to restore normal playback instantly.
 
-## 7. Save Your Work
+## 6. Save Your Work
 
 Projects auto-save on every edit to your browser's local storage. Use **SYSTEM → SAVE AS** to create named snapshots, and **EXPORT** to download a JSON backup.
 

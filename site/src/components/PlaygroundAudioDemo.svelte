@@ -8,7 +8,7 @@
   import { cellForTrack } from '$app/lib/state.svelte.ts'
   import { randomizePattern } from '$app/lib/randomize.ts'
 
-  let { showPerf = false, showRand = false }: { showPerf?: boolean; showRand?: boolean } = $props()
+  let { showPerf = false, showRand = false, showGrid = true }: { showPerf?: boolean; showRand?: boolean; showGrid?: boolean } = $props()
 
   let audioReady = $state(false)
   let error = $state('')
@@ -130,9 +130,11 @@
     {/if}
     {#if error}<span class="error">{error}</span>{/if}
   </div>
+  {#if showGrid}
   <div class="playground" style="height: 360px;">
     <StepGrid />
   </div>
+  {/if}
   {#if cell && params.length > 0}
     <div class="audio-params">
       <span class="track-name">{cell.voiceId}</span>

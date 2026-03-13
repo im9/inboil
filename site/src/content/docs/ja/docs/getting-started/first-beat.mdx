@@ -8,20 +8,9 @@ sidebar:
 import KnobDemo from '../../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../../components/PlaygroundStepGrid.svelte';
 import PlaygroundAudioDemo from '../../../../../components/PlaygroundAudioDemo.svelte';
+import PlaygroundDockTrackEditor from '../../../../../components/PlaygroundDockTrackEditor.svelte';
 
-## 1. 再生と停止
-
-**Space** キー（または **▶** ボタン）を押すと再生が始まります。もう一度押すと停止します。カーソルがグリッド上を進み、有効なステップが順に鳴ります。
-
-## 2. ノブを回す
-
-INBOIL ではほぼすべてのパラメーターをノブで操作します。**上にドラッグ**で値を上げ、**下にドラッグ**で値を下げます。試してみましょう:
-
-<KnobDemo client:visible />
-
-**Shift** を押しながらドラッグすると細かく調整できます。ダブルクリックでデフォルト値にリセットされます。
-
-## 3. ステップを打ち込む
+## 1. ステップを打ち込んで再生
 
 グリッドのセルをタップしてトリガーの ON/OFF を切り替えます。**ドラッグ**で一度に複数のステップを描けます。各行がトラック（KICK、SNARE、HI-HAT など）に対応しています。
 
@@ -33,28 +22,33 @@ INBOIL ではほぼすべてのパラメーターをノブで操作します。*
 
 各トラックは独立して **2〜64 ステップ** を持てます。トラック右端のステップ数をタップして変更できます。奇数ステップにするとポリリズムが生まれます — 16 ステップの KICK に対して 5 や 7 を試してみましょう。
 
-## 4. 音色を変える
+## 2. ノブを回す
 
-トラックの**ラベル**（KICK、SNARE など）をタップして選択すると、左側の **Dock パネル**にそのトラックのボイスパラメーターが表示されます:
+INBOIL ではほぼすべてのパラメーターをノブで操作します。**上にドラッグ**で値を上げ、**下にドラッグ**で値を下げます。試してみましょう:
 
-- **VOL** — トラック音量
-- **PAN** — 左右のステレオ定位
-- **TUNE** — ピッチの上下
-- **DECAY** — 音の余韻の長さ
+<KnobDemo client:visible />
+
+**Shift** を押しながらドラッグすると細かく調整できます。ダブルクリックでデフォルト値にリセットされます。
+
+## 3. 音色を変える
+
+アプリではトラックの**ラベル**（KICK、SNARE など）をタップすると、右側の **Dock パネル**にそのトラックのボイスパラメーターが表示されます。下のデモでトラック番号をタップして選択し、ノブを回してみましょう:
+
+<PlaygroundDockTrackEditor client:load />
 
 ボイスの種類（KICK、SNARE、BASS、LEAD、FM、WAVE）ごとに固有のパラメーターがあります。詳しくは[音色を変える](/ja/docs/getting-started/adding-sounds/)をご覧ください。
 
-## 5. ランダマイズ
+## 4. ランダマイズ
 
 **RAND** を押すとランダムなパターンが生成されます。気に入らなければ **Ctrl+Z** で元に戻せます。アンドゥは無制限 — すべての編集が記録されています。
 
 <PlaygroundAudioDemo client:load showRand={true} />
 
-## 6. パフォーマンスコントロール
+## 5. パフォーマンスコントロール
 
 再生中にトランスポートバーのパフォーマンスボタン（FILL / REV / BRK）を押し続けると、リアルタイムエフェクトがかかります:
 
-<PlaygroundAudioDemo client:load showPerf={true} />
+<PlaygroundAudioDemo client:load showPerf={true} showGrid={false} />
 
 - **FILL** — 押している間、自動ドラムフィル
 - **REV** — 逆再生
@@ -62,7 +56,7 @@ INBOIL ではほぼすべてのパラメーターをノブで操作します。*
 
 ボタンを離すと即座に通常の再生に戻ります。
 
-## 7. 作業を保存する
+## 6. 作業を保存する
 
 プロジェクトは編集のたびにブラウザのローカルストレージへ自動保存されます。**SYSTEM → SAVE AS** で名前付きスナップショットを作成でき、**EXPORT** で JSON バックアップをダウンロードできます。
 
