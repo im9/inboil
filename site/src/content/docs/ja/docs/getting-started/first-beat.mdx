@@ -6,6 +6,7 @@ description: inboil で最初のビートを作るステップバイステップ
 import KnobDemo from '../../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../../components/PlaygroundStepGrid.svelte';
 import PlaygroundPerfButtons from '../../../../../components/PlaygroundPerfButtons.svelte';
+import PlaygroundAudioDemo from '../../../../../components/PlaygroundAudioDemo.svelte';
 
 ## 1. 再生と停止
 
@@ -23,9 +24,9 @@ inboil ではほぼすべてのパラメーターをノブで操作します。*
 
 グリッドのセルをタップしてトリガーの ON/OFF を切り替えます。**ドラッグ**で一度に複数のステップを描けます。各行がトラック（KICK、SNARE、HI-HAT など）に対応しています。
 
-下のグリッドには4つ打ちの KICK と HI-HAT パターンがプリセットされています。SNARE を追加したり、ステップを切り替えてみてください:
+下のグリッドには4つ打ちの KICK と HI-HAT パターンがプリセットされています。**▶ Play** を押して音を聴いてから、SNARE を追加したりステップを切り替えてみてください:
 
-<PlaygroundStepGrid client:visible />
+<PlaygroundAudioDemo client:load />
 
 ### ステップ数
 

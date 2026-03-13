@@ -43,7 +43,7 @@ Yes — connect a USB or BLE MIDI keyboard and configure it in **SYSTEM → MIDI
 ## Patterns & Sequencing
 
 ### How many patterns can I have?
-20 patterns per project. Patterns 00–19 — the first few come pre-loaded with demo content.
+100 patterns per project.
 
 ### Can tracks have different step counts?
 Yes — each track has an independent step count from **2 to 64**. Different step counts create polyrhythms.

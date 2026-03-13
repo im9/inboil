@@ -6,6 +6,7 @@ description: Step-by-step guide to making your first beat in inboil.
 import KnobDemo from '../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
 import PlaygroundPerfButtons from '../../../../components/PlaygroundPerfButtons.svelte';
+import PlaygroundAudioDemo from '../../../../components/PlaygroundAudioDemo.svelte';
 
 ## 1. Play & Stop
 
@@ -23,9 +24,9 @@ Knobs respond to fine control — hold **Shift** while dragging for precision. D
 
 Tap cells in the step grid to toggle triggers on/off. **Drag to paint** multiple steps in one gesture. Each row is a track — kick, snare, hi-hat, etc.
 
-This grid has a 4-on-the-floor kick and hi-hat pattern pre-loaded. Try adding snare hits or toggling steps:
+This grid has a 4-on-the-floor kick and hi-hat pattern pre-loaded. Hit **▶ Play** to hear it, then try adding snare hits or toggling steps:
 
-<PlaygroundStepGrid client:visible />
+<PlaygroundAudioDemo client:load />
 
 ### Step Count
 
