@@ -45,13 +45,13 @@ Yes — connect a USB or BLE MIDI keyboard and configure it in **SYSTEM → MIDI
 ## Patterns & Sequencing
 
 ### How many patterns can I have?
-100 patterns per project.
+You can create up to **100 patterns** per project. Each cell in the Matrix corresponds to one pattern.
 
 ### Can tracks have different step counts?
 Yes — each track has an independent step count from **2 to 64**. Different step counts create polyrhythms.
 
-### What is Per-Step Lock?
-A way to change a sound parameter for just one step. Enable **LOCK ON** in the Dock, select a step, then turn knobs. That step gets its own sound settings while the rest of the pattern keeps the original.
+### What is P-LOCK?
+**P-LOCK** (per-step parameter lock) lets you change a sound parameter for just one step. Tap **P-LOCK** in the Dock, select a step, then turn knobs. That step gets its own sound settings while the rest of the pattern keeps the original.
 
 ## Scene Graph
 
@@ -59,7 +59,7 @@ A way to change a sound parameter for just one step. Enable **LOCK ON** in the D
 **Loop** plays the current pattern on repeat. **Scene** traverses the scene graph starting from the root node, following edges to create longer arrangements with variation.
 
 ### Can the scene loop forever?
-Yes — if your edges form a cycle (A → B → C → A), playback loops through those nodes indefinitely. Use weighted edges for variation so it never sounds exactly the same.
+Yes — if your edges form a cycle (A → B → C → A), playback loops through those nodes indefinitely. When a node has multiple outgoing edges, the next destination is chosen **randomly**, so the arrangement varies on each pass.
 
 ### What are Generative nodes?
 Nodes that create musical content algorithmically instead of playing a stored pattern. Available engines: Turing Machine, Quantizer, and Tonnetz.

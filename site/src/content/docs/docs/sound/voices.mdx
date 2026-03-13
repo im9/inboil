@@ -35,6 +35,8 @@ All drum voices share a common synthesis engine with four parameter groups: **OS
 | **RIM** | Rimshot | Sharp transient |
 | **BELL** | Cowbell | Metallic bell |
 | **SHKR** | Shaker | Noise-based shaker |
+| **CRSH** | Crash | Crash cymbal |
+| **RIDE** | Ride | Ride cymbal |
 
 ### Key Parameters
 
@@ -65,8 +67,13 @@ Monophonic bass synth inspired by the Roland TB-303.
 
 The BASS voice responds to **slide** (SLD) for portamento glides — essential for acid patterns.
 
+### BASS — Analog (Analog Bass)
+Monophonic bass synth with a simpler parameter set.
+- **CUT / MOD / RESO** — Filter section
+- **DCY** — Amplitude decay
+
 ### LEAD (Analog Synth)
-Polyphonic lead synth with full ADSR envelope and built-in arpeggiator.
+Monophonic lead synth with full ADSR envelope and built-in arpeggiator.
 - **CUT / MOD / RESO / FDCY** — Filter section
 - **ATCK / ADCY / SUST / RLS** — Amp ADSR envelope
 - **ARP / RATE / CHRD / AOCT** — Arpeggiator (OFF / UP / DOWN / U-D / RND)
@@ -96,11 +103,12 @@ Dual-oscillator morphing wavetable synth with unison and LFO.
 - **WV-A / WV-B** — Wavetable position for each oscillator
 - **MIX** — Oscillator A/B mix
 - **COMB** — Combine mode (MIX / FM / RING)
-- **CUT / RESO / FTYP** — Filter (LP / HP / BP / NTCH)
+- **CUT / FMOD / RESO / FTYP** — Filter (LP / HP / BP / NTCH)
 - **DRIV** — Post-filter saturation
 - **UNI / SPRD / WIDE** — Unison voices, detune spread, stereo width
 - **ATCK / DCY / SUST / RLS** — Amp ADSR envelope
-- **LFO 1 / LFO 2** — Two LFOs with tempo sync
+- **LFO 1** — LFO with tempo sync
+- **LFO 2** — Free-running LFO
 
 Poly modes: **MONO** / **POLY 16** / **WIDE 8** / **UNISON**
 

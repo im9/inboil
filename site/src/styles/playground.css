@@ -125,4 +125,19 @@
 .playground.dark-zone {
   background: var(--color-fg);
   color: var(--color-bg);
+
+  /* Dock design tokens (mirror DockPanel.svelte) */
+  --dk-cream: 237,232,220;
+  --dk-text: rgba(var(--dk-cream), 0.85);
+  --dk-text-mid: rgba(var(--dk-cream), 0.55);
+  --dk-text-dim: rgba(var(--dk-cream), 0.4);
+  --dk-border: rgba(var(--dk-cream), 0.15);
+  --dk-border-mid: rgba(var(--dk-cream), 0.3);
+  --dk-bg-hover: rgba(var(--dk-cream), 0.08);
+  --dk-bg-faint: rgba(var(--dk-cream), 0.06);
+  --dk-bg-active: rgba(var(--dk-cream), 0.12);
+  --dk-fs-xs: 9px;
+  --dk-fs-sm: 10px;
+  --dk-fs-md: 11px;
+  --dk-fs-lg: 12px;
 }

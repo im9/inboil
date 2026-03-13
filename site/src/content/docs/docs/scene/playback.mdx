@@ -16,7 +16,7 @@ INBOIL has two playback modes:
 | **Loop** | Plays the current pattern on repeat (default) |
 | **Scene** | Traverses the scene graph starting from the root node |
 
-Tap **▶** to play in Loop mode. **Long-press ▶** (or use the mode toggle) to start Scene playback.
+Tap **▶** (or **Space**) to play in Loop mode. In the Scene view, tap the **▶ button next to the root node** to start Scene playback.
 
 ## Scene Playback Flow
 
@@ -28,24 +28,13 @@ Tap **▶** to play in Loop mode. **Long-press ▶** (or use the mode toggle) to
 2. **Play the pattern** — the pattern referenced by the node plays from start to end
 3. **Apply decorators** — transpose, tempo, repeat, FX, automation are applied during playback
 4. **Repeat** — if a Repeat decorator exists, the pattern loops N times
-5. **Choose next edge** — if the node has outgoing edges, pick one randomly based on weight
+5. **Choose next edge** — if the node has outgoing edges, pick one randomly (equal probability)
 6. **Move to next node** — playback continues at the destination node
 7. **Stop at terminal** — if there are no outgoing edges, playback ends
 
 ### Edge Selection
 
-At fork points (nodes with multiple outgoing edges), the engine uses **weighted random selection**:
-
-```
-Weight of edge A: 3
-Weight of edge B: 1
-Weight of edge C: 1
-Total: 5
-
-Probability A = 3/5 = 60%
-Probability B = 1/5 = 20%
-Probability C = 1/5 = 20%
-```
+At fork points (nodes with multiple outgoing edges), the engine picks the next destination **randomly with equal probability**. For example, a node with 3 outgoing edges gives each a 1/3 chance of being chosen.
 
 This creates **generative arrangements** — the same scene plays differently every time.
 
@@ -55,16 +44,9 @@ If edges form a cycle (A → B → C → A), playback loops indefinitely through
 
 To stop scene playback, press **Space** or tap **■**.
 
-## Two-Cursor Model
+## Editing During Playback
 
-INBOIL maintains two independent cursors:
-
-| Cursor | Controlled by | Purpose |
-|--------|--------------|---------|
-| **User cursor** (`ui.currentPattern`) | Tapping patterns in Matrix/Scene | Shows which pattern you're editing |
-| **Playback cursor** (`playback.playingPattern`) | Scene engine | Controls which pattern is currently audible |
-
-During scene playback, the playback cursor moves automatically through the graph. Your user cursor stays where you left it — you can edit patterns while the scene plays without disrupting playback.
+During scene playback, the engine automatically moves through the graph. You can tap any pattern in the Matrix or Scene to edit it without interrupting playback — what you're editing and what's playing are independent.
 
 ## Tempo Changes
 

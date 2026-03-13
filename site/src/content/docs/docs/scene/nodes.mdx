@@ -53,16 +53,11 @@ Edges are directed connections between nodes. They define the playback path.
 | Property | Meaning |
 |----------|---------|
 | **Direction** | From → To (one-way) |
-| **Weight** | Probability of being chosen at forks (default: 1) |
+| **Order** | Display sequence at forks (reorder with Arrow Up/Down when selected) |
 
-### Weight and Probability
+### Fork Selection
 
-When a node has multiple outgoing edges, the scene engine picks one randomly based on weight. Example:
-
-- Edge A (weight 3) → 75% chance
-- Edge B (weight 1) → 25% chance
-
-Weights are relative — what matters is the ratio, not the absolute value.
+When a node has multiple outgoing edges, the scene engine picks one **randomly** with equal probability. The **order** property controls visual display order but does not affect selection probability.
 
 ### Terminal Nodes
 
@@ -70,7 +65,7 @@ A node with **no outgoing edges** is a terminal. Scene playback stops when it re
 
 ## The Root Node
 
-Every scene has one **root node** (marked with a dot). This is where scene playback begins. To change the root, right-click a node and select "Set as Root."
+Every scene has one **root node** (marked with a dot). This is where scene playback begins. To change the root, **double-click** a node.
 
 ## Interaction
 
@@ -78,8 +73,8 @@ Every scene has one **root node** (marked with a dot). This is where scene playb
 |--------|--------|
 | **Click** node | Select it → shows details in Dock |
 | **Drag** node | Reposition |
-| **Click** edge | Select it → shows weight control |
-| **Drag** from node edge | Create new connection |
+| **Click** edge | Select edge (Arrow Up/Down to reorder) |
+| **Long-press** node (500 ms) | Enter edge-draw mode (drag to target) |
 | **Right-click** empty space | Add generative node or label |
 | **Delete** key | Remove selected node or edge |
 | **Scroll / pinch** | Zoom |
