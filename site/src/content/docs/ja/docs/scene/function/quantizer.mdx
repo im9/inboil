@@ -1,0 +1,37 @@
+---
+title: Quantizer
+description: 入力ノートをスケール度数にスナップ — Turing Machine の後にチェインするのが一般的。
+sidebar:
+  order: 2
+---
+
+ノートのシーケンスを受け取り、**最も近いスケール度数にスナップ**します。Turing Machine の後に接続して、ランダムな出力を音楽的なキーに固定するのが最も一般的な使い方です。
+
+## パラメータ
+
+| ノブ | 範囲 | 説明 |
+|------|------|------|
+| **ROOT** | C–B | スケールのルートノート |
+| **OCT LO** | 0–8 | 最低オクターブ |
+| **OCT HI** | 0–8 | 最高オクターブ |
+
+## スケール
+
+ドロップダウンから選択できます：
+
+Major、Minor、Dorian、Phrygian、Lydian、Mixolydian、Locrian、Pentatonic、Minor Pentatonic、Blues、Harmonic Minor、Melodic Minor、Whole Tone、Chromatic。
+
+## チェイン：Turing → Quantizer
+
+Turing Machine ノードの出力エッジを Quantizer ノードに接続し、さらに Quantizer をパターンノードに接続します。シグナルフローのように動作します：
+
+1. Turing Machine が生のランダムノートを生成
+2. Quantizer が全ノートを選択したスケールにスナップ
+3. 結果がターゲットパターンに書き込まれる（またはレイヤーされる）
+
+これが最も一般的なファンクションノードの構成です — リズム的には予測不能ながら、和声的に調和したメロディが得られます。
+
+## 関連
+
+- [Turing Machine](/ja/docs/scene/function/turing-machine/) — 最も一般的な入力ソース
+- [ファンクションノード](/ja/docs/scene/function/) — マージモード、シード、プリセット、シーケンサー連携

@@ -1,0 +1,45 @@
+---
+title: Tonnetz
+description: Generates chord progressions by navigating neo-Riemannian harmonic relationships.
+sidebar:
+  order: 3
+---
+
+Generates **chord progressions** by navigating the [Tonnetz](https://en.wikipedia.org/wiki/Tonnetz) — a mathematical lattice of harmonic relationships used in neo-Riemannian music theory.
+
+Starting from an initial triad, it applies a sequence of transformations to walk through related chords. Each transformation moves to a nearby chord that shares two of three notes.
+
+## Transformations
+
+| Op | Name | Effect |
+|----|------|--------|
+| **P** | Parallel | Flips the third — major ↔ minor (C major → C minor) |
+| **L** | Leading-tone | Moves root or fifth by semitone (C major → E minor) |
+| **R** | Relative | Shifts to the relative key (C major → A minor) |
+
+Compound operations apply multiple transforms at once: **PL**, **PR**, **LR**, **PLR**.
+
+## Parameters
+
+| Control | Description |
+|---------|-------------|
+| **Chord** | Starting triad — root note + quality (major / minor) |
+| **Sequence** | Ordered list of transform operations. Add with **+**, remove with **−**. The sequence loops when exhausted. |
+| **STEPS** knob | Steps per chord (1–16) — how long each chord is held before the next transform |
+| **Voicing** | How chord notes are spaced: **Close** (root, 3rd, 5th), **Spread** (root, 3rd+octave, 5th), **Drop2** (root, 5th, 3rd+octave) |
+
+## Example
+
+Start chord: C major. Sequence: P → L → R.
+
+| Step | Transform | Chord |
+|------|-----------|-------|
+| 1–4 | — | C major (C E G) |
+| 5–8 | P | C minor (C E♭ G) |
+| 9–12 | L | A♭ major (A♭ C E♭) |
+| 13–16 | R | F minor (F A♭ C) |
+| 17–20 | P (loops) | F major (F A C) |
+
+## Related
+
+- [Function Nodes](/docs/scene/function/) — merge mode, seed, presets, step sequencer integration

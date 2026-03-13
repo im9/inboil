@@ -1,0 +1,37 @@
+---
+title: Quantizer
+description: Snaps incoming notes to scale degrees — commonly chained after a Turing Machine.
+sidebar:
+  order: 2
+---
+
+Takes a sequence of notes and **snaps each to the nearest scale degree**. Most commonly used after a Turing Machine to lock random output to a musical key.
+
+## Parameters
+
+| Knob | Range | Description |
+|------|-------|-------------|
+| **ROOT** | C–B | Root note of the scale |
+| **OCT LO** | 0–8 | Lowest octave |
+| **OCT HI** | 0–8 | Highest octave |
+
+## Scale
+
+Select from the dropdown:
+
+Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, Pentatonic, Minor Pentatonic, Blues, Harmonic Minor, Melodic Minor, Whole Tone, Chromatic.
+
+## Chaining: Turing → Quantizer
+
+Connect a Turing Machine node's output edge to a Quantizer node, then connect the Quantizer to a Pattern node. The chain works like a signal flow:
+
+1. Turing Machine generates raw pseudo-random notes
+2. Quantizer snaps every note to the chosen scale
+3. Result is written to (or layered on) the target pattern
+
+This is the most common function node setup — rhythmically unpredictable but harmonically consonant melodies.
+
+## Related
+
+- [Turing Machine](/docs/scene/function/turing-machine/) — the most common input source
+- [Function Nodes](/docs/scene/function/) — merge mode, seed, presets, step sequencer integration

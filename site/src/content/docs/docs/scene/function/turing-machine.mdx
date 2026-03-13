@@ -1,0 +1,35 @@
+---
+title: Turing Machine
+description: Shift-register sequencer that generates pseudo-random sequences evolving over time.
+sidebar:
+  order: 1
+---
+
+A shift-register sequencer inspired by [Music Thing Modular's Turing Machine](https://musicthing.co.uk/). A chain of bits shifts on each step, with a probability of the last bit flipping. The result is a sequence that **evolves gradually** — from frozen loops to pure randomness.
+
+## Parameters
+
+| Knob | Range | Description |
+|------|-------|-------------|
+| **LEN** | 2–32 | Register length — how many steps before the pattern can repeat |
+| **LOCK** | 0.0–1.0 | Stability — **1.0** = frozen loop, **0.0** = fully random, **0.5** = evolving |
+| **DENS** | 0.0–1.0 | Probability of a step being active |
+
+## Mode
+
+Three output modes, selectable via toggle buttons:
+
+| Mode | Output |
+|------|--------|
+| **NOTE** | Register bits map to pitch within the note range. Density controls step activity. |
+| **GAT** | Fixed pitch (center of range). Register bits control which steps are active — useful for hi-hat patterns. |
+| **VEL** | All steps active. Register bits control velocity (0.3–1.0) — for ghost-note grooves. |
+
+## Note Range
+
+The **Range** display shows the MIDI note bounds (e.g. 48–72 = C3–C5). In NOTE mode, the register value is mapped to a pitch within this range.
+
+## Related
+
+- [Quantizer](/docs/scene/function/quantizer/) — chain after Turing Machine to lock output to a scale
+- [Function Nodes](/docs/scene/function/) — merge mode, seed, presets, step sequencer integration

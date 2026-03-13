@@ -48,7 +48,15 @@ export default defineConfig({
         },
         {
           label: 'Scene',
-          autogenerate: { directory: 'docs/scene' },
+          items: [
+            { slug: 'docs/scene/nodes' },
+            { slug: 'docs/scene/decorators' },
+            { slug: 'docs/scene/playback' },
+            {
+              label: 'Function Nodes',
+              autogenerate: { directory: 'docs/scene/function' },
+            },
+          ],
         },
         {
           label: 'Reference',
