@@ -5,16 +5,16 @@ sidebar:
   order: 2
 ---
 
-import KnobDemo from '../../../../../components/KnobDemo.svelte';
-import PlaygroundDockTrackEditor from '../../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundVoiceDemo from '../../../../../components/PlaygroundVoiceDemo.svelte';
 import PlaygroundEnvGraph from '../../../../../components/PlaygroundEnvGraph.svelte';
 import PlaygroundWaveGraph from '../../../../../components/PlaygroundWaveGraph.svelte';
+import PlaygroundAudioDemo from '../../../../../components/PlaygroundAudioDemo.svelte';
 
 ## ボイスパラメーター
 
-各トラックには**ボイス**（ステップがトリガーされたときに鳴る音源）があります。トラックのラベルをタップすると、**Dock パネル**にパラメーターが表示されます。
+各トラックには**ボイス**（ステップがトリガーされたときに鳴る音源）があります。トラックを選択してパラメーターを確認し、ノブを回してからキーをタップして音を聴いてみましょう:
 
-<PlaygroundDockTrackEditor client:visible />
+<PlaygroundVoiceDemo client:load />
 
 ### ドラムボイス
 
@@ -34,12 +34,6 @@ import PlaygroundWaveGraph from '../../../../../components/PlaygroundWaveGraph.s
 | **LEAD** | Moog スタイルのリード — filter、envelope、detune |
 | **FM** | FM シンセシス — ratio、modulation index、feedback |
 | **WAVE** | ウェーブテーブル — 波形間をモーフィング |
-
-## ノブを試す
-
-すべてのパラメーターはノブで操作します。上にドラッグで増加、下にドラッグで減少:
-
-<KnobDemo client:visible />
 
 ## エンベロープ
 
@@ -64,7 +58,11 @@ import PlaygroundWaveGraph from '../../../../../components/PlaygroundWaveGraph.s
 
 ### ステップロック
 
-Dock で **LOCK ON** を有効にしてからステップを選択し、ノブを回すと、音色の変更が**そのステップにだけ**適用されます。パターンの他のステップは元の音色のまま。フィルタースウィープ、アクセントパターン、音色バリエーションなどを1つのパターン内で作れます。
+Dock で **P-LOCK** を有効にしてからステップを選択し、ノブを回すと、音色の変更が**そのステップにだけ**適用されます。パターンの他のステップは元の音色のまま。フィルタースウィープ、アクセントパターン、音色バリエーションなどを1つのパターン内で作れます。
+
+試してみましょう: **P-LOCK** をオンにし、アクティブなステップをタップしてからノブを回します。**Play** で違いを確認できます。ロックされたパラメーターにはノブに青いドットが表示されます。
+
+<PlaygroundAudioDemo client:load showLock={true} />
 
 ステップのロックパラメーターを消去するには **CLR** をタップします。
 

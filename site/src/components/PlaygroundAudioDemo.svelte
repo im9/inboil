@@ -7,16 +7,18 @@
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '$app/lib/paramDefs.ts'
   import { cellForTrack } from '$app/lib/state.svelte.ts'
   import { randomizePattern } from '$app/lib/randomize.ts'
+  import { knobValue, knobChange, isParamLocked } from '$app/lib/paramHelpers.ts'
+  import { clearAllParamLocks } from '$app/lib/stepActions.ts'
 
-  let { showPerf = false, showRand = false, showGrid = true }: { showPerf?: boolean; showRand?: boolean; showGrid?: boolean } = $props()
+  let { showPerf = false, showRand = false, showGrid = true, showLock = false }: { showPerf?: boolean; showRand?: boolean; showGrid?: boolean; showLock?: boolean } = $props()
 
   let audioReady = $state(false)
   let error = $state('')
 
   // Selected track's cell & params
-  const track = $derived(song.tracks[ui.currentTrack])
+  const track = $derived(song.tracks[ui.selectedTrack])
   const cell = $derived(track ? cellForTrack(song.patterns[ui.currentPattern], track.id) : null)
-  const params = $derived(cell ? getParamDefs(cell.voiceId).slice(0, 6) : [])
+  const params = $derived(cell ? getParamDefs(cell.voiceId).slice(0, showLock ? 4 : 6) : [])
 
   // Engine context — soloTracks is reactive via $derived
   const engineCtx = $derived({ fxFlavours: { verb: 'room' as const, delay: 'sync' as const, glitch: 'glitch' as const, granular: 'cloud' as const }, masterPad: { comp: { on: false, x: 0, y: 0 }, duck: { on: false, x: 0, y: 0 }, ret: { on: false, x: 0, y: 0 } }, soloTracks: ui.soloTracks })
@@ -92,18 +94,38 @@
 <div class="audio-demo not-content">
   <div class="audio-transport">
     {#if !playback.playing}
-      <button class="btn-transport btn-play" onclick={play}>▶ Play</button>
+      <button class="btn btn-play" onclick={play}>▶ Play</button>
     {:else}
-      <button class="btn-transport btn-stop" onclick={stop}>■ Stop</button>
+      <button class="btn btn-stop" onclick={stop}>■ Stop</button>
     {/if}
     <span class="bpm-label">BPM {song.bpm}</span>
     {#if showRand}
-      <button class="btn-transport btn-rand" onclick={randomizePattern}>RAND</button>
+      <button class="btn btn-olive" onclick={randomizePattern}>RAND</button>
+    {/if}
+    {#if showLock}
+      <span class="separator"></span>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="plock-toggle" onpointerdown={() => { ui.lockMode = !ui.lockMode; if (!ui.lockMode) ui.selectedStep = null }}>
+        <span class="plock-label">P-LOCK</span>
+        <span class="mode-switch" class:on={ui.lockMode}><span class="mode-switch-thumb"></span></span>
+      </div>
+      {#if ui.lockMode}
+        <span class="lock-info" class:active={ui.selectedStep !== null}>
+          {ui.selectedStep !== null ? `STEP ${ui.selectedStep + 1}` : 'tap a step'}
+        </span>
+        {#if ui.selectedStep !== null}
+          <button
+            class="btn btn-salmon"
+            onclick={() => { if (ui.selectedStep !== null) clearAllParamLocks(ui.selectedTrack, ui.selectedStep); }}
+          >CLR</button>
+        {/if}
+      {/if}
     {/if}
     {#if showPerf}
       <div class="perf-group">
         <button
-          class="btn-transport btn-perf"
+          class="btn btn-blue"
           class:active={perf.filling}
           class:stopped={!playback.playing}
           onpointerdown={() => { perf.filling = true }}
@@ -111,7 +133,7 @@
           onpointerleave={() => { perf.filling = false }}
         >FILL</button>
         <button
-          class="btn-transport btn-perf"
+          class="btn btn-blue"
           class:active={perf.reversing}
           class:stopped={!playback.playing}
           onpointerdown={() => { perf.reversing = true }}
@@ -119,7 +141,7 @@
           onpointerleave={() => { perf.reversing = false }}
         >REV</button>
         <button
-          class="btn-transport btn-brk"
+          class="btn btn-salmon"
           class:active={perf.breaking}
           class:stopped={!playback.playing}
           onpointerdown={() => { perf.breaking = true }}
@@ -130,23 +152,45 @@
     {/if}
     {#if error}<span class="error">{error}</span>{/if}
   </div>
+  {#if showLock && cell && params.length > 0}
+    <div class="audio-params">
+      <span class="track-name">{cell.voiceId}</span>
+      {#each params as def}
+        {@const val = ui.lockMode ? knobValue(def) : (cell.voiceParams[def.key] ?? def.default)}
+        {@const locked = isParamLocked(def.key)}
+        <span class="knob-wrap" class:locked>
+          <Knob
+            value={normalizeParam(def, val)}
+            label={def.label}
+            size={36}
+            displayValue={displayLabel(def, val) ?? String(Math.round(val * 10) / 10)}
+            steps={paramSteps(def)}
+            onchange={ui.lockMode ? (v) => knobChange(def, v) : (v) => handleParamChange(def.key, def, v)}
+          />
+        </span>
+      {/each}
+    </div>
+  {/if}
   {#if showGrid}
   <div class="playground" style="height: 360px;">
     <StepGrid />
   </div>
   {/if}
-  {#if cell && params.length > 0}
+  {#if !showLock && cell && params.length > 0}
     <div class="audio-params">
       <span class="track-name">{cell.voiceId}</span>
       {#each params as def}
-        <Knob
-          value={normalizeParam(def, cell.voiceParams[def.key] ?? def.default)}
-          label={def.label}
-          size={36}
-          displayValue={displayLabel(def, cell.voiceParams[def.key] ?? def.default) ?? String(Math.round((cell.voiceParams[def.key] ?? def.default) * 10) / 10)}
-          steps={paramSteps(def)}
-          onchange={(v) => handleParamChange(def.key, def, v)}
-        />
+        {@const val = (cell.voiceParams[def.key] ?? def.default)}
+        <span class="knob-wrap">
+          <Knob
+            value={normalizeParam(def, val)}
+            label={def.label}
+            size={36}
+            displayValue={displayLabel(def, val) ?? String(Math.round(val * 10) / 10)}
+            steps={paramSteps(def)}
+            onchange={(v) => handleParamChange(def.key, def, v)}
+          />
+        </span>
       {/each}
     </div>
   {/if}
@@ -156,37 +200,40 @@
   .audio-demo {
     border-radius: 12px;
     overflow: hidden;
-    --color-bg:      #EDE8DC;
-    --color-fg:      #1E2028;
-    --color-blue:    #4472B4;
-    --color-salmon:  #E8A090;
-    --color-olive:   #787845;
-    --color-muted:   #9A9680;
-    --font-data:     'JetBrains Mono', 'Fira Code', monospace;
+    --c-bg:      #1E2028;
+    --c-fg:      #EDE8DC;
+    --c-olive:   #787845;
+    --c-salmon:  #E8A090;
+    --c-blue:    #4472B4;
+    --c-muted:   rgba(237,232,220,0.15);
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
   .audio-demo :global(.playground) {
     border-radius: 0;
   }
+
+  /* ── Transport bar ── */
   .audio-transport {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 8px 12px;
-    background: #1E2028;
-    color: #EDE8DC;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: var(--c-bg);
+    color: var(--c-fg);
+    font-family: var(--font-mono);
     font-size: 12px;
     border-radius: 12px 12px 0 0;
   }
 
-  /* Shared base for ALL transport buttons — single source of truth */
-  .btn-transport {
+  /* ── Button base — single source of truth ── */
+  .btn {
     height: 28px;
-    line-height: 28px;
-    padding: 0 12px;
+    line-height: 26px;
+    padding: 0 10px;
     border: 1.5px solid;
+    border-radius: 3px;
     background: transparent;
-    font-family: inherit;
+    font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -194,24 +241,90 @@
     user-select: none;
     touch-action: none;
     box-sizing: border-box;
+    transition: background 0.1s, color 0.1s;
   }
 
-  /* Play / Stop variants */
-  .btn-play {
-    border-color: #787845;
-    color: #EDE8DC;
-    font-size: 12px;
-  }
-  .btn-play:hover { background: #787845; }
-  .btn-stop {
-    border-color: #E8A090;
-    color: #EDE8DC;
-    font-size: 12px;
-  }
-  .btn-stop:hover { background: #E8A090; color: #1E2028; }
+  /* Color variants — olive (primary), salmon (destructive), blue (perf) */
+  .btn-olive  { border-color: var(--c-olive);  color: var(--c-olive); }
+  .btn-olive:hover  { background: var(--c-olive);  color: var(--c-bg); }
+  .btn-salmon { border-color: var(--c-salmon); color: var(--c-salmon); }
+  .btn-salmon:hover { background: var(--c-salmon); color: var(--c-bg); }
+  .btn-blue   { border-color: var(--c-blue);   color: var(--c-blue); }
+  .btn-blue:active, .btn-blue.active { background: var(--c-blue); color: var(--c-fg); }
+  .btn-salmon:active, .btn-salmon.active { background: var(--c-salmon); color: var(--c-bg); }
 
-  .bpm-label { opacity: 0.6; }
+  /* Stopped state — shared by perf buttons */
+  .btn.stopped {
+    border-color: var(--c-muted);
+    color: rgba(237,232,220,0.25);
+    cursor: default;
+  }
 
+  /* Play / Stop — larger text for primary action */
+  .btn-play { border-color: var(--c-olive); color: var(--c-fg); font-size: 12px; }
+  .btn-play:hover { background: var(--c-olive); }
+  .btn-stop  { border-color: var(--c-salmon); color: var(--c-fg); font-size: 12px; }
+  .btn-stop:hover  { background: var(--c-salmon); color: var(--c-bg); }
+
+  .bpm-label { opacity: 0.5; font-size: 11px; }
+  .error { color: var(--c-salmon); }
+
+  /* ── Separator ── */
+  .separator {
+    width: 1px;
+    height: 16px;
+    background: var(--c-muted);
+    flex-shrink: 0;
+  }
+
+  /* ── P-LOCK toggle ── */
+  .plock-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .plock-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.6);
+  }
+  .mode-switch {
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--c-muted);
+    position: relative;
+    transition: background 0.15s;
+  }
+  .mode-switch.on { background: var(--c-olive); }
+  .mode-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(237,232,220,0.6);
+    transition: left 0.15s, background 0.15s;
+  }
+  .mode-switch.on .mode-switch-thumb {
+    left: 19px;
+    background: var(--c-fg);
+  }
+
+  /* ── Lock info ── */
+  .lock-info {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(237,232,220,0.4);
+  }
+  .lock-info.active { color: var(--c-olive); }
+
+  /* ── Perf group ── */
   .perf-group {
     display: flex;
     gap: 4px;
@@ -219,57 +332,33 @@
     align-items: center;
   }
 
-  /* Perf button colors */
-  .btn-perf {
-    border-color: #4472B4;
-    color: #4472B4;
-  }
-  .btn-perf:active, .btn-perf.active {
-    background: #4472B4;
-    color: #EDE8DC;
-  }
-  .btn-perf.stopped {
-    border-color: rgba(237,232,220,0.18);
-    color: rgba(237,232,220,0.25);
-    cursor: default;
-  }
-  .btn-brk {
-    border-color: #E8A090;
-    color: #E8A090;
-  }
-  .btn-brk:active, .btn-brk.active {
-    background: #E8A090;
-    color: #1E2028;
-  }
-  .btn-brk.stopped {
-    border-color: rgba(237,232,220,0.18);
-    color: rgba(237,232,220,0.25);
+  /* ── Knob lock indicator ── */
+  .knob-wrap { position: relative; display: inline-flex; }
+  .knob-wrap.locked::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--c-olive);
   }
 
-  .btn-rand {
-    border-color: #787845;
-    color: #787845;
-  }
-  .btn-rand:hover {
-    background: #787845;
-    color: #EDE8DC;
-  }
-
-  .error { color: #E8A090; }
-
+  /* ── Params row ── */
   .audio-params {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: #1E2028;
-    color: #EDE8DC;
+    background: var(--c-bg);
+    color: var(--c-fg);
     border-radius: 0 0 12px 12px;
     flex-wrap: wrap;
   }
   .track-name {
-    color: #787845;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--c-olive);
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;

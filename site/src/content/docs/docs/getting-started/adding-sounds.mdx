@@ -5,16 +5,16 @@ sidebar:
   order: 2
 ---
 
-import KnobDemo from '../../../../components/KnobDemo.svelte';
-import PlaygroundDockTrackEditor from '../../../../components/PlaygroundDockTrackEditor.svelte';
+import PlaygroundVoiceDemo from '../../../../components/PlaygroundVoiceDemo.svelte';
 import PlaygroundEnvGraph from '../../../../components/PlaygroundEnvGraph.svelte';
 import PlaygroundWaveGraph from '../../../../components/PlaygroundWaveGraph.svelte';
+import PlaygroundAudioDemo from '../../../../components/PlaygroundAudioDemo.svelte';
 
 ## Voice Parameters
 
-Every track has a **voice** — the instrument that plays when a step triggers. Select a track label to open its parameters in the **Dock panel**.
+Every track has a **voice** — the instrument that plays when a step triggers. Select a track to see its parameters, tweak the knobs, then tap the keys to hear the result:
 
-<PlaygroundDockTrackEditor client:visible />
+<PlaygroundVoiceDemo client:load />
 
 ### Drum Voices
 
@@ -34,12 +34,6 @@ Every track has a **voice** — the instrument that plays when a step triggers. 
 | **LEAD** | Moog-style lead — filter, envelope, detune |
 | **FM** | FM synthesis — ratio, modulation index, feedback |
 | **WAVE** | Wavetable — morph through waveforms |
-
-## Try a Knob
-
-Every parameter is controlled by a knob. Drag up to increase, down to decrease:
-
-<KnobDemo client:visible />
 
 ## Envelope
 
@@ -64,7 +58,11 @@ Each voice comes with **factory presets**. Tap the preset name in the Dock to br
 
 ### Per-Step Lock
 
-Enable **LOCK ON** in the Dock, then select a step and turn knobs. Sound changes apply to **that step only** — the rest of the pattern keeps its original sound. This is how you create filter sweeps, accent patterns, and timbral variation within a single pattern.
+Enable **P-LOCK** in the Dock, then select a step and turn knobs. Sound changes apply to **that step only** — the rest of the pattern keeps its original sound. This is how you create filter sweeps, accent patterns, and timbral variation within a single pattern.
+
+Try it: toggle **P-LOCK** on, tap an active step, then tweak a knob. Hit **Play** to hear the difference. Locked parameters show a blue dot on the knob.
+
+<PlaygroundAudioDemo client:load showLock={true} />
 
 Tap **CLR** to clear locked parameters from a step.
 
