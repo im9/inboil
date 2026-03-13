@@ -78,7 +78,7 @@
   }
 </script>
 
-<div class="voice-demo not-content">
+<div class="playground dark-zone voice-demo not-content">
   <!-- Track selector -->
   <div class="track-bar">
     {#each song.patterns[ui.currentPattern].cells as c}
@@ -164,11 +164,8 @@
 
 <style>
   .voice-demo {
-    background: #1E2028;
     border-radius: 12px;
     padding: 12px 16px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    color: rgba(237,232,220,0.85);
   }
   .track-bar {
     display: flex;

@@ -14,7 +14,7 @@
   const params = $derived(cell ? getParamDefs(cell.voiceId) : [])
 </script>
 
-<div class="dock-demo not-content">
+<div class="playground dark-zone dock-demo not-content">
   <!-- Track selector -->
   <div class="track-bar">
     {#each song.patterns[ui.currentPattern].cells as c}
@@ -60,11 +60,8 @@
 
 <style>
   .dock-demo {
-    background: #1E2028;
     border-radius: 12px;
     padding: 12px 16px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    color: rgba(237,232,220,0.85);
   }
   .track-bar {
     display: flex;
