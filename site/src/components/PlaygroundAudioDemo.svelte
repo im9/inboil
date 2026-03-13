@@ -1,6 +1,6 @@
 <script lang="ts">
   import '../styles/playground.css'
-  import { song, ui, playback, perf } from '$app/lib/state.svelte.ts'
+  import { song, ui, playback, perf, undo, redo } from '$app/lib/state.svelte.ts'
   import { engine } from '$app/lib/audio/engine.ts'
   import StepGrid from '$app/lib/components/StepGrid.svelte'
   import Knob from '$app/lib/components/Knob.svelte'
@@ -78,7 +78,16 @@
     if (!cell) return
     cell.voiceParams[key] = denormalizeParam(def, normalized)
   }
+
+  function onKeyDown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
+      e.preventDefault()
+      e.shiftKey ? redo() : undo()
+    }
+  }
 </script>
+
+<svelte:window onkeydown={onKeyDown} />
 
 <div class="audio-demo not-content">
   <div class="audio-transport">
