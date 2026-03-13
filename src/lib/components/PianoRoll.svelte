@@ -276,6 +276,8 @@
   let brushStrumStart = -1     // first step of strum placement
   let brushStrumLen = 0        // number of strum notes placed
   let brushRightClick = false  // right-click in draw mode → erase
+  let brushMoveStep = -1       // draw brush: pitch-move mode (step of note being moved)
+  let brushMoved = false       // true if pitch was actually changed during move
 
   function toggleBrush(mode: BrushMode) {
     ui.brushMode = ui.brushMode === mode ? 'draw' : mode
@@ -383,7 +385,15 @@
     noteGridEl?.setPointerCapture(e.pointerId)
     const key = `${stepIdx}:${note}`
     brushVisited.add(key)
-    if (mode === 'draw') brushPlaceNote(stepIdx, note)
+    if (mode === 'draw') {
+      // If clicking on an existing note head, enter pitch-move mode
+      const trig = ph.trigs[stepIdx]
+      if (trig?.active && trigHasNote(trig, note)) {
+        brushMoveStep = stepIdx
+      } else {
+        brushPlaceNote(stepIdx, note)
+      }
+    }
     else if (mode === 'eraser') brushEraseNote(stepIdx, note)
     else if (mode === 'chord') brushChordPlace(stepIdx, note)
     else if (mode === 'strum') {
@@ -405,9 +415,31 @@
     let note = getNoteFromY(relY)
     if (note < 0) return
     if (activeBrush !== 'eraser' && !brushRightClick) note = snapToScale(note)
-    // Draw brush: lock Y to initial pitch so horizontal drag = legato
-    // (9px rows make Y-drift inevitable; without this, legato never fires)
-    if (activeBrush === 'draw') note = brushConstrainNote
+    // Draw brush: existing note → pitch-move (Y free), empty cell → legato (Y locked)
+    if (activeBrush === 'draw') {
+      if (brushMoveStep >= 0) {
+        // Pitch-move mode: update note pitch of the dragged step
+        const trig = ph.trigs[brushMoveStep]
+        const snapped = snapToScale(note)
+        if (trig.active && snapped !== trig.note) {
+          if (isPoly && trig.notes) {
+            const idx = trig.notes.indexOf(brushConstrainNote)
+            if (idx >= 0) {
+              trig.notes[idx] = snapped
+              trig.notes.sort((a: number, b: number) => a - b)
+              trig.note = trig.notes[0]
+            }
+          } else {
+            trig.note = snapped
+          }
+          brushConstrainNote = snapped
+          brushMoved = true
+        }
+        return
+      }
+      // Legato mode: lock Y to initial pitch (9px rows make Y-drift inevitable)
+      note = brushConstrainNote
+    }
     const key = `${stepIdx}:${note}`
     if (brushVisited.has(key)) return
     brushVisited.add(key)
@@ -437,6 +469,10 @@
   }
 
   function brushEnd() {
+    // Draw brush on existing note with no drag → delete (DAW standard toggle)
+    if (brushMoveStep >= 0 && !brushMoved) {
+      brushEraseNote(brushMoveStep, brushConstrainNote)
+    }
     brushDragging = false
     brushVisited.clear()
     brushConstrainNote = -1
@@ -445,6 +481,8 @@
     brushStrumStart = -1
     brushStrumLen = 0
     brushRightClick = false
+    brushMoveStep = -1
+    brushMoved = false
   }
 
   // D/E modifier key shortcuts (disabled when vkbd is active)
