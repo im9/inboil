@@ -63,7 +63,8 @@ sidebar:
 | **Click** node | Select node |
 | **Drag** node | Reposition |
 | **Click** edge | Select edge |
-| **Long-press** node (500 ms) | Enter edge-draw mode (drag to target) |
+| **Drag** node handle (right side) | Start edge-draw (drag to target) |
+| **Long-press** node (500 ms) | Edge-draw mode on touch devices |
 | **Right-click** empty space | Bubble menu (add node/label) |
 | **Delete** | Remove selected element |
 | **Escape** | Deselect all |
