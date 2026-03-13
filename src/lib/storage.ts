@@ -65,6 +65,8 @@ function open(): Promise<IDBDatabase> {
       // When another tab opens a newer DB version, close this connection
       // so the upgrade isn't blocked (the user will reload this tab anyway)
       db.onversionchange = () => { db.close(); dbPromise = null }
+      // Request persistent storage so the browser won't evict our data
+      navigator.storage?.persist?.()
       resolve(db)
     }
     req.onerror = () => { dbPromise = null; reject(req.error) }
