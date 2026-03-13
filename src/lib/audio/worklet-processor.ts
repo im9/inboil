@@ -841,10 +841,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
       }
 
+      // ── Rhythmic break gate (pre-FX: dry signal only, FX tails ring through) ──
+      const gateTarget = this.breaking
+        ? (this.accumulator < this.currentThreshold * 0.5 ? 1.0 : 0.0)
+        : 1.0
+      this.gateEnv += (gateTarget - this.gateEnv) * (gateTarget > this.gateEnv ? 0.02 : 0.002)
+
       // Sidechain: duck rest + FX returns; source tracks punch through untouched (ADR 064)
       const duck = this.ducker.tick()
-      const mixL = sourceDry + (restL + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
-      const mixR = sourceDry + (restR + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
+      const mixL = sourceDry * this.gateEnv + (restL * this.gateEnv + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
+      const mixR = sourceDry * this.gateEnv + (restR * this.gateEnv + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
 
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
@@ -866,13 +872,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       const filt = this.djFilter.process(fL, fR)
       fL = filt[0]; fR = filt[1]
 
-      // ── Rhythmic break gate ───────────────────────────────────────
-      const gateTarget = this.breaking
-        ? (this.accumulator < this.currentThreshold * 0.5 ? 1.0 : 0.0)
-        : 1.0
-      this.gateEnv += (gateTarget - this.gateEnv) * 0.03
-      fL *= this.gateEnv
-      fR *= this.gateEnv
+      // (BRK gate applied pre-FX above)
 
       // Anti-click fade-in after pattern reset
       if (this.xfadeRemain > 0) {

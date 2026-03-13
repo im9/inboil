@@ -7,7 +7,6 @@ sidebar:
 
 import KnobDemo from '../../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../../components/PlaygroundStepGrid.svelte';
-import PlaygroundPerfButtons from '../../../../../components/PlaygroundPerfButtons.svelte';
 import PlaygroundAudioDemo from '../../../../../components/PlaygroundAudioDemo.svelte';
 
 ## 1. 再生と停止
@@ -49,11 +48,13 @@ inboil ではほぼすべてのパラメーターをノブで操作します。*
 
 **RAND** を押すとランダムなパターンが生成されます。気に入らなければ **Ctrl+Z** で元に戻せます。アンドゥは無制限 — すべての編集が記録されています。
 
+<PlaygroundAudioDemo client:load showRand={true} />
+
 ## 6. パフォーマンスコントロール
 
-再生中にパフォーマンスボタンを押し続けると、リアルタイムエフェクトがかかります:
+再生中にトランスポートバーのパフォーマンスボタン（FILL / REV / BRK）を押し続けると、リアルタイムエフェクトがかかります:
 
-<PlaygroundPerfButtons client:visible />
+<PlaygroundAudioDemo client:load showPerf={true} />
 
 - **FILL** — 押している間、自動ドラムフィル
 - **REV** — 逆再生

@@ -1,11 +1,14 @@
 <script lang="ts">
   import '../styles/playground.css'
-  import { song, ui, playback } from '$app/lib/state.svelte.ts'
+  import { song, ui, playback, perf } from '$app/lib/state.svelte.ts'
   import { engine } from '$app/lib/audio/engine.ts'
   import StepGrid from '$app/lib/components/StepGrid.svelte'
   import Knob from '$app/lib/components/Knob.svelte'
   import { getParamDefs, normalizeParam, denormalizeParam, displayLabel, paramSteps } from '$app/lib/paramDefs.ts'
   import { cellForTrack } from '$app/lib/state.svelte.ts'
+  import { randomizePattern } from '$app/lib/randomize.ts'
+
+  let { showPerf = false, showRand = false }: { showPerf?: boolean; showRand?: boolean } = $props()
 
   let audioReady = $state(false)
   let error = $state('')
@@ -15,8 +18,8 @@
   const cell = $derived(track ? cellForTrack(song.patterns[ui.currentPattern], track.id) : null)
   const params = $derived(cell ? getParamDefs(cell.voiceId).slice(0, 6) : [])
 
-  // Engine context (minimal — no FX pad, no master pad)
-  const engineCtx = { fxFlavours: { verb: 'room' as const, delay: 'sync' as const, glitch: 'glitch' as const, granular: 'cloud' as const }, masterPad: { comp: { on: false, x: 0, y: 0 }, duck: { on: false, x: 0, y: 0 }, ret: { on: false, x: 0, y: 0 } }, soloTracks: new Set<number>() }
+  // Engine context — soloTracks is reactive via $derived
+  const engineCtx = $derived({ fxFlavours: { verb: 'room' as const, delay: 'sync' as const, glitch: 'glitch' as const, granular: 'cloud' as const }, masterPad: { comp: { on: false, x: 0, y: 0 }, duck: { on: false, x: 0, y: 0 }, ret: { on: false, x: 0, y: 0 } }, soloTracks: ui.soloTracks })
 
   // Init tutorial pattern
   function initPattern() {
@@ -33,12 +36,20 @@
   }
   initPattern()
 
-  // Sync pattern to engine reactively
+  // Sync pattern + perf to engine reactively (rAF-batched like App.svelte)
+  let rafId = 0
   $effect(() => {
     if (!audioReady) return
-    // Touch reactive deps: read song deeply + playback state
+    // Touch reactive deps: pattern data + mute/solo + perf state
     JSON.stringify(song.patterns[ui.currentPattern])
-    engine.sendPatternByIndex(song, undefined, undefined, engineCtx, false, ui.currentPattern)
+    JSON.stringify(song.tracks.map(t => t.muted))
+    void ui.soloTracks.size
+    void perf.filling; void perf.reversing; void perf.breaking
+    cancelAnimationFrame(rafId)
+    rafId = requestAnimationFrame(() => {
+      engine.sendPatternByIndex(song, perf, undefined, engineCtx, false, ui.currentPattern)
+    })
+    return () => cancelAnimationFrame(rafId)
   })
 
   async function play() {
@@ -48,7 +59,7 @@
       engine.onStep = (heads: number[], cycle: boolean) => {
         playback.playheads = heads
       }
-      engine.sendPatternByIndex(song, undefined, undefined, engineCtx, true, ui.currentPattern)
+      engine.sendPatternByIndex(song, perf, undefined, engineCtx, true, ui.currentPattern)
       engine.play()
       playback.playing = true
     } catch (e) {
@@ -60,6 +71,7 @@
     engine.stop()
     playback.playing = false
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
+    perf.filling = false; perf.breaking = false; perf.reversing = false
   }
 
   function handleParamChange(key: string, def: { min: number; max: number; step?: number }, normalized: number) {
@@ -68,14 +80,45 @@
   }
 </script>
 
-<div class="audio-demo">
+<div class="audio-demo not-content">
   <div class="audio-transport">
     {#if !playback.playing}
-      <button class="btn-play" onclick={play}>▶ Play</button>
+      <button class="btn-transport btn-play" onclick={play}>▶ Play</button>
     {:else}
-      <button class="btn-stop" onclick={stop}>■ Stop</button>
+      <button class="btn-transport btn-stop" onclick={stop}>■ Stop</button>
     {/if}
     <span class="bpm-label">BPM {song.bpm}</span>
+    {#if showRand}
+      <button class="btn-transport btn-rand" onclick={randomizePattern}>RAND</button>
+    {/if}
+    {#if showPerf}
+      <div class="perf-group">
+        <button
+          class="btn-transport btn-perf"
+          class:active={perf.filling}
+          class:stopped={!playback.playing}
+          onpointerdown={() => { perf.filling = true }}
+          onpointerup={() => { perf.filling = false }}
+          onpointerleave={() => { perf.filling = false }}
+        >FILL</button>
+        <button
+          class="btn-transport btn-perf"
+          class:active={perf.reversing}
+          class:stopped={!playback.playing}
+          onpointerdown={() => { perf.reversing = true }}
+          onpointerup={() => { perf.reversing = false }}
+          onpointerleave={() => { perf.reversing = false }}
+        >REV</button>
+        <button
+          class="btn-transport btn-brk"
+          class:active={perf.breaking}
+          class:stopped={!playback.playing}
+          onpointerdown={() => { perf.breaking = true }}
+          onpointerup={() => { perf.breaking = false }}
+          onpointerleave={() => { perf.breaking = false }}
+        >BRK</button>
+      </div>
+    {/if}
     {#if error}<span class="error">{error}</span>{/if}
   </div>
   <div class="playground" style="height: 360px;">
@@ -102,6 +145,13 @@
   .audio-demo {
     border-radius: 12px;
     overflow: hidden;
+    --color-bg:      #EDE8DC;
+    --color-fg:      #1E2028;
+    --color-blue:    #4472B4;
+    --color-salmon:  #E8A090;
+    --color-olive:   #787845;
+    --color-muted:   #9A9680;
+    --font-data:     'JetBrains Mono', 'Fira Code', monospace;
   }
   .audio-demo :global(.playground) {
     border-radius: 0;
@@ -117,23 +167,85 @@
     font-size: 12px;
     border-radius: 12px 12px 0 0;
   }
-  .btn-play, .btn-stop {
-    border: 1.5px solid #787845;
+
+  /* Shared base for ALL transport buttons — single source of truth */
+  .btn-transport {
+    height: 28px;
+    line-height: 28px;
+    padding: 0 12px;
+    border: 1.5px solid;
     background: transparent;
-    color: #EDE8DC;
-    padding: 4px 16px;
     font-family: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    border-radius: 2px;
-    letter-spacing: 0.06em;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    box-sizing: border-box;
+  }
+
+  /* Play / Stop variants */
+  .btn-play {
+    border-color: #787845;
+    color: #EDE8DC;
+    font-size: 12px;
   }
   .btn-play:hover { background: #787845; }
-  .btn-stop { border-color: #E8A090; }
+  .btn-stop {
+    border-color: #E8A090;
+    color: #EDE8DC;
+    font-size: 12px;
+  }
   .btn-stop:hover { background: #E8A090; color: #1E2028; }
+
   .bpm-label { opacity: 0.6; }
+
+  .perf-group {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    align-items: center;
+  }
+
+  /* Perf button colors */
+  .btn-perf {
+    border-color: #4472B4;
+    color: #4472B4;
+  }
+  .btn-perf:active, .btn-perf.active {
+    background: #4472B4;
+    color: #EDE8DC;
+  }
+  .btn-perf.stopped {
+    border-color: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,0.25);
+    cursor: default;
+  }
+  .btn-brk {
+    border-color: #E8A090;
+    color: #E8A090;
+  }
+  .btn-brk:active, .btn-brk.active {
+    background: #E8A090;
+    color: #1E2028;
+  }
+  .btn-brk.stopped {
+    border-color: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,0.25);
+  }
+
+  .btn-rand {
+    border-color: #787845;
+    color: #787845;
+  }
+  .btn-rand:hover {
+    background: #787845;
+    color: #EDE8DC;
+  }
+
   .error { color: #E8A090; }
+
   .audio-params {
     display: flex;
     align-items: center;

@@ -11,7 +11,7 @@ export default defineConfig({
   prefetch: false,
   integrations: [
     starlight({
-      title: 'inboil',
+      title: 'INBOIL',
       logo: {
         src: './public/favicon.svg',
         replacesTitle: false,

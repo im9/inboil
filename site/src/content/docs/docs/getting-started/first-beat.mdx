@@ -7,7 +7,6 @@ sidebar:
 
 import KnobDemo from '../../../../components/KnobDemo.svelte';
 import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte';
-import PlaygroundPerfButtons from '../../../../components/PlaygroundPerfButtons.svelte';
 import PlaygroundAudioDemo from '../../../../components/PlaygroundAudioDemo.svelte';
 
 ## 1. Play & Stop
@@ -49,11 +48,13 @@ Each voice type (KICK, SNARE, BASS, LEAD, FM, WAVE) has its own set of parameter
 
 Hit **RAND** to generate a random pattern. Use **Ctrl+Z** to undo if you don't like it. Undo is unlimited — every edit is recorded.
 
+<PlaygroundAudioDemo client:load showRand={true} />
+
 ## 6. Performance Controls
 
-Hold the performance buttons for real-time effects during playback:
+Hold the performance buttons (FILL / REV / BRK in the transport bar) for real-time effects during playback:
 
-<PlaygroundPerfButtons client:visible />
+<PlaygroundAudioDemo client:load showPerf={true} />
 
 - **FILL** — auto drum fill while held
 - **REV** — reverse playback
