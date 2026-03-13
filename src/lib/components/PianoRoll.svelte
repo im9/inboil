@@ -138,10 +138,10 @@
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
     const trig = ph.trigs[stepIdx]
     if (trig?.active && trigHasNote(trig, note)) return 'head'
-    // Look backwards for a head whose duration covers this step
-    const maxLook = Math.min(16, ph.steps)
-    for (let d = 1; d < maxLook; d++) {
-      const prevStep = ((stepIdx - d) % ph.steps + ph.steps) % ph.steps
+    // Look backwards for a head whose duration covers this step (no wrap-around)
+    const maxLook = Math.min(16, stepIdx)
+    for (let d = 1; d <= maxLook; d++) {
+      const prevStep = stepIdx - d
       const prevTrig = ph.trigs[prevStep]
       if (prevTrig?.active && trigHasNote(prevTrig, note)) {
         return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
@@ -284,22 +284,38 @@
   }
 
   function brushPlaceNote(stepIdx: number, note: number) {
-    // Truncate any prior note whose duration overlaps this step
-    for (let d = 1; d <= 16; d++) {
-      const prev = stepIdx - d
-      if (prev < 0) break
-      const pt = ph.trigs[prev]
-      if (pt.active) {
-        if ((pt.duration ?? 1) > d) pt.duration = d
-        break
-      }
-    }
     const trig = ph.trigs[stepIdx]
-    // Draw brush always places single notes (mono behavior)
-    trig.active = true
-    trig.note = note
-    trig.duration = 1
-    delete trig.notes
+    if (isPoly && trig.active) {
+      // Poly: add note to existing active step
+      const existing = trig.notes ?? [trig.note]
+      if (!existing.includes(note)) {
+        existing.push(note)
+        existing.sort((a: number, b: number) => a - b)
+      }
+      trig.notes = existing
+      trig.note = existing[0]
+    } else if (isPoly && !trig.active) {
+      // Poly: placing on a continuation or empty cell — don't truncate prior legato
+      trig.active = true
+      trig.note = note
+      trig.duration = 1
+      delete trig.notes
+    } else {
+      // Mono: truncate any prior note whose duration overlaps this step
+      for (let d = 1; d <= 16; d++) {
+        const prev = stepIdx - d
+        if (prev < 0) break
+        const pt = ph.trigs[prev]
+        if (pt.active) {
+          if ((pt.duration ?? 1) > d) pt.duration = d
+          break
+        }
+      }
+      trig.active = true
+      trig.note = note
+      trig.duration = 1
+      delete trig.notes
+    }
   }
 
   function brushEraseNote(stepIdx: number, note: number) {
@@ -418,9 +434,33 @@
     // Draw brush: existing note → pitch-move (Y free), empty cell → legato (Y locked)
     if (activeBrush === 'draw') {
       if (brushMoveStep >= 0) {
-        // Pitch-move mode: update note pitch of the dragged step
-        const trig = ph.trigs[brushMoveStep]
+        // Move mode: drag existing note vertically (pitch) and horizontally (step)
         const snapped = snapToScale(note)
+        const src = ph.trigs[brushMoveStep]
+
+        // Horizontal move: relocate trig to a different step
+        if (stepIdx !== brushMoveStep && src.active && !ph.trigs[stepIdx].active) {
+          const dst = ph.trigs[stepIdx]
+          // Copy trig data to destination
+          dst.active = true
+          dst.note = src.note
+          dst.velocity = src.velocity
+          dst.duration = src.duration
+          dst.slide = src.slide
+          if (src.notes) dst.notes = [...src.notes]
+          else delete dst.notes
+          if (src.paramLocks) dst.paramLocks = { ...src.paramLocks }
+          else delete dst.paramLocks
+          // Clear source
+          src.active = false
+          delete src.notes
+          delete src.paramLocks
+          brushMoveStep = stepIdx
+          brushMoved = true
+        }
+
+        // Vertical move: update pitch
+        const trig = ph.trigs[brushMoveStep]
         if (trig.active && snapped !== trig.note) {
           if (isPoly && trig.notes) {
             const idx = trig.notes.indexOf(brushConstrainNote)
@@ -460,8 +500,9 @@
     } else {
       // draw / chord: forward drag extends duration (legato)
       if (stepIdx <= brushHeadStep) return
-      const dur = stepIdx - brushHeadStep + 1
-      ph.trigs[brushHeadStep].duration = Math.min(16, dur)
+      const maxDur = Math.min(16, ph.steps - brushHeadStep)
+      const dur = Math.min(maxDur, stepIdx - brushHeadStep + 1)
+      ph.trigs[brushHeadStep].duration = dur
       for (let s = brushHeadStep + 1; s <= stepIdx; s++) {
         ph.trigs[s].active = false
       }
