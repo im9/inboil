@@ -82,10 +82,10 @@ Labels are ALL CAPS with `letter-spacing: 0.08em`.
 █ = dark zone (navy bg)   ░ = light zone (cream bg)
 
 ┌█████████████████████████████████████████████████████┐
-│█ ●  INBOIL   120   [▶][■][RND]      PAT ◀ 00 ▶ [⚙]█│  ← AppHeader (dark zone)
-│█  (split-flap)                    (split-flap)     █│
+│█ ● INBOIL  [oscilloscope]        CPU ●●●○○○  [⚙] █│  ← AppHeader top bar
+│█ [−120+] [▶][■][●REC] | SCENE FX EQ MST | [FILL][REV][BRK] | [?][SYS] █│  ← sub-header
 ├█████████████████████████████████████████████████████┤
-│█ [KEY] [OCT▼▲] | [DUC][CMP] | [GAIN][SWG] | GRID TRKR SCENE | [FILL][REV][BRK] █│ ← PerfBar
+│█ PatternToolbar: [color●name] [TMPL] [KEY][OCT▼▲] [RND] [GEN] [VKBD] [LOOP] [✕] █│
 ├░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░┤
 │░ MatrixView │░ SceneView (always main)                  ░│█ DockPanel █│
 │░ (pattern   │░ ┌─ overlay sheets (pattern/FX/EQ) ─┐    ░│█ (PARAM   █│
@@ -141,29 +141,30 @@ Props:
 - `light`: dark strokes for use on cream background (StepGrid track row).
 - `compact`: hides the numeric value display, keeps label visible. Used for inline VOL/PAN knobs in track rows.
 
-### PerfBar — DECIDED
+### PatternToolbar (formerly PerfBar) — DECIDED
 
-Performance controls strip (dark zone). Layout:
+Pattern editing controls strip (dark zone). Shown when a pattern sheet is open. Layout:
 
 ```
-[KEY piano] | [OCT ▼ 0 ▲] | [DUC] [CMP] | [GAIN] [SWG] | GRID TRKR SCENE | [FILL] [REV] [BRK]
+[color● name] [TMPL] | [KEY piano] [OCT ▼ 0 ▲] | [RND] [GEN] [VKBD] | [LOOP]  [✕]
 ```
 
+- **Pattern indicator**: Colored dot + pattern name label (left-aligned).
+- **TMPL**: Template dropdown (Standard, Techno, House, Ambient, HipHop, Drum Kit, Synth, Breaks, Minimal).
 - **KEY**: 12-key piano keyboard. Active key shown in olive.
-- **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink.
-- **DUC / CMP knobs**: Sidechain ducker depth and compressor makeup gain (36px).
-- **GAIN / SWG knobs**: Master volume and swing amount (36px).
-- **FX/EQ toggle**: Two buttons `FX | EQ` open overlay sheets (`ui.phraseView = 'fx' | 'eq'`). SceneView is always the main view (ADR 054). Pattern sheet opened via MatrixView/SceneView double-tap.
-- **Virtual keyboard toggle** (desktop only): Piano icon button toggles `vkbd.enabled`. When active, shows `C{octave}` label. See ADR 031.
-- **Performance buttons**: Press-hold (pointer down/up/leave). Each button has a distinct border color:
-  - FILL, REV: `--color-blue` border/active
-  - BRK: `--color-salmon` border/active
+- **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink (`isPendingOct`).
+- **RND**: Randomize pattern button.
+- **GEN** (conditional): Generate/sparkle button + target track selector. Only appears when upstream generative nodes exist in scene.
+- **VKBD** (desktop only): Virtual keyboard toggle. When active, shows `C{octave}` label. See ADR 031.
+- **MIDI indicator** (desktop only): Shows "MIDI" when MIDI input is active.
+- **LOOP**: Loop current pattern button (right-aligned).
+- **CLOSE** (✕): Close pattern editor sheet.
+
+Note: Master mixing controls (DUC, CMP, GAIN, SWG) are in the **MasterView** overlay sheet, not in the toolbar. View switching (SCENE/FX/EQ/MST) and performance buttons (FILL/REV/BRK) are in **AppHeader**.
 
 On mobile (`< 640px`):
-- DUC, CMP, GAIN, SWG, separators, and labels hidden.
 - **Keyboard → Fan-out bubble menu**: Full piano keyboard replaced by a circular trigger button (shows current root note, e.g. "C") + compact stacked octave ▲/▼. Tapping the trigger opens a **fan-arc keyboard overlay**: 12 rectangular piano keys arranged in a quarter-circle arc (0°–90°). White keys on outer ring (R=130), black keys on inner ring (R=78). Keys are rotated radially with counter-rotated labels. Semi-transparent backdrop (rgba(0,0,0,0.25)) dims the background. Animation: 150ms scale+rotate with 15ms stagger per key.
-- Key trigger + octave share a row with FILL/REV/BRK (3 rows → 2 rows, saving vertical space).
-- FX/EQ toggle buttons for opening overlay sheets.
+- TMPL, RND remain. VKBD hidden. Separators hidden.
 
 ### FxPad — DECIDED
 
@@ -237,11 +238,11 @@ Node-based directed graph canvas. Always the main view (ADR 054). Full arrangeme
 
 ### MatrixView — DECIDED
 
-Compact left sidebar (desktop only) showing the pattern pool as a grid of 24×24px square cells. Shows density via opacity, selection (olive border), playing state (blue), solo (blue inset shadow), and scene usage (small olive dot). Clicking a cell calls `selectPattern()`. In scene mode, shows an arrow button to add selected pattern to the scene.
+Compact left sidebar (desktop only) showing the pattern pool as a grid of 24×24px square cells. Shows density via opacity, selection (olive border), playing state (olive pulse animation, BPM-synced), solo (blue inset shadow), and scene usage (small olive dot). Single-tap calls `selectPattern()`. Double-tap opens pattern editor sheet (overlay). Header includes arrow (→) button to add selected pattern to scene.
 
-### SectionNav — DECIDED
+### SectionNav — DEPRECATED (mobile only)
 
-Two-row navigator strip. Row 1: horizontally scrollable section slot strip (sections 00–N) with drag-to-set loop range, plus SCENE toggle button. Row 2: detail strip showing selected section's metadata (SEC number, PAT dropdown picker, repeats, key, oct, perf mode, FX toggles, clear button).
+Legacy two-row navigator strip, superseded by Scene graph (ADR 044) on desktop. Retained for mobile layout only. Row 1: horizontally scrollable section slot strip (sections 00–N) with drag-to-set loop range, plus SCENE toggle button. Row 2: detail strip showing selected section's metadata (SEC number, PAT dropdown picker, repeats, key, oct, perf mode, FX toggles, clear button). No new features should target this component.
 
 ### Sidebar — DECIDED
 
@@ -253,33 +254,40 @@ App-level fixed right drawer (280px width, dark zone, z-index 110) for help and 
 - Footer: hover guide (help, desktop only) or factory reset (system)
 
 **Help mode:**
-- Collapsible accordion sections (12 sections: About, Basics, Tracks, Velocity & Steps, Piano Roll, Performance, Patterns, Synth Params, Grid, FX Pad, EQ, Chain)
+- 6 collapsible categories: GETTING STARTED, SEQUENCER, SOUND, MIXER & FX, ARRANGEMENT, PERFORMANCE (17+ sections total)
+- Search filter for finding help sections
+- Language toggle (EN/JP)
+- Link to full tutorial docs (Astro Starlight site)
 - GUIDE footer: shows contextual description when user hovers over `data-tip` elements (desktop only)
 
 **System mode** (ADR 085):
 Two sub-tabs: PROJECT / SETTINGS.
 
 PROJECT tab:
+- NEW PROJECT / SAVE AS buttons
+- Project name with inline edit
+- Demo project (Factory Demo)
 - Project list (tap to load, rename, delete)
-- SAVE AS / SAVE buttons
-- Demo projects section
-- FILE section: Export/Import JSON, Export MIDI
+- EXPORT/IMPORT section: Export JSON, Import JSON, Export MIDI
 
 SETTINGS tab:
 - Scale Mode toggle (ON/OFF)
 - Language toggle (JP/EN)
+- MIDI Input: device selection and connection status (ADR 081)
 - About section (version info)
 - Factory Reset with two-step confirmation (footer)
 
 **REC button** (in AppHeader sub-header): Armed-then-record WAV capture via MediaRecorder (ADR 085).
 
-See ADR 017, ADR 018, and ADR 085 for details.
+See ADR 017, ADR 018, ADR 081, and ADR 085 for details.
 
 ### DockPanel — DECIDED
 
 Right-side param dock (280px, dark zone). Minimizable to 16px thin strip via left-edge handle grip (ADR 055). State persisted as `ui.dockMinimized` in localStorage.
 
-Contents:
+Contents (multi-mode, context-dependent):
+
+**Default mode** (pattern sheet open):
 - **Track selector bar**: 2-letter abbreviations (KK, SN, CP, CH, OH, CY, BS, LD)
 - **Selected track name**: Shows current track's voice name between track bar and voice picker
 - **Voice category tabs**: DRUM/BASS/LEAD/SAMPLER for voice selection
@@ -291,7 +299,19 @@ Contents:
 - **Send knobs**: VERB, DLY, GLT, GRN per selected track
 - **Mixer knobs**: VOL, PAN per selected track
 
-FX/EQ are rendered as overlay sheets (ADR 054). Help/System are in the Sidebar (ADR 055).
+**Track editor tabs** (ADR 092): DockTrackEditor with TRACKS / SCENE tabs when pattern sheet is open.
+
+**Decorator editor** (ADR 069): When a scene pattern node is selected, shows decorator controls (transpose, tempo, repeat, probability, automation) in DockPanel with full-size knobs. SceneNodePopup shows read-only labels only.
+
+**Generative node editor** (ADR 078): DockGenerativeEditor for Turing Machine, Quantizer, Tonnetz node parameters.
+
+**Automation editor** (ADR 026): Inline automation curves for global/track/FX/EQ targets.
+
+**Scene navigator** (ADR 070): BFS tree view of placed scene nodes with depth indentation, decorator labels, and playing-node pulse animation.
+
+**Split layout for overlay sheets**: When FX/EQ/MST sheets are open, DockPanel splits into upper (scene navigator) + lower (sheet-specific controls).
+
+FX/EQ/Master are rendered as overlay sheets (ADR 054). Help/System are in the Sidebar (ADR 055).
 
 #### DockPanel Styling Rules
 
@@ -347,19 +367,26 @@ On mobile: Piano spacer narrowed (26px oct-keys only), cells shrunk to 18px with
 
 ### AppHeader — DECIDED
 
-Dark zone. Contains:
-- Logo ("INBOIL")
-- BPM display (SplitFlap, editable)
-- Transport: Play/Stop/Random buttons
-- Pattern navigation: `◄ PAT:01 ►` (SplitFlap display)
-- CPU meter: 6-dot VU-style gauge (olive → yellow → red), EMA-smoothed, shown when CPU > 0
-- ⚙ system button (top-right, opens SYSTEM sidebar)
-- Pending pattern: when queued switch is active, shows target PAT with blinking animation (400ms pulse)
+Dark zone. Two rows:
+
+**Top bar** (40px, 32px compact):
+- Logo: SVG icon (4×4 grid) + "INBOIL" text
+- Oscilloscope: real-time waveform canvas (animated)
+- CPU meter (right-aligned): "CPU" label + 6 dots. Olive (<60%), amber (60–85%), red blink (>85%). Hover tooltip shows percentage + warning.
+
+**Sub-header** (64px, 52px compact):
+- **BPM block**: −/+ buttons (long-press auto-repeat 80ms) + SplitFlap display. Click display to inline-edit (validates 40–240).
+- **Transport**: ▶ Play, ■ Stop, ● REC (arm → blink → recording pulse, salmon color).
+- **View toggle**: SCENE / FX / EQ / MST buttons. Switches `ui.phraseView`. SCENE returns to main view; FX/EQ/MST open overlay sheets.
+- **Performance buttons**: FILL (blue), REV (blue), BRK (salmon). Press-hold. Disabled when stopped.
+- **Navigation**: ? help toggle, SYSTEM button (shows dirty-indicator dot when unsaved).
+
+Pattern switching is **not** in AppHeader — it happens via MatrixView cell tap or SceneView node tap.
 
 On mobile (`compact` mode):
-- Transport (▶ ■ RAND) centered in header via absolute positioning.
-- BPM display (left) and pattern display (right) side-by-side in sub-header row.
-- **Pattern actions → Radial bubble menu**: CPY/PST/CLR buttons replaced by a ⋯ trigger that fans out 3 circular action buttons in a left-down arc. Animation: 150ms with 30ms stagger, `cubic-bezier(0.2, 0, 0.4, 1.3)`. Semi-transparent backdrop for dismissal.
+- Transport (▶ ■ REC) in top row.
+- View toggle (SCENE/FX/EQ/MST) becomes full-width tab bar with underline indicator (row 2).
+- Performance buttons hidden — moved to PerfBubble floating widget (bottom-right).
 - ? help button opens help sidebar (hover guide footer hidden on mobile).
 
 ### MobileTrackView — DECIDED
@@ -390,7 +417,7 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 | Play / Stop | Spacebar or transport button |
 | Change BPM | Drag BPM display vertically, or double-click to type |
 | Mute track | Click M button on track row |
-| Switch pattern | Click ◄ ► in header |
+| Switch pattern | Click pattern cell in MatrixView |
 | Performance controls | Press-hold buttons (FILL, REV, BRK) |
 | Key change | Click piano key in PerfBar |
 | Octave shift | Click −/+ in PerfBar OCT controls |
@@ -449,13 +476,15 @@ Same Othello-style 3D flip as step/mute buttons. `?` icon flips between off (bor
 
 Per-character 3D flip animation (180ms ease-out) triggered on value change.
 
-### Pending Pattern Blink
+### Pending Octave Blink
+
+Octave value in PatternToolbar blinks when user changes octave mid-playback (`isPendingOct`):
 
 ```css
-.pat-value.pending {
-  animation: pat-blink 400ms ease-in-out infinite;
+.oct-value.pending {
+  animation: oct-blink 400ms ease-in-out infinite;
 }
-@keyframes pat-blink {
+@keyframes oct-blink {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.3; }
 }
@@ -486,7 +515,7 @@ Always instant, no transition:
 - Opening/closing PianoRoll
 - Pattern switch application
 - Mute toggle (visual — audio uses smooth fade)
-- View switching (GRID/TRKR/SCENE)
+- View switching (SCENE/FX/EQ/MST)
 
 ## Responsive Behavior — DECIDED
 
