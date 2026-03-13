@@ -8,9 +8,10 @@
     locked?: boolean    // true = P-Lock active (olive value arc)
     steps?: number      // number of discrete positions (e.g. 5 for 0-4) — snaps knob
     displayValue?: string // override displayed value text (e.g. "UP", "OFF")
+    defaultValue?: number // value to reset to on double-click (0.0–1.0)
     onchange: (v: number) => void
   }
-  let { value, label, size = 32, light = false, compact = false, locked = false, steps = 0, displayValue, onchange }: Props = $props()
+  let { value, label, size = 32, light = false, compact = false, locked = false, steps = 0, displayValue, defaultValue = 0.5, onchange }: Props = $props()
 
   function snap(v: number): number {
     if (steps < 2) return v
@@ -48,11 +49,13 @@
   }
   function onPointerMove(e: PointerEvent) {
     if (!dragging) return
-    const delta = (startY - e.clientY) / 100
+    const sensitivity = e.shiftKey ? 400 : 100
+    const delta = (startY - e.clientY) / sensitivity
     const raw = Math.min(1, Math.max(0, startVal + delta))
     onchange(snap(raw))
   }
   function onPointerUp() { dragging = false }
+  function onDblClick() { onchange(snap(defaultValue)) }
 </script>
 
 <!-- svelte-ignore a11y_interactive_supports_focus -->
@@ -68,6 +71,7 @@
   onpointerdown={onPointerDown}
   onpointermove={onPointerMove}
   onpointerup={onPointerUp}
+  ondblclick={onDblClick}
 >
   <svg width={size} height={size} viewBox="0 0 {size} {size}">
     <!-- Track arc (full 270° range) -->
