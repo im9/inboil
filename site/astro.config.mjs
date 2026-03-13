@@ -12,6 +12,10 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'inboil',
+      logo: {
+        src: './public/favicon.svg',
+        replacesTitle: false,
+      },
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       defaultLocale: 'root',

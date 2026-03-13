@@ -104,10 +104,19 @@ nav.sidebar {
   border-left-color: var(--sl-color-accent);
 }
 
-/* ── Site title ── */
-.site-title span {
-  font-family: "Bebas Neue", "Anton", sans-serif !important;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 1.25rem !important;
+/* ── Site title — match AppHeader style ── */
+a.site-title.sl-flex {
+  gap: 5px !important;
+  align-items: center !important;
+}
+a.site-title img {
+  width: 18px !important;
+  height: 18px !important;
+}
+a.site-title span {
+  font-family: "JetBrains Mono", "Fira Code", monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: #EDE8DC !important;
 }

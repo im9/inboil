@@ -279,7 +279,7 @@
   .app-name {
     font-size: 10px;
     letter-spacing: 0.14em;
-    color: rgba(237,232,220,0.5);
+    color: var(--color-bg);
     text-transform: uppercase;
     position: relative;
     z-index: 1;
