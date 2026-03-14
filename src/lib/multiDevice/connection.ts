@@ -17,6 +17,8 @@ const STUN_SERVERS: RTCIceServer[] = [
 ]
 
 const CHANNEL_LABEL = 'inboil'
+const RECONNECT_DELAY = 2000
+const MAX_RECONNECT_ATTEMPTS = 5
 
 // ── Room code generation ──────────────────────────────────────
 
@@ -32,6 +34,9 @@ function generateRoomCode(): string {
 
 let signalingWs: WebSocket | null = null
 let signalingUrl = '' // set by init or env
+let reconnectAttempts = 0
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let intentionalDisconnect = false
 
 export function setSignalingUrl(url: string) {
   signalingUrl = url
@@ -39,13 +44,26 @@ export function setSignalingUrl(url: string) {
 
 function connectSignaling(room: string, name: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
+    if (!signalingUrl) {
+      reject(new Error('Signaling URL not configured'))
+      return
+    }
     const ws = new WebSocket(signalingUrl)
+    const timeout = setTimeout(() => {
+      ws.close()
+      reject(new Error('Signaling connection timeout'))
+    }, 10000)
     ws.onopen = () => {
+      clearTimeout(timeout)
       const msg: SignalMessage = { t: 'join', room, name }
       ws.send(JSON.stringify(msg))
+      reconnectAttempts = 0
       resolve(ws)
     }
-    ws.onerror = () => reject(new Error('Signaling connection failed'))
+    ws.onerror = () => {
+      clearTimeout(timeout)
+      reject(new Error('Signaling connection failed'))
+    }
   })
 }
 
@@ -53,6 +71,44 @@ function sendSignal(msg: SignalMessage) {
   if (signalingWs?.readyState === WebSocket.OPEN) {
     signalingWs.send(JSON.stringify(msg))
   }
+}
+
+// ── Signaling reconnection ────────────────────────────────────
+
+function scheduleReconnect() {
+  if (intentionalDisconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      session.connected = false
+      emitError('Signaling server unreachable')
+    }
+    return
+  }
+  reconnectAttempts++
+  reconnectTimer = setTimeout(async () => {
+    if (intentionalDisconnect || !session.roomCode) return
+    try {
+      signalingWs = await connectSignaling(session.roomCode, session.role === 'host' ? 'host' : 'guest')
+      if (session.role === 'host') {
+        setupHostSignaling()
+      } else {
+        setupGuestSignaling()
+      }
+    } catch {
+      scheduleReconnect()
+    }
+  }, RECONNECT_DELAY * reconnectAttempts)
+}
+
+// ── Error event ───────────────────────────────────────────────
+
+let onError: ((msg: string) => void) | null = null
+
+export function setOnError(handler: (msg: string) => void) {
+  onError = handler
+}
+
+function emitError(msg: string) {
+  onError?.(msg)
 }
 
 // ── Host ──────────────────────────────────────────────────────
@@ -76,7 +132,31 @@ export function setOnGuestConnected(handler: (peerId: string) => void) {
   onGuestConnected = handler
 }
 
+function setupHostSignaling() {
+  if (!signalingWs) return
+  signalingWs.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data) as SignalMessage
+      if (msg.t === 'peer-joined') {
+        handlePeerJoined(msg.id, msg.name)
+      } else if (msg.t === 'answer') {
+        handleAnswer(msg.sdp)
+      } else if (msg.t === 'ice') {
+        handleRemoteIce(msg.candidate)
+      } else if (msg.t === 'peer-left') {
+        handlePeerLeft(msg.id)
+      }
+    } catch {
+      // Ignore malformed signaling messages
+    }
+  }
+  signalingWs.onclose = () => {
+    if (!intentionalDisconnect) scheduleReconnect()
+  }
+}
+
 export async function startHost(): Promise<string> {
+  intentionalDisconnect = false
   const roomCode = generateRoomCode()
 
   session.role = 'host'
@@ -85,23 +165,7 @@ export async function startHost(): Promise<string> {
   hostPeers = []
 
   signalingWs = await connectSignaling(roomCode, 'host')
-
-  signalingWs.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data) as SignalMessage
-    if (msg.t === 'peer-joined') {
-      handlePeerJoined(msg.id, msg.name)
-    } else if (msg.t === 'answer') {
-      handleAnswer(msg.sdp)
-    } else if (msg.t === 'ice') {
-      handleRemoteIce(msg.candidate)
-    } else if (msg.t === 'peer-left') {
-      handlePeerLeft(msg.id)
-    }
-  }
-
-  signalingWs.onclose = () => {
-    // Reconnect logic could go here
-  }
+  setupHostSignaling()
 
   return roomCode
 }
@@ -130,6 +194,14 @@ async function handlePeerJoined(peerId: string, peerName: string) {
 
   channel.onclose = () => {
     handlePeerLeft(peerId)
+  }
+
+  // Monitor ICE connection state
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === 'failed') {
+      emitError(`Connection to ${peerName} failed`)
+      handlePeerLeft(peerId)
+    }
   }
 
   pc.onicecandidate = (ev) => {
@@ -193,20 +265,32 @@ export function setOnHostMessage(handler: (msg: HostMessage) => void) {
   onHostMessage = handler
 }
 
+function setupGuestSignaling() {
+  if (!signalingWs) return
+  signalingWs.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data) as SignalMessage
+      if (msg.t === 'offer') {
+        handleOffer(msg.sdp)
+      } else if (msg.t === 'ice') {
+        handleGuestIce(msg.candidate)
+      }
+    } catch {
+      // Ignore malformed signaling messages
+    }
+  }
+  signalingWs.onclose = () => {
+    if (!intentionalDisconnect) scheduleReconnect()
+  }
+}
+
 export async function joinAsGuest(roomCode: string, name: string): Promise<void> {
+  intentionalDisconnect = false
   session.role = 'guest'
   session.roomCode = roomCode
 
   signalingWs = await connectSignaling(roomCode, name)
-
-  signalingWs.onmessage = (ev) => {
-    const msg = JSON.parse(ev.data) as SignalMessage
-    if (msg.t === 'offer') {
-      handleOffer(msg.sdp)
-    } else if (msg.t === 'ice') {
-      handleGuestIce(msg.candidate)
-    }
-  }
+  setupGuestSignaling()
 }
 
 async function handleOffer(sdp: string) {
@@ -228,6 +312,14 @@ async function handleOffer(sdp: string) {
 
     guestChannel.onclose = () => {
       session.connected = false
+    }
+  }
+
+  // Monitor ICE connection state
+  guestPc.onconnectionstatechange = () => {
+    if (guestPc?.connectionState === 'failed') {
+      session.connected = false
+      emitError('Connection to host lost')
     }
   }
 
@@ -259,6 +351,15 @@ export function sendToHost(msg: GuestMessage) {
 // ── Cleanup ───────────────────────────────────────────────────
 
 export function disconnect() {
+  intentionalDisconnect = true
+
+  // Cancel pending reconnect
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  reconnectAttempts = 0
+
   // Close all host peer connections
   for (const peer of hostPeers) {
     peer.channel?.close()
@@ -285,4 +386,5 @@ export function disconnect() {
   onGuestMessage = null
   onGuestConnected = null
   onHostMessage = null
+  onError = null
 }

@@ -20,8 +20,9 @@
   import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
-  import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead, setOnGuestConnected, initGuestHandlers } from './lib/multiDevice/index.ts'
-  import { syncDelta } from './lib/multiDevice/deltaSync.ts'
+  import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
+  import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
+  import { showToast } from './lib/toast.svelte.ts'
 
   const engineCtx: EngineContext = $derived({
     fxFlavours,
@@ -50,6 +51,11 @@
   initHostHandlers()
   initGuestHandlers()
   setOnGuestConnected((peerId) => sendSnapshot(peerId))
+  setOnError((msg) => showToast(msg, 'warn'))
+  // Clean disconnect on page unload
+  window.addEventListener('beforeunload', () => {
+    if (session.role !== 'solo') { disconnect(); resetDeltaSync() }
+  })
 
   // ── Responsive ────────────────────────────────────────────────────
   let windowWidth = $state(window.innerWidth)

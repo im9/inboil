@@ -4,6 +4,12 @@
   import { exportAndDownloadMidi } from '../midiExport.ts'
   import { initMidi, startListening, stopListening } from '../midi.ts'
   import { startHost, joinAsGuest, disconnect } from '../multiDevice/connection.ts'
+  import { resetDeltaSync } from '../multiDevice/deltaSync.ts'
+  import { generateQrSvg } from '../qr.ts'
+
+  const qrSvg = $derived(session.role === 'host' && session.roomCode
+    ? generateQrSvg(session.roomCode)
+    : '')
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -66,6 +72,7 @@
 
   function handleDisconnect() {
     disconnect()
+    resetDeltaSync()
     joinCode = ''
     joinError = ''
   }
@@ -682,6 +689,9 @@
                     <span class="jam-status-label">{L === 'ja' ? 'ホスト中' : 'HOSTING'}</span>
                     <span class="jam-room-code">{session.roomCode}</span>
                   </div>
+                  {#if qrSvg}
+                    <div class="jam-qr">{@html qrSvg}</div>
+                  {/if}
                   <div class="jam-peers">
                     <span class="setting-row-desc">{L === 'ja'
                       ? `${session.peers.length} 台接続中`
@@ -1479,6 +1489,16 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     color: rgba(237,232,220,0.9);
+  }
+  .jam-qr {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .jam-qr :global(svg) {
+    width: 100px;
+    height: 100px;
+    border-radius: 4px;
   }
   .jam-connected {
     font-size: 10px;
