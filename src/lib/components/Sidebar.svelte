@@ -204,6 +204,7 @@
     { label: 'ミキサー & エフェクト', labelEn: 'MIXER & FX' },
     { label: 'アレンジ', labelEn: 'ARRANGEMENT' },
     { label: 'パフォーマンス', labelEn: 'PERFORMANCE' },
+    { label: 'マルチデバイス', labelEn: 'MULTI-DEVICE' },
   ]
 
   const helpSections = $derived([
@@ -362,6 +363,23 @@
       body: L === 'ja'
         ? 'VKBD ボタンで有効化。PCキーボードで演奏\nA~; で音階、Z/X でオクターブ、1~0 でベロシティ\nUSB/BLE MIDIキーボード対応 (SYSTEM → MIDI)'
         : 'Enable with VKBD button. Play with PC keyboard\nA–; for notes, Z/X octave, 1–0 velocity\nUSB/BLE MIDI keyboard supported (SYSTEM → MIDI)',
+    },
+    // ── 6: MULTI-DEVICE ──
+    {
+      category: 6,
+      title: L === 'ja' ? 'ジャムセッション' : 'JAM SESSION',
+      docsUrl: '/docs/reference/multi-device/',
+      body: L === 'ja'
+        ? 'スマホをコントローラーにして2台でジャム！\nSYSTEM → JAM SESSION → HOST でルームコード発行\n相手はゲストとしてコードを入力して参加\nWebRTC P2P接続 — 同じWiFiなら超低遅延'
+        : 'Turn your phone into a controller for a 2-device jam!\nSYSTEM → JAM SESSION → HOST to get a room code\nOther device joins as GUEST with the code\nWebRTC P2P — ultra-low latency on same WiFi',
+    },
+    {
+      category: 6,
+      title: L === 'ja' ? 'ホスト & ゲスト' : 'HOST & GUEST',
+      docsUrl: '/docs/reference/multi-device/',
+      body: L === 'ja'
+        ? 'ホスト (PC) — オーディオ再生、全状態を管理\nゲスト (スマホ) — コントローラーとして操作\nゲストの操作: ステップ ON/OFF、ミュート、パターン切替、FILL/REV/BRK、パラメータ変更\nゲスト画面にはリアルタイムで状態がミラーリング'
+        : 'Host (PC) — plays audio, manages all state\nGuest (phone) — acts as a controller\nGuest controls: step toggle, mute, pattern switch, FILL/REV/BRK, param tweaks\nGuest screen mirrors state in real time',
     },
   ])
 </script>

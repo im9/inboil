@@ -814,6 +814,37 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </section>
 
+  <!-- ── Feature 4: Multi-Device Jam ── -->
+  <section class="feat-section">
+    <div class="feat-text reveal">
+      <h2 id="feat-jam-title" class="feat-title">Multi-Device Jam</h2>
+      <p id="feat-jam-desc" class="feat-desc">Turn any phone into a live controller. The host runs the DAW on a PC — a friend opens the URL on their phone, enters a 4-character room code, and instantly joins as a guest controller. Edit steps, trigger fills, tweak parameters — all synced in real time over WebRTC. No app install. No setup. Just share a code and jam.</p>
+    </div>
+    <div class="feat-visual reveal" style="flex-direction:column;gap:16px;align-items:center">
+      <svg class="jam-diagram" viewBox="0 0 520 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px">
+        <!-- Host (PC) -->
+        <rect x="20" y="50" width="160" height="100" rx="12" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
+        <text x="100" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="rgba(30,32,40,0.7)">HOST</text>
+        <text x="100" y="112" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Audio + State</text>
+        <text x="100" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Full DAW UI</text>
+        <!-- Connection line -->
+        <line x1="180" y1="100" x2="340" y2="100" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="260" y="88" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.35)">WebRTC P2P</text>
+        <!-- Room code badge -->
+        <rect x="232" y="104" width="56" height="22" rx="4" fill="rgba(30,32,40,0.08)"/>
+        <text x="260" y="119" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="rgba(30,32,40,0.55)">A3F7</text>
+        <!-- Guest (Phone) -->
+        <rect x="340" y="55" width="90" height="90" rx="12" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
+        <text x="385" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="rgba(30,32,40,0.7)">GUEST</text>
+        <text x="385" y="112" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Controller</text>
+        <text x="385" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Mobile UI</text>
+        <!-- Labels -->
+        <text x="100" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">🖥 PC / Laptop</text>
+        <text x="385" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">📱 Phone / Tablet</text>
+      </svg>
+    </div>
+  </section>
+
   <!-- ── Story + Support ── -->
   <section class="story-section reveal">
     <div class="story-content">
@@ -874,6 +905,11 @@ const ogImage = `${siteUrl}/og.png`;
         <div class="spec-note">IndexedDB, no account needed</div>
       </div>
       <div class="spec-cell">
+        <div id="spec-jam-label" class="spec-label">Multi-Device</div>
+        <div id="spec-jam-value" class="spec-value">WebRTC P2P jam</div>
+        <div id="spec-jam-note" class="spec-note">Phone as controller, no app install</div>
+      </div>
+      <div class="spec-cell">
         <div class="spec-label">Price</div>
         <div class="spec-value">Free</div>
       </div>
@@ -914,6 +950,11 @@ const ogImage = `${siteUrl}/og.png`;
     t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。\nフィル、リバース、ブレイクでライブ感のある演奏も。');
     t('feat-fx-title', 'FXパッド');
     t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
+    t('feat-jam-title', 'マルチデバイス・ジャム');
+    t('feat-jam-desc', 'スマホをライブコントローラーに。\nホストがPCでDAWを動かし、友だちはURLを開いて\n4文字のルームコードを入力するだけで、\nゲストコントローラーとして即参加。\nステップ編集、フィル、パラメータ操作 —\nすべてがWebRTCでリアルタイム同期。\nアプリ不要。設定不要。コードをシェアして、すぐジャム。');
+    t('spec-jam-label', 'マルチデバイス');
+    t('spec-jam-value', 'WebRTC P2P ジャム');
+    t('spec-jam-note', 'スマホがコントローラーに、アプリ不要');
     t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
     document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
     document.getElementById('story-text1b').textContent = '音楽ツールは、誰でもすぐ使えて、楽しいものであるべきだと信じています。';
