@@ -30,6 +30,7 @@ const ogImage = `${siteUrl}/og.png`;
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{
       width:100%;
+      overflow-x:hidden;
       /* SceneCanvas と同じ: cream + 40px grid */
       background-color:#EDE8DC;
       background-image:
@@ -76,11 +77,13 @@ const ogImage = `${siteUrl}/og.png`;
         grid-template-columns:1fr;
         padding:58px 24px 32px;
         gap:32px;
+        overflow-x:hidden;
       }
       .hero-text{align-self:auto;margin-top:0}
-      .hero-visual{align-self:auto;margin-bottom:0}
+      .hero-visual{align-self:auto;margin-bottom:0;min-width:0}
       .tagline{white-space:normal;font-size:1.5rem}
       .cta{padding:0.6rem 1.4rem;font-size:0.85rem}
+      .cta-row{flex-wrap:wrap}
     }
     .hero-text{
       display:flex;flex-direction:column;
@@ -126,6 +129,7 @@ const ogImage = `${siteUrl}/og.png`;
       touch-action:none;
       user-select:none;
       width:100%;
+      max-width:100%;
     }
     .seq-row{
       display:flex;align-items:center;gap:2px;
@@ -154,6 +158,7 @@ const ogImage = `${siteUrl}/og.png`;
       padding:0;margin:0;
       position:relative;
       flex:1;
+      min-width:0;
       aspect-ratio:1;
       cursor:pointer;
       perspective:80px;
@@ -293,7 +298,8 @@ const ogImage = `${siteUrl}/og.png`;
         padding:64px 24px;
         gap:48px;
       }
-      .feat-section .feat-visual{padding-top:0;overflow-x:auto}
+      .feat-text{min-width:0}
+      .feat-section .feat-visual{padding-top:0;min-width:0}
       .feat-section:nth-child(even){grid-template-columns:1fr}
       .feat-section:nth-child(even) .feat-text{order:0;padding-top:0}
       .feat-section:nth-child(even) .feat-visual{order:0;padding-top:0}
@@ -315,6 +321,9 @@ const ogImage = `${siteUrl}/og.png`;
       color:#1E2028;
       line-height:1;
       white-space:nowrap;
+    }
+    @media(max-width:768px){
+      .feat-title{white-space:normal;font-size:clamp(2rem, 10vw, 3.5rem)}
     }
     /* タイトル下のアクセントライン */
     .feat-title::after{
@@ -347,6 +356,7 @@ const ogImage = `${siteUrl}/og.png`;
       display:flex;
       align-items:center;
       justify-content:center;
+      min-width:0;
     }
 
     /* ── Voice grid ── */
@@ -354,6 +364,7 @@ const ogImage = `${siteUrl}/og.png`;
       display:flex;flex-wrap:wrap;
       gap:2px;
       justify-content:flex-start;
+      max-width:100%;
     }
     .voice-chip{
       display:flex;flex-direction:column;
@@ -429,6 +440,11 @@ const ogImage = `${siteUrl}/og.png`;
       cursor:ns-resize;touch-action:none;user-select:none;
     }
     .ev-knob svg{width:52px;height:52px}
+    @media(max-width:768px){
+      .ev-knobs{gap:12px}
+      .ev-knob svg{width:44px;height:44px}
+      .engine-viewer{padding:16px 16px}
+    }
     .ev-knob-label{
       font-size:9px;font-weight:700;letter-spacing:0.06em;
       color:rgba(237,232,220,0.4);text-transform:uppercase;
