@@ -104,15 +104,15 @@ The hero section has three jobs in under 3 seconds:
 ├──────────────────────────────────┤
 │  FX Pad (full-width centered)    │  ← draggable effect nodes with constellation lines
 ├──────────────────────────────────┤
-│  Story + Support                 │  ← personal dev story → Ko-fi donate link
-├──────────────────────────────────┤
 │  Generative (full-width centered)│  ← decorator pills on pattern nodes (SVG diagram)
+├──────────────────────────────────┤
+│  Story + Support                 │  ← personal dev story → Ko-fi donate link
 ├──────────────────────────────────┤
 │  Final CTA                       │  ← "Ready to make some noise?" + app/tutorial links
 └──────────────────────────────────┘
 ```
 
-Sections use mixed layouts (2-col, 2-col reversed, full-width) to break visual monotony. Story is placed between two full-width sections to create rhythm variation. Sections fade-in on scroll (subtle, not distracting).
+Feature sections are grouped together, followed by Story + CTA. Sections use mixed layouts (2-col, 2-col reversed, full-width) to break visual monotony. Sections fade-in on scroll (subtle, not distracting).
 
 #### Micro-interactions
 
@@ -263,7 +263,7 @@ Quick lookup during use         Sit down and learn
 - Generative section: horizontal SVG diagram with decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
 - Performance mentioned in Scene Graph description (section removed — not compelling as standalone demo)
 - Final CTA section: "Ready to make some noise?" + app/tutorial links
-- Story + Support section with Ko-fi donate link (placed between FX Pad and Generative for rhythm variation)
+- Story + Support section with Ko-fi donate link (after all feature sections, before Final CTA)
 - Story text split into separate `<p>` elements for proper paragraph breaks (EN and JA)
 - Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
 - Feature title hover bounce + accent-line pulse

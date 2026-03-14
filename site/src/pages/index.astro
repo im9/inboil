@@ -80,12 +80,14 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .hero-text{
       display:flex;flex-direction:column;
-      gap:16px;
+      gap:14px;
+      align-self:start;
+      margin-top:12vh;
     }
     .brand{
-      display:flex;align-items:center;gap:14px;
+      display:flex;align-items:center;gap:16px;
     }
-    .brand svg{width:clamp(44px, 6vw, 64px);height:clamp(44px, 6vw, 64px);flex-shrink:0}
+    .brand svg{width:clamp(56px, 8vw, 80px);height:clamp(56px, 8vw, 80px);flex-shrink:0}
     .brand h1{
       font-family:"JetBrains Mono",monospace;
       font-size:clamp(3rem, 7vw, 5rem);letter-spacing:0.12em;
@@ -95,13 +97,23 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .tagline{
       font-family:system-ui, -apple-system, sans-serif;
-      font-size:1.05rem;letter-spacing:0.02em;
-      color:rgba(30,32,40,0.45);
+      font-size:clamp(1.5rem, 2.4vw, 2.2rem);letter-spacing:-0.01em;
+      white-space:nowrap;
+      color:rgba(30,32,40,0.8);
+      line-height:1.2;
+    }
+    .hero-sub{
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.8rem;letter-spacing:0.04em;
+      color:rgba(30,32,40,0.55);
+      margin-top:-2px;
     }
     .hero-visual{
       display:flex;flex-direction:column;
       align-items:center;
       gap:8px;
+      align-self:end;
+      margin-bottom:4vh;
     }
 
     /* ── Sequencer grid ── */
@@ -141,8 +153,7 @@ const ogImage = `${siteUrl}/og.png`;
       aspect-ratio:1;
       cursor:pointer;
       perspective:80px;
-      /* cap at 36px so it doesn't get too large on wide screens */
-      max-width:36px;max-height:36px;
+      max-width:48px;max-height:48px;
     }
     .step .flip-card{
       width:100%;height:100%;
@@ -251,30 +262,35 @@ const ogImage = `${siteUrl}/og.png`;
       width:100%;
       padding:96px 48px;
       display:grid;
-      grid-template-columns:1fr 1fr;
-      grid-template-rows:auto;
-      align-items:center;
-      gap:72px;
+      grid-template-columns:2fr 3fr;
+      align-items:start;
+      gap:48px;
     }
-    /* 偶数セクション: デモ左 / テキスト右 */
-    .feat-section:nth-child(even) .feat-text{order:2}
-    .feat-section:nth-child(even) .feat-visual{order:1}
-    /* フルワイド variant: テキスト上、デモ下 */
+    /* 奇数: テキスト上、ビジュアル下げる */
+    .feat-section .feat-text{padding-top:0}
+    .feat-section .feat-visual{padding-top:120px}
+    /* 偶数: レイアウト反転 + ずらし逆 */
+    .feat-section:nth-child(even){grid-template-columns:3fr 2fr}
+    .feat-section:nth-child(even) .feat-text{order:2;padding-top:0}
+    .feat-section:nth-child(even) .feat-visual{order:1;padding-top:200px}
+    /* フルワイド variant (FX Pad) */
     .feat-section.full{
       grid-template-columns:1fr;
       text-align:center;
       gap:48px;
     }
-    .feat-section.full .feat-text{align-items:center}
-    .feat-section.full .feat-visual{justify-content:center}
+    .feat-section.full .feat-text{align-items:center;padding-top:0}
+    .feat-section.full .feat-visual{justify-content:center;padding-top:0}
     @media(max-width:768px){
       .feat-section{
         grid-template-columns:1fr;
         padding:64px 24px;
         gap:48px;
       }
-      .feat-section:nth-child(even) .feat-text{order:0}
-      .feat-section:nth-child(even) .feat-visual{order:0}
+      .feat-section .feat-visual{padding-top:0}
+      .feat-section:nth-child(even){grid-template-columns:1fr}
+      .feat-section:nth-child(even) .feat-text{order:0;padding-top:0}
+      .feat-section:nth-child(even) .feat-visual{order:0;padding-top:0}
     }
     .feat-text{
       display:flex;flex-direction:column;
@@ -282,11 +298,12 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .feat-title{
       font-family:"JetBrains Mono",monospace;
-      font-size:clamp(3rem, 6vw, 5rem);font-weight:700;
+      font-size:clamp(3.5rem, 8vw, 7rem);font-weight:700;
       letter-spacing:0.04em;
       text-transform:uppercase;
       color:#1E2028;
-      line-height:1.1;
+      line-height:1;
+      white-space:nowrap;
     }
     /* タイトル下のアクセントライン */
     .feat-title::after{
@@ -311,7 +328,7 @@ const ogImage = `${siteUrl}/og.png`;
       font-family:system-ui, -apple-system, sans-serif;
       font-size:0.95rem;
       line-height:2;
-      color:rgba(30,32,40,0.5);
+      color:rgba(30,32,40,0.7);
       white-space:pre-line;
       letter-spacing:0.01em;
     }
@@ -332,7 +349,7 @@ const ogImage = `${siteUrl}/og.png`;
       align-items:center;justify-content:center;
       width:56px;height:40px;
       background:transparent;
-      border:1px solid rgba(30,32,40,0.15);
+      border:1px solid rgba(30,32,40,0.3);
       font-family:"JetBrains Mono",monospace;
       transition:all 120ms;
       cursor:default;
@@ -350,7 +367,7 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .v-name{
       font-size:9px;
-      color:rgba(30,32,40,0.35);
+      color:rgba(30,32,40,0.55);
       letter-spacing:0.02em;
     }
     .voice-sep{
@@ -361,7 +378,7 @@ const ogImage = `${siteUrl}/og.png`;
     /* ── Interactive engine viewer ── */
     .engine-viewer{
       width:100%;
-      margin-top:20px;
+      margin-top:40px;
       background:#1E2028;
       border-radius:6px;
       padding:20px 24px;
@@ -450,7 +467,7 @@ const ogImage = `${siteUrl}/og.png`;
     }
 
     /* ── Generative demo (SVG, same visual language as scene-svg) ── */
-    .gen-demo{width:100%;max-width:640px}
+
 
     /* voice chip hover */
     .voice-chip{cursor:pointer}
@@ -523,7 +540,7 @@ const ogImage = `${siteUrl}/og.png`;
       font-family:system-ui, -apple-system, sans-serif;
       font-size:0.95rem;
       line-height:2;
-      color:rgba(30,32,40,0.45);
+      color:rgba(30,32,40,0.7);
     }
     .donate-cta{
       align-self:center;
@@ -566,7 +583,7 @@ const ogImage = `${siteUrl}/og.png`;
     .final-cta-sub{
       font-family:system-ui, -apple-system, sans-serif;
       font-size:0.95rem;
-      color:rgba(30,32,40,0.4);
+      color:rgba(30,32,40,0.65);
       letter-spacing:0.01em;
     }
     @media(max-width:768px){
@@ -619,7 +636,8 @@ const ogImage = `${siteUrl}/og.png`;
         </svg>
         <h1>INBOIL</h1>
       </div>
-      <p class="tagline">A groove box in your browser</p>
+      <p id="tagline" class="tagline">Make music anywhere, right now</p>
+      <p id="hero-sub" class="hero-sub">No install. No signup. Just play.</p>
       <div class="cta-row">
         <a id="app-link" class="cta primary" href={appUrl}>Open App</a>
         <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
@@ -726,46 +744,6 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </section>
 
-  <!-- ── Feature 4: Generative / Function Nodes ── -->
-  <section class="feat-section full">
-    <div class="feat-text reveal">
-      <h2 id="feat-gen-title" class="feat-title">Generative</h2>
-      <p id="feat-gen-desc" class="feat-desc">Snap decorators onto pattern nodes to transpose, repeat, automate, or apply effects. Add a Turing machine for controlled randomness, a quantizer to lock notes to a scale, or a Tonnetz engine for neo-Riemannian chord walks.</p>
-    </div>
-    <div class="feat-visual reveal">
-      <svg class="gen-demo" viewBox="0 0 526 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Node 1: INTRO (root) -->
-        <rect x="2" y="2" width="88" height="32" fill="#787845" stroke="#1E2028" stroke-width="2"/>
-        <text x="46" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Intro</text>
-        <circle cx="90" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="12" y="40" width="68" height="16" rx="8" fill="#1E2028"/>
-        <text x="46" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">×2 repeat</text>
-        <!-- Edge 1→2 -->
-        <line x1="90" y1="18" x2="170" y2="18" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
-        <polyline points="164,14 170,18 164,22" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <!-- Node 2: VERSE -->
-        <rect x="170" y="2" width="88" height="32" fill="#4472B4" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
-        <text x="214" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Verse</text>
-        <circle cx="258" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="172" y="40" width="42" height="16" rx="8" fill="#1E2028"/>
-        <text x="193" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
-        <rect x="218" y="40" width="46" height="16" rx="8" fill="#1E2028"/>
-        <text x="241" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">turing</text>
-        <!-- Edge 2→3 -->
-        <line x1="258" y1="18" x2="338" y2="18" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
-        <polyline points="332,14 338,18 332,22" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <!-- Node 3: DROP -->
-        <rect x="338" y="2" width="88" height="32" fill="#E8A090" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
-        <text x="382" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Drop</text>
-        <circle cx="426" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="334" y="40" width="42" height="16" rx="8" fill="#1E2028"/>
-        <text x="355" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">reverb</text>
-        <rect x="380" y="40" width="54" height="16" rx="8" fill="#1E2028"/>
-        <text x="407" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">tonnetz</text>
-      </svg>
-    </div>
-  </section>
-
   <!-- ── Final CTA ── -->
   <section class="final-cta reveal">
     <h2 id="final-cta-title" class="final-cta-heading">Ready to make some noise?</h2>
@@ -787,14 +765,14 @@ const ogImage = `${siteUrl}/og.png`;
     a.textContent = 'チュートリアル →';
     // Features i18n
     const t = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    t('tagline', 'いつでも、どこでも、すぐ作曲');
+    t('hero-sub', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
     t('feat-voice-title', 'サウンドエンジン');
     t('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、\n19種類の音源を搭載。\nトラックごとに好きなエンジンを選ぶことができます。');
     t('feat-scene-title', 'シーングラフ');
     t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。\nフィル、リバース、ブレイクでライブ感のある演奏も。');
     t('feat-fx-title', 'FXパッド');
     t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
-t('feat-gen-title', 'ジェネレーティブ');
-    t('feat-gen-desc', 'パターンノードにデコレーターをスナップして、\n移調、リピート、オートメーション、エフェクトを付加。\nチューリングマシンでコントロールされたランダムネス、\nクォンタイザーでスケールにロック、\nトネッツエンジンでネオリーマン的コード進行を。');
     t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
     document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
     document.getElementById('story-text1b').textContent = '音楽ツールは無料で、すぐ使えて、楽しくあるべきだと信じています。';
@@ -1237,6 +1215,11 @@ t('feat-gen-title', 'ジェネレーティブ');
         o.connect(lp); o2.connect(lp); lp.connect(g).connect(c.destination);
         o.start(t); o2.start(t);
         return { nodes: [o, o2], gain: g, update(k) {
+          if (k.pitch !== undefined) {
+            const freq = 220 + k.pitch * 660;
+            o.frequency.value = freq;
+            o2.frequency.value = freq * 1.0029;
+          }
           if (k.cutoff !== undefined) {
             lp.frequency.cancelScheduledValues(c.currentTime);
             lp.frequency.value = 400 + k.cutoff * 6000;
@@ -1337,6 +1320,7 @@ t('feat-gen-title', 'ジェネレーティブ');
           }
         }
         if (window._evSelect) window._evSelect(v);
+        if (window._evApplyKnobs) window._evApplyKnobs();
         document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('hl'));
         chip.classList.add('hl');
       });
@@ -1673,9 +1657,8 @@ t('feat-gen-title', 'ジェネレーティブ');
     }
 
     window._evSelect = selectVoice;
-    window._evUpdateAudio = (knobs) => {
-      // Forward knob values to the active voice's audio update fn
-      if (window._activeVoiceUpdate) window._activeVoiceUpdate(knobs);
+    window._evApplyKnobs = () => {
+      if (window._activeVoiceUpdate && currentKnobs) window._activeVoiceUpdate(currentKnobs);
     };
 
     // Init with wavetable
