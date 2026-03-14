@@ -11,23 +11,53 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style is:global>
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100%;background:#EDE8DC}
+    html,body{
+      width:100%;
+      /* SceneCanvas と同じ: cream + 40px grid */
+      background-color:#EDE8DC;
+      background-image:
+        linear-gradient(rgba(30,32,40,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30,32,40,0.06) 1px, transparent 1px);
+      background-size:40px 40px;
+    }
+
+    /* ── Scroll reveal ── */
+    .reveal{
+      opacity:0;
+      transform:translateY(24px);
+      transition:opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    .reveal.visible{
+      opacity:1;
+      transform:translateY(0);
+    }
     .page{
       min-height:100vh;
-      display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      gap:0;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      align-items:center;
+      gap:48px;
       /* header 42px + 余白 */
-      padding:58px 16px 16px;
+      padding:58px 48px 48px;
+    }
+    @media(max-width:768px){
+      .page{
+        grid-template-columns:1fr;
+        padding:58px 24px 32px;
+        gap:32px;
+      }
+    }
+    .hero-text{
+      display:flex;flex-direction:column;
+      gap:16px;
     }
     .brand{
       display:flex;align-items:center;gap:14px;
-      margin-bottom:8px;
     }
-    .brand svg{width:44px;height:44px;flex-shrink:0}
+    .brand svg{width:clamp(44px, 6vw, 64px);height:clamp(44px, 6vw, 64px);flex-shrink:0}
     .brand h1{
       font-family:"JetBrains Mono",monospace;
-      font-size:2rem;letter-spacing:0.12em;
+      font-size:clamp(3rem, 7vw, 5rem);letter-spacing:0.12em;
       text-transform:uppercase;
       color:#1E2028;
       font-weight:700;
@@ -36,7 +66,11 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       font-family:"JetBrains Mono",monospace;
       font-size:1rem;letter-spacing:0.08em;
       color:rgba(30,32,40,0.5);
-      margin-bottom:28px;
+    }
+    .hero-visual{
+      display:flex;flex-direction:column;
+      align-items:center;
+      gap:8px;
     }
 
     /* ── Sequencer grid ── */
@@ -44,6 +78,7 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       margin-bottom:6px;
       touch-action:none;
       user-select:none;
+      width:100%;
     }
     .seq-row{
       display:flex;align-items:center;gap:2px;
@@ -64,21 +99,19 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       .seq-label{width:36px;font-size:9px;padding-right:6px}
     }
 
-    /* Othello flip (same structure as app) */
+    /* Othello flip — flexible sizing to fill container */
     button.step{
       appearance:none;
       border:none;
       background:none;
       padding:0;margin:0;
       position:relative;
-      width:24px;height:24px;
-      min-width:24px;min-height:24px;
+      flex:1;
+      aspect-ratio:1;
       cursor:pointer;
       perspective:80px;
-      flex-shrink:0;
-    }
-    @media(max-width:639px){
-      button.step{width:18px;height:18px;min-width:18px;min-height:18px}
+      /* cap at 36px so it doesn't get too large on wide screens */
+      max-width:36px;max-height:36px;
     }
     .step .flip-card{
       width:100%;height:100%;
@@ -134,7 +167,6 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       font-size:9px;font-weight:700;
       letter-spacing:0.04em;
       text-transform:uppercase;
-      margin-bottom:24px;
     }
     .sound-toggle.active{
       background:#787845;
@@ -173,40 +205,69 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     .feat-section{
       width:100%;
       min-height:100vh;
-      padding:72px 24px;
-      display:flex;flex-direction:column;
+      padding:72px 48px;
+      display:grid;
+      /* 横並び: テキスト左 / デモ右 */
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:auto;
       align-items:center;
-      justify-content:center;
-      gap:20px;
+      gap:48px;
+    }
+    /* 偶数セクション: デモ左 / テキスト右 */
+    .feat-section:nth-child(even) .feat-text{order:2}
+    .feat-section:nth-child(even) .feat-visual{order:1}
+    @media(max-width:768px){
+      .feat-section{
+        grid-template-columns:1fr;
+        padding:64px 24px;
+        gap:32px;
+      }
+      .feat-section:nth-child(even) .feat-text{order:0}
+      .feat-section:nth-child(even) .feat-visual{order:0}
+    }
+    .feat-text{
+      display:flex;flex-direction:column;
+      gap:16px;
     }
     .feat-title{
       font-family:"JetBrains Mono",monospace;
-      font-size:2rem;font-weight:700;
-      letter-spacing:0.02em;
+      font-size:clamp(3rem, 6vw, 5rem);font-weight:700;
+      letter-spacing:0.04em;
+      text-transform:uppercase;
       color:#1E2028;
-      text-align:center;
+      line-height:1.05;
+    }
+    /* タイトル下のアクセントライン */
+    .feat-title::after{
+      content:'';
+      display:block;
+      width:48px;height:3px;
+      background:#787845;
+      margin-top:16px;
     }
     .feat-desc{
       font-family:"JetBrains Mono",monospace;
       font-size:1rem;
       line-height:1.7;
       color:rgba(30,32,40,0.6);
-      text-align:center;
       white-space:pre-line;
+    }
+    .feat-visual{
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     /* ── Voice grid ── */
-    /* 10列×58px + 9gap×2px = 598px → 10,9の2行 */
     .voice-grid{
       display:flex;flex-wrap:wrap;
       gap:2px;
-      justify-content:center;
-      max-width:598px;
+      justify-content:flex-start;
     }
     .voice-chip{
       display:flex;flex-direction:column;
       align-items:center;justify-content:center;
-      width:58px;height:44px;
+      width:56px;height:40px;
       background:transparent;
       border:1px solid rgba(30,32,40,0.15);
       font-family:"JetBrains Mono",monospace;
@@ -220,12 +281,12 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     .voice-chip.hl .v-label,
     .voice-chip.hl .v-name{color:#EDE8DC}
     .v-label{
-      font-size:10px;font-weight:700;
+      font-size:11px;font-weight:700;
       letter-spacing:0.04em;
       color:#1E2028;
     }
     .v-name{
-      font-size:8px;
+      font-size:9px;
       color:rgba(30,32,40,0.35);
       letter-spacing:0.02em;
     }
@@ -234,13 +295,69 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       flex-basis:100%;
     }
 
+    /* ── Interactive engine viewer ── */
+    .engine-viewer{
+      width:100%;
+      margin-top:20px;
+      background:#1E2028;
+      border-radius:6px;
+      padding:20px 24px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.18);
+      font-family:"JetBrains Mono",monospace;
+    }
+    .ev-header{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:16px;
+    }
+    .ev-voice-name{
+      font-size:15px;font-weight:700;letter-spacing:0.06em;
+      color:rgba(237,232,220,0.82);text-transform:uppercase;
+    }
+    .ev-voice-cat{
+      font-size:10px;font-weight:700;letter-spacing:0.06em;
+      color:rgba(237,232,220,0.35);
+    }
+    .ev-graph-area{
+      width:100%;
+      border-radius:3px;
+      background:rgba(0,0,0,0.25);
+      margin-bottom:16px;
+      position:relative;
+      overflow:hidden;
+    }
+    .ev-graph-area svg{width:100%;height:auto;display:block}
+    .ev-knobs{
+      display:flex;
+      gap:20px;
+      justify-content:center;
+      flex-wrap:wrap;
+      padding:4px 0;
+    }
+    .ev-knob{
+      display:flex;flex-direction:column;align-items:center;
+      cursor:ns-resize;touch-action:none;user-select:none;
+    }
+    .ev-knob svg{width:52px;height:52px}
+    .ev-knob-label{
+      font-size:9px;font-weight:700;letter-spacing:0.06em;
+      color:rgba(237,232,220,0.4);text-transform:uppercase;
+      margin-top:2px;
+    }
+
     /* ── Scene graph SVG ── */
-    .scene-demo{width:100%;max-width:500px}
+    .scene-demo{width:100%;max-width:720px;touch-action:none}
     @keyframes scene-pulse{
       0%{filter:brightness(1.3)}
       100%{filter:brightness(1)}
     }
     .sn-playing{animation:scene-pulse 0.5s ease-out infinite alternate}
+
+    /* voice chip hover */
+    .voice-chip{cursor:pointer}
+    .voice-chip:hover{
+      background:rgba(120,120,69,0.1);
+      border-color:rgba(120,120,69,0.4);
+    }
 
     /* ── Header — docs header と同じ navy bg / cream text ── */
     .site-header{
@@ -261,7 +378,7 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       color:#EDE8DC;
       text-decoration:none;
     }
-    .header-links{display:flex;gap:1.5rem}
+    .header-links{display:flex;gap:1.5rem;align-items:center}
     .header-links a{
       color:rgba(237,232,220,0.5);
       text-decoration:none;
@@ -271,6 +388,17 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       transition:color 0.2s;
     }
     .header-links a:hover{color:#EDE8DC}
+    .header-links .header-cta{
+      background:#6C7744;
+      color:#EDE8DC;
+      padding:5px 14px;
+      font-weight:700;
+      transition:background 0.2s;
+    }
+    .header-links .header-cta:hover{
+      background:#7a8a4e;
+      color:#EDE8DC;
+    }
 
     /* ── Footer ── */
     .footer{
@@ -300,123 +428,98 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     </a>
     <div class="header-links">
       <a href="/docs/">Docs</a>
-      <a id="header-app" href={appUrl}>App</a>
+      <a id="header-app" class="header-cta" href={appUrl}>Open App</a>
     </div>
   </header>
 
   <!-- ── Hero ── -->
   <div class="page">
-    <div class="brand">
-      <svg viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="4" fill="#1e2028"/>
-        <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
-        <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
-        <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
-        <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
-        <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
-      </svg>
-      <h1>INBOIL</h1>
+    <div class="hero-text">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="4" fill="#1e2028"/>
+          <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
+          <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+          <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+          <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
+          <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
+        </svg>
+        <h1>INBOIL</h1>
+      </div>
+      <p class="tagline">A groove box in your browser</p>
+      <div class="cta-row">
+        <a id="app-link" class="cta primary" href={appUrl}>Open App</a>
+        <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
+      </div>
     </div>
-    <p class="tagline">A groove box in your browser</p>
-
-    <div id="seq" class="seq-wrap"></div>
-
-    <button id="sound-btn" class="sound-toggle" aria-label="Toggle sound">
-      <svg class="sound-icon" width="16" height="16" viewBox="0 0 18 18" fill="none">
-        <path d="M4 10.5V8.5a5 5 0 0110 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        <rect x="2" y="10" width="3" height="4" rx="1" fill="currentColor"/>
-        <rect x="13" y="10" width="3" height="4" rx="1" fill="currentColor"/>
-      </svg>
-      <span class="sound-label">Sound</span>
-    </button>
-
-    <div class="cta-row">
-      <a id="app-link" class="cta primary" href={appUrl}>Open App</a>
-      <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
+    <div class="hero-visual">
+      <div id="seq" class="seq-wrap"></div>
+      <button id="sound-btn" class="sound-toggle" aria-label="Toggle sound">
+        <svg class="sound-icon" width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <path d="M4 10.5V8.5a5 5 0 0110 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="2" y="10" width="3" height="4" rx="1" fill="currentColor"/>
+          <rect x="13" y="10" width="3" height="4" rx="1" fill="currentColor"/>
+        </svg>
+        <span class="sound-label">Sound</span>
+      </button>
     </div>
   </div>
 
   <!-- ── Feature 1: Voices ── -->
   <section class="feat-section">
-    <h2 id="feat-voice-title" class="feat-title">Sound Engines</h2>
-    <div class="voice-grid">
-      <div class="voice-chip"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
-      <div class="voice-chip"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
-      <div class="voice-chip hl"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
-      <div class="voice-chip"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
-      <div class="voice-chip"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
-      <div class="voice-chip"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
-      <div class="voice-chip"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
-      <div class="voice-chip"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
-      <div class="voice-chip"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
-      <div class="voice-chip"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
-      <div class="voice-chip"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
-      <div class="voice-chip"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
-      <div class="voice-chip"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
-      <div class="voice-chip"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
-      <div class="voice-chip"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
-      <div class="voice-chip"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
-      <div class="voice-chip"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
-      <div class="voice-chip"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
-      <div class="voice-chip"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
+    <div class="feat-text reveal">
+      <h2 id="feat-voice-title" class="feat-title">Sound Engines</h2>
+      <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths. Choose a different engine for each track.</p>
     </div>
-    <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths. Choose a different engine for each track.</p>
+    <div class="feat-visual reveal" style="flex-direction:column;gap:12px">
+      <!-- Voice grid selector -->
+      <div class="voice-grid">
+        <div class="voice-chip" data-v="909k"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
+        <div class="voice-chip" data-v="808k"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
+        <div class="voice-chip" data-v="snare"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
+        <div class="voice-chip" data-v="clap"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
+        <div class="voice-chip" data-v="chh"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
+        <div class="voice-chip" data-v="ohh"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
+        <div class="voice-chip" data-v="cym"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
+        <div class="voice-chip" data-v="tom"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
+        <div class="voice-chip" data-v="rim"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
+        <div class="voice-chip" data-v="bell"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
+        <div class="voice-chip" data-v="shkr"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
+        <div class="voice-chip" data-v="303"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
+        <div class="voice-chip" data-v="bass"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
+        <div class="voice-chip" data-v="lead"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
+        <div class="voice-chip" data-v="fm"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
+        <div class="voice-chip hl" data-v="wave"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
+        <div class="voice-chip" data-v="crsh"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
+        <div class="voice-chip" data-v="ride"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
+        <div class="voice-chip" data-v="smpl"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
+      </div>
+      <!-- Engine viewer -->
+      <div class="engine-viewer" id="engine-viewer">
+        <div class="ev-header">
+          <span class="ev-voice-name" id="ev-name">Wavetable</span>
+          <span class="ev-voice-cat" id="ev-cat">SYNTH</span>
+        </div>
+        <div class="ev-graph-area" id="ev-graph-area">
+          <svg id="ev-graph" viewBox="0 0 480 100" fill="none"></svg>
+        </div>
+        <div class="ev-knobs" id="ev-knobs"></div>
+      </div>
+    </div>
   </section>
 
   <!-- ── Feature 2: Scene Graph ── -->
   <section class="feat-section">
-    <h2 id="feat-scene-title" class="feat-title">Scene Graph</h2>
-    <svg class="scene-demo" viewBox="0 0 500 170" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Edges -->
-      <defs>
-        <marker id="arrow" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-          <path d="M0,0 L8,3 L0,6 Z" fill="rgba(30,32,40,0.2)"/>
-        </marker>
-      </defs>
-      <!-- A→B -->
-      <line x1="90" y1="85" x2="126" y2="85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" marker-end="url(#arrow)"/>
-      <!-- B→C (curve up) -->
-      <path d="M198,85 C222,85 238,40 256,40" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-      <!-- B→D (curve down) -->
-      <path d="M198,85 C222,85 238,130 256,130" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-      <!-- C→E -->
-      <path d="M328,40 C352,40 368,85 386,85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-      <!-- D→E -->
-      <path d="M328,130 C352,130 368,85 386,85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-
-      <!-- Edge order badges -->
-      <circle cx="228" cy="62" r="7" fill="rgba(237,232,220,0.9)" stroke="rgba(30,32,40,0.15)" stroke-width="1"/>
-      <text x="228" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#1E2028">1</text>
-      <circle cx="228" cy="108" r="7" fill="rgba(237,232,220,0.9)" stroke="rgba(30,32,40,0.15)" stroke-width="1"/>
-      <text x="228" y="111" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#1E2028">2</text>
-
-      <!-- Node A: Intro (olive, root) -->
-      <rect x="18" y="70" width="72" height="30" fill="#787845" stroke="#1E2028" stroke-width="2"/>
-      <text x="54" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Intro</text>
-
-      <!-- Node B: Verse (blue, playing) -->
-      <rect x="126" y="70" width="72" height="30" fill="#4472B4" class="sn-playing"/>
-      <text x="162" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Verse</text>
-
-      <!-- Node C: Drop (salmon) -->
-      <rect x="256" y="25" width="72" height="30" fill="#E8A090"/>
-      <text x="292" y="44" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Drop</text>
-      <!-- Decorator tag below C -->
-      <rect x="270" y="58" width="44" height="14" rx="7" fill="#1E2028"/>
-      <text x="292" y="68" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
-
-      <!-- Node D: Chill (teal) -->
-      <rect x="256" y="115" width="72" height="30" fill="#4A9B9B"/>
-      <text x="292" y="134" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Chill</text>
-      <!-- Decorator tag below D -->
-      <rect x="266" y="148" width="52" height="14" rx="7" fill="#1E2028"/>
-      <text x="292" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(237,232,220,0.7)">RPT ×2</text>
-
-      <!-- Node E: Outro (purple) -->
-      <rect x="386" y="70" width="72" height="30" fill="#9B6BA0"/>
-      <text x="422" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Outro</text>
+    <div class="feat-text reveal">
+      <h2 id="feat-scene-title" class="feat-title">Scene Graph</h2>
+      <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time.</p>
+    </div>
+    <div class="feat-visual reveal">
+    <svg id="scene-svg" class="scene-demo" viewBox="0 0 720 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g id="scene-edges"></g>
+      <g id="scene-nodes"></g>
     </svg>
-    <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time.</p>
+    </div>
   </section>
 
   <footer class="footer">&copy; INBOIL</footer>
@@ -634,13 +737,928 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       lastStep = step;
 
       // Set new playhead + trigger sounds
+      let hits = 0;
       for (let t = 0; t < TRACKS; t++) {
         cells[t][step].classList.add('playhead');
-        if (grid[t][step]) playSound(t);
+        if (grid[t][step]) { playSound(t); hits++; }
       }
     }
 
     requestAnimationFrame(tick);
+  })();
+
+  // ── Scroll reveal ──
+  (() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  })();
+
+  // ── Voice chip preview sounds (legato: sustain while held) ──
+  (() => {
+    let ctx = null;
+    let noiseBuf = null;
+    function getCtx() {
+      if (ctx) return ctx;
+      ctx = new AudioContext();
+      // longer noise buffer for sustained playback
+      const len = ctx.sampleRate * 4;
+      noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return ctx;
+    }
+
+    // Active sound state for release
+    let activeNodes = [];
+    let activeGain = null;
+    let activeUpdate = null; // knob→audio update fn
+    const REL = 0.08; // release time
+
+    function stopActive() {
+      if (!activeGain || !ctx) return;
+      const t = ctx.currentTime;
+      activeGain.gain.cancelScheduledValues(t);
+      activeGain.gain.setValueAtTime(activeGain.gain.value, t);
+      activeGain.gain.exponentialRampToValueAtTime(0.001, t + REL);
+      const nodes = activeNodes;
+      const g = activeGain;
+      setTimeout(() => {
+        nodes.forEach(n => { try { n.stop() } catch {} });
+        try { g.disconnect() } catch {}
+      }, REL * 1000 + 50);
+      activeNodes = [];
+      activeGain = null;
+      activeUpdate = null;
+    }
+
+    // Sustained voice builders — return { nodes, gain } to keep alive
+    const voices = {
+      '909k': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(340, t);
+        o.frequency.exponentialRampToValueAtTime(55, t + 0.035);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.6, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        o.connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g };
+      },
+      '808k': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(40, t + 0.05);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.6, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        o.connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g };
+      },
+      'snare': () => {
+        const c = getCtx(), t = c.currentTime;
+        const g = c.createGain(); g.gain.setValueAtTime(0.35, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        const o = c.createOscillator(); o.frequency.value = 200;
+        const og = c.createGain(); og.gain.setValueAtTime(0.3, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        o.connect(og).connect(g);
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2000;
+        n.connect(hp).connect(g);
+        g.connect(c.destination);
+        o.start(t); n.start(t);
+        return { nodes: [o, n], gain: g };
+      },
+      'clap': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.5;
+        const g = c.createGain(); g.gain.setValueAtTime(0.3, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        n.connect(bp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      'chh': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 8000;
+        const g = c.createGain(); g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        n.connect(hp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      'ohh': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
+        const g = c.createGain(); g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        n.connect(hp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      'cym': () => {
+        const c = getCtx(), t = c.currentTime;
+        // 606-style: noise + sine through BP filter
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 6000; bp.Q.value = 2;
+        const o = c.createOscillator(); o.frequency.value = 540;
+        const g = c.createGain(); g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+        n.connect(bp).connect(g); o.connect(g);
+        g.connect(c.destination);
+        n.start(t); o.start(t);
+        return { nodes: [n, o], gain: g };
+      },
+      'tom': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(250, t);
+        o.frequency.exponentialRampToValueAtTime(120, t + 0.06);
+        const g = c.createGain(); g.gain.setValueAtTime(0.4, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g };
+      },
+      'rim': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'square'; o.frequency.value = 800;
+        const g = c.createGain(); g.gain.setValueAtTime(0.25, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        o.connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g };
+      },
+      'bell': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o1 = c.createOscillator(); o1.frequency.value = 587;
+        const o2 = c.createOscillator(); o2.frequency.value = 845;
+        const g = c.createGain(); g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+        o1.connect(g); o2.connect(g); g.connect(c.destination);
+        o1.start(t); o2.start(t);
+        return { nodes: [o1, o2], gain: g };
+      },
+      'shkr': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 10000;
+        const g = c.createGain(); g.gain.setValueAtTime(0.1, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        n.connect(hp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      '303': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 110;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(200, t); lp.Q.value = 7;
+        // Filter env sweep
+        lp.frequency.linearRampToValueAtTime(4200, t + 0.002);
+        lp.frequency.exponentialRampToValueAtTime(200, t + 0.18);
+        const g = c.createGain(); g.gain.setValueAtTime(0.3, t);
+        o.connect(lp).connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g, update(k) {
+          lp.frequency.cancelScheduledValues(c.currentTime);
+          lp.frequency.value = 200 + (k.cutoff ?? 0.5) * 4000;
+          lp.Q.value = 1 + (k.reso ?? 0.6) * 18;
+        }};
+      },
+      'bass': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 800; lp.Q.value = 3.5;
+        // Filter env
+        lp.frequency.linearRampToValueAtTime(5300, t + 0.008);
+        lp.frequency.exponentialRampToValueAtTime(800, t + 0.25);
+        const g = c.createGain(); g.gain.setValueAtTime(0.35, t);
+        o.connect(lp).connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g, update(k) {
+          if (k.pitch !== undefined) o.frequency.value = 30 + k.pitch * 80;
+          if (k.cutoff !== undefined) {
+            lp.frequency.cancelScheduledValues(c.currentTime);
+            lp.frequency.value = 200 + k.cutoff * 2000;
+          }
+        }};
+      },
+      'lead': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 440;
+        const o2 = c.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = 440 * 1.0029; // detune
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 400; lp.Q.value = 1.8;
+        lp.frequency.linearRampToValueAtTime(5900, t + 0.005);
+        lp.frequency.exponentialRampToValueAtTime(400, t + 0.35);
+        const g = c.createGain(); g.gain.setValueAtTime(0.25, t);
+        o.connect(lp); o2.connect(lp); lp.connect(g).connect(c.destination);
+        o.start(t); o2.start(t);
+        return { nodes: [o, o2], gain: g, update(k) {
+          if (k.cutoff !== undefined) {
+            lp.frequency.cancelScheduledValues(c.currentTime);
+            lp.frequency.value = 400 + k.cutoff * 6000;
+          }
+        }};
+      },
+      'fm': () => {
+        const c = getCtx(), t = c.currentTime;
+        const car = c.createOscillator(); car.frequency.value = 220;
+        const mod = c.createOscillator(); mod.frequency.value = 440; // ratio 2.0
+        const modG = c.createGain(); modG.gain.value = 220 * 0.7; // depth = op2Level * carrier freq
+        // Mod envelope decay
+        modG.gain.exponentialRampToValueAtTime(220 * 0.1, t + 0.2);
+        const g = c.createGain(); g.gain.setValueAtTime(0.25, t);
+        mod.connect(modG).connect(car.frequency);
+        car.connect(g).connect(c.destination);
+        mod.start(t); car.start(t);
+        return { nodes: [mod, car], gain: g, update(k) {
+          if (k.ratio !== undefined) mod.frequency.value = 220 * (0.5 + k.ratio * 4);
+          if (k.depth !== undefined) {
+            modG.gain.cancelScheduledValues(c.currentTime);
+            modG.gain.value = k.depth * 600;
+          }
+        }};
+      },
+      'wave': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o1 = c.createOscillator(); o1.frequency.value = 261;
+        const o2 = c.createOscillator(); o2.frequency.value = 263;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3000;
+        const g = c.createGain(); g.gain.setValueAtTime(0.2, t);
+        o1.connect(lp); o2.connect(lp); lp.connect(g).connect(c.destination);
+        o1.start(t); o2.start(t);
+        // Map wavetable position to waveform type
+        const waveTypes = ['sawtooth','square','triangle','sine'];
+        return { nodes: [o1, o2], gain: g, update(k) {
+          if (k.pos !== undefined) {
+            const idx = Math.min(3, Math.floor(k.pos * 4));
+            o1.type = waveTypes[idx]; o2.type = waveTypes[idx];
+            o2.frequency.value = 261 + 2 + k.pos * 4; // detune with position
+          }
+        }};
+      },
+      'crsh': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 5000; bp.Q.value = 1.5;
+        const g = c.createGain(); g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+        n.connect(bp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      'ride': () => {
+        const c = getCtx(), t = c.currentTime;
+        const n = c.createBufferSource(); n.buffer = noiseBuf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
+        const g = c.createGain(); g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        n.connect(hp).connect(g).connect(c.destination);
+        n.start(t);
+        return { nodes: [n], gain: g };
+      },
+      'smpl': () => {
+        const c = getCtx(), t = c.currentTime;
+        const o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = 523;
+        const g = c.createGain(); g.gain.setValueAtTime(0.2, t);
+        o.connect(g).connect(c.destination);
+        o.start(t);
+        return { nodes: [o], gain: g };
+      },
+    };
+
+    // Voices that sustain while held (lead/bass); drums are one-shot
+    // Expose active voice update fn for knob→audio bridge
+    Object.defineProperty(window, '_activeVoiceUpdate', {
+      get() { return activeUpdate; }
+    });
+
+    const legatoVoices = new Set(['303','bass','lead','fm','wave','smpl']);
+
+    document.querySelectorAll('.voice-chip[data-v]').forEach(chip => {
+      const v = chip.dataset.v;
+      const isLegato = legatoVoices.has(v);
+
+      chip.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        getCtx();
+        stopActive();
+        const fn = voices[v];
+        if (fn) {
+          const result = fn();
+          activeNodes = result.nodes;
+          activeGain = result.gain;
+          activeUpdate = result.update || null;
+          if (!isLegato) {
+            setTimeout(stopActive, 300);
+          }
+        }
+        if (window._evSelect) window._evSelect(v);
+        document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('hl'));
+        chip.classList.add('hl');
+      });
+      if (isLegato) {
+        chip.addEventListener('pointerup', stopActive);
+        chip.addEventListener('pointerleave', stopActive);
+        chip.addEventListener('pointercancel', stopActive);
+      }
+    });
+  })();
+
+  // ── Interactive engine viewer ──
+  (() => {
+    const svg = document.getElementById('ev-graph');
+    const knobsEl = document.getElementById('ev-knobs');
+    const nameEl = document.getElementById('ev-name');
+    const catEl = document.getElementById('ev-cat');
+    const W = 480, H = 100, PAD = 4;
+
+    // ── Waveform generators (from WaveGraph.svelte) ──
+    function sawWave(t) { return 2 * t - 1 }
+    function squareWave(t) { return t < 0.5 ? 1 : -1 }
+    function triWave(t) { return t < 0.5 ? 4 * t - 1 : 3 - 4 * t }
+    function sineWave(t) { return Math.sin(2 * Math.PI * t) }
+    function pulseWave(t) { return t < 0.15 ? 1 : -0.2 }
+    const waveShapes = [sawWave, squareWave, triWave, sineWave, pulseWave];
+
+    function genWavePath(pos) {
+      const idx = Math.floor(pos * 4);
+      const frac = pos * 4 - idx;
+      const idxN = Math.min(idx + 1, 4);
+      const a = waveShapes[idx], b = waveShapes[idxN];
+      const mid = H / 2, amp = (H - PAD * 2) / 2;
+      const pts = [];
+      for (let i = 0; i <= 128; i++) {
+        const t = i / 128;
+        const x = PAD + t * (W - PAD * 2);
+        const v = a(t) + (b(t) - a(t)) * frac;
+        pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${(mid - v * amp).toFixed(1)}`);
+      }
+      return pts.join(' ');
+    }
+
+    // ── ADSR envelope (from EnvGraph.svelte) ──
+    function genEnvPaths(attack, decay, sustain, release) {
+      const a = Math.max(0.001, attack), d = Math.max(0.01, decay);
+      const s = Math.max(0, Math.min(1, sustain)), r = Math.max(0.01, release);
+      const sustainHold = 0.15;
+      const total = a + d + sustainHold + r;
+      const scale = (W - PAD * 2) / total;
+      const x0 = PAD, x1 = x0 + a * scale, x2 = x1 + d * scale;
+      const x3 = x2 + sustainHold * scale, x4 = x3 + r * scale;
+      const yTop = PAD, ySus = PAD + (1 - s) * (H - PAD * 2), yBot = H - PAD;
+      const stroke = `M${x0},${yBot} L${x1},${yTop} L${x2},${ySus} L${x3},${ySus} L${x4},${yBot}`;
+      return { stroke, fill: stroke + ' Z' };
+    }
+
+    // ── FM algorithm (from AlgoGraph.svelte) ──
+    const ALGOS = [
+      { ops:[[80,25],[160,25],[280,25],[360,25]], links:[[3,2],[2,1],[1,0]], carriers:[0] },
+      { ops:[[80,75],[180,25],[300,25],[400,25]], links:[[3,2],[2,1]], carriers:[0,1] },
+      { ops:[[140,75],[260,75],[80,25],[380,25]], links:[[3,2],[3,1],[1,0]], carriers:[0,2] },
+      { ops:[[140,75],[260,25],[80,25],[380,25]], links:[[3,2],[1,0]], carriers:[0,2] },
+    ];
+
+    function renderAlgo(algoIdx) {
+      const algo = ALGOS[Math.min(algoIdx, 3)];
+      const R = 16;
+      let h = '';
+      // links
+      for (const [f, t] of algo.links) {
+        const [fx,fy] = algo.ops[f], [tx,ty] = algo.ops[t];
+        h += `<line x1="${fx}" y1="${fy}" x2="${tx}" y2="${ty}" stroke="rgba(237,232,220,0.35)" stroke-width="2"/>`;
+        const dx = tx-fx, dy = ty-fy, len = Math.sqrt(dx*dx+dy*dy);
+        const nx = dx/len, ny = dy/len;
+        const ax = tx-nx*(R+3), ay = ty-ny*(R+3);
+        h += `<polygon points="${ax},${ay} ${ax-nx*8+ny*4},${ay-ny*8-nx*4} ${ax-nx*8-ny*4},${ay-ny*8+nx*4}" fill="rgba(237,232,220,0.35)"/>`;
+      }
+      // carrier outputs
+      for (const ci of algo.carriers) {
+        const [cx,cy] = algo.ops[ci];
+        h += `<line x1="${cx}" y1="${cy+R+2}" x2="${cx}" y2="${H-2}" stroke="rgba(180,200,140,0.5)" stroke-width="2"/>`;
+      }
+      // circles
+      algo.ops.forEach(([ox,oy], i) => {
+        const isCar = algo.carriers.includes(i);
+        h += `<circle cx="${ox}" cy="${oy}" r="${R}" fill="${isCar?'rgba(180,200,140,0.25)':'rgba(237,232,220,0.08)'}" stroke="${isCar?'rgba(180,200,140,0.7)':'rgba(237,232,220,0.4)'}" stroke-width="2"/>`;
+        h += `<text x="${ox}" y="${oy+5}" text-anchor="middle" fill="${isCar?'rgba(180,200,140,0.9)':'rgba(237,232,220,0.6)'}" font-size="14" font-family="monospace">${i+1}</text>`;
+      });
+      h += `<text x="${W-8}" y="18" text-anchor="end" fill="rgba(237,232,220,0.3)" font-size="12" font-family="monospace">ALG ${algoIdx}</text>`;
+      return h;
+    }
+
+    // ── Knob SVG rendering ──
+    function knobSVG(value, label, locked) {
+      const r = 18, cx = 24, cy = 24;
+      const circ = 2 * Math.PI * r;
+      const travel = circ * 0.75; // 270°
+      const gap = circ - travel;
+      const filled = travel * value;
+      const col = locked ? '#6C7744' : 'rgba(237,232,220,0.82)';
+      return `<svg viewBox="0 0 48 48" fill="none">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(237,232,220,0.18)" stroke-width="3" stroke-dasharray="${travel} ${gap}" stroke-dashoffset="${-gap/2}" stroke-linecap="round"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="3" stroke-dasharray="${filled} ${circ-filled}" stroke-dashoffset="${-gap/2}" stroke-linecap="round"/>
+        <text x="${cx}" y="${cy+4}" text-anchor="middle" fill="rgba(237,232,220,0.6)" font-size="11" font-family="monospace">${value.toFixed(2)}</text>
+      </svg>`;
+    }
+
+    // ── Voice definitions ──
+    const voiceDefs = {
+      'wave': {
+        name: 'Wavetable', cat: 'SYNTH',
+        knobs: [
+          { key:'pos', label:'POS', value:0.0, locked:false },
+          { key:'attack', label:'ATK', value:0.005, locked:false },
+          { key:'decay', label:'DEC', value:0.3, locked:false },
+          { key:'sustain', label:'SUS', value:0.5, locked:false },
+          { key:'release', label:'REL', value:0.3, locked:false },
+        ],
+        render(k) {
+          const p = k.pos;
+          // Two rows: wave + envelope
+          let h = '';
+          // WaveGraph (top half)
+          h += `<line x1="${PAD}" y1="25" x2="${W-PAD}" y2="25" stroke="rgba(237,232,220,0.1)" stroke-width="1"/>`;
+          const wavePath = genWavePath(p);
+          // Scale wave to top half (0-50)
+          const pts = [];
+          for (let i = 0; i <= 128; i++) {
+            const t = i / 128;
+            const x = PAD + t * (W - PAD * 2);
+            const idx = Math.floor(p * 4), frac = p * 4 - idx;
+            const idxN = Math.min(idx + 1, 4);
+            const v = waveShapes[idx](t) + (waveShapes[idxN](t) - waveShapes[idx](t)) * frac;
+            const y = 25 - v * 20;
+            pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+          }
+          h += `<path d="${pts.join(' ')}" fill="none" stroke="rgba(237,232,220,0.6)" stroke-width="2" stroke-linejoin="round"/>`;
+          // EnvGraph (bottom half: y 55-95)
+          const env = genEnvPaths(k.attack, k.decay, k.sustain, k.release);
+          // Remap env to bottom half
+          const a = Math.max(0.001, k.attack), d = Math.max(0.01, k.decay);
+          const s = Math.max(0, Math.min(1, k.sustain)), r = Math.max(0.01, k.release);
+          const total = a + d + 0.15 + r;
+          const sc = (W - PAD * 2) / total;
+          const x0=PAD, x1=x0+a*sc, x2=x1+d*sc, x3=x2+0.15*sc, x4=x3+r*sc;
+          const eTop=58, eBot=96, eSus=eTop+(1-s)*(eBot-eTop);
+          const envStroke = `M${x0},${eBot} L${x1},${eTop} L${x2},${eSus} L${x3},${eSus} L${x4},${eBot}`;
+          h += `<path d="${envStroke} Z" fill="rgba(108,119,68,0.15)"/>`;
+          h += `<path d="${envStroke}" fill="none" stroke="rgba(108,119,68,0.7)" stroke-width="2" stroke-linejoin="round"/>`;
+          // Divider
+          h += `<line x1="${PAD}" y1="50" x2="${W-PAD}" y2="50" stroke="rgba(237,232,220,0.06)" stroke-width="1"/>`;
+          // Labels
+          h += `<text x="${PAD+4}" y="14" fill="rgba(237,232,220,0.25)" font-size="9" font-family="monospace">OSC</text>`;
+          h += `<text x="${PAD+4}" y="68" fill="rgba(237,232,220,0.25)" font-size="9" font-family="monospace">ENV</text>`;
+          return h;
+        }
+      },
+      'fm': {
+        name: 'FM Synth', cat: 'SYNTH',
+        knobs: [
+          { key:'algo', label:'ALG', value:0, locked:false, max:3, step:1 },
+          { key:'ratio', label:'RATIO', value:0.5, locked:false },
+          { key:'depth', label:'DEPTH', value:0.7, locked:true },
+          { key:'attack', label:'ATK', value:0.003, locked:false },
+          { key:'release', label:'REL', value:0.4, locked:false },
+        ],
+        render(k) { return renderAlgo(Math.round(k.algo)); }
+      },
+      '909k': {
+        name: '909 Kick', cat: 'DRUM',
+        knobs: [
+          { key:'pitch', label:'PITCH', value:0.4, locked:false },
+          { key:'decay', label:'DECAY', value:0.5, locked:false },
+          { key:'drive', label:'DRIVE', value:0.3, locked:false },
+        ],
+        render(k) {
+          // Pitch sweep envelope
+          const pts = [];
+          for (let i = 0; i <= 128; i++) {
+            const t = i / 128;
+            const x = PAD + t * (W - PAD * 2);
+            const freq = (0.2 + k.pitch * 0.8) * Math.exp(-t * 8 * (1 - k.decay * 0.7));
+            const amp = Math.exp(-t * (3 + (1 - k.decay) * 12));
+            const v = Math.sin(2 * Math.PI * t * 8) * amp * freq;
+            const y = H / 2 - v * (H / 2 - PAD);
+            pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+          }
+          let h = `<line x1="${PAD}" y1="${H/2}" x2="${W-PAD}" y2="${H/2}" stroke="rgba(237,232,220,0.1)" stroke-width="1"/>`;
+          h += `<path d="${pts.join(' ')}" fill="none" stroke="rgba(237,232,220,0.6)" stroke-width="2" stroke-linejoin="round"/>`;
+          return h;
+        }
+      },
+      '303': {
+        name: 'Bass 303', cat: 'SYNTH',
+        knobs: [
+          { key:'cutoff', label:'FREQ', value:0.3, locked:false },
+          { key:'reso', label:'RESO', value:0.7, locked:false },
+          { key:'envmod', label:'ENV', value:0.6, locked:false },
+          { key:'decay', label:'DEC', value:0.18, locked:true },
+        ],
+        render(k) {
+          // Resonant filter response
+          const fc = 0.1 + k.cutoff * 0.6;
+          const q = 1 + k.reso * 15;
+          const pts = [];
+          for (let i = 0; i <= 200; i++) {
+            const f = i / 200;
+            const x = PAD + f * (W - PAD * 2);
+            const dist = Math.abs(f - fc);
+            const bw = 0.03 + (1 - k.reso) * 0.1;
+            const resp = 1 / (1 + (dist / bw) ** 2);
+            const base = f < fc ? 1 : Math.max(0, 1 - (f - fc) * 3);
+            const v = base * 0.3 + resp * 0.7 * (q / 16);
+            const y = H - PAD - v * (H - PAD * 2);
+            pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${Math.max(PAD, y).toFixed(1)}`);
+          }
+          let h = `<path d="${pts.join(' ')}" fill="none" stroke="rgba(237,232,220,0.6)" stroke-width="2"/>`;
+          // Swept ghost
+          const fc2 = Math.min(0.8, fc + k.envmod * 0.3);
+          const pts2 = [];
+          for (let i = 0; i <= 200; i++) {
+            const f = i / 200;
+            const x = PAD + f * (W - PAD * 2);
+            const dist = Math.abs(f - fc2);
+            const bw = 0.03 + (1 - k.reso) * 0.1;
+            const resp = 1 / (1 + (dist / bw) ** 2);
+            const base = f < fc2 ? 1 : Math.max(0, 1 - (f - fc2) * 3);
+            const v = base * 0.3 + resp * 0.7 * (q / 16);
+            const y = H - PAD - v * (H - PAD * 2);
+            pts2.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${Math.max(PAD, y).toFixed(1)}`);
+          }
+          h += `<path d="${pts2.join(' ')}" fill="none" stroke="rgba(108,119,68,0.4)" stroke-width="2" stroke-dasharray="6,4"/>`;
+          h += `<line x1="${PAD}" y1="${H-PAD}" x2="${W-PAD}" y2="${H-PAD}" stroke="rgba(237,232,220,0.06)" stroke-width="1"/>`;
+          return h;
+        }
+      },
+    };
+
+    // Default fallback: simple waveform for drums
+    function drumRender(k) {
+      const pts = [];
+      for (let i = 0; i <= 128; i++) {
+        const t = i / 128;
+        const x = PAD + t * (W - PAD * 2);
+        const amp = Math.exp(-t * (3 + (1 - (k.decay ?? 0.5)) * 12));
+        const freq = 4 + (k.pitch ?? 0.5) * 8;
+        const v = Math.sin(2 * Math.PI * t * freq) * amp;
+        const y = H / 2 - v * (H / 2 - PAD);
+        pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
+      }
+      let h = `<line x1="${PAD}" y1="${H/2}" x2="${W-PAD}" y2="${H/2}" stroke="rgba(237,232,220,0.1)" stroke-width="1"/>`;
+      h += `<path d="${pts.join(' ')}" fill="none" stroke="rgba(237,232,220,0.6)" stroke-width="2" stroke-linejoin="round"/>`;
+      return h;
+    }
+
+    const defaultDrum = {
+      cat: 'DRUM',
+      knobs: [
+        { key:'pitch', label:'PITCH', value:0.5, locked:false },
+        { key:'decay', label:'DECAY', value:0.5, locked:false },
+      ],
+      render: drumRender,
+    };
+
+    const voiceNames = {
+      '909k':'909 Kick','808k':'808 Kick','snare':'Snare','clap':'Clap',
+      'chh':'Closed HH','ohh':'Open HH','cym':'Cymbal','tom':'Tom',
+      'rim':'Rimshot','bell':'Cowbell','shkr':'Shaker','303':'Bass 303',
+      'bass':'Analog Bass','lead':'Synth Lead','fm':'FM Synth',
+      'wave':'Wavetable','crsh':'Crash','ride':'Ride','smpl':'Sampler',
+    };
+
+    let currentKnobs = {};
+    let currentVoice = null;
+
+    function render() {
+      if (!currentVoice) return;
+      const def = voiceDefs[currentVoice] || { ...defaultDrum, name: voiceNames[currentVoice] || currentVoice };
+      svg.innerHTML = def.render(currentKnobs);
+    }
+
+    function buildKnobs() {
+      if (!currentVoice) return;
+      const def = voiceDefs[currentVoice] || { ...defaultDrum, name: voiceNames[currentVoice] || currentVoice };
+      knobsEl.innerHTML = '';
+      currentKnobs = {};
+      def.knobs.forEach(k => {
+        currentKnobs[k.key] = k.value;
+        const wrap = document.createElement('div');
+        wrap.className = 'ev-knob';
+        wrap.innerHTML = knobSVG(k.value, k.label, k.locked) + `<span class="ev-knob-label">${k.label}</span>`;
+        wrap.dataset.key = k.key;
+        wrap.dataset.max = k.max ?? 1;
+        wrap.dataset.step = k.step ?? 0;
+        wrap.dataset.locked = k.locked ? '1' : '0';
+
+        // Drag to adjust
+        let startY = 0, startVal = 0;
+        wrap.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          wrap.setPointerCapture(e.pointerId);
+          startY = e.clientY;
+          startVal = currentKnobs[k.key];
+        });
+        wrap.addEventListener('pointermove', e => {
+          if (!wrap.hasPointerCapture(e.pointerId)) return;
+          const dy = startY - e.clientY;
+          const max = parseFloat(wrap.dataset.max);
+          const step = parseFloat(wrap.dataset.step);
+          let newVal = startVal + dy * (max / 150);
+          if (step) newVal = Math.round(newVal / step) * step;
+          newVal = Math.max(0, Math.min(max, newVal));
+          currentKnobs[k.key] = newVal;
+          // Update knob visual
+          const dispVal = step ? newVal.toFixed(0) : newVal.toFixed(2);
+          wrap.querySelector('svg').outerHTML = knobSVG(step ? newVal / max : newVal, k.label, k.locked === true || wrap.dataset.locked === '1');
+          render();
+          // Update live audio
+          if (window._activeVoiceUpdate) window._activeVoiceUpdate(currentKnobs);
+        });
+        knobsEl.appendChild(wrap);
+      });
+    }
+
+    function selectVoice(v) {
+      const changed = currentVoice !== v;
+      currentVoice = v;
+      const def = voiceDefs[v] || { ...defaultDrum, name: voiceNames[v] || v };
+      nameEl.textContent = def.name || voiceNames[v] || v;
+      catEl.textContent = def.cat || 'DRUM';
+      if (changed) buildKnobs();
+      render();
+    }
+
+    window._evSelect = selectVoice;
+    window._evUpdateAudio = (knobs) => {
+      // Forward knob values to the active voice's audio update fn
+      if (window._activeVoiceUpdate) window._activeVoiceUpdate(knobs);
+    };
+
+    // Init with wavetable
+    selectVoice('wave');
+  })();
+
+  // ── Interactive Scene Graph ──
+  (() => {
+    const svg = document.getElementById('scene-svg');
+    const edgesG = document.getElementById('scene-edges');
+    const nodesG = document.getElementById('scene-nodes');
+    if (!svg || !edgesG || !nodesG) return;
+
+    // Match app: scene-node { min-width:72px, height:32px, border-radius:0, font:9px 700 }
+    const NW = 88, NH = 32;
+    const edgeColor = 'rgba(30,32,40,0.18)';
+    const ns = 'http://www.w3.org/2000/svg';
+
+    const nodes = [
+      { id:'intro', label:'Intro', x:80, y:104, color:'#787845', root:true },
+      { id:'verse', label:'Verse', x:220, y:104, color:'#4472B4', playing:true },
+      { id:'drop',  label:'Drop',  x:380, y:50, color:'#E8A090', deco:'T +5' },
+      { id:'chill', label:'Chill', x:380, y:162, color:'#4A9B9B', deco:'RPT ×2' },
+      { id:'outro', label:'Outro', x:540, y:104, color:'#9B6BA0' },
+    ];
+
+    const edges = [
+      { from:'intro', to:'verse' },
+      { from:'verse', to:'drop', order:0 },
+      { from:'verse', to:'chill', order:1 },
+      { from:'drop',  to:'outro' },
+      { from:'chill', to:'outro' },
+    ];
+
+    function nodeById(id) { return nodes.find(n => n.id === id); }
+
+    function renderEdges() {
+      edgesG.innerHTML = '';
+      for (const e of edges) {
+        const s = nodeById(e.from), d = nodeById(e.to);
+        const sx = s.x + NW, sy = s.y + NH / 2;
+        const dx = d.x, dy = d.y + NH / 2;
+
+        // Cubic bezier
+        const mx = (sx + dx) / 2;
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', `M${sx},${sy} C${mx},${sy} ${mx},${dy} ${dx},${dy}`);
+        path.setAttribute('stroke', edgeColor);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        edgesG.appendChild(path);
+
+        // Chevron arrowhead
+        const arr = document.createElementNS(ns, 'polyline');
+        arr.setAttribute('points', `${dx-8},${dy-4} ${dx},${dy} ${dx-8},${dy+4}`);
+        arr.setAttribute('fill', 'none');
+        arr.setAttribute('stroke', edgeColor);
+        arr.setAttribute('stroke-width', '2');
+        arr.setAttribute('stroke-linecap', 'round');
+        arr.setAttribute('stroke-linejoin', 'round');
+        edgesG.appendChild(arr);
+
+        // Edge order label
+        if (e.order !== undefined) {
+          const lx = mx, ly = (sy + dy) / 2;
+          const bg = document.createElementNS(ns, 'rect');
+          bg.setAttribute('x', String(lx - 8));
+          bg.setAttribute('y', String(ly - 7));
+          bg.setAttribute('width', '16');
+          bg.setAttribute('height', '14');
+          bg.setAttribute('fill', '#EDE8DC');
+          bg.setAttribute('rx', '2');
+          edgesG.appendChild(bg);
+          const txt = document.createElementNS(ns, 'text');
+          txt.setAttribute('x', String(lx));
+          txt.setAttribute('y', String(ly + 4));
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('font-family', 'JetBrains Mono,monospace');
+          txt.setAttribute('font-size', '11');
+          txt.setAttribute('font-weight', '700');
+          txt.setAttribute('fill', 'rgba(30,32,40,0.35)');
+          txt.textContent = String(e.order);
+          edgesG.appendChild(txt);
+        }
+      }
+    }
+
+    function renderNodes() {
+      nodesG.innerHTML = '';
+      for (const n of nodes) {
+        const g = document.createElementNS(ns, 'g');
+        g.setAttribute('data-node', n.id);
+        g.style.cursor = 'grab';
+
+        // Node rect — app: border-radius:0, border:1px solid rgba(30,32,40,0.1)
+        // Root: border:2px solid #1E2028. Playing: border:1.5px solid rgba(255,255,255,0.75)
+        const rect = document.createElementNS(ns, 'rect');
+        rect.setAttribute('x', String(n.x));
+        rect.setAttribute('y', String(n.y));
+        rect.setAttribute('width', String(NW));
+        rect.setAttribute('height', String(NH));
+        rect.setAttribute('fill', n.color);
+        if (n.root) {
+          rect.setAttribute('stroke', '#1E2028');
+          rect.setAttribute('stroke-width', '2');
+        } else if (n.playing) {
+          rect.setAttribute('stroke', 'rgba(255,255,255,0.75)');
+          rect.setAttribute('stroke-width', '1.5');
+          rect.classList.add('sn-playing');
+        } else {
+          rect.setAttribute('stroke', 'rgba(30,32,40,0.1)');
+          rect.setAttribute('stroke-width', '1');
+        }
+        g.appendChild(rect);
+
+        // Label — app: 9px 700 monospace, letter-spacing:0.04em
+        const text = document.createElementNS(ns, 'text');
+        text.setAttribute('x', String(n.x + NW / 2));
+        text.setAttribute('y', String(n.y + NH / 2 + 4));
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('font-family', 'JetBrains Mono,monospace');
+        text.setAttribute('font-size', '11');
+        text.setAttribute('font-weight', '700');
+        text.setAttribute('letter-spacing', '0.04em');
+        text.setAttribute('fill', 'white');
+        text.textContent = n.label;
+        g.appendChild(text);
+
+        // Edge handle (right side) — app: 10×10 circle, rgba(30,32,40,0.25)
+        const hx = n.x + NW, hy = n.y + NH / 2;
+        const handle = document.createElementNS(ns, 'circle');
+        handle.setAttribute('cx', String(hx));
+        handle.setAttribute('cy', String(hy));
+        handle.setAttribute('r', '5');
+        handle.setAttribute('fill', 'rgba(30,32,40,0.25)');
+        handle.setAttribute('stroke', 'rgba(30,32,40,0.4)');
+        handle.setAttribute('stroke-width', '1.5');
+        g.appendChild(handle);
+
+        // Decorator pill
+        if (n.deco) {
+          const pw = n.deco.length * 6 + 12;
+          const px = n.x + NW / 2 - pw / 2;
+          const py = n.y + NH + 4;
+          const pill = document.createElementNS(ns, 'rect');
+          pill.setAttribute('x', String(px));
+          pill.setAttribute('y', String(py));
+          pill.setAttribute('width', String(pw));
+          pill.setAttribute('height', '16');
+          pill.setAttribute('rx', '8');
+          pill.setAttribute('fill', '#1E2028');
+          g.appendChild(pill);
+          const dt = document.createElementNS(ns, 'text');
+          dt.setAttribute('x', String(n.x + NW / 2));
+          dt.setAttribute('y', String(py + 11));
+          dt.setAttribute('text-anchor', 'middle');
+          dt.setAttribute('font-family', 'JetBrains Mono,monospace');
+          dt.setAttribute('font-size', '8');
+          dt.setAttribute('font-weight', '700');
+          dt.setAttribute('fill', 'rgba(237,232,220,0.7)');
+          dt.textContent = n.deco;
+          g.appendChild(dt);
+        }
+
+        // Play button on top of everything (root only)
+        if (n.root) {
+          const bx = n.x - 4, by = n.y + NH / 2, br = 14;
+          const shadow = document.createElementNS(ns, 'circle');
+          shadow.setAttribute('cx', String(bx));
+          shadow.setAttribute('cy', String(by + 1));
+          shadow.setAttribute('r', String(br + 1));
+          shadow.setAttribute('fill', 'rgba(30,32,40,0.1)');
+          g.appendChild(shadow);
+          const btn = document.createElementNS(ns, 'circle');
+          btn.setAttribute('cx', String(bx));
+          btn.setAttribute('cy', String(by));
+          btn.setAttribute('r', String(br));
+          btn.setAttribute('fill', 'white');
+          btn.setAttribute('stroke', '#1E2028');
+          btn.setAttribute('stroke-width', '2');
+          btn.style.cursor = 'pointer';
+          g.appendChild(btn);
+          const bw = 3.5, bh = 10, bg = 2;
+          const bar1 = document.createElementNS(ns, 'rect');
+          bar1.setAttribute('x', String(bx - bw - bg/2));
+          bar1.setAttribute('y', String(by - bh/2));
+          bar1.setAttribute('width', String(bw));
+          bar1.setAttribute('height', String(bh));
+          bar1.setAttribute('rx', '0.8');
+          bar1.setAttribute('fill', '#1E2028');
+          bar1.style.pointerEvents = 'none';
+          g.appendChild(bar1);
+          const bar2 = document.createElementNS(ns, 'rect');
+          bar2.setAttribute('x', String(bx + bg/2));
+          bar2.setAttribute('y', String(by - bh/2));
+          bar2.setAttribute('width', String(bw));
+          bar2.setAttribute('height', String(bh));
+          bar2.setAttribute('rx', '0.8');
+          bar2.setAttribute('fill', '#1E2028');
+          bar2.style.pointerEvents = 'none';
+          g.appendChild(bar2);
+        }
+
+        nodesG.appendChild(g);
+      }
+    }
+
+    // Initial render
+    renderEdges();
+    renderNodes();
+
+    // ── Drag interaction ──
+    let dragNode = null, dragOffX = 0, dragOffY = 0;
+
+    function svgPoint(e) {
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    svg.addEventListener('pointerdown', e => {
+      const g = e.target.closest('[data-node]');
+      if (!g) return;
+      e.preventDefault();
+      svg.setPointerCapture(e.pointerId);
+      const n = nodeById(g.dataset.node);
+      if (!n) return;
+      dragNode = n;
+      const p = svgPoint(e);
+      dragOffX = p.x - n.x;
+      dragOffY = p.y - n.y;
+      g.style.cursor = 'grabbing';
+    });
+
+    svg.addEventListener('pointermove', e => {
+      if (!dragNode) return;
+      const p = svgPoint(e);
+      dragNode.x = Math.max(0, Math.min(720 - NW, p.x - dragOffX));
+      dragNode.y = Math.max(0, Math.min(240 - NH, p.y - dragOffY));
+      renderEdges();
+      renderNodes();
+    });
+
+    svg.addEventListener('pointerup', () => {
+      if (dragNode) {
+        const g = nodesG.querySelector(`[data-node="${dragNode.id}"]`);
+        if (g) g.style.cursor = 'grab';
+      }
+      dragNode = null;
+    });
+
+    svg.addEventListener('pointercancel', () => { dragNode = null; });
   })();
   </script>
 </body>
