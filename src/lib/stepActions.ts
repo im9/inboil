@@ -9,7 +9,7 @@ import { PATTERN_COLORS } from './constants.ts'
 import { makeTrig, makeTrack, makeEmptyCell, DRUM_VOICES } from './factory.ts'
 import { VOICE_LIST } from './audio/dsp/voices.ts'
 import { defaultVoiceParams } from './paramDefs.ts'
-import { isGuest, guestToggleTrig, guestSetVelocity, guestSetChance, guestSolo } from './multiDevice/guest.ts'
+import { isGuest, guestToggleTrig, guestSetVelocity, guestSetChance, guestMute, guestSolo } from './multiDevice/guest.ts'
 
 // ── Step editing ──
 
@@ -173,6 +173,7 @@ export function findNoteHead(trackId: number, stepIdx: number, note: number): nu
 // ── Track operations ──
 
 export function toggleMute(trackId: number) {
+  if (isGuest()) { guestMute(trackId, !song.tracks[trackId].muted); return }
   pushUndo('Toggle mute')
   song.tracks[trackId].muted = !song.tracks[trackId].muted
 }

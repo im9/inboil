@@ -4,3 +4,4 @@ export { isGuest, guestAction, guestToggleTrig, guestSetVelocity, guestSetChance
 export { startHost, joinAsGuest, disconnect, setSignalingUrl, broadcastToGuests, sendToGuest, setOnHostMessage, setOnGuestConnected } from './connection.ts'
 export { initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead } from './host.ts'
 export { initGuestHandlers } from './guestHandler.ts'
+export { syncDelta, resetDeltaSync } from './deltaSync.ts'

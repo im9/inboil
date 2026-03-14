@@ -21,6 +21,7 @@
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead, setOnGuestConnected, initGuestHandlers } from './lib/multiDevice/index.ts'
+  import { syncDelta } from './lib/multiDevice/deltaSync.ts'
 
   const engineCtx: EngineContext = $derived({
     fxFlavours,
@@ -77,6 +78,8 @@
       } else {
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
       }
+      // Broadcast song deltas to connected guests
+      if (session.role === 'host') syncDelta(song)
     })
     return () => cancelAnimationFrame(rafId)
   })

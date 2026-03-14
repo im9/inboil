@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, project, masterLevels, toggleSidebar, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, project, session, masterLevels, toggleSidebar, pushUndo } from '../state.svelte.ts'
   import { BPM_MIN, BPM_MAX } from '../constants.ts'
   import { startCapture, stopCapture } from '../wavExport.ts'
   import { downloadBlob } from '../midiExport.ts'
@@ -129,6 +129,11 @@
       <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
     </svg>
     <span class="app-name">INBOIL</span>
+    {#if session.role !== 'solo'}
+      <span class="session-badge" class:guest={session.role === 'guest'}>
+        {session.role === 'host' ? 'HOST' : 'GUEST'}{session.roomCode ? ` ${session.roomCode}` : ''}
+      </span>
+    {/if}
     {#if masterLevels.cpu > 0}
       {@const cpu = masterLevels.cpu}
       {@const dots = Math.min(6, Math.round(cpu / 100 * 6))}
@@ -289,6 +294,20 @@
     text-transform: uppercase;
     position: relative;
     z-index: 1;
+  }
+  .session-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--color-blue);
+    color: var(--color-bg);
+    position: relative;
+    z-index: 1;
+  }
+  .session-badge.guest {
+    background: var(--color-salmon);
   }
 
   .cpu-meter {

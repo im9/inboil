@@ -3,7 +3,13 @@
   import { setTrackSend, clearAllParamLocks, toggleMute, toggleSolo } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
+  import { isGuest, guestSetParam } from '../multiDevice/guest.ts'
   import Knob from './Knob.svelte'
+
+  function setParam(key: string, v: number) {
+    if (isGuest()) { guestSetParam(ui.selectedTrack, key, v); return }
+    ;(song.tracks[ui.selectedTrack] as unknown as Record<string, unknown>)[key] = v
+  }
 
   const track = $derived(song.tracks[ui.selectedTrack])
   const cell   = $derived(activeCell(ui.selectedTrack))
@@ -96,8 +102,8 @@
     <!-- Param knobs for selected category -->
     <div class="params-bar">
       {#if paramTab === 'mix'}
-        <Knob value={track.volume} label="VOL" size={40} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
-        <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+        <Knob value={track.volume} label="VOL" size={40} onchange={v => setParam('volume', v)} />
+        <Knob value={(track.pan + 1) / 2} label="PAN" size={40} onchange={v => setParam('pan', v * 2 - 1)} />
       {:else if paramTab === 'fx'}
         <Knob value={activeCell(ui.selectedTrack).reverbSend} label="VERB" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
         <Knob value={activeCell(ui.selectedTrack).delaySend} label="DLY" size={40} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
