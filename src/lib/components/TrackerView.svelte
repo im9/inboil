@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, activeCell, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { song, playback, ui, activeCell } from '../state.svelte.ts'
+  import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import {
     isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
     setTrigSlide, setTrigChance, toggleMute, toggleSolo,

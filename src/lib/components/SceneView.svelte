@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, primarySelectedNode, selectPattern, hasScenePlayback, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
+  import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneSetRoot, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'

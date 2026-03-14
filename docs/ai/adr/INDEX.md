@@ -119,6 +119,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 | 087 | Looper / Tape Node | Proposed | OP-1 Field style tape looper as scene function node, 4-track overdub, BPM-synced |
 | 093 | Cross-Node Automation | Proposed | Automation decorators that span multiple chained pattern nodes, gradual parameter transitions |
+| 094 | Interactive Docs & Playground | Proposed | Tutorial JSON snapshots, SceneCanvas sandbox, in-app onboarding (split from ADR 072) |
 
 ## Data / Infrastructure
 
@@ -131,7 +132,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
 | 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
-| 072 | Landing Page, Docs & Tutorial | Proposed | Astro + Starlight, LP demo, getting-started tutorial |
+| 072 | Landing Page, Docs & Tutorial | Implemented | Astro + Starlight LP with interactive demos, specs, bilingual docs. Playground/onboarding split to ADR 094 |
 | 073 | Desktop App | Proposed | Tauri v2 shell (Phase 1 done); Phase 2: CI, auto-update, code signing |
 | 074 | Mobile App (iOS Native) | Proposed | Swift/SwiftUI + C++ DSP port to Core Audio |
 | 080 | Pre-Launch Structural Audit | Implemented | Track→mixer-only, BPM constants, insertFx clone fix, undo coverage |

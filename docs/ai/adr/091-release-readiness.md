@@ -49,16 +49,9 @@ ErrorToast component + `showToast()` global store. Wired to: storage (DB blocked
 
 `src/lib/compat.ts` checks AudioContext, AudioWorkletNode, indexedDB (including Safari constructor check). `main.ts` shows fallback page on failure; App is lazy-loaded via dynamic import so unsupported browsers never download the app bundle.
 
-#### 3. Landing Page & Minimal Tutorial (ADR 072)
+#### 3. ~~Landing Page & Minimal Tutorial (ADR 072)~~ ✅ Done
 
-First-time users currently land directly in the app with no explanation.
-
-**Required (minimum viable):**
-- Landing page: hero + feature list + "Open App" CTA + demo GIF/video
-- Getting-started: 3-page tutorial in Starlight docs ("First beat", "Change sounds", "Build a scene")
-- In-app: each Help section gets a "→ Docs" link
-
-**See ADR 072 for full spec.** This is the largest P0 item.
+ADR 072 Implemented. LP with interactive demos (step sequencer, voice engine viewer, scene graph, FX pad), specs section, bilingual i18n. Starlight docs with getting-started tutorial. In-app Help → Docs links wired.
 
 #### 4. ~~Explicit Storage Scope Notice~~ ✅ Done (2026-03-12)
 
@@ -107,10 +100,10 @@ First-time users currently land directly in the app with no explanation.
 
 ## Success Criteria for Launch
 
-- [ ] All P0 items complete
+- [x] All P0 items complete
 - [x] No `console.warn` / `console.error` for user-recoverable situations (all surfaced in UI)
-- [ ] Landing page live at root URL
-- [ ] Getting-started tutorial accessible from LP and in-app Help
+- [x] Landing page live at root URL
+- [x] Getting-started tutorial accessible from LP and in-app Help
 - [ ] Tested in Chrome, Firefox, Safari (desktop + mobile)
 - [ ] Custom domain active (ADR 072 consideration)
 

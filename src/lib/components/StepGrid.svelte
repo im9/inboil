@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
-  import { song, activeCell, playback, ui, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui } from '../state.svelte.ts'
+  import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
 

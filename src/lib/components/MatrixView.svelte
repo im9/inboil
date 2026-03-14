@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene, soloPatternIndex } from '../state.svelte.ts'
+  import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene } from '../state.svelte.ts'
+  import { soloPatternIndex } from '../scenePlayback.ts'
   import { sceneAddNode } from '../sceneActions.ts'
   import { patternCopy, patternPaste, patternClear } from '../sectionActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'

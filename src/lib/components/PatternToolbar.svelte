@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, midiIn, isViewingPlayingPattern, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, midiIn, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo } from '../state.svelte.ts'
+  import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import { engine, type EngineContext } from '../audio/engine.ts'

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo, isViewingPlayingPattern } from '../state.svelte.ts'
+  import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo } from '../state.svelte.ts'
+  import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import type { BrushMode, ChordShape } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
