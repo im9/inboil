@@ -262,28 +262,30 @@ Quick lookup during use         Sit down and learn
 - Engine viewer: dark panel showing real-time SVG graphs (waveform interpolation, ADSR envelope, FM algorithm routing) that switch per voice
 - Draggable SVG arc knobs that update graphs + live audio (filter freq/Q, FM ratio/depth, wavetable position)
 - Audio params matched to app presets (paramDefs.ts / DRUM_PRESETS)
-- Scene Graph section: draggable nodes with dynamic bezier edges, chevron arrowheads, edge-order labels
+- Scene Graph section: draggable nodes with dynamic bezier edges, direction-aware arrowheads, edge-order labels
+- Scene edges use ray-box intersection for exit/entry points (matches app sceneGeometry.ts)
 - Scene nodes match app style (height:32, no border-radius, root border, playing pulse, edge handles, decorator pills)
 - Root node with play button (playing state, ⏸ icon) overlapping left edge
 - Responsive breakpoints at 768px (2-col → 1-col)
 - OGP / meta description / Twitter Card tags (og.png image asset still needed)
 - FX Pad section: draggable effect nodes on canvas with constellation lines between active nodes
-- Performance section: hold-to-engage FILL / REV / BRK buttons with visual feedback
+- FX node colors match app exactly (VERB=#787845, DLY=#4472B4, GLT=#E8A090, GRN=#9B6BA0)
 - Generative section: decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
+- Performance mentioned in Scene Graph description (section removed — not compelling as standalone demo)
 - Final CTA section: "Ready to make some noise?" + app/tutorial links
 - Story + Support section with Ko-fi donate link
-- Scene graph: hint text ("drag the nodes") + nudge animation on scroll-in, hides on first drag
 - Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
 - Feature title hover bounce + accent-line pulse
 - CTA primary button glow sweep on hover
 - Bilingual i18n for all new sections (EN/JA auto-detect)
+- App header logo bold (font-weight:700) to match site header
 
 **TODO (LP):**
 - [x] OGP / meta description / social sharing tags
-- [x] Additional feature sections (Effects/FX Pad, Performance mode, Generative/function nodes)
-- [x] Final CTA section at page bottom ("Try it now" with app link)
+- [x] Additional feature sections (FX Pad, Generative; Performance folded into Scene Graph text)
+- [x] Final CTA section at page bottom ("Ready to make some noise?" with app link)
 - [x] Donate section (ADR 071) — Ko-fi link in Story + Support section
-- [x] Scene graph: hint text or intro animation so users discover drag interaction
+- [x] Scene graph: draggable nodes as hidden discovery (hint text removed per user preference)
 - [x] Mobile UX verification (voice grid + knobs on small screens)
 - [x] Logo flap animation (original ADR spec)
 - [x] Feature icon hover bounce / pulse micro-interactions
