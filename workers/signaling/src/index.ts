@@ -1,6 +1,7 @@
 /**
  * Cloudflare Workers + Durable Objects signaling server (ADR 019).
  *
+ * 1:1 model — each room supports exactly one host + one guest.
  * Each room code maps to one DO instance, guaranteeing shared in-memory
  * state for all WebSocket connections in the same room.
  * Uses server.accept() (not Hibernation API) so addEventListener works.
@@ -52,10 +53,16 @@ export class SignalingRoom extends DurableObject<Env> {
             return
           }
 
+          // 1:1 model: reject if room already has 2 peers (host + guest)
+          if (this.peers.size >= 2) {
+            server.close(4001, 'Room is full')
+            return
+          }
+
           peerId = `p${++this.peerIdCounter}`
           const peerName = msg.name || 'Guest'
 
-          // Notify existing peers
+          // Notify existing peer (host)
           this.broadcast(peerId, JSON.stringify({
             t: 'peer-joined',
             id: peerId,

@@ -1,7 +1,8 @@
 /**
  * WebRTC connection manager for multi-device collaboration (ADR 019).
  *
- * Host: creates a room, accepts peer connections, broadcasts state.
+ * 1:1 model — one host, one guest per room.
+ * Host: creates a room, accepts a single peer connection, sends state.
  * Guest: joins a room, sends control messages, receives state mirror.
  */
 
@@ -121,15 +122,15 @@ interface PeerConnection {
   channel: RTCDataChannel | null
 }
 
-let hostPeers: PeerConnection[] = []
-let onGuestMessage: ((peerId: string, msg: GuestMessage) => void) | null = null
-let onGuestConnected: ((peerId: string) => void) | null = null
+let hostPeer: PeerConnection | null = null
+let onGuestMessage: ((msg: GuestMessage) => void) | null = null
+let onGuestConnected: (() => void) | null = null
 
-export function setOnGuestMessage(handler: (peerId: string, msg: GuestMessage) => void) {
+export function setOnGuestMessage(handler: (msg: GuestMessage) => void) {
   onGuestMessage = handler
 }
 
-export function setOnGuestConnected(handler: (peerId: string) => void) {
+export function setOnGuestConnected(handler: () => void) {
   onGuestConnected = handler
 }
 
@@ -146,7 +147,7 @@ function setupHostSignaling() {
       } else if (msg.t === 'ice') {
         handleRemoteIce(msg.candidate)
       } else if (msg.t === 'peer-left') {
-        handlePeerLeft(msg.id)
+        handlePeerLeft()
       }
     } catch {
       // Ignore malformed signaling messages
@@ -164,7 +165,7 @@ export async function startHost(): Promise<string> {
   session.role = 'host'
   session.roomCode = roomCode
   session.connected = true
-  hostPeers = []
+  hostPeer = null
 
   signalingWs = await connectSignaling(roomCode, 'host')
   setupHostSignaling()
@@ -173,38 +174,44 @@ export async function startHost(): Promise<string> {
 }
 
 async function handlePeerJoined(peerId: string, peerName: string) {
+  // 1:1 model: disconnect existing guest before accepting new one
+  if (hostPeer) {
+    hostPeer.channel?.close()
+    hostPeer.pc.close()
+    hostPeer = null
+  }
+
   const pc = new RTCPeerConnection({ iceServers: STUN_SERVERS })
 
   const channel = pc.createDataChannel(CHANNEL_LABEL, {
     ordered: true,
   })
 
-  const peer: PeerConnection = { id: peerId, name: peerName, pc, channel }
-  hostPeers.push(peer)
-  session.peers = hostPeers.map(p => ({ id: p.id, name: p.name }))
+  hostPeer = { id: peerId, name: peerName, pc, channel }
+  session.peers = [{ id: peerId, name: peerName }]
 
   channel.onopen = () => {
-    onGuestConnected?.(peerId)
+    onGuestConnected?.()
   }
 
   channel.onmessage = (ev) => {
     receiveChunked(channel, ev.data as string, (data) => {
       const msg = decodeGuestMsg(data)
       if (msg && onGuestMessage) {
-        onGuestMessage(peerId, msg)
+        onGuestMessage(msg)
       }
     })
   }
 
   channel.onclose = () => {
-    handlePeerLeft(peerId)
+    handlePeerLeft()
   }
 
   // Monitor ICE connection state
   pc.onconnectionstatechange = () => {
     if (pc.connectionState === 'failed') {
       emitError(`Connection to ${peerName} failed`)
-      handlePeerLeft(peerId)
+      handlePeerLeft()
     }
   }
 
@@ -220,24 +227,20 @@ async function handlePeerJoined(peerId: string, peerName: string) {
 }
 
 async function handleAnswer(sdp: string) {
-  // Apply to the most recently created peer (signaling is sequential)
-  const peer = hostPeers[hostPeers.length - 1]
-  if (!peer) return
-  await peer.pc.setRemoteDescription({ type: 'answer', sdp })
+  if (!hostPeer) return
+  await hostPeer.pc.setRemoteDescription({ type: 'answer', sdp })
 }
 
 async function handleRemoteIce(candidate: RTCIceCandidateInit) {
-  const peer = hostPeers[hostPeers.length - 1]
-  if (!peer) return
-  await peer.pc.addIceCandidate(candidate)
+  if (!hostPeer) return
+  await hostPeer.pc.addIceCandidate(candidate)
 }
 
-function handlePeerLeft(peerId: string) {
-  const idx = hostPeers.findIndex(p => p.id === peerId)
-  if (idx >= 0) {
-    hostPeers[idx].pc.close()
-    hostPeers.splice(idx, 1)
-    session.peers = hostPeers.map(p => ({ id: p.id, name: p.name }))
+function handlePeerLeft() {
+  if (hostPeer) {
+    hostPeer.pc.close()
+    hostPeer = null
+    session.peers = []
   }
 }
 
@@ -290,21 +293,10 @@ function receiveChunked(channel: RTCDataChannel, raw: string, onComplete: (data:
   onComplete(raw)
 }
 
-/** Send a host message to all connected guests. */
-export function broadcastToGuests(msg: HostMessage) {
-  const data = encodeMsg(msg)
-  for (const peer of hostPeers) {
-    if (peer.channel?.readyState === 'open') {
-      sendChunked(peer.channel, data)
-    }
-  }
-}
-
-/** Send a host message to a specific guest. */
-export function sendToGuest(peerId: string, msg: HostMessage) {
-  const peer = hostPeers.find(p => p.id === peerId)
-  if (peer?.channel?.readyState === 'open') {
-    sendChunked(peer.channel, encodeMsg(msg))
+/** Send a host message to the connected guest. */
+export function sendToGuest(msg: HostMessage) {
+  if (hostPeer?.channel?.readyState === 'open') {
+    sendChunked(hostPeer.channel, encodeMsg(msg))
   }
 }
 
@@ -415,12 +407,12 @@ export function disconnect() {
   }
   reconnectAttempts = 0
 
-  // Close all host peer connections
-  for (const peer of hostPeers) {
-    peer.channel?.close()
-    peer.pc.close()
+  // Close host peer connection
+  if (hostPeer) {
+    hostPeer.channel?.close()
+    hostPeer.pc.close()
+    hostPeer = null
   }
-  hostPeers = []
 
   // Close guest connection
   guestChannel?.close()

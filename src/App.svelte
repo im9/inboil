@@ -20,7 +20,7 @@
   import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
-  import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
+  import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
   import { showToast } from './lib/toast.svelte.ts'
 
@@ -50,7 +50,7 @@
   if (sigUrl) setSignalingUrl(sigUrl)
   initHostHandlers()
   initGuestHandlers()
-  setOnGuestConnected((peerId) => sendSnapshot(peerId))
+  setOnGuestConnected(() => sendSnapshot())
   setOnError((msg) => showToast(msg, 'warn'))
   // Clean disconnect on page unload
   window.addEventListener('beforeunload', () => {
@@ -136,7 +136,7 @@
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
     // Broadcast playhead to connected guests
-    if (session.role === 'host') broadcastPlayhead()
+    if (session.role === 'host') sendPlayhead()
     // Apply automation curves on every step (ADR 053)
     if (playback.mode === 'scene' && playback.activeAutomations.length > 0 && playback.playingPattern != null) {
       const pat = song.patterns[playback.playingPattern]

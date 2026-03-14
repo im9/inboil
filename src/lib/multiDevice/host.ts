@@ -8,7 +8,7 @@
 import { song, playback, selectPattern } from '../state.svelte.ts'
 import { toggleTrig, setTrigVelocity, setTrigChance, toggleSolo } from '../stepActions.ts'
 import type { GuestMessage, PlaybackSnapshot } from './protocol.ts'
-import { broadcastToGuests, sendToGuest, setOnGuestMessage } from './connection.ts'
+import { sendToGuest, setOnGuestMessage } from './connection.ts'
 import type { Song } from '../types.ts'
 
 // ── Transport callbacks (set by App.svelte) ───────────────────
@@ -27,7 +27,7 @@ export function initHostHandlers() {
   setOnGuestMessage(handleGuestMessage)
 }
 
-function handleGuestMessage(_peerId: string, msg: GuestMessage) {
+function handleGuestMessage(msg: GuestMessage) {
   switch (msg.t) {
     case 'trig':
       toggleTrig(msg.track, msg.step)
@@ -91,24 +91,24 @@ function handleGuestMessage(_peerId: string, msg: GuestMessage) {
 
 // ── State broadcast helpers ───────────────────────────────────
 
-/** Send a full snapshot to a specific guest (on connect). */
-export function sendSnapshot(peerId: string) {
+/** Send a full snapshot to the connected guest. */
+export function sendSnapshot() {
   const snap: PlaybackSnapshot = {
     playing: playback.playing,
     mode: playback.mode,
     playingPattern: playback.playingPattern,
     playheads: [...playback.playheads],
   }
-  sendToGuest(peerId, {
+  sendToGuest({
     t: 'snapshot',
     song: JSON.parse(JSON.stringify(song)) as Song,
     playback: snap,
   })
 }
 
-/** Broadcast playhead position to all guests. */
-export function broadcastPlayhead() {
-  broadcastToGuests({
+/** Send playhead position to the connected guest. */
+export function sendPlayhead() {
+  sendToGuest({
     t: 'playhead',
     heads: [...playback.playheads],
     playing: playback.playing,

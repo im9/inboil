@@ -6,7 +6,7 @@
  */
 
 import type { JsonPatch } from './protocol.ts'
-import { broadcastToGuests } from './connection.ts'
+import { sendToGuest } from './connection.ts'
 
 let prevSnapshot: string | null = null
 
@@ -34,7 +34,7 @@ export function syncDelta(song: object): void {
   prevSnapshot = current
 
   if (patches.length > 0) {
-    broadcastToGuests({ t: 'delta', patches })
+    sendToGuest({ t: 'delta', patches })
   }
 }
 
