@@ -712,6 +712,20 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </section>
 
+  <!-- ── Story + Support ── -->
+  <section class="story-section reveal">
+    <div class="story-content">
+      <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
+      <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
+      <p id="story-text1b" class="story-body">I believe music tools should be free, instant, and fun.</p>
+      <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development.</p>
+      <p id="story-text2b" class="story-body">Your contribution helps keep the project free and fuels new features.</p>
+      <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
+        <span class="donate-heart">&#9825;</span> Support this project
+      </a>
+    </div>
+  </section>
+
   <!-- ── Feature 4: Generative / Function Nodes ── -->
   <section class="feat-section full">
     <div class="feat-text reveal">
@@ -719,55 +733,36 @@ const ogImage = `${siteUrl}/og.png`;
       <p id="feat-gen-desc" class="feat-desc">Snap decorators onto pattern nodes to transpose, repeat, automate, or apply effects. Add a Turing machine for controlled randomness, a quantizer to lock notes to a scale, or a Tonnetz engine for neo-Riemannian chord walks.</p>
     </div>
     <div class="feat-visual reveal">
-      <!-- Same rendering approach as scene-svg: pure SVG with rects, text, edges, pills -->
       <svg class="gen-demo" viewBox="0 0 526 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Horizontal layout: node + pills below, connected by horizontal edges -->
-
         <!-- Node 1: INTRO (root) -->
         <rect x="2" y="2" width="88" height="32" fill="#787845" stroke="#1E2028" stroke-width="2"/>
-        <text x="44" y="20" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Intro</text>
-        <circle cx="88" cy="16" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="10" y="38" width="68" height="16" rx="8" fill="#1E2028"/>
-        <text x="44" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">×2 repeat</text>
-
+        <text x="46" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Intro</text>
+        <circle cx="90" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <rect x="12" y="40" width="68" height="16" rx="8" fill="#1E2028"/>
+        <text x="46" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">×2 repeat</text>
         <!-- Edge 1→2 -->
-        <line x1="88" y1="16" x2="168" y2="16" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
-        <polyline points="162,12 168,16 162,20" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-
+        <line x1="90" y1="18" x2="170" y2="18" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
+        <polyline points="164,14 170,18 164,22" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <!-- Node 2: VERSE -->
-        <rect x="168" y="0" width="88" height="32" fill="#4472B4" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
-        <text x="212" y="20" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Verse</text>
-        <circle cx="256" cy="16" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="170" y="38" width="42" height="16" rx="8" fill="#1E2028"/>
-        <text x="191" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
-        <rect x="216" y="38" width="46" height="16" rx="8" fill="#1E2028"/>
-        <text x="239" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">turing</text>
-
+        <rect x="170" y="2" width="88" height="32" fill="#4472B4" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
+        <text x="214" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Verse</text>
+        <circle cx="258" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <rect x="172" y="40" width="42" height="16" rx="8" fill="#1E2028"/>
+        <text x="193" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
+        <rect x="218" y="40" width="46" height="16" rx="8" fill="#1E2028"/>
+        <text x="241" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">turing</text>
         <!-- Edge 2→3 -->
-        <line x1="256" y1="16" x2="336" y2="16" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
-        <polyline points="330,12 336,16 330,20" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-
+        <line x1="258" y1="18" x2="338" y2="18" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
+        <polyline points="332,14 338,18 332,22" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <!-- Node 3: DROP -->
-        <rect x="336" y="0" width="88" height="32" fill="#E8A090" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
-        <text x="380" y="20" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Drop</text>
-        <circle cx="424" cy="16" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
-        <rect x="332" y="38" width="42" height="16" rx="8" fill="#1E2028"/>
-        <text x="353" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">reverb</text>
-        <rect x="378" y="38" width="54" height="16" rx="8" fill="#1E2028"/>
-        <text x="405" y="49" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">tonnetz</text>
+        <rect x="338" y="2" width="88" height="32" fill="#E8A090" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
+        <text x="382" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Drop</text>
+        <circle cx="426" cy="18" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <rect x="334" y="40" width="42" height="16" rx="8" fill="#1E2028"/>
+        <text x="355" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">reverb</text>
+        <rect x="380" y="40" width="54" height="16" rx="8" fill="#1E2028"/>
+        <text x="407" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">tonnetz</text>
       </svg>
-    </div>
-  </section>
-
-  <!-- ── Story + Support ── -->
-  <section class="story-section reveal">
-    <div class="story-content">
-      <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
-      <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer who believes music tools should be free, instant, and fun. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
-      <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development. Your contribution helps keep the project free and fuels new features.</p>
-      <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
-        <span class="donate-heart">&#9825;</span> Support this project
-      </a>
     </div>
   </section>
 
@@ -801,8 +796,10 @@ const ogImage = `${siteUrl}/og.png`;
 t('feat-gen-title', 'ジェネレーティブ');
     t('feat-gen-desc', 'パターンノードにデコレーターをスナップして、\n移調、リピート、オートメーション、エフェクトを付加。\nチューリングマシンでコントロールされたランダムネス、\nクォンタイザーでスケールにロック、\nトネッツエンジンでネオリーマン的コード進行を。');
     t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
-    document.getElementById('story-text').innerHTML = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。<br><br>音楽ツールは無料で、すぐ使えて、楽しくあるべきだと信じています。';
-    document.getElementById('story-text2').innerHTML = 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。<br><br>いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。';
+    document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
+    document.getElementById('story-text1b').textContent = '音楽ツールは無料で、すぐ使えて、楽しくあるべきだと信じています。';
+    document.getElementById('story-text2').textContent = 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。';
+    document.getElementById('story-text2b').textContent = 'いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。';
     const dl = document.getElementById('donate-link');
     if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
     t('final-cta-title', 'さっそく始めよう');
