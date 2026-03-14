@@ -1,4 +1,5 @@
 ---
+const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.pages.dev';
 ---
 <html lang="en">
 <head>
@@ -25,9 +26,12 @@
       text-transform:uppercase;
       color:rgba(237,232,220,0.25);
     }
-    .cta{
+    .cta-row{
       pointer-events:auto;
+      display:flex;gap:0.8rem;
       margin-top:1.2rem;
+    }
+    .cta{
       padding:0.45rem 1.4rem;
       border:1px solid rgba(237,232,220,0.18);
       border-radius:4px;
@@ -58,7 +62,10 @@
   <div class="overlay">
     <h1 class="fallback-title">INBOIL</h1>
     <p class="tagline">Browser Groove Box</p>
-    <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Get Started</a>
+    <div class="cta-row">
+      <a id="app-link" class="cta" href={appUrl}>Open App</a>
+      <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Get Started</a>
+    </div>
   </div>
 
   <script is:inline>

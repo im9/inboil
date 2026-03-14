@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "vite build && npx wrangler pages deploy dist --project-name=inboil",
+    "deploy:site": "cd site && pnpm build && npx wrangler pages deploy dist --project-name=inboil-site",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:e2e": "playwright test",

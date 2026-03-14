@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "deploy": "astro build && npx wrangler pages deploy dist --project-name=inboil-site"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.0",
