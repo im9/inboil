@@ -52,7 +52,6 @@
     if (!dragging) return
     if (!dragMoved && movedPastTap(e, startPos)) dragMoved = true
     if (dragMoved) {
-      pushUndo('EQ pad')
       const pos = toNorm(e)
       if (pos) {
         fxPad[dragging].x = pos.x

@@ -62,7 +62,6 @@
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
     }
     if (dragMoved) {
-      pushUndo('FX pad')
       const pos = toNorm(e)
       if (pos) {
         if (dragging === 'granular' && granularMode2) {

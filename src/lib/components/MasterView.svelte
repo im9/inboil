@@ -56,7 +56,6 @@
     if (!dragging) return
     if (!dragMoved && movedPastTap(e, startPos)) dragMoved = true
     if (dragMoved) {
-      pushUndo('Master pad')
       const pos = toNorm(e)
       if (pos) {
         masterPad[dragging].x = pos.x
