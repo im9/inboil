@@ -1,12 +1,3 @@
 name = "inboil-signaling"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
-
-[durable_objects]
-bindings = [
-  { name = "ROOMS", class_name = "SignalingRoom" }
-]
-
-[[migrations]]
-tag = "v1"
-new_classes = ["SignalingRoom"]

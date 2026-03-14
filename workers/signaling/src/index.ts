@@ -1,23 +1,61 @@
 /**
  * Cloudflare Workers signaling server for inboil multi-device (ADR 019).
  *
- * Stateless WebSocket relay using Durable Objects for room isolation.
- * Only used during WebRTC connection setup — no media or data relay.
+ * In-memory WebSocket relay — no Durable Objects, runs on free tier.
+ * Rooms are ephemeral (lost on worker restart), which is fine since
+ * signaling is only needed for the few seconds of WebRTC handshake.
  */
 
-export interface Env {
-  ROOMS: DurableObjectNamespace
+// ── In-memory room state ─────────────────────────────────────
+
+interface Peer {
+  ws: WebSocket
+  id: string
+  name: string
 }
 
+const rooms = new Map<string, Map<string, Peer>>()
+let peerIdCounter = 0
+
+function getOrCreateRoom(code: string): Map<string, Peer> {
+  const key = code.toUpperCase()
+  let room = rooms.get(key)
+  if (!room) {
+    room = new Map()
+    rooms.set(key, room)
+  }
+  return room
+}
+
+function cleanupRoom(code: string) {
+  const key = code.toUpperCase()
+  const room = rooms.get(key)
+  if (room && room.size === 0) {
+    rooms.delete(key)
+  }
+}
+
+function broadcast(room: Map<string, Peer>, senderId: string, data: string) {
+  for (const [id, peer] of room) {
+    if (id !== senderId) {
+      try {
+        peer.ws.send(data)
+      } catch {
+        room.delete(id)
+      }
+    }
+  }
+}
+
+// ── Worker entry ─────────────────────────────────────────────
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
 
     // CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: corsHeaders(),
-      })
+      return new Response(null, { headers: corsHeaders() })
     }
 
     // WebSocket upgrade at /ws
@@ -27,64 +65,71 @@ export default {
         return new Response('Expected WebSocket', { status: 426 })
       }
 
-      // Create a temporary holding WebSocket pair.
-      // The client connects here first, sends a 'join' message with the room code,
-      // then we forward to the appropriate Durable Object.
       const [client, server] = Object.values(new WebSocketPair())
-
       server.accept()
 
-      // Wait for the first message to determine the room
-      server.addEventListener('message', async function handler(ev) {
-        server.removeEventListener('message', handler)
+      let roomCode: string | null = null
+      let peerId: string | null = null
 
+      server.addEventListener('message', (ev) => {
         try {
           const msg = JSON.parse(ev.data as string)
-          if (msg.t !== 'join' || !msg.room) {
-            server.close(4000, 'First message must be join with room code')
+
+          // First message must be 'join' with room code
+          if (!roomCode) {
+            if (msg.t !== 'join' || !msg.room) {
+              server.close(4000, 'First message must be join with room code')
+              return
+            }
+
+            roomCode = msg.room.toUpperCase()
+            peerId = `p${++peerIdCounter}`
+            const peerName = msg.name || 'Guest'
+            const room = getOrCreateRoom(roomCode)
+
+            // Notify existing peers about the new peer
+            broadcast(room, peerId, JSON.stringify({
+              t: 'peer-joined',
+              id: peerId,
+              name: peerName,
+            }))
+
+            // Add to room
+            room.set(peerId, { ws: server, id: peerId, name: peerName })
             return
           }
 
-          // Get or create the Durable Object for this room
-          const roomId = env.ROOMS.idFromName(msg.room.toUpperCase())
-          const room = env.ROOMS.get(roomId)
-
-          // Forward to Durable Object — pass the join info as query params
-          const doUrl = new URL(request.url)
-          doUrl.searchParams.set('name', msg.name || 'Guest')
-
-          const doRequest = new Request(doUrl.toString(), {
-            headers: { Upgrade: 'websocket' },
-          })
-
-          const doResponse = await room.fetch(doRequest)
-          const doWs = doResponse.webSocket
-          if (!doWs) {
-            server.close(4001, 'Failed to connect to room')
-            return
+          // Forward signaling messages (offer/answer/ice) to other peers
+          const room = rooms.get(roomCode)
+          if (room && peerId) {
+            broadcast(room, peerId, ev.data as string)
           }
-
-          doWs.accept()
-
-          // Send the join message to the DO as well
-          doWs.send(ev.data as string)
-
-          // Bridge the two WebSockets
-          server.addEventListener('message', (e) => {
-            if (doWs.readyState === WebSocket.READY_STATE_OPEN) {
-              doWs.send(e.data as string)
-            }
-          })
-          doWs.addEventListener('message', (e) => {
-            if (server.readyState === WebSocket.READY_STATE_OPEN) {
-              server.send(e.data as string)
-            }
-          })
-          server.addEventListener('close', () => doWs.close())
-          doWs.addEventListener('close', () => server.close())
-
         } catch {
-          server.close(4002, 'Invalid message')
+          // Ignore malformed messages
+        }
+      })
+
+      server.addEventListener('close', () => {
+        if (roomCode && peerId) {
+          const room = rooms.get(roomCode)
+          if (room) {
+            room.delete(peerId)
+            broadcast(room, peerId, JSON.stringify({
+              t: 'peer-left',
+              id: peerId,
+            }))
+            cleanupRoom(roomCode)
+          }
+        }
+      })
+
+      server.addEventListener('error', () => {
+        if (roomCode && peerId) {
+          const room = rooms.get(roomCode)
+          if (room) {
+            room.delete(peerId)
+            cleanupRoom(roomCode)
+          }
         }
       })
 
@@ -102,90 +147,6 @@ export default {
 
     return new Response('Not found', { status: 404, headers: corsHeaders() })
   },
-}
-
-// ── Durable Object: one per room ──────────────────────────────
-
-interface Peer {
-  ws: WebSocket
-  id: string
-  name: string
-}
-
-let peerIdCounter = 0
-
-export class SignalingRoom {
-  private peers: Map<string, Peer> = new Map()
-  private state: DurableObjectState
-
-  constructor(state: DurableObjectState) {
-    this.state = state
-  }
-
-  async fetch(request: Request): Promise<Response> {
-    const upgrade = request.headers.get('Upgrade')
-    if (upgrade !== 'websocket') {
-      return new Response('Expected WebSocket', { status: 426 })
-    }
-
-    const [client, server] = Object.values(new WebSocketPair())
-    server.accept()
-
-    const peerId = `p${++peerIdCounter}`
-    let peerName = new URL(request.url).searchParams.get('name') || 'Guest'
-
-    server.addEventListener('message', (ev) => {
-      try {
-        const msg = JSON.parse(ev.data as string)
-
-        if (msg.t === 'join') {
-          peerName = msg.name || peerName
-          const peer: Peer = { ws: server, id: peerId, name: peerName }
-          this.peers.set(peerId, peer)
-
-          // Notify existing peers about the new peer
-          this.broadcast(peerId, JSON.stringify({
-            t: 'peer-joined',
-            id: peerId,
-            name: peerName,
-          }))
-          return
-        }
-
-        // Forward signaling messages (offer/answer/ice) to other peers
-        this.broadcast(peerId, ev.data as string)
-
-      } catch {
-        // Ignore malformed messages
-      }
-    })
-
-    server.addEventListener('close', () => {
-      this.peers.delete(peerId)
-      this.broadcast(peerId, JSON.stringify({
-        t: 'peer-left',
-        id: peerId,
-      }))
-    })
-
-    server.addEventListener('error', () => {
-      this.peers.delete(peerId)
-    })
-
-    return new Response(null, { status: 101, webSocket: client })
-  }
-
-  private broadcast(senderId: string, data: string) {
-    for (const [id, peer] of this.peers) {
-      if (id !== senderId) {
-        try {
-          peer.ws.send(data)
-        } catch {
-          this.peers.delete(id)
-        }
-      }
-    }
-  }
 }
 
 // ── CORS ──────────────────────────────────────────────────────
