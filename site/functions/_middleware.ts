@@ -18,7 +18,7 @@ export const onRequest: PagesFunction = async ({ request, next }) => {
   if (cookie.includes('lang=en')) return next();
 
   // Starlight locale switcher lands on /docs/ — set cookie and stay
-  if (url.searchParams.has('lang', 'en')) {
+  if (url.searchParams.get('lang') === 'en') {
     const res = await next();
     const headers = new Headers(res.headers);
     headers.append('set-cookie', 'lang=en; path=/; max-age=31536000; SameSite=Lax');
