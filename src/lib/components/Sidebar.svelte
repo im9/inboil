@@ -7,6 +7,10 @@
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
 
+  const docsBase = location.hostname === 'localhost'
+    ? 'http://localhost:4321'
+    : 'https://inboil-site.pages.dev'
+
   // ── Open/close animation ──
   let closing = $state(false)
   let visibleMode = $state<'help' | 'system' | null>(null)
@@ -339,7 +343,7 @@
 
       <div class="sidebar-body">
         {#if visibleMode === 'help'}
-          <a class="full-docs-link" href="/docs/" target="_blank" rel="noopener">
+          <a class="full-docs-link" href="{docsBase}{L === 'ja' ? '/ja/docs/' : '/docs/'}" target="_blank" rel="noopener">
             {L === 'ja' ? 'チュートリアル & ドキュメント' : 'Full Tutorial & Docs'} &rarr;
           </a>
           <div class="search-bar">
@@ -363,7 +367,7 @@
                 <div class="help-section">
                   <div class="section-title">{section.title}
                     {#if section.docsUrl}
-                      <a class="docs-link" href={section.docsUrl} target="_blank" rel="noopener">Docs &rarr;</a>
+                      <a class="docs-link" href="{docsBase}{L === 'ja' ? '/ja' : ''}{section.docsUrl}" target="_blank" rel="noopener">Docs &rarr;</a>
                     {/if}
                   </div>
                   <div class="section-body">{section.body}</div>

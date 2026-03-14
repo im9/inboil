@@ -47,7 +47,7 @@ function firstModuleLevelCall(): number {
 
 /** Find all $state variable names referenced inside savePrefs function body */
 function stateVarsInSavePrefs(): string[] {
-  const fnStart = lines.findIndex((l: string) => /^function savePrefs/.test(l))
+  const fnStart = lines.findIndex((l: string) => /^(?:export\s+)?function savePrefs/.test(l))
   if (fnStart === -1) return []
   let depth = 0
   let fnEnd = fnStart
@@ -68,9 +68,9 @@ function stateVarsInSavePrefs(): string[] {
 }
 
 describe('state module init order (TDZ guard)', () => {
-  it('all $state vars used in savePrefs are declared before the first module-level savePrefs() call', () => {
+  it('if a module-level savePrefs() call exists, all $state vars it uses are declared before it', () => {
     const firstCall = firstModuleLevelCall()
-    expect(firstCall, 'should find a module-level savePrefs() call').toBeGreaterThan(-1)
+    if (firstCall === -1) return // no module-level call — nothing to guard
 
     const vars = stateVarsInSavePrefs()
     expect(vars.length, 'savePrefs should reference at least one $state var').toBeGreaterThan(0)

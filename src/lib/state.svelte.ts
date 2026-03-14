@@ -8,6 +8,7 @@ import {
   makeDefaultSong, makeEmptySong, makeEmptyCell,
   SECTION_COUNT,
 } from './factory.ts'
+import { makeDemoSong } from './demo.ts'
 
 export { NOTE_NAMES } from './constants.ts'
 export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
@@ -346,7 +347,7 @@ function loadPrefs(): StoredPrefs {
   } catch { return defaults }
 }
 
-function savePrefs(): void {
+export function savePrefs(): void {
   if (typeof localStorage === 'undefined') return
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     v: STORAGE_VERSION,
@@ -378,11 +379,7 @@ export const project = $state({
   lastSavedAt: 0,
 })
 
-if (!prefs.visited) {
-  ui.sidebar = 'help'
-  prefs.visited = true
-  savePrefs()
-}
+// Welcome overlay handles visited flag + sidebar open on first launch
 
 export function toggleLang(): void {
   lang.value = lang.value === 'ja' ? 'en' : 'ja'
@@ -761,6 +758,22 @@ export async function importProjectJSON(json: string): Promise<void> {
 /** Load factory demo patterns as a new unsaved project */
 export function projectLoadFactory(): void {
   restoreSong(makeDefaultSong())
+  clearSamples()
+  project.id = null
+  project.dirty = true
+  ui.currentPattern = 0
+  ui.currentSection = 0
+  ui.selectedTrack = 0
+  ui.patternSheet = false
+  ui.selectedSceneNodes = {}
+  ui.selectedSceneEdge = null
+  undoStack.length = 0
+  redoStack.length = 0
+}
+
+/** Load demo project (welcome overlay) */
+export function projectLoadDemo(): void {
+  restoreSong(makeDemoSong())
   clearSamples()
   project.id = null
   project.dirty = true
