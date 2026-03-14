@@ -50,7 +50,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **WT** | Wavetable synth (formerly iDEATH). 8-voice with MEGAfm-style poly modes (MONO/POLY8/WIDE4/UNISON). 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
 | **SamplerVoice** | Sample playback voice (ADR 012). Used by Crash, Ride (drum category), and user Sampler. |
-| **Factory preset** | Named parameter snapshot. WT: 22 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |
+| **Factory preset** | Named parameter snapshot. WT: 30 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |
@@ -61,7 +61,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 |---|---|
 | **SplitFlap** | パタパタ split-flap mechanical display. Per-character 3D CSS flip animation. Used for BPM, PAT, track names, octave. |
 | **Othello flip** | Step trig toggle animation: 3D `rotateY` flip between cream (empty) and olive (active) faces. |
-| **PerfBar** | Performance controls strip: KEY piano, OCT shift, DUC/CMP/GAIN/SWG knobs, FX/EQ sheet toggles, FILL/REV/BRK buttons. |
+| **PerfBar** | Performance controls strip (AppHeader sub-header): KEY piano, OCT shift, FX/EQ sheet toggles, FILL/REV/BRK buttons. DUC/CMP/GAIN/SWG controls are in MasterView. |
 | **FxPad** | XY performance surface with 4 draggable FX nodes, audio visualizer, and per-track send mixer. Rendered as overlay sheet (ADR 054). |
 | **DockPanel** | Right-side param dock (minimizable to 16px via edge handle). Track selector + preset browser + synth knobs + lock toolbar + send/mixer knobs. |
 | **MasterView** | Master bus overlay sheet with VU meter and audio-reactive visuals. |
@@ -79,7 +79,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
-| **VoicePicker** | Voice selection UI in DockPanel for changing a cell's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list (ADR 009/058). |
+| **VoicePicker** | Voice selection UI (inline in DockPanel, not a standalone component) for changing a cell's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list (ADR 009/058). |
 | **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 | **Hardware MIDI** | Web MIDI API integration for USB + BLE MIDI keyboards. Per-note release, CC1→DJ Filter (ADR 081). |

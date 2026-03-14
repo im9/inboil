@@ -129,7 +129,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
-│   │   │   ├── VoicePicker.svelte ← Bubble menu for instrument selection
+│   │   │   ├── WelcomeOverlay.svelte ← First-visit welcome overlay
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
 │   │   │   ├── Sidebar.svelte    ← Help / System settings panel (fixed right drawer)
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
@@ -163,7 +163,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
 │   │   ├── paramDefs.ts          ← Synth parameter definitions
 │   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
-│   │   ├── presets.ts            ← Factory presets for WT (22 presets) and FM (20 presets)
+│   │   ├── presets.ts            ← Factory presets for WT (30 presets) and FM (20 presets)
 │   │   ├── constants.ts          ← Default values (DEFAULT_PERF, etc.)
 │   │   ├── sceneActions.ts       ← Scene graph CRUD, layout, clipboard
 │   │   ├── sceneData.ts          ← Scene clone/restore, migration helpers

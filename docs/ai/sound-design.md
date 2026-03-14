@@ -189,7 +189,7 @@ Parameters (via `paramDefs.ts`):
 | lfo2Rate | LF2R | 0.1–20.0 Hz | 0.5 | LFO 2 rate |
 | lfo2Shape | LF2S | 0–4 (step 1) | 0 | LFO 2: SIN/TRI/SAW/SQR/S&H |
 
-Factory presets: 22 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (WT only).
+Factory presets: 30 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, FX). Browsable from DockPanel preset browser (WT only).
 
 ## DSP Building Blocks
 

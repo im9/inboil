@@ -23,7 +23,7 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 ```typescript
 Song {
   name:            string
-  bpm:             number            // 20–300
+  bpm:             number            // 40–240
   rootNote:        number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
   tracks:          Track[]           // up to 16 (mixer-only, ADR 056/080)
   patterns:        Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)

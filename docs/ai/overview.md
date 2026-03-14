@@ -53,7 +53,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Piano roll with chord brush (pen/eraser/chord/strum), drag legato, poly chord input (ADR 067)
 - Lead arpeggiator (5 modes, chord types, octave range)
-- Factory preset browser (22 WT presets across 6 categories, 20 FM presets across 6 categories)
+- Factory preset browser (30 WT presets across 6 categories, 20 FM presets across 6 categories)
 - Master view with VU meter and audio-reactive visuals (ADR 035)
 - Hardware MIDI keyboard input: USB + BLE MIDI, per-note release, CC1→DJ Filter (ADR 081)
 - Virtual MIDI keyboard (PC keyboard audition, Phase 1)

@@ -38,6 +38,9 @@ vite.config.js.timestamp-*
 .AppleDouble
 .LSOverride
 
+# Claude Code (keep skills, ignore personal memory)
+.claude/projects/
+
 # Editor
 .idea/
 *.suo
