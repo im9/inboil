@@ -1,6 +1,6 @@
 # ADR 071: Donate Feature
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

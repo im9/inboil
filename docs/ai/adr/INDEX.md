@@ -131,7 +131,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 020 | Data Persistence & Storage | Proposed | Local persistence (IndexedDB + localStorage) done; cloud sync not yet implemented |
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
-| 071 | Donate Feature | Proposed | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
+| 071 | Donate Feature | Implemented | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Implemented | Astro + Starlight LP with interactive demos, specs, bilingual docs. Playground/onboarding split to ADR 094 |
 | 073 | Desktop App | Proposed | Tauri v2 shell (Phase 1 done); Phase 2: CI, auto-update, code signing |
 | 074 | Mobile App (iOS Native) | Proposed | Swift/SwiftUI + C++ DSP port to Core Audio |
