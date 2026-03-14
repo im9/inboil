@@ -1,12 +1,18 @@
 /**
- * Cloudflare Workers signaling server for inboil multi-device (ADR 019).
+ * Cloudflare Workers + Durable Objects signaling server (ADR 019).
  *
- * In-memory WebSocket relay — no Durable Objects, runs on free tier.
- * Rooms are ephemeral (lost on worker restart), which is fine since
- * signaling is only needed for the few seconds of WebRTC handshake.
+ * Each room code maps to one DO instance, guaranteeing shared in-memory
+ * state for all WebSocket connections in the same room.
+ * Uses server.accept() (not Hibernation API) so addEventListener works.
  */
 
-// ── In-memory room state ─────────────────────────────────────
+import { DurableObject } from 'cloudflare:workers'
+
+// ── Types ────────────────────────────────────────────────────
+
+interface Env {
+  SIGNALING_ROOM: DurableObjectNamespace<SignalingRoom>
+}
 
 interface Peer {
   ws: WebSocket
@@ -14,43 +20,100 @@ interface Peer {
   name: string
 }
 
-const rooms = new Map<string, Map<string, Peer>>()
-let peerIdCounter = 0
+// ── Durable Object: one per room ─────────────────────────────
 
-function getOrCreateRoom(code: string): Map<string, Peer> {
-  const key = code.toUpperCase()
-  let room = rooms.get(key)
-  if (!room) {
-    room = new Map()
-    rooms.set(key, room)
-  }
-  return room
-}
+export class SignalingRoom extends DurableObject<Env> {
+  private peers = new Map<string, Peer>()
+  private peerIdCounter = 0
 
-function cleanupRoom(code: string) {
-  const key = code.toUpperCase()
-  const room = rooms.get(key)
-  if (room && room.size === 0) {
-    rooms.delete(key)
-  }
-}
+  async fetch(request: Request): Promise<Response> {
+    const upgrade = request.headers.get('Upgrade')
+    if (upgrade !== 'websocket') {
+      return new Response('Expected WebSocket', { status: 426 })
+    }
 
-function broadcast(room: Map<string, Peer>, senderId: string, data: string) {
-  for (const [id, peer] of room) {
-    if (id !== senderId) {
+    const webSocketPair = new WebSocketPair()
+    const [client, server] = Object.values(webSocketPair)
+
+    // Use server.accept() instead of this.ctx.acceptWebSocket()
+    // so that addEventListener works normally
+    server.accept()
+
+    let peerId: string | null = null
+
+    server.addEventListener('message', (ev) => {
       try {
-        peer.ws.send(data)
+        const msg = JSON.parse(ev.data as string)
+
+        // First message must be 'join'
+        if (!peerId) {
+          if (msg.t !== 'join' || !msg.room) {
+            server.close(4000, 'First message must be join with room code')
+            return
+          }
+
+          peerId = `p${++this.peerIdCounter}`
+          const peerName = msg.name || 'Guest'
+
+          // Notify existing peers
+          this.broadcast(peerId, JSON.stringify({
+            t: 'peer-joined',
+            id: peerId,
+            name: peerName,
+          }))
+
+          // Add to room
+          this.peers.set(peerId, { ws: server, id: peerId, name: peerName })
+          return
+        }
+
+        // Forward signaling messages to other peers
+        this.broadcast(peerId, ev.data as string)
       } catch {
-        room.delete(id)
+        // Ignore malformed messages
+      }
+    })
+
+    server.addEventListener('close', () => {
+      if (peerId) this.removePeer(peerId)
+    })
+
+    server.addEventListener('error', () => {
+      if (peerId) this.removePeer(peerId)
+    })
+
+    return new Response(null, {
+      status: 101,
+      webSocket: client,
+      headers: corsHeaders(),
+    })
+  }
+
+  private broadcast(senderId: string, data: string) {
+    for (const [id, peer] of this.peers) {
+      if (id !== senderId) {
+        try {
+          peer.ws.send(data)
+        } catch {
+          this.peers.delete(id)
+        }
       }
     }
   }
+
+  private removePeer(peerId: string) {
+    this.peers.delete(peerId)
+    this.broadcast(peerId, JSON.stringify({
+      t: 'peer-left',
+      id: peerId,
+    }))
+  }
 }
 
-// ── Worker entry ─────────────────────────────────────────────
+// ── Worker entry: route to DO by room code ───────────────────
 
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
     // CORS preflight
@@ -58,86 +121,21 @@ export default {
       return new Response(null, { headers: corsHeaders() })
     }
 
-    // WebSocket upgrade at /ws
+    // WebSocket upgrade at /ws?room=XXXX
     if (url.pathname === '/ws') {
       const upgrade = request.headers.get('Upgrade')
       if (upgrade !== 'websocket') {
         return new Response('Expected WebSocket', { status: 426 })
       }
 
-      const [client, server] = Object.values(new WebSocketPair())
-      server.accept()
+      const room = url.searchParams.get('room')
+      if (!room) {
+        return new Response('Missing ?room= parameter', { status: 400 })
+      }
 
-      let roomCode: string | null = null
-      let peerId: string | null = null
-
-      server.addEventListener('message', (ev) => {
-        try {
-          const msg = JSON.parse(ev.data as string)
-
-          // First message must be 'join' with room code
-          if (!roomCode) {
-            if (msg.t !== 'join' || !msg.room) {
-              server.close(4000, 'First message must be join with room code')
-              return
-            }
-
-            roomCode = msg.room.toUpperCase()
-            peerId = `p${++peerIdCounter}`
-            const peerName = msg.name || 'Guest'
-            const room = getOrCreateRoom(roomCode)
-
-            // Notify existing peers about the new peer
-            broadcast(room, peerId, JSON.stringify({
-              t: 'peer-joined',
-              id: peerId,
-              name: peerName,
-            }))
-
-            // Add to room
-            room.set(peerId, { ws: server, id: peerId, name: peerName })
-            return
-          }
-
-          // Forward signaling messages (offer/answer/ice) to other peers
-          const room = rooms.get(roomCode)
-          if (room && peerId) {
-            broadcast(room, peerId, ev.data as string)
-          }
-        } catch {
-          // Ignore malformed messages
-        }
-      })
-
-      server.addEventListener('close', () => {
-        if (roomCode && peerId) {
-          const room = rooms.get(roomCode)
-          if (room) {
-            room.delete(peerId)
-            broadcast(room, peerId, JSON.stringify({
-              t: 'peer-left',
-              id: peerId,
-            }))
-            cleanupRoom(roomCode)
-          }
-        }
-      })
-
-      server.addEventListener('error', () => {
-        if (roomCode && peerId) {
-          const room = rooms.get(roomCode)
-          if (room) {
-            room.delete(peerId)
-            cleanupRoom(roomCode)
-          }
-        }
-      })
-
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-        headers: corsHeaders(),
-      })
+      const roomId = env.SIGNALING_ROOM.idFromName(room.toUpperCase())
+      const stub = env.SIGNALING_ROOM.get(roomId)
+      return stub.fetch(request)
     }
 
     // Health check

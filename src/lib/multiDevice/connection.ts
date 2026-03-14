@@ -48,7 +48,8 @@ function connectSignaling(room: string, name: string): Promise<WebSocket> {
       reject(new Error('Signaling URL not configured'))
       return
     }
-    const ws = new WebSocket(signalingUrl)
+    const wsUrl = `${signalingUrl}?room=${encodeURIComponent(room.toUpperCase())}`
+    const ws = new WebSocket(wsUrl)
     const timeout = setTimeout(() => {
       ws.close()
       reject(new Error('Signaling connection timeout'))
@@ -137,6 +138,7 @@ function setupHostSignaling() {
   signalingWs.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data) as SignalMessage
+
       if (msg.t === 'peer-joined') {
         handlePeerJoined(msg.id, msg.name)
       } else if (msg.t === 'answer') {
@@ -186,10 +188,12 @@ async function handlePeerJoined(peerId: string, peerName: string) {
   }
 
   channel.onmessage = (ev) => {
-    const msg = decodeGuestMsg(ev.data)
-    if (msg && onGuestMessage) {
-      onGuestMessage(peerId, msg)
-    }
+    receiveChunked(channel, ev.data as string, (data) => {
+      const msg = decodeGuestMsg(data)
+      if (msg && onGuestMessage) {
+        onGuestMessage(peerId, msg)
+      }
+    })
   }
 
   channel.onclose = () => {
@@ -237,12 +241,61 @@ function handlePeerLeft(peerId: string) {
   }
 }
 
+// ── Chunked send (DataChannel max ~256KB, we use 60KB chunks) ──
+
+const CHUNK_SIZE = 60_000 // bytes, well under 64KB SCTP limit
+
+function sendChunked(channel: RTCDataChannel, data: string) {
+  if (data.length <= CHUNK_SIZE) {
+    channel.send(data)
+    return
+  }
+  const total = Math.ceil(data.length / CHUNK_SIZE)
+  const id = Date.now()
+  for (let i = 0; i < total; i++) {
+    const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
+    channel.send(JSON.stringify({ _c: id, i, n: total, d: chunk }))
+  }
+}
+
+// Per-channel reassembly buffers
+const chunkBuffers = new Map<RTCDataChannel, Map<number, { parts: string[]; received: number; total: number }>>()
+
+function receiveChunked(channel: RTCDataChannel, raw: string, onComplete: (data: string) => void) {
+  // Try to detect chunk envelope
+  if (raw.startsWith('{"_c":')) {
+    try {
+      const envelope = JSON.parse(raw) as { _c: number; i: number; n: number; d: string }
+      if (typeof envelope._c === 'number' && typeof envelope.i === 'number') {
+        let bufMap = chunkBuffers.get(channel)
+        if (!bufMap) {
+          bufMap = new Map()
+          chunkBuffers.set(channel, bufMap)
+        }
+        let buf = bufMap.get(envelope._c)
+        if (!buf) {
+          buf = { parts: new Array(envelope.n), received: 0, total: envelope.n }
+          bufMap.set(envelope._c, buf)
+        }
+        buf.parts[envelope.i] = envelope.d
+        buf.received++
+        if (buf.received === buf.total) {
+          bufMap.delete(envelope._c)
+          onComplete(buf.parts.join(''))
+        }
+        return
+      }
+    } catch { /* not a chunk, fall through */ }
+  }
+  onComplete(raw)
+}
+
 /** Send a host message to all connected guests. */
 export function broadcastToGuests(msg: HostMessage) {
   const data = encodeMsg(msg)
   for (const peer of hostPeers) {
     if (peer.channel?.readyState === 'open') {
-      peer.channel.send(data)
+      sendChunked(peer.channel, data)
     }
   }
 }
@@ -251,7 +304,7 @@ export function broadcastToGuests(msg: HostMessage) {
 export function sendToGuest(peerId: string, msg: HostMessage) {
   const peer = hostPeers.find(p => p.id === peerId)
   if (peer?.channel?.readyState === 'open') {
-    peer.channel.send(encodeMsg(msg))
+    sendChunked(peer.channel, encodeMsg(msg))
   }
 }
 
@@ -304,10 +357,12 @@ async function handleOffer(sdp: string) {
     }
 
     guestChannel.onmessage = (ev) => {
-      const msg = decodeHostMsg(ev.data)
-      if (msg && onHostMessage) {
-        onHostMessage(msg)
-      }
+      receiveChunked(guestChannel!, ev.data as string, (data) => {
+        const msg = decodeHostMsg(data)
+        if (msg && onHostMessage) {
+          onHostMessage(msg)
+        }
+      })
     }
 
     guestChannel.onclose = () => {

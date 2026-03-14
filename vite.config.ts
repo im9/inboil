@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [svelte()],
   server: {
     strictPort: true,
+    host: true,
+    allowedHosts: ['.trycloudflare.com'],
   },
   test: {
     exclude: ['e2e/**', 'node_modules/**'],

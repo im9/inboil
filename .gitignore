@@ -21,6 +21,9 @@ src/dsp/CMakeCache.txt
 src/dsp/*.o
 src/dsp/*.a
 
+# Wrangler
+.wrangler/
+
 # Vite
 .vite/
 vite.config.js.timestamp-*
