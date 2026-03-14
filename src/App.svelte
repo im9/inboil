@@ -17,9 +17,10 @@
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
-  import { song, playback, ui, prefs, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo } from './lib/state.svelte.ts'
   import { hasArrangement } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
+  import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, broadcastPlayhead, setOnGuestConnected, initGuestHandlers } from './lib/multiDevice/index.ts'
 
   const engineCtx: EngineContext = $derived({
     fxFlavours,
@@ -41,6 +42,13 @@
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
   })
+
+  // ── Multi-device (ADR 019) ───────────────────────────────────────
+  const sigUrl = import.meta.env.VITE_SIGNALING_URL
+  if (sigUrl) setSignalingUrl(sigUrl)
+  initHostHandlers()
+  initGuestHandlers()
+  setOnGuestConnected((peerId) => sendSnapshot(peerId))
 
   // ── Responsive ────────────────────────────────────────────────────
   let windowWidth = $state(window.innerWidth)
@@ -118,6 +126,8 @@
 
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
+    // Broadcast playhead to connected guests
+    if (session.role === 'host') broadcastPlayhead()
     // Apply automation curves on every step (ADR 053)
     if (playback.mode === 'scene' && playback.activeAutomations.length > 0 && playback.playingPattern != null) {
       const pat = song.patterns[playback.playingPattern]
@@ -234,6 +244,9 @@
     playback.playingPattern = null
     void projectAutoSave()
   }
+
+  // Register transport callbacks for multi-device host
+  setHostTransportCallbacks(play, stop)
 
   function closeAllSheets() {
     ui.patternSheet = false

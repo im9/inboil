@@ -66,9 +66,14 @@ interface PeerConnection {
 
 let hostPeers: PeerConnection[] = []
 let onGuestMessage: ((peerId: string, msg: GuestMessage) => void) | null = null
+let onGuestConnected: ((peerId: string) => void) | null = null
 
 export function setOnGuestMessage(handler: (peerId: string, msg: GuestMessage) => void) {
   onGuestMessage = handler
+}
+
+export function setOnGuestConnected(handler: (peerId: string) => void) {
+  onGuestConnected = handler
 }
 
 export async function startHost(): Promise<string> {
@@ -113,7 +118,7 @@ async function handlePeerJoined(peerId: string, peerName: string) {
   session.peers = hostPeers.map(p => ({ id: p.id, name: p.name }))
 
   channel.onopen = () => {
-    // Host will send snapshot via broadcastToGuests after channel opens
+    onGuestConnected?.(peerId)
   }
 
   channel.onmessage = (ev) => {
@@ -278,5 +283,6 @@ export function disconnect() {
   session.connected = false
 
   onGuestMessage = null
+  onGuestConnected = null
   onHostMessage = null
 }

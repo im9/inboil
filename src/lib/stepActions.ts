@@ -9,6 +9,7 @@ import { PATTERN_COLORS } from './constants.ts'
 import { makeTrig, makeTrack, makeEmptyCell, DRUM_VOICES } from './factory.ts'
 import { VOICE_LIST } from './audio/dsp/voices.ts'
 import { defaultVoiceParams } from './paramDefs.ts'
+import { isGuest, guestToggleTrig, guestSetVelocity, guestSetChance, guestSolo } from './multiDevice/guest.ts'
 
 // ── Step editing ──
 
@@ -28,6 +29,7 @@ function maybeAutoColor() {
 }
 
 export function toggleTrig(trackId: number, stepIndex: number) {
+  if (isGuest()) { guestToggleTrig(trackId, stepIndex, !activeCell(trackId).trigs[stepIndex].active); return }
   pushUndo('Toggle step')
   const c = activeCell(trackId)
   const willActivate = !c.trigs[stepIndex].active
@@ -36,6 +38,7 @@ export function toggleTrig(trackId: number, stepIndex: number) {
 }
 
 export function setTrigVelocity(trackId: number, stepIdx: number, v: number) {
+  if (isGuest()) { guestSetVelocity(trackId, stepIdx, v); return }
   pushUndo('Set velocity')
   activeCell(trackId).trigs[stepIdx].velocity = Math.max(0.05, Math.min(1, v))
 }
@@ -64,6 +67,7 @@ export function setTrigSlide(trackId: number, stepIdx: number, slide: boolean) {
 }
 
 export function setTrigChance(trackId: number, stepIdx: number, chance: number) {
+  if (isGuest()) { guestSetChance(trackId, stepIdx, chance); return }
   pushUndo('Set chance')
   const v = Math.max(0, Math.min(1, chance))
   activeCell(trackId).trigs[stepIdx].chance = v >= 1 ? undefined : v
@@ -174,6 +178,7 @@ export function toggleMute(trackId: number) {
 }
 
 export function toggleSolo(trackId: number) {
+  if (isGuest()) { guestSolo(trackId); return }
   if (ui.soloTracks.has(trackId)) {
     ui.soloTracks.delete(trackId)
   } else {

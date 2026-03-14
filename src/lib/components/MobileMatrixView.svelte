@@ -2,6 +2,12 @@
   import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene } from '../state.svelte.ts'
   import { soloPatternIndex } from '../scenePlayback.ts'
   import { PATTERN_COLORS } from '../constants.ts'
+  import { isGuest, guestSelectPattern } from '../multiDevice/guest.ts'
+
+  function handleSelectPattern(pi: number) {
+    if (isGuest()) { guestSelectPattern(pi); return }
+    selectPattern(pi)
+  }
 
   const currentlyPlayingPattern = $derived.by(() => {
     if (!playback.playing) return -1
@@ -48,7 +54,7 @@
         class:playing={isPlaying}
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}; --beat: {30 / song.bpm}s"
-        onpointerdown={() => selectPattern(pi)}
+        onpointerdown={() => handleSelectPattern(pi)}
       >
         {#if inScene}<span class="scene-dot"></span>{/if}
       </button>

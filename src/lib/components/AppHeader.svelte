@@ -4,6 +4,7 @@
   import { startCapture, stopCapture } from '../wavExport.ts'
   import { downloadBlob } from '../midiExport.ts'
   import { engine } from '../audio/engine.ts'
+  import { isGuest, guestTransport } from '../multiDevice/guest.ts'
   import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
@@ -42,6 +43,7 @@
   }
 
   function wrappedPlay() {
+    if (isGuest()) { guestTransport('play'); return }
     onPlay()
     if (recState === 'armed') {
       const ctx = engine.getContext()
@@ -58,6 +60,7 @@
   }
 
   function wrappedStop() {
+    if (isGuest()) { guestTransport('stop'); return }
     onStop()
     // Recording continues after stop — user captures reverb tail, then presses REC to finish
   }

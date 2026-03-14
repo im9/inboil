@@ -1,6 +1,7 @@
 <script lang="ts">
   import { song, playback, ui, selectPattern } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
+  import { isGuest, guestTransport, guestSelectPattern } from '../multiDevice/guest.ts'
 
   const { onplay, onstop }: {
     onplay?: () => void
@@ -10,6 +11,10 @@
   const isScenePlaying = $derived(playback.playing && playback.mode === 'scene')
 
   function toggleScene() {
+    if (isGuest()) {
+      guestTransport(isScenePlaying ? 'scene-stop' : 'scene-play')
+      return
+    }
     if (isScenePlaying) {
       onstop?.()
     } else {
@@ -74,6 +79,7 @@
   const playingNodeId = $derived(playback.playing && playback.mode === 'scene' ? playback.sceneNodeId : null)
 
   function tapNode(rn: RibbonNode) {
+    if (isGuest()) { guestSelectPattern(rn.patternIndex); return }
     selectPattern(rn.patternIndex)
   }
 </script>

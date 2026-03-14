@@ -1,9 +1,17 @@
 <script lang="ts">
   import { perf, playback } from '../state.svelte.ts'
+  import { isGuest, guestPerf } from '../multiDevice/guest.ts'
 
   let { variant = 'bar' }: { variant?: 'bar' | 'bubble' } = $props()
 
   const stopped = $derived(!playback.playing)
+
+  function setPerf(action: 'fill' | 'reverse' | 'break', on: boolean) {
+    if (isGuest()) { guestPerf(action, on); return }
+    if (action === 'fill') perf.filling = on
+    else if (action === 'reverse') perf.reversing = on
+    else perf.breaking = on
+  }
 </script>
 
 {#if variant === 'bar'}
@@ -11,27 +19,27 @@
     class="btn-perf"
     class:active={perf.filling}
     class:stopped
-    onpointerdown={() => { perf.filling = true }}
-    onpointerup={() => { perf.filling = false }}
-    onpointerleave={() => { perf.filling = false }}
+    onpointerdown={() => setPerf('fill', true)}
+    onpointerup={() => setPerf('fill', false)}
+    onpointerleave={() => setPerf('fill', false)}
     data-tip="Hold for drum fill (play first)" data-tip-ja="長押しでドラムフィル (再生中のみ)"
   >FILL</button>
   <button
     class="btn-perf"
     class:active={perf.reversing}
     class:stopped
-    onpointerdown={() => { perf.reversing = true }}
-    onpointerup={() => { perf.reversing = false }}
-    onpointerleave={() => { perf.reversing = false }}
+    onpointerdown={() => setPerf('reverse', true)}
+    onpointerup={() => setPerf('reverse', false)}
+    onpointerleave={() => setPerf('reverse', false)}
     data-tip="Hold to reverse playback (play first)" data-tip-ja="長押しで逆再生 (再生中のみ)"
   >REV</button>
   <button
     class="btn-perf btn-brk"
     class:active={perf.breaking}
     class:stopped
-    onpointerdown={() => { perf.breaking = true }}
-    onpointerup={() => { perf.breaking = false }}
-    onpointerleave={() => { perf.breaking = false }}
+    onpointerdown={() => setPerf('break', true)}
+    onpointerup={() => setPerf('break', false)}
+    onpointerleave={() => setPerf('break', false)}
     data-tip="Hold for rhythmic break (play first)" data-tip-ja="長押しでリズムブレイク (再生中のみ)"
   >BRK</button>
 {:else}
@@ -39,25 +47,25 @@
     class="bubble-btn fill"
     class:active={perf.filling}
     style="--offset: 1"
-    onpointerdown={() => { perf.filling = true }}
-    onpointerup={() => { perf.filling = false }}
-    onpointerleave={() => { perf.filling = false }}
+    onpointerdown={() => setPerf('fill', true)}
+    onpointerup={() => setPerf('fill', false)}
+    onpointerleave={() => setPerf('fill', false)}
   >FILL</button>
   <button
     class="bubble-btn rev"
     class:active={perf.reversing}
     style="--offset: 2"
-    onpointerdown={() => { perf.reversing = true }}
-    onpointerup={() => { perf.reversing = false }}
-    onpointerleave={() => { perf.reversing = false }}
+    onpointerdown={() => setPerf('reverse', true)}
+    onpointerup={() => setPerf('reverse', false)}
+    onpointerleave={() => setPerf('reverse', false)}
   >REV</button>
   <button
     class="bubble-btn brk"
     class:active={perf.breaking}
     style="--offset: 3"
-    onpointerdown={() => { perf.breaking = true }}
-    onpointerup={() => { perf.breaking = false }}
-    onpointerleave={() => { perf.breaking = false }}
+    onpointerdown={() => setPerf('break', true)}
+    onpointerup={() => setPerf('break', false)}
+    onpointerleave={() => setPerf('break', false)}
   >BRK</button>
 {/if}
 
