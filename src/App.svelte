@@ -202,8 +202,8 @@
       playback.playing = true
       return
     }
-    // ADR 045: auto-engage scene mode — only when no sheet is covering the scene
-    if (!hasSheet && (hasScenePlayback() || hasArrangement())) {
+    // ADR 045: auto-engage scene mode — desktop only (mobile has no scene view)
+    if (!isMobile && !hasSheet && (hasScenePlayback() || hasArrangement())) {
       playback.mode = 'scene'
     }
     if (playback.mode === 'scene' && hasScenePlayback()) {

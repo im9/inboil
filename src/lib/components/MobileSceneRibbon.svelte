@@ -84,7 +84,7 @@
   }
 </script>
 
-{#if hasScene && ribbonNodes.length > 0}
+{#if isGuest() && hasScene && ribbonNodes.length > 0}
   <div class="scene-ribbon">
     <button
       class="ribbon-play"

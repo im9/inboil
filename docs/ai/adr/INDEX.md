@@ -75,6 +75,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |
 | 089 | Generative Auto-Mode | Implemented | Auto write/live removed, sparkle arm-then-play in PatternToolbar, Tonnetz legato + startChord UI |
 | 090 | Worklet-Side Generative | Proposed | Move generative computation from main thread to AudioWorklet for timing accuracy |
+| 096 | Odd Step Counts & Rotary Bubble Picker | Proposed | Expand STEP_OPTIONS to 2–16 + 24/32/48/64, rotary bubble menu for step selection, polyrhythm hints |
 
 ## UI / Layout
 
