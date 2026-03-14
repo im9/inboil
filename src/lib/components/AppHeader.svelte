@@ -278,6 +278,7 @@
 
   .app-name {
     font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.14em;
     color: var(--color-bg);
     text-transform: uppercase;

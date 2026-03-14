@@ -1,11 +1,28 @@
 ---
 const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.pages.dev';
+const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : 'https://inboil.pages.dev';
+const description = 'A browser-based groove box with 19 sound engines, a visual scene graph sequencer, and zero setup. No install. No signup. Just play.';
+const ogImage = `${siteUrl}/og.png`;
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>INBOIL</title>
+  <title>INBOIL — A groove box in your browser</title>
+  <meta name="description" content={description} />
+  <!-- OGP -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="INBOIL — A groove box in your browser" />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={siteUrl} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="INBOIL — A groove box in your browser" />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -19,6 +36,20 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
         linear-gradient(rgba(30,32,40,0.06) 1px, transparent 1px),
         linear-gradient(90deg, rgba(30,32,40,0.06) 1px, transparent 1px);
       background-size:40px 40px;
+    }
+
+    /* ── Logo flap ── */
+    @keyframes flap{
+      0%{transform:perspective(80px) rotateY(0)}
+      40%{transform:perspective(80px) rotateY(180deg)}
+      100%{transform:perspective(80px) rotateY(360deg)}
+    }
+    .logo-flap .flap-cell{
+      transform-origin:center;
+      animation:flap 0.6s ease-in-out calc(var(--i) * 0.1s) both;
+    }
+    .logo-flap:hover .flap-cell{
+      animation:flap 0.6s ease-in-out calc(var(--i) * 0.1s);
     }
 
     /* ── Scroll reveal ── */
@@ -195,6 +226,20 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       background:#787845;
       border-color:#787845;
       color:#EDE8DC;
+      position:relative;
+      overflow:hidden;
+    }
+    .cta.primary::after{
+      content:'';
+      position:absolute;
+      top:0;left:-100%;
+      width:100%;height:100%;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition:none;
+    }
+    .cta.primary:hover::after{
+      left:100%;
+      transition:left 0.5s ease;
     }
     .cta.primary:hover{
       background:#8a8a50;
@@ -244,6 +289,16 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       width:48px;height:3px;
       background:#787845;
       margin-top:16px;
+    }
+    /* Feature title accent line bounce on hover */
+    .feat-title{transition:transform 0.2s ease}
+    .feat-title:hover{transform:translateY(-2px)}
+    @keyframes accent-pulse{
+      0%,100%{width:48px}
+      50%{width:64px}
+    }
+    .feat-title:hover::after{
+      animation:accent-pulse 0.4s ease;
     }
     .feat-desc{
       font-family:"JetBrains Mono",monospace;
@@ -352,6 +407,43 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     }
     .sn-playing{animation:scene-pulse 0.5s ease-out infinite alternate}
 
+    /* ── FX Pad demo ── */
+    .fx-demo{
+      width:100%;max-width:420px;aspect-ratio:1;
+      background:#1E2028;
+      border-radius:6px;
+      position:relative;
+      overflow:hidden;
+      touch-action:none;
+      user-select:none;
+      cursor:crosshair;
+    }
+    .fx-demo canvas{position:absolute;top:0;left:0;width:100%;height:100%}
+    .fx-node{
+      position:absolute;width:48px;height:48px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-family:"JetBrains Mono",monospace;
+      font-size:10px;font-weight:700;letter-spacing:0.04em;
+      /* inactive: transparent bg, colored border & text */
+      color:var(--node-color);
+      background:transparent;
+      border:2px solid var(--node-color);
+      cursor:grab;
+      transform:translate(-50%,-50%);
+      transition:box-shadow 0.2s, background 0.2s;
+    }
+    .fx-node:active{cursor:grabbing}
+    /* active: solid fill, inverted text */
+    .fx-node.on{
+      background:var(--node-color);
+      color:#EDE8DC;
+      box-shadow:0 0 16px var(--node-color);
+    }
+
+    /* ── Generative demo (SVG, same visual language as scene-svg) ── */
+    .gen-demo{width:100%;max-width:360px}
+
     /* voice chip hover */
     .voice-chip{cursor:pointer}
     .voice-chip:hover{
@@ -400,6 +492,81 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       color:#EDE8DC;
     }
 
+    /* ── Story + Support ── */
+    .story-section{
+      width:100%;
+      padding:96px 48px;
+      display:flex;
+      justify-content:center;
+    }
+    .story-content{
+      max-width:560px;
+      display:flex;flex-direction:column;
+      gap:16px;
+      text-align:center;
+    }
+    .story-heading{
+      font-family:"JetBrains Mono",monospace;
+      font-size:clamp(1.8rem, 4vw, 2.8rem);
+      font-weight:700;
+      letter-spacing:0.04em;
+      color:#1E2028;
+    }
+    .story-body{
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.9rem;
+      line-height:1.8;
+      color:rgba(30,32,40,0.55);
+      white-space:pre-line;
+    }
+    .donate-cta{
+      align-self:center;
+      margin-top:8px;
+      border-color:#787845;
+      color:#787845;
+      font-weight:700;
+    }
+    .donate-cta:hover{
+      background:#787845;
+      color:#EDE8DC;
+    }
+    .donate-heart{
+      font-size:1.1em;
+      transition:transform 0.3s;
+    }
+    .donate-cta:hover .donate-heart{
+      transform:scale(1.3);
+    }
+    @media(max-width:768px){
+      .story-section{padding:64px 24px}
+    }
+
+    /* ── Final CTA ── */
+    .final-cta{
+      width:100%;
+      padding:96px 48px;
+      display:flex;flex-direction:column;
+      align-items:center;
+      gap:20px;
+      text-align:center;
+    }
+    .final-cta-heading{
+      font-family:"JetBrains Mono",monospace;
+      font-size:clamp(2rem, 5vw, 3.5rem);
+      font-weight:700;
+      letter-spacing:0.04em;
+      color:#1E2028;
+    }
+    .final-cta-sub{
+      font-family:"JetBrains Mono",monospace;
+      font-size:1rem;
+      color:rgba(30,32,40,0.5);
+      letter-spacing:0.04em;
+    }
+    @media(max-width:768px){
+      .final-cta{padding:64px 24px}
+    }
+
     /* ── Footer ── */
     .footer{
       width:100%;
@@ -436,12 +603,12 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
   <div class="page">
     <div class="hero-text">
       <div class="brand">
-        <svg viewBox="0 0 32 32" aria-hidden="true">
+        <svg id="hero-logo" class="logo-flap" viewBox="0 0 32 32" aria-hidden="true">
           <rect width="32" height="32" rx="4" fill="#1e2028"/>
-          <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
-          <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
-          <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
-          <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
+          <rect class="flap-cell" x="4" y="4" width="8" height="8" fill="#a3a145" style="--i:0"/>
+          <rect class="flap-cell" x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5" style="--i:1"/>
+          <rect class="flap-cell" x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5" style="--i:2"/>
+          <rect class="flap-cell" x="14" y="14" width="8" height="8" fill="#a3a145" style="--i:3"/>
           <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
         </svg>
         <h1>INBOIL</h1>
@@ -512,13 +679,100 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
   <section class="feat-section">
     <div class="feat-text reveal">
       <h2 id="feat-scene-title" class="feat-title">Scene Graph</h2>
-      <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time.</p>
+      <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time. Switch scenes on the fly with fills, reverse, and breaks.</p>
     </div>
-    <div class="feat-visual reveal">
+    <div class="feat-visual reveal" style="flex-direction:column;gap:8px">
     <svg id="scene-svg" class="scene-demo" viewBox="0 0 720 240" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g id="scene-edges"></g>
       <g id="scene-nodes"></g>
     </svg>
+    </div>
+  </section>
+
+  <!-- ── Feature 3: Effects / FX Pad ── -->
+  <section class="feat-section">
+    <div class="feat-text reveal">
+      <h2 id="feat-fx-title" class="feat-title">FX Pad</h2>
+      <p id="feat-fx-desc" class="feat-desc">Drag effect nodes across a 2D pad to shape your sound in real time. Reverb, delay, glitch, and granular — each with three flavours. The canvas reacts to your audio, drawing constellations between active effects.</p>
+    </div>
+    <div class="feat-visual reveal">
+      <div class="fx-demo" id="fx-demo">
+        <canvas id="fx-canvas"></canvas>
+        <div class="fx-node on" data-fx="verb" style="left:25%;top:35%;--node-color:#787845">VERB</div>
+        <div class="fx-node" data-fx="dly" style="left:70%;top:30%;--node-color:#4472B4">DLY</div>
+        <div class="fx-node on" data-fx="glt" style="left:35%;top:70%;--node-color:#E8A090">GLT</div>
+        <div class="fx-node" data-fx="grn" style="left:72%;top:68%;--node-color:#9B6BA0">GRN</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Feature 4: Generative / Function Nodes ── -->
+  <section class="feat-section">
+    <div class="feat-text reveal">
+      <h2 id="feat-gen-title" class="feat-title">Generative</h2>
+      <p id="feat-gen-desc" class="feat-desc">Snap decorators onto pattern nodes to transpose, repeat, automate, or apply effects. Add a Turing machine for controlled randomness, a quantizer to lock notes to a scale, or a Tonnetz engine for neo-Riemannian chord walks.</p>
+    </div>
+    <div class="feat-visual reveal">
+      <!-- Same rendering approach as scene-svg: pure SVG with rects, text, edges, pills -->
+      <svg class="gen-demo" viewBox="0 0 360 290" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Edges: pill bottom → next node top, with breathing room -->
+        <line x1="60" y1="52" x2="60" y2="92" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
+        <polyline points="56,86 60,92 64,86" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="60" y1="152" x2="60" y2="192" stroke="rgba(30,32,40,0.18)" stroke-width="2"/>
+        <polyline points="56,186 60,192 64,186" fill="none" stroke="rgba(30,32,40,0.18)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Node 1: INTRO (root) y=4 -->
+        <rect x="16" y="4" width="88" height="32" fill="#787845" stroke="#1E2028" stroke-width="2"/>
+        <text x="60" y="24" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Intro</text>
+        <circle cx="104" cy="20" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <!-- Pill: ×2 repeat -->
+        <rect x="26" y="40" width="68" height="16" rx="8" fill="#1E2028"/>
+        <text x="60" y="51" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">×2 repeat</text>
+
+        <!-- Node 2: VERSE y=96 -->
+        <rect x="16" y="96" width="88" height="32" fill="#4472B4" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
+        <text x="60" y="116" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Verse</text>
+        <circle cx="104" cy="112" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <!-- Pills: T +5, turing -->
+        <rect x="12" y="132" width="58" height="16" rx="8" fill="#1E2028"/>
+        <text x="41" y="143" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
+        <rect x="74" y="132" width="46" height="16" rx="8" fill="#1E2028"/>
+        <text x="97" y="143" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">turing</text>
+
+        <!-- Node 3: DROP y=196 -->
+        <rect x="16" y="196" width="88" height="32" fill="#E8A090" stroke="rgba(30,32,40,0.1)" stroke-width="1"/>
+        <text x="60" y="216" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" letter-spacing="0.04em" fill="white">Drop</text>
+        <circle cx="104" cy="212" r="5" fill="rgba(30,32,40,0.25)" stroke="rgba(30,32,40,0.4)" stroke-width="1.5"/>
+        <!-- Pills: ×1.5, reverb, tonnetz -->
+        <rect x="4" y="232" width="52" height="16" rx="8" fill="#1E2028"/>
+        <text x="30" y="243" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">×1.5</text>
+        <rect x="60" y="232" width="46" height="16" rx="8" fill="#1E2028"/>
+        <text x="83" y="243" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">reverb</text>
+        <rect x="110" y="232" width="54" height="16" rx="8" fill="#1E2028"/>
+        <text x="137" y="243" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="rgba(237,232,220,0.7)">tonnetz</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ── Story + Support ── -->
+  <section class="story-section reveal">
+    <div class="story-content">
+      <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
+      <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer who believes music tools should be free, instant, and fun. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
+      <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development. Your contribution helps keep the project free and fuels new features.</p>
+      <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
+        <span class="donate-heart">&#9825;</span> Support this project
+      </a>
+    </div>
+  </section>
+
+  <!-- ── Final CTA ── -->
+  <section class="final-cta reveal">
+    <h2 id="final-cta-title" class="final-cta-heading">Ready to make some noise?</h2>
+    <p id="final-cta-desc" class="final-cta-sub">No install. No signup. Just open and play.</p>
+    <div class="cta-row" style="justify-content:center">
+      <a id="final-app-link" class="cta primary" href={appUrl}>Open App</a>
+      <a id="final-docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
     </div>
   </section>
 
@@ -536,7 +790,20 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     t('feat-voice-title', 'サウンドエンジン');
     t('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、\n19種類の音源を搭載。\nトラックごとに好きなエンジンを選ぶことができます。');
     t('feat-scene-title', 'シーングラフ');
-    t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。');
+    t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。\nフィル、リバース、ブレイクでライブ感のある演奏も。');
+    t('feat-fx-title', 'FXパッド');
+    t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
+t('feat-gen-title', 'ジェネレーティブ');
+    t('feat-gen-desc', 'パターンノードにデコレーターをスナップして、\n移調、リピート、オートメーション、エフェクトを付加。\nチューリングマシンでコントロールされたランダムネス、\nクォンタイザーでスケールにロック、\nトネッツエンジンでネオリーマン的コード進行を。');
+    t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
+    t('story-text', 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。\n音楽ツールは無料で、すぐ使えて、楽しくあるべきだと信じています。');
+    t('story-text2', 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。\nいただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。');
+    const dl = document.getElementById('donate-link');
+    if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
+    t('final-cta-title', 'さっそく始めよう');
+    t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
+    const fl = document.getElementById('final-docs-link');
+    if (fl) { fl.href = '/ja/docs/getting-started/first-beat/'; fl.textContent = 'チュートリアル →'; }
   })();
 
   // Mini Sequencer (DOM-based, matches app StepGrid)
@@ -1443,35 +1710,56 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
 
     function nodeById(id) { return nodes.find(n => n.id === id); }
 
+    // Compute edge exit/entry points on node boundary (matches app sceneGeometry.ts)
+    function edgePoints(s, d) {
+      const hw = NW / 2, hh = NH / 2;
+      const scx = s.x + hw, scy = s.y + hh;
+      const dcx = d.x + hw, dcy = d.y + hh;
+      const dx = dcx - scx, dy = dcy - scy;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 1) return { sx: scx, sy: scy, dx: dcx, dy: dcy, angle: 0 };
+      const nx = dx / dist, ny = dy / dist;
+      // Ray-box intersection: find where direction exits each node rect
+      const r0 = Math.min(hw / Math.max(Math.abs(nx), 0.01), hh / Math.max(Math.abs(ny), 0.01));
+      const r1 = Math.min(hw / Math.max(Math.abs(nx), 0.01), hh / Math.max(Math.abs(ny), 0.01));
+      return {
+        sx: scx + nx * r0, sy: scy + ny * r0,
+        dx: dcx - nx * r1, dy: dcy - ny * r1,
+        angle: Math.atan2(ny, nx)
+      };
+    }
+
     function renderEdges() {
       edgesG.innerHTML = '';
       for (const e of edges) {
         const s = nodeById(e.from), d = nodeById(e.to);
-        const sx = s.x + NW, sy = s.y + NH / 2;
-        const dx = d.x, dy = d.y + NH / 2;
+        const ep = edgePoints(s, d);
 
-        // Cubic bezier
-        const mx = (sx + dx) / 2;
+        // Quadratic bezier with slight perpendicular offset (matches app)
+        const mx = (ep.sx + ep.dx) / 2 + (ep.sy - ep.dy) * 0.15;
+        const my = (ep.sy + ep.dy) / 2 - (ep.sx - ep.dx) * 0.15;
         const path = document.createElementNS(ns, 'path');
-        path.setAttribute('d', `M${sx},${sy} C${mx},${sy} ${mx},${dy} ${dx},${dy}`);
+        path.setAttribute('d', `M${ep.sx},${ep.sy} Q${mx},${my} ${ep.dx},${ep.dy}`);
         path.setAttribute('stroke', edgeColor);
         path.setAttribute('stroke-width', '2');
         path.setAttribute('fill', 'none');
         edgesG.appendChild(path);
 
-        // Chevron arrowhead
-        const arr = document.createElementNS(ns, 'polyline');
-        arr.setAttribute('points', `${dx-8},${dy-4} ${dx},${dy} ${dx-8},${dy+4}`);
-        arr.setAttribute('fill', 'none');
-        arr.setAttribute('stroke', edgeColor);
-        arr.setAttribute('stroke-width', '2');
-        arr.setAttribute('stroke-linecap', 'round');
-        arr.setAttribute('stroke-linejoin', 'round');
+        // Triangle arrowhead (direction from control point to endpoint)
+        const aAngle = Math.atan2(ep.dy - my, ep.dx - mx);
+        const al = 7;
+        const arr = document.createElementNS(ns, 'polygon');
+        arr.setAttribute('points', [
+          `${ep.dx},${ep.dy}`,
+          `${ep.dx - al * Math.cos(aAngle - 0.4)},${ep.dy - al * Math.sin(aAngle - 0.4)}`,
+          `${ep.dx - al * Math.cos(aAngle + 0.4)},${ep.dy - al * Math.sin(aAngle + 0.4)}`
+        ].join(' '));
+        arr.setAttribute('fill', edgeColor);
         edgesG.appendChild(arr);
 
         // Edge order label
         if (e.order !== undefined) {
-          const lx = mx, ly = (sy + dy) / 2;
+          const lx = mx, ly = my;
           const bg = document.createElementNS(ns, 'rect');
           bg.setAttribute('x', String(lx - 8));
           bg.setAttribute('y', String(ly - 7));
@@ -1659,6 +1947,99 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     });
 
     svg.addEventListener('pointercancel', () => { dragNode = null; });
+  })();
+
+  // ── FX Pad constellation demo ──
+  (() => {
+    const demo = document.getElementById('fx-demo');
+    const canvas = document.getElementById('fx-canvas');
+    if (!demo || !canvas) return;
+    const ctx2d = canvas.getContext('2d');
+    const nodes = demo.querySelectorAll('.fx-node');
+    let W, H;
+
+    function resize() {
+      const r = demo.getBoundingClientRect();
+      W = r.width; H = r.height;
+      canvas.width = W * devicePixelRatio;
+      canvas.height = H * devicePixelRatio;
+      ctx2d.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Toggle on click
+    nodes.forEach(n => {
+      n.addEventListener('click', e => {
+        if (n._dragged) return;
+        n.classList.toggle('on');
+      });
+    });
+
+    // Drag
+    let dragEl = null, ox, oy;
+    demo.addEventListener('pointerdown', e => {
+      const n = e.target.closest('.fx-node');
+      if (!n) return;
+      e.preventDefault();
+      n._dragged = false;
+      dragEl = n;
+      const r = demo.getBoundingClientRect();
+      ox = e.clientX - (parseFloat(n.style.left) / 100 * r.width);
+      oy = e.clientY - (parseFloat(n.style.top) / 100 * r.height);
+      demo.setPointerCapture(e.pointerId);
+    });
+    demo.addEventListener('pointermove', e => {
+      if (!dragEl) return;
+      dragEl._dragged = true;
+      const r = demo.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, (e.clientX - ox) / r.width * 100));
+      const y = Math.max(0, Math.min(100, (e.clientY - oy) / r.height * 100));
+      dragEl.style.left = x + '%';
+      dragEl.style.top = y + '%';
+    });
+    demo.addEventListener('pointerup', () => { dragEl = null; });
+    demo.addEventListener('pointercancel', () => { dragEl = null; });
+
+    // Draw constellation lines
+    let t = 0;
+    function draw() {
+      requestAnimationFrame(draw);
+      t += 0.02;
+      ctx2d.clearRect(0, 0, W, H);
+      const pts = [];
+      nodes.forEach(n => {
+        pts.push({
+          x: parseFloat(n.style.left) / 100 * W,
+          y: parseFloat(n.style.top) / 100 * H,
+          on: n.classList.contains('on'),
+          color: n.style.color
+        });
+      });
+      // Ghost lines between all pairs
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const a = pts[i], b = pts[j];
+          ctx2d.beginPath();
+          ctx2d.moveTo(a.x, a.y);
+          ctx2d.lineTo(b.x, b.y);
+          ctx2d.strokeStyle = 'rgba(237,232,220,0.04)';
+          ctx2d.lineWidth = 1;
+          ctx2d.stroke();
+          // Active glow between enabled nodes
+          if (a.on && b.on) {
+            const wave = Math.sin(t + i * 1.3 + j * 0.7) * 0.3 + 0.7;
+            ctx2d.beginPath();
+            ctx2d.moveTo(a.x, a.y);
+            ctx2d.lineTo(b.x, b.y);
+            ctx2d.strokeStyle = `rgba(237,232,220,${0.08 * wave})`;
+            ctx2d.lineWidth = 2;
+            ctx2d.stroke();
+          }
+        }
+      }
+    }
+    draw();
   })();
   </script>
 </body>

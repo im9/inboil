@@ -230,24 +230,66 @@ Quick lookup during use         Sit down and learn
 ## Phases
 
 ### Phase 1 — LP + Static Docs (shippable independently)
-- Astro + Starlight setup in `site/`
-- Landing page with hero animation (SceneCanvas-based), logo flap, micro-interactions
-- Donate section with Knob selector and celebration animation (ADR 071)
-- Docs: Markdown pages with screenshots / GIFs
-- In-app Help `→ Docs` links
-- Desktop download links (if ready)
+- [x] Astro + Starlight setup in `site/`
+- [ ] ~~Landing page with hero animation (SceneCanvas-based), logo flap, micro-interactions~~ → Hero is interactive DOM step sequencer instead (see Implementation Status)
+- [ ] Donate section with Knob selector and celebration animation (ADR 071)
+- [x] Docs: Markdown pages with screenshots / GIFs (EN/JA bilingual)
+- [x] In-app Help `→ Docs` links
+- [ ] Desktop download links (not yet applicable)
 
 ### Phase 2 — Interactive Docs
-- Embed lightweight Svelte components in docs pages (MiniSequencer, SceneRibbon, Knob)
-- Props-only mode or mini-state injection for embedded components
-- Tutorial step snapshots as copy-pasteable JSON
+- [x] Embed lightweight Svelte components in docs pages (PlaygroundSceneView, PlaygroundAlgoGraph, PlaygroundWaveGraph, PlaygroundEnvGraph)
+- [x] Props-only mode or mini-state injection for embedded components (`tutorialSetup.ts`)
+- [ ] Tutorial step snapshots as copy-pasteable JSON
 
 ### Phase 3 — Function Node Playground + Onboarding
-- SceneCanvas + DockDecoratorEditor sandbox in docs
-- Full PlaygroundState context (1-pattern sandbox with audio)
-- Copy-paste from playground to app via ADR 020 JSON export
-- First-launch onboarding banner in app
-- Contextual feature hints (one-time tooltips → docs links)
+- [ ] SceneCanvas + DockDecoratorEditor sandbox in docs
+- [ ] Full PlaygroundState context (1-pattern sandbox with audio)
+- [ ] Copy-paste from playground to app via ADR 020 JSON export
+- [ ] First-launch onboarding banner in app
+- [ ] Contextual feature hints (one-time tooltips → docs links)
+
+## Implementation Status
+
+### LP (`site/src/pages/index.astro`)
+
+**Done:**
+- 2-column grid layout (text left, interactive right) with scroll-reveal animations
+- SceneCanvas-style grid background (cream #EDE8DC + 40px lines)
+- Dark header with nav (Docs link + olive "Open App" CTA button)
+- Hero: interactive 4-track × 16-step DOM sequencer with Othello-flip cells, playhead, Web Audio preview
+- Sound Engines section: 19 voice chips with audio preview (legato for synths, one-shot with proper envelopes for drums)
+- Engine viewer: dark panel showing real-time SVG graphs (waveform interpolation, ADSR envelope, FM algorithm routing) that switch per voice
+- Draggable SVG arc knobs that update graphs + live audio (filter freq/Q, FM ratio/depth, wavetable position)
+- Audio params matched to app presets (paramDefs.ts / DRUM_PRESETS)
+- Scene Graph section: draggable nodes with dynamic bezier edges, chevron arrowheads, edge-order labels
+- Scene nodes match app style (height:32, no border-radius, root border, playing pulse, edge handles, decorator pills)
+- Root node with play button (playing state, ⏸ icon) overlapping left edge
+- Responsive breakpoints at 768px (2-col → 1-col)
+- OGP / meta description / Twitter Card tags (og.png image asset still needed)
+- FX Pad section: draggable effect nodes on canvas with constellation lines between active nodes
+- Performance section: hold-to-engage FILL / REV / BRK buttons with visual feedback
+- Generative section: decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
+- Final CTA section: "Ready to make some noise?" + app/tutorial links
+- Story + Support section with Ko-fi donate link
+- Scene graph: hint text ("drag the nodes") + nudge animation on scroll-in, hides on first drag
+- Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
+- Feature title hover bounce + accent-line pulse
+- CTA primary button glow sweep on hover
+- Bilingual i18n for all new sections (EN/JA auto-detect)
+
+**TODO (LP):**
+- [x] OGP / meta description / social sharing tags
+- [x] Additional feature sections (Effects/FX Pad, Performance mode, Generative/function nodes)
+- [x] Final CTA section at page bottom ("Try it now" with app link)
+- [x] Donate section (ADR 071) — Ko-fi link in Story + Support section
+- [x] Scene graph: hint text or intro animation so users discover drag interaction
+- [x] Mobile UX verification (voice grid + knobs on small screens)
+- [x] Logo flap animation (original ADR spec)
+- [x] Feature icon hover bounce / pulse micro-interactions
+- [x] Story + Support section
+- [ ] OGP image (og.png 1200×630) — placeholder tag added, image asset needed
+- [ ] Desktop download links (not yet applicable)
 
 ## Future Extensions
 
