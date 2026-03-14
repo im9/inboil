@@ -17,26 +17,26 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       display:flex;flex-direction:column;
       align-items:center;justify-content:center;
       gap:0;
-      padding:16px;
+      /* header 42px + 余白 */
+      padding:58px 16px 16px;
     }
     .brand{
-      display:flex;align-items:center;gap:10px;
-      margin-bottom:4px;
+      display:flex;align-items:center;gap:14px;
+      margin-bottom:8px;
     }
-    .brand svg{width:32px;height:32px;flex-shrink:0}
+    .brand svg{width:44px;height:44px;flex-shrink:0}
     .brand h1{
       font-family:"JetBrains Mono",monospace;
-      font-size:20px;letter-spacing:0.14em;
+      font-size:2rem;letter-spacing:0.12em;
       text-transform:uppercase;
       color:#1E2028;
       font-weight:700;
     }
     .tagline{
       font-family:"JetBrains Mono",monospace;
-      font-size:0.6rem;letter-spacing:0.18em;
-      text-transform:uppercase;
-      color:rgba(30,32,40,0.45);
-      margin-bottom:20px;
+      font-size:1rem;letter-spacing:0.08em;
+      color:rgba(30,32,40,0.5);
+      margin-bottom:28px;
     }
 
     /* ── Sequencer grid ── */
@@ -53,15 +53,15 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     .seq-label{
       width:48px;
       font-family:"JetBrains Mono",monospace;
-      font-size:8px;font-weight:700;
+      font-size:11px;font-weight:700;
       letter-spacing:0.04em;
       text-align:right;
       padding-right:8px;
-      color:rgba(30,32,40,0.45);
+      color:#1E2028;
       flex-shrink:0;
     }
     @media(max-width:639px){
-      .seq-label{width:36px;font-size:7px;padding-right:6px}
+      .seq-label{width:36px;font-size:9px;padding-right:6px}
     }
 
     /* Othello flip (same structure as app) */
@@ -122,39 +122,37 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
 
     /* ── Controls ── */
     .sound-toggle{
-      all:unset;
+      appearance:none;
+      border:1.5px solid #787845;
+      border-radius:0;
+      background:transparent;
+      padding:4px 8px;margin:0;
       cursor:pointer;
       display:flex;align-items:center;gap:6px;
+      color:#787845;
       font-family:"JetBrains Mono",monospace;
-      font-size:0.65rem;letter-spacing:0.1em;
+      font-size:9px;font-weight:700;
+      letter-spacing:0.04em;
       text-transform:uppercase;
-      color:rgba(30,32,40,0.45);
-      padding:6px 0;
-      margin-bottom:18px;
-      transition:color 0.2s;
+      margin-bottom:24px;
     }
-    .sound-toggle:hover{color:rgba(30,32,40,0.7)}
-    .sound-dot{
-      display:inline-block;
-      width:7px;height:7px;border-radius:50%;
-      border:1.5px solid rgba(30,32,40,0.4);
-      background:transparent;
-      transition:background 0.2s,border-color 0.2s;
+    .sound-toggle.active{
+      background:#787845;
+      border-color:#787845;
+      color:#EDE8DC;
     }
-    .sound-toggle.active .sound-dot{background:#787845;border-color:#787845}
     .cta-row{
-      display:flex;gap:1rem;
+      display:flex;gap:1.2rem;
     }
     .cta{
-      padding:0.6rem 1.8rem;
+      padding:0.75rem 2.4rem;
       border:1.5px solid rgba(30,32,40,0.35);
-      border-radius:4px;
+      border-radius:0;
       background:transparent;
       color:rgba(30,32,40,0.7);
       font-family:"JetBrains Mono",monospace;
-      font-size:0.8rem;letter-spacing:0.08em;
+      font-size:1rem;letter-spacing:0.06em;
       text-transform:uppercase;text-decoration:none;
-      transition:all 0.2s;
     }
     .cta:hover{
       background:rgba(30,32,40,0.06);
@@ -170,9 +168,143 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
       background:#8a8a50;
       border-color:#8a8a50;
     }
+
+    /* ── Feature sections ── */
+    .feat-section{
+      width:100%;
+      min-height:100vh;
+      padding:72px 24px;
+      display:flex;flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:20px;
+    }
+    .feat-title{
+      font-family:"JetBrains Mono",monospace;
+      font-size:2rem;font-weight:700;
+      letter-spacing:0.02em;
+      color:#1E2028;
+      text-align:center;
+    }
+    .feat-desc{
+      font-family:"JetBrains Mono",monospace;
+      font-size:1rem;
+      line-height:1.7;
+      color:rgba(30,32,40,0.6);
+      text-align:center;
+      white-space:pre-line;
+    }
+
+    /* ── Voice grid ── */
+    /* 10列×58px + 9gap×2px = 598px → 10,9の2行 */
+    .voice-grid{
+      display:flex;flex-wrap:wrap;
+      gap:2px;
+      justify-content:center;
+      max-width:598px;
+    }
+    .voice-chip{
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      width:58px;height:44px;
+      background:transparent;
+      border:1px solid rgba(30,32,40,0.15);
+      font-family:"JetBrains Mono",monospace;
+      transition:all 120ms;
+      cursor:default;
+    }
+    .voice-chip.hl{
+      background:#787845;
+      border-color:#787845;
+    }
+    .voice-chip.hl .v-label,
+    .voice-chip.hl .v-name{color:#EDE8DC}
+    .v-label{
+      font-size:10px;font-weight:700;
+      letter-spacing:0.04em;
+      color:#1E2028;
+    }
+    .v-name{
+      font-size:8px;
+      color:rgba(30,32,40,0.35);
+      letter-spacing:0.02em;
+    }
+    .voice-sep{
+      width:100%;height:0;
+      flex-basis:100%;
+    }
+
+    /* ── Scene graph SVG ── */
+    .scene-demo{width:100%;max-width:500px}
+    @keyframes scene-pulse{
+      0%{filter:brightness(1.3)}
+      100%{filter:brightness(1)}
+    }
+    .sn-playing{animation:scene-pulse 0.5s ease-out infinite alternate}
+
+    /* ── Header — docs header と同じ navy bg / cream text ── */
+    .site-header{
+      position:fixed;top:0;left:0;right:0;
+      z-index:100;
+      padding:12px 24px;
+      background:#1E2028;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-family:"JetBrains Mono",monospace;
+    }
+    .header-brand{
+      display:flex;align-items:center;gap:8px;
+      font-size:0.7rem;
+      font-weight:700;letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:#EDE8DC;
+      text-decoration:none;
+    }
+    .header-links{display:flex;gap:1.5rem}
+    .header-links a{
+      color:rgba(237,232,220,0.5);
+      text-decoration:none;
+      text-transform:uppercase;
+      font-size:0.7rem;
+      letter-spacing:0.04em;
+      transition:color 0.2s;
+    }
+    .header-links a:hover{color:#EDE8DC}
+
+    /* ── Footer ── */
+    .footer{
+      width:100%;
+      padding:16px 24px;
+      text-align:center;
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.65rem;
+      letter-spacing:0.04em;
+      color:rgba(30,32,40,0.25);
+    }
   </style>
 </head>
 <body>
+  <!-- ── Header ── -->
+  <header class="site-header">
+    <a class="header-brand" href="/">
+      <svg viewBox="0 0 32 32" aria-hidden="true" width="18" height="18">
+        <rect width="32" height="32" rx="4" fill="#1e2028"/>
+        <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
+        <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+        <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
+        <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
+        <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
+      </svg>
+      <span>INBOIL</span>
+    </a>
+    <div class="header-links">
+      <a href="/docs/">Docs</a>
+      <a id="header-app" href={appUrl}>App</a>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
   <div class="page">
     <div class="brand">
       <svg viewBox="0 0 32 32" aria-hidden="true">
@@ -190,7 +322,12 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     <div id="seq" class="seq-wrap"></div>
 
     <button id="sound-btn" class="sound-toggle" aria-label="Toggle sound">
-      <span class="sound-dot"></span> SOUND
+      <svg class="sound-icon" width="16" height="16" viewBox="0 0 18 18" fill="none">
+        <path d="M4 10.5V8.5a5 5 0 0110 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="2" y="10" width="3" height="4" rx="1" fill="currentColor"/>
+        <rect x="13" y="10" width="3" height="4" rx="1" fill="currentColor"/>
+      </svg>
+      <span class="sound-label">Sound</span>
     </button>
 
     <div class="cta-row">
@@ -199,14 +336,104 @@ const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.p
     </div>
   </div>
 
+  <!-- ── Feature 1: Voices ── -->
+  <section class="feat-section">
+    <h2 id="feat-voice-title" class="feat-title">Sound Engines</h2>
+    <div class="voice-grid">
+      <div class="voice-chip"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
+      <div class="voice-chip"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
+      <div class="voice-chip hl"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
+      <div class="voice-chip"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
+      <div class="voice-chip"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
+      <div class="voice-chip"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
+      <div class="voice-chip"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
+      <div class="voice-chip"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
+      <div class="voice-chip"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
+      <div class="voice-chip"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
+      <div class="voice-chip"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
+      <div class="voice-chip"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
+      <div class="voice-chip"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
+      <div class="voice-chip"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
+      <div class="voice-chip"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
+      <div class="voice-chip"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
+      <div class="voice-chip"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
+      <div class="voice-chip"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
+      <div class="voice-chip"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
+    </div>
+    <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths. Choose a different engine for each track.</p>
+  </section>
+
+  <!-- ── Feature 2: Scene Graph ── -->
+  <section class="feat-section">
+    <h2 id="feat-scene-title" class="feat-title">Scene Graph</h2>
+    <svg class="scene-demo" viewBox="0 0 500 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Edges -->
+      <defs>
+        <marker id="arrow" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="rgba(30,32,40,0.2)"/>
+        </marker>
+      </defs>
+      <!-- A→B -->
+      <line x1="90" y1="85" x2="126" y2="85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <!-- B→C (curve up) -->
+      <path d="M198,85 C222,85 238,40 256,40" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <!-- B→D (curve down) -->
+      <path d="M198,85 C222,85 238,130 256,130" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <!-- C→E -->
+      <path d="M328,40 C352,40 368,85 386,85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      <!-- D→E -->
+      <path d="M328,130 C352,130 368,85 386,85" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+      <!-- Edge order badges -->
+      <circle cx="228" cy="62" r="7" fill="rgba(237,232,220,0.9)" stroke="rgba(30,32,40,0.15)" stroke-width="1"/>
+      <text x="228" y="65" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#1E2028">1</text>
+      <circle cx="228" cy="108" r="7" fill="rgba(237,232,220,0.9)" stroke="rgba(30,32,40,0.15)" stroke-width="1"/>
+      <text x="228" y="111" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#1E2028">2</text>
+
+      <!-- Node A: Intro (olive, root) -->
+      <rect x="18" y="70" width="72" height="30" fill="#787845" stroke="#1E2028" stroke-width="2"/>
+      <text x="54" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Intro</text>
+
+      <!-- Node B: Verse (blue, playing) -->
+      <rect x="126" y="70" width="72" height="30" fill="#4472B4" class="sn-playing"/>
+      <text x="162" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Verse</text>
+
+      <!-- Node C: Drop (salmon) -->
+      <rect x="256" y="25" width="72" height="30" fill="#E8A090"/>
+      <text x="292" y="44" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Drop</text>
+      <!-- Decorator tag below C -->
+      <rect x="270" y="58" width="44" height="14" rx="7" fill="#1E2028"/>
+      <text x="292" y="68" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(237,232,220,0.7)">T +5</text>
+
+      <!-- Node D: Chill (teal) -->
+      <rect x="256" y="115" width="72" height="30" fill="#4A9B9B"/>
+      <text x="292" y="134" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Chill</text>
+      <!-- Decorator tag below D -->
+      <rect x="266" y="148" width="52" height="14" rx="7" fill="#1E2028"/>
+      <text x="292" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="7" font-weight="700" fill="rgba(237,232,220,0.7)">RPT ×2</text>
+
+      <!-- Node E: Outro (purple) -->
+      <rect x="386" y="70" width="72" height="30" fill="#9B6BA0"/>
+      <text x="422" y="89" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="white">Outro</text>
+    </svg>
+    <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time.</p>
+  </section>
+
+  <footer class="footer">&copy; INBOIL</footer>
+
   <script is:inline>
   // Language
   (() => {
+    if (!/^ja/i.test(navigator.language)) return;
     const a = document.getElementById('docs-link');
-    if (/^ja/i.test(navigator.language)) {
-      a.href = '/ja/docs/getting-started/first-beat/';
-      a.textContent = 'チュートリアル →';
-    }
+    a.href = '/ja/docs/getting-started/first-beat/';
+    a.textContent = 'チュートリアル →';
+    // Features i18n
+    const t = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    t('feat-voice-title', 'サウンドエンジン');
+    t('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、\n19種類の音源を搭載。\nトラックごとに好きなエンジンを選ぶことができます。');
+    t('feat-scene-title', 'シーングラフ');
+    t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。');
   })();
 
   // Mini Sequencer (DOM-based, matches app StepGrid)
