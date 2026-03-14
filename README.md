@@ -74,7 +74,7 @@ docs/ai/                      # Design specs & ADRs
 
 ## Links
 
-- [Docs](https://inboil.pages.dev/docs/)
+- [Docs](https://inboil-site.pages.dev/ja/docs/)
 - [Support (Ko-fi)](https://ko-fi.com/inboil)
 
 ## License

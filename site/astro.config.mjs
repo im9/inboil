@@ -25,6 +25,9 @@ export default defineConfig({
   const a=document.querySelector('a.site-title');if(a)a.href='/';
   if(location.pathname.startsWith('/ja/'))document.cookie='lang=en;path=/;max-age=0';
   else if(location.pathname.startsWith('/docs/'))document.cookie='lang=en;path=/;max-age=31536000';
+  document.querySelectorAll('starlight-lang-select a, a[hreflang="en"]').forEach(a=>{
+    try{const u=new URL(a.href,location.origin);if(u.pathname.startsWith('/docs/')){u.searchParams.set('lang','en');a.href=u.toString()}}catch(e){}
+  });
   const hdr=document.querySelector('header.header .sl-flex');
   if(hdr){
     const lnk=document.createElement('a');
