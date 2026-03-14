@@ -607,6 +607,18 @@
 
     {#if visibleMode === 'system' && ui.systemTab === 'settings'}
       <div class="sidebar-footer">
+        <a
+          class="donate-link-app"
+          href="https://ko-fi.com/inboil"
+          target="_blank"
+          rel="noopener"
+        >&#9825; {L === 'ja' ? 'このプロジェクトを応援' : 'SUPPORT THIS PROJECT'}</a>
+        <a
+          class="footer-link"
+          href="https://github.com/im9"
+          target="_blank"
+          rel="noopener"
+        >GitHub</a>
         <span class="setting-label">{L === 'ja' ? 'リセット' : 'RESET'}</span>
         {#if confirmReset}
           <p class="reset-warn">{L === 'ja'
@@ -797,6 +809,36 @@
     padding: 12px 16px;
     border-top: 1px solid rgba(237,232,220,0.08);
     margin-top: auto;
+  }
+
+  .donate-link-app {
+    display: block;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--olive);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(237,232,220,0.08);
+  }
+  .donate-link-app:hover {
+    text-decoration: underline;
+    filter: brightness(1.2);
+  }
+  .footer-link {
+    display: block;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: rgba(237,232,220,0.4);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(237,232,220,0.08);
+  }
+  .footer-link:hover {
+    color: rgba(237,232,220,0.7);
   }
 
   /* ── Search ── */
