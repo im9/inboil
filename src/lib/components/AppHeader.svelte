@@ -192,12 +192,14 @@
 
     <!-- View toggle: SCENE / FX / EQ / MST -->
     <div class="view-toggle">
+      {#if !compact}
       <button
         class="btn-view"
         class:active={ui.phraseView === 'pattern' && !ui.patternSheet}
         onpointerdown={() => { ui.phraseView = 'pattern'; ui.patternSheet = false }}
         data-tip="Scene view" data-tip-ja="シーンビュー"
       >SCENE</button>
+      {/if}
       <button
         class="btn-view"
         class:active={ui.phraseView === 'fx'}

@@ -4,7 +4,8 @@
   import DockPanel from './lib/components/DockPanel.svelte'
 
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
-  import SectionNav from './lib/components/SectionNav.svelte'
+  import MobileMatrixView from './lib/components/MobileMatrixView.svelte'
+  import MobileSceneRibbon from './lib/components/MobileSceneRibbon.svelte'
   import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import SceneView from './lib/components/SceneView.svelte'
@@ -272,14 +273,15 @@
 <div class="app">
   {#if isMobile}
     <AppHeader onPlay={play} onStop={stop} compact={true} />
-    <SectionNav />
+    <MobileMatrixView />
     <div class="view-area">
       <div class="perf-flash fill" class:on={perf.filling}></div>
       <div class="perf-flash rev" class:on={perf.reversing}></div>
       <div class="perf-flash brk" class:on={perf.breaking}></div>
-      <SceneView onplay={play} onstop={stop} />
-      <!-- Overlay sheets (mobile) -->
-      {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
+      <MobileTrackView />
+      <MobileSceneRibbon onplay={play} onstop={stop} />
+      <!-- Overlay sheets (mobile: FX / EQ / Master only) -->
+      {#if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
@@ -295,13 +297,6 @@
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <MasterView />
-          {:else}
-            <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
-            {#if prefs.patternEditor === 'tracker'}
-              <TrackerView />
-            {:else}
-              <MobileTrackView />
-            {/if}
           {/if}
         </div>
       {/if}
