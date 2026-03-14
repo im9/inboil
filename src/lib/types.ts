@@ -217,7 +217,7 @@ export interface Song {
   name: string
   bpm: number
   rootNote: number        // 0–11
-  tracks: Track[]         // 8 fixed
+  tracks: Track[]         // max 16 (stepActions.ts MAX_TRACKS)
   patterns: Pattern[]     // pattern pool (ADR 044)
   sections: Section[]     // arrangement slots referencing patterns
   scene: Scene            // arrangement graph (ADR 044, data-only in Phase 1a)

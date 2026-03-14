@@ -1,6 +1,6 @@
 # ADR 072: Landing Page, Docs & Tutorial
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -98,15 +98,15 @@ The hero section has three jobs in under 3 seconds:
 ┌──────────────────────────────────┐
 │  Hero                            │  ← brand + tagline + interactive step sequencer
 ├──────────────────────────────────┤
-│  Sound Engines (2-col)           │  ← voice chips + engine viewer with SVG graphs
+│  Sound Engines (2-col 2:3)       │  ← voice chips + engine viewer with SVG graphs
 ├──────────────────────────────────┤
-│  Scene Graph (2-col reversed)    │  ← draggable nodes, bezier edges, arrowheads
+│  Scene Graph (2-col 3:2 reversed)│  ← draggable nodes, bezier edges, arrowheads
 ├──────────────────────────────────┤
 │  FX Pad (full-width centered)    │  ← draggable effect nodes with constellation lines
 ├──────────────────────────────────┤
-│  Generative (full-width centered)│  ← decorator pills on pattern nodes (SVG diagram)
-├──────────────────────────────────┤
 │  Story + Support                 │  ← personal dev story → Ko-fi donate link
+├──────────────────────────────────┤
+│  Specs                           │  ← technical spec grid (tracks, voices, effects, etc.)
 ├──────────────────────────────────┤
 │  Final CTA                       │  ← "Ready to make some noise?" + app/tutorial links
 └──────────────────────────────────┘
@@ -219,73 +219,53 @@ Quick lookup during use         Sit down and learn
 
 ## Phases
 
-### Phase 1 — LP + Static Docs (shippable independently)
+### Phase 1 — LP + Static Docs
 - [x] Astro + Starlight setup in `site/`
 - [x] Landing page with hero (interactive DOM step sequencer), logo flap, micro-interactions
 - [x] Donate section — Ko-fi link in Story + Support section (knob selector deferred)
 - [x] Docs: Markdown pages with screenshots / GIFs (EN/JA bilingual)
 - [x] In-app Help `→ Docs` links
-- [ ] Desktop download links (not yet applicable)
+- Desktop download links → ADR 073 (requires Apple Developer account)
 
 ### Phase 2 — Interactive Docs
 - [x] Embed lightweight Svelte components in docs pages (PlaygroundSceneView, PlaygroundAlgoGraph, PlaygroundWaveGraph, PlaygroundEnvGraph)
 - [x] Props-only mode or mini-state injection for embedded components (`tutorialSetup.ts`)
-- [ ] Tutorial step snapshots as copy-pasteable JSON
-
-### Phase 3 — Function Node Playground + Onboarding
-- [ ] SceneCanvas + DockDecoratorEditor sandbox in docs
-- [ ] Full PlaygroundState context (1-pattern sandbox with audio)
-- [ ] Copy-paste from playground to app via ADR 020 JSON export
-- [ ] First-launch onboarding banner in app
-- [ ] Contextual feature hints (one-time tooltips → docs links)
+- Tutorial step snapshots, playground, onboarding → split to ADR 094
 
 ## Implementation Status
 
 ### LP (`site/src/pages/index.astro`)
 
 **Done:**
-- 2-column grid layout (text left, interactive right) with scroll-reveal animations
 - SceneCanvas-style grid background (cream #EDE8DC + 40px lines)
 - Dark header with nav (Docs link + olive "Open App" CTA button)
+- Hero: asymmetric layout (text top-left, sequencer bottom-right) with 2fr:3fr grid
 - Hero: interactive 4-track × 16-step DOM sequencer with Othello-flip cells, playhead, Web Audio preview
-- Sound Engines section: 19 voice chips with audio preview (legato for synths, one-shot with proper envelopes for drums)
-- Engine viewer: dark panel showing real-time SVG graphs (waveform interpolation, ADSR envelope, FM algorithm routing) that switch per voice
-- Draggable SVG arc knobs that update graphs + live audio (filter freq/Q, FM ratio/depth, wavetable position)
+- Hero: tagline "Make music anywhere, right now" + sub-line "No install. No signup. Just play."
+- Hero: larger logo (80px), larger tagline (2.2rem), larger sequencer cells (48px)
+- Sound Engines section: 2:3 grid, 19 voice chips with audio preview, voice ↔ engine viewer param sync
+- Engine viewer: dark panel showing real-time SVG graphs (waveform, ADSR, FM routing) with draggable arc knobs
 - Audio params matched to app presets (paramDefs.ts / DRUM_PRESETS)
-- Scene Graph section: draggable nodes with dynamic bezier edges, direction-aware arrowheads, edge-order labels
-- Scene edges use ray-box intersection for exit/entry points (matches app sceneGeometry.ts)
-- Scene nodes match app style (height:32, no border-radius, root border, playing pulse, edge handles, decorator pills)
-- Root node with play button (playing state, ⏸ icon) overlapping left edge
-- Responsive breakpoints at 768px (2-col → 1-col)
-- OGP / meta description / Twitter Card tags (og.png image asset still needed)
-- FX Pad section: draggable effect nodes on canvas with constellation lines between active nodes
+- Scene Graph section: 3:2 reversed grid, draggable nodes with dynamic bezier edges, ray-box intersection
+- Scene nodes match app style (height:32, no border-radius, root border, playing pulse, decorator pills)
+- FX Pad section: full-width, draggable effect nodes on canvas with constellation lines
 - FX node colors match app exactly (VERB=#787845, DLY=#4472B4, GLT=#E8A090, GRN=#9B6BA0)
-- Generative section: horizontal SVG diagram with decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
-- Performance mentioned in Scene Graph description (section removed — not compelling as standalone demo)
+- Story + Support section with Ko-fi donate link (after all feature sections)
+- Specs section: grid of technical specs (tracks, voices, sequencer, effects, export, MIDI, browser, etc.)
 - Final CTA section: "Ready to make some noise?" + app/tutorial links
-- Story + Support section with Ko-fi donate link (after all feature sections, before Final CTA)
-- Story text split into separate `<p>` elements for proper paragraph breaks (EN and JA)
+- OGP image: og.svg source + og.png 1200×630 (logo + tagline + step sequencer pattern)
 - Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
-- Feature title hover bounce + accent-line pulse
+- Feature titles: large (7rem max), white-space:nowrap, hover bounce + accent-line pulse
 - CTA primary button glow sweep on hover
-- Bilingual i18n for all new sections (EN/JA auto-detect)
-- App header logo bold (font-weight:700) to match site header
-- Typography: JetBrains Mono for headings, system-ui sans-serif for body text (tagline, descriptions, story, CTA sub-text)
-- Section layouts: mixed 2-col / 2-col reversed / full-width centered to break visual monotony
-- Spacing: generous padding (96px sections), larger gaps (72px) for breathing room
+- Alternating section backgrounds (rgba(30,32,40,0.03)) for visual rhythm
+- Asymmetric vertical offsets between text and visual columns (120px / 200px)
+- Bilingual i18n for all sections (EN/JA auto-detect)
+- Typography: JetBrains Mono for headings, system-ui sans-serif for body text
+- Text color opacity tuned for readability (tagline 0.8, descriptions 0.7, labels 0.55)
+- Responsive breakpoints at 768px (2-col → 1-col, CTA/chip sizing)
 
 **TODO (LP):**
-- [x] OGP / meta description / social sharing tags
-- [x] Additional feature sections (FX Pad, Generative; Performance folded into Scene Graph text)
-- [x] Final CTA section at page bottom ("Ready to make some noise?" with app link)
-- [x] Donate section (ADR 071) — Ko-fi link in Story + Support section
-- [x] Scene graph: draggable nodes as hidden discovery (hint text removed per user preference)
-- [x] Mobile UX verification (voice grid + knobs on small screens)
-- [x] Logo flap animation (original ADR spec)
-- [x] Feature icon hover bounce / pulse micro-interactions
-- [x] Story + Support section
-- [ ] OGP image (og.png 1200×630) — placeholder tag added, image asset needed
-- [ ] Desktop download links (not yet applicable)
+- Desktop download links → ADR 073
 
 ## Future Extensions
 

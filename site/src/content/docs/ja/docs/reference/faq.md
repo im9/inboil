@@ -11,11 +11,7 @@ sidebar:
 ブラウザベースのグルーブボックス兼 DAW です。ブラウザ上で完全に動作し、ダウンロード、アカウント登録、プラグインは一切不要。アプリを開いたらすぐにビートメイキングを始められます。
 
 ### 対応ブラウザは？
-INBOIL は **Web Audio API** と **AudioWorklet** をサポートするモダンブラウザが必要です：
-- Chrome 66+（推奨）
-- Firefox 76+
-- Safari 14.1+
-- Edge 79+
+INBOIL は **Web Audio API** と **AudioWorklet** をサポートするモダンブラウザが必要です。Chrome、Firefox、Safari、Edge の最新版を推奨します。
 
 モバイルブラウザでも動作しますが、インターフェースはデスクトップ向けに最適化されています。
 

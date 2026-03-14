@@ -10,7 +10,7 @@
 
 namespace inboil {
 
-static constexpr int MAX_TRACKS = 8;
+static constexpr int MAX_TRACKS = 8;  // TODO: bump to 16 to match JS side (stepActions.ts MAX_TRACKS)
 static constexpr int MAX_STEPS  = 64;
 
 struct Trig {

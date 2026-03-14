@@ -11,11 +11,7 @@ sidebar:
 A browser-based groove box and DAW. It runs entirely in your browser — no download, no account, no plugins required. Open the app and start making beats.
 
 ### What browsers are supported?
-INBOIL requires a modern browser with **Web Audio API** and **AudioWorklet** support:
-- Chrome 66+ (recommended)
-- Firefox 76+
-- Safari 14.1+
-- Edge 79+
+INBOIL requires a modern browser with **Web Audio API** and **AudioWorklet** support. Use the latest version of Chrome, Firefox, Safari, or Edge for the best experience.
 
 Mobile browsers work but the interface is optimized for desktop.
 

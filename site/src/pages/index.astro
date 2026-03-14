@@ -77,6 +77,10 @@ const ogImage = `${siteUrl}/og.png`;
         padding:58px 24px 32px;
         gap:32px;
       }
+      .hero-text{align-self:auto;margin-top:0}
+      .hero-visual{align-self:auto;margin-bottom:0}
+      .tagline{white-space:normal;font-size:1.5rem}
+      .cta{padding:0.6rem 1.4rem;font-size:0.85rem}
     }
     .hero-text{
       display:flex;flex-direction:column;
@@ -227,6 +231,7 @@ const ogImage = `${siteUrl}/og.png`;
       font-family:"JetBrains Mono",monospace;
       font-size:1rem;letter-spacing:0.06em;
       text-transform:uppercase;text-decoration:none;
+      white-space:nowrap;
     }
     .cta:hover{
       background:rgba(30,32,40,0.06);
@@ -266,6 +271,7 @@ const ogImage = `${siteUrl}/og.png`;
       align-items:start;
       gap:48px;
     }
+    .feat-section:nth-child(even){background:rgba(30,32,40,0.03)}
     /* 奇数: テキスト上、ビジュアル下げる */
     .feat-section .feat-text{padding-top:0}
     .feat-section .feat-visual{padding-top:120px}
@@ -287,10 +293,15 @@ const ogImage = `${siteUrl}/og.png`;
         padding:64px 24px;
         gap:48px;
       }
-      .feat-section .feat-visual{padding-top:0}
+      .feat-section .feat-visual{padding-top:0;overflow-x:auto}
       .feat-section:nth-child(even){grid-template-columns:1fr}
       .feat-section:nth-child(even) .feat-text{order:0;padding-top:0}
       .feat-section:nth-child(even) .feat-visual{order:0;padding-top:0}
+      .voice-chip{width:48px;height:34px}
+      .v-label{font-size:10px}
+      .v-name{font-size:8px}
+      .feat-section.full{text-align:left}
+      .feat-section.full .feat-text{align-items:flex-start}
     }
     .feat-text{
       display:flex;flex-direction:column;
@@ -523,6 +534,7 @@ const ogImage = `${siteUrl}/og.png`;
       padding:96px 48px;
       display:flex;
       justify-content:center;
+      background:rgba(30,32,40,0.03);
     }
     .story-content{
       max-width:560px;
@@ -564,12 +576,65 @@ const ogImage = `${siteUrl}/og.png`;
       .story-section{padding:64px 24px}
     }
 
+    /* ── Specs ── */
+    .specs-section{
+      width:100%;
+      padding:96px 48px;
+    }
+    .specs-title{
+      font-family:"JetBrains Mono",monospace;
+      font-size:clamp(2rem, 5vw, 3.5rem);
+      font-weight:700;
+      letter-spacing:0.04em;
+      text-transform:uppercase;
+      color:#1E2028;
+      margin-bottom:48px;
+    }
+    .specs-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+      gap:1px;
+      background:rgba(30,32,40,0.08);
+      border:1px solid rgba(30,32,40,0.08);
+    }
+    .spec-cell{
+      background:#EDE8DC;
+      padding:20px 24px;
+    }
+    .spec-label{
+      font-family:"JetBrains Mono",monospace;
+      font-size:10px;
+      font-weight:700;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:rgba(30,32,40,0.45);
+      margin-bottom:6px;
+    }
+    .spec-value{
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.95rem;
+      font-weight:700;
+      color:#1E2028;
+      line-height:1.4;
+    }
+    .spec-note{
+      font-family:system-ui, -apple-system, sans-serif;
+      font-size:0.8rem;
+      color:rgba(30,32,40,0.5);
+      margin-top:4px;
+    }
+    @media(max-width:768px){
+      .specs-section{padding:64px 24px}
+      .specs-grid{grid-template-columns:1fr 1fr}
+    }
+
     /* ── Final CTA ── */
     .final-cta{
       width:100%;
       padding:96px 48px;
       display:flex;flex-direction:column;
       align-items:center;
+      background:rgba(30,32,40,0.03);
       gap:24px;
       text-align:center;
     }
@@ -735,12 +800,69 @@ const ogImage = `${siteUrl}/og.png`;
     <div class="story-content">
       <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
       <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
-      <p id="story-text1b" class="story-body">I believe music tools should be free, instant, and fun.</p>
+      <p id="story-text1b" class="story-body">I believe music tools should be accessible, instant, and fun.</p>
       <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development.</p>
       <p id="story-text2b" class="story-body">Your contribution helps keep the project free and fuels new features.</p>
       <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
         <span class="donate-heart">&#9825;</span> Support this project
       </a>
+    </div>
+  </section>
+
+  <!-- ── Specs ── -->
+  <section class="specs-section reveal">
+    <h2 id="specs-title" class="specs-title">Specs</h2>
+    <div class="specs-grid">
+      <div class="spec-cell">
+        <div class="spec-label">Tracks</div>
+        <div class="spec-value">16</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Voices</div>
+        <div class="spec-value">19</div>
+        <div class="spec-note">13 drums, 5 synths, sampler</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Sequencer</div>
+        <div class="spec-value">Grid / Tracker / Piano Roll</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Steps</div>
+        <div class="spec-value">1 – 64</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Effects</div>
+        <div class="spec-value">4 sends + 3-band EQ + master comp</div>
+        <div class="spec-note">Reverb, Delay, Glitch, Granular</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Scene Graph</div>
+        <div class="spec-value">Node-based arrangement</div>
+        <div class="spec-note">Branching, looping, decorators</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Export</div>
+        <div class="spec-value">WAV / MIDI / JSON</div>
+      </div>
+      <div class="spec-cell">
+        <div id="spec-midi-label" class="spec-label">MIDI</div>
+        <div id="spec-midi-value" class="spec-value">USB MIDI input</div>
+        <div id="spec-midi-note" class="spec-note">Web MIDI API (Chrome / Edge)</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Storage</div>
+        <div class="spec-value">Browser local</div>
+        <div class="spec-note">IndexedDB, no account needed</div>
+      </div>
+      <div class="spec-cell">
+        <div class="spec-label">Price</div>
+        <div class="spec-value">Free</div>
+      </div>
+      <div class="spec-cell">
+        <div id="spec-browser-label" class="spec-label">Browser</div>
+        <div id="spec-browser-value" class="spec-value">Chrome / Firefox / Safari (latest)</div>
+        <div id="spec-browser-note" class="spec-note">Web Audio + AudioWorklet required</div>
+      </div>
     </div>
   </section>
 
@@ -775,11 +897,18 @@ const ogImage = `${siteUrl}/og.png`;
     t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
     t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
     document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
-    document.getElementById('story-text1b').textContent = '音楽ツールは無料で、すぐ使えて、楽しくあるべきだと信じています。';
+    document.getElementById('story-text1b').textContent = '音楽ツールは、誰でもすぐ使えて、楽しいものであるべきだと信じています。';
     document.getElementById('story-text2').textContent = 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。';
     document.getElementById('story-text2b').textContent = 'いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。';
     const dl = document.getElementById('donate-link');
     if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
+    t('specs-title', 'スペック');
+    t('spec-browser-label', 'ブラウザ');
+    t('spec-browser-value', 'Chrome / Firefox / Safari（最新版推奨）');
+    t('spec-browser-note', 'Web Audio + AudioWorklet 対応ブラウザ');
+    t('spec-midi-label', 'MIDI');
+    t('spec-midi-value', 'USB MIDI 入力');
+    t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
     t('final-cta-title', 'さっそく始めよう');
     t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
     const fl = document.getElementById('final-docs-link');

@@ -121,6 +121,8 @@ git tag v0.0.2
 - **Phase 2b (future)**: Apple Developer ($99/year) for notarization
   - `APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_PASSWORD` as GitHub Actions secrets
   - Tauri's built-in notarization support via `tauri.conf.json` → `bundle.macOS.signing`
+  - Same Apple Developer account can cover iOS app (ADR 074) — register once, use for both macOS signing and App Store distribution
+  - Plan: register when starting iOS development, set up macOS signing at the same time
 
 ### Versioning
 
