@@ -74,59 +74,45 @@ The hero section has three jobs in under 3 seconds:
 
 ```
 ┌──────────────────────────────────────────┐
+│  [logo] inboil           Docs [OPEN →]  │  ← dark header
+├──────────────────────────────────────────┤
 │                                          │
-│  ┌─┬─┬─┐                                │
-│  ├─┼─┼─┤  inboil         [OPEN APP →]   │
-│  └─┴─┴─┘                                │
-│  (logo with flap animation)             │
-│                                          │
-│  No install. No signup. Just play.       │  ← catchphrase
-│  A groove box that lives in your browser │  ← sub-line
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │  ○──○──○     ○                     │  │
-│  │     │  └──○──┘   (generative       │  │
-│  │  ○──┘            scene canvas      │  │
-│  │        ○──○──○    animation)       │  │
-│  └────────────────────────────────────┘  │
+│  tagline (left, 2fr)  │ sequencer (3fr) │
+│  + [sound] button      │ 4×16 step grid │
+│                        │ + playhead      │
 │                                          │
 └──────────────────────────────────────────┘
 ```
 
-**Logo**: Grid cells flap-animate on page load, re-trigger on hover.
+**Layout**: 2fr (text) : 3fr (sequencer) grid to fill the hero width.
 
-**Scene canvas animation**: Full-bleed background or hero-inset. Reuses SceneCanvas drawing logic to render floating nodes and Bezier edges in a generative loop. Purely visual (no audio). Nodes drift, connect, and pulse — communicates "graph-based music" without explanation. Click/tap on a node triggers a ripple. This is approach B (Canvas animation), chosen over live audio demo (too heavy for first load) or video loop (not interactive).
+**Logo**: 4-cell grid with rotateY flap animation on load, re-trigger on hover.
 
-**Catchphrase candidates** (decide during implementation):
-- "No install. No signup. Just play."
-- "A groove box that lives in your browser."
-- "Sequence everything."
+**Step sequencer**: 4-track × 16-step DOM grid with Othello-flip toggle cells, animated playhead, Web Audio preview. Pre-populated with a basic pattern. Sound button triggers audio playback.
+
+**Tagline**: "No install. No signup. Just play." + sub-line "A groove box that lives in your browser."
 
 #### Page Flow
 
 ```
 ┌──────────────────────────────────┐
-│  Hero (above)                    │  ← 3 seconds: brand + concept + motion
+│  Hero                            │  ← brand + tagline + interactive step sequencer
 ├──────────────────────────────────┤
-│  Features (3 cards, 1 line each) │  ← scannable, icons with hover bounce
-│  • Synth & Drum Machine          │
-│  • Scene Graph Sequencer         │
-│  • Desktop & Browser             │
+│  Sound Engines (2-col)           │  ← voice chips + engine viewer with SVG graphs
 ├──────────────────────────────────┤
-│  Try It / Demo                   │  ← CTA to app, or embedded mini-demo
+│  Scene Graph (2-col reversed)    │  ← draggable nodes, bezier edges, arrowheads
 ├──────────────────────────────────┤
-│  Story + Support                 │  ← personal dev story → donate
-│  (Knob-style amount selector,    │
-│   particle + sound on complete)  │
+│  FX Pad (full-width centered)    │  ← draggable effect nodes with constellation lines
 ├──────────────────────────────────┤
-│  Download Desktop                │
-│  [macOS]  [Windows]  [Linux]     │
+│  Story + Support                 │  ← personal dev story → Ko-fi donate link
 ├──────────────────────────────────┤
-│  Footer: Docs, GitHub, SNS       │
+│  Generative (full-width centered)│  ← decorator pills on pattern nodes (SVG diagram)
+├──────────────────────────────────┤
+│  Final CTA                       │  ← "Ready to make some noise?" + app/tutorial links
 └──────────────────────────────────┘
 ```
 
-Each section is one viewport tall with generous whitespace. Sections fade-in on scroll (subtle, not distracting).
+Sections use mixed layouts (2-col, 2-col reversed, full-width) to break visual monotony. Story is placed between two full-width sections to create rhythm variation. Sections fade-in on scroll (subtle, not distracting).
 
 #### Micro-interactions
 
@@ -134,20 +120,24 @@ The LP should feel like the app itself — playful, responsive, musical.
 
 | Element | Interaction |
 |---|---|
-| Logo grid | Flap animation on load + hover |
-| Scene canvas background | Nodes drift, click → ripple |
-| Feature icons | Hover bounce / pulse |
+| Logo grid | 4-cell rotateY flap animation on load, re-trigger on hover |
+| Step sequencer | Othello-flip cells, playhead animation, Web Audio preview |
+| Engine viewer | SVG graphs update in real-time per voice selection |
+| Arc knobs | Draggable, update graphs + live audio (filter, FM, wavetable) |
+| Scene graph nodes | Draggable (hidden discovery, no hint text) |
+| Feature titles | Hover bounce + accent-line pulse |
 | CTA "Open App" | Hover glow sweep |
-| Donate amount | Knob-style selector (reuse Knob.svelte) |
-| Donate complete | Particle burst + short sound |
+| FX Pad nodes | Draggable, constellation lines between active nodes |
 | Scroll | Per-section fade-in (once, not repeating) |
 
-**Guideline**: micro-interactions respond to user actions (hover, click, scroll arrival). Nothing chases attention or interrupts. Donate animations celebrate the action, never guilt-trip.
+**Guideline**: micro-interactions respond to user actions (hover, click, scroll arrival). Nothing chases attention or interrupts.
 
 #### Demo approach
 
-- Primary: Canvas animation in hero (no audio, instant load)
-- Secondary: "Try It" section links to app, optionally with an embedded MiniSequencer (`client:visible`)
+- Primary: Interactive DOM step sequencer in hero (4-track × 16-step, Web Audio preview on click)
+- Sound Engines section: 19 voice chips with audio preview, engine viewer with live SVG graphs and draggable arc knobs
+- Scene Graph section: draggable nodes with dynamic bezier edges (ray-box intersection)
+- FX Pad section: draggable effect nodes with constellation lines
 - No autoplay audio (browser policy + UX)
 
 ### 2. Docs
@@ -231,8 +221,8 @@ Quick lookup during use         Sit down and learn
 
 ### Phase 1 — LP + Static Docs (shippable independently)
 - [x] Astro + Starlight setup in `site/`
-- [ ] ~~Landing page with hero animation (SceneCanvas-based), logo flap, micro-interactions~~ → Hero is interactive DOM step sequencer instead (see Implementation Status)
-- [ ] Donate section with Knob selector and celebration animation (ADR 071)
+- [x] Landing page with hero (interactive DOM step sequencer), logo flap, micro-interactions
+- [x] Donate section — Ko-fi link in Story + Support section (knob selector deferred)
 - [x] Docs: Markdown pages with screenshots / GIFs (EN/JA bilingual)
 - [x] In-app Help `→ Docs` links
 - [ ] Desktop download links (not yet applicable)
@@ -270,15 +260,19 @@ Quick lookup during use         Sit down and learn
 - OGP / meta description / Twitter Card tags (og.png image asset still needed)
 - FX Pad section: draggable effect nodes on canvas with constellation lines between active nodes
 - FX node colors match app exactly (VERB=#787845, DLY=#4472B4, GLT=#E8A090, GRN=#9B6BA0)
-- Generative section: decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
+- Generative section: horizontal SVG diagram with decorator pills on pattern nodes (transpose, turing, tonnetz, etc.)
 - Performance mentioned in Scene Graph description (section removed — not compelling as standalone demo)
 - Final CTA section: "Ready to make some noise?" + app/tutorial links
-- Story + Support section with Ko-fi donate link
+- Story + Support section with Ko-fi donate link (placed between FX Pad and Generative for rhythm variation)
+- Story text split into separate `<p>` elements for proper paragraph breaks (EN and JA)
 - Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
 - Feature title hover bounce + accent-line pulse
 - CTA primary button glow sweep on hover
 - Bilingual i18n for all new sections (EN/JA auto-detect)
 - App header logo bold (font-weight:700) to match site header
+- Typography: JetBrains Mono for headings, system-ui sans-serif for body text (tagline, descriptions, story, CTA sub-text)
+- Section layouts: mixed 2-col / 2-col reversed / full-width centered to break visual monotony
+- Spacing: generous padding (96px sections), larger gaps (72px) for breathing room
 
 **TODO (LP):**
 - [x] OGP / meta description / social sharing tags
