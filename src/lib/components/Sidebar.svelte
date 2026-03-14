@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ui, lang, prefs, project, song, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, exportProjectJSON, importProjectJSON, type StoredProject } from '../state.svelte.ts'
+  import { ui, lang, prefs, project, song, session, midiIn, toggleLang, toggleScaleMode, togglePatternEditor, toggleShowGuide, factoryReset, projectNew, projectSaveAs, projectLoad, projectDelete, projectLoadFactory, projectRename, listProjects, exportProjectJSON, importProjectJSON, type StoredProject } from '../state.svelte.ts'
   import { exportAndDownloadMidi } from '../midiExport.ts'
   import { initMidi, startListening, stopListening } from '../midi.ts'
+  import { startHost, joinAsGuest, disconnect } from '../multiDevice/connection.ts'
 
   const mode = $derived(ui.sidebar)
   const L = $derived(lang.value)
@@ -31,6 +32,43 @@
   }
 
   let confirmReset = $state(false)
+
+  // ── Multi-device jam (ADR 019) ──
+  let joinCode = $state('')
+  let joinName = $state('')
+  let joinError = $state('')
+  let joining = $state(false)
+
+  async function handleStartHost() {
+    try {
+      await startHost()
+    } catch {
+      joinError = L === 'ja' ? '接続に失敗しました' : 'Connection failed'
+    }
+  }
+
+  async function handleJoin() {
+    const code = joinCode.trim().toUpperCase()
+    const name = joinName.trim() || 'Guest'
+    if (code.length !== 4) {
+      joinError = L === 'ja' ? '4文字のルームコードを入力' : 'Enter 4-character room code'
+      return
+    }
+    joining = true
+    joinError = ''
+    try {
+      await joinAsGuest(code, name)
+    } catch {
+      joinError = L === 'ja' ? '接続に失敗しました' : 'Connection failed'
+    }
+    joining = false
+  }
+
+  function handleDisconnect() {
+    disconnect()
+    joinCode = ''
+    joinError = ''
+  }
 
   function handleReset() {
     factoryReset()
@@ -596,6 +634,84 @@
               {/if}
             </div>
             {/if}
+
+            <!-- Multi-device jam (ADR 019) -->
+            <div class="settings-section">
+              <span class="setting-label">{L === 'ja' ? 'ジャムセッション' : 'JAM SESSION'}</span>
+              {#if session.role === 'solo'}
+                <div class="setting-row">
+                  <div class="setting-row-text">
+                    <span class="setting-row-label">{L === 'ja' ? 'ホストとして開始' : 'START AS HOST'}</span>
+                    <span class="setting-row-desc">{L === 'ja'
+                      ? 'ルームコードを発行して他デバイスを招待'
+                      : 'Generate room code to invite other devices'}</span>
+                  </div>
+                  <button class="btn-toggle" onpointerdown={handleStartHost}>HOST</button>
+                </div>
+                <div class="setting-row jam-join-row">
+                  <div class="setting-row-text">
+                    <span class="setting-row-label">{L === 'ja' ? 'ゲストとして参加' : 'JOIN AS GUEST'}</span>
+                  </div>
+                </div>
+                <div class="jam-join-form">
+                  <input
+                    class="jam-input"
+                    type="text"
+                    maxlength="4"
+                    placeholder={L === 'ja' ? 'コード' : 'CODE'}
+                    bind:value={joinCode}
+                    onkeydown={(e) => { if (e.key === 'Enter') void handleJoin() }}
+                  />
+                  <input
+                    class="jam-input jam-name"
+                    type="text"
+                    maxlength="12"
+                    placeholder={L === 'ja' ? '名前' : 'Name'}
+                    bind:value={joinName}
+                    onkeydown={(e) => { if (e.key === 'Enter') void handleJoin() }}
+                  />
+                  <button class="btn-toggle" disabled={joining} onpointerdown={() => void handleJoin()}>JOIN</button>
+                </div>
+                {#if joinError}
+                  <p class="jam-error">{joinError}</p>
+                {/if}
+
+              {:else if session.role === 'host'}
+                <div class="jam-active">
+                  <div class="jam-status">
+                    <span class="jam-status-label">{L === 'ja' ? 'ホスト中' : 'HOSTING'}</span>
+                    <span class="jam-room-code">{session.roomCode}</span>
+                  </div>
+                  <div class="jam-peers">
+                    <span class="setting-row-desc">{L === 'ja'
+                      ? `${session.peers.length} 台接続中`
+                      : `${session.peers.length} device${session.peers.length !== 1 ? 's' : ''} connected`}</span>
+                    {#each session.peers as peer}
+                      <div class="jam-peer">{peer.name}</div>
+                    {/each}
+                  </div>
+                  <button class="btn-toggle danger" onpointerdown={handleDisconnect}>
+                    {L === 'ja' ? '終了' : 'END'}
+                  </button>
+                </div>
+
+              {:else}
+                <div class="jam-active">
+                  <div class="jam-status">
+                    <span class="jam-status-label">{L === 'ja' ? 'ゲスト' : 'GUEST'}</span>
+                    <span class="jam-room-code">{session.roomCode}</span>
+                    <span class="jam-connected" class:on={session.connected}>
+                      {session.connected
+                        ? (L === 'ja' ? '接続中' : 'Connected')
+                        : (L === 'ja' ? '接続待ち...' : 'Connecting...')}
+                    </span>
+                  </div>
+                  <button class="btn-toggle danger" onpointerdown={handleDisconnect}>
+                    {L === 'ja' ? '切断' : 'LEAVE'}
+                  </button>
+                </div>
+              {/if}
+            </div>
 
             <div class="setting-group about">
               <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
@@ -1306,5 +1422,83 @@
     font-size: 10px;
     color: rgba(237,232,220,0.4);
     line-height: 1.3;
+  }
+
+  /* ── Jam session (ADR 019) ── */
+  .jam-join-row { border-bottom: none !important; padding-bottom: 0; }
+  .jam-join-form {
+    display: flex;
+    gap: 4px;
+    padding: 0 12px 10px;
+  }
+  .jam-input {
+    background: transparent;
+    border: 1px solid rgba(237,232,220,0.3);
+    color: rgba(237,232,220,0.8);
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 5px 6px;
+    width: 64px;
+    text-transform: uppercase;
+  }
+  .jam-input.jam-name {
+    flex: 1;
+    text-transform: none;
+  }
+  .jam-input::placeholder {
+    color: rgba(237,232,220,0.25);
+    text-transform: uppercase;
+  }
+  .jam-error {
+    font-size: 10px;
+    color: #e85050;
+    padding: 0 12px 8px;
+    margin: 0;
+  }
+  .jam-active {
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .jam-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .jam-status-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-olive);
+  }
+  .jam-room-code {
+    font-family: var(--font-data);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(237,232,220,0.9);
+  }
+  .jam-connected {
+    font-size: 10px;
+    color: rgba(237,232,220,0.4);
+  }
+  .jam-connected.on {
+    color: var(--color-olive);
+  }
+  .jam-peers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .jam-peer {
+    font-size: 10px;
+    color: rgba(237,232,220,0.6);
+    padding-left: 8px;
+  }
+  .btn-toggle.danger {
+    border-color: #e85050;
+    color: #e85050;
   }
 </style>

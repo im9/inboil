@@ -432,6 +432,19 @@ export const vkbd = $state({
   heldKeys: new Set<string>(),
 })
 
+// ── Multi-device session (ADR 019) ────────────────────────────────
+export const session = $state<{
+  role: 'solo' | 'host' | 'guest'
+  roomCode: string | null
+  peers: { id: string; name: string }[]
+  connected: boolean
+}>({
+  role: 'solo',
+  roomCode: null,
+  peers: [],
+  connected: false,
+})
+
 export const midiIn = $state({
   available: !!navigator.requestMIDIAccess,
   enabled: false,
