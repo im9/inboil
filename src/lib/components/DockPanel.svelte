@@ -4,7 +4,7 @@
   import { patternRename, patternSetColor } from '../sectionActions.ts'
 
   import { decoratorLabel } from '../sceneGeometry.ts'
-  import { sceneAddDecorator } from '../sceneActions.ts'
+  import { sceneAddDecorator, sceneSetRoot } from '../sceneActions.ts'
   import { targetColor as autoTargetColor } from '../automationDraw.ts'
 
   import { PATTERN_COLORS, FX_FLAVOURS } from '../constants.ts'
@@ -635,9 +635,16 @@
                 ></span>
               {/each}
             </div>
-            <button class="btn-open-seq" onpointerdown={openPatternSheet}
-              data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
-            >Open Sequencer ▸</button>
+            <div class="dec-action-row">
+              <button class="btn-open-seq" onpointerdown={openPatternSheet}
+                data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
+              >Open Sequencer ▸</button>
+              {#if scenePatternNode && !scenePatternNode.root}
+                <button class="btn-set-root" onpointerdown={() => sceneSetRoot(scenePatternNode.id)}
+                  data-tip="Set as scene root" data-tip-ja="ルートノードに設定"
+                >★ Root</button>
+              {/if}
+            </div>
             <div class="section-divider" aria-hidden="true"></div>
           {/if}
 
@@ -1051,8 +1058,13 @@
     opacity: 1;
     transform: scaleY(1.8);
   }
+  .dec-action-row {
+    display: flex;
+    gap: 4px;
+    margin: 6px 0 8px;
+  }
   .btn-open-seq {
-    width: 100%;
+    flex: 1;
     border: 1px solid var(--dk-border-mid);
     background: transparent;
     color: var(--dk-text-mid);
@@ -1062,9 +1074,24 @@
     padding: 5px 0;
     cursor: pointer;
     transition: color 60ms, background 60ms;
-    margin: 6px 0 8px;
   }
   .btn-open-seq:hover {
+    color: var(--dk-text);
+    background: var(--dk-bg-hover);
+  }
+  .btn-set-root {
+    border: 1px solid var(--dk-border-mid);
+    background: transparent;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 5px 8px;
+    cursor: pointer;
+    transition: color 60ms, background 60ms;
+    white-space: nowrap;
+  }
+  .btn-set-root:hover {
     color: var(--dk-text);
     background: var(--dk-bg-hover);
   }
