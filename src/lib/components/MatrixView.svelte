@@ -17,7 +17,7 @@
       if (playback.playingPattern != null) return playback.playingPattern
       return song.sections[playback.currentSection]?.patternIndex ?? -1
     }
-    return ui.currentPattern
+    return playback.playingPattern ?? ui.currentPattern
   })
 
   const selectedName = $derived(song.patterns[ui.currentPattern]?.name || '------')
@@ -121,6 +121,7 @@
       {@const pc = song.patterns[pi]?.color ?? 0}
       {@const isSelected = ui.currentPattern === pi}
       {@const isPlaying = currentlyPlayingPattern === pi}
+      {@const isQueued = playback.queuedPattern === pi}
       {@const isSolo = soloPatternIndex() === pi}
       {@const inScene = patternUsedInScene(pi)}
       <div
@@ -128,6 +129,7 @@
         class:has-data={hasData}
         class:selected={isSelected}
         class:playing={isPlaying}
+        class:queued={isQueued}
         class:solo={isSolo}
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}; --beat: {30 / song.bpm}s"
@@ -248,6 +250,10 @@
     border-color: var(--color-olive);
   }
 
+  .pat-cell.queued {
+    border: 2px dashed var(--color-olive);
+    animation: pat-pulse var(--beat, 0.25s) ease-in-out infinite alternate;
+  }
   @keyframes pat-pulse {
     from { opacity: 1; }
     to   { opacity: 0.4; }

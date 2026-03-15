@@ -27,7 +27,7 @@ export function currentlyPlayingIndex(): number {
     if (playback.playingPattern != null) return playback.playingPattern
     return song.sections[playback.currentSection]?.patternIndex ?? -1
   }
-  return ui.currentPattern
+  return playback.playingPattern ?? ui.currentPattern
 }
 
 /** True when the viewed pattern is the one the engine is actually playing */

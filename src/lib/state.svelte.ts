@@ -171,6 +171,8 @@ export const playback = $state({
   // ADR 045: playback mode decoupled from view
   mode: 'loop' as 'loop' | 'scene',
   playingPattern: null as number | null,
+  // Pattern queue: next pattern to play at cycle boundary (loop mode)
+  queuedPattern: null as number | null,
   // ADR 053: active automation curves during scene playback
   activeAutomations: [] as AutomationParams[],
   automationSnapshot: null as AutomationSnapshot | null,
@@ -241,6 +243,10 @@ export function selectPattern(patternIndex: number): void {
   const pat = song.patterns[patternIndex]
   if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
     ui.selectedTrack = pat.cells.length > 0 ? pat.cells[0].trackId : -1
+  }
+  // Queue pattern switch at cycle boundary during loop playback
+  if (playback.playing && playback.mode === 'loop') {
+    playback.queuedPattern = patternIndex !== playback.playingPattern ? patternIndex : null
   }
 }
 

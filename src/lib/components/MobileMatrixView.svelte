@@ -17,7 +17,7 @@
       if (playback.playingPattern != null) return playback.playingPattern
       return -1
     }
-    return ui.currentPattern
+    return playback.playingPattern ?? ui.currentPattern
   })
 
   // Only show patterns that have data or are near the selection
@@ -46,12 +46,14 @@
       {@const pc = song.patterns[pi]?.color ?? 0}
       {@const isSelected = ui.currentPattern === pi}
       {@const isPlaying = currentlyPlayingPattern === pi}
+      {@const isQueued = playback.queuedPattern === pi}
       {@const inScene = patternUsedInScene(pi)}
       <button
         class="m-cell"
         class:has-data={hasData}
         class:selected={isSelected}
         class:playing={isPlaying}
+        class:queued={isQueued}
         class:in-scene={inScene}
         style="--d: {d}; --pat-hex: {PATTERN_COLORS[pc]}; --beat: {30 / song.bpm}s"
         onpointerdown={() => handleSelectPattern(pi)}
@@ -108,6 +110,10 @@
   .m-cell.playing.selected {
     border-width: 2px;
     border-color: var(--color-olive);
+  }
+  .m-cell.queued {
+    border: 2px dashed var(--color-olive);
+    animation: m-pulse var(--beat, 0.25s) ease-in-out infinite alternate;
   }
   @keyframes m-pulse {
     from { opacity: 1; }

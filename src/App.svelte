@@ -82,7 +82,8 @@
       } else if (playback.mode === 'scene' && hasArrangement()) {
         engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
       } else {
-        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
+        const idx = (playback.playing && playback.playingPattern != null) ? playback.playingPattern : ui.currentPattern
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, idx)
       }
       // Broadcast song deltas to connected guests
       if (session.role === 'host') syncDelta(song)
@@ -155,8 +156,17 @@
       return
     }
     if (playback.soloNodeId == null) soloSent = null
-    // Loop mode — just loop current pattern, no advancement
-    if (playback.mode !== 'scene') return
+    // Loop mode — queue-based pattern switching at cycle boundary
+    if (playback.mode !== 'scene') {
+      if (cycle && playback.queuedPattern != null) {
+        const next = playback.queuedPattern
+        playback.playingPattern = next
+        playback.queuedPattern = null
+        applyLoopDecorators()
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, next)
+      }
+      return
+    }
     if (cycle) {
       // Pattern cycle complete (all tracks finished) — scene graph takes priority
       if (hasScenePlayback()) {
@@ -203,7 +213,9 @@
       return
     }
     // ADR 045: auto-engage scene mode — desktop only (mobile has no scene view)
-    if (!isMobile && !hasSheet && (hasScenePlayback() || hasArrangement())) {
+    if (isMobile) {
+      playback.mode = 'loop'
+    } else if (!hasSheet && (hasScenePlayback() || hasArrangement())) {
       playback.mode = 'scene'
     }
     if (playback.mode === 'scene' && hasScenePlayback()) {
@@ -221,6 +233,8 @@
       engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
     } else {
       applyLoopDecorators()
+      playback.playingPattern = ui.currentPattern
+      playback.queuedPattern = null
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
     }
     engine.play()
@@ -251,6 +265,7 @@
     playback.activeAutomations = []
     playback.mode = 'loop'
     playback.playingPattern = null
+    playback.queuedPattern = null
     void projectAutoSave()
   }
 
