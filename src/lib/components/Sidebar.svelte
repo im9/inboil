@@ -678,11 +678,11 @@
                     <span class="setting-row-label">{L === 'ja' ? 'ゲストとして参加' : 'JOIN AS GUEST'}</span>
                   </div>
                 </div>
-                <div class="jam-join-form">
+                <div class="setting-row jam-join-inputs">
                   <input
                     class="jam-input"
                     type="text"
-                    maxlength="4"
+                    maxlength="6"
                     placeholder={L === 'ja' ? 'コード' : 'CODE'}
                     bind:value={joinCode}
                     onkeydown={(e) => { if (e.key === 'Enter') void handleJoin() }}
@@ -1453,11 +1453,11 @@
   }
 
   /* ── Jam session (ADR 019) ── */
-  .jam-join-row { border-bottom: none !important; padding-bottom: 0; }
-  .jam-join-form {
+  .jam-join-row { border-bottom: none !important; padding-bottom: 8px; }
+  .jam-join-inputs {
     display: flex;
-    gap: 4px;
-    padding: 0 12px 10px;
+    gap: 6px;
+    padding-top: 0;
   }
   .jam-input {
     background: transparent;
