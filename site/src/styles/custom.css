@@ -137,3 +137,41 @@ a.site-title span {
   text-transform: uppercase !important;
   color: #EDE8DC !important;
 }
+
+/* ── Docs button styling — match LP ── */
+.sl-markdown-content a[href*="pages.dev"],
+.sl-markdown-content a.action {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1.5px solid var(--sl-color-accent);
+  padding: 0.5rem 1.4rem;
+  transition: all 0.2s;
+}
+.sl-markdown-content a[href*="pages.dev"]:hover,
+.sl-markdown-content a.action:hover {
+  background: var(--sl-color-accent);
+  color: var(--sl-color-black);
+}
+
+/* ── Home breadcrumb in docs ── */
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 1rem;
+  padding: 0.2rem 0.6rem;
+  color: rgba(237,232,220,0.45);
+  font-family: var(--sl-font);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.home-link:hover {
+  color: rgba(237,232,220,0.85);
+}

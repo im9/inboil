@@ -8,6 +8,7 @@ const ogImage = `${siteUrl}/og.png`;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1E2028" />
   <title>INBOIL — A groove box in your browser</title>
   <meta name="description" content={description} />
   <!-- OGP -->
@@ -228,10 +229,10 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .cta{
       padding:0.75rem 2.4rem;
-      border:1.5px solid rgba(30,32,40,0.18);
+      border:1.5px solid rgba(30,32,40,0.25);
       border-radius:0;
       background:transparent;
-      color:rgba(30,32,40,0.45);
+      color:rgba(30,32,40,0.6);
       font-family:"JetBrains Mono",monospace;
       font-size:1rem;letter-spacing:0.06em;
       text-transform:uppercase;text-decoration:none;
@@ -348,7 +349,6 @@ const ogImage = `${siteUrl}/og.png`;
       font-size:0.95rem;
       line-height:2;
       color:rgba(30,32,40,0.7);
-      white-space:pre-line;
       letter-spacing:0.01em;
     }
     .feat-visual{
@@ -622,7 +622,7 @@ const ogImage = `${siteUrl}/og.png`;
       font-weight:700;
       letter-spacing:0.08em;
       text-transform:uppercase;
-      color:rgba(30,32,40,0.45);
+      color:rgba(30,32,40,0.6);
       margin-bottom:6px;
     }
     .spec-value{
@@ -635,11 +635,14 @@ const ogImage = `${siteUrl}/og.png`;
     .spec-note{
       font-family:system-ui, -apple-system, sans-serif;
       font-size:0.8rem;
-      color:rgba(30,32,40,0.5);
+      color:rgba(30,32,40,0.6);
       margin-top:4px;
     }
     @media(max-width:768px){
       .specs-section{padding:64px 24px}
+      .specs-grid{grid-template-columns:repeat(3, 1fr)}
+    }
+    @media(max-width:480px){
       .specs-grid{grid-template-columns:1fr 1fr}
     }
 
@@ -670,6 +673,35 @@ const ogImage = `${siteUrl}/og.png`;
       .final-cta{padding:64px 24px}
     }
 
+    /* ── Reduced motion ── */
+    @media(prefers-reduced-motion: reduce){
+      .logo-flap .flap-cell{animation:none}
+      .logo-flap:hover .flap-cell{animation:none}
+      .reveal{transition:none;opacity:1;transform:none}
+      .step .flip-card{transition:none}
+      .step.playhead.active .flip-face.back{animation:none}
+      .step.playhead:not(.active) .flip-face.front{animation:none}
+      .feat-title:hover::after{animation:none}
+      .sn-playing{animation:none}
+      .cta.primary::after{transition:none}
+      .donate-heart{transition:none}
+    }
+
+    /* ── Skip link ── */
+    .skip-link{
+      position:absolute;
+      top:-100%;left:50%;
+      transform:translateX(-50%);
+      padding:0.5rem 1.2rem;
+      background:#1E2028;color:#EDE8DC;
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.75rem;letter-spacing:0.04em;
+      text-decoration:none;
+      z-index:200;
+      border-radius:0 0 4px 4px;
+    }
+    .skip-link:focus{top:0}
+
     /* ── Footer ── */
     .footer{
       width:100%;
@@ -678,11 +710,12 @@ const ogImage = `${siteUrl}/og.png`;
       font-family:"JetBrains Mono",monospace;
       font-size:0.65rem;
       letter-spacing:0.04em;
-      color:rgba(30,32,40,0.25);
+      color:rgba(30,32,40,0.45);
     }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <!-- ── Header ── -->
   <header class="site-header">
     <a class="header-brand" href="/">
@@ -705,6 +738,7 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </header>
 
+  <main id="main">
   <!-- ── Hero ── -->
   <div class="page">
     <div class="hero-text">
@@ -748,25 +782,25 @@ const ogImage = `${siteUrl}/og.png`;
     <div class="feat-visual reveal" style="flex-direction:column;gap:12px">
       <!-- Voice grid selector -->
       <div class="voice-grid">
-        <div class="voice-chip" data-v="909k"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
-        <div class="voice-chip" data-v="808k"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
-        <div class="voice-chip" data-v="snare"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
-        <div class="voice-chip" data-v="clap"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
-        <div class="voice-chip" data-v="chh"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
-        <div class="voice-chip" data-v="ohh"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
-        <div class="voice-chip" data-v="cym"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
-        <div class="voice-chip" data-v="tom"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
-        <div class="voice-chip" data-v="rim"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
-        <div class="voice-chip" data-v="bell"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
-        <div class="voice-chip" data-v="shkr"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
-        <div class="voice-chip" data-v="303"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
-        <div class="voice-chip" data-v="bass"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
-        <div class="voice-chip" data-v="lead"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
-        <div class="voice-chip" data-v="fm"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
-        <div class="voice-chip hl" data-v="wave"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
-        <div class="voice-chip" data-v="crsh"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
-        <div class="voice-chip" data-v="ride"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
-        <div class="voice-chip" data-v="smpl"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
+        <div class="voice-chip" data-v="909k" role="button" aria-label="909 Kick"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
+        <div class="voice-chip" data-v="808k" role="button" aria-label="808 Kick"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
+        <div class="voice-chip" data-v="snare" role="button" aria-label="Snare"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
+        <div class="voice-chip" data-v="clap" role="button" aria-label="Clap"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
+        <div class="voice-chip" data-v="chh" role="button" aria-label="Closed Hi-Hat"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
+        <div class="voice-chip" data-v="ohh" role="button" aria-label="Open Hi-Hat"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
+        <div class="voice-chip" data-v="cym" role="button" aria-label="Cymbal"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
+        <div class="voice-chip" data-v="tom" role="button" aria-label="Tom"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
+        <div class="voice-chip" data-v="rim" role="button" aria-label="Rimshot"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
+        <div class="voice-chip" data-v="bell" role="button" aria-label="Cowbell"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
+        <div class="voice-chip" data-v="shkr" role="button" aria-label="Shaker"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
+        <div class="voice-chip" data-v="303" role="button" aria-label="Bass 303"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
+        <div class="voice-chip" data-v="bass" role="button" aria-label="Analog Bass"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
+        <div class="voice-chip" data-v="lead" role="button" aria-label="Synth Lead"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
+        <div class="voice-chip" data-v="fm" role="button" aria-label="FM Synth"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
+        <div class="voice-chip hl" data-v="wave" role="button" aria-label="Wavetable"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
+        <div class="voice-chip" data-v="crsh" role="button" aria-label="Crash"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
+        <div class="voice-chip" data-v="ride" role="button" aria-label="Ride"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
+        <div class="voice-chip" data-v="smpl" role="button" aria-label="Sampler"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
       </div>
       <!-- Engine viewer -->
       <div class="engine-viewer" id="engine-viewer">
@@ -911,7 +945,7 @@ const ogImage = `${siteUrl}/og.png`;
     <h2 id="final-cta-title" class="final-cta-heading">Ready to make some noise?</h2>
     <p id="final-cta-desc" class="final-cta-sub">No install. No signup. Just open and play.</p>
     <div class="cta-row" style="justify-content:center">
-      <a id="final-app-link" class="cta primary" href={appUrl}>Open App</a>
+      <a id="final-app-link" class="cta primary" href={appUrl}>Start Playing</a>
       <a id="final-docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
     </div>
   </section>
@@ -930,27 +964,30 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </section>
 
+  </main>
   <footer class="footer">&copy; INBOIL</footer>
 
   <script is:inline>
   // Language
   (() => {
     if (!/^ja/i.test(navigator.language)) return;
+    document.documentElement.lang = 'ja';
     const a = document.getElementById('docs-link');
     a.href = '/ja/docs/getting-started/first-beat/';
     a.textContent = 'チュートリアル →';
     // Features i18n
     const t = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    const h = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
     t('tagline', 'いつでも、どこでも、すぐ作曲');
     t('hero-sub', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
     t('feat-voice-title', 'サウンドエンジン');
-    t('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、\n19種類の音源を搭載。\nトラックごとに好きなエンジンを選ぶことができます。');
+    h('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、<br>19種類の音源を搭載。<br>トラックごとに好きなエンジンを選ぶことができます。');
     t('feat-scene-title', 'シーングラフ');
-    t('feat-scene-desc', 'パターンをノードとしてつなげることで、\n曲の構成を視覚的に組み立てることができます。\n分岐を作れば、再生のたびに展開が変わる曲も作れます。\nフィル、リバース、ブレイクでライブ感のある演奏も。');
+    h('feat-scene-desc', 'パターンをノードとしてつなげることで、<br>曲の構成を視覚的に組み立てることができます。<br>分岐を作れば、再生のたびに展開が変わる曲も作れます。<br>フィル、リバース、ブレイクでライブ感のある演奏も。');
     t('feat-fx-title', 'FXパッド');
-    t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
+    h('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、<br>リアルタイムにサウンドを加工。<br>リバーブ、ディレイ、グリッチ、グラニュラー<br>— 各3フレーバー搭載。<br>キャンバスがオーディオに反応し、<br>アクティブなエフェクト間にコンステレーションを描きます。');
     t('feat-jam-title', 'マルチデバイス・ジャム');
-    t('feat-jam-desc', 'スマホをライブコントローラーに。\nホストがPCでDAWを動かし、友だちはURLを開いて\n4文字のルームコードを入力するだけで、\nゲストコントローラーとして即参加。\nステップ編集、フィル、パラメータ操作 —\nすべてがWebRTCでリアルタイム同期。\n音はホストから。操作はスマホで。\nアプリ不要。設定不要。コードをシェアして、すぐジャム。');
+    h('feat-jam-desc', 'スマホをライブコントローラーに。<br>ホストがPCでDAWを動かし、友だちはURLを開いて<br>4文字のルームコードを入力するだけで、<br>ゲストコントローラーとして即参加。<br>ステップ編集、フィル、パラメータ操作 —<br>すべてがWebRTCでリアルタイム同期。<br>音はホストから。操作はスマホで。<br>アプリ不要。設定不要。コードをシェアして、すぐジャム。');
     t('spec-tracks-label', 'トラック');
     t('spec-voices-label', 'ボイス');
     t('spec-voices-note', 'ドラム13、シンセ5、サンプラー');
@@ -988,6 +1025,8 @@ const ogImage = `${siteUrl}/og.png`;
     if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
     t('final-cta-title', 'さっそく始めよう');
     t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
+    const fal = document.getElementById('final-app-link');
+    if (fal) fal.textContent = 'はじめる';
     const fl = document.getElementById('final-docs-link');
     if (fl) { fl.href = '/ja/docs/getting-started/first-beat/'; fl.textContent = 'チュートリアル →'; }
   })();
@@ -1024,6 +1063,8 @@ const ogImage = `${siteUrl}/og.png`;
       for (let s = 0; s < STEPS; s++) {
         const btn = document.createElement('button');
         btn.className = 'step';
+        btn.setAttribute('aria-label', `${LABELS[t]} step ${s + 1}`);
+        btn.setAttribute('aria-pressed', String(!!grid[t][s]));
         if (grid[t][s]) btn.classList.add('active');
         btn.innerHTML = '<div class="flip-card"><div class="flip-face front"></div><div class="flip-face back"></div></div>';
         row.appendChild(btn);
@@ -1142,6 +1183,7 @@ const ogImage = `${siteUrl}/og.png`;
       if (cur === paintValue) return;
       grid[t][s] = paintValue;
       cells[t][s].classList.toggle('active', !!paintValue);
+      cells[t][s].setAttribute('aria-pressed', String(!!paintValue));
       if (paintValue && audioOn) playSound(t);
     }
 
@@ -1818,6 +1860,12 @@ const ogImage = `${siteUrl}/og.png`;
         currentKnobs[k.key] = k.value;
         const wrap = document.createElement('div');
         wrap.className = 'ev-knob';
+        wrap.setAttribute('role', 'slider');
+        wrap.setAttribute('aria-label', k.label);
+        wrap.setAttribute('aria-valuemin', '0');
+        wrap.setAttribute('aria-valuemax', String(k.max ?? 1));
+        wrap.setAttribute('aria-valuenow', String(k.value));
+        wrap.setAttribute('tabindex', '0');
         wrap.innerHTML = knobSVG(k.value, k.label, k.locked) + `<span class="ev-knob-label">${k.label}</span>`;
         wrap.dataset.key = k.key;
         wrap.dataset.max = k.max ?? 1;
@@ -1841,6 +1889,7 @@ const ogImage = `${siteUrl}/og.png`;
           if (step) newVal = Math.round(newVal / step) * step;
           newVal = Math.max(0, Math.min(max, newVal));
           currentKnobs[k.key] = newVal;
+          wrap.setAttribute('aria-valuenow', String(newVal));
           // Update knob visual
           const dispVal = step ? newVal.toFixed(0) : newVal.toFixed(2);
           wrap.querySelector('svg').outerHTML = knobSVG(step ? newVal / max : newVal, k.label, k.locked === true || wrap.dataset.locked === '1');

@@ -32,6 +32,11 @@ export default defineConfig({
   },true);
   const hdr=document.querySelector('header.header .sl-flex');
   if(hdr){
+    const home=document.createElement('a');
+    home.href='/';
+    home.textContent='← Home';
+    home.className='home-link';
+    hdr.appendChild(home);
     const lnk=document.createElement('a');
     lnk.href=location.hostname==='localhost'?'http://localhost:5173':'https://inboil.pages.dev';
     lnk.textContent='Open App';
