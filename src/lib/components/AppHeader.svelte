@@ -5,7 +5,6 @@
   import { downloadBlob } from '../midiExport.ts'
   import { engine } from '../audio/engine.ts'
   import { isGuest, guestTransport } from '../multiDevice/guest.ts'
-  import SplitFlap from './SplitFlap.svelte'
   import Oscilloscope from './Oscilloscope.svelte'
 
   import PerfButtons from './PerfButtons.svelte'
@@ -176,7 +175,7 @@
       {:else}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <span class="bpm-value" onclick={startBpmEdit} data-tip="Click to edit tempo" data-tip-ja="クリックでテンポを変更">{#if compact}{song.bpm}{:else}<SplitFlap value={song.bpm} />{/if}</span>
+        <span class="bpm-value" onclick={startBpmEdit} data-tip="Click to edit tempo" data-tip-ja="クリックでテンポを変更">{song.bpm}</span>
       {/if}
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Increase tempo (hold to scroll)" data-tip-ja="テンポを上げる (長押しでスクロール)">+</button>
       <span class="bpm-label">BPM</span>
@@ -448,13 +447,17 @@
   }
 
   .bpm-value {
-    font-family: var(--font-display);
-    font-size: 24px;
+    font-family: var(--font-data);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     line-height: 1;
     color: var(--color-bg);
     cursor: text;
+    min-width: 3ch;
+    text-align: center;
   }
-  .compact .bpm-value { font-size: 18px; }
+  .compact .bpm-value { font-size: 16px; }
 
   .bpm-adj {
     border: 1px solid rgba(237,232,220,0.3);
