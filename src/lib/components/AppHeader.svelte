@@ -139,6 +139,7 @@
       <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
     </svg>
     <span class="app-name">INBOIL</span>
+    <span class="version-badge" data-tip="v{__APP_VERSION__} beta" data-tip-ja="v{__APP_VERSION__} ベータ版">β</span>
     {#if session.role !== 'solo'}
       <span class="session-badge" class:guest={session.role === 'guest'}>
         {session.role === 'host' ? 'HOST' : 'GUEST'}{session.roomCode ? ` ${session.roomCode}` : ''}
@@ -336,6 +337,19 @@
     text-transform: uppercase;
     position: relative;
     z-index: 1;
+  }
+  .version-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0 4px;
+    margin-left: 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(237,232,220,0.25);
+    color: rgba(237,232,220,0.45);
+    position: relative;
+    z-index: 1;
+    line-height: 14px;
   }
   .session-badge {
     font-size: 8px;

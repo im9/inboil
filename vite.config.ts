@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import pkg from './package.json' with { type: 'json' }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [svelte()],
   server: {
     strictPort: true,
