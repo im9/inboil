@@ -520,8 +520,9 @@
     }
     if (ui.patternSheet) return
     if (e.target instanceof HTMLInputElement) return
-    // Let MatrixView handle its own keyboard shortcuts when focused
+    // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
     if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
+    if (!(e.target as HTMLElement)?.closest?.('.scene-view')) return
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
       if (ui.selectedSceneLabel) {
@@ -701,10 +702,11 @@
   class:drop-active={dropActive}
   class:space-pan={spaceHeld}
   bind:this={viewEl}
+  tabindex="-1"
   onpointermove={onMove}
   onpointerup={endDrag}
   onpointercancel={(e) => { activePointers.delete(e.pointerId); dragging = null; edgeFrom = null; isPanning = false; selectRect = null }}
-  onpointerdown={onBgDown}
+  onpointerdown={(e) => { viewEl?.focus(); onBgDown(e) }}
   oncontextmenu={onContextMenu}
   onwheel={onWheel}
   ondragover={onDragOver}
@@ -975,6 +977,7 @@
     background: var(--color-bg);
     overflow: hidden;
     touch-action: none;
+    outline: none;
     user-select: none;
     cursor: default;
   }

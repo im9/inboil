@@ -2,7 +2,7 @@
   import { song, playback, ui, selectPattern, patternHasData, patternDensity, patternUsedInScene } from '../state.svelte.ts'
   import { soloPatternIndex } from '../scenePlayback.ts'
   import { sceneAddNode } from '../sceneActions.ts'
-  import { patternCopy, patternPaste, patternClear } from '../sectionActions.ts'
+  // Pattern copy/paste/clear handled globally in App.svelte
   import { PATTERN_COLORS } from '../constants.ts'
 
   // Show all patterns in the pool
@@ -64,21 +64,39 @@
     e.dataTransfer.effectAllowed = 'copy'
   }
 
-  function onKeydown(e: KeyboardEvent) {
-    if (e.target instanceof HTMLInputElement) return
-    if (ui.patternSheet) return // pattern sheet handles its own keys
-    const mod = e.metaKey || e.ctrlKey
-    if (mod && e.code === 'KeyC') {
-      e.preventDefault()
-      patternCopy(ui.currentPattern)
-    } else if (mod && e.code === 'KeyV') {
-      e.preventDefault()
-      patternPaste(ui.currentPattern)
-    } else if (e.code === 'Backspace' || e.code === 'Delete') {
-      e.preventDefault()
-      patternClear(ui.currentPattern)
-    }
+  // Pattern copy/paste moved to App.svelte global handler (no focus dependency)
+
+  // Arrow key navigation (window-level to avoid focus issues)
+  function getGridCols(): number {
+    if (!gridEl) return 4
+    // 24px cell + 2px gap; padding 6px each side
+    const w = gridEl.clientWidth - 12
+    return Math.max(1, Math.floor((w + 2) / 26))
   }
+
+  $effect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf') return
+      // Only skip when a scene edge is selected (SceneView uses arrows for edge reorder)
+      if (ui.selectedSceneEdge != null) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const cur = ui.currentPattern
+      const total = song.patterns.length
+      let next = -1
+      if (e.code === 'ArrowRight') next = Math.min(total - 1, cur + 1)
+      else if (e.code === 'ArrowLeft') next = Math.max(0, cur - 1)
+      else if (e.code === 'ArrowDown') next = Math.min(total - 1, cur + getGridCols())
+      else if (e.code === 'ArrowUp') next = Math.max(0, cur - getGridCols())
+      else if (e.code === 'Enter') { ui.patternSheet = true; ui.phraseView = 'pattern'; e.preventDefault(); return }
+      if (next >= 0 && next !== cur) {
+        e.preventDefault()
+        selectPattern(next)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -96,7 +114,7 @@
 
   <!-- Grid: square cells -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" onkeydown={onKeydown} data-tip="Pattern pool — colored cells have data, dot = used in scene" data-tip-ja="パターンプール — 色付きセル = データあり、ドット = シーンで使用中">
+  <div class="matrix-grid" bind:this={gridEl} tabindex="0" role="grid" data-tip="Pattern pool — colored cells have data, dot = used in scene" data-tip-ja="パターンプール — 色付きセル = データあり、ドット = シーンで使用中">
     {#each { length: visibleCount } as _, pi}
       {@const hasData = patternHasData(pi)}
       {@const d = patternDensity(pi)}

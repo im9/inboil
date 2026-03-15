@@ -1,3 +1,13 @@
+<script module lang="ts">
+  // Module-level note clipboard — persists across track switches
+  interface ClipNote {
+    stepOffset: number; note: number  // stepOffset from selection start, note is absolute
+    velocity: number; duration: number; slide: boolean
+    chance?: number; paramLocks?: Record<string, number>
+  }
+  let noteClipboard: ClipNote[] | null = null
+</script>
+
 <script lang="ts">
   import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
@@ -175,11 +185,13 @@
     return NOTES[idx]
   }
 
-  function noteStartDrag(e: PointerEvent, stepIdx: number, note: number) {
+  function noteStartDrag(e: PointerEvent, stepIdx: number, note: number, noteIdx: number) {
+    if (activeBrush === 'select') { selectStart(e, stepIdx, noteIdx); return }
     brushStart(e, stepIdx, note)
   }
 
   function noteOnMove(e: PointerEvent) {
+    if (selectDragging) { selectMove(e); return }
     if (brushDragging) { brushMove(e); return }
     if (!noteGridEl) return
 
@@ -229,6 +241,7 @@
   }
 
   function noteEndDrag() {
+    if (selectDragging) { selectEnd(); return }
     if (brushDragging) { brushEnd(); noteGridEl = null; return }
     if (moveTimer !== null) {
       clearTimeout(moveTimer)
@@ -282,6 +295,156 @@
 
   function toggleBrush(mode: BrushMode) {
     ui.brushMode = ui.brushMode === mode ? 'draw' : mode
+    if (ui.brushMode !== 'select') {
+      selectedNotes = {}
+      selMinStep = selMaxStep = selMinNoteIdx = selMaxNoteIdx = -1
+    }
+  }
+
+  // ── Select mode (rectangle select, copy, delete) ──
+  let selectedNotes = $state<Record<string, true>>({})
+  const hasSelection = $derived(Object.keys(selectedNotes).length > 0)
+  let selectDragging = $state(false)
+  let selectStartStep = $state(-1)
+  let selectStartNoteIdx = $state(-1)
+  let selectEndStep = $state(-1)
+  let selectEndNoteIdx = $state(-1)
+  let selectShift = false
+  // Committed selection bounds (persist after drag ends for visual feedback)
+  let selMinStep = $state(-1)
+  let selMaxStep = $state(-1)
+  let selMinNoteIdx = $state(-1)
+  let selMaxNoteIdx = $state(-1)
+  // Paste cursor step (set on click in select mode)
+  let pasteStep = $state(0)
+
+  function selectStart(e: PointerEvent, stepIdx: number, noteIdx: number) {
+    e.preventDefault()
+    selectShift = e.shiftKey
+    if (!e.shiftKey) {
+      selectedNotes = {}
+      selMinStep = selMaxStep = selMinNoteIdx = selMaxNoteIdx = -1
+    }
+    selectDragging = true
+    selectStartStep = stepIdx
+    selectStartNoteIdx = noteIdx
+    selectEndStep = stepIdx
+    selectEndNoteIdx = noteIdx
+    pasteStep = stepIdx
+    noteGridEl = (e.currentTarget as HTMLElement).closest('.grid') as HTMLElement
+    noteGridEl?.setPointerCapture(e.pointerId)
+  }
+
+  function selectMove(e: PointerEvent) {
+    if (!selectDragging || !noteGridEl) return
+    const rect = noteGridEl.getBoundingClientRect()
+    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+    const relY = e.clientY - rect.top
+    selectEndStep = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    selectEndNoteIdx = Math.max(0, Math.min(RANGE - 1, Math.floor(relY / (noteGridEl.scrollHeight / RANGE))))
+  }
+
+  function selectEnd() {
+    if (!selectDragging) return
+    selectDragging = false
+    // Compute notes in rectangle
+    const minStep = Math.min(selectStartStep, selectEndStep)
+    const maxStep = Math.max(selectStartStep, selectEndStep)
+    const minNoteIdx = Math.min(selectStartNoteIdx, selectEndNoteIdx)
+    const maxNoteIdx = Math.max(selectStartNoteIdx, selectEndNoteIdx)
+    const newSel: Record<string, true> = selectShift ? { ...selectedNotes } : {}
+    for (let ni = minNoteIdx; ni <= maxNoteIdx; ni++) {
+      const note = NOTES[ni]
+      for (let s = minStep; s <= maxStep; s++) {
+        if (getCellState(s, note) === 'head') {
+          newSel[`${s}:${note}`] = true
+        }
+      }
+    }
+    selectedNotes = newSel
+    // Persist bounds for visual feedback (marching ants)
+    if (Object.keys(newSel).length > 0) {
+      selMinStep = minStep; selMaxStep = maxStep
+      selMinNoteIdx = minNoteIdx; selMaxNoteIdx = maxNoteIdx
+    } else {
+      selMinStep = selMaxStep = selMinNoteIdx = selMaxNoteIdx = -1
+    }
+    noteGridEl = null
+  }
+
+  /** Selection rectangle bounds (pixel coords relative to grid) */
+  const selectRectStyle = $derived.by(() => {
+    let minStep: number, maxStep: number, minNoteIdx: number, maxNoteIdx: number
+    let committed = false
+    if (selectDragging) {
+      minStep = Math.min(selectStartStep, selectEndStep)
+      maxStep = Math.max(selectStartStep, selectEndStep)
+      minNoteIdx = Math.min(selectStartNoteIdx, selectEndNoteIdx)
+      maxNoteIdx = Math.max(selectStartNoteIdx, selectEndNoteIdx)
+    } else if (selMinStep >= 0) {
+      minStep = selMinStep; maxStep = selMaxStep
+      minNoteIdx = selMinNoteIdx; maxNoteIdx = selMaxNoteIdx
+      committed = true
+    } else {
+      return null
+    }
+    return `left:${minStep * 26}px;top:${minNoteIdx * 9}px;width:${(maxStep - minStep + 1) * 26 - 2}px;height:${(maxNoteIdx - minNoteIdx + 1) * 9}px`
+      + (committed ? ';--march:1' : '')
+  })
+
+  function deleteSelectedNotes() {
+    if (!hasSelection) return
+    pushUndo('Delete notes')
+    for (const key of Object.keys(selectedNotes)) {
+      const [s, n] = key.split(':').map(Number)
+      const trig = ph.trigs[s]
+      if (!trig?.active) continue
+      if (isPoly && trig.notes) {
+        removeNoteFromStep(trackId, s, n)
+      } else if (trigHasNote(trig, n)) {
+        trig.active = false
+      }
+    }
+    selectedNotes = {}
+    selMinStep = selMaxStep = selMinNoteIdx = selMaxNoteIdx = -1
+  }
+
+  function copySelectedNotes() {
+    if (!hasSelection) return
+    const keys = Object.keys(selectedNotes).map(k => {
+      const [s, n] = k.split(':').map(Number)
+      return { step: s, note: n }
+    })
+    const minStep = Math.min(...keys.map(k => k.step))
+    noteClipboard = keys.map(({ step, note }) => {
+      const trig = ph.trigs[step]
+      return {
+        stepOffset: step - minStep, note,
+        velocity: trig.velocity,
+        duration: trig.duration ?? 1,
+        slide: trig.slide,
+        ...(trig.chance != null ? { chance: trig.chance } : {}),
+        ...(trig.paramLocks ? { paramLocks: { ...trig.paramLocks } } : {}),
+      }
+    })
+  }
+
+  function pasteNotes() {
+    if (!noteClipboard || noteClipboard.length === 0) return
+    pushUndo('Paste notes')
+    // Paste at click position (pasteStep), same pitch — works across tracks
+    for (const cn of noteClipboard) {
+      const step = pasteStep + cn.stepOffset
+      if (step < 0 || step >= ph.steps || cn.note < 0 || cn.note > 127) continue
+      const trig = ph.trigs[step]
+      trig.active = true
+      trig.note = cn.note
+      trig.velocity = cn.velocity
+      trig.duration = cn.duration
+      trig.slide = cn.slide
+      if (cn.chance != null) trig.chance = cn.chance
+      if (cn.paramLocks) trig.paramLocks = { ...cn.paramLocks }
+    }
   }
 
   function brushPlaceNote(stepIdx: number, note: number) {
@@ -527,11 +690,33 @@
     brushMoved = false
   }
 
-  // D/E modifier key shortcuts (disabled when vkbd is active)
+  // Keyboard shortcuts (brush hold + select mode copy/delete)
   $effect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (vkbd.enabled || e.repeat) return
+      if (vkbd.enabled) return
+      // Select mode: Cmd+C, Cmd+V, Delete/Backspace
+      if (!e.repeat && (e.ctrlKey || e.metaKey)) {
+        if (e.code === 'KeyC' && hasSelection) { e.preventDefault(); copySelectedNotes(); return }
+        if (e.code === 'KeyV' && noteClipboard) { e.preventDefault(); pasteNotes(); return }
+        if (e.code === 'KeyA' && activeBrush === 'select') {
+          e.preventDefault()
+          // Select all notes
+          const all: Record<string, true> = {}
+          for (let s = 0; s < ph.steps; s++) {
+            for (const note of NOTES) {
+              if (getCellState(s, note) === 'head') all[`${s}:${note}`] = true
+            }
+          }
+          selectedNotes = all
+          return
+        }
+      }
+      if (!e.repeat && (e.code === 'Delete' || e.code === 'Backspace') && hasSelection) {
+        e.preventDefault(); deleteSelectedNotes(); return
+      }
+      // Brush hold shortcuts
+      if (e.repeat) return
       if (e.key === 'd' || e.key === 'D') heldBrush = 'draw'
       else if (e.key === 'e' || e.key === 'E') heldBrush = 'eraser'
       else if (e.key === 'c' || e.key === 'C') heldBrush = 'chord'
@@ -587,6 +772,14 @@
           <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.strum}</svg></span>
           <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.strum}</svg></span>
         </span></button>
+      <button
+        class="brush-btn flip-host"
+        data-tip="Select (⌘C copy, ⌘A all, Del delete)" data-tip-ja="選択 (⌘C コピー, ⌘A 全選択, Del 削除)"
+        onclick={() => toggleBrush('select')}
+      ><span class="flip-card" class:flipped={activeBrush === 'select'}>
+          <span class="flip-face brush-off"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.select}</svg></span>
+          <span class="flip-face back brush-on"><svg viewBox="0 0 14 14" width="14" height="14">{@html ICON.select}</svg></span>
+        </span></button>
       {#if activeBrush === 'chord' || activeBrush === 'strum'}
         <select class="chord-select" name="chord-shape"
           value={ui.chordShape}
@@ -628,7 +821,7 @@
       onpointercancel={noteEndDrag}
       oncontextmenu={(e) => e.preventDefault()}
     >
-      {#each NOTES as note}
+      {#each NOTES as note, noteIdx}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
           {#each ph.trigs as _trig, stepIdx}
             {@const state = getCellState(stepIdx, note)}
@@ -636,8 +829,9 @@
               class="cell"
               class:active={state === 'head'}
               class:continuation={state === 'continuation'}
+              class:selected={`${stepIdx}:${note}` in selectedNotes}
               aria-label="Step {stepIdx + 1} note {note}"
-              onpointerdown={(e) => noteStartDrag(e, stepIdx, activeBrush === 'eraser' ? note : snapToScale(note))}
+              onpointerdown={(e) => noteStartDrag(e, stepIdx, activeBrush === 'eraser' ? note : snapToScale(note), noteIdx)}
             >
               {#if state === 'head'}
                 <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
@@ -646,6 +840,9 @@
           {/each}
         </div>
       {/each}
+      {#if selectRectStyle}
+        <div class="select-rect" class:marching={!selectDragging} style={selectRectStyle}></div>
+      {/if}
     </div>
     <div class="grid-cap"></div>
   </div>
@@ -799,6 +996,8 @@
   .grid[data-brush="chord"] .cell { cursor: cell; }
   .grid[data-brush="strum"] { cursor: cell; }
   .grid[data-brush="strum"] .cell { cursor: cell; }
+  .grid[data-brush="select"] { cursor: crosshair; }
+  .grid[data-brush="select"] .cell { cursor: crosshair; }
   .grid {
     flex: 1;
     min-height: 0;
@@ -851,6 +1050,34 @@
     background: rgba(108,119,68,0.3);
     margin: 1px;
     border-radius: 1px;
+  }
+  .cell.selected {
+    outline: 1.5px solid var(--color-blue);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+  .cell.active.selected {
+    background: var(--color-blue);
+  }
+  .select-rect {
+    position: absolute;
+    border: 1.5px dashed var(--color-blue);
+    background: rgba(68,114,180,0.08);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .select-rect.marching {
+    border: none;
+    background:
+      repeating-linear-gradient(90deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 0 / 100% 1.5px no-repeat,
+      repeating-linear-gradient(90deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 100% / 100% 1.5px no-repeat,
+      repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 0 / 1.5px 100% no-repeat,
+      repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 100% 0 / 1.5px 100% no-repeat,
+      rgba(68,114,180,0.06);
+    animation: march 0.3s linear infinite;
+  }
+  @keyframes march {
+    to { background-position: 6px 0, -6px 100%, 0 -6px, 100% 6px, 0 0; }
   }
   .resize-handle {
     position: absolute;

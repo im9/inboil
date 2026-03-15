@@ -343,3 +343,29 @@ export function patternPaste(index: number): void {
 export function hasPatternClipboard(): boolean {
   return patternClipboard !== null
 }
+
+// ── Cell (track) clipboard ──
+
+let cellClipboard: Pattern['cells'][0] | null = null
+
+/** Copy a single cell (track data) to internal clipboard */
+export function cellCopy(patternIndex: number, trackId: number): void {
+  const pat = song.patterns[patternIndex]
+  const cell = pat.cells.find(c => c.trackId === trackId)
+  if (cell) cellClipboard = cloneCell(cell)
+}
+
+/** Paste cell clipboard into the target track (overwrites trigs, voice, params) */
+export function cellPaste(patternIndex: number, trackId: number): void {
+  if (!cellClipboard) return
+  pushUndo('Paste cell')
+  const pat = song.patterns[patternIndex]
+  const idx = pat.cells.findIndex(c => c.trackId === trackId)
+  if (idx < 0) return
+  pat.cells[idx] = { ...cloneCell(cellClipboard), trackId }
+}
+
+/** Returns true if the cell clipboard has content */
+export function hasCellClipboard(): boolean {
+  return cellClipboard !== null
+}

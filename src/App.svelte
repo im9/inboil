@@ -18,7 +18,7 @@
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
   import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot } from './lib/state.svelte.ts'
-  import { hasArrangement } from './lib/sectionActions.ts'
+  import { hasArrangement, cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
@@ -286,6 +286,23 @@
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
+    // Skip pattern-level ops when scene edge/label is selected (SceneView handles its own keys).
+    // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block pattern ops.
+    const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || ui.selectedSceneLabel != null
+    // Copy/paste: pattern-level (no sheet) or cell-level (sheet open, not select mode)
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      if (hasSheet && ui.brushMode !== 'select') {
+        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack) }
+        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
+      } else if (!hasSheet && !hasSceneEdgeOrLabel) {
+        if (e.code === 'KeyC') { patternCopy(ui.currentPattern) }
+        if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern) }
+      }
+    }
+    // Delete/Backspace: clear pattern (no sheet, no scene edge/label selection)
+    if (!hasSheet && !hasSceneEdgeOrLabel && (e.code === 'Backspace' || e.code === 'Delete')) {
+      e.preventDefault(); patternClear(ui.currentPattern)
+    }
   }
 
 </script>

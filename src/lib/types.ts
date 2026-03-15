@@ -6,7 +6,7 @@ import type { FxFlavours as _FxFlavours } from './constants.ts'
 export type VoiceId = _VoiceId
 export type FxFlavours = _FxFlavours
 
-export type BrushMode = 'draw' | 'eraser' | 'chord' | 'strum'
+export type BrushMode = 'draw' | 'eraser' | 'chord' | 'strum' | 'select'
 export type ChordShape = 'triad' | '7th' | 'sus2' | 'sus4'
 
 export interface Trig {
