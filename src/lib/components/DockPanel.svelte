@@ -51,11 +51,18 @@
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
 
   // Find scene node for current pattern (for DECO tab when pattern sheet is open)
+  // When the same pattern is used by multiple scene nodes, prioritize:
+  // 1. Currently playing scene node  2. Selected scene node  3. First match
   const currentPatternSceneNode = $derived.by(() => {
     if (!ui.patternSheet) return null
     const patId = song.patterns[ui.currentPattern]?.id
     if (!patId) return null
-    return song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === patId) ?? null
+    const matches = song.scene.nodes.filter(n => n.type === 'pattern' && n.patternId === patId)
+    if (matches.length <= 1) return matches[0] ?? null
+    const playing = matches.find(n => playback.sceneNodeId === n.id)
+    if (playing) return playing
+    const selected = matches.find(n => ui.selectedSceneNodes[n.id])
+    return selected ?? matches[0]
   })
   // Find generative nodes connected to current pattern's scene node (incoming edges)
   const connectedGenerativeNodes = $derived.by(() => {
