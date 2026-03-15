@@ -613,6 +613,7 @@ export async function projectSaveAs(name: string): Promise<string> {
   await (await storage()).saveProject(buildStoredProject(id, name, now))
   project.id = id
   project.lastSavedAt = now
+  clearRecoverySnapshot()
   await persistPendingSamples(id)
   savePrefs()
   return id
@@ -629,6 +630,7 @@ export async function projectSave(): Promise<void> {
   const now = Date.now()
   await s.saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
   project.lastSavedAt = now
+  clearRecoverySnapshot()
 }
 
 /** Load a project by id and replace current state */
@@ -711,11 +713,67 @@ export async function projectAutoSave(): Promise<void> {
   project.dirty = false
 }
 
+// ── Crash Recovery (ADR 099) ─────────────────────────────────────────
+const RECOVERY_KEY = 'inboil_recovery'
+
+/** Write current song to localStorage as crash recovery (synchronous, safe for beforeunload). */
+export function writeRecoverySnapshot(): void {
+  if (!project.dirty) return
+  try {
+    const snapshot = JSON.stringify({
+      projectId: project.id,
+      song: cloneSong(),
+      timestamp: Date.now(),
+    })
+    localStorage.setItem(RECOVERY_KEY, snapshot)
+  } catch (e) {
+    // localStorage full or unavailable — silently skip
+    console.warn('[recovery] snapshot write failed:', e)
+  }
+}
+
+/** Clear recovery snapshot (call after successful IDB save). */
+export function clearRecoverySnapshot(): void {
+  try { localStorage.removeItem(RECOVERY_KEY) } catch { /* ignore */ }
+}
+
+/** Check for a recovery snapshot newer than IDB and restore if found.
+ *  Returns true if recovery was applied. */
+export async function checkRecovery(): Promise<boolean> {
+  try {
+    const raw = localStorage.getItem(RECOVERY_KEY)
+    if (!raw) return false
+    const rec = JSON.parse(raw) as { projectId: string | null; song: Song; timestamp: number }
+    // Only recover if it matches the current project (or no project yet)
+    if (rec.projectId !== project.id) {
+      clearRecoverySnapshot()
+      return false
+    }
+    // Only recover if newer than last IDB save
+    if (rec.timestamp <= project.lastSavedAt) {
+      clearRecoverySnapshot()
+      return false
+    }
+    restoreSong(rec.song)
+    project.dirty = true
+    clearRecoverySnapshot()
+    scheduleAutoSave()
+    showToast('Unsaved changes recovered', 'info')
+    return true
+  } catch (e) {
+    console.warn('[recovery] check failed:', e)
+    clearRecoverySnapshot()
+    return false
+  }
+}
+
 /** Restore last project on app startup */
 export async function projectRestore(): Promise<void> {
   if (!project.id) return
   const ok = await projectLoad(project.id)
-  if (!ok) { project.id = null; savePrefs() }
+  if (!ok) { project.id = null; savePrefs() ; return }
+  // Check for crash recovery after IDB load
+  await checkRecovery()
 }
 
 /** Rename the current project */

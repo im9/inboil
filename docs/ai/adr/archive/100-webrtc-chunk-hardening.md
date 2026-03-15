@@ -1,6 +1,6 @@
 # ADR 100: WebRTC Chunk Buffer Hardening
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

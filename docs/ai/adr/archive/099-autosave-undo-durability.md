@@ -1,6 +1,6 @@
 # ADR 099: Auto-Save and Undo Durability
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

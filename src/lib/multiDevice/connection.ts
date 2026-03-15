@@ -9,6 +9,7 @@
 import { session } from '../state.svelte.ts'
 import type { GuestMessage, HostMessage, SignalMessage } from './protocol.ts'
 import { encodeMsg, decodeGuestMsg, decodeHostMsg } from './protocol.ts'
+import { ChunkReassembler, sendChunked } from './chunking.ts'
 
 // ── Configuration ─────────────────────────────────────────────
 
@@ -204,6 +205,7 @@ async function handlePeerJoined(peerId: string, peerName: string) {
   }
 
   channel.onclose = () => {
+    reassembler.cleanup(channel)  // ADR 100 §4
     handlePeerLeft()
   }
 
@@ -244,53 +246,13 @@ function handlePeerLeft() {
   }
 }
 
-// ── Chunked send (DataChannel max ~256KB, we use 60KB chunks) ──
+// ── Chunked send/receive (ADR 100) ───────────────────────────
+// Logic extracted to chunking.ts for testability
 
-const CHUNK_SIZE = 60_000 // bytes, well under 64KB SCTP limit
-
-function sendChunked(channel: RTCDataChannel, data: string) {
-  if (data.length <= CHUNK_SIZE) {
-    channel.send(data)
-    return
-  }
-  const total = Math.ceil(data.length / CHUNK_SIZE)
-  const id = Date.now()
-  for (let i = 0; i < total; i++) {
-    const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
-    channel.send(JSON.stringify({ _c: id, i, n: total, d: chunk }))
-  }
-}
-
-// Per-channel reassembly buffers
-const chunkBuffers = new Map<RTCDataChannel, Map<number, { parts: string[]; received: number; total: number }>>()
+const reassembler = new ChunkReassembler()
 
 function receiveChunked(channel: RTCDataChannel, raw: string, onComplete: (data: string) => void) {
-  // Try to detect chunk envelope
-  if (raw.startsWith('{"_c":')) {
-    try {
-      const envelope = JSON.parse(raw) as { _c: number; i: number; n: number; d: string }
-      if (typeof envelope._c === 'number' && typeof envelope.i === 'number') {
-        let bufMap = chunkBuffers.get(channel)
-        if (!bufMap) {
-          bufMap = new Map()
-          chunkBuffers.set(channel, bufMap)
-        }
-        let buf = bufMap.get(envelope._c)
-        if (!buf) {
-          buf = { parts: new Array(envelope.n), received: 0, total: envelope.n }
-          bufMap.set(envelope._c, buf)
-        }
-        buf.parts[envelope.i] = envelope.d
-        buf.received++
-        if (buf.received === buf.total) {
-          bufMap.delete(envelope._c)
-          onComplete(buf.parts.join(''))
-        }
-        return
-      }
-    } catch { /* not a chunk, fall through */ }
-  }
-  onComplete(raw)
+  reassembler.receive(channel, raw, onComplete)
 }
 
 /** Send a host message to the connected guest. */
@@ -358,6 +320,7 @@ async function handleOffer(sdp: string) {
     }
 
     guestChannel.onclose = () => {
+      reassembler.cleanup(guestChannel!)  // ADR 100 §4
       session.connected = false
     }
   }
@@ -409,12 +372,14 @@ export function disconnect() {
 
   // Close host peer connection
   if (hostPeer) {
+    if (hostPeer.channel) reassembler.cleanup(hostPeer.channel)
     hostPeer.channel?.close()
     hostPeer.pc.close()
     hostPeer = null
   }
 
   // Close guest connection
+  if (guestChannel) reassembler.cleanup(guestChannel)
   guestChannel?.close()
   guestPc?.close()
   guestChannel = null
