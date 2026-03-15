@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, activeCell, playback, ui } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, addTrack, removeTrack, STEP_OPTIONS } from '../stepActions.ts'
   import { randomizePattern } from '../randomize.ts'
   import { VOICE_LIST } from '../audio/dsp/voices.ts'
   import PianoRoll from './PianoRoll.svelte'
@@ -184,7 +184,23 @@
     stepPickerOpen = false
   }
 
-  onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
+  // ── Track add/remove ──
+  let nameLongPress: ReturnType<typeof setTimeout> | null = null
+
+  function onNameDown() {
+    nameLongPress = setTimeout(() => {
+      nameLongPress = null
+      if (confirm(`Remove "${ph.name}"?`)) removeTrack(ui.selectedTrack)
+    }, 500)
+  }
+  function onNameUp() {
+    if (nameLongPress) { clearTimeout(nameLongPress); nameLongPress = null }
+  }
+
+  onDestroy(() => {
+    if (longPressTimer) clearTimeout(longPressTimer)
+    if (nameLongPress) clearTimeout(nameLongPress)
+  })
 
   function prevTrack() {
     ui.selectedTrack = (ui.selectedTrack - 1 + song.tracks.length) % song.tracks.length
@@ -219,9 +235,10 @@
   <div class="track-nav" ontouchstart={onNavTouchStart} ontouchend={onNavTouchEnd}>
     <button class="nav-btn" onpointerdown={prevTrack}>◀</button>
     <div class="track-info">
-      <span class="track-name">{ph.name}</span>
+      <span class="track-name" onpointerdown={onNameDown} onpointerup={onNameUp} onpointerleave={onNameUp}>{ph.name}</span>
     </div>
     <button class="nav-btn" onpointerdown={nextTrack}>▶</button>
+    <button class="nav-btn add-btn" onpointerdown={() => addTrack()}>+</button>
   </div>
 
   <!-- Voice bar + controls -->
@@ -383,6 +400,15 @@
     flex-shrink: 0;
   }
   .nav-btn:active { background: rgba(30,32,40,0.08); color: var(--color-fg); }
+  .add-btn {
+    font-size: 18px;
+    color: var(--color-olive);
+    border: 1.5px solid var(--color-olive);
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+  .add-btn:active { background: var(--color-olive); color: var(--color-bg); }
   .track-info {
     flex: 1;
     display: flex;
@@ -734,9 +760,6 @@
   .piano-wrap {
     flex: 1;
     overflow: hidden;
-  }
-  .piano-wrap :global(.piano-roll) {
-    height: 100%;
   }
 
 

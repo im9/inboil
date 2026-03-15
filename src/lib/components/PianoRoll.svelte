@@ -27,7 +27,7 @@
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
-  const RANGE = PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1  // 24 notes
+  const FULL_RANGE = PIANO_ROLL_MAX - PIANO_ROLL_MIN + 1  // 24 notes
   const octaveOffset = $derived(vkbd.octave - 4)
   let scrollDir = $state<'up' | 'down' | null>(null)
 
@@ -53,7 +53,8 @@
   }
 
   const rollMax = $derived(PIANO_ROLL_MAX + octaveOffset * 12)
-  const NOTES = $derived(Array.from({ length: RANGE }, (_, i) => rollMax - i))
+  const NOTES = $derived(Array.from({ length: FULL_RANGE }, (_, i) => rollMax - i))
+  const RANGE = FULL_RANGE
   const SCALE_TEMPLATES: number[][] = [
     [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian
     [0, 2, 4, 5, 7, 9, 11],  //  1 C# major
@@ -909,7 +910,7 @@
     border-right: 1px solid rgba(30,32,40,0.15);
   }
   .key {
-    height: 9px;
+    height: calc(216px / var(--rows, 24));
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -1007,7 +1008,7 @@
     overflow-y: hidden;
   }
   .row {
-    height: 9px;
+    height: calc(216px / var(--rows, 24));
     box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
@@ -1127,7 +1128,6 @@
   /* ── Mobile ── */
   @media (max-width: 639px) {
     .piano-roll {
-      height: auto;
       padding-left: 2px;
       padding-right: 4px;
     }
@@ -1136,11 +1136,9 @@
     }
     .oct-keys { width: 26px; }
     .keys { width: 26px; }
-    .key { height: auto; flex: 1; min-height: 12px; }
     .key-label { font-size: 6px; }
     .grid { overflow-x: auto; }
     .row {
-      height: auto; flex: 1; min-height: 12px;
       grid-template-columns: repeat(var(--steps), 18px);
       gap: 1px;
     }
