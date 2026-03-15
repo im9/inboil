@@ -742,7 +742,7 @@
             </div>
 
             <div class="setting-group about">
-              <p class="about-text">inboil v0.1.0 &mdash; &copy; 2026 origamiworks</p>
+              <p class="about-text">inboil v0.1.0 &mdash; &copy; INBOIL</p>
             </div>
 
           {/if}

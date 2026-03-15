@@ -24,7 +24,7 @@ The SYSTEM sidebar has grown to include project management, export, settings, an
 - LANGUAGE toggle
 - MIDI INPUT section (toggle, device, channel — conditional on `midiIn.available`)
 - FACTORY RESET (footer)
-- About line (`inboil v0.1.0 — © 2026 origamiworks`)
+- About line (`inboil v0.1.0 — © INBOIL`)
 
 ### 2. Move WAV REC to sub-header
 
