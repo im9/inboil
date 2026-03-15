@@ -544,6 +544,9 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   /* ── Tab bar ── */
@@ -578,13 +581,14 @@
   .kaoss-pad {
     position: relative;
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 3 / 2;
     background: #1E2028;
     border-radius: 8px;
     overflow: hidden;
     touch-action: none;
     user-select: none;
     cursor: crosshair;
+    flex-shrink: 0;
   }
   .kaoss-pad.stopped {
     opacity: 0.4;
@@ -707,10 +711,11 @@
   /* ── Canvas visualizer ── */
   .perf-viz {
     width: 100%;
-    flex: 1;
-    min-height: 120px;
+    min-height: 80px;
+    max-height: 160px;
     background: #1E2028;
     border-radius: 8px;
+    flex-shrink: 1;
   }
 
   .coming-soon {
