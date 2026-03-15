@@ -290,7 +290,7 @@
   <!-- Main area -->
   {#if stepPickerOpen}
     <!-- PO-style step picker (replaces calculator grid) -->
-    <div class="calculator" style="--cols: 4">
+    <div class="calculator step-picker-grid" style="--cols: 4">
       {#each { length: STEP_SET_MAX } as _, i}
         {@const isActive = i < ph.steps}
         <button
@@ -514,6 +514,13 @@
   }
 
   /* ── PO-style step picker (inside calculator) ── */
+  .step-picker-grid {
+    align-content: start;
+  }
+  .step-picker-grid .calc-btn {
+    aspect-ratio: unset;
+    min-height: 44px;
+  }
   .calc-btn.sp-cell {
     background: var(--color-bg);
     border: 1.5px solid rgba(30,32,40,0.2);
