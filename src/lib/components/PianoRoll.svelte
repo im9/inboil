@@ -694,13 +694,16 @@
   // Keyboard shortcuts (brush hold + select mode copy/delete)
   $effect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented) return
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (vkbd.enabled) return
-      // Select mode: Cmd+C, Cmd+V, Delete/Backspace
+      // Only handle keys when select brush is active (piano roll is being interacted with)
+      if (activeBrush !== 'select') return
+      // Select mode: Cmd+C, Cmd+V, Cmd+A, Delete/Backspace
       if (!e.repeat && (e.ctrlKey || e.metaKey)) {
         if (e.code === 'KeyC' && hasSelection) { e.preventDefault(); copySelectedNotes(); return }
         if (e.code === 'KeyV' && noteClipboard) { e.preventDefault(); pasteNotes(); return }
-        if (e.code === 'KeyA' && activeBrush === 'select') {
+        if (e.code === 'KeyA') {
           e.preventDefault()
           // Select all notes
           const all: Record<string, true> = {}
@@ -716,22 +719,10 @@
       if (!e.repeat && (e.code === 'Delete' || e.code === 'Backspace') && hasSelection) {
         e.preventDefault(); deleteSelectedNotes(); return
       }
-      // Brush hold shortcuts
-      if (e.repeat) return
-      if (e.key === 'd' || e.key === 'D') heldBrush = 'draw'
-      else if (e.key === 'e' || e.key === 'E') heldBrush = 'eraser'
-      else if (e.key === 'c' || e.key === 'C') heldBrush = 'chord'
-    }
-    function onKeyUp(e: KeyboardEvent) {
-      if ((e.key === 'd' || e.key === 'D') && heldBrush === 'draw') heldBrush = null
-      else if ((e.key === 'e' || e.key === 'E') && heldBrush === 'eraser') heldBrush = null
-      else if ((e.key === 'c' || e.key === 'C') && heldBrush === 'chord') heldBrush = null
     }
     window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
     }
   })
 </script>

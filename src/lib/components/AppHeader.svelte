@@ -186,13 +186,13 @@
       <button
         class="btn-transport"
         class:active={playback.playing}
-        onpointerdown={wrappedPlay}
+        onpointerdown={(e) => { (e.currentTarget as HTMLElement).blur(); wrappedPlay() }}
         aria-label="Play"
         data-tip="Play pattern" data-tip-ja="パターンを再生"
       >▶</button>
       <button
         class="btn-transport"
-        onpointerdown={wrappedStop}
+        onpointerdown={(e) => { (e.currentTarget as HTMLElement).blur(); wrappedStop() }}
         aria-label="Stop"
         data-tip="Stop playback" data-tip-ja="再生を停止"
       >■</button>

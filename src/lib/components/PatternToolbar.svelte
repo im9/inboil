@@ -168,6 +168,7 @@
   }
 
   async function handleVkbdKeyDown(e: KeyboardEvent) {
+    if (e.defaultPrevented) return
     if (!vkbd.enabled || isTextInput(e.target) || e.repeat) return
 
     const midi = keyToMidi(e.key)

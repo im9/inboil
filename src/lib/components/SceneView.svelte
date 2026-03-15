@@ -512,17 +512,17 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
-    // Space key → pan mode
-    if (e.code === 'Space' && !e.repeat && !(e.target instanceof HTMLInputElement)) {
-      e.preventDefault()
-      spaceHeld = true
-      return
-    }
+    if (e.defaultPrevented) return
     if (ui.patternSheet) return
     if (e.target instanceof HTMLInputElement) return
     // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
     if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
     if (!(e.target as HTMLElement)?.closest?.('.scene-view')) return
+    // Space key → pan mode (only when scene view has focus)
+    if (e.code === 'Space' && !e.repeat) {
+      spaceHeld = true
+      return
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
       if (ui.selectedSceneLabel) {

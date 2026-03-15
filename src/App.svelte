@@ -296,6 +296,7 @@
   const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf')
 
   function onKeydown(e: KeyboardEvent) {
+    if (e.defaultPrevented) return
     if (e.target instanceof HTMLInputElement) return
     if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return }
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
@@ -304,18 +305,19 @@
     // Skip pattern-level ops when scene edge/label is selected (SceneView handles its own keys).
     // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block pattern ops.
     const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || ui.selectedSceneLabel != null
-    // Copy/paste: pattern-level (no sheet) or cell-level (sheet open, not select mode)
+    const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
+    // Copy/paste: pattern-level (matrix focus or no sheet) vs cell-level (sheet open)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-      if (hasSheet && ui.brushMode !== 'select') {
-        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack) }
-        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
-      } else if (!hasSheet && !hasSceneEdgeOrLabel) {
+      if (inMatrix || (!hasSheet && !hasSceneEdgeOrLabel)) {
         if (e.code === 'KeyC') { patternCopy(ui.currentPattern) }
         if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern) }
+      } else if (hasSheet && ui.brushMode !== 'select') {
+        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack) }
+        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
       }
     }
-    // Delete/Backspace: clear pattern (no sheet, no scene edge/label selection)
-    if (!hasSheet && !hasSceneEdgeOrLabel && (e.code === 'Backspace' || e.code === 'Delete')) {
+    // Delete/Backspace: clear pattern (matrix focus or no sheet, no scene edge/label)
+    if ((inMatrix || (!hasSheet && !hasSceneEdgeOrLabel)) && (e.code === 'Backspace' || e.code === 'Delete')) {
       e.preventDefault(); patternClear(ui.currentPattern)
     }
   }

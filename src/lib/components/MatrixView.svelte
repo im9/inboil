@@ -76,6 +76,7 @@
 
   $effect(() => {
     function onKey(e: KeyboardEvent) {
+      if (e.defaultPrevented) return
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       if (ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf') return
       // Only skip when a scene edge is selected (SceneView uses arrows for edge reorder)

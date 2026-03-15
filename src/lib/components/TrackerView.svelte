@@ -74,6 +74,7 @@
 
   // ── Keyboard navigation ──────────────────────────────────────────
   function onKeydown(e: KeyboardEvent) {
+    if (e.defaultPrevented) return
     if (e.target instanceof HTMLInputElement) return
 
     const steps = ph.steps
