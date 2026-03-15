@@ -43,7 +43,9 @@ export function cellForTrack(pat: Pattern, trackId: number): Cell | undefined {
 
 /** Get the active cell for a track in the currently selected pattern. */
 export function activeCell(trackId: number): Cell {
-  return cellForTrack(song.patterns[ui.currentPattern], trackId)!
+  const cell = cellForTrack(song.patterns[ui.currentPattern], trackId)
+  if (!cell) throw new Error(`No cell for trackId=${trackId} in pattern ${ui.currentPattern}`)
+  return cell
 }
 
 /** Ensure a pattern has cells for all global tracks (call before mutation). */
@@ -150,7 +152,7 @@ export function redo(): boolean {
 
 export const song = $state<Song>(makeEmptySong())
 // Restore project name + BPM synchronously to avoid flash before async IDB load
-try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch {}
+try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch (e) { console.warn('[state] localStorage restore failed:', e) }
 
 export const playback = $state({
   playing: false,
@@ -344,7 +346,7 @@ function loadPrefs(): StoredPrefs {
     const parsed = JSON.parse(raw)
     if (parsed.v !== STORAGE_VERSION) return defaults
     return { ...defaults, ...parsed }
-  } catch { return defaults }
+  } catch (e) { console.warn('[state] loadPrefs failed:', e); return defaults }
 }
 
 export function savePrefs(): void {
