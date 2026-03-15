@@ -13,7 +13,7 @@
   import FilterView from './lib/components/FilterView.svelte'
   import MasterView from './lib/components/MasterView.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
-  import PerfBubble from './lib/components/PerfBubble.svelte'
+  import MobilePerfSheet from './lib/components/MobilePerfSheet.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
@@ -278,7 +278,7 @@
     }
   }
 
-  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf')
 
   function onKeydown(e: KeyboardEvent) {
     if (e.target instanceof HTMLInputElement) return
@@ -302,28 +302,25 @@
       <div class="perf-flash brk" class:on={perf.breaking}></div>
       <MobileTrackView />
       <MobileSceneRibbon onplay={play} onstop={stop} />
-      <!-- Overlay sheets (mobile: FX / EQ / Master only) -->
-      {#if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
+      <!-- Overlay sheets (mobile: FX / EQ / Master / Perf) -->
+      {#if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf'}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
           {#if ui.phraseView === 'fx'}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <FxPad />
           {:else if ui.phraseView === 'eq'}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <FilterView />
           {:else if ui.phraseView === 'master'}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
             <MasterView />
+          {:else if ui.phraseView === 'perf'}
+            <MobilePerfSheet />
           {/if}
         </div>
       {/if}
     </div>
-    <PerfBubble />
   {:else}
     <AppHeader onPlay={play} onStop={stop} />
     <div class="view-area">

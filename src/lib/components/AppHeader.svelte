@@ -226,14 +226,24 @@
         onpointerdown={() => { ui.phraseView = ui.phraseView === 'master' ? 'pattern' : 'master'; ui.patternSheet = false }}
         data-tip="Master bus — compressor, ducker, FX returns" data-tip-ja="マスターバス — コンプ、ダッカー、FXリターン"
       >MST</button>
+      {#if compact}
+      <button
+        class="btn-view btn-perf-tab"
+        class:active={ui.phraseView === 'perf'}
+        onpointerdown={() => { ui.phraseView = ui.phraseView === 'perf' ? 'pattern' : 'perf'; ui.patternSheet = false }}
+        data-tip="Performance effects" data-tip-ja="パフォーマンスエフェクト"
+      >PERF</button>
+      {/if}
     </div>
 
     <div class="sep" aria-hidden="true"></div>
 
-    <!-- Performance buttons (momentary press-hold) -->
+    <!-- Performance buttons (momentary press-hold, desktop only) -->
+    {#if !compact}
     <div class="perf-btns">
       <PerfButtons variant="bar" />
     </div>
+    {/if}
 
     <div class="header-nav">
       <button
@@ -571,7 +581,7 @@
 
     .sep { display: none; }
 
-    /* Hide perf-btns on mobile (moved to PerfBubble) */
+    /* Hide perf-btns on mobile (moved to MobilePerfSheet) */
     .perf-btns { display: none; }
 
     /* Mobile transport */

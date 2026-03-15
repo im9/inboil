@@ -178,7 +178,7 @@ export const ui = $state<{
   selectedTrack: number
   currentSection: number
   currentPattern: number
-  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master'
+  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf'
   viewFocus: 'pattern' | 'scene'
   patternSheet: boolean
   patternSheetOrigin: { x: number; y: number } | null

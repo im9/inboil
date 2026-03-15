@@ -130,4 +130,14 @@ export const DEFAULT_PERF = {
   granularPitch: 0.5,
   granularScatter: 0.67,
   granularFreeze: false,
+  // Kaoss Pad XY + tilt (mobile perf sheet)
+  perfX: 0.5,
+  perfY: 0.5,
+  perfTouching: false,
+  tiltX: 0,
+  tiltY: 0,
+  // Glitch effects (ADR 097 Phase 2)
+  stuttering: false,
+  halfSpeed: false,
+  tapeStop: false,
 }

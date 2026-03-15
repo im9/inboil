@@ -40,6 +40,9 @@ type PerfState = {
   swing: number
   granularPitch?: number; granularScatter?: number
   granularFreeze?: boolean
+  perfX?: number; perfY?: number; perfTouching?: boolean
+  tiltX?: number; tiltY?: number
+  stuttering?: boolean; halfSpeed?: boolean; tapeStop?: boolean
 }
 
 type FxNode = { on: boolean; x: number; y: number }
@@ -364,6 +367,14 @@ function buildWorkletPattern(
       granularOn:      fxPad?.granular.on ?? false,
       ...granularFlavourParams(fxPad, perf, ctx?.fxFlavours),
       swing:           perf?.swing       ?? 0,
+      perfX:           perf?.perfX       ?? 0.5,
+      perfY:           perf?.perfY       ?? 0.5,
+      perfTouching:    perf?.perfTouching ?? false,
+      tiltX:           perf?.tiltX       ?? 0,
+      tiltY:           perf?.tiltY       ?? 0,
+      stuttering:      perf?.stuttering  ?? false,
+      halfSpeed:       perf?.halfSpeed   ?? false,
+      tapeStop:        perf?.tapeStop    ?? false,
     },
     tracks: s.tracks.map((t) => {
       const cell = pat.cells.find((c: Cell) => c.trackId === t.id)

@@ -47,6 +47,16 @@ export interface WorkletPattern {
     glitchRedux: boolean    // ADR 075: Redux flavour skips bit quantize
     delayTape: boolean      // ADR 075: Tape delay flavour (LP + wow/flutter)
     glitchStutter: boolean  // ADR 075: Stutter glitch flavour (buffer repeat)
+    // Kaoss Pad (ADR 097)
+    perfX: number
+    perfY: number
+    perfTouching: boolean
+    tiltX: number
+    tiltY: number
+    // Glitch effects (ADR 097 Phase 2)
+    stuttering: boolean
+    halfSpeed: boolean
+    tapeStop: boolean
   }
 }
 

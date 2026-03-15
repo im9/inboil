@@ -194,6 +194,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchY        = 0.5
   private filling        = false
   private reversing      = false
+  // Kaoss Pad (ADR 097)
+  private perfX          = 0.5
+  private perfY          = 0.5
+  private perfTouching   = false
+  private tiltX          = 0
+  private tiltY          = 0
+  // Glitch effects (ADR 097 Phase 2)
+  private stuttering     = false
+  private halfSpeed      = false
+  private tapeStop       = false
+  private tapeSpeed      = 1.0          // current tape speed multiplier (1.0 = normal)
+  private stutterAccum   = 0            // sub-step accumulator for stutter retrigger
+  private stutterThreshold = 0          // samples per stutter subdivision
+  private halfAccumFrac  = 0            // fractional accumulator for half-speed
   private swing          = 0.5          // effective swing 0.5–0.75
   private swingPhase     = 0            // 0 or 1, toggles each step
   private currentThreshold = 0          // samples until next step (swing-adjusted)
@@ -405,6 +419,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchX      = p.perf.glitchX
           this.glitchY      = p.perf.glitchY
           if (this.glitchStutter) this.stutter.setSlice(p.perf.glitchX)
+          this.perfX         = p.perf.perfX
+          this.perfY         = p.perf.perfY
+          this.perfTouching  = p.perf.perfTouching
+          this.tiltX         = p.perf.tiltX
+          this.tiltY         = p.perf.tiltY
+          this.stuttering    = p.perf.stuttering
+          this.halfSpeed     = p.perf.halfSpeed
+          if (p.perf.tapeStop && !this.tapeStop) this.tapeSpeed = 1.0  // reset on engage
+          this.tapeStop      = p.perf.tapeStop
           this.glitchRedux   = p.perf.glitchRedux ?? false
           this.delayTape     = p.perf.delayTape ?? false
           this.glitchStutter = p.perf.glitchStutter ?? false
@@ -636,13 +659,18 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       if (this.filling && !isMelodic) {
-        // Fill mode: random hits, always duration=1, no slide
+        // Fill mode: random hits, density controlled by perfY when touching
         this.fillSeed = (this.fillSeed * 1664525 + 1013904223) >>> 0
         const rand = (this.fillSeed >>> 16) / 65536
-        const prob = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
+        const baseProb = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
+        // perfY scales density: 0=sparse (0.1x), 1=dense (2x)
+        const density = this.perfTouching ? 0.1 + this.perfY * 1.9 : 1.0
+        const prob = Math.min(1.0, baseProb * density)
+        // perfX modulates velocity range when touching
+        const velBase = this.perfTouching ? 0.3 + this.perfX * 0.5 : 0.6
         if (rand < prob) {
           if (this.scSource[t]) this.ducker.trigger(this.duckDepth)
-          if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, 0.6 + rand * 0.4)
+          if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, velBase + rand * 0.4)
           this.gateCounters[t] = 1
         }
       } else if (trig?.active) {
@@ -707,7 +735,24 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       let reverbIn = 0, delayIn = 0, glitchIn = 0, granularIn = 0
 
       if (this.playing) {
-        this.accumulator++
+        // ── Glitch: tape stop (exponential slowdown) ──
+        if (this.tapeStop) {
+          // Ramp down: multiply by 0.9998 per sample ≈ stops in ~0.5s at 44.1kHz
+          this.tapeSpeed = Math.max(0.01, this.tapeSpeed * 0.9998)
+        } else if (this.tapeSpeed < 1.0) {
+          // Ramp back up on release
+          this.tapeSpeed = Math.min(1.0, this.tapeSpeed * 1.0004)
+        }
+
+        // ── Glitch: half speed ──
+        const speedMul = this.halfSpeed ? 0.5 : 1.0
+        const increment = speedMul * this.tapeSpeed
+
+        this.halfAccumFrac += increment
+        const steps = Math.floor(this.halfAccumFrac)
+        this.halfAccumFrac -= steps
+        this.accumulator += steps
+
         if (this.accumulator >= this.currentThreshold) {
           this.accumulator -= this.currentThreshold
           this._advanceStep()
@@ -715,6 +760,30 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.currentThreshold = this.swingPhase === 1
             ? this.swing * 2 * this.samplesPerStep
             : (1 - this.swing) * 2 * this.samplesPerStep
+          // Reset stutter on new step
+          this.stutterAccum = 0
+          const stutterDiv = this.perfTouching ? 2 + Math.floor(this.perfY * 6) : 4  // 2-8 subdivisions
+          this.stutterThreshold = Math.floor(this.currentThreshold / stutterDiv)
+        }
+
+        // ── Glitch: stutter (retrigger within step) ──
+        if (this.stuttering && this.stutterThreshold > 0) {
+          this.stutterAccum += steps
+          if (this.stutterAccum >= this.stutterThreshold) {
+            this.stutterAccum -= this.stutterThreshold
+            // Retrigger all active voices at current step
+            for (let t = 0; t < this.tracks.length; t++) {
+              const track = this.tracks[t]
+              if (!track || track.muted) continue
+              const ph = this.playheads[t]
+              const trig = track.trigs[ph]
+              if (trig?.active) {
+                const vel = (trig.velocity ?? 1.0) * (0.6 + Math.random() * 0.3)
+                this.voices[t]?.noteOn(trig.note, vel)
+                this.gateCounters[t] = 1
+              }
+            }
+          }
         }
         // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceStep)
         for (let t = 0; t < this.voices.length; t++) {
@@ -842,8 +911,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // ── Rhythmic break gate (pre-FX: dry signal only, FX tails ring through) ──
+      // perfY = duty cycle (0=choppy 10%, 1=wide 90%), perfX = subdivision (gate repeats within step)
+      const brkDuty = this.perfTouching ? 0.1 + this.perfY * 0.8 : 0.5
+      const brkSubDiv = this.perfTouching ? 1 + Math.floor(this.perfX * 3) : 1  // 1-4 sub-gates per step
+      const subPhase = (this.accumulator % (this.currentThreshold / brkSubDiv)) / (this.currentThreshold / brkSubDiv)
       const gateTarget = this.breaking
-        ? (this.accumulator < this.currentThreshold * 0.5 ? 1.0 : 0.0)
+        ? (subPhase < brkDuty ? 1.0 : 0.0)
         : 1.0
       this.gateEnv += (gateTarget - this.gateEnv) * (gateTarget > this.gateEnv ? 0.02 : 0.002)
 
