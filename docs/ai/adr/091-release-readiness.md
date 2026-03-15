@@ -104,7 +104,7 @@ ADR 072 Implemented. LP with interactive demos (step sequencer, voice engine vie
 - [x] No `console.warn` / `console.error` for user-recoverable situations (all surfaced in UI)
 - [x] Landing page live at root URL
 - [x] Getting-started tutorial accessible from LP and in-app Help
-- [ ] Tested in Chrome, Firefox, Safari (desktop + mobile)
+- [x] Tested in Chrome, Firefox, Safari (desktop + mobile)
 - [ ] Custom domain active (ADR 072 consideration)
 
 ## Considerations
