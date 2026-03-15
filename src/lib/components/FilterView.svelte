@@ -3,7 +3,6 @@
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
-  import TrackSelector from './TrackSelector.svelte'
 
   let padEl: HTMLDivElement
   let dragging: 'filter' | 'eqLow' | 'eqMid' | 'eqHigh' | null = $state(null)
@@ -581,7 +580,6 @@
     {/each}
   </div>
 
-  <TrackSelector />
 </div>
 
 <style>

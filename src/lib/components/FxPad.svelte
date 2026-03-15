@@ -4,7 +4,6 @@
   import { PAD_INSET, COLORS_RGB, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
-  import TrackSelector from './TrackSelector.svelte'
   import FxBubbleMenu from './FxBubbleMenu.svelte'
 
   const nodes = [
@@ -561,7 +560,6 @@
     {/if}
   </div>
 
-  <TrackSelector />
 </div>
 
 <style>
