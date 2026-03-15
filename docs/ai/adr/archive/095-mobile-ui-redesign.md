@@ -1,6 +1,6 @@
 # ADR 095: Mobile UI Redesign
 
-## Status: In Progress (Phase 1–2 done, Phase 3 pending)
+## Status: Implemented
 
 ## Context
 

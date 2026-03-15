@@ -240,9 +240,9 @@ Node-based directed graph canvas. Always the main view (ADR 054). Full arrangeme
 
 Compact left sidebar (desktop only) showing the pattern pool as a grid of 24×24px square cells. Shows density via opacity, selection (olive border), playing state (olive pulse animation, BPM-synced), solo (blue inset shadow), and scene usage (small olive dot). Single-tap calls `selectPattern()`. Double-tap opens pattern editor sheet (overlay). Header includes arrow (→) button to add selected pattern to scene.
 
-### SectionNav — DEPRECATED (mobile only)
+### SectionNav — REMOVED
 
-Legacy two-row navigator strip, superseded by Scene graph (ADR 044) on desktop. Retained for mobile layout only. Row 1: horizontally scrollable section slot strip (sections 00–N) with drag-to-set loop range, plus SCENE toggle button. Row 2: detail strip showing selected section's metadata (SEC number, PAT dropdown picker, repeats, key, oct, perf mode, FX toggles, clear button). No new features should target this component.
+Legacy linear-section navigator. Fully removed from mobile (ADR 095). Superseded by Scene graph (ADR 044) + MobileMatrixView for pattern selection.
 
 ### Sidebar — DECIDED
 
@@ -383,25 +383,34 @@ Dark zone. Two rows:
 
 Pattern switching is **not** in AppHeader — it happens via MatrixView cell tap or SceneView node tap.
 
-On mobile (`compact` mode):
-- Transport (▶ ■ REC) in top row.
-- View toggle (SCENE/FX/EQ/MST) becomes full-width tab bar with underline indicator (row 2).
-- Performance buttons hidden — PERF tab in AppHeader opens MobilePerfSheet (Kaoss Pad overlay).
-- ? help button opens help sidebar (hover guide footer hidden on mobile).
+On mobile (`compact` mode, 2-row layout):
+- **Row 1**: BPM (plain text, no SplitFlap) + transport (▶ ■ ● REC icon-only, 28×28px, gap 8px) + ⋯ overflow menu (borderless 32px circle, contains Help and System).
+- **Row 2**: Full-width tab bar (FX / EQ / MST / PERF) with 3px underline indicator, padding 8px 0.
+- BPM adj buttons: 28×28px, font-size 14px.
+- Performance buttons hidden — PERF tab opens MobilePerfSheet (Kaoss Pad overlay).
+- Help/System buttons hidden from header, accessible via ⋯ overflow menu with backdrop dismiss.
 
 ### MobileTrackView — DECIDED
 
-Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × N rows). Track navigation via ◄ ► buttons. Same Othello flip and playhead glow animations as desktop. Melodic tracks can switch between STEPS and NOTES (piano roll) tabs.
+Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 columns × N rows, `align-content: center`). Melodic tracks can switch between STEPS and NOTES (piano roll) tabs.
+
+**Track navigation:** Swipe left/right on track-nav area (40px threshold) or tap ◄ ► buttons (borderless 32px circles) to switch tracks. Track name displayed as plain text (no SplitFlap on mobile).
+
+**Voice bar:** Subtle background bar with SVG fader icon. Tap to open MobileParamOverlay for full param editing.
+
+**Step / Solo / Mute buttons:** Othello flip-card animation (180ms rotateY) matching desktop. `class:flipped` toggles between front/back faces. Steps use same playhead glow as desktop.
+
+**PO-style step picker:** Integrated into calculator grid. Tap cycles through STEP_OPTIONS (2–16, 24, 32, 48, 64), long-press (300ms) opens grid picker overlay. Step picker button uses flip-card animation when active. CSS: `.calc-btn.sp-cell` and `.calc-btn.sp-cell.sp-ext` for specificity over `.calc-btn` base styles.
 
 **Edit mode tabs (STEP / VEL / CHNC):** Animated tab bar with sliding pill indicator above the calculator grid. STEP mode = tap toggles on/off + paint-drag. VEL mode = drag up/down to edit velocity, tap to reset to 1.0. CHNC mode = drag up/down to edit chance. Active steps show velocity/chance gauge as gradient fill. See ADR 033.
 
 **MobilePerfSheet:** Kaoss Pad XY controller with 4 tabs (PERF/GLITCH/FILTER/MOTION). Canvas visualizer shows touch trails. Supports accelerometer/gyroscope for hands-free modulation. Opened via PERF tab button in AppHeader on mobile.
 
-**Track header:** Track name (button, taps to open overlay) + synth type label + step count (−/+ buttons with "step" suffix).
-
-**MobileParamOverlay** (bottom-sheet, opened by tapping track name):
+**MobileParamOverlay** (near-full-screen panel, opened via voice bar):
 - Fixed backdrop overlay (`position: fixed; inset: 0; z-index: 50`). Tap backdrop or swipe down (dy > 50px) to dismiss.
+- Entry/exit animation: `transition:fade={{ duration: 120 }}` on backdrop, `transition:fly={{ y: 60, duration: 120 }}` on card (uses internal `{#if}` for proper outro).
 - Drag handle pill at top.
+- Voice picker, all synth params, insert FX, send/mix, sample loader.
 - Lock toolbar: LOCK button + step label + CLR + SOLO + MUTE.
 - Param category tabs: MIX | synth param groups (e.g. PITC, AMP) | FX — switches displayed knobs.
 - Params bar: Knobs for selected category (VOL/PAN in MIX, synth params per group, sends in FX).
