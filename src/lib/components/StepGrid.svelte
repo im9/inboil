@@ -215,13 +215,18 @@
 
         <!-- Step count -->
         <button
-          class="btn-steps"
+          class="btn-steps flip-host"
           onpointerdown={(e) => stepPointerDown(e, trackId)}
           onpointerup={() => stepPointerUp(trackId)}
           onpointerleave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null } }}
           oncontextmenu={(e) => stepContextMenu(e, trackId)}
           data-tip="Tap: cycle · Hold: picker" data-tip-ja="タップ: 切替 · 長押し: 選択"
-        >{ph.steps}</button>
+        >
+          <span class="flip-card" class:flipped={stepSetTrack === trackId}>
+            <span class="flip-face steps-off">{ph.steps}</span>
+            <span class="flip-face back steps-on">{ph.steps}</span>
+          </span>
+        </button>
 
         <!-- Solo -->
         <button
@@ -621,15 +626,32 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    border: 1px solid var(--color-fg);
+    border: none;
     background: transparent;
-    color: var(--color-fg);
     font-size: 8px;
     font-weight: 700;
+    padding: 0;
+    position: relative;
+  }
+  .steps-off {
+    border: 1px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    font-size: 8px;
+    font-weight: 700;
+  }
+  .steps-on {
+    border: 1px solid var(--color-olive);
+    background: var(--color-olive);
+    color: var(--color-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
   }
   .vel-bars {
     flex: 1;

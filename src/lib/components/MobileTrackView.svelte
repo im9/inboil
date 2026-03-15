@@ -1,13 +1,16 @@
 <script lang="ts">
   import { song, activeCell, playback, ui } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, isDrum, setTrackSteps, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../stepActions.ts'
+  import { VOICE_LIST } from '../audio/dsp/voices.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
-  import SplitFlap from './SplitFlap.svelte'
+  import { onDestroy } from 'svelte'
 
   const ph = $derived(activeCell(ui.selectedTrack))
+  const track = $derived(song.tracks[ui.selectedTrack])
   const drum = $derived(isDrum(ph))
+  const voiceMeta = $derived(ph.voiceId ? VOICE_LIST.find(v => v.id === ph.voiceId) : null)
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
@@ -149,14 +152,38 @@
     calcEl = null
   }
 
-  function stepDown() {
+  // ── PO-style step picker (tap: cycle, long-press: grid picker) ──
+  let stepPickerOpen = $state(false)
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+  let longPressTriggered = false
+  const STEP_SET_MAX = 16
+  const EXT_STEPS = [24, 32, 48, 64] as const
+
+  function cycleSteps() {
     const idx = STEP_OPTIONS.indexOf(ph.steps as typeof STEP_OPTIONS[number])
-    if (idx > 0) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx - 1])
+    setTrackSteps(ui.selectedTrack, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
-  function stepUp() {
-    const idx = STEP_OPTIONS.indexOf(ph.steps as typeof STEP_OPTIONS[number])
-    if (idx < STEP_OPTIONS.length - 1) setTrackSteps(ui.selectedTrack, STEP_OPTIONS[idx + 1])
+
+  function stepBtnDown() {
+    if (stepPickerOpen) { stepPickerOpen = false; return }
+    longPressTriggered = false
+    longPressTimer = setTimeout(() => {
+      longPressTriggered = true
+      stepPickerOpen = true
+    }, 300)
   }
+
+  function stepBtnUp() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    if (!longPressTriggered && !stepPickerOpen) cycleSteps()
+  }
+
+  function pickStepCount(n: number) {
+    setTrackSteps(ui.selectedTrack, n)
+    stepPickerOpen = false
+  }
+
+  onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
 
   function prevTrack() {
     ui.selectedTrack = (ui.selectedTrack - 1 + song.tracks.length) % song.tracks.length
@@ -166,30 +193,76 @@
     ui.selectedTrack = (ui.selectedTrack + 1) % song.tracks.length
     ui.selectedStep = null
   }
+
+  // ── Swipe to change track ──
+  let swipeStartX = 0
+  let swipeSwiped = false
+  function onNavTouchStart(e: TouchEvent) {
+    swipeStartX = e.touches[0].clientX
+    swipeSwiped = false
+  }
+  function onNavTouchEnd(e: TouchEvent) {
+    if (swipeSwiped) return
+    const dx = e.changedTouches[0].clientX - swipeStartX
+    if (Math.abs(dx) < 40) return
+    swipeSwiped = true
+    if (dx < 0) nextTrack()
+    else prevTrack()
+  }
 </script>
 
 <div class="mobile-view">
 
-  <!-- Track navigation -->
-  <div class="track-nav">
+  <!-- Track navigation: row 1 = name, row 2 = voice bar + steps + S + M -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="track-nav" ontouchstart={onNavTouchStart} ontouchend={onNavTouchEnd}>
     <button class="nav-btn" onpointerdown={prevTrack}>◀</button>
-
     <div class="track-info">
-      <button class="track-name-btn" onpointerdown={() => { ui.mobileOverlay = !ui.mobileOverlay }}>
-        <span class="track-name"><SplitFlap value={ph.name} width={5} /></span>
-      </button>
-      <div class="track-meta">
-        <span class="track-type">{ph.voiceId ?? '—'}</span>
-      </div>
-      <div class="step-row">
-        <button class="step-adj" onpointerdown={stepDown}>−</button>
-        <span class="step-value">{ph.steps}</span>
-        <span class="step-suffix">step</span>
-        <button class="step-adj" onpointerdown={stepUp}>+</button>
-      </div>
+      <span class="track-name">{ph.name}</span>
     </div>
-
     <button class="nav-btn" onpointerdown={nextTrack}>▶</button>
+  </div>
+
+  <!-- Voice bar + controls -->
+  <div class="track-controls">
+    <button class="voice-bar" onpointerdown={() => { ui.mobileOverlay = !ui.mobileOverlay }}>
+      <svg class="voice-icon" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+        <line x1="2" y1="3" x2="2" y2="9"/><circle cx="2" cy="5" r="1.2" fill="currentColor" stroke="none"/>
+        <line x1="6" y1="3" x2="6" y2="9"/><circle cx="6" cy="7" r="1.2" fill="currentColor" stroke="none"/>
+        <line x1="10" y1="3" x2="10" y2="9"/><circle cx="10" cy="4.5" r="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+      <span class="voice-label">{voiceMeta?.fullName ?? ph.voiceId ?? '—'}</span>
+      <span class="voice-chevron">{ui.mobileOverlay ? '▼' : '▲'}</span>
+    </button>
+    <button
+      class="btn-steps flip-host"
+      onpointerdown={stepBtnDown}
+      onpointerup={stepBtnUp}
+      onpointerleave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null } }}
+    >
+      <span class="flip-card" class:flipped={stepPickerOpen}>
+        <span class="flip-face steps-off">{ph.steps}</span>
+        <span class="flip-face back steps-on">{ph.steps}</span>
+      </span>
+    </button>
+    <button
+      class="btn-sm flip-host"
+      onpointerdown={() => toggleSolo(ui.selectedTrack)}
+    >
+      <span class="flip-card" class:flipped={ui.soloTracks.has(ui.selectedTrack)}>
+        <span class="flip-face solo-off">S</span>
+        <span class="flip-face back solo-on">S</span>
+      </span>
+    </button>
+    <button
+      class="btn-sm flip-host"
+      onpointerdown={() => toggleMute(ui.selectedTrack)}
+    >
+      <span class="flip-card" class:flipped={track?.muted}>
+        <span class="flip-face mute-off">M</span>
+        <span class="flip-face back mute-on">M</span>
+      </span>
+    </button>
   </div>
 
   <!-- Melodic tab switcher -->
@@ -215,7 +288,27 @@
   {/if}
 
   <!-- Main area -->
-  {#if drum || mobileTab === 'steps'}
+  {#if stepPickerOpen}
+    <!-- PO-style step picker (replaces calculator grid) -->
+    <div class="calculator" style="--cols: 4">
+      {#each { length: STEP_SET_MAX } as _, i}
+        {@const isActive = i < ph.steps}
+        <button
+          class="calc-btn sp-cell"
+          class:active={isActive}
+          class:current-end={i === ph.steps - 1}
+          onpointerdown={() => pickStepCount(i + 1)}
+        ><span class="step-num">{i + 1}</span></button>
+      {/each}
+      {#each EXT_STEPS as ext}
+        <button
+          class="calc-btn sp-cell sp-ext"
+          class:active={ph.steps === ext}
+          onpointerdown={() => pickStepCount(ext)}
+        ><span class="step-num">{ext}</span></button>
+      {/each}
+    </div>
+  {:else if drum || mobileTab === 'steps'}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="calculator"
@@ -254,9 +347,7 @@
     </div>
   {/if}
 
-  {#if ui.mobileOverlay}
-    <MobileParamOverlay />
-  {/if}
+  <MobileParamOverlay />
 
 </div>
 
@@ -269,40 +360,32 @@
     background: var(--color-bg);
   }
 
-  /* ── Track nav ── */
+  /* ── Track nav (row 1: ◀ name ▶) ── */
   .track-nav {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(30,32,40,0.1);
+    padding: 8px 12px 4px;
   }
   .nav-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--color-fg);
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
     background: transparent;
-    color: var(--color-fg);
-    font-size: 14px;
+    color: rgba(30,32,40,0.35);
+    font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
-  .nav-btn:active { background: var(--color-fg); color: var(--color-bg); }
-
+  .nav-btn:active { background: rgba(30,32,40,0.08); color: var(--color-fg); }
   .track-info {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
     align-items: center;
-  }
-  .track-name-btn {
-    background: transparent;
-    border: none;
-    padding: 0;
-    display: block;
+    justify-content: center;
   }
   .track-name {
     font-family: var(--font-display);
@@ -311,54 +394,152 @@
     color: var(--color-fg);
     letter-spacing: 0.02em;
   }
-  .track-meta {
+
+  /* ── Track controls (row 2: voice bar + steps + S + M) ── */
+  .track-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    padding: 2px 12px 6px;
+    border-bottom: 1px solid rgba(30,32,40,0.1);
   }
-  .track-type {
-    font-size: 9px;
-    color: var(--color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .step-row {
+  .voice-bar {
+    flex: 1;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 4px 0;
-  }
-  .step-adj {
-    width: 28px;
+    justify-content: space-between;
+    min-width: 0;
     height: 28px;
+    padding: 0 8px;
+    border: 1px solid rgba(30,32,40,0.2);
+    border-radius: 4px;
+    background: rgba(30,32,40,0.04);
+    color: var(--color-fg);
+  }
+  .voice-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    opacity: 0.4;
+    margin-right: 4px;
+  }
+  .voice-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .voice-chevron {
+    font-size: 8px;
+    opacity: 0.4;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+  .voice-bar:active {
+    background: rgba(30,32,40,0.1);
+    border-color: rgba(30,32,40,0.35);
+  }
+  .btn-steps {
+    min-width: 32px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .steps-off {
     border: 1px solid var(--color-olive);
     background: transparent;
     color: var(--color-olive);
+    font-family: var(--font-display);
     font-size: 14px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
   }
-  .step-adj:active {
+  .steps-on {
+    border: 1px solid var(--color-olive);
     background: var(--color-olive);
     color: var(--color-bg);
-  }
-  .step-value {
     font-family: var(--font-display);
-    font-size: 20px;
-    line-height: 1;
-    color: var(--color-olive);
-    min-width: 2ch;
-    text-align: right;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .step-suffix {
-    font-size: 9px;
-    letter-spacing: 0.06em;
+  .btn-sm {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .solo-off, .mute-off {
+    border: 1px solid rgba(30,32,40,0.3);
+    background: transparent;
+    color: rgba(30,32,40,0.4);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .solo-on {
+    border: 1px solid var(--color-olive);
+    background: var(--color-olive);
+    color: var(--color-bg);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mute-on {
+    border: 1px solid var(--color-salmon);
+    background: var(--color-salmon);
+    color: var(--color-bg);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── PO-style step picker (inside calculator) ── */
+  .calc-btn.sp-cell {
+    background: var(--color-bg);
+    border: 1.5px solid rgba(30,32,40,0.2);
+  }
+  .calc-btn.sp-cell .step-num {
+    color: rgba(30,32,40,0.5);
+    opacity: 1;
+  }
+  .calc-btn.sp-cell.active {
+    background: rgba(120,120,69,0.15);
+    border-color: rgba(120,120,69,0.4);
+  }
+  .calc-btn.sp-cell.active .step-num {
     color: var(--color-olive);
-    text-transform: uppercase;
-    opacity: 0.6;
+    opacity: 1;
+  }
+  .calc-btn.sp-cell.current-end {
+    border-color: var(--color-olive);
+    box-shadow: 0 0 0 1.5px var(--color-olive);
+  }
+  .calc-btn.sp-cell.current-end .step-num {
+    color: var(--color-fg);
+  }
+  .calc-btn.sp-cell.sp-ext {
+    grid-column: span 2;
+    border-style: dashed;
   }
   /* ── View tabs (melodic only) ── */
   .view-tabs {
@@ -385,8 +566,8 @@
   .edit-tabs {
     display: flex;
     position: relative;
-    margin: 4px 8px 2px;
-    background: rgba(30,32,40,0.06);
+    margin: 4px 12px 2px;
+    background: rgba(30,32,40,0.08);
     border-radius: 4px;
     flex-shrink: 0;
   }
@@ -425,7 +606,7 @@
     grid-template-columns: repeat(var(--cols, 4), 1fr);
     gap: 4px;
     padding: 8px;
-    align-content: start;
+    align-content: center;
     overflow-y: auto;
     overscroll-behavior: none;
   }

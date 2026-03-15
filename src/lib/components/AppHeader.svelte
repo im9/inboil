@@ -115,6 +115,17 @@
   // Cleanup timers on component unmount
   $effect(() => () => stopBpmRepeat())
 
+  // ── Mobile overflow menu ──
+  let mobileMenuOpen = $state(false)
+
+  function toggleMobileMenu() {
+    mobileMenuOpen = !mobileMenuOpen
+  }
+
+  function closeMobileMenu() {
+    mobileMenuOpen = false
+  }
+
 </script>
 
 <div class="header-wrap" class:compact>
@@ -165,7 +176,7 @@
       {:else}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <span class="bpm-value" onclick={startBpmEdit} data-tip="Click to edit tempo" data-tip-ja="クリックでテンポを変更"><SplitFlap value={song.bpm} /></span>
+        <span class="bpm-value" onclick={startBpmEdit} data-tip="Click to edit tempo" data-tip-ja="クリックでテンポを変更">{#if compact}{song.bpm}{:else}<SplitFlap value={song.bpm} />{/if}</span>
       {/if}
       <button class="bpm-adj" onpointerdown={() => startBpmRepeat(1)} onpointerup={stopBpmRepeat} onpointerleave={stopBpmRepeat} data-tip="Increase tempo (hold to scroll)" data-tip-ja="テンポを上げる (長押しでスクロール)">+</button>
       <span class="bpm-label">BPM</span>
@@ -193,7 +204,7 @@
         aria-label={recState === 'recording' ? 'Stop recording' : recState === 'armed' ? 'Cancel record' : 'Arm recording'}
         data-tip={recState === 'recording' ? 'Stop recording and save WAV' : recState === 'armed' ? 'Cancel recording standby' : 'Arm recording (starts on play)'}
         data-tip-ja={recState === 'recording' ? '録音を停止してWAVを保存' : recState === 'armed' ? '録音待機を解除' : '録音待機 (再生で開始)'}
-      >● REC</button>
+      >●<span class="rec-label"> REC</span></button>
     </div>
 
     <div class="sep" aria-hidden="true"></div>
@@ -247,19 +258,41 @@
 
     <div class="header-nav">
       <button
-        class="btn-header-nav"
+        class="btn-header-nav desktop-only"
         class:active={ui.sidebar === 'help'}
         onpointerdown={compact ? () => toggleSidebar('help') : handleHelp}
         aria-label="Help"
         data-tip="Show help" data-tip-ja="ヘルプを表示"
       >?</button>
       <button
-        class="btn-header-nav"
+        class="btn-header-nav desktop-only"
         class:active={ui.sidebar === 'system'}
         onpointerdown={handleSystem}
         aria-label="System settings"
         data-tip="System settings" data-tip-ja="システム設定"
       ><span class="btn-nav-inner">SYSTEM{#if project.dirty}<span class="dirty-dot"></span>{/if}</span></button>
+
+      <!-- Mobile overflow menu trigger -->
+      <div class="mobile-menu-wrap mobile-only">
+        <button
+          class="btn-header-nav btn-overflow"
+          class:active={mobileMenuOpen}
+          onpointerdown={toggleMobileMenu}
+          aria-label="More"
+        >⋯</button>
+        {#if mobileMenuOpen}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="overflow-backdrop" onpointerdown={closeMobileMenu}></div>
+          <div class="overflow-menu">
+            <button class="overflow-item" onpointerdown={() => { closeMobileMenu(); toggleSidebar('help') }}>
+              <span class="overflow-icon">?</span> Help
+            </button>
+            <button class="overflow-item" onpointerdown={() => { closeMobileMenu(); handleSystem() }}>
+              <span class="overflow-icon">⚙</span> System{#if project.dirty}<span class="dirty-dot"></span>{/if}
+            </button>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -560,8 +593,14 @@
   }
 
 
+  /* ── Mobile visibility helpers ── */
+  .mobile-only { display: none; }
+
   /* ── Mobile ── */
   @media (max-width: 639px) {
+    .desktop-only { display: none; }
+    .mobile-only { display: block; }
+
     .sub-header,
     .compact .sub-header {
       height: auto;
@@ -570,13 +609,13 @@
       flex-wrap: wrap;
     }
 
-    /* Row 1: BPM + transport + knobs + pat */
+    /* Row 1: BPM + ▶■ + ⋯ only */
     .bpm-block {
-      padding: 4px 0 4px 8px;
+      padding: 6px 0 6px 8px;
     }
-    .bpm-value { font-size: 14px; }
-    .bpm-input { font-size: 14px; }
-    .bpm-adj { width: 20px; height: 20px; font-size: 12px; }
+    .bpm-value { font-size: 16px; }
+    .bpm-input { font-size: 16px; }
+    .bpm-adj { width: 28px; height: 28px; font-size: 14px; }
     .bpm-label { display: none; }
 
     .sep { display: none; }
@@ -584,20 +623,33 @@
     /* Hide perf-btns on mobile (moved to MobilePerfSheet) */
     .perf-btns { display: none; }
 
-    /* Mobile transport */
+    /* REC: icon-only on mobile */
+    .btn-rec {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .rec-label { display: none; }
+
+    /* Mobile transport — bigger tap targets */
     .transport {
       display: flex;
-      gap: 3px;
+      gap: 8px;
       order: 10;
       align-items: center;
-      margin-left: 10px;
+      margin-left: auto;
     }
     .btn-transport {
       border: 1px solid rgba(237,232,220,0.45);
       background: transparent;
       color: var(--color-bg);
-      padding: 0 12px;
+      width: 40px;
       height: 28px;
+      padding: 0;
       font-size: 11px;
       display: flex;
       align-items: center;
@@ -607,6 +659,12 @@
     .btn-transport.active {
       background: var(--color-bg);
       color: var(--color-fg);
+    }
+
+    /* Overflow menu trigger */
+    .header-nav {
+      order: 11;
+      margin-left: 4px;
     }
 
     /* Row 2: full-width tab bar */
@@ -619,11 +677,11 @@
     }
     .btn-view {
       flex: 1;
-      padding: 6px 0;
+      padding: 8px 0;
       font-size: 9px;
       text-align: center;
       border: none;
-      border-bottom: 2px solid transparent;
+      border-bottom: 3px solid transparent;
       color: rgba(237,232,220,0.35);
     }
     .btn-view:not(:last-child) { border-right: 1px solid rgba(237,232,220,0.08); }
@@ -632,5 +690,81 @@
       border-bottom-color: var(--color-olive);
       background: rgba(237,232,220,0.06);
     }
+  }
+
+  /* ── Overflow menu ── */
+  .mobile-menu-wrap {
+    position: relative;
+    margin-right: 8px;
+  }
+  .btn-overflow {
+    border: none;
+    background: transparent;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    letter-spacing: 0.1em;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(237,232,220,0.5);
+  }
+  .btn-overflow:active,
+  .btn-overflow.active {
+    background: rgba(237,232,220,0.12);
+    color: rgba(237,232,220,0.85);
+  }
+  .overflow-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+  }
+  .overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    min-width: 140px;
+    margin-top: 4px;
+    background: var(--color-fg);
+    border: 1px solid rgba(237,232,220,0.2);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  .overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: rgba(237,232,220,0.7);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: left;
+  }
+  .overflow-item:active {
+    background: rgba(237,232,220,0.1);
+    color: rgba(237,232,220,0.9);
+  }
+  .overflow-item:not(:last-child) {
+    border-bottom: 1px solid rgba(237,232,220,0.08);
+  }
+  .overflow-icon {
+    width: 16px;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.6;
+  }
+  .overflow-item .dirty-dot {
+    top: auto;
+    right: auto;
+    position: static;
+    display: inline-block;
   }
 </style>
