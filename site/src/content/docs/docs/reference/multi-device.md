@@ -2,7 +2,7 @@
 title: Multi-Device Jam
 description: Use your phone as a live controller via WebRTC.
 sidebar:
-  order: 3
+  order: 2
 ---
 
 Turn any phone or tablet into a real-time controller for INBOIL. No app install — just open the URL and enter a room code.
@@ -42,7 +42,7 @@ INBOIL uses **WebRTC DataChannel** for peer-to-peer communication between two de
 | Change velocity / chance | Switch to VEL/CHNC mode and drag |
 | Mute / Solo tracks | Tap M or S buttons |
 | Switch patterns | Use the pattern selector |
-| FILL / REV / BRK | Hold performance buttons |
+| FILL / REV / BRK | Perf Sheet (PERF tab → Kaoss Pad XY controller) |
 | Tweak parameters | Turn knobs in the dock |
 | Play / Stop | Transport controls |
 

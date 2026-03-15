@@ -2,7 +2,7 @@
 title: FAQ
 description: Frequently asked questions about INBOIL.
 sidebar:
-  order: 1
+  order: 3
 ---
 
 ## General

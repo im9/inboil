@@ -2,7 +2,7 @@
 title: よくある質問
 description: INBOIL に関するよくある質問。
 sidebar:
-  order: 1
+  order: 3
 ---
 
 ## 全般

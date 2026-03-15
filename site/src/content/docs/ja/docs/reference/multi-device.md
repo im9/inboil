@@ -2,7 +2,7 @@
 title: マルチデバイス・ジャム
 description: スマホをWebRTCライブコントローラーとして使う。
 sidebar:
-  order: 3
+  order: 2
 ---
 
 スマホやタブレットを INBOIL のリアルタイムコントローラーに。アプリ不要 — URLを開いてルームコードを入力するだけ。
@@ -42,7 +42,7 @@ INBOIL は **WebRTC DataChannel** を使って2台のデバイス間でP2P通信
 | ベロシティ / 確率の変更 | VEL/CHNCモードに切り替えてドラッグ |
 | ミュート / ソロ | M / S ボタンをタップ |
 | パターン切替 | パターンセレクターを使用 |
-| FILL / REV / BRK | パフォーマンスボタンを長押し |
+| FILL / REV / BRK | MobilePerfSheet（Kaoss Pad スタイルの XY パッド）で操作 |
 | パラメータ調整 | ドックのノブを操作 |
 | 再生 / 停止 | トランスポートコントロール |
 

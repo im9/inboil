@@ -2,7 +2,7 @@
 title: Keyboard Shortcuts
 description: Every keyboard shortcut in INBOIL at a glance.
 sidebar:
-  order: 2
+  order: 1
 ---
 
 ## Global

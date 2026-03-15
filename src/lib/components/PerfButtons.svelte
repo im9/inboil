@@ -108,7 +108,7 @@
     color: rgba(237,232,220,0.25);
   }
 
-  /* ── Bubble variant (PerfBubble) ── */
+  /* ── Bubble variant (MobilePerfSheet) ── */
   .bubble-btn {
     position: absolute;
     width: 44px;

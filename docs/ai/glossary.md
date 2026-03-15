@@ -76,7 +76,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **MatrixView** | Pattern pool browser sidebar (desktop). Grid of 24×24px cells showing pattern density and selection. |
 | **SectionNav** | *(deprecated)* Linear section strip. Superseded by Scene graph (ADR 044). Retained for mobile layout only. |
 | **FilterView** | EQ/filter XY pad rendered as overlay sheet (ADR 054). FILTER + 3-band EQ nodes. |
-| **PerfBubble** | Mobile floating FAB for FILL/REV/BRK. Draggable, snaps to screen edges. |
+| **MobilePerfSheet** | Mobile Kaoss Pad XY controller. 4 tabs (PERF/GLITCH/FILTER/MOTION) with per-zone effects, Canvas visualizer, accelerometer/gyroscope support. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
 | **VoicePicker** | Voice selection UI (inline in DockPanel, not a standalone component) for changing a cell's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list (ADR 009/058). |

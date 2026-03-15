@@ -121,7 +121,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
-│   │   │   ├── PerfBubble.svelte ← Mobile floating FILL/REV/BRK bubble menu
+│   │   │   ├── MobilePerfSheet.svelte ← Mobile Kaoss Pad (4 tabs: PERF/GLITCH/FILTER/MOTION, Canvas visualizer, accelerometer/gyroscope)
 │   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
 │   │   │   ├── MasterView.svelte ← Master bus VU meter + audio-reactive visuals

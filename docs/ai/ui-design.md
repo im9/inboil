@@ -386,7 +386,7 @@ Pattern switching is **not** in AppHeader — it happens via MatrixView cell tap
 On mobile (`compact` mode):
 - Transport (▶ ■ REC) in top row.
 - View toggle (SCENE/FX/EQ/MST) becomes full-width tab bar with underline indicator (row 2).
-- Performance buttons hidden — moved to PerfBubble floating widget (bottom-right).
+- Performance buttons hidden — PERF tab in AppHeader opens MobilePerfSheet (Kaoss Pad overlay).
 - ? help button opens help sidebar (hover guide footer hidden on mobile).
 
 ### MobileTrackView — DECIDED
@@ -395,7 +395,7 @@ Calculator-style step grid for mobile. Steps displayed as a grid of buttons (4 c
 
 **Edit mode tabs (STEP / VEL / CHNC):** Animated tab bar with sliding pill indicator above the calculator grid. STEP mode = tap toggles on/off + paint-drag. VEL mode = drag up/down to edit velocity, tap to reset to 1.0. CHNC mode = drag up/down to edit chance. Active steps show velocity/chance gauge as gradient fill. See ADR 033.
 
-**PerfBubble:** Floating draggable FILL/REV/BRK bubble trigger (position: fixed, bottom-right). Tap to toggle radial menu. Snaps to nearest horizontal edge on release.
+**MobilePerfSheet:** Kaoss Pad XY controller with 4 tabs (PERF/GLITCH/FILTER/MOTION). Canvas visualizer shows touch trails. Supports accelerometer/gyroscope for hands-free modulation. Opened via PERF tab button in AppHeader on mobile.
 
 **Track header:** Track name (button, taps to open overlay) + synth type label + step count (−/+ buttons with "step" suffix).
 

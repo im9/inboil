@@ -30,7 +30,9 @@ New here? Start with the tutorial:
 - [Nodes](/docs/scene/nodes/) — pattern and generative node types
 - [Decorators](/docs/scene/decorators/) — transpose, tempo, repeat, FX, automation
 - [Playback](/docs/scene/playback/) — how the scene engine traverses the graph
+- [Function Nodes](/docs/scene/function/) — generative engines (Turing Machine, Quantizer, Tonnetz)
 
 ### Reference
 - [Keyboard Shortcuts](/docs/reference/shortcuts/) — every shortcut at a glance
+- [Multi-Device Jam](/docs/reference/multi-device/) — use your phone as a live controller
 - [FAQ](/docs/reference/faq/) — common questions and answers

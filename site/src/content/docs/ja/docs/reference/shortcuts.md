@@ -2,7 +2,7 @@
 title: キーボードショートカット
 description: INBOIL のすべてのキーボードショートカット一覧。
 sidebar:
-  order: 2
+  order: 1
 ---
 
 ## グローバル
