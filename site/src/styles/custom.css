@@ -82,11 +82,15 @@ nav.sidebar {
   color: var(--sl-color-accent);
 }
 
-/* ── Code blocks — dark zone ── */
+/* ── Code blocks — lighter bg for readability ── */
 .sl-markdown-content pre {
-  background: #1E2028 !important;
-  border: 1px solid #2A2830;
+  background: #2E2C36 !important;
+  border: 1px solid #3A3844;
   border-radius: 4px;
+}
+.sl-markdown-content pre code,
+.sl-markdown-content pre code span {
+  color: #D0CCC0 !important;
 }
 
 /* ── Tables — clean borders, no zebra ── */

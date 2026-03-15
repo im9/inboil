@@ -18,6 +18,6 @@
   }
 </script>
 
-<div class="playground dark-zone" style="min-height: 200px;">
+<div class="playground dark-zone" style="padding: 8px 12px;">
   <DockDecoratorEditor {node} />
 </div>
