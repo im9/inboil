@@ -572,6 +572,7 @@ export const samplesByTrack = $state<Record<number, SampleMeta>>({})
 export function setSample(trackId: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
   samplesByTrack[trackId] = { name, waveform, rawBuffer }
   if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, name, rawBuffer))
+    .catch(e => { console.warn('[sample] save failed:', e); showToast('Sample save failed', 'error') })
 }
 
 /** Persist any pending samples after project gets an id (called from projectSaveAs) */
@@ -811,8 +812,12 @@ export async function importProjectJSON(json: string): Promise<void> {
   const data = JSON.parse(json)
   if (typeof data !== 'object' || data === null) throw new Error('Invalid project file')
   // Accept both v:1 export format and raw Song objects
-  const src: Song = data as Song
-  restoreSong(src)
+  const src = data as Record<string, unknown>
+  // Validate required Song fields
+  if (!Array.isArray(src.tracks) || !Array.isArray(src.patterns) || typeof src.bpm !== 'number') {
+    throw new Error('Invalid project file: missing required fields (tracks, patterns, bpm)')
+  }
+  restoreSong(src as unknown as Song)
   clearSamples()
   project.id = null
   project.dirty = false

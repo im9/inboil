@@ -153,6 +153,20 @@ describe('ChunkReassembler', () => {
     r.cleanup({}) // should not throw
   })
 
+  // ── ADR 100 §6: Chunk index bounds ──
+
+  it('rejects chunks with index >= n', () => {
+    const results: string[] = []
+    r.receive(ch, envelope(1, 5, 2, 'x'), d => results.push(d))
+    expect(r.pendingSize).toBe(0)
+  })
+
+  it('rejects chunks with negative index', () => {
+    const results: string[] = []
+    r.receive(ch, envelope(1, -1, 2, 'x'), d => results.push(d))
+    expect(r.pendingSize).toBe(0)
+  })
+
   // ── ADR 100 §5: Memory budget ──
 
   it('rejects chunks when memory budget is exceeded', () => {

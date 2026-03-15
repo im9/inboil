@@ -1,6 +1,6 @@
 export type { GuestMessage, HostMessage, PlaybackSnapshot, JsonPatch, SignalMessage } from './protocol.ts'
 export { encodeMsg, decodeGuestMsg, decodeHostMsg } from './protocol.ts'
-export { isGuest, guestAction, guestToggleTrig, guestSetVelocity, guestSetChance, guestSetParam, guestPerf, guestTransport, guestSelectPattern, guestMute, guestSolo, guestFxPad } from './guest.ts'
+export { isGuest, guestAction, guestToggleTrig, guestSetVelocity, guestSetChance, guestSetParam, guestSetVoiceParam, guestSetSend, guestPerf, guestTransport, guestSelectPattern, guestMute, guestSolo, guestFxPad } from './guest.ts'
 export { startHost, joinAsGuest, disconnect, setSignalingUrl, sendToGuest, setOnHostMessage, setOnGuestConnected, setOnError } from './connection.ts'
 export { initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead } from './host.ts'
 export { initGuestHandlers } from './guestHandler.ts'

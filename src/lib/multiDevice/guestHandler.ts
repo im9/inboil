@@ -53,9 +53,15 @@ function applySnapshot(
 
 // ── JSON Patch (RFC 6902 subset) ──────────────────────────────
 
+/** Keys that must never be written via patch (prototype pollution guard). */
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 function applyJsonPatch(patch: JsonPatch) {
   const segments = patch.path.split('/').filter(Boolean)
   if (segments.length === 0) return
+
+  // Reject dangerous property names anywhere in the path
+  if (segments.some(s => DANGEROUS_KEYS.has(s))) return
 
   // Navigate to the parent
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,7 +69,14 @@ function applyJsonPatch(patch: JsonPatch) {
   for (let i = 0; i < segments.length - 1; i++) {
     const key = segments[i]
     if (target == null) return
-    target = Array.isArray(target) ? target[Number(key)] : target[key]
+    if (Array.isArray(target)) {
+      const idx = Number(key)
+      if (!Number.isInteger(idx) || idx < 0 || idx >= target.length) return
+      target = target[idx]
+    } else {
+      if (!Object.prototype.hasOwnProperty.call(target, key)) return
+      target = target[key]
+    }
   }
 
   if (target == null) return
@@ -74,17 +87,23 @@ function applyJsonPatch(patch: JsonPatch) {
     case 'replace':
       if (Array.isArray(target)) {
         const idx = lastKey === '-' ? target.length : Number(lastKey)
+        if (!Number.isInteger(idx) || idx < 0 || idx > target.length) return
         if (patch.op === 'add') target.splice(idx, 0, patch.value)
         else target[idx] = patch.value
       } else {
+        // Only allow replacing existing keys (no arbitrary injection)
+        if (patch.op === 'replace' && !Object.prototype.hasOwnProperty.call(target, lastKey)) return
         target[lastKey] = patch.value
       }
       break
 
     case 'remove':
       if (Array.isArray(target)) {
-        target.splice(Number(lastKey), 1)
+        const idx = Number(lastKey)
+        if (!Number.isInteger(idx) || idx < 0 || idx >= target.length) return
+        target.splice(idx, 1)
       } else {
+        if (!Object.prototype.hasOwnProperty.call(target, lastKey)) return
         delete target[lastKey]
       }
       break

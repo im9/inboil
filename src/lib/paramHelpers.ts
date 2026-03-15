@@ -1,6 +1,7 @@
 import { activeCell, ui } from './state.svelte.ts'
 import { setVoiceParam, setParamLock } from './stepActions.ts'
 import { denormalizeParam, type ParamDef } from './paramDefs.ts'
+import { isGuest, guestSetVoiceParam } from './multiDevice/guest.ts'
 
 export function knobValue(p: { key: string; default: number }): number {
   const ph = activeCell(ui.selectedTrack)
@@ -14,6 +15,10 @@ export function knobValue(p: { key: string; default: number }): number {
 
 export function knobChange(p: { key: string }, v: number): void {
   const actual = denormalizeParam(p as ParamDef, v)
+  if (isGuest()) {
+    guestSetVoiceParam(ui.selectedTrack, p.key, actual)
+    return
+  }
   if (ui.lockMode && ui.selectedStep !== null) {
     setParamLock(ui.selectedTrack, ui.selectedStep, p.key, actual)
   } else {

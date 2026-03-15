@@ -27,8 +27,8 @@ const MAX_RECONNECT_ATTEMPTS = 5
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no I/O/0/1 to avoid confusion
   let code = ''
-  const arr = crypto.getRandomValues(new Uint8Array(4))
-  for (let i = 0; i < 4; i++) code += chars[arr[i] % chars.length]
+  const arr = crypto.getRandomValues(new Uint8Array(6))
+  for (let i = 0; i < 6; i++) code += chars[arr[i] % chars.length]
   return code
 }
 
@@ -142,11 +142,11 @@ function setupHostSignaling() {
       const msg = JSON.parse(ev.data) as SignalMessage
 
       if (msg.t === 'peer-joined') {
-        handlePeerJoined(msg.id, msg.name)
+        handlePeerJoined(msg.id, msg.name).catch(e => emitError(`Peer join failed: ${e}`))
       } else if (msg.t === 'answer') {
-        handleAnswer(msg.sdp)
+        handleAnswer(msg.sdp).catch(e => emitError(`Answer failed: ${e}`))
       } else if (msg.t === 'ice') {
-        handleRemoteIce(msg.candidate)
+        handleRemoteIce(msg.candidate).catch(e => emitError(`ICE failed: ${e}`))
       } else if (msg.t === 'peer-left') {
         handlePeerLeft()
       }
@@ -278,9 +278,9 @@ function setupGuestSignaling() {
     try {
       const msg = JSON.parse(ev.data) as SignalMessage
       if (msg.t === 'offer') {
-        handleOffer(msg.sdp)
+        handleOffer(msg.sdp).catch(e => emitError(`Offer handling failed: ${e}`))
       } else if (msg.t === 'ice') {
-        handleGuestIce(msg.candidate)
+        handleGuestIce(msg.candidate).catch(e => emitError(`ICE failed: ${e}`))
       }
     } catch {
       // Ignore malformed signaling messages

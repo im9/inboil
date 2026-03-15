@@ -61,3 +61,11 @@ export function guestSolo(track: number) {
 export function guestFxPad(x: number, y: number) {
   guestAction({ t: 'fxpad', x, y })
 }
+
+export function guestSetVoiceParam(track: number, key: string, v: number) {
+  guestAction({ t: 'vparam', track, key, v })
+}
+
+export function guestSetSend(track: number, key: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
+  guestAction({ t: 'send', track, key, v })
+}

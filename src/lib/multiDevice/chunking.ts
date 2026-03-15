@@ -88,6 +88,11 @@ export class ChunkReassembler {
             bufMap.set(envelope._c, buf)
           }
 
+          // §6: reject out-of-bounds chunk index
+          if (envelope.i < 0 || envelope.i >= envelope.n) {
+            return
+          }
+
           // §3: duplicate chunk guard
           if (buf.parts[envelope.i] != null) {
             return
@@ -125,7 +130,7 @@ export function sendChunked(channel: { send: (data: string) => void }, data: str
     return
   }
   const total = Math.ceil(data.length / CHUNK_SIZE)
-  const id = Date.now()
+  const id = crypto.getRandomValues(new Uint32Array(1))[0]
   for (let i = 0; i < total; i++) {
     const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
     channel.send(JSON.stringify({ _c: id, i, n: total, d: chunk }))

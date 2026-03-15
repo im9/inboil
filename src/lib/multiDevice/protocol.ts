@@ -20,6 +20,8 @@ export type GuestMessage =
   | { t: 'mute'; track: number; muted: boolean }
   | { t: 'solo'; track: number }
   | { t: 'fxpad'; x: number; y: number }
+  | { t: 'vparam'; track: number; key: string; v: number }
+  | { t: 'send'; track: number; key: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend'; v: number }
 
 // ── Host → Guest ──────────────────────────────────────────────
 

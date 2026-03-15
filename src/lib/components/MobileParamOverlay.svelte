@@ -6,7 +6,7 @@
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import { engine } from '../audio/engine.ts'
-  import { isGuest, guestSetParam } from '../multiDevice/guest.ts'
+  import { isGuest, guestSetParam, guestSetSend } from '../multiDevice/guest.ts'
   import { fade, fly } from 'svelte/transition'
   import Knob from './Knob.svelte'
 
@@ -19,6 +19,12 @@
   function setParam(key: string, v: number) {
     if (isGuest()) { guestSetParam(ui.selectedTrack, key, v); return }
     ;(song.tracks[ui.selectedTrack] as unknown as Record<string, unknown>)[key] = v
+  }
+
+  type SendKey = 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend'
+  function handleSend(key: SendKey, v: number) {
+    if (isGuest()) { guestSetSend(ui.selectedTrack, key, v); return }
+    setTrackSend(ui.selectedTrack, key, v)
   }
 
   const track = $derived(song.tracks[ui.selectedTrack])
@@ -319,10 +325,10 @@
       <div class="knob-grid">
         <Knob value={track.volume} label="VOL" size={48} onchange={v => setParam('volume', v)} />
         <Knob value={(track.pan + 1) / 2} label="PAN" size={48} onchange={v => setParam('pan', v * 2 - 1)} />
-        <Knob value={cell.reverbSend} label="VERB" size={48} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />
-        <Knob value={cell.delaySend} label="DLY" size={48} onchange={v => setTrackSend(ui.selectedTrack, 'delaySend', v)} />
-        <Knob value={cell.glitchSend} label="GLT" size={48} onchange={v => setTrackSend(ui.selectedTrack, 'glitchSend', v)} />
-        <Knob value={cell.granularSend} label="GRN" size={48} onchange={v => setTrackSend(ui.selectedTrack, 'granularSend', v)} />
+        <Knob value={cell.reverbSend} label="VERB" size={48} onchange={v => handleSend('reverbSend', v)} />
+        <Knob value={cell.delaySend} label="DLY" size={48} onchange={v => handleSend('delaySend', v)} />
+        <Knob value={cell.glitchSend} label="GLT" size={48} onchange={v => handleSend('glitchSend', v)} />
+        <Knob value={cell.granularSend} label="GRN" size={48} onchange={v => handleSend('granularSend', v)} />
       </div>
 
     </div>
