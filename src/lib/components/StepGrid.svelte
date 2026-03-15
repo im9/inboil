@@ -23,6 +23,43 @@
     setTrackSteps(trackId, STEP_OPTIONS[(idx + 1) % STEP_OPTIONS.length])
   }
 
+  // ── PO-style step-set mode (long-press step button → tap grid to set length) ──
+  let stepSetTrack: number | null = $state(null)
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+  let longPressTriggered = false
+  const STEP_SET_MAX = 16
+  const EXT_STEPS = [24, 32, 48, 64] as const
+
+  function stepPointerDown(_e: PointerEvent, trackId: number) {
+    // If already in step-set mode for this track, dismiss
+    if (stepSetTrack === trackId) {
+      stepSetTrack = null
+      return
+    }
+    longPressTriggered = false
+    longPressTimer = setTimeout(() => {
+      longPressTriggered = true
+      stepSetTrack = trackId
+    }, 300)
+  }
+
+  function stepPointerUp(trackId: number) {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    if (!longPressTriggered && stepSetTrack !== trackId) cycleSteps(trackId)
+  }
+
+  function stepContextMenu(e: Event, trackId: number) {
+    e.preventDefault()
+    stepSetTrack = stepSetTrack === trackId ? null : trackId
+  }
+
+  function pickStepCount(n: number) {
+    if (stepSetTrack != null) setTrackSteps(stepSetTrack, n)
+    stepSetTrack = null
+  }
+
+  onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
+
   // ── Velocity drag state ──
   let velContainer: HTMLDivElement | undefined = $state(undefined)
   let velDragging = $state(false)
@@ -179,8 +216,11 @@
         <!-- Step count -->
         <button
           class="btn-steps"
-          onpointerdown={() => cycleSteps(trackId)}
-          data-tip="Change step count" data-tip-ja="ステップ数を変更"
+          onpointerdown={(e) => stepPointerDown(e, trackId)}
+          onpointerup={() => stepPointerUp(trackId)}
+          onpointerleave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null } }}
+          oncontextmenu={(e) => stepContextMenu(e, trackId)}
+          data-tip="Tap: cycle · Hold: picker" data-tip-ja="タップ: 切替 · 長押し: 選択"
         >{ph.steps}</button>
 
         <!-- Solo -->
@@ -210,35 +250,62 @@
       </div>
 
       <!-- Steps -->
-      <div
-        class="steps"
-        role="application"
-        style="--steps: {ph.steps}"
-        onpointermove={stepOnMove}
-        onpointerup={stepEndDrag}
-        onpointercancel={stepEndDrag}
-        data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
-      >
-        {#each ph.trigs as trig, stepIdx}
-          {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
-          {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
-          {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
-          <button
-            class="step flip-host"
-            class:playhead={isPlayhead}
-            class:lock-selected={isLockSel}
-            aria-label="Step {stepIdx + 1}"
-            onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
-          >
-            <span class="flip-card" class:flipped={trig.active}>
-              <span class="flip-face step-off"></span>
-              <span class="flip-face back step-on"></span>
-            </span>
-            {#if hasLocks}<span class="lock-dot"></span>{/if}
-            {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
-          </button>
-        {/each}
-      </div>
+      {#if stepSetTrack === trackId}
+        <!-- Step-set mode: PO-style grid tap to set step count -->
+        <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
+          {#each { length: STEP_SET_MAX } as _, stepIdx}
+            {@const isActive = stepIdx < ph.steps}
+            <button
+              class="step step-set-cell"
+              class:active={isActive}
+              class:current-end={stepIdx === ph.steps - 1}
+              aria-label="Set {stepIdx + 1} steps"
+              onpointerdown={() => pickStepCount(stepIdx + 1)}
+            >
+              <span class="step-set-num">{stepIdx + 1}</span>
+            </button>
+          {/each}
+          {#each EXT_STEPS as ext}
+            <button
+              class="step step-set-cell ext"
+              class:active={ph.steps === ext}
+              onpointerdown={() => pickStepCount(ext)}
+            >
+              <span class="step-set-num">{ext}</span>
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div
+          class="steps"
+          role="application"
+          style="--steps: {ph.steps}"
+          onpointermove={stepOnMove}
+          onpointerup={stepEndDrag}
+          onpointercancel={stepEndDrag}
+          data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
+        >
+          {#each ph.trigs as trig, stepIdx}
+            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
+            {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
+            {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
+            <button
+              class="step flip-host"
+              class:playhead={isPlayhead}
+              class:lock-selected={isLockSel}
+              aria-label="Step {stepIdx + 1}"
+              onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
+            >
+              <span class="flip-card" class:flipped={trig.active}>
+                <span class="flip-face step-off"></span>
+                <span class="flip-face back step-on"></span>
+              </span>
+              {#if hasLocks}<span class="lock-dot"></span>{/if}
+              {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
     <!-- Inline velocity lane for selected track -->
@@ -642,6 +709,49 @@
   .btn-add-track:hover {
     color: var(--color-olive);
     border-color: var(--color-olive);
+  }
+
+  /* ── Step-set mode ── */
+  .step-set-mode {
+    background: rgba(30, 32, 40, 0.04);
+    border-radius: 2px;
+  }
+  .step-set-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    border: 1px solid rgba(30, 32, 40, 0.2);
+    cursor: pointer;
+    transition: background 60ms, border-color 60ms;
+  }
+  .step-set-cell.active {
+    background: rgba(120, 120, 69, 0.15);
+    border-color: rgba(120, 120, 69, 0.4);
+  }
+  .step-set-cell.current-end {
+    border-color: var(--color-olive);
+    box-shadow: 0 0 0 1px var(--color-olive);
+  }
+  .step-set-cell:hover {
+    background: rgba(120, 120, 69, 0.3);
+    border-color: var(--color-olive);
+  }
+  .step-set-cell.ext {
+    border-style: dashed;
+  }
+  .step-set-num {
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    color: rgba(30, 32, 40, 0.5);
+    pointer-events: none;
+  }
+  .step-set-cell.active .step-set-num {
+    color: var(--color-olive);
+  }
+  .step-set-cell.current-end .step-set-num {
+    color: var(--color-fg);
   }
 
 </style>

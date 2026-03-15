@@ -64,35 +64,33 @@ const ogImage = `${siteUrl}/og.png`;
       transform:translateY(0);
     }
     .page{
-      min-height:100vh;
-      display:grid;
-      grid-template-columns:2fr 3fr;
+      display:flex;
+      flex-direction:column;
       align-items:center;
+      justify-content:center;
       gap:40px;
       /* header 42px + 余白 */
-      padding:58px 48px 48px;
+      padding:96px 48px 48px;
+      text-align:center;
     }
     @media(max-width:768px){
       .page{
-        grid-template-columns:1fr;
-        padding:58px 24px 32px;
+        padding:80px 24px 32px;
         gap:32px;
         overflow-x:hidden;
       }
-      .hero-text{align-self:auto;margin-top:0}
-      .hero-visual{align-self:auto;margin-bottom:0;min-width:0}
+      .hero-visual{min-width:0}
       .tagline{white-space:normal;font-size:1.5rem}
       .cta{padding:0.6rem 1.4rem;font-size:0.85rem}
       .cta-row{flex-wrap:wrap}
     }
     .hero-text{
       display:flex;flex-direction:column;
+      align-items:center;
       gap:14px;
-      align-self:start;
-      margin-top:12vh;
     }
     .brand{
-      display:flex;align-items:center;gap:16px;
+      display:flex;align-items:center;gap:20px;
     }
     .brand svg{width:clamp(56px, 8vw, 80px);height:clamp(56px, 8vw, 80px);flex-shrink:0}
     .brand h1{
@@ -119,8 +117,8 @@ const ogImage = `${siteUrl}/og.png`;
       display:flex;flex-direction:column;
       align-items:center;
       gap:8px;
-      align-self:end;
-      margin-bottom:4vh;
+      width:100%;
+      max-width:640px;
     }
 
     /* ── Sequencer grid ── */
@@ -226,22 +224,23 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .cta-row{
       display:flex;gap:1.2rem;
+      max-width:420px;
     }
     .cta{
       padding:0.75rem 2.4rem;
-      border:1.5px solid rgba(30,32,40,0.35);
+      border:1.5px solid rgba(30,32,40,0.18);
       border-radius:0;
       background:transparent;
-      color:rgba(30,32,40,0.7);
+      color:rgba(30,32,40,0.45);
       font-family:"JetBrains Mono",monospace;
       font-size:1rem;letter-spacing:0.06em;
       text-transform:uppercase;text-decoration:none;
       white-space:nowrap;
     }
     .cta:hover{
-      background:rgba(30,32,40,0.06);
-      border-color:rgba(30,32,40,0.6);
-      color:rgba(30,32,40,0.9);
+      background:rgba(30,32,40,0.04);
+      border-color:rgba(30,32,40,0.35);
+      color:rgba(30,32,40,0.7);
     }
     .cta.primary{
       background:#787845;
@@ -815,12 +814,12 @@ const ogImage = `${siteUrl}/og.png`;
   </section>
 
   <!-- ── Feature 4: Multi-Device Jam ── -->
-  <section class="feat-section full">
+  <section class="feat-section">
     <div class="feat-text reveal">
       <h2 id="feat-jam-title" class="feat-title">Multi-Device Jam</h2>
       <p id="feat-jam-desc" class="feat-desc">Turn any phone into a live controller. The host runs the DAW on a PC — a friend opens the URL on their phone, enters a 4-character room code, and instantly joins as a guest controller. Edit steps, trigger fills, tweak parameters — all synced in real time over WebRTC. Audio stays on the host. Control comes from the phone. No app install. No setup. Just share a code and jam.</p>
     </div>
-    <div class="feat-visual reveal" style="flex-direction:column;gap:16px;align-items:center">
+    <div class="feat-visual reveal" style="flex-direction:column;gap:16px">
       <svg class="jam-diagram" viewBox="0 0 520 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:520px">
         <!-- Host (PC) -->
         <rect x="20" y="50" width="160" height="100" rx="12" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
@@ -845,53 +844,39 @@ const ogImage = `${siteUrl}/og.png`;
     </div>
   </section>
 
-  <!-- ── Story + Support ── -->
-  <section class="story-section reveal">
-    <div class="story-content">
-      <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
-      <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
-      <p id="story-text1b" class="story-body">I believe music tools should be accessible, instant, and fun.</p>
-      <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development.</p>
-      <p id="story-text2b" class="story-body">Your contribution helps keep the project free and fuels new features.</p>
-      <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
-        <span class="donate-heart">&#9825;</span> Support this project
-      </a>
-    </div>
-  </section>
-
   <!-- ── Specs ── -->
   <section class="specs-section reveal">
     <h2 id="specs-title" class="specs-title">Specs</h2>
     <div class="specs-grid">
       <div class="spec-cell">
-        <div class="spec-label">Tracks</div>
+        <div id="spec-tracks-label" class="spec-label">Tracks</div>
         <div class="spec-value">16</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Voices</div>
+        <div id="spec-voices-label" class="spec-label">Voices</div>
         <div class="spec-value">19</div>
-        <div class="spec-note">13 drums, 5 synths, sampler</div>
+        <div id="spec-voices-note" class="spec-note">13 drums, 5 synths, sampler</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Sequencer</div>
-        <div class="spec-value">Grid / Tracker / Piano Roll</div>
+        <div id="spec-seq-label" class="spec-label">Sequencer</div>
+        <div id="spec-seq-value" class="spec-value">Grid / Tracker / Piano Roll</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Steps</div>
-        <div class="spec-value">1 – 64</div>
+        <div id="spec-steps-label" class="spec-label">Steps</div>
+        <div class="spec-value">2 – 64</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Effects</div>
-        <div class="spec-value">4 sends + 3-band EQ + master comp</div>
-        <div class="spec-note">Reverb, Delay, Glitch, Granular</div>
+        <div id="spec-fx-label" class="spec-label">Effects</div>
+        <div id="spec-fx-value" class="spec-value">4 sends + 3-band EQ + master comp</div>
+        <div id="spec-fx-note" class="spec-note">Reverb, Delay, Glitch, Granular</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Scene Graph</div>
-        <div class="spec-value">Node-based arrangement</div>
-        <div class="spec-note">Branching, looping, decorators</div>
+        <div id="spec-scene-label" class="spec-label">Scene Graph</div>
+        <div id="spec-scene-value" class="spec-value">Node-based arrangement</div>
+        <div id="spec-scene-note" class="spec-note">Branching, looping, decorators</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Export</div>
+        <div id="spec-export-label" class="spec-label">Export</div>
         <div class="spec-value">WAV / MIDI / JSON</div>
       </div>
       <div class="spec-cell">
@@ -900,18 +885,18 @@ const ogImage = `${siteUrl}/og.png`;
         <div id="spec-midi-note" class="spec-note">Web MIDI API (Chrome / Edge)</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Storage</div>
-        <div class="spec-value">Browser local</div>
-        <div class="spec-note">IndexedDB, no account needed</div>
+        <div id="spec-storage-label" class="spec-label">Storage</div>
+        <div id="spec-storage-value" class="spec-value">Browser local</div>
+        <div id="spec-storage-note" class="spec-note">IndexedDB, no account needed</div>
       </div>
       <div class="spec-cell">
         <div id="spec-jam-label" class="spec-label">Multi-Device</div>
-        <div id="spec-jam-value" class="spec-value">WebRTC P2P jam</div>
-        <div id="spec-jam-note" class="spec-note">Phone as controller, no app install</div>
+        <div id="spec-jam-value" class="spec-value">Phone as live controller</div>
+        <div id="spec-jam-note" class="spec-note">WebRTC P2P, no app install</div>
       </div>
       <div class="spec-cell">
-        <div class="spec-label">Price</div>
-        <div class="spec-value">Free</div>
+        <div id="spec-price-label" class="spec-label">Price</div>
+        <div id="spec-price-value" class="spec-value">Free</div>
       </div>
       <div class="spec-cell">
         <div id="spec-browser-label" class="spec-label">Browser</div>
@@ -928,6 +913,20 @@ const ogImage = `${siteUrl}/og.png`;
     <div class="cta-row" style="justify-content:center">
       <a id="final-app-link" class="cta primary" href={appUrl}>Open App</a>
       <a id="final-docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
+    </div>
+  </section>
+
+  <!-- ── Story + Support ── -->
+  <section class="story-section reveal">
+    <div class="story-content">
+      <h2 id="story-title" class="story-heading">Built by one person, for everyone</h2>
+      <p id="story-text" class="story-body">INBOIL is a solo passion project — designed, coded, and sound-designed by a single developer. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.</p>
+      <p id="story-text1b" class="story-body">I believe music tools should be accessible, instant, and fun.</p>
+      <p id="story-text2" class="story-body">If INBOIL brings you joy, consider supporting its development.</p>
+      <p id="story-text2b" class="story-body">Your contribution helps keep the project free and fuels new features.</p>
+      <a id="donate-link" class="cta donate-cta" href="https://ko-fi.com/inboil" target="_blank" rel="noopener">
+        <span class="donate-heart">&#9825;</span> Support this project
+      </a>
     </div>
   </section>
 
@@ -952,9 +951,34 @@ const ogImage = `${siteUrl}/og.png`;
     t('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、\nリアルタイムにサウンドを加工。\nリバーブ、ディレイ、グリッチ、グラニュラー\n— 各3フレーバー搭載。\nキャンバスがオーディオに反応し、\nアクティブなエフェクト間にコンステレーションを描きます。');
     t('feat-jam-title', 'マルチデバイス・ジャム');
     t('feat-jam-desc', 'スマホをライブコントローラーに。\nホストがPCでDAWを動かし、友だちはURLを開いて\n4文字のルームコードを入力するだけで、\nゲストコントローラーとして即参加。\nステップ編集、フィル、パラメータ操作 —\nすべてがWebRTCでリアルタイム同期。\n音はホストから。操作はスマホで。\nアプリ不要。設定不要。コードをシェアして、すぐジャム。');
+    t('spec-tracks-label', 'トラック');
+    t('spec-voices-label', 'ボイス');
+    t('spec-voices-note', 'ドラム13、シンセ5、サンプラー');
+    t('spec-seq-label', 'シーケンサー');
+    t('spec-seq-value', 'グリッド / トラッカー / ピアノロール');
+    t('spec-steps-label', 'ステップ');
+    t('spec-fx-label', 'エフェクト');
+    t('spec-fx-value', '4センド + 3バンドEQ + マスターコンプ');
+    t('spec-fx-note', 'リバーブ、ディレイ、グリッチ、グラニュラー');
+    t('spec-scene-label', 'シーングラフ');
+    t('spec-scene-value', 'ノードベースの構成');
+    t('spec-scene-note', '分岐、ループ、デコレーター');
+    t('spec-export-label', 'エクスポート');
+    t('spec-midi-label', 'MIDI');
+    t('spec-midi-value', 'USB MIDI 入力');
+    t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
+    t('spec-storage-label', 'ストレージ');
+    t('spec-storage-value', 'ブラウザ内保存');
+    t('spec-storage-note', 'IndexedDB、アカウント不要');
     t('spec-jam-label', 'マルチデバイス');
-    t('spec-jam-value', 'WebRTC P2P ジャム');
-    t('spec-jam-note', 'スマホがコントローラーに、アプリ不要');
+    t('spec-jam-value', 'スマホがコントローラーに');
+    t('spec-jam-note', 'WebRTC P2P、アプリ不要');
+    t('spec-price-label', '料金');
+    t('spec-price-value', '無料');
+    t('spec-browser-label', 'ブラウザ');
+    t('spec-browser-value', 'Chrome / Firefox / Safari（最新版推奨）');
+    t('spec-browser-note', 'Web Audio + AudioWorklet 対応ブラウザ');
+    t('specs-title', 'スペック');
     t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
     document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
     document.getElementById('story-text1b').textContent = '音楽ツールは、誰でもすぐ使えて、楽しいものであるべきだと信じています。';
@@ -962,13 +986,6 @@ const ogImage = `${siteUrl}/og.png`;
     document.getElementById('story-text2b').textContent = 'いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。';
     const dl = document.getElementById('donate-link');
     if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
-    t('specs-title', 'スペック');
-    t('spec-browser-label', 'ブラウザ');
-    t('spec-browser-value', 'Chrome / Firefox / Safari（最新版推奨）');
-    t('spec-browser-note', 'Web Audio + AudioWorklet 対応ブラウザ');
-    t('spec-midi-label', 'MIDI');
-    t('spec-midi-value', 'USB MIDI 入力');
-    t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
     t('final-cta-title', 'さっそく始めよう');
     t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
     const fl = document.getElementById('final-docs-link');
