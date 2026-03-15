@@ -2,6 +2,7 @@
   import { song, activeCell, playback, ui } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, STEP_OPTIONS } from '../stepActions.ts'
+  import { randomizePattern } from '../randomize.ts'
   import { VOICE_LIST } from '../audio/dsp/voices.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
@@ -263,6 +264,7 @@
         <span class="flip-face back mute-on">M</span>
       </span>
     </button>
+    <button class="btn-rand" onpointerdown={randomizePattern}>RND</button>
   </div>
 
   <!-- Melodic tab switcher -->
@@ -511,6 +513,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .btn-rand {
+    height: 28px;
+    border: 1.5px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+    padding: 0 8px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .btn-rand:active {
+    background: var(--color-olive);
+    color: var(--color-bg);
   }
 
   /* ── PO-style step picker (inside calculator) ── */
