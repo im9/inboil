@@ -17,9 +17,10 @@ Tracks can be reassigned to any voice via VoicePicker (ADR 009). These are the f
 | 2 | CLAP | Clap | DrumMachine | TR-909 style hand clap |
 | 3 | C.HH | Hat | DrumMachine | TR-909 closed hi-hat |
 | 4 | O.HH | OpenHat | DrumMachine | TR-909 open hi-hat |
-| 5 | CYM | Cymbal | DrumMachine | TR-909 crash cymbal |
+| 5 | RIDE | Ride | SamplerVoice | TR-909 ride cymbal (PCM sample) |
 | 6 | BASS | Bass303 | TB303Voice | TB-303 acid bass |
-| 7 | LEAD | MoogLead | MoogVoice | Moog-style 4-pole lead |
+| 7 | FM | FM | FMVoice | 4-operator FM synth |
+| 8 | LEAD | MoogLead | MoogVoice | Moog-style 4-pole lead |
 
 ## Synth Voices
 

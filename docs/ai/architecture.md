@@ -117,7 +117,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── TrackerView.svelte ← M8-style vertical tracker editor
 │   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
 │   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
-│   │   │   ├── SectionNav.svelte ← (deprecated) Linear section strip, mobile only
+│   │   │   ├── SectionNav.svelte ← (removed) Legacy linear section strip, superseded by Scene graph
 │   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
 │   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
@@ -128,12 +128,13 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
-│   │   │   ├── TrackSelector.svelte ← Track dot selector (mobile FX/EQ views)
+│   │   │   ├── MobileMatrixView.svelte ← Mobile pattern pool browser (ADR 095)
+│   │   │   ├── MobileSceneRibbon.svelte ← Mobile scene playback ribbon (future)
 │   │   │   ├── WelcomeOverlay.svelte ← First-visit welcome overlay
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
 │   │   │   ├── Sidebar.svelte    ← Help / System settings panel (fixed right drawer)
 │   │   │   ├── Knob.svelte       ← SVG rotary knob control
-│   │   │   ├── SplitFlap.svelte  ← パタパタ split-flap display
+│   │   │   ├── ErrorToast.svelte ← Transient error/info notification
 │   │   │   ├── SceneCanvas.svelte ← Canvas layer for scene edges/arrowheads
 │   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
 │   │   │   ├── SceneLabels.svelte ← Free-floating canvas text labels

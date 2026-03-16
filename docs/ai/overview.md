@@ -18,7 +18,6 @@ The goal is a focused, expressive tool for composing and performing electronic m
 ## Non-Goals (v1)
 
 - Cloud sync / user accounts
-- Collaboration features
 
 ## Constraints
 

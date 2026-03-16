@@ -107,6 +107,7 @@ Section {
   delay?:       ChainFx
   glitch?:      ChainFx
   granular?:    ChainFx
+  flavours?:    Partial<FxFlavours>  // per-section FX flavour override (ADR 076)
 }
 ```
 
@@ -220,12 +221,13 @@ See ADR 021 for duration/slide, ADR 028 for chance, ADR 014 for parameter locks.
 | 2 | CLAP | Clap | DrumMachine | 60 | 0.15 |
 | 3 | C.HH | Hat | DrumMachine | 60 | -0.30 |
 | 4 | O.HH | OpenHat | DrumMachine | 60 | 0.35 |
-| 5 | CYM | Cymbal | DrumMachine | 60 | 0.25 |
+| 5 | RIDE | Ride | SamplerVoice | 60 | 0.25 |
 | 6 | BASS | Bass303 | TB303Voice | 48 | 0.00 |
-| 7 | LEAD | MoogLead | MoogVoice | 64 | 0.10 |
+| 7 | FM | FM | FMVoice | 64 | 0.10 |
+| 8 | LEAD | MoogLead | MoogVoice | 64 | 0.10 |
 
 Tracks 0–5 are drums (note is ignored; fixed pitch set by voice params).
-Tracks 6–7 are melodic (note from trigs, transposable by KEY).
+Tracks 6–8 are melodic (note from trigs, transposable by KEY).
 
 ## Variable Step Count — DECIDED
 

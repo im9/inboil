@@ -242,7 +242,7 @@ Compact left sidebar (desktop only) showing the pattern pool as a grid of 24×24
 
 ### SectionNav — REMOVED
 
-Legacy linear-section navigator. Fully removed from mobile (ADR 095). Superseded by Scene graph (ADR 044) + MobileMatrixView for pattern selection.
+Legacy linear-section navigator. Fully removed (ADR 095). Superseded by Scene graph (ADR 044) + MobileMatrixView for pattern selection. Component file retained but unused.
 
 ### Sidebar — DECIDED
 

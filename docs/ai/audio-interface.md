@@ -82,6 +82,14 @@ interface WorkletPattern {
     granularPitch: number   // 0–1 (0.5 = no shift, ±12 semitones)
     granularScatter: number // 0–1 (position randomization)
     granularFreeze: boolean // freeze ring buffer writing
+    perfX: number           // Kaoss Pad X position (0–1) (ADR 097)
+    perfY: number           // Kaoss Pad Y position (0–1)
+    perfTouching: boolean   // Kaoss Pad touch active
+    tiltX: number           // accelerometer X (0–1)
+    tiltY: number           // accelerometer Y (0–1)
+    stuttering: boolean     // stutter glitch effect active (ADR 097 Phase 2)
+    halfSpeed: boolean      // half-speed tape effect
+    tapeStop: boolean       // tape stop effect
   }
 }
 
@@ -98,7 +106,18 @@ interface WorkletTrack {
   glitchSend: number        // 0.0–1.0
   granularSend: number      // 0.0–1.0
   voiceParams: Record<string, number>
-  insertFx?: { type: 'verb' | 'delay' | 'glitch' | null; flavour: string; mix: number; x: number; y: number }
+  insertFx?: WorkletInsertFx
+}
+
+interface WorkletInsertFx {
+  type: 'verb' | 'delay' | 'glitch' | null
+  mix: number
+  x: number
+  y: number
+  hall?: boolean              // reverb: hall flavour
+  dotted?: boolean            // delay: dotted flavour
+  tape?: boolean              // delay: tape flavour
+  redux?: boolean             // glitch: redux flavour
 }
 
 interface WorkletTrig {

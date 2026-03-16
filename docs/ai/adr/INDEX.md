@@ -146,3 +146,5 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 099 | Auto-Save and Undo Durability | Implemented | beforeunload localStorage recovery snapshot, auto-restore on load (Option 3) |
 | 100 | WebRTC Chunk Buffer Hardening | Implemented | MAX_CHUNKS limit, 30s TTL, duplicate guard, channel cleanup, 5MB memory budget |
 | 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
+| 102 | Mobile Melodic Input & Track Management | Proposed | Mobile piano roll improvements + track add/remove |
+| 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
