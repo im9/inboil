@@ -103,7 +103,18 @@ Click "Add to Pool"            3. Compute content hash (dedup check)
 
 **Size limit:** 10MB per file, 10s duration cap (per ADR 012). Total pool soft limit: 200MB (warn at 80%).
 
-### D. Browse & Assign Flow
+### D. Coexistence with Sampler LOAD
+
+The existing sampler LOAD button (file picker / drag-and-drop per track) remains unchanged:
+
+- **LOAD** = "use this file on this track right now" — quick, no pool involvement
+- **Pool** = "browse my library and pick a sample" — organized, persistent
+
+These are complementary workflows. LOAD is faster for one-off experimentation; the pool is better for curated reuse across projects.
+
+Optional future enhancement: after LOAD, offer "Add to pool?" prompt so ad-hoc samples can be saved to the library without a separate import step.
+
+### E. Browse & Assign Flow
 
 ```
 Pool Browser (Dock panel)      Assignment
@@ -114,7 +125,7 @@ Waveform shown from metadata   3. Assign to current track (existing setSample fl
                                4. Copy to per-project IndexedDB store
 ```
 
-### E. UI
+### F. UI
 
 Pool browser as a new Dock panel mode (alongside track params, FX, EQ, decorators):
 
@@ -143,7 +154,7 @@ Pool browser as a new Dock panel mode (alongside track params, FX, EQ, decorator
 - Drag from desktop onto the pool area = bulk import
 - Folder tabs derived from OPFS directory listing
 
-### F. Storage Budget
+### G. Storage Budget
 
 ```
 OPFS:
@@ -156,7 +167,93 @@ IndexedDB pool-meta:
   400 entries ≈ 400KB (negligible)
 ```
 
-### G. Progressive Enhancement (Future Phases)
+### H. Factory Samples
+
+A curated set of samples bundled with the app, pre-installed into the pool on first launch.
+
+#### Structure
+
+```
+OPFS pool/
+├── factory/                    ← read-only, restored on factory reset
+│   ├── kicks/                  (808, 909, vinyl, electro)
+│   ├── snares/                 (tight, clap, rim, noise)
+│   ├── hats/                   (closed, open, pedal)
+│   ├── perc/                   (conga, cowbell, shaker, tom)
+│   ├── cymbals/                (crash, ride — migrated from CymbalVoice PCM)
+│   └── loops/                  (breakbeat, funk, minimal, ambient)
+└── user/                       ← user imports go here
+    └── ...
+```
+
+#### Lazy Loading Strategy
+
+Factory samples are **not bundled in the app** — they are fetched from CDN on first launch to keep the app bundle untouched:
+
+```
+App bundle (~460KB gzip)        ← no change
+        ↓ first launch
+CDN: /samples/factory-v1.tar   ← 1–2MB, fetched once
+        ↓ decode
+OPFS pool/factory/              ← persisted locally
+```
+
+- Samples hosted as static assets on CDN (Cloudflare Pages `public/samples/` or separate R2 bucket)
+- Fetched on first launch (or factory reset), with progress indicator
+- Version stamp in localStorage (`factoryPoolVersion`) tracks installed pack — app updates can push new packs
+- Factory folder is protected: delete/rename disabled in UI, reset re-fetches from CDN
+- Offline fallback: if CDN unreachable on first launch, pool starts empty with a retry prompt
+
+#### Size Budget
+
+```
+One-shots (kick/snare/hat/perc): 10–50KB each × 20–30  ≈  500KB
+Loops (breakbeat, funk, ambient): 100–200KB each × 3–5  ≈  500KB–1MB
+Total factory pack:                                      ≈  1–2MB compressed
+```
+
+#### Demo Projects with Samples
+
+Demo projects that depend on samples (e.g. a Squarepusher-style mangle demo) use the same lazy fetch mechanism:
+
+- Demo project JSON references samples by pool ID (content hash)
+- On demo load: check if referenced samples exist in OPFS → if not, fetch from CDN
+- This keeps demo projects as lightweight JSON while delivering full sample-based compositions
+- Showcases sampler capabilities (chop, pitch, reverse) without bloating the app
+
+#### Expansion Packs (Future)
+
+The lazy fetch architecture naturally supports additional sample packs:
+
+```
+CDN:
+  /samples/factory-v1.tar       ← core kit (ships with app)
+  /samples/pack-ambient-v1.tar  ← optional expansion
+  /samples/pack-lofi-v1.tar     ← optional expansion
+```
+
+- Browse available packs in pool UI → tap to download → OPFS install
+- Each pack has its own version stamp for independent updates
+- No authentication required — packs are public static assets
+
+#### Cymbal / PCM Voices
+
+The existing crash/ride PCM samples (`tr909_crash.webm`, `tr909_ride.webm`) currently ship as static assets loaded by CymbalVoice. Once the audio pool exists:
+
+- Move crash/ride into the factory pool under `factory/cymbals/`
+- CymbalVoice continues to load from the pool but stays in the **DRUM category** in the UI
+- Users select "Crash" / "Ride" from DRUM voices as before — the PCM-via-pool implementation is transparent
+- UX priority: crash/ride are everyday drum sounds, not "sampler" sounds — keep them where users expect them
+- CymbalVoice synth mode remains as a lo-fi/analog alternative voice option
+
+#### Sample Sourcing
+
+Factory samples must be:
+- Public domain, CC0, or original recordings (no license ambiguity)
+- Normalized, trimmed, and optimized for web (mono, 44.1kHz, short decay)
+- Diverse enough to cover basic genres (electronic, hip-hop, lo-fi, ambient)
+
+### I. Progressive Enhancement (Future Phases)
 
 | Phase | Feature | Browser | Notes |
 |-------|---------|---------|-------|
@@ -170,11 +267,13 @@ Phase 2/3 would allow *referencing* samples in-place without copying to OPFS. Ph
 
 1. `src/lib/audioPool.ts` — OPFS read/write helpers, hash function, PoolEntry CRUD
 2. IndexedDB `pool-meta` store (bump DB_VERSION)
-3. Import flow: file/folder drop → decode → hash → OPFS write → metadata save
-4. Pool browser UI in DockPanel (folder tabs, waveform list, audition, assign)
-5. Dedup check on import
-6. Storage budget tracking + warning toast at 80%
-7. Pool management: delete, rename, move between folders
+3. Factory samples: bundle WebM assets, first-launch install to OPFS, version tracking
+4. Import flow: file/folder drop → decode → hash → OPFS write → metadata save
+5. Pool browser UI in DockPanel (folder tabs, waveform list, audition, assign)
+6. Dedup check on import
+7. Storage budget tracking + warning toast at 80%
+8. Pool management: delete, rename, move between folders
+9. Cymbal migration: move crash/ride from CymbalVoice static assets to factory pool
 
 ## Consequences
 
