@@ -1,12 +1,12 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Section, Song, Scene, SceneNode, SceneEdge, SceneDecorator, VoiceId } from './types.ts'
+import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, SceneDecorator, VoiceId } from './types.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
 
 export { DRUM_VOICES }
 
-export const SECTION_COUNT = 100
+export const PATTERN_POOL_SIZE = 100
 
 // ── Random pattern names (≤8 chars) ─────────────────────────────────
 
@@ -210,13 +210,6 @@ export function makeEmptyPattern(index: number, name = '', templateId?: string):
     name,
     color: 0,
     cells: tmpl.tracks.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note)),
-  }
-}
-
-export function makeEmptySection(patternIndex: number): Section {
-  return {
-    patternIndex,
-    repeats: 1,
   }
 }
 
@@ -499,10 +492,8 @@ export function makeEmptySong(templateId?: string): Song {
     makeTrack(trackIdx, d.pan)
   )
   const patterns: Pattern[] = []
-  const sections: Section[] = []
-  for (let i = 0; i < SECTION_COUNT; i++) {
+  for (let i = 0; i < PATTERN_POOL_SIZE; i++) {
     patterns.push(makeEmptyPattern(i, '', templateId))
-    sections.push(makeEmptySection(i))
   }
   return {
     name: 'Untitled',
@@ -510,7 +501,7 @@ export function makeEmptySong(templateId?: string): Song {
     rootNote: 0,
     tracks,
     patterns,
-    sections,
+    sections: [],
     scene: { name: 'Main', nodes: [], edges: [], labels: [] },
     effects: {
       reverb: { ...DEFAULT_EFFECTS.reverb },
@@ -532,7 +523,6 @@ export function makeDefaultSong(): Song {
   )
 
   const patterns: Pattern[] = []
-  const sections: Section[] = []
 
   for (let i = 0; i < FACTORY.length; i++) {
     const f = FACTORY[i]
@@ -544,11 +534,9 @@ export function makeDefaultSong(): Song {
         buildFactoryCell(trackIdx, f, d.name, d.voiceId as VoiceId, d.note)
       ),
     })
-    sections.push(makeEmptySection(i))
   }
-  for (let i = FACTORY.length; i < SECTION_COUNT; i++) {
+  for (let i = FACTORY.length; i < PATTERN_POOL_SIZE; i++) {
     patterns.push(makeEmptyPattern(i))
-    sections.push(makeEmptySection(i))
   }
 
   return {
@@ -557,7 +545,7 @@ export function makeDefaultSong(): Song {
     rootNote: 0,
     tracks,
     patterns,
-    sections,
+    sections: [],
     scene: makeDefaultScene(patterns),
     effects: {
       reverb: { ...DEFAULT_EFFECTS.reverb },

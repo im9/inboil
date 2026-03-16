@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  cloneTrig, cloneCell, clonePattern, cloneSection, cloneTrack,
+  cloneTrig, cloneCell, clonePattern, cloneTrack,
   cloneSongPure, restoreCellPure, restoreSongPure,
 } from './songClone.ts'
-import type { Trig, Cell, Pattern, Section, Track, Song } from './types.ts'
+import type { Trig, Cell, Pattern, Track, Song } from './types.ts'
 import { DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -30,16 +30,12 @@ function makeTrack(id = 0): Track {
   return { id, muted: false, volume: 0.8, pan: 0 }
 }
 
-function makeSection(overrides: Partial<Section> = {}): Section {
-  return { patternIndex: 0, repeats: 1, ...overrides }
-}
-
 function makeMinimalSong(overrides: Partial<Song> = {}): Song {
   return {
     name: 'Test', bpm: 120, rootNote: 0,
     tracks: [makeTrack(0), makeTrack(1)],
     patterns: [makePattern({ cells: [makeCell({ trackId: 0 }), makeCell({ trackId: 1, name: 'SNARE', voiceId: 'Snare' })] })],
-    sections: [makeSection()],
+    sections: [],
     scene: { name: 'Main', nodes: [], edges: [], labels: [] },
     effects: { ...DEFAULT_EFFECTS, comp: { ...DEFAULT_EFFECTS.comp } },
     masterGain: 0.8,
@@ -120,30 +116,6 @@ describe('clonePattern', () => {
     expect(copy.cells).toHaveLength(2)
     copy.cells[0].name = 'MODIFIED'
     expect(orig.cells[0].name).toBe('KICK')
-  })
-})
-
-// ── cloneSection ──────────────────────────────────────────────────────────────
-
-describe('cloneSection', () => {
-  it('copies all optional fields', () => {
-    const orig = makeSection({
-      key: 3, oct: -1, perf: 1, perfLen: 8,
-      verb: { on: true, x: 0.5, y: 0.5 },
-      flavours: { verb: 'hall' },
-    })
-    const copy = cloneSection(orig)
-
-    expect(copy).toEqual(orig)
-    copy.verb!.x = 1.0
-    expect(orig.verb!.x).toBe(0.5)
-  })
-
-  it('omits undefined optional fields', () => {
-    const copy = cloneSection(makeSection())
-    expect(copy).not.toHaveProperty('key')
-    expect(copy).not.toHaveProperty('verb')
-    expect(copy).not.toHaveProperty('flavours')
   })
 })
 

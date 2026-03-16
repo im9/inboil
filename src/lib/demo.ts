@@ -3,7 +3,7 @@
  * Builds a 4-pattern lo-fi project with scene graph — same data as the
  * docs tutorial (site/src/components/tutorialSetup.ts) but standalone.
  */
-import { makeTrig, TRACK_DEFAULTS, makeEmptyPattern, makeEmptySection, makeTrack, SECTION_COUNT } from './factory.ts'
+import { makeTrig, TRACK_DEFAULTS, makeEmptyPattern, makeTrack, PATTERN_POOL_SIZE } from './factory.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { defaultVoiceParams } from './paramDefs.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
@@ -135,10 +135,9 @@ export function makeDemoSong(): Song {
     cells: TRACK_DEFAULTS.map((td, ti) => buildCell(ti, f, td)),
   }))
   // Fill remaining slots with empty patterns
-  for (let i = patterns.length; i < SECTION_COUNT; i++) {
+  for (let i = patterns.length; i < PATTERN_POOL_SIZE; i++) {
     patterns.push(makeEmptyPattern(i))
   }
-  const sections = Array.from({ length: SECTION_COUNT }, (_, i) => makeEmptySection(i))
 
   // Scene graph: Verse → Chorus → (Break | Break2) → Verse
   const fxDec: SceneDecorator = { type: 'fx', params: { verb: 1, glitch: 1 } }
@@ -166,7 +165,7 @@ export function makeDemoSong(): Song {
     rootNote: 7,
     tracks,
     patterns,
-    sections,
+    sections: [],
     scene: { name: 'Main', nodes, edges, labels: [] },
     effects: {
       reverb: { ...DEFAULT_EFFECTS.reverb },

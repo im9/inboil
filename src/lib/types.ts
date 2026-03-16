@@ -219,7 +219,7 @@ export interface Song {
   rootNote: number        // 0–11
   tracks: Track[]         // max 16 (stepActions.ts MAX_TRACKS)
   patterns: Pattern[]     // pattern pool (ADR 044)
-  sections: Section[]     // arrangement slots referencing patterns
+  sections: Section[]     // @deprecated — legacy arrangement slots, kept for save-data migration
   scene: Scene            // arrangement graph (ADR 044, data-only in Phase 1a)
   effects: Effects        // global send/bus effects (ADR 020)
   flavours?: FxFlavours   // FX flavour variants (ADR 075), optional for backwards compat

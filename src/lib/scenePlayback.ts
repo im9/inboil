@@ -2,10 +2,10 @@
  * Scene graph playback engine — graph traversal, decorator application, generative chains.
  * Extracted from state.svelte.ts for modularity.
  */
-import { song, playback, ui, fxPad, fxFlavours, cellForTrack, SECTION_COUNT, perf } from './state.svelte.ts'
+import { song, playback, ui, fxPad, fxFlavours, cellForTrack } from './state.svelte.ts'
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
-import type { SceneNode, SceneEdge, Section } from './types.ts'
+import type { SceneNode, SceneEdge } from './types.ts'
 
 // ── Scene graph helpers ─────────────────────────────────────────────
 
@@ -24,8 +24,7 @@ export function currentlyPlayingIndex(): number {
   const soloIdx = soloPatternIndex()
   if (soloIdx != null) return soloIdx
   if (playback.mode === 'scene') {
-    if (playback.playingPattern != null) return playback.playingPattern
-    return song.sections[playback.currentSection]?.patternIndex ?? -1
+    return playback.playingPattern ?? -1
   }
   return playback.playingPattern ?? ui.currentPattern
 }
@@ -230,74 +229,3 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
   return walkToNode(outEdges[Math.floor(Math.random() * outEdges.length)])
 }
 
-// ── Linear section playback (legacy) ────────────────────────────────
-
-/** @deprecated Apply FX and key/oct for a section (linear playback). Scene graph supersedes this. */
-export function applySection(sec: Section) {
-  if (sec.key != null) perf.rootNote = sec.key
-  if (sec.oct != null) perf.octave = sec.oct
-  fxPad.verb = sec.verb?.on
-    ? { on: true, x: sec.verb.x, y: sec.verb.y }
-    : { ...fxPad.verb, on: false }
-  fxPad.delay = sec.delay?.on
-    ? { on: true, x: sec.delay.x, y: sec.delay.y }
-    : { ...fxPad.delay, on: false }
-  fxPad.glitch = sec.glitch?.on
-    ? { on: true, x: sec.glitch.x, y: sec.glitch.y }
-    : { ...fxPad.glitch, on: false }
-  fxPad.granular = sec.granular?.on
-    ? { on: true, x: sec.granular.x, y: sec.granular.y }
-    : { ...fxPad.granular, on: false }
-  if (sec.flavours) {
-    if (sec.flavours.verb)     fxFlavours.verb     = sec.flavours.verb
-    if (sec.flavours.delay)    fxFlavours.delay    = sec.flavours.delay
-    if (sec.flavours.glitch)   fxFlavours.glitch   = sec.flavours.glitch
-    if (sec.flavours.granular) fxFlavours.granular = sec.flavours.granular
-  }
-}
-
-/** Apply perf on last repeat of a section */
-export function updateSectionPerf(step: number): boolean {
-  if (!(playback.loopEnd > playback.loopStart)) return false
-  const sec = song.sections[playback.currentSection]
-  const isLast = playback.repeatCount >= sec.repeats - 1
-  const perfLen = sec.perfLen ?? 16
-  const perfType = sec.perf ?? 0
-  const inZone = isLast && step >= (16 - perfLen - 1)
-  const f = perfType === 1 && inZone
-  const b = perfType === 2 && inZone
-  const r = perfType === 3 && inZone
-  const changed = perf.filling !== f || perf.breaking !== b || perf.reversing !== r
-  perf.filling = f; perf.breaking = b; perf.reversing = r
-  return changed
-}
-
-export function sectionRewind() {
-  playback.currentSection = playback.loopStart
-  playback.repeatCount = 0
-  if (playback.playing && (playback.loopEnd > playback.loopStart)) {
-    applySection(song.sections[playback.loopStart])
-  }
-}
-
-export function sectionJump(index: number) {
-  if (index < 0 || index >= SECTION_COUNT) return
-  playback.currentSection = index
-  playback.repeatCount = 0
-  if (playback.playing && (playback.loopEnd > playback.loopStart)) {
-    applySection(song.sections[index])
-  }
-}
-
-/** Called at beat boundary. Returns true if advanced to a new section. */
-export function advanceSection(): boolean {
-  if (!(playback.loopEnd > playback.loopStart)) return false
-  playback.repeatCount++
-  if (playback.repeatCount >= song.sections[playback.currentSection].repeats) {
-    const next = playback.currentSection + 1
-    playback.currentSection = next > playback.loopEnd ? playback.loopStart : next
-    playback.repeatCount = 0
-    return true
-  }
-  return false
-}

@@ -95,13 +95,6 @@ export class GrooveboxEngine {
     }
   }
 
-  sendPattern(song: Song, perf: PerfState | undefined, fxPad: FxPadState | undefined, ctx: EngineContext, reset = false, sectionIndex = 0): void {
-    if (!this.node) return
-    const wp = patternToWorklet(song, perf, fxPad, ctx, sectionIndex)
-    this._post({ type: 'setPattern', pattern: wp, reset })
-    this._autoLoadSamples(wp)
-  }
-
   sendPatternByIndex(song: Song, perf: PerfState | undefined, fxPad: FxPadState | undefined, ctx: EngineContext, reset = false, patternIndex = 0): void {
     if (!this.node) return
     const pat = song.patterns[patternIndex]
@@ -250,13 +243,6 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
     ...(trig.paramLocks && Object.keys(trig.paramLocks).length > 0
       ? { paramLocks: { ...trig.paramLocks } } : {}),
   }
-}
-
-function patternToWorklet(
-  s: Song, perf?: PerfState, fxPad?: FxPadState, ctx?: EngineContext, sectionIndex = 0,
-): WorkletPattern {
-  const sec = s.sections[sectionIndex]
-  return buildWorkletPattern(s, s.patterns[sec.patternIndex], perf, fxPad, ctx)
 }
 
 /** Compute granular params adjusted by flavour (ADR 075) */

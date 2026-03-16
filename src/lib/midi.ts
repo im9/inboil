@@ -15,7 +15,7 @@ async function ensureEngine() {
   if (engineReady || enginePending) return
   enginePending = true
   await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
-  engine.sendPattern(song, perf, fxPad, getCtx())
+  engine.sendPatternByIndex(song, perf, fxPad, getCtx(), false, ui.currentPattern)
   engineReady = true
   enginePending = false
 }

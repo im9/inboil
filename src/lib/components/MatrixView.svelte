@@ -14,8 +14,7 @@
     const soloIdx = soloPatternIndex()
     if (soloIdx != null) return soloIdx
     if (playback.mode === 'scene') {
-      if (playback.playingPattern != null) return playback.playingPattern
-      return song.sections[playback.currentSection]?.patternIndex ?? -1
+      return playback.playingPattern ?? -1
     }
     return playback.playingPattern ?? ui.currentPattern
   })

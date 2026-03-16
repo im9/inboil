@@ -6,12 +6,11 @@ import {
 import type { FxFlavours } from './constants.ts'
 import {
   makeDefaultSong, makeEmptySong, makeEmptyCell,
-  SECTION_COUNT,
 } from './factory.ts'
 import { makeDemoSong } from './demo.ts'
 
 export { NOTE_NAMES } from './constants.ts'
-export { FACTORY_COUNT, SECTION_COUNT } from './factory.ts'
+export { FACTORY_COUNT, PATTERN_POOL_SIZE } from './factory.ts'
 
 // Re-export all types from types.ts for backwards compatibility
 export type {
@@ -30,11 +29,6 @@ import type {
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
 import { showToast } from './toast.svelte.ts'
-
-/** Resolve the Pattern referenced by a section index */
-export function sectionPattern(sectionIndex: number): Pattern {
-  return song.patterns[song.sections[sectionIndex].patternIndex]
-}
 
 /** Find a cell by trackId in a pattern (ADR 079). */
 export function cellForTrack(pat: Pattern, trackId: number): Cell | undefined {
@@ -104,7 +98,7 @@ function restoreSong(src: Song): void {
   song.rootNote = r.song.rootNote
   song.tracks = r.song.tracks
   song.patterns = r.song.patterns
-  song.sections = r.song.sections
+  song.sections = r.song.sections ?? []
   song.scene = r.song.scene
   song.effects = r.song.effects
   // FX flavours
@@ -157,10 +151,6 @@ try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProj
 export const playback = $state({
   playing: false,
   playheads: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
-  currentSection: 0,
-  repeatCount: 0,
-  loopStart: 0,
-  loopEnd: 0,
   // Scene graph playback (Phase 4)
   sceneNodeId: null as string | null,
   sceneEdgeId: null as string | null,
@@ -180,7 +170,6 @@ export const playback = $state({
 
 export const ui = $state<{
   selectedTrack: number
-  currentSection: number
   currentPattern: number
   phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf'
   viewFocus: 'pattern' | 'scene'
@@ -203,7 +192,6 @@ export const ui = $state<{
   chordShape: ChordShape
 }>({
   selectedTrack: 0,
-  currentSection: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
   phraseView: 'pattern',
   viewFocus: 'pattern',
@@ -250,26 +238,9 @@ export function selectPattern(patternIndex: number): void {
   }
 }
 
-/** Switch to a section for editing — also syncs currentPattern to section's pattern */
-export function selectSection(index: number): void {
-  if (index < 0 || index >= SECTION_COUNT) return
-  ui.currentSection = index
-  ui.currentPattern = song.sections[index].patternIndex
-}
-
 /** Get name of the currently selected pattern */
 export function getActivePatternName(): string {
   return song.patterns[ui.currentPattern]?.name ?? ''
-}
-
-/** Total number of sections */
-export function getSectionCount(): number {
-  return SECTION_COUNT
-}
-
-/** Check if a section's pattern contains any active trigs */
-export function sectionHasData(index: number): boolean {
-  return sectionPattern(index).cells.some(c => c.trigs.some(t => t.active))
 }
 
 /** Check if a pattern contains any active trigs */
@@ -298,27 +269,6 @@ export function patternUsedInScene(patternIndex: number): boolean {
   return song.scene.nodes.some(n => n.type === 'pattern' && n.patternId === pat.id)
 }
 
-/** Assign a different pattern to a section (enables N:1 pattern re-use) */
-export function sectionSetPattern(sectionIndex: number, patternIndex: number): void {
-  if (patternIndex < 0 || patternIndex >= song.patterns.length) return
-  pushUndo('Assign pattern')
-  song.sections[sectionIndex].patternIndex = patternIndex
-}
-
-/** Set loop range (used by SectionNav drag) */
-export function setLoopRange(start: number, end: number): void {
-  let s = Math.max(0, Math.min(start, SECTION_COUNT - 1))
-  let e = Math.max(0, Math.min(end, SECTION_COUNT - 1))
-  if (s > e) { const tmp = s; s = e; e = tmp }
-  playback.loopStart = s
-  playback.loopEnd = e
-}
-
-/** Clear loop range (single section loop) */
-export function clearLoopRange(): void {
-  playback.loopStart = 0
-  playback.loopEnd = 0
-}
 
 // ── Persisted preferences (single localStorage key) ─────────────────
 const STORAGE_KEY = 'inboil'
@@ -480,7 +430,6 @@ export function factoryReset(): void {
   restoreSong(makeEmptySong())
   // Reset UI
   ui.selectedTrack = 0
-  ui.currentSection = 0
   ui.currentPattern = 0
   ui.phraseView = 'pattern'
   ui.viewFocus = 'pattern'
@@ -514,10 +463,6 @@ export function factoryReset(): void {
   masterPad.duck = { ...DEFAULT_MASTER_PAD.duck }
   masterPad.ret  = { ...DEFAULT_MASTER_PAD.ret }
   // Reset playback
-  playback.currentSection = 0
-  playback.repeatCount = 0
-  playback.loopStart = 0
-  playback.loopEnd = 0
   playback.sceneNodeId = null
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
@@ -549,7 +494,6 @@ export function factoryReset(): void {
 export {
   hasScenePlayback, currentlyPlayingIndex, isViewingPlayingPattern,
   soloPatternIndex, advanceSceneNode,
-  applySection, updateSectionPerf, sectionRewind, sectionJump, advanceSection,
 } from './scenePlayback.ts'
 
 // Automation
@@ -651,7 +595,6 @@ export async function projectLoad(id: string): Promise<boolean> {
   project.dirty = false
   // Reset UI
   ui.currentPattern = 0
-  ui.currentSection = 0
   ui.selectedTrack = 0
   ui.patternSheet = false
   ui.selectedSceneNodes = {}
@@ -671,7 +614,6 @@ export function projectNew(): void {
   project.id = null
   project.dirty = false
   ui.currentPattern = 0
-  ui.currentSection = 0
   ui.selectedTrack = 0
   ui.patternSheet = false
   ui.selectedSceneNodes = {}
@@ -828,7 +770,6 @@ export async function importProjectJSON(json: string): Promise<void> {
   project.id = null
   project.dirty = false
   ui.currentPattern = 0
-  ui.currentSection = 0
   ui.selectedTrack = 0
   ui.patternSheet = false
   ui.selectedSceneNodes = {}
@@ -846,7 +787,6 @@ export function projectLoadFactory(): void {
   project.id = null
   project.dirty = true
   ui.currentPattern = 0
-  ui.currentSection = 0
   ui.selectedTrack = 0
   ui.patternSheet = false
   ui.selectedSceneNodes = {}
@@ -862,7 +802,6 @@ export function projectLoadDemo(): void {
   project.id = null
   project.dirty = true
   ui.currentPattern = 0
-  ui.currentSection = 0
   ui.selectedTrack = 0
   ui.patternSheet = false
   ui.selectedSceneNodes = {}

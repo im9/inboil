@@ -17,8 +17,8 @@
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
-  import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, advanceSection, applySection, updateSectionPerf, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot } from './lib/state.svelte.ts'
-  import { hasArrangement, cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
+  import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot } from './lib/state.svelte.ts'
+  import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
@@ -70,17 +70,14 @@
   // Sync song (incl. effects) → worklet on any state change (rAF-throttled)
   let rafId = 0
   $effect(() => {
-    void (JSON.stringify(song) + JSON.stringify(perf) + JSON.stringify(fxPad) + playback.currentSection + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
+    void (JSON.stringify(song) + JSON.stringify(perf) + JSON.stringify(fxPad) + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
       const soloIdx = soloPatternIndex()
       if (soloIdx != null) {
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx)
-      } else if (playback.mode === 'scene' && hasScenePlayback()) {
-        if (playback.playingPattern == null) return
+      } else if (playback.mode === 'scene' && playback.playingPattern != null) {
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, playback.playingPattern)
-      } else if (playback.mode === 'scene' && hasArrangement()) {
-        engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
       } else {
         const idx = (playback.playing && playback.playingPattern != null) ? playback.playingPattern : ui.currentPattern
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, idx)
@@ -182,20 +179,6 @@
         }
         return
       }
-      // Fallback: linear section advancement
-      const sectionAdvanced = advanceSection()
-      if (hasArrangement()) {
-        if (sectionAdvanced) applySection(song.sections[playback.currentSection])
-        updateSectionPerf(heads[0])
-        engine.sendPattern(song, perf, fxPad, engineCtx, true, playback.currentSection)
-        return
-      }
-    }
-    if (hasArrangement() && !hasScenePlayback()) {
-      const changed = updateSectionPerf(heads[0])
-      if (changed) {
-        engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
-      }
     }
   }
 
@@ -215,7 +198,7 @@
     // ADR 045: auto-engage scene mode — desktop only (mobile has no scene view)
     if (isMobile) {
       playback.mode = 'loop'
-    } else if (!hasSheet && (hasScenePlayback() || hasArrangement())) {
+    } else if (!hasSheet && hasScenePlayback()) {
       playback.mode = 'scene'
     }
     if (playback.mode === 'scene' && hasScenePlayback()) {
@@ -227,10 +210,6 @@
       if (shouldStop) return
       perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
-    } else if (playback.mode === 'scene' && hasArrangement()) {
-      playback.repeatCount = 0
-      applySection(song.sections[playback.currentSection])
-      engine.sendPattern(song, perf, fxPad, engineCtx, false, playback.currentSection)
     } else {
       applyLoopDecorators()
       playback.playingPattern = ui.currentPattern
@@ -280,7 +259,7 @@
   function toggleLoop() {
     if (playback.mode === 'loop') {
       // Exit loop → re-engage scene if available
-      if (hasScenePlayback() || hasArrangement()) {
+      if (hasScenePlayback()) {
         playback.mode = 'scene'
       }
     } else {
