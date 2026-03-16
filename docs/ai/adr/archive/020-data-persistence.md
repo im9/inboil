@@ -1,6 +1,6 @@
 # ADR 020: Data Persistence & Storage Design
 
-## Status: In Progress (local persistence done, cloud sync pending)
+## Status: Implemented
 
 ## Context
 
@@ -300,55 +300,11 @@ Download flow:
 - Project JSON stores only sample references (R2 key + metadata)
 - Authentication required (ADR 061)
 
-#### Tier 3: External Storage (Dropbox / Google Drive)
+#### ~~Tier 3: External Storage (Dropbox / Google Drive)~~ Cancelled
 
-Directly reference the user's existing sample pool.
-
-```
-┌───────────┐     OAuth2      ┌──────────────┐
-│  inboil   │ <─────────────> │   Dropbox    │
-│ (browser) │   Access Token   │  /samples/   │
-└───────────┘                  └──────────────┘
-     │                              │
-     │  Dropbox JS SDK              │
-     │  files/list_folder           │
-     │  files/download              │
-     └──────────────────────────────┘
-```
-
-**Dropbox:**
-- Dropbox JavaScript SDK (`dropbox` npm package, or direct REST API calls)
-- OAuth2 PKCE flow, browser-only authentication (no backend needed)
-- `files/list_folder` for directory listing, `files/download` for sample fetch
-- User selects a folder (e.g. `/Music/Samples/`) to browse
-- Downloaded samples cached in IndexedDB (offline support)
-
-**Google Drive:**
-- Google Identity Services + Drive API v3
-- OAuth2 PKCE, browser-only
-- `files.list` + `files.get?alt=media` for sample fetch
-
-**UI:**
-```
-┌─────────────────────────────┐
-│ SAMPLE SOURCE               │
-│ [LOCAL] [R2] [DROPBOX] [GD] │
-│                             │
-│   /Music/Samples/           │
-│   breakbeat_170bpm.wav      │
-│   kick_808.wav              │
-│   snare_vinyl.wav           │
-│   ...                       │
-│                             │
-│ [LOAD SELECTED]             │
-└─────────────────────────────┘
-```
-
-**Constraints:**
-- Dropbox API is free (personal apps, up to 500 users). Production requires App Review
-- Choice between npm dependency or direct REST API calls (zero-dep policy favors REST)
-- CORS: Dropbox Content API supports CORS via `dl.dropboxusercontent.com`
-- File size limit enforced in UI (10MB / 10s cap, per ADR 012)
+> **Decision (2026-03):** Dropbox/Google Drive OAuth integration cancelled.
+> Users who want cloud backup can use Dropbox/iCloud/OneDrive desktop clients to sync their local export folder — no app-level integration needed.
+> For an audio pool (browsable sample library), OPFS (Origin Private File System) provides a browser-native solution without external service dependencies. See future ADR for audio pool design.
 
 #### Implementation Priority
 
@@ -451,8 +407,8 @@ Samples (ArrayBuffer) are **not** included in JSON export (too large, not JSON-f
 13. ~~Authentication (ADR 061) — Google/Apple OAuth via Cloudflare Workers~~ Cancelled — ADR 061 Superseded; no self-hosted auth needed
 14. ~~Cloud sync Worker + KV setup~~ Cancelled — replaced by Dropbox/Google Drive backup (no Cloudflare KV)
 15. ~~R2 sample upload/download (Section I, Phase B)~~ Cancelled — privacy concern with user audio; samples stay local or in user's own cloud storage
-16. Dropbox / Google Drive integration (Section I, Phase C) — now covers both sample access and project backup
-17. Sync UI (status indicator, manual sync button, conflict notification)
+16. ~~Dropbox / Google Drive integration (Section I, Phase C)~~ Cancelled — OAuth adds external dependency and app review burden; users can sync exports via desktop cloud clients (Dropbox/iCloud/OneDrive); audio pool needs moved to separate ADR using OPFS
+17. ~~Sync UI (status indicator, manual sync button, conflict notification)~~ Cancelled — no cloud sync layer; JSON Export/Import covers backup needs
 
 ## Consequences
 
@@ -464,12 +420,7 @@ Samples (ArrayBuffer) are **not** included in JSON export (too large, not JSON-f
 - **Negative:** IndexedDB async API is more complex than localStorage
 - **Positive:** Immediate auto-save on every mutation eliminates data loss risk
 - **Positive:** `visibilitychange` + `beforeunload` double-safety net for page close
-- **Positive:** Cloud sync provides cross-device access and backup
-- **Negative:** Cloud sync adds Cloudflare Worker infrastructure dependency
-- **Negative:** KV free tier write limit (1,000/day) requires careful debouncing
 - **Dependency:** ADR 018 (Settings Panel) — settings field localStorage persistence
 - **Dependency:** ADR 015 (Presets) — presets store usage
-- **Dependency:** ADR 061 (Authentication) — required for cloud sync
 - **Dependency:** ADR 012/065 (Sampler) — sample buffer persistence
-- **Positive:** Dropbox/GDrive integration lets users bring their own sample library without uploading
-- **Negative:** External OAuth providers add API key management and app review process
+- **Decision:** Cloud sync (KV, R2, Dropbox/GDrive OAuth) all cancelled — JSON Export/Import covers backup; audio pool moved to separate ADR using OPFS

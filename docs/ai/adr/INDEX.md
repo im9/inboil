@@ -132,9 +132,9 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 007 | Pattern Persistence | Superseded | Replaced by 020 (Data Persistence) |
 | 016 | VST Plugin / MIDI | Proposed | |
 | 019 | Multi-Device Collaboration | Implemented | WebRTC 1:1 (host+guest), CF Workers DO signaling, chunked DataChannel, delta sync |
-| 020 | Data Persistence & Storage | Proposed | Local persistence (IndexedDB + localStorage) done; cloud sync not yet implemented |
+| 020 | Data Persistence & Storage | Implemented | localStorage + IndexedDB + JSON Export/Import; cloud sync cancelled (no external dependencies) |
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
-| 061 | Authentication | Superseded | Self-hosted OAuth cancelled; Dropbox/GDrive backup replaces KV (browser PKCE only) |
+| 061 | Authentication | Superseded | Self-hosted OAuth cancelled; cloud sync/external API integration all cancelled — no auth needed |
 | 071 | Donate Feature | Implemented | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Implemented | Astro + Starlight LP with interactive demos, specs, bilingual docs. Playground/onboarding split to ADR 094 |
 | 073 | Desktop App | Proposed | Tauri v2 shell (Phase 1 done); Phase 2: CI, auto-update, code signing |
@@ -148,3 +148,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
 | 102 | Mobile Melodic Input & Track Management | Proposed | Mobile piano roll improvements + track add/remove |
 | 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
+| 104 | Audio Pool | Proposed | OPFS-based persistent sample library; browse, preview, assign to tracks; replaces Dropbox/GDrive integration |
