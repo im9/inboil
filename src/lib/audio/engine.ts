@@ -19,16 +19,8 @@ export interface EngineCallbacks {
   onLevels(peakL: number, peakR: number, gr: number, cpu: number): void
 }
 import workletUrl from './worklet-processor.ts?worker&url'
-import crashUrl from './samples/tr909_crash.webm'
-import rideUrl from './samples/tr909_ride.webm'
 
-/** Drum voices with built-in PCM samples (auto-loaded, hidden from user) */
-const DRUM_SAMPLES: Record<string, string> = {
-  Crash: crashUrl,
-  Ride:  rideUrl,
-}
-
-/** Map built-in drum voice → pool entry name for ADR 104 cymbal migration */
+/** Map built-in drum voice → pool entry name (ADR 104) */
 const DRUM_POOL_NAMES: Record<string, string> = {
   Crash: '909-crash',
   Ride:  '909-ride',
@@ -117,8 +109,8 @@ export class GrooveboxEngine {
       if (!vid) continue
       const prev = this.trackVoiceIds[i]
       this.trackVoiceIds[i] = vid
-      // Built-in drum samples (Crash, Ride)
-      if (vid in DRUM_SAMPLES) {
+      // Built-in drum samples (Crash, Ride) — loaded from pool OPFS
+      if (vid in DRUM_POOL_NAMES) {
         if (prev !== vid) void this.loadBuiltinSample(i, vid)
         continue
       }
@@ -192,32 +184,20 @@ export class GrooveboxEngine {
     )
   }
 
-  /** Decode a built-in sample and send Float32Array to worklet (ADR 012).
-   *  Tries pool OPFS first (ADR 104 cymbal migration), falls back to bundled URL. */
+  /** Load a built-in drum sample from audio pool OPFS (ADR 104) */
   async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
-    const url = DRUM_SAMPLES[voiceId]
-    if (!url || !this.ctx) return
+    if (!this.ctx) return
+    const poolName = DRUM_POOL_NAMES[voiceId]
+    if (!poolName) return
     try {
-      // Try loading from pool OPFS first (ADR 104)
-      const poolName = DRUM_POOL_NAMES[voiceId]
-      if (poolName) {
-        const { loadAllMeta, readSample } = await import('../../lib/audioPool.ts')
-        const entries = await loadAllMeta()
-        const entry = entries.find(e => e.name === poolName && e.folder.startsWith('factory/'))
-        if (entry) {
-          const raw = await readSample(entry)
-          if (raw) {
-            const result = await this._decodeToMono(raw)
-            if (result) { this._sendSample(trackId, result.mono, result.sampleRate); return }
-          }
-        }
-      }
-      // Fallback to bundled static asset
-      const resp = await fetch(url)
-      if (!resp.ok) { showToast(`Failed to load sample: ${voiceId}`, 'warn'); return }
-      const result = await this._decodeToMono(await resp.arrayBuffer())
-      if (!result) return
-      this._sendSample(trackId, result.mono, result.sampleRate)
+      const { loadAllMeta, readSample } = await import('../../lib/audioPool.ts')
+      const entries = await loadAllMeta()
+      const entry = entries.find(e => e.name === poolName && e.folder.startsWith('factory/'))
+      if (!entry) { showToast(`Sample not in pool: ${voiceId} — open Pool Browser to install`, 'warn'); return }
+      const raw = await readSample(entry)
+      if (!raw) { showToast(`Failed to read sample: ${voiceId}`, 'warn'); return }
+      const result = await this._decodeToMono(raw)
+      if (result) this._sendSample(trackId, result.mono, result.sampleRate)
     } catch {
       showToast(`Failed to load sample: ${voiceId}`, 'warn')
     }

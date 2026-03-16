@@ -4,7 +4,7 @@
    * Shows folder drill-down, audition, and one-tap assign.
    * Toggled by POOL button next to LOAD in DockTrackEditor.
    */
-  import { pool, initPool, poolAssignToTrack, poolDeleteEntry, poolRenameEntry, poolMoveEntry } from '../state.svelte.ts'
+  import { pool, poolAssignToTrack, poolDeleteEntry, poolRenameEntry, poolMoveEntry } from '../state.svelte.ts'
   import type { PoolEntry } from '../audioPool.ts'
   import { showToast } from '../toast.svelte.ts'
 
@@ -162,13 +162,6 @@
   }
 
   // ── Init ──
-  let poolInitDone = false
-  $effect(() => {
-    if (!poolInitDone && !pool.loading) {
-      poolInitDone = true
-      void initPool()
-    }
-  })
 </script>
 
 <div class="pool-inline">

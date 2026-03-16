@@ -17,7 +17,7 @@
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
-  import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot } from './lib/state.svelte.ts'
+  import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
@@ -40,7 +40,7 @@
   // ── Project restore (once) + save on page hide ───────────────────
   let restored = false
   $effect(() => {
-    if (!restored) { restored = true; void projectRestore() }
+    if (!restored) { restored = true; void projectRestore(); void initPool() }
     const onVisChange = () => { if (document.visibilityState === 'hidden') { writeRecoverySnapshot(); void projectAutoSave() } }
     const onBeforeUnload = () => { writeRecoverySnapshot(); void projectAutoSave() }
     document.addEventListener('visibilitychange', onVisChange)
