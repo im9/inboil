@@ -1,15 +1,18 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import svelte from '@astrojs/svelte';
+import sitemap from '@astrojs/sitemap';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const appSrc = path.resolve(fileURLToPath(import.meta.url), '../../src');
 
 export default defineConfig({
+  site: 'https://inboil.pages.dev',
   outDir: './dist',
   prefetch: false,
   integrations: [
+    sitemap(),
     starlight({
       title: 'INBOIL',
       logo: {
