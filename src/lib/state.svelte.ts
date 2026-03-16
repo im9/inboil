@@ -187,7 +187,7 @@ export const ui = $state<{
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   editingAutomationInline: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
-  dockTab: 'tracks' | 'scene' | 'pool'
+  dockTab: 'tracks' | 'scene'
   brushMode: BrushMode
   chordShape: ChordShape
 }>({
@@ -525,12 +525,35 @@ export const pool = $state<{
   folders: string[]
   stats: PoolStats
   loading: boolean
+  factoryProgress: { done: number; total: number } | null
 }>({
   entries: [],
   folders: [],
   stats: { totalSize: 0, count: 0, limitBytes: 200 * 1024 * 1024, usageRatio: 0, warning: false },
   loading: false,
+  factoryProgress: null,
 })
+
+/** Install factory samples on first launch, then refresh pool. */
+export async function initPool(): Promise<void> {
+  try {
+    const mod = await audioPool()
+    const needs = mod.needsFactoryInstall()
+    if (needs) {
+      pool.loading = true
+      const result = await mod.installFactorySamples((done, total) => {
+        pool.factoryProgress = { done, total }
+      })
+      pool.factoryProgress = null
+      if (result.installed > 0) {
+        showToast(`${result.installed} factory samples installed`, 'info')
+      }
+    }
+  } catch (e) {
+    console.warn('[pool] factory install failed:', e)
+  }
+  await refreshPool()
+}
 
 /** Refresh pool entries and stats from IndexedDB + OPFS. */
 export async function refreshPool(): Promise<void> {
@@ -559,7 +582,12 @@ export async function poolImportFiles(files: File[], folder?: string): Promise<v
   const newCount = results.length - dupeCount
   if (newCount > 0) showToast(`${newCount} sample${newCount > 1 ? 's' : ''} added to pool`, 'info')
   if (dupeCount > 0) showToast(`${dupeCount} duplicate${dupeCount > 1 ? 's' : ''} skipped`, 'info')
-  if (results.length > 0) await refreshPool()
+  if (results.length > 0) {
+    await refreshPool()
+    if (pool.stats.warning) {
+      showToast(`Pool storage at ${(pool.stats.usageRatio * 100).toFixed(0)}% (${(pool.stats.totalSize / 1024 / 1024).toFixed(1)}MB / ${(pool.stats.limitBytes / 1024 / 1024).toFixed(0)}MB)`, 'warn')
+    }
+  }
 }
 
 /** Delete a sample from the pool and refresh state. */
@@ -573,6 +601,13 @@ export async function poolDeleteEntry(id: string): Promise<void> {
 export async function poolMoveEntry(id: string, newFolder: string): Promise<void> {
   const mod = await audioPool()
   await mod.moveToFolder(id, newFolder)
+  await refreshPool()
+}
+
+/** Rename a pool sample and refresh state. */
+export async function poolRenameEntry(id: string, newName: string): Promise<void> {
+  const mod = await audioPool()
+  await mod.renameEntry(id, newName)
   await refreshPool()
 }
 

@@ -47,10 +47,13 @@ async function poolRoot(): Promise<FileSystemDirectoryHandle> {
   return root.getDirectoryHandle(POOL_ROOT, { create: true })
 }
 
-/** Get (or create) a subfolder inside the pool. */
+/** Get (or create) a subfolder inside the pool. Supports nested paths like "factory/kicks". */
 async function poolFolder(folder: string): Promise<FileSystemDirectoryHandle> {
-  const root = await poolRoot()
-  return root.getDirectoryHandle(folder, { create: true })
+  let dir = await poolRoot()
+  for (const segment of folder.split('/')) {
+    if (segment) dir = await dir.getDirectoryHandle(segment, { create: true })
+  }
+  return dir
 }
 
 /** Write raw bytes to OPFS at folder/filename. */
@@ -339,6 +342,14 @@ export async function moveToFolder(id: string, newFolder: string): Promise<void>
   await saveMeta(entry)
 }
 
+/** Rename a sample's display name (metadata only, OPFS filename unchanged). */
+export async function renameEntry(id: string, newName: string): Promise<void> {
+  const entry = await loadMeta(id)
+  if (!entry) return
+  entry.name = newName.trim() || entry.name
+  await saveMeta(entry)
+}
+
 // ── Storage budget ───────────────────────────────────────────────────
 
 const POOL_SOFT_LIMIT = 200 * 1024 * 1024  // 200 MB
@@ -364,6 +375,96 @@ export async function getPoolStats(): Promise<PoolStats> {
     usageRatio,
     warning: usageRatio >= POOL_WARN_THRESHOLD,
   }
+}
+
+// ── Factory samples (ADR 104 §H) ────────────────────────────────────
+
+const FACTORY_VERSION_KEY = 'inboil-factory-pool-version'
+const FACTORY_VERSION = 2              // bump when factory pack changes (v2: 909 crash/ride)
+const FACTORY_MANIFEST_URL = '/samples/factory.json'
+const FACTORY_SAMPLES_BASE = '/samples/'
+
+interface FactoryManifest {
+  version: number
+  totalSize: number
+  samples: { file: string; folder: string; name: string; size: number }[]
+}
+
+/** Check if factory samples need to be installed (no network). */
+export function needsFactoryInstall(): boolean {
+  const current = parseInt(localStorage.getItem(FACTORY_VERSION_KEY) ?? '0', 10)
+  return current < FACTORY_VERSION
+}
+
+/**
+ * Install factory samples into the pool on first launch (or version bump).
+ * Fetches manifest + individual webm files from CDN, decodes, writes to OPFS + metadata.
+ * Calls onProgress(done, total) for each completed file.
+ */
+export async function installFactorySamples(
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ installed: number; skipped: number }> {
+  if (!needsFactoryInstall()) return { installed: 0, skipped: 0 }
+
+  // Fetch manifest
+  const res = await fetch(FACTORY_MANIFEST_URL)
+  if (!res.ok) throw new Error(`Factory manifest fetch failed: ${res.status}`)
+  const manifest: FactoryManifest = await res.json()
+
+  const ctx = new OfflineAudioContext(1, 1, 44100)
+  let installed = 0
+  let skipped = 0
+  const total = manifest.samples.length
+
+  for (const sample of manifest.samples) {
+    try {
+      // Fetch audio file
+      const audioRes = await fetch(`${FACTORY_SAMPLES_BASE}${sample.file}`)
+      if (!audioRes.ok) { skipped++; continue }
+      const rawBuffer = await audioRes.arrayBuffer()
+
+      // Compute hash for dedup
+      const id = await contentHash(rawBuffer)
+
+      // Skip if already in pool
+      const existing = await loadMeta(id)
+      if (existing) { skipped++; onProgress?.(installed + skipped, total); continue }
+
+      // Decode to get duration, sampleRate, waveform
+      const audioBuf = await ctx.decodeAudioData(rawBuffer.slice(0))
+      const mono = audioBuf.numberOfChannels === 1
+        ? new Float32Array(audioBuf.getChannelData(0))
+        : averageChannels(audioBuf)
+      const waveform = generateWaveform(mono)
+
+      // Write to OPFS
+      const folder = `factory/${sample.folder}`
+      await writeFile(folder, sample.file, rawBuffer)
+
+      // Save metadata
+      const entry: PoolEntry = {
+        id,
+        path: `${folder}/${sample.file}`,
+        name: sample.name,
+        folder,
+        duration: audioBuf.duration,
+        sampleRate: audioBuf.sampleRate,
+        size: rawBuffer.byteLength,
+        waveform,
+        addedAt: Date.now(),
+      }
+      await saveMeta(entry)
+      installed++
+    } catch (e) {
+      console.warn(`[pool] factory install failed for ${sample.file}:`, e)
+      skipped++
+    }
+    onProgress?.(installed + skipped, total)
+  }
+
+  // Mark version installed
+  localStorage.setItem(FACTORY_VERSION_KEY, String(FACTORY_VERSION))
+  return { installed, skipped }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

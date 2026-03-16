@@ -148,4 +148,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
 | 102 | Mobile Melodic Input & Track Management | Proposed | Mobile piano roll improvements + track add/remove |
 | 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
-| 104 | Audio Pool | Proposed | OPFS-based persistent sample library; browse, preview, assign to tracks; replaces Dropbox/GDrive integration |
+| 104 | Audio Pool | Implemented | OPFS-based pool with 79 factory samples (WebM/Opus), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |

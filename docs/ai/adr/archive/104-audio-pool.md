@@ -1,6 +1,6 @@
 # ADR 104: Audio Pool (OPFS-Based Sample Library)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

@@ -28,6 +28,12 @@ const DRUM_SAMPLES: Record<string, string> = {
   Ride:  rideUrl,
 }
 
+/** Map built-in drum voice → pool entry name for ADR 104 cymbal migration */
+const DRUM_POOL_NAMES: Record<string, string> = {
+  Crash: '909-crash',
+  Ride:  '909-ride',
+}
+
 /** Sampler category presets (user-selectable via preset browser) */
 export const SAMPLER_PRESETS: Record<string, string> = {
   // Future: add preset samples here (e.g. breaks, one-shots, foley)
@@ -186,11 +192,27 @@ export class GrooveboxEngine {
     )
   }
 
-  /** Decode a built-in sample and send Float32Array to worklet (ADR 012) */
+  /** Decode a built-in sample and send Float32Array to worklet (ADR 012).
+   *  Tries pool OPFS first (ADR 104 cymbal migration), falls back to bundled URL. */
   async loadBuiltinSample(trackId: number, voiceId: string): Promise<void> {
     const url = DRUM_SAMPLES[voiceId]
     if (!url || !this.ctx) return
     try {
+      // Try loading from pool OPFS first (ADR 104)
+      const poolName = DRUM_POOL_NAMES[voiceId]
+      if (poolName) {
+        const { loadAllMeta, readSample } = await import('../../lib/audioPool.ts')
+        const entries = await loadAllMeta()
+        const entry = entries.find(e => e.name === poolName && e.folder.startsWith('factory/'))
+        if (entry) {
+          const raw = await readSample(entry)
+          if (raw) {
+            const result = await this._decodeToMono(raw)
+            if (result) { this._sendSample(trackId, result.mono, result.sampleRate); return }
+          }
+        }
+      }
+      // Fallback to bundled static asset
       const resp = await fetch(url)
       if (!resp.ok) { showToast(`Failed to load sample: ${voiceId}`, 'warn'); return }
       const result = await this._decodeToMono(await resp.arrayBuffer())

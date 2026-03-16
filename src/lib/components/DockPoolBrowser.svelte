@@ -1,28 +1,65 @@
 <script lang="ts">
   /**
-   * Audio Pool browser — browse, audition, and assign samples from the
-   * OPFS-based persistent sample library (ADR 104).
+   * Inline pool browser for the Sampler section.
+   * Shows folder drill-down, audition, and one-tap assign.
+   * Toggled by POOL button next to LOAD in DockTrackEditor.
    */
-  import { lang, ui, pool, refreshPool, poolImportFiles, poolDeleteEntry, poolAssignToTrack } from '../state.svelte.ts'
+  import { pool, initPool, poolAssignToTrack, poolDeleteEntry, poolRenameEntry, poolMoveEntry } from '../state.svelte.ts'
   import type { PoolEntry } from '../audioPool.ts'
   import { showToast } from '../toast.svelte.ts'
 
-  const L = $derived(lang.value)
+  interface Props {
+    trackId: number
+    onclose?: () => void
+  }
+  const { trackId, onclose }: Props = $props()
 
-  // ── Folder filter ──
-  let selectedFolder = $state<string | null>(null)  // null = ALL
-  const filteredEntries = $derived(
-    selectedFolder
-      ? pool.entries.filter(e => e.folder === selectedFolder)
-      : pool.entries
-  )
+  // ── Search ──
+  let query = $state('')
+
+  // ── Folder drill-down ──
+  let currentPath = $state('')
+  const allFolders = $derived([...new Set(pool.entries.map(e => e.folder))].sort())
+
+  const childFolders = $derived.by(() => {
+    const prefix = currentPath ? currentPath + '/' : ''
+    const children = new Set<string>()
+    for (const f of allFolders) {
+      if (currentPath === '' || f === currentPath || f.startsWith(prefix)) {
+        const rest = currentPath === '' ? f : f.slice(prefix.length)
+        if (rest) {
+          const seg = rest.split('/')[0]
+          children.add(seg)
+        }
+      }
+    }
+    return [...children].sort()
+  })
+
+  // Search mode: when query is non-empty, ignore folder filter and search all entries
+  const isSearching = $derived(query.trim().length > 0)
+  const searchTerms = $derived(query.toLowerCase().trim().split(/\s+/).filter(Boolean))
+
+  const filteredEntries = $derived.by(() => {
+    let entries = pool.entries
+    // Folder filter (only when not searching)
+    if (!isSearching && currentPath !== '') {
+      entries = entries.filter(e => e.folder === currentPath || e.folder.startsWith(currentPath + '/'))
+    }
+    // Text search (matches all terms against name and folder)
+    if (isSearching) {
+      entries = entries.filter(e => {
+        const hay = (e.name + ' ' + e.folder).toLowerCase()
+        return searchTerms.every(t => hay.includes(t))
+      })
+    }
+    return entries
+  })
   const sortedEntries = $derived(
     [...filteredEntries].sort((a, b) => a.name.localeCompare(b.name))
   )
 
-  // ── Selection ──
-  let selectedId = $state<string | null>(null)
-  const selectedEntry = $derived(selectedId ? pool.entries.find(e => e.id === selectedId) ?? null : null)
+  const breadcrumbs = $derived(currentPath ? currentPath.split('/') : [])
 
   // ── Audition ──
   let auditioning = $state<string | null>(null)
@@ -30,14 +67,11 @@
   let auditSource: AudioBufferSourceNode | null = null
 
   async function audition(entry: PoolEntry) {
-    // Stop any current audition
     stopAudition()
-
     try {
       const { readSample } = await import('../audioPool.ts')
       const raw = await readSample(entry)
       if (!raw) return
-
       if (!auditCtx) auditCtx = new AudioContext()
       const buf = await auditCtx.decodeAudioData(raw.slice(0))
       auditSource = auditCtx.createBufferSource()
@@ -59,62 +93,49 @@
     auditioning = null
   }
 
-  // ── Assign to track ──
-  async function assignToTrack() {
-    if (!selectedEntry) return
-    await poolAssignToTrack(selectedEntry, ui.selectedTrack)
-    showToast(L === 'ja'
-      ? `${selectedEntry.name} をトラックに割り当て`
-      : `${selectedEntry.name} assigned to track`, 'info')
+  // ── Assign ──
+  let assigning = $state(false)
+  async function assign(entry: PoolEntry) {
+    if (assigning) return
+    assigning = true
+    stopAudition()
+    await poolAssignToTrack(entry, trackId)
+    assigning = false
+    onclose?.()
   }
 
-  // ── File import ──
-  let fileInput: HTMLInputElement
-  let dragOver = $state(false)
-
-  function handleFiles(files: FileList | File[]) {
-    const audioFiles = Array.from(files).filter(f =>
-      f.type.startsWith('audio/') || /\.(wav|mp3|ogg|webm|flac|aiff?)$/i.test(f.name)
-    )
-    if (audioFiles.length === 0) {
-      showToast(L === 'ja' ? '対応するオーディオファイルがありません' : 'No supported audio files', 'warn')
-      return
-    }
-    void poolImportFiles(audioFiles, selectedFolder ?? 'unsorted')
-  }
-
-  function handleDrop(e: DragEvent) {
-    e.preventDefault()
-    dragOver = false
-    if (e.dataTransfer?.files) handleFiles(e.dataTransfer.files)
-  }
-
-  function handleDragOver(e: DragEvent) {
-    e.preventDefault()
-    dragOver = true
-  }
-
-  // ── Delete ──
+  // ── Row actions (delete, rename, move) ──
+  let actionId = $state<string | null>(null)
+  let renameValue = $state('')
+  let renamingId = $state<string | null>(null)
   let confirmDeleteId = $state<string | null>(null)
+  let movingId = $state<string | null>(null)
+
+  function toggleActions(id: string) {
+    if (actionId === id) { actionId = null; renamingId = null; confirmDeleteId = null; movingId = null }
+    else { actionId = id; renamingId = null; confirmDeleteId = null; movingId = null }
+  }
+
+  function startRename(entry: PoolEntry) {
+    renameValue = entry.name
+    renamingId = entry.id
+  }
+
+  async function commitRename() {
+    if (!renamingId || !renameValue.trim()) return
+    await poolRenameEntry(renamingId, renameValue.trim())
+    renamingId = null
+    actionId = null
+  }
 
   function handleDelete(id: string) {
     if (confirmDeleteId === id) {
       void poolDeleteEntry(id)
       confirmDeleteId = null
-      if (selectedId === id) selectedId = null
+      actionId = null
     } else {
       confirmDeleteId = id
     }
-  }
-
-  // ── Format helpers ──
-  function formatDuration(s: number): string {
-    return s < 1 ? `${(s * 1000).toFixed(0)}ms` : `${s.toFixed(1)}s`
-  }
-  function formatSize(bytes: number): string {
-    return bytes < 1024 * 1024
-      ? `${(bytes / 1024).toFixed(0)}KB`
-      : `${(bytes / (1024 * 1024)).toFixed(1)}MB`
   }
 
   // ── Waveform mini canvas ──
@@ -136,250 +157,308 @@
     return { update(wf: Float32Array) { draw(wf) } }
   }
 
+  function formatDuration(s: number): string {
+    return s < 1 ? `${(s * 1000).toFixed(0)}ms` : `${s.toFixed(1)}s`
+  }
+
   // ── Init ──
+  let poolInitDone = false
   $effect(() => {
-    if (pool.entries.length === 0 && !pool.loading) void refreshPool()
+    if (!poolInitDone && !pool.loading) {
+      poolInitDone = true
+      void initPool()
+    }
   })
 </script>
 
-<div
-  class="pool-browser"
-  class:drag-over={dragOver}
-  role="region"
-  ondrop={handleDrop}
-  ondragover={handleDragOver}
-  ondragleave={() => dragOver = false}
->
-  <!-- Header -->
-  <div class="pool-header">
-    <span class="pool-title">POOL</span>
-    <button class="pool-add-btn" onpointerdown={() => fileInput.click()}>+ ADD</button>
+<div class="pool-inline">
+  <!-- Search -->
+  <div class="pool-search">
     <input
-      bind:this={fileInput}
-      type="file"
-      accept="audio/*"
-      multiple
-      style="display:none"
-      onchange={(e) => {
-        const target = e.target as HTMLInputElement
-        if (target.files) handleFiles(target.files)
-        target.value = ''
-      }}
+      type="text"
+      class="search-input"
+      placeholder="Search..."
+      bind:value={query}
     />
-  </div>
-
-  <!-- Folder tabs -->
-  <div class="pool-folders">
-    <button
-      class="pool-folder-btn"
-      class:active={selectedFolder === null}
-      onpointerdown={() => selectedFolder = null}
-    >ALL</button>
-    {#each pool.folders as folder}
-      <button
-        class="pool-folder-btn"
-        class:active={selectedFolder === folder}
-        onpointerdown={() => selectedFolder = folder}
-      >{folder.toUpperCase().slice(0, 6)}</button>
-    {/each}
-  </div>
-
-  <!-- Sample list -->
-  <div class="pool-list">
-    {#if pool.loading}
-      <div class="pool-empty">{L === 'ja' ? '読み込み中...' : 'Loading...'}</div>
-    {:else if sortedEntries.length === 0}
-      <div class="pool-empty">
-        {L === 'ja'
-          ? 'サンプルをドラッグ&ドロップまたは + ADD で追加'
-          : 'Drag & drop samples or tap + ADD'}
-      </div>
-    {:else}
-      {#each sortedEntries as entry (entry.id)}
-        <div
-          class="pool-row"
-          class:selected={selectedId === entry.id}
-          class:playing={auditioning === entry.id}
-          role="button"
-          tabindex="0"
-          onpointerdown={() => { selectedId = entry.id; void audition(entry) }}
-        >
-          <span class="pool-row-play">{auditioning === entry.id ? '■' : '▸'}</span>
-          <span class="pool-row-name">{entry.name}</span>
-          <span class="pool-row-dur">{formatDuration(entry.duration)}</span>
-          <canvas
-            class="pool-row-wave"
-            width="64"
-            height="20"
-            use:waveformAction={entry.waveform}
-          ></canvas>
-          <button
-            class="pool-row-del"
-            class:confirm={confirmDeleteId === entry.id}
-            onpointerdown={(e) => { e.stopPropagation(); handleDelete(entry.id) }}
-          >{confirmDeleteId === entry.id ? '✕' : '×'}</button>
-        </div>
-      {/each}
+    {#if query}
+      <button class="search-clear" onpointerdown={() => query = ''}>×</button>
     {/if}
   </div>
 
-  <!-- Footer: assign + stats -->
-  <div class="pool-footer">
-    <button
-      class="pool-assign-btn"
-      disabled={!selectedEntry}
-      onpointerdown={assignToTrack}
-    >{L === 'ja' ? 'トラックに割り当て' : 'LOAD TO TRACK'}</button>
-    <div class="pool-stats">
-      {pool.stats.count} sample{pool.stats.count !== 1 ? 's' : ''} ({formatSize(pool.stats.totalSize)})
-      {#if pool.stats.warning}
-        <span class="pool-warn">⚠ {(pool.stats.usageRatio * 100).toFixed(0)}%</span>
+  <!-- Breadcrumbs + folders (hidden during search) -->
+  <div class="pool-nav" class:hidden={isSearching}>
+    {#if currentPath}
+      <div class="pool-crumbs">
+        <button class="crumb" onpointerdown={() => currentPath = ''}>ALL</button>
+        {#each breadcrumbs as seg, i}
+          <span class="crumb-sep">›</span>
+          <button
+            class="crumb"
+            class:active={i === breadcrumbs.length - 1}
+            onpointerdown={() => currentPath = breadcrumbs.slice(0, i + 1).join('/')}
+          >{seg.toUpperCase()}</button>
+        {/each}
+      </div>
+    {/if}
+    <div class="pool-folders">
+      {#if !currentPath}
+        <button class="folder-btn active">ALL</button>
       {/if}
+      {#each childFolders as folder}
+        <button
+          class="folder-btn"
+          onpointerdown={() => currentPath = currentPath ? `${currentPath}/${folder}` : folder}
+        >{folder.toUpperCase()}</button>
+      {/each}
     </div>
+  </div>
+
+  <!-- Sample list (max-height with scroll) -->
+  <div class="pool-list">
+    {#if pool.loading}
+      <div class="pool-msg">
+        {#if pool.factoryProgress}
+          Installing ({pool.factoryProgress.done}/{pool.factoryProgress.total})
+        {:else}
+          Loading...
+        {/if}
+      </div>
+    {:else if sortedEntries.length === 0}
+      <div class="pool-msg">No samples</div>
+    {:else}
+      {#each sortedEntries as entry (entry.id)}
+        {@const isFactory = entry.folder.startsWith('factory')}
+        <div
+          class="pool-row"
+          class:playing={auditioning === entry.id}
+          role="button"
+          tabindex="0"
+          ondblclick={() => void assign(entry)}
+        >
+          <button
+            class="row-play"
+            onpointerdown={(e) => { e.stopPropagation(); auditioning === entry.id ? stopAudition() : void audition(entry) }}
+          >{auditioning === entry.id ? '■' : '▸'}</button>
+          <button
+            class="row-name"
+            onpointerdown={() => void assign(entry)}
+          >{entry.name}</button>
+          {#if isSearching}
+            <span class="row-folder">{entry.folder.split('/').pop()}</span>
+          {/if}
+          <span class="row-dur">{formatDuration(entry.duration)}</span>
+          <canvas
+            class="row-wave"
+            width="48"
+            height="16"
+            use:waveformAction={entry.waveform}
+          ></canvas>
+          {#if !isFactory}
+            <button
+              class="row-more"
+              onpointerdown={(e) => { e.stopPropagation(); toggleActions(entry.id) }}
+            >⋯</button>
+          {/if}
+        </div>
+        {#if actionId === entry.id && !isFactory}
+          <div class="row-actions">
+            {#if renamingId === entry.id}
+              <input
+                class="rename-input"
+                type="text"
+                bind:value={renameValue}
+                onkeydown={(e) => { if (e.key === 'Enter') void commitRename(); if (e.key === 'Escape') { renamingId = null; actionId = null } }}
+              />
+              <button class="action-btn" onpointerdown={() => void commitRename()}>OK</button>
+            {:else if movingId === entry.id}
+              <span class="action-label">Move to:</span>
+              {#each allFolders.filter(f => f !== entry.folder && !f.startsWith('factory')) as f}
+                <button class="action-btn" onpointerdown={() => { void poolMoveEntry(entry.id, f); movingId = null; actionId = null }}>{f}</button>
+              {/each}
+              <button class="action-btn" onpointerdown={() => { movingId = null }}>Cancel</button>
+            {:else}
+              <button class="action-btn" onpointerdown={() => startRename(entry)}>Rename</button>
+              <button class="action-btn" onpointerdown={() => { movingId = entry.id }}>Move</button>
+              <button class="action-btn action-del" onpointerdown={() => handleDelete(entry.id)}>{confirmDeleteId === entry.id ? 'Confirm?' : 'Delete'}</button>
+            {/if}
+          </div>
+        {/if}
+      {/each}
+    {/if}
   </div>
 </div>
 
 <style>
-  .pool-browser {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    padding: 4px 0;
-    transition: background 120ms;
-  }
-  .pool-browser.drag-over {
-    background: rgba(159,167,128,0.08);
+  .pool-inline {
+    border: 1px solid rgba(237,232,220,0.15);
+    border-radius: 2px;
+    margin-top: 4px;
   }
 
-  /* ── Header ── */
-  .pool-header {
+  /* ── Search ── */
+  .pool-search {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 10px 6px;
+    padding: 4px 6px 0;
+    gap: 2px;
   }
-  .pool-title {
-    font-size: var(--dk-fs-md, 11px);
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.85);
-  }
-  .pool-add-btn {
-    margin-left: auto;
-    font-size: var(--dk-fs-xs, 9px);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 2px 8px;
-    border: 1px solid rgba(237,232,220,0.3);
-    background: transparent;
-    color: rgba(237,232,220,0.55);
-    cursor: pointer;
+  .search-input {
+    flex: 1;
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid rgba(237,232,220,0.15);
     border-radius: 2px;
+    background: rgba(0,0,0,0.2);
+    color: rgba(237,232,220,0.85);
+    outline: none;
+    font-family: inherit;
   }
-  .pool-add-btn:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.8);
+  .search-input::placeholder {
+    color: rgba(237,232,220,0.25);
+  }
+  .search-input:focus {
+    border-color: rgba(237,232,220,0.35);
+  }
+  .search-clear {
+    font-size: 12px;
+    color: rgba(237,232,220,0.35);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .search-clear:hover {
+    color: rgba(237,232,220,0.7);
   }
 
-  /* ── Folder tabs ── */
+  /* ── Nav ── */
+  .pool-nav {
+    padding: 4px 6px 2px;
+  }
+  .pool-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding-bottom: 3px;
+  }
+  .crumb {
+    font-size: 9px;
+    font-weight: 600;
+    color: rgba(237,232,220,0.45);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .crumb:hover { color: rgba(237,232,220,0.75); }
+  .crumb.active { color: rgba(237,232,220,0.85); cursor: default; }
+  .crumb-sep { font-size: 8px; color: rgba(237,232,220,0.25); }
+
   .pool-folders {
     display: flex;
+    flex-wrap: wrap;
     gap: 0;
-    padding: 0 10px 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    row-gap: 2px;
   }
-  .pool-folders::-webkit-scrollbar { display: none; }
-  .pool-folder-btn {
-    font-size: var(--dk-fs-xs, 9px);
+  .folder-btn {
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 2px 6px;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
     border: 1px solid rgba(237,232,220,0.15);
     background: transparent;
     color: rgba(237,232,220,0.4);
     cursor: pointer;
   }
-  .pool-folder-btn:not(:last-child) {
-    border-right: none;
-  }
-  .pool-folder-btn:first-child { border-radius: 2px 0 0 2px; }
-  .pool-folder-btn:last-child { border-radius: 0 2px 2px 0; }
-  .pool-folder-btn.active {
+  .folder-btn:not(:last-child) { border-right: none; }
+  .folder-btn:first-child { border-radius: 2px 0 0 2px; }
+  .folder-btn:last-child { border-radius: 0 2px 2px 0; }
+  .folder-btn.active {
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
   }
 
-  /* ── Sample list ── */
+  /* ── List ── */
   .pool-list {
-    flex: 1;
+    max-height: 200px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0 4px;
+    padding: 0 2px 2px;
   }
-  .pool-empty {
-    font-size: var(--dk-fs-sm, 10px);
+  .pool-msg {
+    font-size: 9px;
     color: rgba(237,232,220,0.35);
-    padding: 20px 10px;
+    padding: 10px 6px;
     text-align: center;
     font-style: italic;
   }
   .pool-row {
     display: flex;
     align-items: center;
-    gap: 4px;
-    width: 100%;
-    padding: 4px 6px;
-    border: none;
-    background: transparent;
-    color: rgba(237,232,220,0.65);
-    cursor: pointer;
+    gap: 3px;
+    padding: 2px 4px;
     border-radius: 2px;
-    text-align: left;
+    cursor: pointer;
+    color: rgba(237,232,220,0.65);
   }
   .pool-row:hover {
     background: rgba(237,232,220,0.06);
   }
-  .pool-row.selected {
-    background: rgba(237,232,220,0.1);
-    color: rgba(237,232,220,0.9);
-  }
   .pool-row.playing {
     color: var(--color-olive, #9fa780);
   }
-  .pool-row-play {
-    font-size: 8px;
-    width: 12px;
+
+  .row-play {
+    font-size: 7px;
+    width: 14px;
     text-align: center;
     flex-shrink: 0;
     opacity: 0.5;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
   }
-  .pool-row.playing .pool-row-play {
-    opacity: 1;
-  }
-  .pool-row-name {
-    font-size: var(--dk-fs-sm, 10px);
+  .row-play:hover { opacity: 0.8; }
+  .pool-row.playing .row-play { opacity: 1; }
+
+  .row-name {
+    font-size: 10px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
     min-width: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    padding: 0;
   }
-  .pool-row-dur {
-    font-size: var(--dk-fs-xs, 9px);
-    color: rgba(237,232,220,0.35);
+  .row-name:hover {
+    color: rgba(237,232,220,0.95);
+  }
+
+  .row-folder {
+    font-size: 8px;
+    color: rgba(237,232,220,0.25);
+    flex-shrink: 0;
+    padding: 0 3px;
+    border: 1px solid rgba(237,232,220,0.1);
+    border-radius: 2px;
+  }
+  .row-dur {
+    font-size: 8px;
+    color: rgba(237,232,220,0.3);
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
   }
-  .pool-row-wave {
-    flex-shrink: 0;
-    width: 64px;
-    height: 20px;
-  }
-  .pool-row-del {
+  .row-more {
     font-size: 10px;
-    color: rgba(237,232,220,0.25);
+    color: rgba(237,232,220,0.2);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -388,52 +467,59 @@
     opacity: 0;
     transition: opacity 60ms;
   }
-  .pool-row:hover .pool-row-del {
-    opacity: 1;
+  .pool-row:hover .row-more { opacity: 1; }
+  .row-more:hover { color: rgba(237,232,220,0.6); }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 4px 20px;
+    flex-wrap: wrap;
   }
-  .pool-row-del:hover {
-    color: rgba(237,232,220,0.6);
+  .action-label {
+    font-size: 8px;
+    color: rgba(237,232,220,0.35);
   }
-  .pool-row-del.confirm {
+  .action-btn {
+    font-size: 8px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border: 1px solid rgba(237,232,220,0.15);
+    border-radius: 2px;
+    background: transparent;
+    color: rgba(237,232,220,0.5);
+    cursor: pointer;
+  }
+  .action-btn:hover {
+    background: rgba(237,232,220,0.08);
+    color: rgba(237,232,220,0.8);
+  }
+  .action-del {
+    color: rgba(232,80,80,0.6);
+    border-color: rgba(232,80,80,0.2);
+  }
+  .action-del:hover {
+    background: rgba(232,80,80,0.1);
     color: #e85050;
-    opacity: 1;
+  }
+  .rename-input {
+    flex: 1;
+    font-size: 9px;
+    padding: 1px 4px;
+    border: 1px solid rgba(237,232,220,0.25);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.2);
+    color: rgba(237,232,220,0.85);
+    outline: none;
+    font-family: inherit;
+    min-width: 60px;
   }
 
-  /* ── Footer ── */
-  .pool-footer {
-    padding: 6px 10px 4px;
-    border-top: 1px solid rgba(237,232,220,0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .pool-assign-btn {
-    font-size: var(--dk-fs-sm, 10px);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 6px 0;
-    border: 1px solid var(--color-olive, #9fa780);
-    background: transparent;
-    color: var(--color-olive, #9fa780);
-    cursor: pointer;
-    border-radius: 2px;
-    width: 100%;
-    text-align: center;
-  }
-  .pool-assign-btn:disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
-  .pool-assign-btn:not(:disabled):hover {
-    background: rgba(159,167,128,0.12);
-  }
-  .pool-stats {
-    font-size: var(--dk-fs-xs, 9px);
-    color: rgba(237,232,220,0.3);
-    text-align: center;
-  }
-  .pool-warn {
-    color: #e8a050;
-    font-weight: 700;
+  .hidden { display: none; }
+  .row-wave {
+    flex-shrink: 0;
+    width: 48px;
+    height: 16px;
   }
 </style>

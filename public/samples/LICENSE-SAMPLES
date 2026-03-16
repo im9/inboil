@@ -1,0 +1,46 @@
+# Factory Sample Licenses
+
+All factory samples in this directory are CC0 (Creative Commons Zero)
+or Public Domain. No attribution is required. They may be freely used,
+modified, and redistributed.
+
+## Sources
+
+### Original Jungle Breaks (Public Domain)
+- Files: kick_jbk-*, snare_jbk-*, hat_jbk-*, rim_jbk-*, loop_*
+- Source: https://archive.org/details/back03st
+- License: Public Domain
+
+### The Open Source Drumkit (Public Domain)
+- Files: snare_acoustic-*, hat_closed-*, hat_half-open, hat_pedal, tom_small, tom_medium, tom_large
+- Source: https://github.com/crabacus/the-open-source-drumkit
+- Original: Real Music Media
+- License: Public Domain
+
+### VCSL — Versilian Community Sample Library (CC0)
+- Files: snare_orch-*, snare_rope, hat_orch-*, cymbal_crash, tom_orch-*, perc_bongo, perc_cabasa, perc_conga, perc_cowbell, perc_shaker, perc_tambourine, perc_woodblock
+- Source: https://github.com/sgossner/VCSL
+- License: CC0 1.0 Universal
+
+### Mailbox Badger — HeatDish (Public Domain)
+- Files: kick_casio-lofi, snare_casio-lofi, cymbal_lofi, tom_lofi, perc_casio-*
+- Source: https://archive.org/details/HeatDish
+- Creator: Patrick Callan
+- License: Public Domain
+
+### Behringer RD-6 Clap (CC0)
+- Files: clap_rd6
+- Source: https://freesound.org/people/o-toener/sounds/558220/
+- Creator: o-toener
+- License: CC0 1.0 Universal
+
+### Boss DR-110 Clap (CC0)
+- Files: clap_dr110
+- Source: https://freesound.org/people/PopoMagoo/sounds/612833/
+- Creator: PopoMagoo
+- License: CC0 1.0 Universal
+
+### TR-909 Crash & Ride (Public Domain)
+- Files: cymbal_909-crash, cymbal_909-ride
+- Source: TR-909 PCM samples (migrated from built-in app assets)
+- License: Public Domain (short utilitarian PCM waveforms from 1984)

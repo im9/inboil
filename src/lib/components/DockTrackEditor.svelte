@@ -4,7 +4,7 @@
    * send/mix, sample loader, remove track.
    * Extracted from DockPanel.svelte for modularity.
    */
-  import { song, activeCell, ui, samplesByTrack, setSample } from '../state.svelte.ts'
+  import { song, activeCell, ui, samplesByTrack, setSample, poolImportFiles } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
   import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -13,6 +13,7 @@
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
   import DockPresetBrowser from './DockPresetBrowser.svelte'
+  import DockPoolBrowser from './DockPoolBrowser.svelte'
   import EnvGraph from './EnvGraph.svelte'
   import WaveGraph from './WaveGraph.svelte'
   import AlgoGraph from './AlgoGraph.svelte'
@@ -55,6 +56,8 @@
 
   // ── Sample loader ──
   const MAX_SAMPLE_SIZE = 10 * 1024 * 1024
+  let poolOpen = $state(false)
+  $effect(() => { void ui.selectedTrack; poolOpen = false })
   let collapsedGroups = $state(new Set<string>())
   let fileInput = $state<HTMLInputElement>(null!)
   let waveformCanvas = $state<HTMLCanvasElement>(null!)
@@ -73,6 +76,8 @@
     const result = await engine.loadUserSample(ui.selectedTrack, file)
     if (result) {
       setSample(ui.selectedTrack, file.name, result.waveform, result.rawBuffer)
+      // Also add to pool under user/ folder (fire-and-forget)
+      void poolImportFiles([file], 'user')
     }
   }
 
@@ -210,8 +215,12 @@
   >
     <div class="sample-file-row">
       <button class="btn-load" onpointerdown={() => fileInput.click()}
-        data-tip="Load audio sample" data-tip-ja="サンプルを読み込む"
+        data-tip="Load audio file from disk" data-tip-ja="ファイルからサンプルを読み込む"
       >LOAD</button>
+      <button class="btn-load" class:btn-active={poolOpen}
+        onpointerdown={() => poolOpen = !poolOpen}
+        data-tip="Browse sample pool" data-tip-ja="サンプルプールから選択"
+      >POOL</button>
       <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || currentSample?.name || 'Drop audio file'}</span>
     </div>
     <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
@@ -222,6 +231,9 @@
       onchange={handleFileSelect}
       style="display: none"
     />
+    {#if poolOpen}
+      <DockPoolBrowser trackId={ui.selectedTrack} onclose={() => poolOpen = false} />
+    {/if}
   </div>
 {/if}
 
@@ -699,6 +711,11 @@
   .btn-load:hover {
     color: rgba(var(--dk-cream), 0.9);
     border-color: rgba(var(--dk-cream), 0.5);
+  }
+  .btn-load.btn-active {
+    background: rgba(var(--dk-cream), 0.12);
+    color: rgba(var(--dk-cream), 0.9);
+    border-color: var(--color-olive, #9fa780);
   }
   .sample-name {
     font-size: var(--dk-fs-sm);

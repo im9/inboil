@@ -5,10 +5,24 @@
  */
 import { IDBFactory } from 'fake-indexeddb'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { contentHash, generateWaveform, loadMeta, loadAllMeta, _resetPoolForTest } from './audioPool.ts'
+import { contentHash, generateWaveform, loadMeta, loadAllMeta, needsFactoryInstall, _resetPoolForTest } from './audioPool.ts'
+
+// Minimal localStorage polyfill for Node
+if (typeof globalThis.localStorage === 'undefined') {
+  const store: Record<string, string> = {}
+  globalThis.localStorage = {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value },
+    removeItem: (key: string) => { delete store[key] },
+    clear: () => { for (const k in store) delete store[k] },
+    get length() { return Object.keys(store).length },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+  } as Storage
+}
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory()
+  localStorage.clear()
   _resetPoolForTest()
 })
 
@@ -136,5 +150,28 @@ describe('pool-meta store', () => {
     await putRaw({ id: 'b', path: 'b', name: 'b', folder: 'y', duration: 0, sampleRate: 44100, size: 0, waveform: [], addedAt: 0 })
     const all = await loadAllMeta()
     expect(all.length).toBe(2)
+  })
+})
+
+// ── needsFactoryInstall ──
+
+describe('needsFactoryInstall', () => {
+  it('returns true when no version in localStorage', () => {
+    expect(needsFactoryInstall()).toBe(true)
+  })
+
+  it('returns false when version matches', () => {
+    localStorage.setItem('inboil-factory-pool-version', '2')
+    expect(needsFactoryInstall()).toBe(false)
+  })
+
+  it('returns false when version is higher', () => {
+    localStorage.setItem('inboil-factory-pool-version', '99')
+    expect(needsFactoryInstall()).toBe(false)
+  })
+
+  it('returns true when version is lower', () => {
+    localStorage.setItem('inboil-factory-pool-version', '0')
+    expect(needsFactoryInstall()).toBe(true)
   })
 })

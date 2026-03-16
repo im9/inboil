@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "totalSize": 970829,
+  "samples": [
+    {
+      "file": "clap_dr110.webm",
+      "folder": "claps",
+      "name": "dr110",
+      "size": 6294
+    },
+    {
+      "file": "clap_rd6.webm",
+      "folder": "claps",
+      "name": "rd6",
+      "size": 7414
+    },
+    {
+      "file": "cymbal_909-crash.webm",
+      "folder": "cymbals",
+      "name": "909-crash",
+      "size": 12574
+    },
+    {
+      "file": "cymbal_909-ride.webm",
+      "folder": "cymbals",
+      "name": "909-ride",
+      "size": 41063
+    },
+    {
+      "file": "cymbal_crash.webm",
+      "folder": "cymbals",
+      "name": "crash",
+      "size": 110122
+    },
+    {
+      "file": "cymbal_lofi.webm",
+      "folder": "cymbals",
+      "name": "lofi",
+      "size": 21532
+    },
+    {
+      "file": "hat_closed-1.webm",
+      "folder": "hats",
+      "name": "closed-1",
+      "size": 2062
+    },
+    {
+      "file": "hat_closed-2.webm",
+      "folder": "hats",
+      "name": "closed-2",
+      "size": 3576
+    },
+    {
+      "file": "hat_half-open.webm",
+      "folder": "hats",
+      "name": "half-open",
+      "size": 9242
+    },
+    {
+      "file": "hat_jbk-closed.webm",
+      "folder": "hats",
+      "name": "jbk-closed",
+      "size": 2494
+    },
+    {
+      "file": "hat_jbk-open.webm",
+      "folder": "hats",
+      "name": "jbk-open",
+      "size": 3205
+    },
+    {
+      "file": "hat_orch-closed.webm",
+      "folder": "hats",
+      "name": "orch-closed",
+      "size": 14728
+    },
+    {
+      "file": "hat_orch-open.webm",
+      "folder": "hats",
+      "name": "orch-open",
+      "size": 61434
+    },
+    {
+      "file": "hat_pedal.webm",
+      "folder": "hats",
+      "name": "pedal",
+      "size": 2816
+    },
+    {
+      "file": "kick_casio-lofi.webm",
+      "folder": "kicks",
+      "name": "casio-lofi",
+      "size": 2692
+    },
+    {
+      "file": "kick_jbk-body.webm",
+      "folder": "kicks",
+      "name": "jbk-body",
+      "size": 4336
+    },
+    {
+      "file": "kick_jbk-boom.webm",
+      "folder": "kicks",
+      "name": "jbk-boom",
+      "size": 4875
+    },
+    {
+      "file": "kick_jbk-deep.webm",
+      "folder": "kicks",
+      "name": "jbk-deep",
+      "size": 4214
+    },
+    {
+      "file": "kick_jbk-heavy.webm",
+      "folder": "kicks",
+      "name": "jbk-heavy",
+      "size": 3723
+    },
+    {
+      "file": "kick_jbk-low.webm",
+      "folder": "kicks",
+      "name": "jbk-low",
+      "size": 7353
+    },
+    {
+      "file": "kick_jbk-mid.webm",
+      "folder": "kicks",
+      "name": "jbk-mid",
+      "size": 4114
+    },
+    {
+      "file": "kick_jbk-punch.webm",
+      "folder": "kicks",
+      "name": "jbk-punch",
+      "size": 3923
+    },
+    {
+      "file": "kick_jbk-snap.webm",
+      "folder": "kicks",
+      "name": "jbk-snap",
+      "size": 3541
+    },
+    {
+      "file": "kick_jbk-sub.webm",
+      "folder": "kicks",
+      "name": "jbk-sub",
+      "size": 6068
+    },
+    {
+      "file": "kick_jbk-thud.webm",
+      "folder": "kicks",
+      "name": "jbk-thud",
+      "size": 4970
+    },
+    {
+      "file": "kick_jbk-tight.webm",
+      "folder": "kicks",
+      "name": "jbk-tight",
+      "size": 2891
+    },
+    {
+      "file": "loop_160-annedroid.webm",
+      "folder": "loops",
+      "name": "160-annedroid",
+      "size": 14792
+    },
+    {
+      "file": "loop_160-technology.webm",
+      "folder": "loops",
+      "name": "160-technology",
+      "size": 15137
+    },
+    {
+      "file": "loop_162-openup.webm",
+      "folder": "loops",
+      "name": "162-openup",
+      "size": 14859
+    },
+    {
+      "file": "loop_164-gasmask.webm",
+      "folder": "loops",
+      "name": "164-gasmask",
+      "size": 13617
+    },
+    {
+      "file": "loop_165-gameboy.webm",
+      "folder": "loops",
+      "name": "165-gameboy",
+      "size": 14531
+    },
+    {
+      "file": "loop_165-moonwalk.webm",
+      "folder": "loops",
+      "name": "165-moonwalk",
+      "size": 14109
+    },
+    {
+      "file": "loop_166-gamma.webm",
+      "folder": "loops",
+      "name": "166-gamma",
+      "size": 14198
+    },
+    {
+      "file": "loop_168-dajungle.webm",
+      "folder": "loops",
+      "name": "168-dajungle",
+      "size": 14472
+    },
+    {
+      "file": "loop_168-stored.webm",
+      "folder": "loops",
+      "name": "168-stored",
+      "size": 13168
+    },
+    {
+      "file": "loop_169-mania.webm",
+      "folder": "loops",
+      "name": "169-mania",
+      "size": 14198
+    },
+    {
+      "file": "loop_170-egged.webm",
+      "folder": "loops",
+      "name": "170-egged",
+      "size": 13442
+    },
+    {
+      "file": "loop_170-kreep.webm",
+      "folder": "loops",
+      "name": "170-kreep",
+      "size": 13444
+    },
+    {
+      "file": "loop_170-loose.webm",
+      "folder": "loops",
+      "name": "170-loose",
+      "size": 27998
+    },
+    {
+      "file": "loop_175-phett.webm",
+      "folder": "loops",
+      "name": "175-phett",
+      "size": 13513
+    },
+    {
+      "file": "loop_178-noddy.webm",
+      "folder": "loops",
+      "name": "178-noddy",
+      "size": 13769
+    },
+    {
+      "file": "loop_182-erra.webm",
+      "folder": "loops",
+      "name": "182-erra",
+      "size": 12524
+    },
+    {
+      "file": "loop_182-halftime.webm",
+      "folder": "loops",
+      "name": "182-halftime",
+      "size": 24309
+    },
+    {
+      "file": "loop_182-hiphop.webm",
+      "folder": "loops",
+      "name": "182-hiphop",
+      "size": 24592
+    },
+    {
+      "file": "loop_184-fist.webm",
+      "folder": "loops",
+      "name": "184-fist",
+      "size": 13086
+    },
+    {
+      "file": "perc_bongo.webm",
+      "folder": "percussion",
+      "name": "bongo",
+      "size": 12631
+    },
+    {
+      "file": "perc_cabasa.webm",
+      "folder": "percussion",
+      "name": "cabasa",
+      "size": 8442
+    },
+    {
+      "file": "perc_casio-agogo.webm",
+      "folder": "percussion",
+      "name": "casio-agogo",
+      "size": 5921
+    },
+    {
+      "file": "perc_casio-conga.webm",
+      "folder": "percussion",
+      "name": "casio-conga",
+      "size": 2967
+    },
+    {
+      "file": "perc_casio-matsuri.webm",
+      "folder": "percussion",
+      "name": "casio-matsuri",
+      "size": 16063
+    },
+    {
+      "file": "perc_casio-stick.webm",
+      "folder": "percussion",
+      "name": "casio-stick",
+      "size": 1653
+    },
+    {
+      "file": "perc_casio-wadaiko1.webm",
+      "folder": "percussion",
+      "name": "casio-wadaiko1",
+      "size": 6827
+    },
+    {
+      "file": "perc_casio-wadaiko2.webm",
+      "folder": "percussion",
+      "name": "casio-wadaiko2",
+      "size": 5685
+    },
+    {
+      "file": "perc_conga.webm",
+      "folder": "percussion",
+      "name": "conga",
+      "size": 9505
+    },
+    {
+      "file": "perc_cowbell.webm",
+      "folder": "percussion",
+      "name": "cowbell",
+      "size": 20052
+    },
+    {
+      "file": "perc_shaker.webm",
+      "folder": "percussion",
+      "name": "shaker",
+      "size": 10467
+    },
+    {
+      "file": "perc_tambourine.webm",
+      "folder": "percussion",
+      "name": "tambourine",
+      "size": 16795
+    },
+    {
+      "file": "perc_woodblock.webm",
+      "folder": "percussion",
+      "name": "woodblock",
+      "size": 6979
+    },
+    {
+      "file": "rim_jbk-mid.webm",
+      "folder": "rims",
+      "name": "jbk-mid",
+      "size": 3493
+    },
+    {
+      "file": "rim_jbk-ring-a.webm",
+      "folder": "rims",
+      "name": "jbk-ring-a",
+      "size": 5060
+    },
+    {
+      "file": "rim_jbk-ring-b.webm",
+      "folder": "rims",
+      "name": "jbk-ring-b",
+      "size": 6490
+    },
+    {
+      "file": "rim_jbk-snap.webm",
+      "folder": "rims",
+      "name": "jbk-snap",
+      "size": 4505
+    },
+    {
+      "file": "rim_jbk-tight.webm",
+      "folder": "rims",
+      "name": "jbk-tight",
+      "size": 2257
+    },
+    {
+      "file": "snare_acoustic-1.webm",
+      "folder": "snares",
+      "name": "acoustic-1",
+      "size": 3495
+    },
+    {
+      "file": "snare_acoustic-2.webm",
+      "folder": "snares",
+      "name": "acoustic-2",
+      "size": 3301
+    },
+    {
+      "file": "snare_acoustic-3.webm",
+      "folder": "snares",
+      "name": "acoustic-3",
+      "size": 3350
+    },
+    {
+      "file": "snare_casio-lofi.webm",
+      "folder": "snares",
+      "name": "casio-lofi",
+      "size": 4803
+    },
+    {
+      "file": "snare_jbk-mid.webm",
+      "folder": "snares",
+      "name": "jbk-mid",
+      "size": 3711
+    },
+    {
+      "file": "snare_jbk-tight.webm",
+      "folder": "snares",
+      "name": "jbk-tight",
+      "size": 3820
+    },
+    {
+      "file": "snare_orch-bright.webm",
+      "folder": "snares",
+      "name": "orch-bright",
+      "size": 13953
+    },
+    {
+      "file": "snare_orch-crisp.webm",
+      "folder": "snares",
+      "name": "orch-crisp",
+      "size": 10709
+    },
+    {
+      "file": "snare_orch-warm.webm",
+      "folder": "snares",
+      "name": "orch-warm",
+      "size": 10261
+    },
+    {
+      "file": "snare_rope.webm",
+      "folder": "snares",
+      "name": "rope",
+      "size": 20080
+    },
+    {
+      "file": "tom_large.webm",
+      "folder": "toms",
+      "name": "large",
+      "size": 13045
+    },
+    {
+      "file": "tom_lofi.webm",
+      "folder": "toms",
+      "name": "lofi",
+      "size": 3760
+    },
+    {
+      "file": "tom_medium.webm",
+      "folder": "toms",
+      "name": "medium",
+      "size": 7211
+    },
+    {
+      "file": "tom_orch-hi.webm",
+      "folder": "toms",
+      "name": "orch-hi",
+      "size": 32308
+    },
+    {
+      "file": "tom_orch-lo.webm",
+      "folder": "toms",
+      "name": "orch-lo",
+      "size": 33056
+    },
+    {
+      "file": "tom_small.webm",
+      "folder": "toms",
+      "name": "small",
+      "size": 7160
+    }
+  ]
+}
