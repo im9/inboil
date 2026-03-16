@@ -24,6 +24,12 @@
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
   import { showToast } from './lib/toast.svelte.ts'
 
+  // ── Global unhandled rejection handler ──────────────────────────
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('[unhandled]', e.reason)
+    showToast('Unexpected error', 'error')
+  })
+
   const engineCtx: EngineContext = $derived({
     fxFlavours,
     masterPad,
@@ -226,10 +232,10 @@
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
     // Clear perf & FX
     perf.filling = false; perf.breaking = false; perf.reversing = false
-    fxPad.verb = { ...fxPad.verb, on: false }
-    fxPad.delay = { ...fxPad.delay, on: false }
-    fxPad.glitch = { ...fxPad.glitch, on: false }
-    fxPad.granular = { ...fxPad.granular, on: false }
+    fxPad.verb.on = false
+    fxPad.delay.on = false
+    fxPad.glitch.on = false
+    fxPad.granular.on = false
     // Clear solo & scene playback
     playback.soloNodeId = null
     playback.sceneNodeId = null

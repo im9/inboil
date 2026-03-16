@@ -120,33 +120,24 @@ function applyAutomationValue(target: AutomationTarget, v: number): void {
     }
     case 'fx':
       switch (target.param) {
-        case 'reverbWet':      fxPad.verb     = { ...fxPad.verb,     x: v }; break
-        case 'reverbDamp':     fxPad.verb     = { ...fxPad.verb,     y: v }; break
-        case 'delayTime':      fxPad.delay    = { ...fxPad.delay,    x: v }; break
-        case 'delayFeedback':  fxPad.delay    = { ...fxPad.delay,    y: v }; break
-        case 'filterCutoff':   fxPad.filter   = { ...fxPad.filter,   x: v }; break
-        case 'glitchX':        fxPad.glitch   = { ...fxPad.glitch,   x: v }; break
-        case 'glitchY':        fxPad.glitch   = { ...fxPad.glitch,   y: v }; break
-        case 'granularSize':   fxPad.granular = { ...fxPad.granular, x: v }; break
-        case 'granularDensity': fxPad.granular = { ...fxPad.granular, y: v }; break
+        case 'reverbWet':      fxPad.verb.x     = v; break
+        case 'reverbDamp':     fxPad.verb.y     = v; break
+        case 'delayTime':      fxPad.delay.x    = v; break
+        case 'delayFeedback':  fxPad.delay.y    = v; break
+        case 'filterCutoff':   fxPad.filter.x   = v; break
+        case 'glitchX':        fxPad.glitch.x   = v; break
+        case 'glitchY':        fxPad.glitch.y   = v; break
+        case 'granularSize':   fxPad.granular.x = v; break
+        case 'granularDensity': fxPad.granular.y = v; break
       }
       break
-    case 'eq':
-      if (target.param === 'freq') {
-        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, x: v }
-        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, x: v }
-        else fxPad.eqHigh = { ...fxPad.eqHigh, x: v }
-      } else if (target.param === 'gain') {
-        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, y: v }
-        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, y: v }
-        else fxPad.eqHigh = { ...fxPad.eqHigh, y: v }
-      } else {
-        const q = 0.3 + v * 7.7
-        if (target.band === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, q }
-        else if (target.band === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, q }
-        else fxPad.eqHigh = { ...fxPad.eqHigh, q }
-      }
+    case 'eq': {
+      const band = fxPad[target.band!]
+      if (target.param === 'freq') band.x = v
+      else if (target.param === 'gain') band.y = v
+      else band.q = 0.3 + v * 7.7
       break
+    }
     case 'send': {
       const pat = playback.playingPattern != null ? song.patterns[playback.playingPattern] : null
       if (!pat) break

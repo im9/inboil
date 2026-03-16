@@ -114,26 +114,19 @@
   function setEqQ(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
     pushUndo('EQ')
     const q = Math.round(eqQDenorm(v) * 10) / 10
-    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, q }
-    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, q }
-    else fxPad.eqHigh = { ...fxPad.eqHigh, q }
+    fxPad[bandKey].q = q
   }
   function setEqX(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
     pushUndo('EQ')
-    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, x: v }
-    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, x: v }
-    else fxPad.eqHigh = { ...fxPad.eqHigh, x: v }
+    fxPad[bandKey].x = v
   }
   function setEqY(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
     pushUndo('EQ')
-    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, y: v }
-    else if (bandKey === 'eqMid') fxPad.eqMid = { ...fxPad.eqMid, y: v }
-    else fxPad.eqHigh = { ...fxPad.eqHigh, y: v }
+    fxPad[bandKey].y = v
   }
   function toggleEqShelf(bandKey: 'eqLow' | 'eqHigh') {
     pushUndo('Toggle EQ shelf')
-    if (bandKey === 'eqLow') fxPad.eqLow = { ...fxPad.eqLow, shelf: !fxPad.eqLow.shelf }
-    else fxPad.eqHigh = { ...fxPad.eqHigh, shelf: !fxPad.eqHigh.shelf }
+    fxPad[bandKey].shelf = !fxPad[bandKey].shelf
   }
   function getEqShelf(bandKey: 'eqLow' | 'eqMid' | 'eqHigh'): boolean {
     if (bandKey === 'eqMid') return false
@@ -195,27 +188,15 @@
   }
 
   function setFxX(key: FxKey, v: number) {
-    if (key === 'verb') fxPad.verb = { ...fxPad.verb, x: v }
-    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, x: v }
-    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, x: v }
-    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, x: v }
-    else fxPad.filter = { ...fxPad.filter, x: v }
+    fxPad[key].x = v
   }
 
   function setFxY(key: FxKey, v: number) {
-    if (key === 'verb') fxPad.verb = { ...fxPad.verb, y: v }
-    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, y: v }
-    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, y: v }
-    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, y: v }
-    else fxPad.filter = { ...fxPad.filter, y: v }
+    fxPad[key].y = v
   }
 
   function toggleFxOn(key: FxKey) {
-    if (key === 'verb') fxPad.verb = { ...fxPad.verb, on: !fxPad.verb.on }
-    else if (key === 'delay') fxPad.delay = { ...fxPad.delay, on: !fxPad.delay.on }
-    else if (key === 'glitch') fxPad.glitch = { ...fxPad.glitch, on: !fxPad.glitch.on }
-    else if (key === 'granular') fxPad.granular = { ...fxPad.granular, on: !fxPad.granular.on }
-    else fxPad.filter = { ...fxPad.filter, on: !fxPad.filter.on }
+    fxPad[key].on = !fxPad[key].on
   }
 
   function fxFlavourKey(key: FxKey): FxFlavourKey | null {

@@ -59,10 +59,10 @@ function applyDecorators(node: SceneNode): void {
     } else if (dec.type === 'repeat') {
       playback.sceneRepeatLeft = (dec.params.count ?? 2) - 1
     } else if (dec.type === 'fx') {
-      fxPad.verb     = { ...fxPad.verb,     on: !!dec.params.verb }
-      fxPad.delay    = { ...fxPad.delay,    on: !!dec.params.delay }
-      fxPad.glitch   = { ...fxPad.glitch,   on: !!dec.params.glitch }
-      fxPad.granular = { ...fxPad.granular, on: !!dec.params.granular }
+      fxPad.verb.on     = !!dec.params.verb
+      fxPad.delay.on    = !!dec.params.delay
+      fxPad.glitch.on   = !!dec.params.glitch
+      fxPad.granular.on = !!dec.params.granular
       // ADR 076: apply per-decorator flavour overrides
       if (dec.flavourOverrides) {
         if (dec.flavourOverrides.verb)     fxFlavours.verb     = dec.flavourOverrides.verb

@@ -590,6 +590,7 @@ export async function projectLoad(id: string): Promise<boolean> {
   if (!proj) return false
   // Migrate: ensure song.name matches project name
   if (!proj.song.name) proj.song.name = proj.name
+  clearSamples()
   restoreSong(proj.song)
   project.id = id
   project.dirty = false
