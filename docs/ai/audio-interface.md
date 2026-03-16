@@ -167,7 +167,7 @@ class GrooveboxEngine {
   triggerNote(trackId, note, velocity): void                                     // Immediate note trigger (VKBD/MIDI audition)
   releaseNote(trackId): void                                                     // Release triggered note
   releaseNoteByPitch(trackId, note): void                                        // Release specific pitch (MIDI per-note release)
-  async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load TR-909 Crash/Ride sample
+  async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load Crash/Ride from Audio Pool OPFS (ADR 104)
   async loadUserSample(trackId, file): Promise<{waveform, rawBuffer} | null>     // Load user audio file (ADR 012)
   async loadSampleFromBuffer(trackId, rawBuffer): Promise<Float32Array | null>   // Reload stored buffer (ADR 020 §I)
   set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback

@@ -293,7 +293,7 @@ Contents (multi-mode, context-dependent):
 - **Voice category tabs**: DRUM/BASS/LEAD/SAMPLER for voice selection
 - **Voice list**: Voices in selected category, click to change
 - **Preset browser** (WT only): Collapsible section with category filter pills (ALL/LEAD/BASS/PAD/PLCK/KEYS/FX) and scrollable preset list. Shows selected preset name in toggle button. Applies all voiceParams via `applyPreset()`.
-- **Sample loader** (Sampler/Crash/Ride): File input for loading user samples
+- **Sample loader** (Sampler/Crash/Ride): LOAD button for file input, POOL button for inline Audio Pool browser (ADR 104). Uploaded samples auto-added to pool. Pool browser provides folder drill-down, search, audition (▸), and one-tap assign. User samples support rename, move, and delete.
 - **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
 - **Synth knob grid**: Voice parameters from `paramDefs.ts`
 - **Send knobs**: VERB, DLY, GLT, GRN per selected track

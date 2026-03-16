@@ -58,7 +58,9 @@ Each drum VoiceId has a factory preset in `DRUM_PRESETS` that overrides these de
 
 ### SamplerVoice (ADR 012)
 
-Sample playback voice used by Crash, Ride, and user Sampler. Loads audio via `loadSample` WorkletCommand. Factory samples for Crash/Ride are bundled; user Sampler accepts any audio file. Crash and Ride are categorized as `drum` in the UI (not `sampler`) because they are drum sounds that happen to use sample playback internally.
+Sample playback voice used by Crash, Ride, and user Sampler. Loads audio via `loadSample` WorkletCommand. Factory samples for Crash/Ride are loaded from the Audio Pool (OPFS); user Sampler accepts any audio file via LOAD or the Pool browser. Crash and Ride are categorized as `drum` in the UI (not `sampler`) because they are drum sounds that happen to use sample playback internally.
+
+**Audio Pool (ADR 104):** Persistent OPFS-based sample library with 79 factory samples (WebM/Opus, ~1MB total) across 8 categories. Factory samples are auto-installed at app startup. User-uploaded samples are auto-added to the pool. Pool browser (DockPoolBrowser) provides folder drill-down, search, audition, and one-tap assign. Content-hash dedup (SHA-256) prevents duplicates.
 
 Parameters:
 | Key | Label | Range | Default | Description |
@@ -219,7 +221,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
 | voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. FMVoice is 4-op (ADR 068). |
 | voices.ts | WTSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
-| voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. |
+| voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. Crash/Ride loaded from Audio Pool OPFS (ADR 104). |
 | voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
 | voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |
 | voices.ts | VOICE_REGISTRY | Maps VoiceId string → voice constructor. |

@@ -67,6 +67,7 @@ See [adr/](./adr/) for full rationale.
 - **Pattern toolbar** (IMPLEMENTED) — RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header. → [adr/057-pattern-toolbar.md](./adr/057-pattern-toolbar.md)
 - **Cross-category voice assignment** (IMPLEMENTED) — Any voice on any track, drill-down picker. → [adr/058-cross-category-voice.md](./adr/058-cross-category-voice.md)
 - **Sampler** (IMPLEMENTED) — SamplerVoice + user sample loading; Crash/Ride in drum category. → [adr/012-sampler.md](./adr/012-sampler.md)
+- **Audio Pool** (IMPLEMENTED) — OPFS-based sample library, 79 factory samples, inline browser with search/audition. → [adr/archive/104-audio-pool.md](./adr/archive/104-audio-pool.md)
 - **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 - **Per-pattern voice assignment** (IMPLEMENTED) — voiceId + name moved from Track to Cell. → [adr/062-per-pattern-voice.md](./adr/062-per-pattern-voice.md)
@@ -107,80 +108,107 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 ```
 /
 ├── src/
-│   ├── App.svelte                ← Root component (layout, engine wiring)
-│   ├── main.ts                   ← Entry point
-│   ├── app.css                   ← Global styles (reset, tokens, base)
+│   ├── App.svelte                  ← Root component (layout, engine wiring, initPool)
+│   ├── main.ts                     ← Entry point
+│   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/           ← Svelte 5 UI components
-│   │   │   ├── AppHeader.svelte  ← BPM, transport, PAT navigation, CPY/PST/CLR
-│   │   │   ├── StepGrid.svelte   ← Desktop step sequencer grid
-│   │   │   ├── TrackerView.svelte ← M8-style vertical tracker editor
-│   │   │   ├── SceneView.svelte  ← Node-based scene graph canvas
-│   │   │   ├── MatrixView.svelte ← Pattern pool browser sidebar
-│   │   │   ├── SectionNav.svelte ← (removed) Legacy linear section strip, superseded by Scene graph
-│   │   │   ├── DockPanel.svelte  ← Right dock: synth param knobs, preset browser, minimizable
-│   │   │   ├── PianoRoll.svelte  ← Note bar editor for melodic tracks (poly chord support)
+│   │   ├── components/ (43 files)  ← Svelte 5 UI components
+│   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
+│   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
+│   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
+│   │   │   ├── PianoRoll.svelte    ← Note bar editor for melodic tracks (poly chord support)
+│   │   │   ├── SceneView.svelte    ← Node-based scene graph canvas
+│   │   │   ├── SceneCanvas.svelte  ← Canvas layer for scene edges/arrowheads
+│   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
+│   │   │   ├── SceneLabels.svelte  ← Free-floating canvas text labels
+│   │   │   ├── SceneBubbleMenu.svelte ← Radial menu for adding scene nodes
+│   │   │   ├── SceneNodePopup.svelte ← Node detail popup (rename, params)
+│   │   │   ├── MatrixView.svelte   ← Pattern pool browser sidebar
+│   │   │   ├── DockPanel.svelte    ← Right dock: synth param knobs, preset browser, minimizable
+│   │   │   ├── DockTrackEditor.svelte ← Track param knobs, send/mixer, sample LOAD/POOL
+│   │   │   ├── DockPoolBrowser.svelte ← Inline audio pool browser (ADR 104)
+│   │   │   ├── DockPresetBrowser.svelte ← Factory preset browser (WT/FM)
+│   │   │   ├── DockDecoratorEditor.svelte ← Dock decorator knobs (ADR 069)
+│   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
+│   │   │   ├── DockAutomationEditor.svelte ← Dock inline automation editor
+│   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
-│   │   │   ├── MobilePerfSheet.svelte ← Mobile Kaoss Pad (4 tabs: PERF/GLITCH/FILTER/MOTION, Canvas visualizer, accelerometer/gyroscope)
-│   │   │   ├── PerfButtons.svelte ← Shared FILL/REV/BRK button strip
-│   │   │   ├── FxPad.svelte      ← FX XY pad, audio visualizer, per-track sends
-│   │   │   ├── MasterView.svelte ← Master bus VU meter + audio-reactive visuals
-│   │   │   ├── FilterView.svelte ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
+│   │   │   ├── PerfButtons.svelte  ← Shared FILL/REV/BRK button strip
+│   │   │   ├── FxPad.svelte        ← FX XY pad, audio visualizer, per-track sends
+│   │   │   ├── FxBubbleMenu.svelte ← FX node radial menu
+│   │   │   ├── MasterView.svelte   ← Master bus VU meter + audio-reactive visuals
+│   │   │   ├── FilterView.svelte   ← EQ/filter XY pad (FILTER, LOW, MID, HIGH nodes)
+│   │   │   ├── Sidebar.svelte      ← Help / System settings panel (fixed right drawer)
+│   │   │   ├── SidebarHelp.svelte  ← Help content (bilingual, searchable)
+│   │   │   ├── SidebarProject.svelte ← Project management (save/load/export)
+│   │   │   ├── SidebarSettings.svelte ← System preferences
 │   │   │   ├── MobileTrackView.svelte ← Mobile: calculator-style steps + VEL/CHNC tabs
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── MobileMatrixView.svelte ← Mobile pattern pool browser (ADR 095)
+│   │   │   ├── MobilePerfSheet.svelte ← Mobile Kaoss Pad (4 tabs, accelerometer/gyroscope)
 │   │   │   ├── MobileSceneRibbon.svelte ← Mobile scene playback ribbon (future)
 │   │   │   ├── WelcomeOverlay.svelte ← First-visit welcome overlay
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
-│   │   │   ├── Sidebar.svelte    ← Help / System settings panel (fixed right drawer)
-│   │   │   ├── Knob.svelte       ← SVG rotary knob control
-│   │   │   ├── ErrorToast.svelte ← Transient error/info notification
-│   │   │   ├── SceneCanvas.svelte ← Canvas layer for scene edges/arrowheads
-│   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
-│   │   │   ├── SceneLabels.svelte ← Free-floating canvas text labels
-│   │   │   ├── SceneBubbleMenu.svelte ← Radial menu for adding scene nodes
-│   │   │   ├── SceneNodePopup.svelte ← Node detail popup (rename, params)
-│   │   │   ├── AlgoGraph.svelte ← FM algorithm topology visualization (ADR 068)
-│   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
-│   │   │   ├── DockAutomationEditor.svelte ← Dock inline automation editor
-│   │   │   ├── DockDecoratorEditor.svelte ← Dock decorator knobs (ADR 069)
-│   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
-│   │   │   ├── DockPresetBrowser.svelte ← Factory preset browser (WT/FM)
-│   │   │   ├── DockTrackEditor.svelte ← Track param knobs, send/mixer
-│   │   │   ├── EnvGraph.svelte  ← ADSR envelope visualization
-│   │   │   ├── FxBubbleMenu.svelte ← FX node radial menu
-│   │   │   ├── WaveGraph.svelte ← Wavetable preview visualization
+│   │   │   ├── AlgoGraph.svelte    ← FM algorithm topology visualization (ADR 068)
+│   │   │   ├── EnvGraph.svelte     ← ADSR envelope visualization
+│   │   │   ├── WaveGraph.svelte    ← Wavetable preview visualization
+│   │   │   ├── Knob.svelte         ← SVG rotary knob control
+│   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
-│   │   │   └── SceneRibbon.svelte ← Playback scrubber (unused, future mobile)
+│   │   │   └── SceneRibbon.svelte  ← Playback scrubber (unused, future mobile)
 │   │   ├── audio/
-│   │   │   ├── engine.ts         ← Main-thread audio engine API
+│   │   │   ├── engine.ts           ← Main-thread audio engine API
 │   │   │   ├── worklet-processor.ts ← AudioWorklet entry point + sequencer
-│   │   │   └── dsp/              ← DSP modules (imported by worklet)
-│   │   │       ├── types.ts      ← Message types (WorkletPattern, etc.)
-│   │   │       ├── filters.ts    ← ResonantLP, BiquadHP, SVFilter, DJFilter, PeakingEQ, ADSR
-│   │   │       ├── effects.ts    ← Reverb, delay, ducker, compressor, limiter, granular
-│   │   │       └── voices.ts     ← Voice interface, all synth voices, makeVoice
-│   │   ├── factory.ts            ← Factory patterns, track defaults, song builder
-│   │   ├── state.svelte.ts       ← Reactive state (Svelte 5 runes)
-│   │   ├── paramDefs.ts          ← Synth parameter definitions
-│   │   ├── paramHelpers.ts       ← Knob value/change helpers, p-lock check
-│   │   ├── presets.ts            ← Factory presets for WT (30 presets) and FM (20 presets)
-│   │   ├── constants.ts          ← Default values (DEFAULT_PERF, etc.)
-│   │   ├── sceneActions.ts       ← Scene graph CRUD, layout, clipboard
-│   │   ├── sceneData.ts          ← Scene clone/restore, migration helpers
-│   │   ├── sectionActions.ts     ← Pattern/section operations, duplicate, copy/paste
-│   │   ├── songClone.ts          ← Pure data clone/restore for Song serialization
-│   │   ├── generative.ts         ← Turing Machine, Quantizer, Tonnetz algorithms
-│   │   ├── midiInput.ts          ← Web MIDI API integration (ADR 081)
-│   │   └── storage.ts            ← IndexedDB access layer (ADR 020)
-│   └── dsp/                      ← C++ source (compiled separately, WIP)
+│   │   │   └── dsp/                ← DSP modules (imported by worklet)
+│   │   │       ├── types.ts        ← Message types (WorkletPattern, etc.)
+│   │   │       ├── filters.ts      ← ResonantLP, BiquadHP, SVFilter, DJFilter, PeakingEQ, ADSR
+│   │   │       ├── effects.ts      ← Reverb, delay, ducker, compressor, limiter, granular
+│   │   │       └── voices.ts       ← Voice interface, all synth voices, makeVoice
+│   │   ├── multiDevice/            ← WebRTC multi-device jam (ADR 019)
+│   │   │   ├── index.ts            ← Public API (host/guest handlers, signaling)
+│   │   │   ├── host.ts / guest.ts  ← Role-specific WebRTC logic
+│   │   │   ├── chunking.ts         ← DataChannel message chunking
+│   │   │   ├── deltaSync.ts        ← Incremental state sync
+│   │   │   └── protocol.ts         ← Wire format definitions
+│   │   ├── types.ts                ← Core data types (Song, Pattern, Cell, Trig, Track)
+│   │   ├── state.svelte.ts         ← Reactive state (Svelte 5 runes)
+│   │   ├── toast.svelte.ts         ← Toast notification state
+│   │   ├── paramDefs.ts            ← Synth parameter definitions
+│   │   ├── paramHelpers.ts         ← Knob value/change helpers, p-lock check
+│   │   ├── presets.ts              ← Factory presets for WT (30) and FM (20)
+│   │   ├── constants.ts            ← Default values (DEFAULT_PERF, FX flavours, etc.)
+│   │   ├── factory.ts              ← Factory patterns, track defaults, song builder
+│   │   ├── demo.ts                 ← Demo song data
+│   │   ├── sceneActions.ts         ← Scene graph CRUD, layout, clipboard
+│   │   ├── sceneData.ts            ← Scene clone/restore, migration helpers
+│   │   ├── sceneGeometry.ts        ← Scene node geometry calculations
+│   │   ├── scenePlayback.ts        ← Scene graph traversal engine
+│   │   ├── sectionActions.ts       ← Pattern/section operations, copy/paste
+│   │   ├── stepActions.ts          ← Step-level mutations (toggle, velocity, etc.)
+│   │   ├── songClone.ts            ← Pure data clone/restore for Song serialization
+│   │   ├── generative.ts           ← Turing Machine, Quantizer, Tonnetz algorithms
+│   │   ├── automation.ts           ← Automation curve evaluation
+│   │   ├── automationDraw.ts       ← Automation drawing/editing helpers
+│   │   ├── randomize.ts            ← Pattern randomization
+│   │   ├── audioPool.ts            ← OPFS audio pool: factory install, import, browse (ADR 104)
+│   │   ├── storage.ts              ← IndexedDB access layer (ADR 020)
+│   │   ├── compat.ts               ← Save format migration / compatibility
+│   │   ├── midi.ts                 ← Web MIDI API integration (ADR 081)
+│   │   ├── midiExport.ts           ← MIDI Type 1 export
+│   │   ├── wavExport.ts            ← WAV recording capture
+│   │   ├── icons.ts                ← SVG icon definitions
+│   │   ├── padHelpers.ts           ← XY pad coordinate helpers
+│   │   └── qr.ts                   ← QR code generation (multi-device)
+│   └── dsp/                        ← C++ source (compiled separately, WIP)
 │       ├── CMakeLists.txt
-│       ├── engine/               ← C++ sequencer + voice manager
-│       ├── synth/                ← C++ synth implementations
-│       ├── fx/                   ← C++ effects chain
-│       └── wasm/                 ← Emscripten bindings
+│       ├── engine/                 ← C++ sequencer + voice manager
+│       ├── synth/                  ← C++ synth implementations
+│       ├── fx/                     ← C++ effects chain
+│       └── wasm/                   ← Emscripten bindings
+├── public/
+│   └── samples/                    ← Factory sample WebM files (79) + manifest
 ├── docs/
-│   └── ai/                       ← This directory
+│   └── ai/                         ← This directory
 └── index.html
 ```
 

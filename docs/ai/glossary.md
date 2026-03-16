@@ -122,6 +122,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **WASM / WebAssembly** | Binary instruction format. Used by the C++ DSP core (not yet integrated). |
 | **Emscripten** | Compiler toolchain for C++ → WebAssembly. Used for `src/dsp/`. |
 | **VST3** | Plugin format for DAWs. Future target platform for C++ DSP core. |
+| **OPFS** | Origin Private File System. Browser-native filesystem API used by the Audio Pool for persistent sample storage. |
+| **Audio Pool** | OPFS-based sample library (ADR 104). 79 factory samples auto-installed at startup. User samples auto-added on LOAD. Browsable via DockPoolBrowser. |
 
 ## Status Markers (used in all docs)
 
