@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, playback, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
+  import { song, ui, playback, selectPattern, fxPad, fxFlavours, perf, effects, masterPad, pushUndo, pool } from '../state.svelte.ts'
   import type { SceneNode } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
 
@@ -14,6 +14,7 @@
   import DockAutomationEditor from './DockAutomationEditor.svelte'
   import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import DockTrackEditor from './DockTrackEditor.svelte'
+  import DockPoolBrowser from './DockPoolBrowser.svelte'
 
   // FX/EQ/Master sheets override decorator editor → show navigator instead
   const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
@@ -704,6 +705,11 @@
                 class:active={ui.dockTab === 'scene'}
                 onpointerdown={() => ui.dockTab = 'scene'}
               >SCENE{#if decoCount > 0}<span class="dock-tab-badge">{decoCount}</span>{/if}</button>
+              <button
+                class="dock-tab"
+                class:active={ui.dockTab === 'pool'}
+                onpointerdown={() => ui.dockTab = 'pool'}
+              >POOL{#if pool.stats.count > 0}<span class="dock-tab-badge">{pool.stats.count}</span>{/if}</button>
             </div>
 
             {#if ui.dockTab === 'tracks'}
@@ -728,6 +734,8 @@
                   Place this pattern in the scene graph to add decorators.
                 </div>
               {/if}
+            {:else if ui.dockTab === 'pool'}
+              <DockPoolBrowser />
             {/if}
           {/if}
         </div>

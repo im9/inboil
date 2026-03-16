@@ -187,7 +187,7 @@ export const ui = $state<{
   editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
   editingAutomationInline: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
-  dockTab: 'tracks' | 'scene'
+  dockTab: 'tracks' | 'scene' | 'pool'
   brushMode: BrushMode
   chordShape: ChordShape
 }>({
@@ -512,6 +512,80 @@ const storage = () => import('./storage.ts')
 
 export async function listProjects() {
   return (await storage()).listProjects()
+}
+
+// ── Audio Pool (ADR 104) ─────────────────────────────────────────────
+
+import type { PoolEntry, PoolStats } from './audioPool.ts'
+export type { PoolEntry, PoolStats }
+const audioPool = () => import('./audioPool.ts')
+
+export const pool = $state<{
+  entries: PoolEntry[]
+  folders: string[]
+  stats: PoolStats
+  loading: boolean
+}>({
+  entries: [],
+  folders: [],
+  stats: { totalSize: 0, count: 0, limitBytes: 200 * 1024 * 1024, usageRatio: 0, warning: false },
+  loading: false,
+})
+
+/** Refresh pool entries and stats from IndexedDB + OPFS. */
+export async function refreshPool(): Promise<void> {
+  pool.loading = true
+  try {
+    const mod = await audioPool()
+    const [entries, folders, stats] = await Promise.all([
+      mod.loadAllMeta(),
+      mod.listFolders(),
+      mod.getPoolStats(),
+    ])
+    pool.entries = entries
+    pool.folders = folders
+    pool.stats = stats
+  } catch (e) {
+    console.warn('[pool] refresh failed:', e)
+  }
+  pool.loading = false
+}
+
+/** Import files into the pool and refresh state. */
+export async function poolImportFiles(files: File[], folder?: string): Promise<void> {
+  const mod = await audioPool()
+  const results = await mod.importFiles(files, folder)
+  const dupeCount = results.filter(r => r.duplicate).length
+  const newCount = results.length - dupeCount
+  if (newCount > 0) showToast(`${newCount} sample${newCount > 1 ? 's' : ''} added to pool`, 'info')
+  if (dupeCount > 0) showToast(`${dupeCount} duplicate${dupeCount > 1 ? 's' : ''} skipped`, 'info')
+  if (results.length > 0) await refreshPool()
+}
+
+/** Delete a sample from the pool and refresh state. */
+export async function poolDeleteEntry(id: string): Promise<void> {
+  const mod = await audioPool()
+  await mod.deleteFromPool(id)
+  await refreshPool()
+}
+
+/** Move a pool sample to a different folder and refresh state. */
+export async function poolMoveEntry(id: string, newFolder: string): Promise<void> {
+  const mod = await audioPool()
+  await mod.moveToFolder(id, newFolder)
+  await refreshPool()
+}
+
+/** Assign a pool sample to the current track. Reads from OPFS, decodes, and sets on track. */
+export async function poolAssignToTrack(entry: PoolEntry, trackId: number): Promise<void> {
+  const mod = await audioPool()
+  const rawBuffer = await mod.readSample(entry)
+  if (!rawBuffer) { showToast('Sample not found in pool', 'error'); return }
+  const { engine } = await import('./audio/engine.ts')
+  const result = await engine.loadUserSample(trackId, new File([rawBuffer], entry.name))
+  if (result) {
+    setSample(trackId, entry.name, result.waveform, result.rawBuffer)
+  }
 }
 
 // ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────

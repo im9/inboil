@@ -34,7 +34,7 @@ export interface StoredPreset {
 }
 
 const DB_NAME = 'inboil'
-const DB_VERSION = 3
+const DB_VERSION = 4
 const STORE = 'projects'
 const SAMPLE_STORE = 'samples'
 const PRESET_STORE = 'presets'
@@ -193,3 +193,4 @@ export async function renameUserPreset(id: number, name: string): Promise<void> 
   existing.name = name.slice(0, 16)
   await req(store.put(existing))
 }
+
