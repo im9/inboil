@@ -1,6 +1,6 @@
 # ADR 001: DSP Core in C++ compiled to WebAssembly
 
-## Status: Proposed
+## Status: Superseded
 
 ## Context
 
@@ -33,3 +33,9 @@ and prevent garbage-collection pauses from causing audio glitches.
 - **Negative:** Emscripten build adds complexity to the dev toolchain.
 - **Negative:** Debugging across the WASM boundary is harder than pure JS.
 - **Mitigated by:** The `wasm-interface.md` document defines a clear, typed API boundary that limits where cross-language bugs can occur.
+
+## Superseded (2026-03)
+
+DSP is now implemented entirely in **TypeScript AudioWorklet** (`src/lib/audio/worklet-processor.ts` + `src/lib/audio/dsp/`). The pure-JS approach has proven sufficient for performance — no GC-related audio dropouts have been observed in practice.
+
+The original C++ prototype (`src/dsp/`) was removed as dead code. If iOS/VST portability is revisited, a fresh C++ layer should be written against the current AudioWorklet DSP as the reference implementation, rather than resurrecting the old headers.

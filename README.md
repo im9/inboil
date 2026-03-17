@@ -28,7 +28,7 @@ Step sequencing, analog-modeled synthesis, scene graph arrangement — all runni
 |-------|------|
 | UI | Svelte 5 (runes), TypeScript |
 | Build | Vite 6 |
-| DSP | TypeScript AudioWorklet (C++ WASM port planned) |
+| DSP | TypeScript AudioWorklet |
 | Audio | AudioWorklet, Web Audio API |
 | Docs | Astro + Starlight |
 | Fonts | Bebas Neue, JetBrains Mono |
@@ -81,7 +81,6 @@ src/
 │   ├── midiExport.ts           # MIDI Type 1 export
 │   ├── wavExport.ts            # WAV recording capture
 │   └── songClone.ts            # Pure data clone/restore for serialization
-├── dsp/                        # C++ synth engines → WASM (future)
 public/
 ├── samples/                    # Factory sample WebM files (79) + manifest
 site/                           # Astro docs & landing page

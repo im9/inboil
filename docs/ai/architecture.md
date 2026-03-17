@@ -31,13 +31,13 @@
 | Styling | Plain CSS (scoped, no utility framework) | DECIDED |
 | Type safety | TypeScript (strict) | DECIDED |
 | Package manager | pnpm | DECIDED |
-| C++ DSP core | C++17 via Emscripten (parallel, not yet integrated) | IN PROGRESS |
+| C++ DSP core | C++17 via Emscripten | SUPERSEDED (ADR 001) |
 
 ## Key Architectural Decisions
 
 See [adr/](./adr/) for full rationale.
 
-- **DSP in WASM (long-term)** — Enables reuse on iOS and VST. C++ exists, not yet integrated. → [adr/001-wasm-dsp.md](./adr/001-wasm-dsp.md)
+- **DSP in WASM** (SUPERSEDED) — Original C++ prototype removed; TypeScript AudioWorklet is the current DSP layer. → [adr/001-wasm-dsp.md](./adr/001-wasm-dsp.md)
 - **TypeScript AudioWorklet** (IMPLEMENTED) — Rapid iteration; WASM integration deferred. → [adr/002-ts-worklet.md](./adr/002-ts-worklet.md)
 - **BPM-synced delay** (IMPLEMENTED) — Beat fraction → ms at send time. → [adr/003-bpm-synced-delay.md](./adr/003-bpm-synced-delay.md)
 - **Queued pattern switching** (IMPLEMENTED) — Queue during playback, apply at loop boundary. → [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md)
@@ -131,6 +131,10 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockDecoratorEditor.svelte ← Dock decorator knobs (ADR 069)
 │   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
 │   │   │   ├── DockAutomationEditor.svelte ← Dock inline automation editor
+│   │   │   ├── DockNavigator.svelte  ← Scene BFS navigator (ADR 070)
+│   │   │   ├── DockFxControls.svelte ← FX knobs/toggles/flavours
+│   │   │   ├── DockEqControls.svelte ← EQ band controls (freq/gain/Q)
+│   │   │   ├── DockMasterControls.svelte ← Master gain/comp/duck/return
 │   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
 │   │   │   ├── PerfButtons.svelte  ← Shared FILL/REV/BRK button strip
@@ -164,7 +168,11 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │       ├── types.ts        ← Message types (WorkletPattern, etc.)
 │   │   │       ├── filters.ts      ← ResonantLP, BiquadHP, SVFilter, DJFilter, PeakingEQ, ADSR
 │   │   │       ├── effects.ts      ← Reverb, delay, ducker, compressor, limiter, granular
-│   │   │       └── voices.ts       ← Voice interface, all synth voices, makeVoice
+│   │   │       ├── drums.ts        ← Drum voice implementations
+│   │   │       ├── bass.ts         ← Bass voice implementations
+│   │   │       ├── melodic.ts      ← Melodic voice implementations (Lead, FM, WT)
+│   │   │       ├── sampler.ts      ← Sampler/PolySampler voices
+│   │   │       └── voices.ts       ← Voice registry + re-export (makeVoice)
 │   │   ├── multiDevice/            ← WebRTC multi-device jam (ADR 019)
 │   │   │   ├── index.ts            ← Public API (host/guest handlers, signaling)
 │   │   │   ├── host.ts / guest.ts  ← Role-specific WebRTC logic
@@ -200,12 +208,6 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── icons.ts                ← SVG icon definitions
 │   │   ├── padHelpers.ts           ← XY pad coordinate helpers
 │   │   └── qr.ts                   ← QR code generation (multi-device)
-│   └── dsp/                        ← C++ source (compiled separately, WIP)
-│       ├── CMakeLists.txt
-│       ├── engine/                 ← C++ sequencer + voice manager
-│       ├── synth/                  ← C++ synth implementations
-│       ├── fx/                     ← C++ effects chain
-│       └── wasm/                   ← Emscripten bindings
 ├── public/
 │   └── samples/                    ← Factory sample WebM files (111) + manifest
 ├── docs/
