@@ -45,7 +45,7 @@ function refreshDeviceList(e?: Event) {
   }))
   // Notify on disconnect
   if (e && (e as MIDIConnectionEvent).port?.state === 'disconnected') {
-    const port = (e as MIDIConnectionEvent).port
+    const port = (e as MIDIConnectionEvent).port!
     if (prev.has(port.id)) showToast(`MIDI device disconnected: ${port.name ?? 'Unknown'}`, 'warn')
   }
 }

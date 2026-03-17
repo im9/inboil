@@ -12,7 +12,7 @@
   import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import type { BrushMode, ChordShape } from '../state.svelte.ts'
-  import { setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
+  import { setTrigDuration, placeNoteBar, findNoteHead, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, SCALE_TEMPLATES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { ICON } from '../icons.ts'
 
@@ -157,7 +157,6 @@
   // ── Note move drag state (long-press on existing note) ──
   let moveDragging = $state(false)
   let moveStep = -1
-  let movePointerId = -1
   let moveTimer: number | null = null
   let moveFromHead = false       // true if long-press started on head cell
   let moveTapNote = -1           // note of the tapped cell (for empty-cell short-tap)
@@ -273,7 +272,6 @@
   let brushVisited = new Set<string>()
   let brushConstrainNote = -1
   let brushHeadStep = -1       // start step of current legato note
-  let brushLastNote = -1       // last drawn pitch (for legato detection)
   let brushStrumStart = -1     // first step of strum placement
   let brushStrumLen = 0        // number of strum notes placed
   let brushRightClick = false  // right-click in draw mode → erase
@@ -547,7 +545,6 @@
     brushVisited.clear()
     brushConstrainNote = note
     brushHeadStep = stepIdx
-    brushLastNote = note
     brushRightClick = e.button === 2
     noteGridEl?.setPointerCapture(e.pointerId)
     const key = `${stepIdx}:${note}`
@@ -669,7 +666,6 @@
     brushVisited.clear()
     brushConstrainNote = -1
     brushHeadStep = -1
-    brushLastNote = -1
     brushStrumStart = -1
     brushStrumLen = 0
     brushRightClick = false

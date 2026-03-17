@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toasts, dismissToast } from '../toast.svelte.ts'
-  import { fly, fade } from 'svelte/transition'
+  import { fly } from 'svelte/transition'
 </script>
 
 {#if toasts.length > 0}

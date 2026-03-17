@@ -184,8 +184,6 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private perfX          = 0.5
   private perfY          = 0.5
   private perfTouching   = false
-  private tiltX          = 0
-  private tiltY          = 0
   // Glitch effects (ADR 097 Phase 2)
   private stuttering     = false
   private halfSpeed      = false
@@ -408,8 +406,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.perfX         = p.perf.perfX
           this.perfY         = p.perf.perfY
           this.perfTouching  = p.perf.perfTouching
-          this.tiltX         = p.perf.tiltX
-          this.tiltY         = p.perf.tiltY
+          // tiltX/tiltY received but not yet used in DSP (ADR 097 Phase 3)
           this.stuttering    = p.perf.stuttering
           this.halfSpeed     = p.perf.halfSpeed
           if (p.perf.tapeStop && !this.tapeStop) this.tapeSpeed = 1.0  // reset on engage

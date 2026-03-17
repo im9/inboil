@@ -260,9 +260,6 @@
     pointer-events: none;
     transition: right 100ms;
   }
-  :global(.guide-float.shifted) {
-    /* no shift — guide is narrower than the gap and has higher z-index */
-  }
   @keyframes guide-in {
     from { opacity: 0; transform: translateX(-50%) translateY(4px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }

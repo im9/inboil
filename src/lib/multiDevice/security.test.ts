@@ -4,7 +4,7 @@
  * Tests input validation, bounds checking, prototype pollution guards,
  * rate limiting, and other hardening measures.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 
 // ── Chunk index bounds (chunking.ts §6) ─────────────────────────────────────
 // Already covered in chunking.test.ts — see "rejects chunks with index >= n"

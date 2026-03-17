@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { perf, playback, fxPad, masterLevels } from '../state.svelte.ts'
+  import { perf, playback, song, fxPad, masterLevels } from '../state.svelte.ts'
   import { isGuest, guestPerf } from '../multiDevice/guest.ts'
 
   type PerfAction = 'fill' | 'reverse' | 'break'
@@ -34,6 +34,12 @@
   type TabId = typeof tabs[number]
   let activeTab: TabId = $state('PERF')
 
+  let padEl: HTMLDivElement | undefined = $state(undefined)
+  let activeZone: ZoneAction | null = $state(null)
+  let touchX = $state(0.5)
+  let touchY = $state(0.5)
+  let hasTilt = $state(false)
+
   const currentZones = $derived(
     activeTab === 'PERF' ? perfZones :
     activeTab === 'GLITCH' ? glitchZones :
@@ -41,16 +47,9 @@
     activeTab === 'MOTION' && hasTilt ? motionZones : []
   )
 
-  let padEl: HTMLDivElement | undefined = $state(undefined)
-  let activeZone: ZoneAction | null = $state(null)
-  let touchX = $state(0.5)
-  let touchY = $state(0.5)
-  let hasTilt = $state(false)
-
   const stopped = $derived(!playback.playing)
 
   const isFilter = (a: ZoneAction): a is FilterAction => a === 'lpf' || a === 'hpf' || a === 'dj'
-  const isMotion = (a: ZoneAction): a is MotionAction => a === 'tilt' || a === 'shake' || a === 'chop'
 
   // ── Shake detection state ──
   let shakeArmed = false
@@ -181,7 +180,7 @@
     const cx = w / 2, cy = h / 2
     const maxR = Math.min(w, h) * 0.44
     const peak = Math.max(masterLevels.peakL, masterLevels.peakR)
-    const bpm = playback.bpm || 120
+    const bpm = song.bpm || 120
     const now = performance.now()
 
     // BPM phase (0..1 per beat)
@@ -417,7 +416,7 @@
         perf.filling = true
         // Auto-release after ~1 bar (4 beats)
         if (shakeFillTimer) clearTimeout(shakeFillTimer)
-        const msPerBar = (60_000 / (playback.bpm || 120)) * 4
+        const msPerBar = (60_000 / (song.bpm || 120)) * 4
         shakeFillTimer = setTimeout(() => { perf.filling = false; shakeFillTimer = null }, msPerBar)
       }
 
