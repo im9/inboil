@@ -43,11 +43,11 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **EG** | Envelope Generator. Produces a time-varying control signal for VCF or VCA. |
 | **Ladder filter** | A specific VCF topology (Moog-style) with 4-pole rolloff. Emulated via two cascaded biquads. |
 | **FM synthesis** | Frequency Modulation synthesis. One oscillator modulates the frequency of another. |
-| **Operator** | A single oscillator unit in FM synthesis. This app uses 4-operator FM with 8 algorithm topologies, 12-voice polyphony (MONO/POLY12/WIDE6/UNISON) (ADR 068). |
+| **Operator** | A single oscillator unit in FM synthesis. This app uses 4-operator FM with 8 algorithm topologies, per-op ADSR, LFO with sync. 12-voice polyphony with MEGAfm-style poly modes (MONO/POLY12/WIDE6/UNISON) (ADR 068). |
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
 | **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
-| **WT** | Wavetable synth (formerly iDEATH). 16-voice with MEGAfm-style poly modes (MONO/POLY16/WIDE8/UNISON). 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
+| **WT** | Wavetable synth (formerly iDEATH). Waldorf Protein-inspired direction (ADR 113). 16-voice poly (MONO/POLY16/WIDE8/UNISON). 2 osc (WT morph, MIX/FM/Ring combine) + SVF + unison + 2 env + 2 LFO + mod matrix + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
 | **SamplerVoice** | Single-voice sample playback engine (ADR 012). Supports multi-sample zone mapping, chop, timestretch. Used directly by Crash/Ride (drum category) and as core inside PolySampler. |
 | **PolySampler** | 8-voice polyphonic sampler wrapping SamplerVoice (ADR 106). Round-robin allocation, dynamic gain `1/√N`. Used by `Sampler` VoiceId — a melodic voice supporting piano roll, transpose, and arpeggiator. |

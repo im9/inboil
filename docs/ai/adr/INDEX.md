@@ -27,6 +27,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 075 | FX / EQ / Master Improvements | Implemented | FX flavours (tape delay, stutter, shimmer), EQ Q control, compressor attack/release, dock controls |
 | 076 | Per-Pattern FX Flavours | Implemented | SceneDecorator flavourOverrides, DockPanel cycle UI, applyDecorators integration |
 | 077 | Per-Track Insert FX | Implemented | LiteReverb, insert verb/delay/glitch per track, DockPanel UI, CPU meter warnings |
+| 111 | FM Drum Voice | Proposed | Model:Cycles-inspired FM drum with 6 machine algorithms, 8 macro params, factory presets |
+| 113 | WT Synth Evolution | Proposed | Expanded wavetables (15 shapes), comb/formant filters, deeper mod matrix, drive types |
 
 ## Sequencer / Pattern
 
@@ -43,6 +45,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 029 | Undo / Redo | Implemented | Desktop only (Ctrl+Z / Ctrl+Shift+Z) |
 | 033 | Mobile Velocity / Chance Editing | Implemented | 3-mode tabs (STEP/VEL/CHNC) with drag editing |
 | 067 | Piano Roll Drawing & Chord Brush | Implemented | Pen draw + drag legato, chord/strum brush with drag duration, eraser with continuation cell support |
+| 112 | Per-Track Step Scale | Proposed | Per-track 1/8–1/32 resolution via divisor, 1/32 base tick, polyrhythmic patterns |
 
 ## Song Structure / Arrangement
 
