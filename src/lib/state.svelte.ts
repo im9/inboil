@@ -29,6 +29,7 @@ import type {
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
 import { showToast } from './toast.svelte.ts'
+import { validateSongData, validateRecoverySnapshot } from './validate.ts'
 
 /** Find a cell by trackId in a pattern (ADR 079). */
 export function cellForTrack(pat: Pattern, trackId: number): Cell | undefined {
@@ -741,14 +742,16 @@ export async function projectDelete(id: string): Promise<void> {
   if (project.id === id) projectNew()
 }
 
-/** Auto-save: debounced 500ms after last mutation */
+/** Auto-save: debounced 500ms after last mutation, with concurrency guard */
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+let autoSaving = false
 
 function scheduleAutoSave() {
   if (autoSaveTimer) clearTimeout(autoSaveTimer)
   autoSaveTimer = setTimeout(() => {
     autoSaveTimer = null
-    if (!project.dirty) return
+    if (!project.dirty || autoSaving) return
+    autoSaving = true
     const doSave = project.id
       ? projectSave()
       : projectSaveAs(song.name || 'Untitled')
@@ -757,6 +760,8 @@ function scheduleAutoSave() {
     }).catch(e => {
       console.error('[autoSave] ERROR:', e)
       showToast('Auto-save failed. Export your project to avoid data loss.', 'error')
+    }).finally(() => {
+      autoSaving = false
     })
   }, 500)
 }
@@ -802,7 +807,7 @@ export async function checkRecovery(): Promise<boolean> {
   try {
     const raw = localStorage.getItem(RECOVERY_KEY)
     if (!raw) return false
-    const rec = JSON.parse(raw) as { projectId: string | null; song: Song; timestamp: number }
+    const rec = validateRecoverySnapshot(JSON.parse(raw))
     // Only recover if it matches the current project (or no project yet)
     if (rec.projectId !== project.id) {
       clearRecoverySnapshot()
@@ -868,14 +873,8 @@ export function exportProjectJSON(): void {
 /** Import a project from JSON string — creates a new unsaved project */
 export async function importProjectJSON(json: string): Promise<void> {
   const data = JSON.parse(json)
-  if (typeof data !== 'object' || data === null) throw new Error('Invalid project file')
-  // Accept both v:1 export format and raw Song objects
-  const src = data as Record<string, unknown>
-  // Validate required Song fields
-  if (!Array.isArray(src.tracks) || !Array.isArray(src.patterns) || typeof src.bpm !== 'number') {
-    throw new Error('Invalid project file: missing required fields (tracks, patterns, bpm)')
-  }
-  restoreSong(src as unknown as Song)
+  const validated = validateSongData(data)
+  restoreSong(validated)
   clearSamples()
   project.id = null
   project.dirty = false

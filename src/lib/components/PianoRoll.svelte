@@ -13,7 +13,7 @@
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import type { BrushMode, ChordShape } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
-  import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
+  import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, SCALE_TEMPLATES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { ICON } from '../icons.ts'
 
   interface Props {
@@ -55,20 +55,6 @@
   const rollMax = $derived(PIANO_ROLL_MAX + octaveOffset * 12)
   const NOTES = $derived(Array.from({ length: FULL_RANGE }, (_, i) => rollMax - i))
   const RANGE = FULL_RANGE
-  const SCALE_TEMPLATES: number[][] = [
-    [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian
-    [0, 2, 4, 5, 7, 9, 11],  //  1 C# major
-    [0, 2, 3, 5, 7, 9, 10],  //  2 D  Dorian
-    [0, 2, 4, 5, 7, 9, 11],  //  3 Eb major
-    [0, 1, 3, 5, 7, 8, 10],  //  4 E  Phrygian
-    [0, 2, 4, 6, 7, 9, 11],  //  5 F  Lydian
-    [0, 2, 4, 5, 7, 9, 11],  //  6 F# major
-    [0, 2, 4, 5, 7, 9, 10],  //  7 G  Mixolydian
-    [0, 2, 4, 5, 7, 9, 11],  //  8 Ab major
-    [0, 2, 3, 5, 7, 8, 10],  //  9 A  Aeolian
-    [0, 2, 4, 5, 7, 9, 11],  // 10 Bb major
-    [0, 1, 3, 5, 6, 8, 10],  // 11 B  Locrian
-  ]
   const PC_TO_DEG = (() => {
     const m = new Int8Array(12)
     for (let p = 0; p < 12; p++) {

@@ -73,20 +73,24 @@ export class GrooveboxEngine {
     if (callbacks) this._onLevels = callbacks.onLevels
     if (this.ctx) return
     try {
-      this.ctx = new AudioContext()
-      await this.ctx.audioWorklet.addModule(workletUrl)
-      this.node = new AudioWorkletNode(this.ctx, 'groovebox-processor', {
+      const ctx = new AudioContext()
+      await ctx.audioWorklet.addModule(workletUrl)
+      const node = new AudioWorkletNode(ctx, 'groovebox-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
       })
-      this.analyser = this.ctx.createAnalyser()
-      this.analyser.fftSize = 1024
-      this.analyser.smoothingTimeConstant = 0.8
-      this.node.connect(this.analyser)
-      this.analyser.connect(this.ctx.destination)
-      this.node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      analyser.smoothingTimeConstant = 0.8
+      node.connect(analyser)
+      analyser.connect(ctx.destination)
+      node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
         if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
         else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
       }
+      // Commit to instance only after all steps succeed — avoids partial init state
+      this.ctx = ctx
+      this.node = node
+      this.analyser = analyser
     } catch (e) {
       showToast('Audio not available. Check browser permissions.', 'error')
       throw e

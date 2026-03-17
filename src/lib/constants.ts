@@ -1,7 +1,6 @@
 // ── Shared constants ─────────────────────────────────────────────────────────
 // Single source of truth for values used across multiple modules.
-// NOTE: worklet-processor.ts runs in AudioWorklet scope and cannot import this
-// file — it maintains its own copies of scale/transposition constants.
+// This file has zero imports and can be safely imported from AudioWorklet scope.
 
 // ── Project ─────────────────────────────────────────────────────────────────
 export const PROJECT_NAME = 'UNTITLED'
@@ -13,6 +12,23 @@ export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A',
 // White-key positions (C major / Ionian scale degrees)
 export const SCALE_DEGREES = [0, 2, 4, 5, 7, 9, 11] as const
 export const SCALE_DEGREES_SET: Set<number> = new Set(SCALE_DEGREES)
+
+// Mode-specific scale templates — one per chromatic root (0=C … 11=B).
+// Used by PianoRoll (UI) and worklet-processor (DSP) for transposition.
+export const SCALE_TEMPLATES: readonly number[][] = [
+  [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian (major)
+  [0, 2, 4, 5, 7, 9, 11],  //  1 C# major
+  [0, 2, 3, 5, 7, 9, 10],  //  2 D  Dorian
+  [0, 2, 4, 5, 7, 9, 11],  //  3 Eb major
+  [0, 1, 3, 5, 7, 8, 10],  //  4 E  Phrygian
+  [0, 2, 4, 6, 7, 9, 11],  //  5 F  Lydian
+  [0, 2, 4, 5, 7, 9, 11],  //  6 F# major
+  [0, 2, 4, 5, 7, 9, 10],  //  7 G  Mixolydian
+  [0, 2, 4, 5, 7, 9, 11],  //  8 Ab major
+  [0, 2, 3, 5, 7, 8, 10],  //  9 A  Aeolian (natural minor)
+  [0, 2, 4, 5, 7, 9, 11],  // 10 Bb major
+  [0, 1, 3, 5, 6, 8, 10],  // 11 B  Locrian
+]
 
 // ── BPM range ────────────────────────────────────────────────────────────────
 export const BPM_MIN = 40

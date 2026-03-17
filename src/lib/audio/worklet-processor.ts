@@ -38,6 +38,7 @@ import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, Bu
 import { makeVoice, DRUM_VOICES, SamplerVoice } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
+import { SCALE_TEMPLATES } from '../constants.ts'
 
 // Re-export types for engine.ts
 export type { WorkletCommand, WorkletPattern, WorkletTrack, WorkletEvent } from './dsp/types.ts'
@@ -46,21 +47,6 @@ export type { WorkletTrig } from './dsp/types.ts'
 // ── Diatonic transposition — OP-XY Brain style ───────────────────────────────
 
 const BASE_SCALE = [0, 2, 4, 5, 7, 9, 11]
-
-const SCALE_TEMPLATES: number[][] = [
-  [0, 2, 4, 5, 7, 9, 11],  //  0 C  Ionian (major)
-  [0, 2, 4, 5, 7, 9, 11],  //  1 C# major (chromatic)
-  [0, 2, 3, 5, 7, 9, 10],  //  2 D  Dorian
-  [0, 2, 4, 5, 7, 9, 11],  //  3 Eb major (chromatic)
-  [0, 1, 3, 5, 7, 8, 10],  //  4 E  Phrygian
-  [0, 2, 4, 6, 7, 9, 11],  //  5 F  Lydian
-  [0, 2, 4, 5, 7, 9, 11],  //  6 F# major (chromatic)
-  [0, 2, 4, 5, 7, 9, 10],  //  7 G  Mixolydian
-  [0, 2, 4, 5, 7, 9, 11],  //  8 Ab major (chromatic)
-  [0, 2, 3, 5, 7, 8, 10],  //  9 A  Aeolian (natural minor)
-  [0, 2, 4, 5, 7, 9, 11],  // 10 Bb major (chromatic)
-  [0, 1, 3, 5, 6, 8, 10],  // 11 B  Locrian
-]
 
 const PC_TO_DEG = new Int8Array(12)
 for (let pc = 0; pc < 12; pc++) {
