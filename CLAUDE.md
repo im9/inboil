@@ -1,13 +1,22 @@
 # inboil
 
-Browser-based groove box / DAW. Svelte 5 + TypeScript + C++ WASM AudioWorklet. Zero npm dependencies.
+Browser-based groove box / DAW. Svelte 5 + TypeScript AudioWorklet. Zero npm runtime dependencies.
 
-## Build
+## Setup
+
+```bash
+pnpm install
+git config core.hooksPath .githooks   # enable pre-push check+test hook
+```
+
+## Build & Test
 
 ```bash
 pnpm dev       # Vite dev server
 pnpm build     # production build
-pnpm check     # svelte-check
+pnpm check     # svelte-check (strict, 0 errors required — enforced by CI)
+pnpm test      # vitest unit tests
+pnpm test:e2e  # Playwright (chromium/firefox/webkit)
 pnpm deploy    # build + Cloudflare Pages
 ```
 
@@ -18,5 +27,18 @@ pnpm deploy    # build + Cloudflare Pages
 - Undo is snapshot-based: insert `pushUndo(label)` before mutations
 - Parameters are normalized (0.0–1.0); denormalized on the DSP side
 - Bilingual tooltips (`data-tip` / `data-tip-ja`)
-- ADRs are in `docs/ai/adr/` (001–059). Review before implementation
+- ADRs in `docs/ai/adr/` — review INDEX.md before implementation
+- Technical backlog in `docs/ai/BACKLOG.md` — for items that don't need an ADR
 - Docs, code, and commit messages in English (conversation in Japanese is OK)
+
+## Data Validation
+
+- Use `validateSongData()` / `validateRecoverySnapshot()` from `src/lib/validate.ts` when loading Song data from external sources (JSON import, localStorage recovery, IDB)
+- Never cast raw JSON to Song directly — always validate first
+
+## Key Architecture
+
+- Track lookups: use `cellForTrack(pat, trackId)` not `cells[index]` (ADR 079)
+- Auto-save: debounced 500ms with concurrency guard — do not bypass
+- Engine init: local variables committed to `this.*` only after all steps succeed
+- `src/lib/constants.ts` has zero imports — safe to use from AudioWorklet scope

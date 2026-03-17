@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pre-push hook: run type check and unit tests before pushing.
+# Bypass with: git push --no-verify
+
+echo "Running pre-push checks..."
+
+pnpm check || { echo "Type check failed. Push aborted."; exit 1; }
+pnpm test  || { echo "Unit tests failed. Push aborted."; exit 1; }
+
+echo "All checks passed."

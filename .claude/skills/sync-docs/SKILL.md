@@ -12,7 +12,9 @@ Scan all documentation in `docs/ai/` for inconsistencies with the actual codebas
 
 Check and fix these doc files:
 
-1. `docs/ai/architecture.md` — ADR statuses, component list, directory structure, commands
+1. `CLAUDE.md` — project description, build commands, conventions, key architecture notes
+2. `docs/ai/BACKLOG.md` — check completed items against code, remove if done
+3. `docs/ai/architecture.md` — ADR statuses, component list, directory structure, commands
 2. `docs/ai/overview.md` — current state, non-goals
 3. `docs/ai/sequencer-spec.md` — Pattern/Track/Trig interfaces, playback behavior
 4. `docs/ai/audio-interface.md` — WorkletCommand, WorkletPattern, WorkletTrig, Engine API
