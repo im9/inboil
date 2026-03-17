@@ -12,7 +12,7 @@ import PlaygroundAlgoGraph from '../../../../components/PlaygroundAlgoGraph.svel
 
 ## Overview
 
-Every track has a **voice** — the sound engine that produces audio when a step triggers. INBOIL includes both **drum** and **synth** voices, all synthesized in real-time (no samples, except the Sampler voice).
+Every track has a **voice** — the sound engine that produces audio when a step triggers. INBOIL includes **drum**, **synth**, and **sampler** voices. Drum and synth voices are synthesized in real-time; the Sampler plays back audio samples with multi-sample zone mapping and 8-voice polyphony.
 
 Select a track and use the **Dock panel** to edit its voice parameters:
 
@@ -111,6 +111,19 @@ Dual-oscillator morphing wavetable synth with unison and LFO.
 - **LFO 2** — Free-running LFO
 
 Poly modes: **MONO** / **POLY 16** / **WIDE 8** / **UNISON**
+
+### SMPL (Sampler)
+8-voice polyphonic sample playback engine with multi-sample zone mapping.
+- **STRT / END** — Sample start & end points
+- **PTCH** — Pitch shift (±24 semitones)
+- **DCY** — Amplitude decay
+- **REV** — Reverse playback
+- **CHOP / MODE** — Slice into 8/16/32 segments (MAP or SEQ mode)
+- **BPM / LOOP / STRC** — BPM sync, loop, and timestretch (repitch or WSOLA)
+
+The Sampler is a **melodic voice** — it supports piano roll input, transpose, and arpeggiator. Load the **Grand Piano** multi-sample pack for realistic piano across the full keyboard, or use vocal chops and loops for creative sampling.
+
+See [Sampler](/docs/sound/sampler/) for full details.
 
 ## Switching Voices
 

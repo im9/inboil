@@ -810,7 +810,7 @@ const ogImage = `${siteUrl}/og.png`;
   <section class="feat-section">
     <div class="feat-text reveal">
       <h2 id="feat-voice-title" class="feat-title">Sound Engines</h2>
-      <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths, plus a sampler with 79 built-in samples. Choose a different engine for each track.</p>
+      <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths, plus a polyphonic sampler with 99 built-in samples including a multi-sampled grand piano. Choose a different engine for each track.</p>
       <!-- Voice grid selector -->
       <div class="voice-grid">
         <div class="voice-chip" data-v="909k" role="button" tabindex="0" aria-label="909 Kick"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
@@ -922,7 +922,7 @@ const ogImage = `${siteUrl}/og.png`;
       <div class="spec-cell">
         <div id="spec-voices-label" class="spec-label">Voices</div>
         <div class="spec-value">19</div>
-        <div id="spec-voices-note" class="spec-note">13 drums, 5 synths, sampler + 79 factory samples</div>
+        <div id="spec-voices-note" class="spec-note">13 drums, 5 synths, sampler + 99 factory samples</div>
       </div>
       <div class="spec-cell">
         <div id="spec-seq-label" class="spec-label">Sequencer</div>
@@ -1020,7 +1020,7 @@ const ogImage = `${siteUrl}/og.png`;
     t('tagline', 'いつでも、どこでも、すぐ作曲');
     t('hero-sub', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
     t('feat-voice-title', 'サウンドエンジン');
-    h('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、<br>19種類の音源を搭載。79種のファクトリーサンプル内蔵のサンプラーも。<br>トラックごとに好きなエンジンを選ぶことができます。');
+    h('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、<br>19種類の音源を搭載。99種のファクトリーサンプル内蔵の<br>ポリフォニックサンプラーも。マルチサンプルのグランドピアノ付き。<br>トラックごとに好きなエンジンを選ぶことができます。');
     t('feat-scene-title', 'シーングラフ');
     h('feat-scene-desc', 'パターンをノードとしてつなげることで、<br>曲の構成を視覚的に組み立てることができます。<br>分岐を作れば、再生のたびに展開が変わる曲も作れます。<br>フィル、リバース、ブレイクでライブ感のある演奏も。');
     t('feat-fx-title', 'FXパッド');
@@ -1029,7 +1029,7 @@ const ogImage = `${siteUrl}/og.png`;
     h('feat-jam-desc', 'スマホをライブコントローラーに。<br>ホストがPCでDAWを動かし、友だちはURLを開いて<br>4文字のルームコードを入力するだけで、<br>ゲストコントローラーとして即参加。<br>ステップ編集、フィル、パラメータ操作 —<br>すべてがWebRTCでリアルタイム同期。<br>音はホストから。操作はスマホで。<br>アプリ不要。設定不要。コードをシェアして、すぐジャム。');
     t('spec-tracks-label', 'トラック');
     t('spec-voices-label', 'ボイス');
-    t('spec-voices-note', 'ドラム13、シンセ5、サンプラー + 79ファクトリーサンプル');
+    t('spec-voices-note', 'ドラム13、シンセ5、サンプラー + 99ファクトリーサンプル');
     t('spec-seq-label', 'シーケンサー');
     t('spec-seq-value', 'グリッド / トラッカー / ピアノロール');
     t('spec-steps-label', 'ステップ');
@@ -1571,11 +1571,32 @@ const ogImage = `${siteUrl}/og.png`;
       },
       'smpl': () => {
         const c = getCtx(), t = c.currentTime;
-        const o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = 523;
-        const g = c.createGain(); g.gain.setValueAtTime(0.2, t);
-        o.connect(g).connect(c.destination);
-        o.start(t);
-        return { nodes: [o], gain: g };
+        const g = c.createGain(); g.gain.setValueAtTime(0.35, t);
+        g.connect(c.destination);
+        // Play vocal chop — preload on first call, play immediately when cached
+        if (window._smplBuf) {
+          const src = c.createBufferSource();
+          src.buffer = window._smplBuf;
+          src.connect(g);
+          src.start(t);
+          return { nodes: [src], gain: g };
+        }
+        // First call: fetch, decode, then auto-play
+        if (!window._smplLoading) {
+          window._smplLoading = true;
+          fetch('/samples/vocal_tonight.webm')
+            .then(r => r.arrayBuffer())
+            .then(ab => c.decodeAudioData(ab))
+            .then(buf => {
+              window._smplBuf = buf;
+              const src = c.createBufferSource();
+              src.buffer = buf;
+              src.connect(g);
+              src.start();
+            })
+            .catch(() => { window._smplLoading = false; });
+        }
+        return { nodes: [], gain: g };
       },
     };
 
@@ -1585,7 +1606,7 @@ const ogImage = `${siteUrl}/og.png`;
       get() { return activeUpdate; }
     });
 
-    const legatoVoices = new Set(['303','bass','lead','fm','wave','smpl']);
+    const legatoVoices = new Set(['303','bass','lead','fm','wave']);
 
     function triggerChip(chip) {
       const v = chip.dataset.v;
@@ -1599,7 +1620,7 @@ const ogImage = `${siteUrl}/og.png`;
         activeGain = result.gain;
         activeUpdate = result.update || null;
         if (!isLegato) {
-          setTimeout(stopActive, 300);
+          setTimeout(stopActive, v === 'smpl' ? 2000 : 300);
         }
       }
       if (window._evSelect) window._evSelect(v);

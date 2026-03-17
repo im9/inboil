@@ -7,9 +7,13 @@ sidebar:
 
 ## Overview
 
-The **Sampler** voice (SMPL) lets you load audio files and play them as instruments. It's a full-featured sampler with slicing, pitch control, and BPM sync.
+The **Sampler** voice (SMPL) lets you load audio files and play them as instruments. It's a full-featured polyphonic sampler with slicing, pitch control, BPM sync, and multi-sample zone mapping.
 
-Switch any track to Sampler via the **SMPL** tab in the Dock panel.
+Switch any track to Sampler via the **SMPL** tab in the Dock panel. The Sampler is treated as a **melodic voice** — it supports the piano roll, transpose, and arpeggiator just like synth voices.
+
+### Polyphony
+
+The Sampler uses an 8-voice polyphonic engine. Play chords from the piano roll or MIDI keyboard — each note gets its own voice with independent pitch and playback position. Dynamic gain scaling keeps single notes at full volume while chords are automatically balanced.
 
 ## Loading Samples
 
@@ -19,11 +23,11 @@ Uploaded samples are automatically added to the **Audio Pool** for reuse across 
 
 ## Audio Pool
 
-The Audio Pool is a persistent sample library stored in the browser (OPFS). It comes with **79 factory samples** across 8 categories: kicks, snares, hats, claps, cymbals, toms, rims, percussion, and loops.
+The Audio Pool is a persistent sample library stored in the browser (OPFS). It comes with **99 factory samples** across 10 categories: kicks, snares, hats, claps, cymbals, toms, rims, percussion, loops, keys, and vocals.
 
 Tap the **POOL** button next to LOAD to open the browser:
 
-- **Folder drill-down** — navigate by category (kicks, snares, hats, etc.)
+- **Folder drill-down** — navigate by category (kicks, snares, hats, vocals, etc.)
 - **Search** — type to filter across all folders
 - **Audition** — tap ▸ to preview before loading
 - **Assign** — tap the sample name to load it onto the current track
@@ -58,6 +62,12 @@ Chopping is non-destructive. Set CHOP back to OFF to return to the full sample.
 | **LOOP** | Loop | **1SHT** (one-shot) or **LOOP** (continuous loop) |
 | **STRC** | Stretch | **RPTC** (repitch — changes pitch with tempo) or **WSLA** (WSOLA — preserves pitch) |
 
+## Multi-Sample Packs
+
+Some factory instruments use **multi-sample zone mapping** — multiple samples mapped across the keyboard for realistic timbre across the full range. The **Grand Piano** pack maps 21 Salamander Grand Piano samples (public domain) so each note plays from the nearest recorded sample, avoiding extreme pitch shifting.
+
+Load a pack from the pool browser — tap the pack name to load all zones to the current track automatically.
+
 ## Tips
 
 - **Layer samples with synth voices**: Use one track for the sample and another for a synth layer to add body
@@ -65,6 +75,8 @@ Chopping is non-destructive. Set CHOP back to OFF to return to the full sample.
 - **Micro-sampling**: Set STRT and END very close together for granular textures
 - **Breakbeat slicing**: Set CHOP to 16 with SEQ mode for classic breakbeat patterns
 - **Factory jungle breaks**: The pool includes 18 jungle/breakbeat loops — load one and set CHOP to 16 for instant breakbeats
+- **Vocal chops**: The pool includes melodic vocal chops and lyrical phrases — pitch-shift and chop them for melodic hooks
+- **Piano chords**: Load the Grand Piano pack and draw chords in the piano roll for realistic piano parts
 
 ## Related
 

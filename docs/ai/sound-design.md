@@ -56,11 +56,17 @@ Parameters (via `paramDefs.ts`, shared by all drum VoiceIds):
 
 Each drum VoiceId has a factory preset in `DRUM_PRESETS` that overrides these defaults for the specific drum sound.
 
-### SamplerVoice (ADR 012)
+### SamplerVoice (ADR 012) & PolySampler (ADR 106)
 
-Sample playback voice used by Crash, Ride, and user Sampler. Loads audio via `loadSample` WorkletCommand. Factory samples for Crash/Ride are loaded from the Audio Pool (OPFS); user Sampler accepts any audio file via LOAD or the Pool browser. Crash and Ride are categorized as `drum` in the UI (not `sampler`) because they are drum sounds that happen to use sample playback internally.
+`SamplerVoice` is the single-voice sample playback engine. It supports multi-sample zone mapping (`loadZones`), chop/timestretch (ADR 065), and BPM sync. Used directly by Crash and Ride (drum category).
 
-**Audio Pool (ADR 104):** Persistent OPFS-based sample library with 79 factory samples (WebM/Opus, ~1MB total) across 8 categories. Factory samples are auto-installed at app startup. User-uploaded samples are auto-added to the pool. Pool browser (DockPoolBrowser) provides folder drill-down, search, audition, and one-tap assign. Content-hash dedup (SHA-256) prevents duplicates.
+`PolySampler` wraps 8 `SamplerVoice` cores in round-robin polyphony. This is what the `Sampler` VoiceId creates. Dynamic gain scaling: `1/sqrt(activeVoiceCount)` — single notes at full volume, chords properly attenuated. `noteOff` is conditional on `loopMode`: one-shot samples ignore noteOff, looped samples trigger release.
+
+Sampler is **not** in `DRUM_VOICES` — it is a melodic voice supporting piano roll, transpose, and arpeggiator.
+
+Crash and Ride use bare `SamplerVoice` (not PolySampler) and remain in `DRUM_VOICES` because they are drum sounds that happen to use sample playback internally.
+
+**Audio Pool (ADR 104):** Persistent OPFS-based sample library with 99 factory samples (WebM/Opus, ~1.7MB total) across 10 categories (kicks, snares, hats, claps, cymbals, toms, rims, percussion, loops, keys, vocals). Factory samples are auto-installed at app startup. User-uploaded samples are auto-added to the pool. Pool browser (DockPoolBrowser) provides folder drill-down, search, audition, and one-tap assign. Content-hash dedup (SHA-256) prevents duplicates. Multi-sample packs (e.g., Grand Piano — 21 Salamander zones) load all zones to a track via `loadZones` command.
 
 Parameters:
 | Key | Label | Range | Default | Description |
@@ -221,11 +227,12 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ 
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
 | voices.ts | TB303Voice, MoogVoice, AnalogVoice, FMVoice | Individual melodic voice implementations. FMVoice is 4-op (ADR 068). |
 | voices.ts | WTSynth | Wavetable synth with mono/poly, unison, SVF, dual LFO, factory presets. |
-| voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride, and user Sampler. Crash/Ride loaded from Audio Pool OPFS (ADR 104). |
+| voices.ts | SamplerVoice | Sample playback voice (ADR 012). Used by Crash, Ride (bare), and as core inside PolySampler. Supports multi-sample zones (ADR 106). |
+| voices.ts | PolySampler | 8-voice polyphonic sampler wrapping SamplerVoice (ADR 106). Dynamic gain scaling. Used by `Sampler` VoiceId. |
 | voices.ts | WavetableOsc | Band-limited wavetable oscillator with 5 morphable shapes (Saw/Square/Triangle/Sine/Pulse). |
 | voices.ts | makeVoice(trackIdx, voiceId, sr) | Registry-based factory for voice instantiation (ADR 009). |
 | voices.ts | VOICE_REGISTRY | Maps VoiceId string → voice constructor. |
-| voices.ts | DRUM_VOICES | ReadonlySet of drum VoiceIds for isDrum() check. |
+| voices.ts | DRUM_VOICES | ReadonlySet of drum VoiceIds for isDrum() check. Includes Crash/Ride but NOT Sampler (Sampler is melodic). |
 | voices.ts | VOICE_LIST | VoiceMeta array with id, label, category for UI picker. |
 
 ## Effects Chain — DECIDED
