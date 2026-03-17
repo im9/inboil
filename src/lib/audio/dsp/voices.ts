@@ -1467,29 +1467,31 @@ export class SamplerVoice implements Voice {
     this._updateEnvCoeffs()
   }
 
-  /** Peak-normalize a buffer in place to 1.0, then RMS-normalize for consistent loudness */
+  /** Normalize a buffer for consistent loudness: RMS-based gain with peak cap */
   private _normalizeBuffer(buffer: Float32Array): void {
-    // Step 1: peak-normalize to 1.0
+    // Single-pass: compute peak and RMS on original buffer
     let peak = 0
-    for (let i = 0; i < buffer.length; i++) {
-      const a = Math.abs(buffer[i])
-      if (a > peak) peak = a
-    }
-    if (peak > 0 && peak !== 1) {
-      const scale = 1 / peak
-      for (let i = 0; i < buffer.length; i++) buffer[i] *= scale
-    }
-    // Step 2: RMS loudness boost — loops/pads have lower RMS than one-shots at same peak
-    // Target RMS ≈ -12 dBFS (0.25). Only boost, never attenuate. Cap peak at 0.95.
-    const TARGET_RMS = 0.25
     let sumSq = 0
-    for (let i = 0; i < buffer.length; i++) sumSq += buffer[i] * buffer[i]
+    for (let i = 0; i < buffer.length; i++) {
+      const v = buffer[i]
+      const a = v < 0 ? -v : v
+      if (a > peak) peak = a
+      sumSq += v * v
+    }
+    if (peak === 0) return  // silence
     const rms = Math.sqrt(sumSq / buffer.length)
+
+    // Choose gain: boost to target RMS (-12 dBFS ≈ 0.25), but cap so peak stays ≤ 0.95
+    const TARGET_RMS = 0.25
+    let gain: number
     if (rms > 0 && rms < TARGET_RMS) {
-      const gain = Math.min(TARGET_RMS / rms, 0.95 / peak)
-      if (gain > 1) {
-        for (let i = 0; i < buffer.length; i++) buffer[i] *= gain
-      }
+      gain = Math.min(TARGET_RMS / rms, 0.95 / peak)
+    } else {
+      // RMS already at/above target — just peak-normalize
+      gain = 1 / peak
+    }
+    if (gain !== 1) {
+      for (let i = 0; i < buffer.length; i++) buffer[i] *= gain
     }
   }
 
@@ -1615,8 +1617,8 @@ export class SamplerVoice implements Voice {
   }
 
   noteOff(): void {
-    // Drum samples: ignore noteOff — let sample play to end / natural decay
-    // (same as DrumMachine behavior)
+    // One-shot samples play to natural end; only looped samples respond to noteOff
+    if (this.loopMode) this.ampTarget = 0
   }
 
   slideNote(note: number, _velocity: number): void {
@@ -1721,6 +1723,9 @@ export class SamplerVoice implements Voice {
 
     return sample * this.amp * 0.85
   }
+
+  /** Whether this voice is currently producing output */
+  isActive(): boolean { return this.playing }
 
   reset(): void {
     this.playing = false
@@ -1827,6 +1832,82 @@ export class SamplerVoice implements Voice {
   }
 }
 
+// ── Polyphonic Sampler (ADR 106 Phase 4) ─────────────────────────────
+
+const POLY_SAMPLER_VOICES = 8
+
+export class PolySampler implements Voice {
+  private cores: SamplerVoice[]
+  private nextVoice = 0
+  private activeNotes = new Int8Array(POLY_SAMPLER_VOICES).fill(-1)
+
+  constructor(sr: number) {
+    this.cores = Array.from({ length: POLY_SAMPLER_VOICES }, () => new SamplerVoice(sr))
+  }
+
+  /** Load a single sample to all cores */
+  loadSample(buffer: Float32Array, bufferSR: number): void {
+    for (const c of this.cores) c.loadSample(buffer, bufferSR)
+  }
+
+  /** Load multi-sample zones to all cores (ADR 106) */
+  loadZones(zones: SampleZone[]): void {
+    for (const c of this.cores) c.loadZones(zones)
+  }
+
+  noteOn(note: number, velocity: number): void {
+    // Retrigger if same note already active
+    for (let i = 0; i < POLY_SAMPLER_VOICES; i++) {
+      if (this.activeNotes[i] === note) {
+        this.cores[i].noteOn(note, velocity)
+        return
+      }
+    }
+    // Allocate next voice (round-robin)
+    const idx = this.nextVoice
+    this.nextVoice = (this.nextVoice + 1) % POLY_SAMPLER_VOICES
+    this.activeNotes[idx] = note
+    this.cores[idx].noteOn(note, velocity)
+  }
+
+  noteOff(): void {
+    for (let i = 0; i < POLY_SAMPLER_VOICES; i++) {
+      this.cores[i].noteOff()
+      this.activeNotes[i] = -1
+    }
+  }
+
+  slideNote(note: number, velocity: number): void {
+    // Sampler: retrigger with new note (zone selection needs noteOn, not pitch bend)
+    this.noteOn(note, velocity)
+  }
+
+  tick(): number {
+    let sum = 0
+    let active = 0
+    for (let i = 0; i < POLY_SAMPLER_VOICES; i++) {
+      sum += this.cores[i].tick()
+      if (this.cores[i].isActive()) active++
+    }
+    // Dynamic gain: scale by active voice count instead of fixed 8-voice headroom.
+    // Sampler voices decay naturally, so single notes play at full level
+    // while chords get appropriate scaling to avoid clipping.
+    return active <= 1 ? sum : sum / Math.sqrt(active)
+  }
+
+  reset(): void {
+    for (let i = 0; i < POLY_SAMPLER_VOICES; i++) {
+      this.cores[i].reset()
+      this.activeNotes[i] = -1
+    }
+    this.nextVoice = 0
+  }
+
+  setParam(key: string, value: number): void {
+    for (const c of this.cores) c.setParam(key, value)
+  }
+}
+
 // ── Voice registry (ADR 009) ────────────────────────────────────────
 
 export type VoiceId =
@@ -1856,13 +1937,13 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   WT:          sr => new WTSynth(sr),
   Crash: sr => new SamplerVoice(sr),
   Ride:  sr => new SamplerVoice(sr),
-  Sampler:     sr => new SamplerVoice(sr),
+  Sampler:     sr => new PolySampler(sr),
 }
 
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
   'Tom', 'Rimshot', 'Cowbell', 'Shaker',
-  'Crash', 'Ride', 'Sampler',
+  'Crash', 'Ride',
 ])
 
 export type VoiceCategory = 'drum' | 'synth' | 'sampler'

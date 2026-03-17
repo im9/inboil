@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SamplerVoice, type SampleZone } from './voices.ts'
+import { SamplerVoice, PolySampler, type SampleZone } from './voices.ts'
 
 /** Create a simple sine buffer for testing */
 function makeSine(length: number, freq = 440, sr = 44100): Float32Array {
@@ -151,5 +151,93 @@ describe('SamplerVoice', () => {
       // buf2[100] = -0.2 * 2.0 = -0.4 (preserves relative level)
       expect(buf2[100]).toBeCloseTo(-0.4)
     })
+  })
+
+  describe('noteOff triggers release', () => {
+    it('noteOff is ignored for one-shot (loopMode=0)', () => {
+      const v = new SamplerVoice(44100)
+      const buf = makeSine(4410)
+      v.loadSample(buf, 44100)
+      v.noteOn(60, 0.8)
+      for (let i = 0; i < 10; i++) v.tick()
+      v.noteOff()
+      // Should still be producing output (one-shot plays to end)
+      let hasOutput = false
+      for (let i = 0; i < 100; i++) {
+        if (Math.abs(v.tick()) > 0.001) hasOutput = true
+      }
+      expect(hasOutput).toBe(true)
+    })
+
+    it('noteOff triggers release when loopMode=1', () => {
+      const v = new SamplerVoice(44100)
+      const buf = makeSine(44100) // 1 second buffer
+      v.loadSample(buf, 44100)
+      v.setParam('loopMode', 1)
+      v.noteOn(60, 0.8)
+      for (let i = 0; i < 10; i++) v.tick()
+      v.noteOff()
+      // Tick enough for release envelope
+      for (let i = 0; i < 3500; i++) v.tick()
+      expect(Math.abs(v.tick())).toBeLessThan(0.001)
+    })
+  })
+})
+
+describe('PolySampler', () => {
+  it('plays multiple notes simultaneously', () => {
+    const ps = new PolySampler(44100)
+    const buf = makeSine(4410)
+    ps.loadSample(buf, 44100)
+    ps.noteOn(60, 0.8)
+    ps.noteOn(64, 0.8)
+    ps.noteOn(67, 0.8)
+    // Should produce output (3 voices active)
+    let hasOutput = false
+    for (let i = 0; i < 100; i++) {
+      if (Math.abs(ps.tick()) > 0.001) hasOutput = true
+    }
+    expect(hasOutput).toBe(true)
+  })
+
+  it('retriggers same note on same voice', () => {
+    const ps = new PolySampler(44100)
+    const buf = makeSine(4410)
+    ps.loadSample(buf, 44100)
+    ps.noteOn(60, 0.8)
+    ps.noteOn(64, 0.8)
+    // Retrigger note 60 — should reuse voice 0, not allocate voice 2
+    ps.noteOn(60, 0.5)
+    // Still only 2 voices active
+    let sum = 0
+    for (let i = 0; i < 10; i++) sum += Math.abs(ps.tick())
+    expect(sum).toBeGreaterThan(0)
+  })
+
+  it('forwards setParam to all cores', () => {
+    const ps = new PolySampler(44100)
+    const buf = makeSine(4410)
+    ps.loadSample(buf, 44100)
+    // Should not throw
+    ps.setParam('decay', 2.0)
+    ps.setParam('rootNote', 60)
+  })
+
+  it('noteOff releases all voices', () => {
+    const ps = new PolySampler(44100)
+    const buf = makeSine(4410)
+    ps.loadSample(buf, 44100)
+    ps.noteOn(60, 0.8)
+    ps.noteOn(64, 0.8)
+    for (let i = 0; i < 10; i++) ps.tick()
+    ps.setParam('loopMode', 1)
+    ps.noteOn(60, 0.8)
+    ps.noteOn(64, 0.8)
+    for (let i = 0; i < 10; i++) ps.tick()
+    ps.noteOff()
+    // Tick until silence (exponential decay ~3000 samples)
+    for (let i = 0; i < 3500; i++) ps.tick()
+    // Should be silent after release
+    expect(Math.abs(ps.tick())).toBeLessThan(0.001)
   })
 })

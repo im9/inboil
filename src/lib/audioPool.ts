@@ -380,7 +380,7 @@ export async function getPoolStats(): Promise<PoolStats> {
 // ── Factory samples (ADR 104 §H) ────────────────────────────────────
 
 const FACTORY_VERSION_KEY = 'inboil-factory-pool-version'
-const FACTORY_VERSION = 3              // bump when factory pack changes (v3: piano pack + vocals)
+const FACTORY_VERSION = 4              // bump when factory pack changes (v4: replace vocals with ETV chops + phrases)
 const FACTORY_MANIFEST_URL = '/samples/factory.json'
 const FACTORY_SAMPLES_BASE = '/samples/'
 

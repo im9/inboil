@@ -161,7 +161,7 @@ describe('needsFactoryInstall', () => {
   })
 
   it('returns false when version matches', () => {
-    localStorage.setItem('inboil-factory-pool-version', '3')
+    localStorage.setItem('inboil-factory-pool-version', '4')
     expect(needsFactoryInstall()).toBe(false)
   })
 

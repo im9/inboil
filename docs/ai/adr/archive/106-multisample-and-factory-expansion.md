@@ -1,6 +1,6 @@
 # ADR 106: Multi-Sample Mapping & Factory Sound Expansion
 
-## Status: Implemented (Phase 1–3); Phase 4 future
+## Status: Implemented
 
 ## Context
 
@@ -153,20 +153,30 @@ Added to `factory.json`:
 
 ### E. New Factory Category: Vocals
 
-Single-sample one-shots (no multi-sample needed — pitch-shifting voices is musically desirable):
+Two sub-categories of female vocal samples sourced from Producer Space (CC0 Public Domain):
 
-| Sample | Source | License | Est. Size |
-|--------|--------|---------|-----------|
-| yeah | Freesound CC0 | CC0 | ~8KB |
-| ah | Freesound CC0 | CC0 | ~6KB |
-| oh | Freesound CC0 | CC0 | ~6KB |
-| hey | Freesound CC0 | CC0 | ~8KB |
-| ooh | Freesound CC0 | CC0 | ~8KB |
-| huh | Freesound CC0 | CC0 | ~5KB |
+**Chops** (wordless melodic ad-libs, 2–6s):
 
-**Total**: ~40–60KB — negligible addition to factory bundle.
+| Sample | Key | Size |
+|--------|-----|------|
+| chop-ebmin | Eb minor | ~20KB |
+| chop-ebmaj | Eb major | ~50KB |
+| chop-dmin | D minor | ~34KB |
+| chop-fmin | F minor | ~40KB |
+| chop-cmin | C minor | ~34KB |
 
-These go in `factory/vocals/` as regular pool entries (no zone mapping). The sampler's existing pitch-shift makes them instantly usable as vocal chops.
+**Phrases** (lyrical vocal phrases, 1–6s):
+
+| Sample | Lyric | Size |
+|--------|-------|------|
+| when-you-see-me | "When You See Me" | ~30KB |
+| lay-me-down | "Lay Me Down" | ~21KB |
+| drive-into-night | "We Drive Into The Night" | ~20KB |
+| tonight | "Tonight" | ~8KB |
+| just-a-dream | "Is It Just A Dream" | ~32KB |
+| follow-to-ocean | "You Can Follow Me Down to the Ocean" | ~41KB |
+
+**Total**: ~329KB. These go in `vocals/chops/` and `vocals/phrases/` as regular pool entries. The sampler's pitch-shift and chop modes make them versatile for melodic and rhythmic use.
 
 ### F. UI: Pack Browser in DockPanel
 
@@ -217,13 +227,13 @@ interface SampleZoneMeta {
 
 | Addition | Samples | Compressed Size |
 |----------|---------|----------------|
-| Grand Piano (10 zones) | 10 | ~250KB |
-| Vocals (6 one-shots) | 6 | ~45KB |
-| **Total new** | **16** | **~295KB** |
-| Current factory total | 79 | ~970KB |
-| **New factory total** | **95** | **~1,265KB** |
+| Grand Piano (21 zones) | 21 | ~430KB |
+| Vocals (11 chops+phrases) | 11 | ~329KB |
+| **Total new** | **32** | **~759KB** |
+| Drum/perc/loop samples | 67 | ~983KB |
+| **Factory total** | **99** | **~1,742KB** |
 
-+30% factory size — still well under 2MB. First-launch install remains fast on any connection.
+Still under 2MB. First-launch install remains fast on any connection.
 
 ## Phases
 
@@ -238,11 +248,11 @@ interface SampleZoneMeta {
 
 ### Phase 2: Factory Piano & Vocals
 
-- Source Salamander Grand Piano subset, transcode to WebM/Opus
-- Source 6 vocal one-shots from Freesound (CC0 only)
+- Source Salamander Grand Piano subset (21 zones, every minor 3rd C2–C7), transcode to WebM/Opus
+- Source 11 vocal samples from Producer Space (CC0): 5 melodic chops + 6 lyrical phrases
 - Add `packs` array to `factory.json`
-- Add `keys/` and `vocals/` factory folders
-- Bump factory pool version (v2 → v3)
+- Add `keys/`, `vocals/chops/`, `vocals/phrases/` factory folders
+- Bump factory pool version
 - `installFactorySamples` handles pack installation + zone metadata
 
 ### Phase 3: UI & Persistence
@@ -252,12 +262,13 @@ interface SampleZoneMeta {
 - Pack-aware project save/load (persist `packId`, re-hydrate zones from pool)
 - Pack name in track header display
 
-### Phase 4 (Future): User Multi-Sample Packs
+### Phase 4: Polyphonic Sampler & Piano Roll
 
-- UI for creating custom zone maps from pool samples
-- Drag samples onto a keyboard range visualizer
-- Velocity layer assignment
-- Save/load user packs
+- `PolySampler` class: 8-voice round-robin polyphony wrapping `SamplerVoice` (analogous to WTSynth wrapping WTCore)
+- Dynamic gain scaling: `1/sqrt(activeVoiceCount)` instead of fixed headroom — single notes at full volume, chords properly attenuated
+- Sampler removed from `DRUM_VOICES` → enables piano roll, transpose, arpeggiator, auto-legato
+- `noteOff` conditional on `loopMode`: one-shot samples ignore noteOff, looped samples trigger release
+- Piano roll polyphony detection: Sampler always treated as polyphonic for chord input
 
 ## Alternatives Considered
 

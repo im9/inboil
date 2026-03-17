@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "totalSize": 1469120,
+  "totalSize": 1741718,
   "samples": [
     {
       "file": "clap_dr110.webm",
@@ -603,76 +603,70 @@
       "size": 14644
     },
     {
-      "file": "vocal_m-go.webm",
-      "folder": "vocals",
-      "name": "m-go",
-      "size": 6062
+      "file": "vocal_chop-ebmin.webm",
+      "folder": "vocals/chops",
+      "name": "chop-ebmin",
+      "size": 20366
     },
     {
-      "file": "vocal_m-ready.webm",
-      "folder": "vocals",
-      "name": "m-ready",
-      "size": 3149
+      "file": "vocal_chop-ebmaj.webm",
+      "folder": "vocals/chops",
+      "name": "chop-ebmaj",
+      "size": 49642
     },
     {
-      "file": "vocal_m-set.webm",
-      "folder": "vocals",
-      "name": "m-set",
-      "size": 4131
+      "file": "vocal_chop-dmin.webm",
+      "folder": "vocals/chops",
+      "name": "chop-dmin",
+      "size": 33809
     },
     {
-      "file": "vocal_m-three.webm",
-      "folder": "vocals",
-      "name": "m-three",
-      "size": 6432
+      "file": "vocal_chop-fmin.webm",
+      "folder": "vocals/chops",
+      "name": "chop-fmin",
+      "size": 39726
     },
     {
-      "file": "vocal_m-gogogo.webm",
-      "folder": "vocals",
-      "name": "m-gogogo",
-      "size": 6612
+      "file": "vocal_chop-cmin.webm",
+      "folder": "vocals/chops",
+      "name": "chop-cmin",
+      "size": 33495
     },
     {
-      "file": "vocal_m-hold.webm",
-      "folder": "vocals",
-      "name": "m-hold",
-      "size": 3231
+      "file": "vocal_when-you-see-me.webm",
+      "folder": "vocals/phrases",
+      "name": "when-you-see-me",
+      "size": 30275
     },
     {
-      "file": "vocal_f-go.webm",
-      "folder": "vocals",
-      "name": "f-go",
-      "size": 7374
+      "file": "vocal_lay-me-down.webm",
+      "folder": "vocals/phrases",
+      "name": "lay-me-down",
+      "size": 21405
     },
     {
-      "file": "vocal_f-ready.webm",
-      "folder": "vocals",
-      "name": "f-ready",
-      "size": 2583
+      "file": "vocal_drive-into-night.webm",
+      "folder": "vocals/phrases",
+      "name": "drive-into-night",
+      "size": 19669
     },
     {
-      "file": "vocal_f-set.webm",
-      "folder": "vocals",
-      "name": "f-set",
-      "size": 2707
+      "file": "vocal_tonight.webm",
+      "folder": "vocals/phrases",
+      "name": "tonight",
+      "size": 7896
     },
     {
-      "file": "vocal_f-three.webm",
-      "folder": "vocals",
-      "name": "f-three",
-      "size": 6789
+      "file": "vocal_just-a-dream.webm",
+      "folder": "vocals/phrases",
+      "name": "just-a-dream",
+      "size": 31705
     },
     {
-      "file": "vocal_f-gogogo.webm",
-      "folder": "vocals",
-      "name": "f-gogogo",
-      "size": 4214
-    },
-    {
-      "file": "vocal_f-powerup.webm",
-      "folder": "vocals",
-      "name": "f-powerup",
-      "size": 3058
+      "file": "vocal_follow-to-ocean.webm",
+      "folder": "vocals/phrases",
+      "name": "follow-to-ocean",
+      "size": 40952
     }
   ],
   "packs": [

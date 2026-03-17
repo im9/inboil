@@ -35,7 +35,7 @@ declare const sampleRate: number
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
 import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter } from './dsp/effects.ts'
-import { makeVoice, DRUM_VOICES, SamplerVoice } from './dsp/voices.ts'
+import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
 import { SCALE_TEMPLATES } from '../constants.ts'
@@ -321,20 +321,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         case 'loadSample': {
           const t = cmd.trackId ?? 0
           if (!cmd.buffer || !cmd.sampleRate) break
-          // Create SamplerVoice if not yet initialized or wrong type
-          if (!(this.voices[t] instanceof SamplerVoice)) {
-            this.voices[t] = new SamplerVoice(sampleRate)
+          const sv = this.voices[t]
+          if (sv && 'loadSample' in sv) {
+            (sv as any).loadSample(cmd.buffer, cmd.sampleRate)
           }
-          (this.voices[t] as SamplerVoice).loadSample(cmd.buffer, cmd.sampleRate)
           break
         }
         case 'loadZones': {
           const t = cmd.trackId ?? 0
           if (!cmd.zones || !cmd.zones.length) break
-          if (!(this.voices[t] instanceof SamplerVoice)) {
-            this.voices[t] = new SamplerVoice(sampleRate)
+          const zv = this.voices[t]
+          if (zv && 'loadZones' in zv) {
+            (zv as any).loadZones(cmd.zones)
           }
-          (this.voices[t] as SamplerVoice).loadZones(cmd.zones)
           break
         }
         case 'setPattern': {
