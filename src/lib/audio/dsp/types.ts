@@ -3,7 +3,7 @@
  */
 
 export interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample' | 'loadZones'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
@@ -12,6 +12,7 @@ export interface WorkletCommand {
   velocity?: number
   buffer?: Float32Array    // loadSample: mono sample data
   sampleRate?: number      // loadSample: original sample rate
+  zones?: import('./voices.ts').SampleZone[]  // loadZones: multi-sample zones (ADR 106)
 }
 
 export interface WorkletPattern {

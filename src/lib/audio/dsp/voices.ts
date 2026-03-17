@@ -1404,9 +1404,22 @@ export class WTSynth implements Voice {
 
 // ── Sampler Voice (ADR 012) ─────────────────────────────────────────
 
+/** Multi-sample zone: defines which sample plays for a note/velocity range (ADR 106) */
+export interface SampleZone {
+  buffer: Float32Array
+  bufferSR: number
+  rootNote: number    // MIDI note this sample was recorded at
+  loNote: number      // lowest MIDI note (inclusive)
+  hiNote: number      // highest MIDI note (inclusive)
+  loVel: number       // velocity lower bound 0–127
+  hiVel: number       // velocity upper bound 0–127
+}
+
 export class SamplerVoice implements Voice {
-  private buffer: Float32Array | null = null
-  private bufferSR = 44100
+  // Multi-sample zones (ADR 106) — single-sample loadSample wraps into one zone
+  private zones: SampleZone[] = []
+  private activeZone: SampleZone | null = null
+
   private cursor = 0
   private rate = 1.0
   private playing = false
@@ -1454,8 +1467,8 @@ export class SamplerVoice implements Voice {
     this._updateEnvCoeffs()
   }
 
-  loadSample(buffer: Float32Array, bufferSR: number): void {
-    // Peak-normalize to 1.0
+  /** Peak-normalize a buffer in place to 1.0 */
+  private _normalizeBuffer(buffer: Float32Array): void {
     let peak = 0
     for (let i = 0; i < buffer.length; i++) {
       const a = Math.abs(buffer[i])
@@ -1465,14 +1478,63 @@ export class SamplerVoice implements Voice {
       const scale = 1 / peak
       for (let i = 0; i < buffer.length; i++) buffer[i] *= scale
     }
-    this.buffer = buffer
-    this.bufferSR = bufferSR
+  }
+
+  /** Load a single sample — wraps into one full-range zone (backwards compatible) */
+  loadSample(buffer: Float32Array, bufferSR: number): void {
+    this._normalizeBuffer(buffer)
+    this.zones = [{
+      buffer, bufferSR, rootNote: this.rootNote,
+      loNote: 0, hiNote: 127, loVel: 0, hiVel: 127
+    }]
+    this.activeZone = this.zones[0]
+  }
+
+  /** Load multiple zones for multi-sample instruments (ADR 106) */
+  loadZones(zones: SampleZone[]): void {
+    for (const z of zones) this._normalizeBuffer(z.buffer)
+    this.zones = zones.sort((a, b) => a.loNote - b.loNote)
+    this.activeZone = this.zones[0] ?? null
+  }
+
+  /** Find the best zone for a given note and velocity */
+  _findZone(note: number, velocity: number): SampleZone | null {
+    if (this.zones.length === 0) return null
+    if (this.zones.length === 1) return this.zones[0]
+
+    const vel127 = Math.round(velocity * 127)
+    let best: SampleZone | null = null
+    let bestDist = Infinity
+
+    for (const z of this.zones) {
+      if (note < z.loNote || note > z.hiNote) continue
+      if (vel127 < z.loVel || vel127 > z.hiVel) continue
+      const dist = Math.abs(note - z.rootNote)
+      if (dist < bestDist) { best = z; bestDist = dist }
+    }
+
+    // Fallback: if no zone matched, pick the closest zone by note distance
+    if (!best) {
+      for (const z of this.zones) {
+        const dist = note < z.loNote ? z.loNote - note
+                   : note > z.hiNote ? note - z.hiNote
+                   : Math.abs(note - z.rootNote)
+        if (dist < bestDist) { best = z; bestDist = dist }
+      }
+    }
+
+    return best
   }
 
   noteOn(note: number, velocity: number): void {
-    if (!this.buffer) return
-    const srRatio = this.bufferSR / this.sr
-    const semis = (note - this.rootNote) + this.pitchShift
+    // Zone selection (ADR 106)
+    const zone = this._findZone(note, velocity)
+    if (!zone) return
+    this.activeZone = zone
+
+    const buf = zone.buffer
+    const srRatio = zone.bufferSR / this.sr
+    const semis = (note - zone.rootNote) + this.pitchShift
     // BPM sync: repitch to match tempo, then apply pitch shift on top
     if (this.sampleBPM > 0) {
       this.rate = (this.currentBPM / this.sampleBPM) * srRatio * Math.pow(2, this.pitchShift / 12)
@@ -1487,8 +1549,8 @@ export class SamplerVoice implements Voice {
       const sliceSize = 1 / this.chopSlices
       let idx: number
       if (this.chopMode === 0) {
-        // NOTE-MAP: note offset selects slice
-        idx = ((note - this.rootNote) % this.chopSlices + this.chopSlices) % this.chopSlices
+        // NOTE-MAP: note offset selects slice (relative to zone rootNote)
+        idx = ((note - zone.rootNote) % this.chopSlices + this.chopSlices) % this.chopSlices
       } else {
         // SEQ: advance to next slice each noteOn
         idx = this.seqIndex
@@ -1500,8 +1562,8 @@ export class SamplerVoice implements Voice {
 
     this.activeStart = s
     this.activeEnd = e
-    const startSample = Math.floor(s * this.buffer.length)
-    const endSample = Math.floor(e * this.buffer.length)
+    const startSample = Math.floor(s * buf.length)
+    const endSample = Math.floor(e * buf.length)
     this.cursor = this.reverse ? endSample - 1 : startSample
     this.amp = velocity
     this.ampTarget = velocity
@@ -1526,12 +1588,14 @@ export class SamplerVoice implements Voice {
   }
 
   slideNote(note: number, _velocity: number): void {
-    const semis = (note - this.rootNote) + this.pitchShift
-    this.rate = Math.pow(2, semis / 12) * (this.bufferSR / this.sr)
+    if (!this.activeZone) return
+    const semis = (note - this.activeZone.rootNote) + this.pitchShift
+    this.rate = Math.pow(2, semis / 12) * (this.activeZone.bufferSR / this.sr)
   }
 
   tick(): number {
-    if (!this.playing || !this.buffer) return 0
+    if (!this.playing || !this.activeZone) return 0
+    const buf = this.activeZone.buffer
 
     let sample: number
 
@@ -1556,21 +1620,21 @@ export class SamplerVoice implements Voice {
       }
     } else {
       // Normal / repitch mode
-      const startSample = Math.floor(this.activeStart * this.buffer.length)
-      const endSample = Math.floor(this.activeEnd * this.buffer.length)
+      const startSample = Math.floor(this.activeStart * buf.length)
+      const endSample = Math.floor(this.activeEnd * buf.length)
 
       // Interpolated read helper
       const lerp = (pos: number): number => {
         const i = Math.floor(pos)
-        if (i < 0 || i >= this.buffer!.length) return 0
+        if (i < 0 || i >= buf.length) return 0
         const f = pos - i
-        const a = this.buffer![i]
-        const b = i + 1 < this.buffer!.length ? this.buffer![i + 1] : a
+        const a = buf[i]
+        const b = i + 1 < buf.length ? buf[i + 1] : a
         return a + (b - a) * f
       }
 
       const idx = Math.floor(this.cursor)
-      if (idx < 0 || idx >= this.buffer.length) { this.playing = false; return 0 }
+      if (idx < 0 || idx >= buf.length) { this.playing = false; return 0 }
       sample = lerp(this.cursor)
 
       // Crossfade blend: mix outgoing region with incoming region
@@ -1652,7 +1716,7 @@ export class SamplerVoice implements Voice {
 
   /** WSOLA: find best overlap offset within ±tolerance using cross-correlation */
   private _wsolaFindBest(ideal: number, startSamp: number, endSamp: number): number {
-    const buf = this.buffer!
+    const buf = this.activeZone!.buffer
     const WIN = SamplerVoice.WIN
     const tolerance = WIN >> 2  // search ±quarter window
     const prevEnd = this.wsolaWritePos  // tail of previous window in ring
@@ -1675,7 +1739,7 @@ export class SamplerVoice implements Voice {
 
   /** WSOLA: synthesize one hop of output into the ring buffer */
   private _wsolaHop(): void {
-    const buf = this.buffer!
+    const buf = this.activeZone!.buffer
     const WIN = SamplerVoice.WIN
     const hop = Math.floor(WIN * SamplerVoice.HOP_RATIO)
     const startSamp = Math.floor(this.activeStart * buf.length)
@@ -1720,7 +1784,7 @@ export class SamplerVoice implements Voice {
     this.wsolaWritePos = (this.wsolaWritePos + hop) % WIN
     this.wsolaAvail = Math.min(this.wsolaAvail + hop, WIN)
     // Advance input position at original playback speed (SR-compensated)
-    const srRatio = this.bufferSR / this.sr
+    const srRatio = this.activeZone!.bufferSR / this.sr
     this.wsolaInputPos += hop * srRatio
   }
 
