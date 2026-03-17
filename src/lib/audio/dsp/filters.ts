@@ -3,6 +3,11 @@
  * Shared by voices and effects.
  */
 
+// Tiny DC offset added to filter inputs to prevent denormal floats.
+// Subnormals (~1e-38) cause 10–100× CPU slowdown in feedback paths on some
+// platforms (notably Safari/WebKit). 1e-18 is inaudible (~-360 dBFS).
+const DENORMAL_DC = 1e-18
+
 /**
  * 2-pole resonant low-pass filter (biquad).
  * Q controls resonance — high Q (6–10) gives TB-303 "squelch".
@@ -26,6 +31,7 @@ export class ResonantLP {
     this.a2 = (1 - alpha) * a0inv
   }
   process(x: number): number {
+    x += DENORMAL_DC
     const y = this.b0*x + this.b1*this.x1 + this.b2*this.x2
                         - this.a1*this.y1 - this.a2*this.y2
     this.x2 = this.x1; this.x1 = x
@@ -58,6 +64,7 @@ export class BiquadHP {
     this.a2 = (1 - alpha) * a0inv
   }
   process(x: number): number {
+    x += DENORMAL_DC
     const y = this.b0*x + this.b1*this.x1 + this.b2*this.x2
                         - this.a1*this.y1 - this.a2*this.y2
     this.x2 = this.x1; this.x1 = x
@@ -122,6 +129,7 @@ export class DJFilter {
       return this.out
     }
     const a1 = this._a1, a2 = this._a2, a3 = this._a3, k = this._k
+    inL += DENORMAL_DC; inR += DENORMAL_DC
     // Left channel
     let v3 = inL - this.ic2eqL
     let v1 = a1 * this.ic1eqL + a2 * v3
@@ -197,6 +205,7 @@ export class PeakingEQ {
       return this.out
     }
     // Left
+    inL += DENORMAL_DC; inR += DENORMAL_DC
     const yL = this.b0*inL + this.b1*this.x1L + this.b2*this.x2L
                             - this.a1*this.y1L - this.a2*this.y2L
     this.x2L = this.x1L; this.x1L = inL
@@ -268,6 +277,7 @@ export class ShelfEQ {
       this.out[0] = inL; this.out[1] = inR
       return this.out
     }
+    inL += DENORMAL_DC; inR += DENORMAL_DC
     const yL = this.b0*inL + this.b1*this.x1L + this.b2*this.x2L
                             - this.a1*this.y1L - this.a2*this.y2L
     this.x2L = this.x1L; this.x1L = inL

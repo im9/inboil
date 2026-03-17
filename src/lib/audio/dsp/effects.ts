@@ -3,6 +3,9 @@
  * peak limiter, granular processor, tape delay, stutter, shimmer pitch shift.
  */
 
+// Tiny DC offset to prevent denormal floats in feedback paths (see filters.ts)
+const DENORMAL_DC = 1e-18
+
 // ── Reverb internals ────────────────────────────────────────────────
 
 class CombFilter {
@@ -15,7 +18,7 @@ class CombFilter {
   process(x: number): number {
     const y = this.buf[this.ptr]
     this.filt = y * (1 - this.damp) + this.filt * this.damp
-    this.buf[this.ptr] = x + this.filt * this.fb
+    this.buf[this.ptr] = x + this.filt * this.fb + DENORMAL_DC
     if (++this.ptr >= this.buf.length) this.ptr = 0
     return y
   }
@@ -27,7 +30,7 @@ class AllpassFilter {
   process(x: number): number {
     const b = this.buf[this.ptr]
     const y = b - x
-    this.buf[this.ptr] = x + b * this.fb
+    this.buf[this.ptr] = x + b * this.fb + DENORMAL_DC
     if (++this.ptr >= this.buf.length) this.ptr = 0
     return y
   }
@@ -390,8 +393,8 @@ export class TapeDelay {
     const oR = this._readInterp(this.bR, this.pR - this.ds - lfo)
 
     // LP filter on feedback (cross-feed for ping-pong)
-    this.lpL = oR + (this.lpL - oR) * this.lpCoeff
-    this.lpR = oL + (this.lpR - oL) * this.lpCoeff
+    this.lpL = oR + (this.lpL - oR) * this.lpCoeff + DENORMAL_DC
+    this.lpR = oL + (this.lpR - oL) * this.lpCoeff + DENORMAL_DC
 
     // Soft saturation (tape compression)
     this.bL[this.pL] = iL + Math.tanh(this.lpL * 1.2) * fb

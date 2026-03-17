@@ -5,9 +5,9 @@ Items are not prioritized — pick based on what you're already touching.
 
 ## DSP / Audio
 
-- [ ] **Sampler loop crossfade** — SamplerVoice loop boundary wraps without crossfade, can click on short loops. Add 2ms Hann crossfade at loop point.
+- [x] **Sampler loop crossfade** — 96-sample (~2ms) Hann crossfade at loop boundary in SamplerVoice (forward + reverse).
 - [ ] **FM/WT anti-aliasing** — High-frequency operators (4×, 8× ratio) can exceed Nyquist. Consider PolyBLEP or 2× oversampling on carriers.
-- [ ] **Denormal flushing** — No explicit flush-to-zero. Chrome handles via DAZ but Safari may accumulate subnormals in filter feedback paths.
+- [x] **Denormal flushing** — Added `1e-18` DC offset to all biquad filters (ResonantLP, BiquadHP, DJFilter, PeakingEQ, ShelfEQ), reverb (CombFilter, AllpassFilter), and TapeDelay feedback paths.
 
 ## Code Organization
 

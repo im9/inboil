@@ -1442,6 +1442,11 @@ export class SamplerVoice implements Voice {
   private wsolaInputPos = 0  // fractional position in source buffer
   private wsolaActive = false
 
+  // Loop crossfade (2ms Hann window to eliminate clicks at loop boundary)
+  private static readonly XFADE = 96  // ~2ms @ 48kHz
+  private xfadePos = 0       // countdown within crossfade region (0 = not active)
+  private xfadeFrom = 0      // cursor position in the "old" region for crossfade blend
+
   private readonly sr: number
 
   constructor(sr: number) {
@@ -1554,25 +1559,54 @@ export class SamplerVoice implements Voice {
       const startSample = Math.floor(this.activeStart * this.buffer.length)
       const endSample = Math.floor(this.activeEnd * this.buffer.length)
 
-      // Interpolated read
+      // Interpolated read helper
+      const lerp = (pos: number): number => {
+        const i = Math.floor(pos)
+        if (i < 0 || i >= this.buffer!.length) return 0
+        const f = pos - i
+        const a = this.buffer![i]
+        const b = i + 1 < this.buffer!.length ? this.buffer![i + 1] : a
+        return a + (b - a) * f
+      }
+
       const idx = Math.floor(this.cursor)
       if (idx < 0 || idx >= this.buffer.length) { this.playing = false; return 0 }
-      const frac = this.cursor - idx
-      const s0 = this.buffer[idx]
-      const s1 = idx + 1 < this.buffer.length ? this.buffer[idx + 1] : s0
-      sample = s0 + (s1 - s0) * frac
+      sample = lerp(this.cursor)
+
+      // Crossfade blend: mix outgoing region with incoming region
+      if (this.xfadePos > 0) {
+        const XFADE = SamplerVoice.XFADE
+        const t = (XFADE - this.xfadePos) / XFADE  // 0→1 over crossfade
+        // Hann fade-in: 0.5 * (1 - cos(πt))
+        const fadeIn = 0.5 * (1 - Math.cos(Math.PI * t))
+        const fadeOut = 1 - fadeIn
+        const old = lerp(this.xfadeFrom)
+        sample = sample * fadeIn + old * fadeOut
+        // Advance the "from" cursor in the same direction
+        if (this.reverse) this.xfadeFrom -= this.rate
+        else this.xfadeFrom += this.rate
+        this.xfadePos--
+      }
 
       // Advance cursor
       if (this.reverse) {
         this.cursor -= this.rate
         if (this.cursor < startSample) {
-          if (this.loopMode) { this.cursor = endSample - 1 }
+          if (this.loopMode) {
+            this.xfadeFrom = this.cursor  // continue reading from old position
+            this.xfadePos = SamplerVoice.XFADE
+            this.cursor = endSample - 1
+          }
           else { this.playing = false; return 0 }
         }
       } else {
         this.cursor += this.rate
         if (this.cursor >= endSample) {
-          if (this.loopMode) { this.cursor = startSample }
+          if (this.loopMode) {
+            this.xfadeFrom = this.cursor  // continue reading from old position
+            this.xfadePos = SamplerVoice.XFADE
+            this.cursor = startSample
+          }
           else { this.playing = false; return 0 }
         }
       }
@@ -1596,6 +1630,7 @@ export class SamplerVoice implements Voice {
     this.playing = false
     this.amp = 0
     this.cursor = 0
+    this.xfadePos = 0
   }
 
   setParam(key: string, value: number): void {
