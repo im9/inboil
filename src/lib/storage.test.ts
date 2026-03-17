@@ -90,17 +90,18 @@ describe('project CRUD', () => {
 describe('sample CRUD', () => {
   it('save → load round-trip', async () => {
     const buf = new ArrayBuffer(16)
-    await saveSample('proj-1', 0, 'kick.wav', buf)
+    await saveSample('proj-1', 0, 0, 'kick.wav', buf)
     const samples = await loadSamples('proj-1')
     expect(samples.length).toBe(1)
     expect(samples[0].name).toBe('kick.wav')
     expect(samples[0].trackId).toBe(0)
+    expect(samples[0].patternIndex).toBe(0)
     expect(samples[0].buffer.byteLength).toBe(16)
   })
 
-  it('overwrite sample for same project+track', async () => {
-    await saveSample('proj-1', 0, 'old.wav', new ArrayBuffer(8))
-    await saveSample('proj-1', 0, 'new.wav', new ArrayBuffer(32))
+  it('overwrite sample for same project+track+pattern', async () => {
+    await saveSample('proj-1', 0, 0, 'old.wav', new ArrayBuffer(8))
+    await saveSample('proj-1', 0, 0, 'new.wav', new ArrayBuffer(32))
     const samples = await loadSamples('proj-1')
     expect(samples.length).toBe(1)
     expect(samples[0].name).toBe('new.wav')
@@ -108,25 +109,25 @@ describe('sample CRUD', () => {
   })
 
   it('multiple tracks per project', async () => {
-    await saveSample('proj-1', 0, 'kick.wav', new ArrayBuffer(8))
-    await saveSample('proj-1', 1, 'snare.wav', new ArrayBuffer(12))
+    await saveSample('proj-1', 0, 0, 'kick.wav', new ArrayBuffer(8))
+    await saveSample('proj-1', 1, 0, 'snare.wav', new ArrayBuffer(12))
     const samples = await loadSamples('proj-1')
     expect(samples.length).toBe(2)
   })
 
   it('deleteSamples removes all for project', async () => {
-    await saveSample('proj-1', 0, 'a.wav', new ArrayBuffer(8))
-    await saveSample('proj-1', 1, 'b.wav', new ArrayBuffer(8))
-    await saveSample('proj-2', 0, 'c.wav', new ArrayBuffer(8))
+    await saveSample('proj-1', 0, 0, 'a.wav', new ArrayBuffer(8))
+    await saveSample('proj-1', 1, 0, 'b.wav', new ArrayBuffer(8))
+    await saveSample('proj-2', 0, 0, 'c.wav', new ArrayBuffer(8))
     await deleteSamples('proj-1')
     expect((await loadSamples('proj-1')).length).toBe(0)
     expect((await loadSamples('proj-2')).length).toBe(1)
   })
 
-  it('deleteSample removes single track sample', async () => {
-    await saveSample('proj-1', 0, 'a.wav', new ArrayBuffer(8))
-    await saveSample('proj-1', 1, 'b.wav', new ArrayBuffer(8))
-    await deleteSample('proj-1', 0)
+  it('deleteSample removes single track+pattern sample', async () => {
+    await saveSample('proj-1', 0, 0, 'a.wav', new ArrayBuffer(8))
+    await saveSample('proj-1', 1, 0, 'b.wav', new ArrayBuffer(8))
+    await deleteSample('proj-1', 0, 0)
     const samples = await loadSamples('proj-1')
     expect(samples.length).toBe(1)
     expect(samples[0].trackId).toBe(1)

@@ -4,7 +4,7 @@
    * send/mix, sample loader, remove track.
    * Extracted from DockPanel.svelte for modularity.
    */
-  import { song, activeCell, ui, samplesByTrack, setSample, poolImportFiles, pushUndo } from '../state.svelte.ts'
+  import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles, pushUndo } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
   import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -63,7 +63,7 @@
   let waveformCanvas = $state<HTMLCanvasElement>(null!)
   let dropActive = $state(false)
   let sampleError = $state('')
-  const currentSample = $derived(samplesByTrack[ui.selectedTrack])
+  const currentSample = $derived(samplesByCell[sampleCellKey(ui.selectedTrack, ui.currentPattern)])
 
   async function loadSampleFile(file: File) {
     if (file.size > MAX_SAMPLE_SIZE) {
@@ -73,9 +73,9 @@
       return
     }
     sampleError = ''
-    const result = await engine.loadUserSample(ui.selectedTrack, file)
+    const result = await engine.loadUserSample(ui.selectedTrack, file, ui.currentPattern)
     if (result) {
-      setSample(ui.selectedTrack, file.name, result.waveform, result.rawBuffer)
+      setSample(ui.selectedTrack, ui.currentPattern, file.name, result.waveform, result.rawBuffer)
       // Also add to pool under user/ folder (fire-and-forget)
       void poolImportFiles([file], 'user')
     }

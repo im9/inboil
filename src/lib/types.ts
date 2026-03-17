@@ -29,6 +29,12 @@ export interface CellInsertFx {
   y: number             // 0.0–1.0 param2 (type-dependent)
 }
 
+/** Per-cell sample reference (ADR 110) — which sample to load for this pattern×track */
+export interface CellSampleRef {
+  name: string         // display name (filename or pack name)
+  packId?: string      // factory pack id — zones re-hydrated from pool on load
+}
+
 /** Inline step data for one track in one section (ADR 042, replaces Phrase) */
 export interface Cell {
   trackId: number          // stable reference to Track.id (ADR 079)
@@ -43,6 +49,7 @@ export interface Cell {
   glitchSend: number
   granularSend: number
   insertFx?: CellInsertFx  // per-track insert FX (ADR 077)
+  sampleRef?: CellSampleRef // per-cell sample reference (ADR 110)
 }
 
 export interface ChainFx {

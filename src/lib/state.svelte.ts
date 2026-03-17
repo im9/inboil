@@ -15,7 +15,7 @@ export { FACTORY_COUNT, PATTERN_POOL_SIZE } from './factory.ts'
 // Re-export all types from types.ts for backwards compatibility
 export type {
   VoiceId, BrushMode, ChordShape,
-  Trig, CellInsertFx, Cell, ChainFx, Pattern, Section, Track, Effects,
+  Trig, CellInsertFx, CellSampleRef, Cell, ChainFx, Pattern, Section, Track, Effects,
   SceneDecorator, AutomationPoint, AutomationTarget, AutomationParams, AutomationSnapshot,
   GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams,
   SceneNode, SceneEdge, SceneLabel, Scene, Song,
@@ -619,52 +619,66 @@ export async function poolRenameEntry(id: string, newName: string): Promise<void
 }
 
 /** Assign a pool sample to the current track. Reads from OPFS, decodes, and sets on track. */
-export async function poolAssignToTrack(entry: PoolEntry, trackId: number): Promise<void> {
+export async function poolAssignToTrack(entry: PoolEntry, trackId: number, patternIndex = ui.currentPattern): Promise<void> {
   const mod = await audioPool()
   const rawBuffer = await mod.readSample(entry)
   if (!rawBuffer) { showToast('Sample not found in pool', 'error'); return }
   const { engine } = await import('./audio/engine.ts')
-  const result = await engine.loadUserSample(trackId, new File([rawBuffer], entry.name))
+  const result = await engine.loadUserSample(trackId, new File([rawBuffer], entry.name), patternIndex)
   if (result) {
-    setSample(trackId, entry.name, result.waveform, result.rawBuffer)
+    setSample(trackId, patternIndex, entry.name, result.waveform, result.rawBuffer)
   }
 }
 
-/** Assign a factory pack to the current track. Loads all zones and sends to worklet. (ADR 106) */
-export async function poolAssignPackToTrack(packId: string, packName: string, trackId: number): Promise<void> {
+/** Assign a factory pack to the current track+pattern. Loads all zones and sends to worklet. (ADR 106) */
+export async function poolAssignPackToTrack(packId: string, packName: string, trackId: number, patternIndex = ui.currentPattern): Promise<void> {
   const mod = await audioPool()
   const zones = await mod.loadPackZones(packId)
   if (!zones.length) { showToast('Pack has no zones', 'error'); return }
   const { engine } = await import('./audio/engine.ts')
-  const waveform = await engine.loadPackToTrack(trackId, zones)
+  const waveform = await engine.loadPackToTrack(trackId, zones, patternIndex)
   if (waveform) {
-    setSamplePack(trackId, packName, waveform, zones[0].buffer.buffer as ArrayBuffer, packId)
+    setSamplePack(trackId, patternIndex, packName, waveform, zones[0].buffer.buffer as ArrayBuffer, packId)
   }
 }
 
-// ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────
+// ── Sample persistence (ADR 020 Section I, ADR 110 per-cell) ─────────
 
+/** Per-cell sample storage — key: `${trackId}_${patternIndex}` (ADR 110) */
+export const samplesByCell = $state<Record<string, SampleMeta>>({})
+
+/** Compose a samplesByCell key */
+export function sampleCellKey(trackId: number, patternIndex: number): string {
+  return `${trackId}_${patternIndex}`
+}
+
+/** @deprecated Use samplesByCell — kept temporarily for migration */
 export const samplesByTrack = $state<Record<number, SampleMeta>>({})
 
-/** Store a loaded sample in memory + persist to IndexedDB */
-export function setSample(trackId: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
-  samplesByTrack[trackId] = { name, waveform, rawBuffer }
-  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, name, rawBuffer))
+/** Store a loaded sample in memory + persist to IndexedDB + set cell.sampleRef (ADR 110) */
+export function setSample(trackId: number, patternIndex: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
+  samplesByCell[sampleCellKey(trackId, patternIndex)] = { name, waveform, rawBuffer }
+  // Set sampleRef on the Cell
+  const cell = cellForTrack(song.patterns[patternIndex], trackId)
+  if (cell) cell.sampleRef = { name }
+  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, patternIndex, name, rawBuffer))
     .catch(e => { console.warn('[sample] save failed:', e); showToast('Sample save failed', 'error') })
 }
 
-/** Store a factory pack reference in memory + persist packId to IndexedDB (ADR 106) */
-export function setSamplePack(trackId: number, name: string, waveform: Float32Array, primaryBuffer: ArrayBuffer, packId: string): void {
-  samplesByTrack[trackId] = { name, waveform, rawBuffer: primaryBuffer, packId }
-  // Persist only packId + name — zones re-hydrated from pool on load (no large buffer needed)
-  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, name, new ArrayBuffer(0), packId))
+/** Store a factory pack reference in memory + persist packId to IndexedDB (ADR 106, 110) */
+export function setSamplePack(trackId: number, patternIndex: number, name: string, waveform: Float32Array, primaryBuffer: ArrayBuffer, packId: string): void {
+  samplesByCell[sampleCellKey(trackId, patternIndex)] = { name, waveform, rawBuffer: primaryBuffer, packId }
+  const cell = cellForTrack(song.patterns[patternIndex], trackId)
+  if (cell) cell.sampleRef = { name, packId }
+  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, patternIndex, name, new ArrayBuffer(0), packId))
     .catch(e => { console.warn('[sample] pack save failed:', e); showToast('Sample save failed', 'error') })
 }
 
 /** Persist any pending samples after project gets an id (called from projectSaveAs) */
 async function persistPendingSamples(projectId: string): Promise<void> {
-  for (const [tid, meta] of Object.entries(samplesByTrack)) {
-    await (await storage()).saveSample(projectId, Number(tid), meta.name, meta.rawBuffer, meta.packId)
+  for (const [key, meta] of Object.entries(samplesByCell)) {
+    const [tid, pi] = key.split('_').map(Number)
+    await (await storage()).saveSample(projectId, tid, pi, meta.name, meta.rawBuffer, meta.packId)
   }
 }
 
@@ -673,39 +687,64 @@ export async function restoreSamples(projectId: string): Promise<void> {
   clearSamples()
   const stored = await (await storage()).loadSamples(projectId)
   if (stored.length === 0) return
-  const { engine } = await import('./audio/engine.ts')  // lazy: engine.init() may not have been called yet
+  const { engine } = await import('./audio/engine.ts')
   for (const s of stored) {
-    // Factory pack — re-hydrate zones from pool (ADR 106)
-    if (s.packId) {
-      try {
-        const mod = await audioPool()
-        const zones = await mod.loadPackZones(s.packId)
-        const waveform = await engine.loadPackToTrack(s.trackId, zones)
-        if (waveform) {
-          samplesByTrack[s.trackId] = { name: s.name, waveform, rawBuffer: new ArrayBuffer(0), packId: s.packId }
+    // Detect old format (pre-ADR 110): patternIndex missing or undefined
+    const isLegacy = s.patternIndex == null
+    const patternIndices = isLegacy
+      ? song.patterns.map((_, i) => i).filter(i => {
+          const cell = cellForTrack(song.patterns[i], s.trackId)
+          return cell && (cell.voiceId === 'Sampler')
+        })
+      : [s.patternIndex]
+
+    for (const pi of patternIndices) {
+      const key = sampleCellKey(s.trackId, pi)
+      if (s.packId) {
+        try {
+          const mod = await audioPool()
+          const zones = await mod.loadPackZones(s.packId)
+          const waveform = await engine.loadPackToTrack(s.trackId, zones, pi)
+          if (waveform) {
+            samplesByCell[key] = { name: s.name, waveform, rawBuffer: new ArrayBuffer(0), packId: s.packId }
+            const cell = cellForTrack(song.patterns[pi], s.trackId)
+            if (cell) cell.sampleRef = { name: s.name, packId: s.packId }
+          }
+        } catch (e) {
+          console.warn(`[sample] pack restore failed for ${s.packId}:`, e)
         }
-      } catch (e) {
-        console.warn(`[sample] pack restore failed for ${s.packId}:`, e)
+      } else {
+        const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer, pi)
+        if (waveform) {
+          samplesByCell[key] = { name: s.name, waveform, rawBuffer: s.buffer }
+          const cell = cellForTrack(song.patterns[pi], s.trackId)
+          if (cell) cell.sampleRef = { name: s.name }
+        }
       }
-      continue
+      // Migrate old entry to new format
+      if (isLegacy && project.id) {
+        void storage().then(st => st.saveSample(project.id!, s.trackId, pi, s.name, s.buffer, s.packId))
+      }
     }
-    const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer)
-    if (waveform) {
-      samplesByTrack[s.trackId] = { name: s.name, waveform, rawBuffer: s.buffer }
-    }
+    // Old-format IDB entries are left as-is — they'll be overwritten by new-format saves
+    // and won't cause issues (loadSamples returns all, new entries take precedence)
   }
 }
 
 /** Clear all in-memory sample state */
 function clearSamples(): void {
+  for (const k of Object.keys(samplesByCell)) delete samplesByCell[k]
   for (const k of Object.keys(samplesByTrack)) delete samplesByTrack[Number(k)]
 }
 
-/** Display name for a track: use sample name for Sampler voices, otherwise cell.name */
-export function trackDisplayName(cell: Cell): string {
+/** Display name for a track: use sampleRef first, then in-memory lookup (ADR 110) */
+export function trackDisplayName(cell: Cell, patternIndex?: number): string {
   if (cell.voiceId === 'Sampler') {
-    const meta = samplesByTrack[cell.trackId]
-    if (meta?.name) return meta.name
+    if (cell.sampleRef?.name) return cell.sampleRef.name
+    if (patternIndex != null) {
+      const meta = samplesByCell[sampleCellKey(cell.trackId, patternIndex)]
+      if (meta?.name) return meta.name
+    }
   }
   return cell.name
 }
@@ -925,16 +964,16 @@ function base64ToBuffer(b64: string): ArrayBuffer {
 /** Export current project as a downloadable .inboil.json file */
 export function exportProjectJSON(): void {
   const snapshot = cloneSong()
-  // Serialize samples: pack references by packId only, user samples by base64-encoded rawBuffer
+  // Serialize samples per cell (ADR 110): key = "trackId_patternIndex"
   const samples: Record<string, { name: string; packId?: string; buffer?: string }> = {}
-  for (const [tid, meta] of Object.entries(samplesByTrack)) {
+  for (const [key, meta] of Object.entries(samplesByCell)) {
     if (meta.packId) {
-      samples[tid] = { name: meta.name, packId: meta.packId }
+      samples[key] = { name: meta.name, packId: meta.packId }
     } else if (meta.rawBuffer.byteLength > 0) {
-      samples[tid] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
+      samples[key] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
     }
   }
-  const payload = { v: 2 as const, ...snapshot, samples, exportedAt: Date.now() }
+  const payload = { v: 3 as const, ...snapshot, samples, exportedAt: Date.now() }
   const json = JSON.stringify(payload, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
   const a = document.createElement('a')
@@ -961,28 +1000,38 @@ export async function importProjectJSON(json: string): Promise<void> {
   redoStack.length = 0
   // Persist immediately so the imported project isn't lost on page close
   await projectSaveAs(song.name || 'Untitled')
-  // Restore embedded samples (v2+)
+  // Restore embedded samples (v2: trackId keys, v3: trackId_patternIndex keys)
   const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
   if (samples) {
     const { engine } = await import('./audio/engine.ts')
-    for (const [tid, entry] of Object.entries(samples)) {
-      const trackId = Number(tid)
-      if (entry.packId) {
-        try {
-          const mod = await audioPool()
-          const zones = await mod.loadPackZones(entry.packId)
-          const waveform = await engine.loadPackToTrack(trackId, zones)
-          if (waveform) {
-            setSamplePack(trackId, entry.name, waveform, new ArrayBuffer(0), entry.packId)
+    for (const [key, entry] of Object.entries(samples)) {
+      const isLegacy = !key.includes('_')  // v2: "0", "1" etc.
+      const trackId = isLegacy ? Number(key) : Number(key.split('_')[0])
+      const patternIndices = isLegacy
+        ? song.patterns.map((_, i) => i).filter(i => {
+            const cell = cellForTrack(song.patterns[i], trackId)
+            return cell && cell.voiceId === 'Sampler'
+          })
+        : [Number(key.split('_')[1])]
+
+      for (const pi of patternIndices) {
+        if (entry.packId) {
+          try {
+            const mod = await audioPool()
+            const zones = await mod.loadPackZones(entry.packId)
+            const waveform = await engine.loadPackToTrack(trackId, zones, pi)
+            if (waveform) {
+              setSamplePack(trackId, pi, entry.name, waveform, new ArrayBuffer(0), entry.packId)
+            }
+          } catch (e) {
+            console.warn(`[import] pack restore failed for ${entry.packId}:`, e)
           }
-        } catch (e) {
-          console.warn(`[import] pack restore failed for ${entry.packId}:`, e)
-        }
-      } else if (entry.buffer) {
-        const rawBuffer = base64ToBuffer(entry.buffer)
-        const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer)
-        if (waveform) {
-          setSample(trackId, entry.name, waveform, rawBuffer)
+        } else if (entry.buffer) {
+          const rawBuffer = base64ToBuffer(entry.buffer)
+          const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer, pi)
+          if (waveform) {
+            setSample(trackId, pi, entry.name, waveform, rawBuffer)
+          }
         }
       }
     }

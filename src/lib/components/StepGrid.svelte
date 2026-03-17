@@ -254,7 +254,7 @@
           onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
           data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
         >
-          <span class="track-name">{trackDisplayName(ph)}</span>
+          <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}</span>
           <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="1,1 5,5 9,1" />
           </svg>

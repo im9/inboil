@@ -261,7 +261,7 @@
         class:muted={t.muted}
         class:soloed={ui.soloTracks.has(c.trackId)}
       >
-        <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{trackDisplayName(c)}</button>
+        <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{trackDisplayName(c, ui.currentPattern)}</button>
         <button class="track-act" onpointerdown={() => toggleMute(c.trackId)}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>

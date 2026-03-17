@@ -14,11 +14,12 @@ export interface StoredProject {
   updatedAt: number
 }
 
-/** Persisted sample buffer (ADR 020 Section I, Phase A) */
+/** Persisted sample buffer (ADR 020 Section I, ADR 110 per-cell) */
 export interface StoredSample {
-  key: string          // `${projectId}_${trackId}`
+  key: string          // `${projectId}_${trackId}_${patternIndex}` (ADR 110)
   projectId: string
   trackId: number
+  patternIndex: number // pattern index within song.patterns (ADR 110)
   name: string         // original filename
   buffer: ArrayBuffer  // raw encoded audio bytes (pre-decode)
   createdAt: number
@@ -126,13 +127,14 @@ export async function deleteProject(id: string): Promise<void> {
 
 // ── Samples (ADR 020 Section I, Phase A) ─────────────────────────────
 
-/** Save a sample buffer for a project+track. For packs, pass packId and empty buffer. */
-export async function saveSample(projectId: string, trackId: number, name: string, buffer: ArrayBuffer, packId?: string): Promise<void> {
+/** Save a sample buffer for a project+track+pattern. For packs, pass packId and empty buffer. */
+export async function saveSample(projectId: string, trackId: number, patternIndex: number, name: string, buffer: ArrayBuffer, packId?: string): Promise<void> {
   const store = await tx(SAMPLE_STORE, 'readwrite')
   const sample: StoredSample = {
-    key: `${projectId}_${trackId}`,
+    key: `${projectId}_${trackId}_${patternIndex}`,
     projectId,
     trackId,
+    patternIndex,
     name,
     buffer,
     createdAt: Date.now(),
@@ -156,10 +158,10 @@ export async function deleteSamples(projectId: string): Promise<void> {
   for (const key of keys) store.delete(key)
 }
 
-/** Delete a single sample for a project+track */
-export async function deleteSample(projectId: string, trackId: number): Promise<void> {
+/** Delete a single sample for a project+track+pattern */
+export async function deleteSample(projectId: string, trackId: number, patternIndex: number): Promise<void> {
   const store = await tx(SAMPLE_STORE, 'readwrite')
-  await req(store.delete(`${projectId}_${trackId}`))
+  await req(store.delete(`${projectId}_${trackId}_${patternIndex}`))
 }
 
 // ── User Presets (ADR 015 §B) ────────────────────────────────────────

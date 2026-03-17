@@ -33,6 +33,7 @@ export function cloneCell(c: Cell): Cell {
     reverbSend: c.reverbSend, delaySend: c.delaySend,
     glitchSend: c.glitchSend, granularSend: c.granularSend,
     ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
+    ...(c.sampleRef ? { sampleRef: { ...c.sampleRef } } : {}),
     trigs: c.trigs.map(cloneTrig),
   }
 }

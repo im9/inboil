@@ -60,10 +60,12 @@ export class GrooveboxEngine {
   private suspendTimer: ReturnType<typeof setTimeout> | null = null
   /** Tracks current voiceId per track to detect changes and reload samples */
   private trackVoiceIds: string[] = []
-  /** Cached decoded user samples per track — re-sent after voice re-init (ADR 020 §I) */
-  private userSamples: Map<number, { mono: Float32Array; sampleRate: number }> = new Map()
-  /** Cached pack zones per track — re-sent after voice re-init (ADR 106) */
-  private packZones: Map<number, import('./dsp/voices.ts').SampleZone[]> = new Map()
+  /** Cached decoded user samples per cell — key: "trackId_patternIndex" (ADR 110) */
+  private userSamples: Map<string, { mono: Float32Array; sampleRate: number }> = new Map()
+  /** Cached pack zones per cell — key: "trackId_patternIndex" (ADR 110) */
+  private packZones: Map<string, import('./dsp/voices.ts').SampleZone[]> = new Map()
+  /** Tracks which sample name is currently loaded in each worklet track slot — for dedup */
+  private loadedSampleKey: Map<number, string> = new Map()
 
   set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
@@ -106,11 +108,11 @@ export class GrooveboxEngine {
     if (!pat) return
     const wp = buildWorkletPattern(song, pat, perf, fxPad, ctx)
     this._post({ type: 'setPattern', pattern: wp, reset })
-    this._autoLoadSamples(wp)
+    this._autoLoadSamples(wp, patternIndex)
   }
 
-  /** Auto-load built-in and user samples for sampler voices (ADR 012, 020) */
-  private _autoLoadSamples(wp: WorkletPattern): void {
+  /** Auto-load built-in and user samples for sampler voices (ADR 012, 020, 110) */
+  private _autoLoadSamples(wp: WorkletPattern, patternIndex: number): void {
     const voicesResized = wp.tracks.length !== this.trackVoiceIds.length
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
@@ -122,15 +124,22 @@ export class GrooveboxEngine {
         if (prev !== vid) void this.loadBuiltinSample(i, vid)
         continue
       }
-      // User/pack samples — re-send cached buffer when voice was re-initialized
-      // Also resend when voices array was resized (worklet recreates all instances)
-      if (vid === 'Sampler' && (prev !== vid || voicesResized)) {
-        const cachedPack = this.packZones.get(i)
+      // User/pack samples — re-send when voice changed, resized, or pattern switched (ADR 110)
+      if (vid === 'Sampler') {
+        const cellKey = `${i}_${patternIndex}`
+        const sampleId = cellKey  // unique id for what should be loaded
+        const alreadyLoaded = this.loadedSampleKey.get(i)
+        if (alreadyLoaded === sampleId && prev === vid && !voicesResized) continue
+        const cachedPack = this.packZones.get(cellKey)
         if (cachedPack) {
           this._sendZones(i, cachedPack)
+          this.loadedSampleKey.set(i, sampleId)
         } else {
-          const cached = this.userSamples.get(i)
-          if (cached) this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
+          const cached = this.userSamples.get(cellKey)
+          if (cached) {
+            this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
+            this.loadedSampleKey.set(i, sampleId)
+          }
         }
       }
     }
@@ -213,10 +222,11 @@ export class GrooveboxEngine {
     )
   }
 
-  /** Load a factory pack's zones to a track (ADR 106). Returns waveform of first zone for display. */
-  async loadPackToTrack(trackId: number, zones: import('../../lib/audioPool.ts').PackZoneData[]): Promise<Float32Array | null> {
+  /** Load a factory pack's zones to a track+pattern (ADR 106, 110). Returns waveform of first zone for display. */
+  async loadPackToTrack(trackId: number, zones: import('../../lib/audioPool.ts').PackZoneData[], patternIndex?: number): Promise<Float32Array | null> {
     await this.init()
     if (!zones.length) return null
+    const cellKey = patternIndex != null ? `${trackId}_${patternIndex}` : `${trackId}_0`
     // Build SampleZone array and cache for re-send
     const sampleZones = zones.map(z => ({
       buffer: z.buffer,
@@ -227,8 +237,8 @@ export class GrooveboxEngine {
       loVel: 0,
       hiVel: 127,
     }))
-    this.packZones.set(trackId, sampleZones)
-    this.userSamples.delete(trackId)  // clear single-sample cache
+    this.packZones.set(cellKey, sampleZones)
+    this.userSamples.delete(cellKey)  // clear single-sample cache
     this._sendZones(trackId, sampleZones)
     // Return waveform overview of first zone for UI display
     const { generateWaveform } = await import('../../lib/audioPool.ts')
@@ -254,8 +264,8 @@ export class GrooveboxEngine {
     }
   }
 
-  /** Decode a user-provided File and send to worklet. Returns waveform + raw buffer for persistence. (ADR 012 Phase 2) */
-  async loadUserSample(trackId: number, file: File): Promise<{ waveform: Float32Array; rawBuffer: ArrayBuffer } | null> {
+  /** Decode a user-provided File and send to worklet. Returns waveform + raw buffer for persistence. (ADR 012, 110) */
+  async loadUserSample(trackId: number, file: File, patternIndex?: number): Promise<{ waveform: Float32Array; rawBuffer: ArrayBuffer } | null> {
     await this.init()
     const rawBuffer = await file.arrayBuffer()
     // Clone before decodeAudioData (which detaches the buffer)
@@ -263,23 +273,25 @@ export class GrooveboxEngine {
     const result = await this._decodeToMono(rawBuffer)
     if (!result) return null
     const waveform = new Float32Array(result.mono)
+    const cellKey = patternIndex != null ? `${trackId}_${patternIndex}` : `${trackId}_0`
     // Cache decoded mono for re-send after voice re-init
-    this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
-    this.packZones.delete(trackId)  // clear pack cache so single sample takes priority
+    this.userSamples.set(cellKey, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
+    this.packZones.delete(cellKey)  // clear pack cache so single sample takes priority
     this._sendSample(trackId, result.mono, result.sampleRate)
     return { waveform, rawBuffer: rawCopy }
   }
 
-  /** Decode a stored ArrayBuffer and cache for worklet. Returns waveform for display. (ADR 020 Section I) */
-  async loadSampleFromBuffer(trackId: number, rawBuffer: ArrayBuffer): Promise<Float32Array | null> {
+  /** Decode a stored ArrayBuffer and cache for worklet. Returns waveform for display. (ADR 020 Section I, 110) */
+  async loadSampleFromBuffer(trackId: number, rawBuffer: ArrayBuffer, patternIndex?: number): Promise<Float32Array | null> {
     await this.init()
     // Clone before decodeAudioData (which detaches the buffer)
     const result = await this._decodeToMono(rawBuffer.slice(0))
     if (!result) return null
     const waveform = new Float32Array(result.mono)
+    const cellKey = patternIndex != null ? `${trackId}_${patternIndex}` : `${trackId}_0`
     // Cache decoded mono — will be sent to worklet by _autoLoadSamples on next sendPattern
-    this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
-    this.packZones.delete(trackId)  // clear pack cache so single sample takes priority
+    this.userSamples.set(cellKey, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
+    this.packZones.delete(cellKey)  // clear pack cache so single sample takes priority
     return waveform
   }
 

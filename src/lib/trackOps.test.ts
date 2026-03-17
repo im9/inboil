@@ -170,7 +170,7 @@ describe('addTrack — per-pattern isolation', () => {
     expect(s.patterns[1].cells.length).toBe(5)
     expect(s.patterns[2].cells.length).toBe(4)
     // New cell has correct trackId
-    expect(cellFor(s.patterns[1], newTrackId)).toBeDefined()
+    expect(cellFor(s.patterns[1], newTrackId!)).toBeDefined()
   })
 
   it('new cell trackId matches new track id', () => {
