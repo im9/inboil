@@ -104,7 +104,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 010 | Unified Drum Machine Voice | Implemented | Single DrumMachine class with tone/noise/metal sections, 11 factory presets |
 | 015 | Named Instrument Presets | Implemented | Built-in presets for all voices, user presets (IDB), pattern templates |
 | 056 | Variable Track Count | Implemented | Up to 16 tracks, nullable voiceId, dynamic worklet arrays, StepGrid scroll, DockPanel 2-row selector |
-| 063 | WT Synth Engine | Implemented | Wavetable synth (formerly iDEATH), 8-voice poly (MONO/POLY8/WIDE4/UNISON), unison, tempo-sync LFO, drive, wobble bass presets |
+| 063 | WT Synth Engine | Implemented | Wavetable synth (formerly iDEATH), 16-voice poly (MONO/POLY16/WIDE8/UNISON), unison, tempo-sync LFO, drive, wobble bass presets |
 | 068 | 4-Operator FM Synth | Implemented | 4-op, 8 algorithms, per-op ADSR, tempo-sync LFO, 12-voice poly (MONO/POLY12/WIDE6/UNISON), AlgoGraph, 20 presets |
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |
@@ -149,5 +149,5 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
 | 102 | Mobile Melodic Input & Track Management | Proposed | Mobile piano roll improvements + track add/remove |
 | 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
-| 104 | Audio Pool | Implemented | OPFS-based pool with 79 factory samples (WebM/Opus), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |
+| 104 | Audio Pool | Implemented | OPFS-based pool with 111 factory samples (WebM/Opus, incl. Grand Piano pack), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |
 | 105 | CI/CD Pipeline | Proposed | GitHub Actions: type check + unit test + build on push/PR. No auto-deploy. E2E deferred to Phase 2 |

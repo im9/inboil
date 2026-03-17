@@ -47,9 +47,10 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Modulation index** | In FM, controls the depth of pitch modulation — higher values = brighter/harsher tone. |
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
 | **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
-| **WT** | Wavetable synth (formerly iDEATH). 8-voice with MEGAfm-style poly modes (MONO/POLY8/WIDE4/UNISON). 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
+| **WT** | Wavetable synth (formerly iDEATH). 16-voice with MEGAfm-style poly modes (MONO/POLY16/WIDE8/UNISON). 2 osc (WT morph) + SVF + unison + 2 env + 2 LFO + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
-| **SamplerVoice** | Sample playback voice (ADR 012). Used by Crash, Ride (drum category), and user Sampler. |
+| **SamplerVoice** | Single-voice sample playback engine (ADR 012). Supports multi-sample zone mapping, chop, timestretch. Used directly by Crash/Ride (drum category) and as core inside PolySampler. |
+| **PolySampler** | 8-voice polyphonic sampler wrapping SamplerVoice (ADR 106). Round-robin allocation, dynamic gain `1/√N`. Used by `Sampler` VoiceId — a melodic voice supporting piano roll, transpose, and arpeggiator. |
 | **Factory preset** | Named parameter snapshot. WT: 30 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
@@ -123,7 +124,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Emscripten** | Compiler toolchain for C++ → WebAssembly. Used for `src/dsp/`. |
 | **VST3** | Plugin format for DAWs. Future target platform for C++ DSP core. |
 | **OPFS** | Origin Private File System. Browser-native filesystem API used by the Audio Pool for persistent sample storage. |
-| **Audio Pool** | OPFS-based sample library (ADR 104). 79 factory samples auto-installed at startup. User samples auto-added on LOAD. Browsable via DockPoolBrowser. |
+| **Audio Pool** | OPFS-based sample library (ADR 104). 111 factory samples (90 browsable + 21-zone Grand Piano pack) auto-installed at startup. User samples auto-added on LOAD. Browsable via DockPoolBrowser. |
 
 ## Status Markers (used in all docs)
 

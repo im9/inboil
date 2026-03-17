@@ -66,7 +66,7 @@ Sampler is **not** in `DRUM_VOICES` — it is a melodic voice supporting piano r
 
 Crash and Ride use bare `SamplerVoice` (not PolySampler) and remain in `DRUM_VOICES` because they are drum sounds that happen to use sample playback internally.
 
-**Audio Pool (ADR 104):** Persistent OPFS-based sample library with 99 factory samples (WebM/Opus, ~1.7MB total) across 10 categories (kicks, snares, hats, claps, cymbals, toms, rims, percussion, loops, keys, vocals). Factory samples are auto-installed at app startup. User-uploaded samples are auto-added to the pool. Pool browser (DockPoolBrowser) provides folder drill-down, search, audition, and one-tap assign. Content-hash dedup (SHA-256) prevents duplicates. Multi-sample packs (e.g., Grand Piano — 21 Salamander zones) load all zones to a track via `loadZones` command.
+**Audio Pool (ADR 104):** Persistent OPFS-based sample library with 111 factory sample files (WebM/Opus, ~1.7MB total) — 90 browsable samples across 11 categories (kicks, snares, hats, claps, cymbals, toms, rims, percussion, loops, keys, vocals) + 21 Grand Piano pack zones. User-facing count is 90 (pack zones are loaded as a unit, not individually browsed). Factory samples are auto-installed at app startup. User-uploaded samples are auto-added to the pool. Pool browser (DockPoolBrowser) provides folder drill-down, search, audition, and one-tap assign. Content-hash dedup (SHA-256) prevents duplicates. Multi-sample packs (e.g., Grand Piano — 21 Salamander zones) load all zones to a track via `loadZones` command.
 
 Parameters:
 | Key | Label | Range | Default | Description |
@@ -166,12 +166,12 @@ Wavetable synth engine (formerly iDEATH). VoiceId: `'WT'`. Class: `WTSynth`.
 
 Dual wavetable oscillator synth with SVF filter, dual envelopes, dual LFOs, unison, filter drive, and modulation matrix. Combine modes: Mix (crossfade), FM (A modulated by B), Ring Mod (A × B). Wavetable shapes: Saw, Square, Triangle, Sine, Pulse — generated at startup (no stored data). See ADR 011.
 
-MEGAfm-style poly modes switchable via `polyMode` parameter (0=MONO, 1=POLY8 with round-robin allocation and oldest-note stealing, 2=WIDE4 stereo pairs, 3=UNISON 8-voice stack). √N scaling for voice summing. Poly mode supports chord input via `trig.notes[]` field.
+MEGAfm-style poly modes switchable via `polyMode` parameter (0=MONO, 1=POLY16 with round-robin allocation and oldest-note stealing, 2=WIDE8 stereo pairs, 3=UNISON 16-voice stack). √N scaling for voice summing. Poly mode supports chord input via `trig.notes[]` field.
 
 Parameters (via `paramDefs.ts`):
 | Key | Label | Range | Default | Description |
 |---|---|---|---|---|
-| polyMode | POLY | 0–3 (step 1) | 0 | Polyphony: MONO/POLY8/WIDE4/UNISON |
+| polyMode | POLY | 0–3 (step 1) | 0 | Polyphony: MONO/POLY16/WIDE8/UNISON |
 | oscAPos | WV-A | 0.0–1.0 | 0.0 | Osc A wavetable position |
 | oscBPos | WV-B | 0.0–1.0 | 0.25 | Osc B wavetable position |
 | oscBSemi | SEMI | -24–24 (step 1) | 0 | Osc B semitone offset |

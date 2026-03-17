@@ -67,7 +67,7 @@ See [adr/](./adr/) for full rationale.
 - **Pattern toolbar** (IMPLEMENTED) — RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header. → [adr/057-pattern-toolbar.md](./adr/057-pattern-toolbar.md)
 - **Cross-category voice assignment** (IMPLEMENTED) — Any voice on any track, drill-down picker. → [adr/058-cross-category-voice.md](./adr/058-cross-category-voice.md)
 - **Sampler** (IMPLEMENTED) — SamplerVoice + user sample loading; Crash/Ride in drum category. → [adr/012-sampler.md](./adr/012-sampler.md)
-- **Audio Pool** (IMPLEMENTED) — OPFS-based sample library, 79 factory samples, inline browser with search/audition. → [adr/archive/104-audio-pool.md](./adr/archive/104-audio-pool.md)
+- **Audio Pool** (IMPLEMENTED) — OPFS-based sample library, 111 factory samples (incl. Grand Piano pack), inline browser with search/audition. → [adr/archive/104-audio-pool.md](./adr/archive/104-audio-pool.md)
 - **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 - **Per-pattern voice assignment** (IMPLEMENTED) — voiceId + name moved from Track to Cell. → [adr/062-per-pattern-voice.md](./adr/062-per-pattern-voice.md)
@@ -98,7 +98,7 @@ Communication:   MessagePort (postMessage) — bidirectional
 
 The AudioWorklet has no access to the DOM.
 All communication crosses the thread boundary via `MessagePort`:
-- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `loadSample`
+- **UI → Worklet:** `setPattern` (full state snapshot incl. FX, perf, fxPad), `play`, `stop`, `setBpm`, `triggerNote`, `releaseNote`, `releaseNoteByPitch`, `loadSample`, `loadZones`
 - **Worklet → UI:** `step` event with playhead positions array, `levels` event with peak/GR/CPU metering
 
 No `SharedArrayBuffer` is used in the current implementation. The UI sends the entire pattern + effects + performance state as a serialized object on every reactive change. This is simple and correct for the current scale (up to 16 tracks × 64 steps max).
@@ -112,7 +112,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (43 files)  ← Svelte 5 UI components
+│   │   ├── components/ (44 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -153,6 +153,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── EnvGraph.svelte     ← ADSR envelope visualization
 │   │   │   ├── WaveGraph.svelte    ← Wavetable preview visualization
 │   │   │   ├── Knob.svelte         ← SVG rotary knob control
+│   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
 │   │   │   └── SceneRibbon.svelte  ← Playback scrubber (unused, future mobile)
@@ -206,7 +207,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │       ├── fx/                     ← C++ effects chain
 │       └── wasm/                   ← Emscripten bindings
 ├── public/
-│   └── samples/                    ← Factory sample WebM files (79) + manifest
+│   └── samples/                    ← Factory sample WebM files (111) + manifest
 ├── docs/
 │   └── ai/                         ← This directory
 └── index.html

@@ -34,8 +34,8 @@ The goal is a focused, expressive tool for composing and performing electronic m
 
 The TypeScript AudioWorklet implementation is fully functional with:
 - Variable track count (up to 16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
-- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice, loaded from Audio Pool), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM 12-voice with 8 algorithms and MEGAfm-style poly modes — ADR 068), 1 wavetable synth (WT — 8-voice with MONO/POLY8/WIDE4/UNISON poly modes), 1 user sampler
-- Audio Pool (ADR 104): OPFS-based persistent sample library with 79 factory samples (WebM/Opus, ~1MB), inline browser with folder drill-down, search, audition, user sample auto-import and management
+- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice, loaded from Audio Pool), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM 12-voice with 8 algorithms and MEGAfm-style poly modes — ADR 068), 1 wavetable synth (WT — 16-voice with MONO/POLY16/WIDE8/UNISON poly modes), 1 polyphonic sampler (PolySampler — 8-voice round-robin, multi-sample zone mapping)
+- Audio Pool (ADR 104): OPFS-based persistent sample library with 111 factory sample files (WebM/Opus, ~1.7MB) — 90 browsable samples across 11 categories + 21 Grand Piano pack zones. Multi-sample packs, inline browser with folder drill-down, search, audition, user sample auto-import and management
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)

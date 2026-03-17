@@ -32,15 +32,16 @@ The `AnalyserNode` (fftSize=1024, smoothingTimeConstant=0.8) is inserted between
 
 ```typescript
 interface WorkletCommand {
-  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample'
+  type: 'play' | 'stop' | 'setBpm' | 'setPattern' | 'triggerNote' | 'releaseNote' | 'releaseNoteByPitch' | 'loadSample' | 'loadZones'
   bpm?: number
   pattern?: WorkletPattern
   reset?: boolean
-  trackId?: number          // for triggerNote / releaseNote / loadSample
+  trackId?: number          // for triggerNote / releaseNote / loadSample / loadZones
   note?: number             // for triggerNote / releaseNoteByPitch
   velocity?: number         // for triggerNote
   buffer?: Float32Array     // loadSample: mono sample data
   sampleRate?: number       // loadSample: original sample rate
+  zones?: SampleZone[]      // loadZones: multi-sample zone data (ADR 106)
 }
 ```
 
@@ -170,6 +171,7 @@ class GrooveboxEngine {
   async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load Crash/Ride from Audio Pool OPFS (ADR 104)
   async loadUserSample(trackId, file): Promise<{waveform, rawBuffer} | null>     // Load user audio file (ADR 012)
   async loadSampleFromBuffer(trackId, rawBuffer): Promise<Float32Array | null>   // Reload stored buffer (ADR 020 §I)
+  async loadPackToTrack(trackId, zones): Promise<Float32Array | null>            // Load multi-sample pack zones (ADR 106)
   set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback
   getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
   getContext(): AudioContext | null                                               // Current AudioContext
