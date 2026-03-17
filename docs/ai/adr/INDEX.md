@@ -151,3 +151,6 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
 | 104 | Audio Pool | Implemented | OPFS-based pool with 111 factory samples (WebM/Opus, incl. Grand Piano pack), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |
 | 105 | CI/CD Pipeline | Proposed | GitHub Actions: type check + unit test + build on push/PR. No auto-deploy. E2E deferred to Phase 2 |
+| 107 | Pattern Sharing API | Proposed | Beginner backend: REST CRUD, D1/SQLite, pattern/preset sharing, anonymous auth |
+| 108 | Collaboration Server & Media Processing | Proposed | Intermediate backend: WebSocket rooms (DO), BullMQ job queue, FFmpeg audio conversion |
+| 109 | AI Composer API | Proposed | Advanced backend: algorithmic variation, LLM-assisted composition (Claude API), real-time suggestions |

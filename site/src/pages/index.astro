@@ -8,7 +8,7 @@ const ogImage = `${siteUrl}/og.png`;
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <script is:inline>if(/^ja/i.test(navigator.language))document.documentElement.lang='ja';</script>
+  <script is:inline>if(localStorage.getItem('inboil-lang')==='ja'||(!localStorage.getItem('inboil-lang')&&/^ja/i.test(navigator.language)))document.documentElement.lang='ja';</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1E2028" />
   <title>INBOIL — A groove box in your browser</title>
@@ -565,6 +565,22 @@ const ogImage = `${siteUrl}/og.png`;
       background:#7a8a4e;
       color:#EDE8DC;
     }
+    .lang-toggle{
+      background:transparent;
+      border:1px solid rgba(237,232,220,0.3);
+      color:rgba(237,232,220,0.5);
+      font-family:"JetBrains Mono",monospace;
+      font-size:0.65rem;
+      font-weight:700;
+      letter-spacing:0.08em;
+      padding:2px 8px;
+      cursor:pointer;
+      transition:all 0.2s;
+    }
+    .lang-toggle:hover{
+      color:#EDE8DC;
+      border-color:rgba(237,232,220,0.6);
+    }
 
     /* ── Story + Support ── */
     .story-section{
@@ -763,6 +779,7 @@ const ogImage = `${siteUrl}/og.png`;
       <span>INBOIL</span>
     </a>
     <div class="header-links">
+      <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
       <a href="/docs/">Docs</a>
       <a href="https://github.com/im9" target="_blank" rel="noopener" aria-label="GitHub">
         <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -922,7 +939,7 @@ const ogImage = `${siteUrl}/og.png`;
       <div class="spec-cell">
         <div id="spec-voices-label" class="spec-label">Voices</div>
         <div class="spec-value">19</div>
-        <div id="spec-voices-note" class="spec-note">13 drums, 5 synths, sampler + 90 factory samples</div>
+        <div id="spec-voices-note" class="spec-note">13 drums, 5 synths, sampler + 90 factory samples (< 2 MB)</div>
       </div>
       <div class="spec-cell">
         <div id="spec-seq-label" class="spec-label">Sequencer</div>
@@ -1003,71 +1020,152 @@ const ogImage = `${siteUrl}/og.png`;
   <script is:inline>
   const _reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // Language
+  // Language toggle
   (() => {
-    if (!/^ja/i.test(navigator.language)) return;
-    document.documentElement.lang = 'ja';
-    const srOnly = document.querySelector('.brand h1 .sr-only');
-    if (srOnly) srOnly.textContent = ' — ブラウザで動くグルーヴボックス';
-    const seq = document.getElementById('seq');
-    if (seq) seq.setAttribute('aria-label', 'ステップシーケンサーのデモ');
-    const a = document.getElementById('docs-link');
-    a.href = '/ja/docs/getting-started/first-beat/';
-    a.textContent = 'チュートリアル →';
-    // Features i18n
     const t = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
     const h = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-    t('tagline', 'いつでも、どこでも、すぐ作曲');
-    t('hero-sub', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
-    t('feat-voice-title', 'サウンドエンジン');
-    h('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、<br>19種類の音源を搭載。90種のファクトリーサンプル内蔵の<br>ポリフォニックサンプラーも。マルチサンプルのグランドピアノ付き。<br>トラックごとに好きなエンジンを選ぶことができます。');
-    t('feat-scene-title', 'シーングラフ');
-    h('feat-scene-desc', 'パターンをノードとしてつなげることで、<br>曲の構成を視覚的に組み立てることができます。<br>分岐を作れば、再生のたびに展開が変わる曲も作れます。<br>フィル、リバース、ブレイクでライブ感のある演奏も。');
-    t('feat-fx-title', 'FXパッド');
-    h('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、<br>リアルタイムにサウンドを加工。<br>リバーブ、ディレイ、グリッチ、グラニュラー<br>— 各3フレーバー搭載。<br>キャンバスがオーディオに反応し、<br>アクティブなエフェクト間にコンステレーションを描きます。');
-    t('feat-jam-title', 'マルチデバイス・ジャム');
-    h('feat-jam-desc', 'スマホをライブコントローラーに。<br>ホストがPCでDAWを動かし、友だちはURLを開いて<br>4文字のルームコードを入力するだけで、<br>ゲストコントローラーとして即参加。<br>ステップ編集、フィル、パラメータ操作 —<br>すべてがWebRTCでリアルタイム同期。<br>音はホストから。操作はスマホで。<br>アプリ不要。設定不要。コードをシェアして、すぐジャム。');
-    t('spec-tracks-label', 'トラック');
-    t('spec-voices-label', 'ボイス');
-    t('spec-voices-note', 'ドラム13、シンセ5、サンプラー + 90ファクトリーサンプル');
-    t('spec-seq-label', 'シーケンサー');
-    t('spec-seq-value', 'グリッド / トラッカー / ピアノロール');
-    t('spec-steps-label', 'ステップ');
-    t('spec-fx-label', 'エフェクト');
-    t('spec-fx-value', '4センド + 3バンドEQ + マスターコンプ');
-    t('spec-fx-note', 'リバーブ、ディレイ、グリッチ、グラニュラー');
-    t('spec-scene-label', 'シーングラフ');
-    t('spec-scene-value', 'ノードベースの構成');
-    t('spec-scene-note', '分岐、ループ、デコレーター');
-    t('spec-export-label', 'エクスポート');
-    t('spec-midi-label', 'MIDI');
-    t('spec-midi-value', 'USB MIDI 入力');
-    t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
-    t('spec-storage-label', 'ストレージ');
-    t('spec-storage-value', 'ブラウザ内保存');
-    t('spec-storage-note', 'IndexedDB + OPFSオーディオプール、アカウント不要');
-    t('spec-jam-label', 'マルチデバイス');
-    t('spec-jam-value', 'スマホがコントローラーに');
-    t('spec-jam-note', 'WebRTC P2P、アプリ不要');
-    t('spec-price-label', '料金');
-    t('spec-price-value', '無料');
-    t('spec-browser-label', 'ブラウザ');
-    t('spec-browser-value', 'Chrome / Firefox / Safari（最新版推奨）');
-    t('spec-browser-note', 'Web Audio + AudioWorklet 対応ブラウザ');
-    t('specs-title', 'スペック');
-    t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
-    document.getElementById('story-text').textContent = 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。';
-    document.getElementById('story-text1b').textContent = '音楽ツールは、誰でもすぐ使えて、楽しいものであるべきだと信じています。';
-    document.getElementById('story-text2').textContent = 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。';
-    document.getElementById('story-text2b').textContent = 'いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。';
-    const dl = document.getElementById('donate-link');
-    if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
-    t('final-cta-title', 'さっそく始めよう');
-    t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
-    const fal = document.getElementById('final-app-link');
-    if (fal) fal.textContent = 'はじめる';
-    const fl = document.getElementById('final-docs-link');
-    if (fl) { fl.href = '/ja/docs/getting-started/first-beat/'; fl.textContent = 'チュートリアル →'; }
+
+    function applyJa() {
+      document.documentElement.lang = 'ja';
+      const srOnly = document.querySelector('.brand h1 .sr-only');
+      if (srOnly) srOnly.textContent = ' — ブラウザで動くグルーヴボックス';
+      const seq = document.getElementById('seq');
+      if (seq) seq.setAttribute('aria-label', 'ステップシーケンサーのデモ');
+      const a = document.getElementById('docs-link');
+      if (a) { a.href = '/ja/docs/getting-started/first-beat/'; a.textContent = 'チュートリアル →'; }
+      t('tagline', 'いつでも、どこでも、すぐ作曲');
+      t('hero-sub', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
+      t('feat-voice-title', 'サウンドエンジン');
+      h('feat-voice-desc', 'ドラムマシンからウェーブテーブルまで、<br>19種類の音源を搭載。90種のファクトリーサンプル内蔵の<br>ポリフォニックサンプラーも。マルチサンプルのグランドピアノ付き。<br>トラックごとに好きなエンジンを選ぶことができます。');
+      t('feat-scene-title', 'シーングラフ');
+      h('feat-scene-desc', 'パターンをノードとしてつなげることで、<br>曲の構成を視覚的に組み立てることができます。<br>分岐を作れば、再生のたびに展開が変わる曲も作れます。<br>フィル、リバース、ブレイクでライブ感のある演奏も。');
+      t('feat-fx-title', 'FXパッド');
+      h('feat-fx-desc', '4つのエフェクトノードを2Dパッド上でドラッグして、<br>リアルタイムにサウンドを加工。<br>リバーブ、ディレイ、グリッチ、グラニュラー<br>— 各3フレーバー搭載。<br>キャンバスがオーディオに反応し、<br>アクティブなエフェクト間にコンステレーションを描きます。');
+      t('feat-jam-title', 'マルチデバイス・ジャム');
+      h('feat-jam-desc', 'スマホをライブコントローラーに。<br>ホストがPCでDAWを動かし、友だちはURLを開いて<br>4文字のルームコードを入力するだけで、<br>ゲストコントローラーとして即参加。<br>ステップ編集、フィル、パラメータ操作 —<br>すべてがWebRTCでリアルタイム同期。<br>音はホストから。操作はスマホで。<br>アプリ不要。設定不要。コードをシェアして、すぐジャム。');
+      t('spec-tracks-label', 'トラック');
+      t('spec-voices-label', 'ボイス');
+      t('spec-voices-note', 'ドラム13、シンセ5、サンプラー + 90ファクトリーサンプル (< 2 MB)');
+      t('spec-seq-label', 'シーケンサー');
+      t('spec-seq-value', 'グリッド / トラッカー / ピアノロール');
+      t('spec-steps-label', 'ステップ');
+      t('spec-fx-label', 'エフェクト');
+      t('spec-fx-value', '4センド + 3バンドEQ + マスターコンプ');
+      t('spec-fx-note', 'リバーブ、ディレイ、グリッチ、グラニュラー');
+      t('spec-scene-label', 'シーングラフ');
+      t('spec-scene-value', 'ノードベースの構成');
+      t('spec-scene-note', '分岐、ループ、デコレーター');
+      t('spec-export-label', 'エクスポート');
+      t('spec-midi-label', 'MIDI');
+      t('spec-midi-value', 'USB MIDI 入力');
+      t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
+      t('spec-storage-label', 'ストレージ');
+      t('spec-storage-value', 'ブラウザ内保存');
+      t('spec-storage-note', 'IndexedDB + OPFSオーディオプール、アカウント不要');
+      t('spec-jam-label', 'マルチデバイス');
+      t('spec-jam-value', 'スマホがコントローラーに');
+      t('spec-jam-note', 'WebRTC P2P、アプリ不要');
+      t('spec-price-label', '料金');
+      t('spec-price-value', '無料');
+      t('spec-browser-label', 'ブラウザ');
+      t('spec-browser-value', 'Chrome / Firefox / Safari（最新版推奨）');
+      t('spec-browser-note', 'Web Audio + AudioWorklet 対応ブラウザ');
+      t('specs-title', 'スペック');
+      t('story-title', 'ひとりで作っている、みんなのための音楽ツール');
+      t('story-text', 'INBOILは個人開発のプロジェクトです。シンセエンジンからシーングラフ、FXパッド、このウェブサイトまで、すべてをひとりの開発者がゼロから作っています。');
+      t('story-text1b', '音楽ツールは、誰でもすぐ使えて、楽しいものであるべきだと信じています。');
+      t('story-text2', 'INBOILが楽しいと思ってもらえたら、開発を応援していただけると嬉しいです。');
+      t('story-text2b', 'いただいたサポートは、プロジェクトを無料で維持し、新しい機能を生み出す力になります。');
+      const dl = document.getElementById('donate-link');
+      if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> このプロジェクトを応援';
+      t('final-cta-title', 'さっそく始めよう');
+      t('final-cta-desc', 'インストール不要。アカウント不要。開いて、すぐ演奏。');
+      const fal = document.getElementById('final-app-link');
+      if (fal) fal.textContent = 'はじめる';
+      const fl = document.getElementById('final-docs-link');
+      if (fl) { fl.href = '/ja/docs/getting-started/first-beat/'; fl.textContent = 'チュートリアル →'; }
+      const ha = document.getElementById('header-app');
+      if (ha) ha.textContent = 'アプリを開く';
+    }
+
+    function applyEn() {
+      document.documentElement.lang = 'en';
+      const srOnly = document.querySelector('.brand h1 .sr-only');
+      if (srOnly) srOnly.textContent = ' — Browser-based groove box';
+      const seq = document.getElementById('seq');
+      if (seq) seq.setAttribute('aria-label', 'Interactive step sequencer demo');
+      const a = document.getElementById('docs-link');
+      if (a) { a.href = '/docs/getting-started/first-beat/'; a.textContent = 'Tutorial →'; }
+      t('tagline', 'Make music anywhere, right now');
+      t('hero-sub', 'No install. No signup. Just play.');
+      t('feat-voice-title', 'Sound Engines');
+      t('feat-voice-desc', '19 voices \u2014 from drum machines to wavetable synths, plus a polyphonic sampler with 90 built-in samples and a multi-sampled grand piano. Choose a different engine for each track.');
+      t('feat-scene-title', 'Scene Graph');
+      t('feat-scene-desc', 'Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time. Switch scenes on the fly with fills, reverse, and breaks.');
+      t('feat-fx-title', 'FX Pad');
+      t('feat-fx-desc', 'Drag effect nodes across a 2D pad to shape your sound in real time. Reverb, delay, glitch, and granular \u2014 each with three flavours. The canvas reacts to your audio, drawing constellations between active effects.');
+      t('feat-jam-title', 'Multi-Device Jam');
+      t('feat-jam-desc', 'Turn any phone into a live controller. The host runs the DAW on a PC \u2014 a friend opens the URL on their phone, enters a 4-character room code, and instantly joins as a guest controller. Edit steps, trigger fills, tweak parameters \u2014 all synced in real time over WebRTC. Audio stays on the host. Control comes from the phone. No app install. No setup. Just share a code and jam.');
+      t('spec-tracks-label', 'Tracks');
+      t('spec-voices-label', 'Voices');
+      t('spec-voices-note', '13 drums, 5 synths, sampler + 90 factory samples (< 2 MB)');
+      t('spec-seq-label', 'Sequencer');
+      t('spec-seq-value', 'Grid / Tracker / Piano Roll');
+      t('spec-steps-label', 'Steps');
+      t('spec-fx-label', 'Effects');
+      t('spec-fx-value', '4 sends + 3-band EQ + master comp');
+      t('spec-fx-note', 'Reverb, Delay, Glitch, Granular');
+      t('spec-scene-label', 'Scene Graph');
+      t('spec-scene-value', 'Node-based arrangement');
+      t('spec-scene-note', 'Branching, looping, decorators');
+      t('spec-export-label', 'Export');
+      t('spec-midi-label', 'MIDI');
+      t('spec-midi-value', 'USB MIDI input');
+      t('spec-midi-note', 'Web MIDI API (Chrome / Edge)');
+      t('spec-storage-label', 'Storage');
+      t('spec-storage-value', 'Browser local');
+      t('spec-storage-note', 'IndexedDB + OPFS audio pool, no account needed');
+      t('spec-jam-label', 'Multi-device');
+      t('spec-jam-value', 'Phone as live controller');
+      t('spec-jam-note', 'WebRTC P2P, no app install');
+      t('spec-price-label', 'Price');
+      t('spec-price-value', 'Free');
+      t('spec-browser-label', 'Browser');
+      t('spec-browser-value', 'Chrome / Firefox / Safari (latest)');
+      t('spec-browser-note', 'Web Audio + AudioWorklet required');
+      t('specs-title', 'Specs');
+      t('story-title', 'Built by one person, for everyone');
+      t('story-text', 'INBOIL is a solo passion project \u2014 designed, coded, and sound-designed by a single developer. Every feature you see here was built from scratch: the synth engines, the scene graph, the FX pad, even this website.');
+      t('story-text1b', 'I believe music tools should be accessible, instant, and fun.');
+      t('story-text2', 'If INBOIL brings you joy, consider supporting its development.');
+      t('story-text2b', 'Your contribution helps keep the project free and fuels new features.');
+      const dl = document.getElementById('donate-link');
+      if (dl) dl.innerHTML = '<span class="donate-heart">&#9825;</span> Support this project';
+      t('final-cta-title', 'Ready to make some noise?');
+      t('final-cta-desc', 'No install. No signup. Just open and play.');
+      const fal = document.getElementById('final-app-link');
+      if (fal) fal.textContent = 'Start Playing';
+      const fl = document.getElementById('final-docs-link');
+      if (fl) { fl.href = '/docs/getting-started/first-beat/'; fl.textContent = 'Tutorial →'; }
+      const ha = document.getElementById('header-app');
+      if (ha) ha.textContent = 'Open App';
+    }
+
+    // Determine initial language: localStorage > navigator.language
+    const stored = localStorage.getItem('inboil-lang');
+    let lang = stored || (/^ja/i.test(navigator.language) ? 'ja' : 'en');
+
+    const btn = document.getElementById('lang-toggle');
+
+    function setLang(l) {
+      lang = l;
+      localStorage.setItem('inboil-lang', l);
+      if (l === 'ja') { applyJa(); } else { applyEn(); }
+      if (btn) btn.textContent = l === 'ja' ? 'JA' : 'EN';
+    }
+
+    setLang(lang);
+    if (btn) btn.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
   })();
 
   // Mini Sequencer (DOM-based, matches app StepGrid)
