@@ -429,7 +429,7 @@
 
   <!-- Mode buttons -->
   <div class="dae-row">
-    <div class="dae-toggle">
+    <div class="dae-toggle" role="tablist" aria-label="Draw mode">
       {#each [
         { id: 'pencil', label: 'Pencil' },
         { id: 'line', label: 'Line' },
@@ -437,6 +437,8 @@
         { id: 'bezier', label: 'Bezier' },
       ] as m}
         <button
+          role="tab"
+          aria-selected={mode === m.id}
           class:active={mode === m.id}
           onpointerdown={() => { mode = m.id as typeof mode; lineStart = null }}
         >{m.label}</button>
@@ -447,14 +449,14 @@
   <!-- Interpolation + Snap -->
   <div class="dae-row">
     <span class="dae-label">INTERP</span>
-    <div class="dae-toggle">
-      <button class:active={interpolation === 'linear'} onpointerdown={() => mutate(p => { p.interpolation = 'linear' })}>Lin</button>
-      <button class:active={interpolation === 'smooth'} onpointerdown={() => mutate(p => { p.interpolation = 'smooth' })}>Smo</button>
+    <div class="dae-toggle" role="tablist" aria-label="Interpolation">
+      <button role="tab" aria-selected={interpolation === 'linear'} class:active={interpolation === 'linear'} onpointerdown={() => mutate(p => { p.interpolation = 'linear' })}>Lin</button>
+      <button role="tab" aria-selected={interpolation === 'smooth'} class:active={interpolation === 'smooth'} onpointerdown={() => mutate(p => { p.interpolation = 'smooth' })}>Smo</button>
     </div>
     <span class="dae-label" style="margin-left:6px">SNAP</span>
-    <div class="dae-toggle">
+    <div class="dae-toggle" role="tablist" aria-label="Snap">
       {#each SNAP_OPTIONS as opt}
-        <button class:active={snap === opt.value} onpointerdown={() => snap = opt.value}>{opt.label}</button>
+        <button role="tab" aria-selected={snap === opt.value} class:active={snap === opt.value} onpointerdown={() => snap = opt.value}>{opt.label}</button>
       {/each}
     </div>
   </div>

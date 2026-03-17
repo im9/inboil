@@ -257,14 +257,18 @@
 
           {#if showTrackParams}
             <!-- Tab bar (ADR 092) -->
-            <div class="dock-tabs">
+            <div class="dock-tabs" role="tablist" aria-label="Dock">
               <button
                 class="dock-tab"
+                role="tab"
+                aria-selected={ui.dockTab === 'tracks'}
                 class:active={ui.dockTab === 'tracks'}
                 onpointerdown={() => ui.dockTab = 'tracks'}
               >TRACKS</button>
               <button
                 class="dock-tab"
+                role="tab"
+                aria-selected={ui.dockTab === 'scene'}
                 class:active={ui.dockTab === 'scene'}
                 onpointerdown={() => ui.dockTab = 'scene'}
               >SCENE{#if decoCount > 0}<span class="dock-tab-badge">{decoCount}</span>{/if}</button>

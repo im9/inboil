@@ -65,9 +65,9 @@
       </div>
     </div>
     {#if visibleMode === 'system'}
-      <div class="system-tabs">
-        <button class="system-tab" class:active={ui.systemTab === 'project'} onpointerdown={() => { ui.systemTab = 'project' }}>PROJECT</button>
-        <button class="system-tab" class:active={ui.systemTab === 'settings'} onpointerdown={() => { ui.systemTab = 'settings' }}>SETTINGS</button>
+      <div class="system-tabs" role="tablist" aria-label="System">
+        <button class="system-tab" role="tab" aria-selected={ui.systemTab === 'project'} class:active={ui.systemTab === 'project'} onpointerdown={() => { ui.systemTab = 'project' }}>PROJECT</button>
+        <button class="system-tab" role="tab" aria-selected={ui.systemTab === 'settings'} class:active={ui.systemTab === 'settings'} onpointerdown={() => { ui.systemTab = 'settings' }}>SETTINGS</button>
       </div>
     {/if}
 

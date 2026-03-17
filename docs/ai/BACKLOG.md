@@ -15,7 +15,5 @@ Items are not prioritized — pick based on what you're already touching.
 
 ## Accessibility
 
-- [ ] **`:focus-visible` on all interactive elements** — Currently partial. Add to buttons, chips, toggles.
-- [ ] **`aria-pressed` on toggle buttons** — State exists in code but not announced to assistive tech.
 - [ ] **Keyboard navigation for StepGrid** — Arrow keys to move between steps, Enter/Space to toggle.
 

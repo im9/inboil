@@ -286,19 +286,21 @@
 
   <!-- Melodic tab switcher -->
   {#if !drum}
-    <div class="view-tabs">
-      <button class="tab" class:active={mobileTab === 'steps'} onpointerdown={() => { mobileTab = 'steps' }}>STEPS</button>
-      <button class="tab" class:active={mobileTab === 'notes'} onpointerdown={() => { mobileTab = 'notes' }}>NOTES</button>
+    <div class="view-tabs" role="tablist" aria-label="View">
+      <button class="tab" role="tab" aria-selected={mobileTab === 'steps'} class:active={mobileTab === 'steps'} onpointerdown={() => { mobileTab = 'steps' }}>STEPS</button>
+      <button class="tab" role="tab" aria-selected={mobileTab === 'notes'} class:active={mobileTab === 'notes'} onpointerdown={() => { mobileTab = 'notes' }}>NOTES</button>
     </div>
   {/if}
 
   <!-- Edit mode tabs -->
   {#if drum || mobileTab === 'steps'}
-    <div class="edit-tabs">
+    <div class="edit-tabs" role="tablist" aria-label="Edit mode">
       <div class="edit-tab-pill" style="--tab-i: {editTabIdx}"></div>
       {#each EDIT_TABS as tab}
         <button
           class="edit-tab"
+          role="tab"
+          aria-selected={editMode === tab}
           class:active={editMode === tab}
           onpointerdown={() => { editMode = tab }}
         >{tab === 'step' ? 'STEP' : tab === 'vel' ? 'VEL' : 'CHNC'}</button>

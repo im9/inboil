@@ -212,10 +212,12 @@
     <div class="sep" aria-hidden="true"></div>
 
     <!-- View toggle: SCENE / FX / EQ / MST -->
-    <div class="view-toggle">
+    <div class="view-toggle" role="tablist" aria-label="View">
       {#if !compact}
       <button
         class="btn-view"
+        role="tab"
+        aria-selected={ui.phraseView === 'pattern' && !ui.patternSheet}
         class:active={ui.phraseView === 'pattern' && !ui.patternSheet}
         onpointerdown={() => { ui.phraseView = 'pattern'; ui.patternSheet = false }}
         data-tip="Scene view" data-tip-ja="シーンビュー"
@@ -223,18 +225,24 @@
       {/if}
       <button
         class="btn-view"
+        role="tab"
+        aria-selected={ui.phraseView === 'fx'}
         class:active={ui.phraseView === 'fx'}
         onpointerdown={() => { ui.phraseView = ui.phraseView === 'fx' ? 'pattern' : 'fx'; ui.patternSheet = false }}
         data-tip="FX pad — drag nodes to control effects" data-tip-ja="FXパッド — ノードをドラッグしてエフェクト操作"
       >FX</button>
       <button
         class="btn-view"
+        role="tab"
+        aria-selected={ui.phraseView === 'eq'}
         class:active={ui.phraseView === 'eq'}
         onpointerdown={() => { ui.phraseView = ui.phraseView === 'eq' ? 'pattern' : 'eq'; ui.patternSheet = false }}
         data-tip="EQ / Filter view" data-tip-ja="EQ / フィルター画面"
       >EQ</button>
       <button
         class="btn-view"
+        role="tab"
+        aria-selected={ui.phraseView === 'master'}
         class:active={ui.phraseView === 'master'}
         onpointerdown={() => { ui.phraseView = ui.phraseView === 'master' ? 'pattern' : 'master'; ui.patternSheet = false }}
         data-tip="Master bus — compressor, ducker, FX returns" data-tip-ja="マスターバス — コンプ、ダッカー、FXリターン"
@@ -242,6 +250,8 @@
       {#if compact}
       <button
         class="btn-view btn-perf-tab"
+        role="tab"
+        aria-selected={ui.phraseView === 'perf'}
         class:active={ui.phraseView === 'perf'}
         onpointerdown={() => { ui.phraseView = ui.phraseView === 'perf' ? 'pattern' : 'perf'; ui.patternSheet = false }}
         data-tip="Performance effects" data-tip-ja="パフォーマンスエフェクト"

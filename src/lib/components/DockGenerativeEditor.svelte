@@ -77,10 +77,12 @@
       <span class="gen-range-label">RANGE</span>
       <span class="gen-range-val">{tp.range[0]}–{tp.range[1]}</span>
     </div>
-    <div class="gen-mode-row">
+    <div class="gen-mode-row" role="tablist" aria-label="Turing mode">
       {#each ['note', 'gate', 'velocity'] as m}
         <button
           class="btn-toggle gen-mode-btn"
+          role="tab"
+          aria-selected={tp.mode === m}
           class:active={tp.mode === m}
           onpointerdown={() => sceneUpdateGenerativeParams(nodeId, { mode: m as TuringParams['mode'] })}
         >{m.toUpperCase().slice(0, 3)}</button>
@@ -209,11 +211,13 @@
     </div>
   {/if}
   <!-- Common: merge mode -->
-  <div class="gen-merge-row">
+  <div class="gen-merge-row" role="tablist" aria-label="Merge mode">
     <span class="gen-range-label">MERGE</span>
     {#each ['replace', 'merge', 'layer'] as m}
       <button
         class="btn-toggle gen-mode-btn"
+        role="tab"
+        aria-selected={gen.mergeMode === m}
         class:active={gen.mergeMode === m}
         onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer' }}
       >{m.toUpperCase().slice(0, 3)}</button>

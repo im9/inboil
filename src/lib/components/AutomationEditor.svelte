@@ -272,9 +272,9 @@
   <!-- Mode toggle -->
   <div class="auto-row">
     <span class="auto-label">MODE</span>
-    <div class="auto-toggle">
-      <button class:active={mode === 'bezier'} onpointerdown={() => mode = 'bezier'}>Bezier</button>
-      <button class:active={mode === 'freehand'} onpointerdown={() => mode = 'freehand'}>Freehand</button>
+    <div class="auto-toggle" role="tablist" aria-label="Draw mode">
+      <button role="tab" aria-selected={mode === 'bezier'} class:active={mode === 'bezier'} onpointerdown={() => mode = 'bezier'}>Bezier</button>
+      <button role="tab" aria-selected={mode === 'freehand'} class:active={mode === 'freehand'} onpointerdown={() => mode = 'freehand'}>Freehand</button>
     </div>
   </div>
 
@@ -292,17 +292,17 @@
   <!-- Controls row -->
   <div class="auto-row">
     <span class="auto-label">INTERP</span>
-    <div class="auto-toggle">
-      <button class:active={interpolation === 'linear'} onpointerdown={() => mutate(p => { p.interpolation = 'linear' })}>Linear</button>
-      <button class:active={interpolation === 'smooth'} onpointerdown={() => mutate(p => { p.interpolation = 'smooth' })}>Smooth</button>
+    <div class="auto-toggle" role="tablist" aria-label="Interpolation">
+      <button role="tab" aria-selected={interpolation === 'linear'} class:active={interpolation === 'linear'} onpointerdown={() => mutate(p => { p.interpolation = 'linear' })}>Linear</button>
+      <button role="tab" aria-selected={interpolation === 'smooth'} class:active={interpolation === 'smooth'} onpointerdown={() => mutate(p => { p.interpolation = 'smooth' })}>Smooth</button>
     </div>
   </div>
 
   <div class="auto-row">
     <span class="auto-label">SNAP</span>
-    <div class="auto-toggle">
+    <div class="auto-toggle" role="tablist" aria-label="Snap">
       {#each SNAP_OPTIONS as opt}
-        <button class:active={snap === opt.value} onpointerdown={() => snap = opt.value}>{opt.label}</button>
+        <button role="tab" aria-selected={snap === opt.value} class:active={snap === opt.value} onpointerdown={() => snap = opt.value}>{opt.label}</button>
       {/each}
     </div>
   </div>
