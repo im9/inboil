@@ -4,7 +4,7 @@
    * Shows folder drill-down, audition, and one-tap assign.
    * Toggled by POOL button next to LOAD in DockTrackEditor.
    */
-  import { pool, poolAssignToTrack, poolDeleteEntry, poolRenameEntry, poolMoveEntry } from '../state.svelte.ts'
+  import { pool, poolAssignToTrack, poolAssignPackToTrack, poolDeleteEntry, poolRenameEntry, poolMoveEntry } from '../state.svelte.ts'
   import type { PoolEntry } from '../audioPool.ts'
   import { showToast } from '../toast.svelte.ts'
 
@@ -13,6 +13,35 @@
     onclose?: () => void
   }
   const { trackId, onclose }: Props = $props()
+
+  // ── Factory packs (ADR 106) ──
+  interface PackInfo { id: string; name: string; category: string; zoneCount: number }
+  let packs = $state<PackInfo[]>([])
+  let loadingPack = $state<string | null>(null)
+
+  $effect(() => {
+    void import('../audioPool.ts').then(mod => mod.getFactoryPacks()).then(fp => {
+      packs = fp.map(p => ({ id: p.id, name: p.name, category: p.category, zoneCount: p.zones.length }))
+    }).catch(() => { /* factory not installed yet */ })
+  })
+
+  async function assignPack(pack: PackInfo) {
+    if (loadingPack) return
+    loadingPack = pack.id
+    stopAudition()
+    await poolAssignPackToTrack(pack.id, pack.name, trackId)
+    loadingPack = null
+    onclose?.()
+  }
+
+  // Packs matching search filter
+  const filteredPacks = $derived.by(() => {
+    if (!isSearching) return packs
+    return packs.filter(p => {
+      const hay = (p.name + ' ' + p.category).toLowerCase()
+      return searchTerms.every(t => hay.includes(t))
+    })
+  })
 
   // ── Search ──
   let query = $state('')
@@ -216,9 +245,26 @@
           Loading...
         {/if}
       </div>
-    {:else if sortedEntries.length === 0}
+    {:else if sortedEntries.length === 0 && filteredPacks.length === 0}
       <div class="pool-msg">No samples</div>
     {:else}
+      <!-- Factory packs (ADR 106) -->
+      {#each filteredPacks as pack (pack.id)}
+        <div
+          class="pool-row pack-row"
+          class:loading={loadingPack === pack.id}
+          role="button"
+          tabindex="0"
+          ondblclick={() => void assignPack(pack)}
+        >
+          <span class="pack-icon">🎹</span>
+          <button
+            class="row-name"
+            onpointerdown={() => void assignPack(pack)}
+          >{pack.name}</button>
+          <span class="pack-zones">{pack.zoneCount} zones</span>
+        </div>
+      {/each}
       {#each sortedEntries as entry (entry.id)}
         {@const isFactory = entry.folder.startsWith('factory')}
         <div
@@ -507,6 +553,28 @@
     outline: none;
     font-family: inherit;
     min-width: 60px;
+  }
+
+  /* ── Pack rows (ADR 106) ── */
+  .pack-row {
+    border-bottom: 1px solid rgba(237,232,220,0.06);
+  }
+  .pack-row.loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .pack-icon {
+    font-size: 10px;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+  }
+  .pack-zones {
+    font-size: 8px;
+    color: rgba(237,232,220,0.3);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .hidden { display: none; }

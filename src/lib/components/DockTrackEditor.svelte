@@ -221,7 +221,7 @@
         onpointerdown={() => poolOpen = !poolOpen}
         data-tip="Browse sample pool" data-tip-ja="サンプルプールから選択"
       >POOL</button>
-      <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || currentSample?.name || 'Drop audio file'}</span>
+      <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || (currentSample?.packId ? '🎹 ' : '') + (currentSample?.name || '') || 'Drop audio file'}</span>
     </div>
     <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
     <input

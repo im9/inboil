@@ -624,6 +624,18 @@ export async function poolAssignToTrack(entry: PoolEntry, trackId: number): Prom
   }
 }
 
+/** Assign a factory pack to the current track. Loads all zones and sends to worklet. (ADR 106) */
+export async function poolAssignPackToTrack(packId: string, packName: string, trackId: number): Promise<void> {
+  const mod = await audioPool()
+  const zones = await mod.loadPackZones(packId)
+  if (!zones.length) { showToast('Pack has no zones', 'error'); return }
+  const { engine } = await import('./audio/engine.ts')
+  const waveform = await engine.loadPackToTrack(trackId, zones)
+  if (waveform) {
+    setSamplePack(trackId, packName, waveform, zones[0].buffer.buffer as ArrayBuffer, packId)
+  }
+}
+
 // ── Sample persistence (ADR 020 Section I, Phase A) ──────────────────
 
 export const samplesByTrack = $state<Record<number, SampleMeta>>({})
@@ -635,10 +647,18 @@ export function setSample(trackId: number, name: string, waveform: Float32Array,
     .catch(e => { console.warn('[sample] save failed:', e); showToast('Sample save failed', 'error') })
 }
 
+/** Store a factory pack reference in memory + persist packId to IndexedDB (ADR 106) */
+export function setSamplePack(trackId: number, name: string, waveform: Float32Array, primaryBuffer: ArrayBuffer, packId: string): void {
+  samplesByTrack[trackId] = { name, waveform, rawBuffer: primaryBuffer, packId }
+  // Persist only packId + name — zones re-hydrated from pool on load (no large buffer needed)
+  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, name, new ArrayBuffer(0), packId))
+    .catch(e => { console.warn('[sample] pack save failed:', e); showToast('Sample save failed', 'error') })
+}
+
 /** Persist any pending samples after project gets an id (called from projectSaveAs) */
 async function persistPendingSamples(projectId: string): Promise<void> {
   for (const [tid, meta] of Object.entries(samplesByTrack)) {
-    await (await storage()).saveSample(projectId, Number(tid), meta.name, meta.rawBuffer)
+    await (await storage()).saveSample(projectId, Number(tid), meta.name, meta.rawBuffer, meta.packId)
   }
 }
 
@@ -649,6 +669,20 @@ export async function restoreSamples(projectId: string): Promise<void> {
   if (stored.length === 0) return
   const { engine } = await import('./audio/engine.ts')  // lazy: engine.init() may not have been called yet
   for (const s of stored) {
+    // Factory pack — re-hydrate zones from pool (ADR 106)
+    if (s.packId) {
+      try {
+        const mod = await audioPool()
+        const zones = await mod.loadPackZones(s.packId)
+        const waveform = await engine.loadPackToTrack(s.trackId, zones)
+        if (waveform) {
+          samplesByTrack[s.trackId] = { name: s.name, waveform, rawBuffer: new ArrayBuffer(0), packId: s.packId }
+        }
+      } catch (e) {
+        console.warn(`[sample] pack restore failed for ${s.packId}:`, e)
+      }
+      continue
+    }
     const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer)
     if (waveform) {
       samplesByTrack[s.trackId] = { name: s.name, waveform, rawBuffer: s.buffer }

@@ -22,6 +22,7 @@ export interface StoredSample {
   name: string         // original filename
   buffer: ArrayBuffer  // raw encoded audio bytes (pre-decode)
   createdAt: number
+  packId?: string      // factory pack id (ADR 106) — if set, buffer is empty and zones re-hydrated from pool
 }
 
 /** User-saved voice preset (ADR 015 §B) */
@@ -117,8 +118,8 @@ export async function deleteProject(id: string): Promise<void> {
 
 // ── Samples (ADR 020 Section I, Phase A) ─────────────────────────────
 
-/** Save a sample buffer for a project+track */
-export async function saveSample(projectId: string, trackId: number, name: string, buffer: ArrayBuffer): Promise<void> {
+/** Save a sample buffer for a project+track. For packs, pass packId and empty buffer. */
+export async function saveSample(projectId: string, trackId: number, name: string, buffer: ArrayBuffer, packId?: string): Promise<void> {
   const store = await tx(SAMPLE_STORE, 'readwrite')
   const sample: StoredSample = {
     key: `${projectId}_${trackId}`,
@@ -127,6 +128,7 @@ export async function saveSample(projectId: string, trackId: number, name: strin
     name,
     buffer,
     createdAt: Date.now(),
+    ...(packId ? { packId } : {}),
   }
   await req(store.put(sample))
 }

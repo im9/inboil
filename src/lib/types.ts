@@ -242,6 +242,18 @@ export interface SampleMeta {
   name: string
   waveform: Float32Array
   rawBuffer: ArrayBuffer
+  packId?: string              // factory pack id (ADR 106) — zones re-hydrated from pool on load
+  zones?: SampleZoneMeta[]     // multi-sample zone data for worklet re-send
+}
+
+/** Metadata for a single zone in a multi-sample pack (ADR 106) */
+export interface SampleZoneMeta {
+  name: string
+  rawBuffer: ArrayBuffer
+  sampleRate: number
+  rootNote: number
+  loNote: number
+  hiNote: number
 }
 
 export type Lang = 'ja' | 'en'

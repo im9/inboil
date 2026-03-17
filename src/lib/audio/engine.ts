@@ -61,6 +61,8 @@ export class GrooveboxEngine {
   private trackVoiceIds: string[] = []
   /** Cached decoded user samples per track — re-sent after voice re-init (ADR 020 §I) */
   private userSamples: Map<number, { mono: Float32Array; sampleRate: number }> = new Map()
+  /** Cached pack zones per track — re-sent after voice re-init (ADR 106) */
+  private packZones: Map<number, import('./dsp/voices.ts').SampleZone[]> = new Map()
 
   set onStep(cb: (playheads: number[], cycle: boolean) => void) { this._onStep = cb }
 
@@ -118,10 +120,15 @@ export class GrooveboxEngine {
         if (prev !== vid) void this.loadBuiltinSample(i, vid)
         continue
       }
-      // User samples — re-send cached buffer when voice was re-initialized
+      // User/pack samples — re-send cached buffer when voice was re-initialized
       if (vid === 'Sampler' && prev !== vid) {
-        const cached = this.userSamples.get(i)
-        if (cached) this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
+        const cachedPack = this.packZones.get(i)
+        if (cachedPack) {
+          this._sendZones(i, cachedPack)
+        } else {
+          const cached = this.userSamples.get(i)
+          if (cached) this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
+        }
       }
     }
   }
@@ -186,6 +193,43 @@ export class GrooveboxEngine {
       { type: 'loadSample', trackId, buffer, sampleRate },
       [buffer.buffer],
     )
+  }
+
+  /** Send multi-sample zones to worklet (ADR 106) */
+  private _sendZones(trackId: number, zones: import('./dsp/voices.ts').SampleZone[]): void {
+    if (!this.node) return
+    // Clone buffers for transfer (originals stay in cache)
+    const transferZones = zones.map(z => ({
+      ...z,
+      buffer: new Float32Array(z.buffer),
+    }))
+    const transferables = transferZones.map(z => z.buffer.buffer)
+    this.node.port.postMessage(
+      { type: 'loadZones', trackId, zones: transferZones },
+      transferables,
+    )
+  }
+
+  /** Load a factory pack's zones to a track (ADR 106). Returns waveform of first zone for display. */
+  async loadPackToTrack(trackId: number, zones: import('../../lib/audioPool.ts').PackZoneData[]): Promise<Float32Array | null> {
+    await this.init()
+    if (!zones.length) return null
+    // Build SampleZone array and cache for re-send
+    const sampleZones = zones.map(z => ({
+      buffer: z.buffer,
+      bufferSR: z.bufferSR,
+      rootNote: z.rootNote,
+      loNote: z.loNote,
+      hiNote: z.hiNote,
+      loVel: 0,
+      hiVel: 127,
+    }))
+    this.packZones.set(trackId, sampleZones)
+    this.userSamples.delete(trackId)  // clear single-sample cache
+    this._sendZones(trackId, sampleZones)
+    // Return waveform overview of first zone for UI display
+    const { generateWaveform } = await import('../../lib/audioPool.ts')
+    return generateWaveform(zones[0].buffer)
   }
 
   /** Load a built-in drum sample from audio pool OPFS (ADR 104) */
