@@ -474,7 +474,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           // with new data. Only when reset flag is set (not on normal param tweaks).
           if (cmd.reset) {
             for (let t = 0; t < this.activeCount; t++) {
-              this.voices[t]?.noteOff()
+              this.voices[t]?.reset()
               this.gateCounters[t] = 0
               this.arpNotes[t] = []
               const steps = this.tracks[t]?.steps ?? 16
