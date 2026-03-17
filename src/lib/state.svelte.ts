@@ -912,7 +912,7 @@ export function projectLoadDemo(): void {
   project.dirty = true
   ui.currentPattern = 0
   ui.selectedTrack = 0
-  ui.patternSheet = false
+  ui.patternSheet = true   // show sequencer so new users see what to interact with
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
   undoStack.length = 0

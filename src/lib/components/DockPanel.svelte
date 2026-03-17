@@ -44,8 +44,8 @@
   })
 
   // ── Scene Navigator (ADR 070) ──
-  // Show pattern header when no pattern sheet and no overlay — either scene node selected or current pattern
-  const showPatternHeader = $derived(!ui.patternSheet && !isOverlaySheet)
+  // Show pattern header (name + color) in both scene and sequencer views — only hidden during overlay sheets
+  const showPatternHeader = $derived(!isOverlaySheet)
   // Navigator: show when no pattern sheet and no scene node selected (including overlay sheets)
   const showNavigator = $derived(!ui.patternSheet && !scenePatternNode)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
@@ -623,16 +623,18 @@
                 ></span>
               {/each}
             </div>
-            <div class="dec-action-row">
-              <button class="btn-open-seq" onpointerdown={openPatternSheet}
-                data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
-              >Open Sequencer ▸</button>
-              {#if scenePatternNode && !scenePatternNode.root}
-                <button class="btn-set-root" onpointerdown={() => sceneSetRoot(scenePatternNode.id)}
-                  data-tip="Set as scene root" data-tip-ja="ルートノードに設定"
-                >★ Root</button>
-              {/if}
-            </div>
+            {#if !ui.patternSheet}
+              <div class="dec-action-row">
+                <button class="btn-open-seq" onpointerdown={openPatternSheet}
+                  data-tip="Open step sequencer" data-tip-ja="ステップシーケンサーを開く"
+                >Open Sequencer ▸</button>
+                {#if scenePatternNode && !scenePatternNode.root}
+                  <button class="btn-set-root" onpointerdown={() => sceneSetRoot(scenePatternNode.id)}
+                    data-tip="Set as scene root" data-tip-ja="ルートノードに設定"
+                  >★ Root</button>
+                {/if}
+              </div>
+            {/if}
             <div class="section-divider" aria-hidden="true"></div>
           {/if}
 
