@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, activeCell } from '../state.svelte.ts'
+  import { song, playback, ui, activeCell, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import {
     isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
@@ -261,7 +261,7 @@
         class:muted={t.muted}
         class:soloed={ui.soloTracks.has(c.trackId)}
       >
-        <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{c.name}</button>
+        <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{trackDisplayName(c)}</button>
         <button class="track-act" onpointerdown={() => toggleMute(c.trackId)}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>
@@ -429,6 +429,10 @@
     letter-spacing: 0.04em;
     cursor: pointer;
     padding: 4px 4px;
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .track-btn.selected .track-label { color: rgba(237,232,220,0.85); }
 

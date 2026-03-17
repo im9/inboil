@@ -696,6 +696,15 @@ function clearSamples(): void {
   for (const k of Object.keys(samplesByTrack)) delete samplesByTrack[Number(k)]
 }
 
+/** Display name for a track: use sample name for Sampler voices, otherwise cell.name */
+export function trackDisplayName(cell: Cell): string {
+  if (cell.voiceId === 'Sampler') {
+    const meta = samplesByTrack[cell.trackId]
+    if (meta?.name) return meta.name
+  }
+  return cell.name
+}
+
 /** Build a StoredProject from current state */
 function buildStoredProject(id: string, name: string, now: number, createdAt?: number): StoredProject {
   return { id, name, song: cloneSong(), createdAt: createdAt ?? now, updatedAt: now }

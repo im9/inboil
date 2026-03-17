@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
-  import { song, activeCell, playback, ui } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
@@ -207,7 +207,7 @@
           onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
           data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
         >
-          <span class="track-name">{ph.name}</span>
+          <span class="track-name">{trackDisplayName(ph)}</span>
           <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="1,1 5,5 9,1" />
           </svg>
@@ -457,6 +457,9 @@
     color: var(--color-fg);
     line-height: 1;
     text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .chevron {
     width: 10px;
