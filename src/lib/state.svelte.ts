@@ -29,6 +29,7 @@ import type {
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
 import { showToast } from './toast.svelte.ts'
+import { showFatalError } from './fatalError.svelte.ts'
 import { validateSongData, validateRecoverySnapshot } from './validate.ts'
 
 /** Find a cell by trackId in a pattern (ADR 079). */
@@ -793,7 +794,7 @@ function scheduleAutoSave() {
       project.dirty = false
     }).catch(e => {
       console.error('[autoSave] ERROR:', e)
-      showToast('Auto-save failed. Export your project to avoid data loss.', 'error')
+      showFatalError('DAT-002', e instanceof Error ? e.message : String(e))
     }).finally(() => {
       autoSaving = false
     })

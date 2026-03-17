@@ -22,5 +22,18 @@ if (compatError) {
 } else {
   Promise.all([import('svelte'), import('./App.svelte')]).then(([{ mount }, { default: App }]) => {
     mount(App, { target: document.getElementById('app')! })
+
+    // Global error boundary — catch unhandled errors and show fatal dialog
+    import('./lib/fatalError.svelte.ts').then(({ showFatalError }) => {
+      window.addEventListener('unhandledrejection', (e) => {
+        const msg = e.reason instanceof Error ? e.reason.message : String(e.reason ?? 'Unknown')
+        // Skip redundant reports for errors already shown via showFatalError
+        if (msg.includes('[fatal]')) return
+        showFatalError('UNK-001', msg)
+      })
+      window.addEventListener('error', (e) => {
+        showFatalError('UNK-001', e.message || 'Unknown error')
+      })
+    })
   })
 }

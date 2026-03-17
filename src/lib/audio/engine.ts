@@ -6,6 +6,7 @@ import type { Song, Pattern, Cell } from '../types.ts'
 import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import { showToast } from '../toast.svelte.ts'
+import { showFatalError } from '../fatalError.svelte.ts'
 
 /** External state passed by callers — engine never imports reactive state (ADR 086) */
 export interface EngineContext {
@@ -94,7 +95,7 @@ export class GrooveboxEngine {
       this.node = node
       this.analyser = analyser
     } catch (e) {
-      showToast('Audio not available. Check browser permissions.', 'error')
+      showFatalError('AUD-001', e instanceof Error ? e.message : String(e))
       throw e
     }
   }

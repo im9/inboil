@@ -108,7 +108,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 068 | 4-Operator FM Synth | Implemented | 4-op, 8 algorithms, per-op ADSR, tempo-sync LFO, 12-voice poly (MONO/POLY12/WIDE6/UNISON), AlgoGraph, 20 presets |
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |
-| 106 | Multi-Sample Mapping & Factory Expansion | Proposed | Note-range zone map in SamplerVoice, factory grand piano (Salamander, PD), vocal one-shots (CC0) |
+| 106 | Multi-Sample Mapping & Factory Expansion | Implemented | Note-range zone map in SamplerVoice, factory grand piano (Salamander, PD), vocal one-shots (CC0); Phase 4 (user packs) future |
 
 ## Performance / Live
 

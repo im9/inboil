@@ -16,6 +16,7 @@
   import MobilePerfSheet from './lib/components/MobilePerfSheet.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import ErrorToast from './lib/components/ErrorToast.svelte'
+  import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
   import { song, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
@@ -378,6 +379,7 @@
   {/if}
   <Sidebar />
   <ErrorToast />
+  <ErrorDialog />
   {#if !prefs.visited}
     <WelcomeOverlay onLoadDemo={projectLoadDemo} onStartEmpty={() => {}} />
   {/if}

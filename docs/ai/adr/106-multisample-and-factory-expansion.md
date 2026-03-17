@@ -1,6 +1,6 @@
 # ADR 106: Multi-Sample Mapping & Factory Sound Expansion
 
-## Status: Proposed
+## Status: Implemented (Phase 1–3); Phase 4 future
 
 ## Context
 

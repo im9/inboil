@@ -37,13 +37,24 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 
 ### P0 — Must Do (Blocks Launch)
 
-#### 1. ~~Error Handling UI~~ ✅ Done (2026-03-12)
+#### 1. ~~Error Handling UI~~ ✅ Done (2026-03-12, upgraded 2026-03-17)
 
-ErrorToast component + `showToast()` global store. Wired to: storage (DB blocked), engine (AudioContext init, sample decode, fetch), MIDI (access denied, device disconnect), auto-save failure.
+**Two-tier system:**
 
-- `src/lib/toast.svelte.ts` — store
-- `src/lib/components/ErrorToast.svelte` — component (error/warn/info, 5s auto-dismiss)
-- Catch blocks in `storage.ts`, `engine.ts`, `midi.ts`, `state.svelte.ts`
+| Level | Component | Behavior | Use |
+|-------|-----------|----------|-----|
+| warn/info | `ErrorToast` + `showToast()` | Auto-dismiss 5s | Non-critical (sample decode, pool, MIDI) |
+| fatal | `ErrorDialog` + `showFatalError(code)` | Modal, user must dismiss | Engine init, auto-save, unhandled errors |
+
+**Error code registry** (`src/lib/fatalError.svelte.ts`): Each fatal error has a unique code (e.g. `AUD-001`, `STG-002`, `DAT-001`) with bilingual messages and optional action (reload / export). Dialog shows code, message, copy-detail button for bug reports.
+
+**Global boundary** (`src/main.ts`): `unhandledrejection` + `error` events caught and shown as `UNK-001`.
+
+- `src/lib/toast.svelte.ts` — toast store (warn/info)
+- `src/lib/components/ErrorToast.svelte` — toast component (5s auto-dismiss)
+- `src/lib/fatalError.svelte.ts` — fatal error store + code registry
+- `src/lib/components/ErrorDialog.svelte` — modal dialog (persistent until dismissed)
+- Catch blocks in `engine.ts` (`AUD-001`), `state.svelte.ts` (`DAT-002`), global (`UNK-001`)
 
 #### 2. ~~Browser Capability Detection~~ ✅ Done (2026-03-12)
 
