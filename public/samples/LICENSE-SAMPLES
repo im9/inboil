@@ -44,3 +44,17 @@ modified, and redistributed.
 - Files: cymbal_909-crash, cymbal_909-ride
 - Source: TR-909 PCM samples (migrated from built-in app assets)
 - License: Public Domain (short utilitarian PCM waveforms from 1984)
+
+### Salamander Grand Piano V3 (Public Domain)
+- Files: piano_c2, piano_ds2, piano_fs2, piano_a2, piano_c3, piano_ds3, piano_fs3, piano_a3, piano_c4, piano_ds4, piano_fs4, piano_a4, piano_c5, piano_ds5, piano_fs5, piano_a5, piano_c6, piano_ds6, piano_fs6, piano_a6, piano_c7
+- Source: https://github.com/sfzinstruments/SalamanderGrandPiano
+- Creator: Alexander Holm
+- Instrument: Yamaha C5 grand, AKG C414 mics, velocity layer 8 (mf)
+- Processing: Trimmed to 2.5–3.5s with fade-out, mono mixdown, WebM/Opus 48kbps
+- License: Public Domain (released 2022-03-04, formerly CC-BY 3.0)
+
+### Kenney Voiceover Pack (CC0)
+- Files: vocal_m-go, vocal_m-ready, vocal_m-set, vocal_m-three, vocal_m-gogogo, vocal_m-hold, vocal_f-go, vocal_f-ready, vocal_f-set, vocal_f-three, vocal_f-gogogo, vocal_f-powerup
+- Source: https://opengameart.org/content/voiceover-pack-40-lines
+- Creator: Kenney (kenney.nl)
+- License: CC0 1.0 Universal

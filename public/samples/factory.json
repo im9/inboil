@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "totalSize": 970829,
+  "totalSize": 1469120,
   "samples": [
     {
       "file": "clap_dr110.webm",
@@ -475,6 +475,339 @@
       "folder": "toms",
       "name": "small",
       "size": 7160
+    },
+    {
+      "file": "piano_c2.webm",
+      "folder": "keys",
+      "name": "c2",
+      "size": 23977
+    },
+    {
+      "file": "piano_ds2.webm",
+      "folder": "keys",
+      "name": "ds2",
+      "size": 25145
+    },
+    {
+      "file": "piano_fs2.webm",
+      "folder": "keys",
+      "name": "fs2",
+      "size": 26377
+    },
+    {
+      "file": "piano_a2.webm",
+      "folder": "keys",
+      "name": "a2",
+      "size": 24963
+    },
+    {
+      "file": "piano_c3.webm",
+      "folder": "keys",
+      "name": "c3",
+      "size": 21882
+    },
+    {
+      "file": "piano_ds3.webm",
+      "folder": "keys",
+      "name": "ds3",
+      "size": 21799
+    },
+    {
+      "file": "piano_fs3.webm",
+      "folder": "keys",
+      "name": "fs3",
+      "size": 22329
+    },
+    {
+      "file": "piano_a3.webm",
+      "folder": "keys",
+      "name": "a3",
+      "size": 23338
+    },
+    {
+      "file": "piano_c4.webm",
+      "folder": "keys",
+      "name": "c4",
+      "size": 23990
+    },
+    {
+      "file": "piano_ds4.webm",
+      "folder": "keys",
+      "name": "ds4",
+      "size": 24314
+    },
+    {
+      "file": "piano_fs4.webm",
+      "folder": "keys",
+      "name": "fs4",
+      "size": 24374
+    },
+    {
+      "file": "piano_a4.webm",
+      "folder": "keys",
+      "name": "a4",
+      "size": 25363
+    },
+    {
+      "file": "piano_c5.webm",
+      "folder": "keys",
+      "name": "c5",
+      "size": 20231
+    },
+    {
+      "file": "piano_ds5.webm",
+      "folder": "keys",
+      "name": "ds5",
+      "size": 20363
+    },
+    {
+      "file": "piano_fs5.webm",
+      "folder": "keys",
+      "name": "fs5",
+      "size": 18585
+    },
+    {
+      "file": "piano_a5.webm",
+      "folder": "keys",
+      "name": "a5",
+      "size": 16766
+    },
+    {
+      "file": "piano_c6.webm",
+      "folder": "keys",
+      "name": "c6",
+      "size": 16170
+    },
+    {
+      "file": "piano_ds6.webm",
+      "folder": "keys",
+      "name": "ds6",
+      "size": 16541
+    },
+    {
+      "file": "piano_fs6.webm",
+      "folder": "keys",
+      "name": "fs6",
+      "size": 15665
+    },
+    {
+      "file": "piano_a6.webm",
+      "folder": "keys",
+      "name": "a6",
+      "size": 15133
+    },
+    {
+      "file": "piano_c7.webm",
+      "folder": "keys",
+      "name": "c7",
+      "size": 14644
+    },
+    {
+      "file": "vocal_m-go.webm",
+      "folder": "vocals",
+      "name": "m-go",
+      "size": 6062
+    },
+    {
+      "file": "vocal_m-ready.webm",
+      "folder": "vocals",
+      "name": "m-ready",
+      "size": 3149
+    },
+    {
+      "file": "vocal_m-set.webm",
+      "folder": "vocals",
+      "name": "m-set",
+      "size": 4131
+    },
+    {
+      "file": "vocal_m-three.webm",
+      "folder": "vocals",
+      "name": "m-three",
+      "size": 6432
+    },
+    {
+      "file": "vocal_m-gogogo.webm",
+      "folder": "vocals",
+      "name": "m-gogogo",
+      "size": 6612
+    },
+    {
+      "file": "vocal_m-hold.webm",
+      "folder": "vocals",
+      "name": "m-hold",
+      "size": 3231
+    },
+    {
+      "file": "vocal_f-go.webm",
+      "folder": "vocals",
+      "name": "f-go",
+      "size": 7374
+    },
+    {
+      "file": "vocal_f-ready.webm",
+      "folder": "vocals",
+      "name": "f-ready",
+      "size": 2583
+    },
+    {
+      "file": "vocal_f-set.webm",
+      "folder": "vocals",
+      "name": "f-set",
+      "size": 2707
+    },
+    {
+      "file": "vocal_f-three.webm",
+      "folder": "vocals",
+      "name": "f-three",
+      "size": 6789
+    },
+    {
+      "file": "vocal_f-gogogo.webm",
+      "folder": "vocals",
+      "name": "f-gogogo",
+      "size": 4214
+    },
+    {
+      "file": "vocal_f-powerup.webm",
+      "folder": "vocals",
+      "name": "f-powerup",
+      "size": 3058
+    }
+  ],
+  "packs": [
+    {
+      "id": "grand-piano",
+      "name": "Grand Piano",
+      "category": "keys",
+      "zones": [
+        {
+          "file": "piano_c2.webm",
+          "rootNote": 36,
+          "loNote": 21,
+          "hiNote": 37
+        },
+        {
+          "file": "piano_ds2.webm",
+          "rootNote": 39,
+          "loNote": 38,
+          "hiNote": 40
+        },
+        {
+          "file": "piano_fs2.webm",
+          "rootNote": 42,
+          "loNote": 41,
+          "hiNote": 43
+        },
+        {
+          "file": "piano_a2.webm",
+          "rootNote": 45,
+          "loNote": 44,
+          "hiNote": 46
+        },
+        {
+          "file": "piano_c3.webm",
+          "rootNote": 48,
+          "loNote": 47,
+          "hiNote": 49
+        },
+        {
+          "file": "piano_ds3.webm",
+          "rootNote": 51,
+          "loNote": 50,
+          "hiNote": 52
+        },
+        {
+          "file": "piano_fs3.webm",
+          "rootNote": 54,
+          "loNote": 53,
+          "hiNote": 55
+        },
+        {
+          "file": "piano_a3.webm",
+          "rootNote": 57,
+          "loNote": 56,
+          "hiNote": 58
+        },
+        {
+          "file": "piano_c4.webm",
+          "rootNote": 60,
+          "loNote": 59,
+          "hiNote": 61
+        },
+        {
+          "file": "piano_ds4.webm",
+          "rootNote": 63,
+          "loNote": 62,
+          "hiNote": 64
+        },
+        {
+          "file": "piano_fs4.webm",
+          "rootNote": 66,
+          "loNote": 65,
+          "hiNote": 67
+        },
+        {
+          "file": "piano_a4.webm",
+          "rootNote": 69,
+          "loNote": 68,
+          "hiNote": 70
+        },
+        {
+          "file": "piano_c5.webm",
+          "rootNote": 72,
+          "loNote": 71,
+          "hiNote": 73
+        },
+        {
+          "file": "piano_ds5.webm",
+          "rootNote": 75,
+          "loNote": 74,
+          "hiNote": 76
+        },
+        {
+          "file": "piano_fs5.webm",
+          "rootNote": 78,
+          "loNote": 77,
+          "hiNote": 79
+        },
+        {
+          "file": "piano_a5.webm",
+          "rootNote": 81,
+          "loNote": 80,
+          "hiNote": 82
+        },
+        {
+          "file": "piano_c6.webm",
+          "rootNote": 84,
+          "loNote": 83,
+          "hiNote": 85
+        },
+        {
+          "file": "piano_ds6.webm",
+          "rootNote": 87,
+          "loNote": 86,
+          "hiNote": 88
+        },
+        {
+          "file": "piano_fs6.webm",
+          "rootNote": 90,
+          "loNote": 89,
+          "hiNote": 91
+        },
+        {
+          "file": "piano_a6.webm",
+          "rootNote": 93,
+          "loNote": 92,
+          "hiNote": 94
+        },
+        {
+          "file": "piano_c7.webm",
+          "rootNote": 96,
+          "loNote": 95,
+          "hiNote": 108
+        }
+      ]
     }
   ]
 }

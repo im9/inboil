@@ -380,14 +380,29 @@ export async function getPoolStats(): Promise<PoolStats> {
 // ── Factory samples (ADR 104 §H) ────────────────────────────────────
 
 const FACTORY_VERSION_KEY = 'inboil-factory-pool-version'
-const FACTORY_VERSION = 2              // bump when factory pack changes (v2: 909 crash/ride)
+const FACTORY_VERSION = 3              // bump when factory pack changes (v3: piano pack + vocals)
 const FACTORY_MANIFEST_URL = '/samples/factory.json'
 const FACTORY_SAMPLES_BASE = '/samples/'
+
+interface FactoryZone {
+  file: string
+  rootNote: number
+  loNote: number
+  hiNote: number
+}
+
+interface FactoryPack {
+  id: string
+  name: string
+  category: string
+  zones: FactoryZone[]
+}
 
 interface FactoryManifest {
   version: number
   totalSize: number
   samples: { file: string; folder: string; name: string; size: number }[]
+  packs?: FactoryPack[]
 }
 
 /** Check if factory samples need to be installed (no network). */
@@ -465,6 +480,75 @@ export async function installFactorySamples(
   // Mark version installed
   localStorage.setItem(FACTORY_VERSION_KEY, String(FACTORY_VERSION))
   return { installed, skipped }
+}
+
+// ── Factory packs (ADR 106) ─────────────────────────────────────────
+
+/** Cached manifest for pack lookups (populated during factory install). */
+let cachedManifest: FactoryManifest | null = null
+
+/** Get the factory manifest (fetches once, then caches). */
+export async function getFactoryManifest(): Promise<FactoryManifest> {
+  if (cachedManifest) return cachedManifest
+  const res = await fetch(FACTORY_MANIFEST_URL)
+  if (!res.ok) throw new Error(`Factory manifest fetch failed: ${res.status}`)
+  cachedManifest = await res.json()
+  return cachedManifest!
+}
+
+/** Get available factory pack definitions. */
+export async function getFactoryPacks(): Promise<FactoryPack[]> {
+  const manifest = await getFactoryManifest()
+  return manifest.packs ?? []
+}
+
+export interface PackZoneData {
+  buffer: Float32Array
+  bufferSR: number
+  rootNote: number
+  loNote: number
+  hiNote: number
+}
+
+/**
+ * Load all zone buffers for a factory pack. Reads from OPFS (factory samples must be installed).
+ * Returns decoded zone data ready to send to the worklet via loadZones command.
+ */
+export async function loadPackZones(
+  packId: string,
+  ctx?: AudioContext | OfflineAudioContext,
+): Promise<PackZoneData[]> {
+  const manifest = await getFactoryManifest()
+  const pack = manifest.packs?.find(p => p.id === packId)
+  if (!pack) throw new Error(`Factory pack not found: ${packId}`)
+
+  if (!ctx) ctx = new AudioContext()
+  const zones: PackZoneData[] = []
+
+  for (const z of pack.zones) {
+    // Read from OPFS — factory samples are in factory/{category}/
+    const rawBuffer = await readFile(`factory/${pack.category}`, z.file)
+    if (!rawBuffer) {
+      console.warn(`[pool] pack zone file not found: factory/${pack.category}/${z.file}`)
+      continue
+    }
+
+    // Decode to Float32Array
+    const audioBuf = await ctx.decodeAudioData(rawBuffer.slice(0))
+    const mono = audioBuf.numberOfChannels === 1
+      ? new Float32Array(audioBuf.getChannelData(0))
+      : averageChannels(audioBuf)
+
+    zones.push({
+      buffer: mono,
+      bufferSR: audioBuf.sampleRate,
+      rootNote: z.rootNote,
+      loNote: z.loNote,
+      hiNote: z.hiNote,
+    })
+  }
+
+  return zones
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
