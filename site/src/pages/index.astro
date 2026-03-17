@@ -1,7 +1,7 @@
 ---
 import pkg from '../../../package.json';
-const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://inboil.pages.dev';
-const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : 'https://inboil.pages.dev';
+const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : (import.meta.env.PUBLIC_APP_URL || 'https://inboil.pages.dev');
+const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : (import.meta.env.SITE || 'https://inboil.pages.dev');
 const description = 'A browser-based groove box with 19 sound engines, a visual scene graph sequencer, and zero setup. No install. No signup. Just play.';
 const ogImage = `${siteUrl}/og.png`;
 ---
@@ -320,7 +320,7 @@ const ogImage = `${siteUrl}/og.png`;
       .feat-section:nth-child(even){grid-template-columns:1fr}
       .feat-section:nth-child(even) .feat-text{order:0;padding-top:0}
       .feat-section:nth-child(even) .feat-visual{order:0;padding-top:0}
-      .voice-chip{width:48px;height:34px}
+      .voice-chip{width:48px;height:44px}
       .v-label{font-size:10px}
       .v-name{font-size:8px}
       .feat-section.full{text-align:left}
@@ -385,7 +385,7 @@ const ogImage = `${siteUrl}/og.png`;
     .voice-chip{
       display:flex;flex-direction:column;
       align-items:center;justify-content:center;
-      width:56px;height:40px;
+      width:56px;height:44px;
       background:transparent;
       border:1px solid rgba(30,32,40,0.3);
       font-family:"JetBrains Mono",monospace;
@@ -418,7 +418,7 @@ const ogImage = `${siteUrl}/og.png`;
       width:100%;
       margin-top:40px;
       background:#1E2028;
-      border-radius:6px;
+      border-radius:0;
       padding:20px 24px;
       box-shadow:0 8px 32px rgba(0,0,0,0.18);
       font-family:"JetBrains Mono",monospace;
@@ -479,7 +479,7 @@ const ogImage = `${siteUrl}/og.png`;
     .fx-demo{
       width:100%;max-width:600px;aspect-ratio:1;
       background:#1E2028;
-      border-radius:6px;
+      border-radius:0;
       position:relative;
       overflow:hidden;
       touch-action:none;
@@ -502,6 +502,7 @@ const ogImage = `${siteUrl}/og.png`;
       transition:box-shadow 0.2s, background 0.2s;
     }
     .fx-node:active{cursor:grabbing}
+    .fx-node:focus-visible{outline:2px solid var(--node-color);outline-offset:2px}
     /* active: solid fill, inverted text */
     .fx-node.on{
       background:var(--node-color);
@@ -512,11 +513,16 @@ const ogImage = `${siteUrl}/og.png`;
     /* ── Generative demo (SVG, same visual language as scene-svg) ── */
 
 
-    /* voice chip hover */
+    /* voice chip hover + focus */
     .voice-chip{cursor:pointer}
-    .voice-chip:hover{
+    .voice-chip:hover,
+    .voice-chip:focus-visible{
       background:rgba(120,120,69,0.1);
       border-color:rgba(120,120,69,0.4);
+    }
+    .voice-chip:focus-visible{
+      outline:2px solid #787845;
+      outline-offset:1px;
     }
 
     /* ── Header — docs header と同じ navy bg / cream text ── */
@@ -807,25 +813,25 @@ const ogImage = `${siteUrl}/og.png`;
       <p id="feat-voice-desc" class="feat-desc">19 voices — from drum machines to wavetable synths, plus a sampler with 79 built-in samples. Choose a different engine for each track.</p>
       <!-- Voice grid selector -->
       <div class="voice-grid">
-        <div class="voice-chip" data-v="909k" role="button" aria-label="909 Kick"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
-        <div class="voice-chip" data-v="808k" role="button" aria-label="808 Kick"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
-        <div class="voice-chip" data-v="snare" role="button" aria-label="Snare"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
-        <div class="voice-chip" data-v="clap" role="button" aria-label="Clap"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
-        <div class="voice-chip" data-v="chh" role="button" aria-label="Closed Hi-Hat"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
-        <div class="voice-chip" data-v="ohh" role="button" aria-label="Open Hi-Hat"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
-        <div class="voice-chip" data-v="cym" role="button" aria-label="Cymbal"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
-        <div class="voice-chip" data-v="tom" role="button" aria-label="Tom"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
-        <div class="voice-chip" data-v="rim" role="button" aria-label="Rimshot"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
-        <div class="voice-chip" data-v="bell" role="button" aria-label="Cowbell"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
-        <div class="voice-chip" data-v="shkr" role="button" aria-label="Shaker"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
-        <div class="voice-chip" data-v="303" role="button" aria-label="Bass 303"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
-        <div class="voice-chip" data-v="bass" role="button" aria-label="Analog Bass"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
-        <div class="voice-chip" data-v="lead" role="button" aria-label="Synth Lead"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
-        <div class="voice-chip" data-v="fm" role="button" aria-label="FM Synth"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
-        <div class="voice-chip hl" data-v="wave" role="button" aria-label="Wavetable"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
-        <div class="voice-chip" data-v="crsh" role="button" aria-label="Crash"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
-        <div class="voice-chip" data-v="ride" role="button" aria-label="Ride"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
-        <div class="voice-chip" data-v="smpl" role="button" aria-label="Sampler"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
+        <div class="voice-chip" data-v="909k" role="button" tabindex="0" aria-label="909 Kick"><span class="v-label">909K</span><span class="v-name">909 Kick</span></div>
+        <div class="voice-chip" data-v="808k" role="button" tabindex="0" aria-label="808 Kick"><span class="v-label">808K</span><span class="v-name">808 Kick</span></div>
+        <div class="voice-chip" data-v="snare" role="button" tabindex="0" aria-label="Snare"><span class="v-label">SNARE</span><span class="v-name">Snare</span></div>
+        <div class="voice-chip" data-v="clap" role="button" tabindex="0" aria-label="Clap"><span class="v-label">CLAP</span><span class="v-name">Clap</span></div>
+        <div class="voice-chip" data-v="chh" role="button" tabindex="0" aria-label="Closed Hi-Hat"><span class="v-label">C.HH</span><span class="v-name">Closed HH</span></div>
+        <div class="voice-chip" data-v="ohh" role="button" tabindex="0" aria-label="Open Hi-Hat"><span class="v-label">O.HH</span><span class="v-name">Open HH</span></div>
+        <div class="voice-chip" data-v="cym" role="button" tabindex="0" aria-label="Cymbal"><span class="v-label">CYM</span><span class="v-name">Cymbal</span></div>
+        <div class="voice-chip" data-v="tom" role="button" tabindex="0" aria-label="Tom"><span class="v-label">TOM</span><span class="v-name">Tom</span></div>
+        <div class="voice-chip" data-v="rim" role="button" tabindex="0" aria-label="Rimshot"><span class="v-label">RIM</span><span class="v-name">Rimshot</span></div>
+        <div class="voice-chip" data-v="bell" role="button" tabindex="0" aria-label="Cowbell"><span class="v-label">BELL</span><span class="v-name">Cowbell</span></div>
+        <div class="voice-chip" data-v="shkr" role="button" tabindex="0" aria-label="Shaker"><span class="v-label">SHKR</span><span class="v-name">Shaker</span></div>
+        <div class="voice-chip" data-v="303" role="button" tabindex="0" aria-label="Bass 303"><span class="v-label">303</span><span class="v-name">Bass 303</span></div>
+        <div class="voice-chip" data-v="bass" role="button" tabindex="0" aria-label="Analog Bass"><span class="v-label">BASS</span><span class="v-name">Analog</span></div>
+        <div class="voice-chip" data-v="lead" role="button" tabindex="0" aria-label="Synth Lead"><span class="v-label">LEAD</span><span class="v-name">Synth</span></div>
+        <div class="voice-chip" data-v="fm" role="button" tabindex="0" aria-label="FM Synth"><span class="v-label">FM</span><span class="v-name">FM Synth</span></div>
+        <div class="voice-chip hl" data-v="wave" role="button" tabindex="0" aria-label="Wavetable"><span class="v-label">WAVE</span><span class="v-name">Wavetable</span></div>
+        <div class="voice-chip" data-v="crsh" role="button" tabindex="0" aria-label="Crash"><span class="v-label">CRSH</span><span class="v-name">Crash</span></div>
+        <div class="voice-chip" data-v="ride" role="button" tabindex="0" aria-label="Ride"><span class="v-label">RIDE</span><span class="v-name">Ride</span></div>
+        <div class="voice-chip" data-v="smpl" role="button" tabindex="0" aria-label="Sampler"><span class="v-label">SMPL</span><span class="v-name">Sampler</span></div>
       </div>
     </div>
     <div class="feat-visual reveal" style="flex-direction:column;gap:12px">
@@ -866,10 +872,10 @@ const ogImage = `${siteUrl}/og.png`;
     <div class="feat-visual reveal">
       <div class="fx-demo" id="fx-demo">
         <canvas id="fx-canvas"></canvas>
-        <div class="fx-node on" data-fx="verb" style="left:25%;top:35%;--node-color:#787845">VERB</div>
-        <div class="fx-node" data-fx="dly" style="left:70%;top:30%;--node-color:#4472B4">DLY</div>
-        <div class="fx-node on" data-fx="glt" style="left:35%;top:70%;--node-color:#E8A090">GLT</div>
-        <div class="fx-node" data-fx="grn" style="left:72%;top:68%;--node-color:#9B6BA0">GRN</div>
+        <div class="fx-node on" data-fx="verb" role="button" tabindex="0" aria-label="Reverb" aria-pressed="true" style="left:25%;top:35%;--node-color:#787845">VERB</div>
+        <div class="fx-node" data-fx="dly" role="button" tabindex="0" aria-label="Delay" aria-pressed="false" style="left:70%;top:30%;--node-color:#4472B4">DLY</div>
+        <div class="fx-node on" data-fx="glt" role="button" tabindex="0" aria-label="Glitch" aria-pressed="true" style="left:35%;top:70%;--node-color:#E8A090">GLT</div>
+        <div class="fx-node" data-fx="grn" role="button" tabindex="0" aria-label="Granular" aria-pressed="false" style="left:72%;top:68%;--node-color:#9B6BA0">GRN</div>
       </div>
     </div>
   </section>
@@ -995,6 +1001,8 @@ const ogImage = `${siteUrl}/og.png`;
   <footer class="footer">&copy; INBOIL <span class="footer-version">v{pkg.version} beta</span></footer>
 
   <script is:inline>
+  const _reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
   // Language
   (() => {
     if (!/^ja/i.test(navigator.language)) return;
@@ -1255,7 +1263,7 @@ const ogImage = `${siteUrl}/og.png`;
       if (step === lastStep) return;
 
       // Remove previous playhead
-      if (lastStep >= 0) {
+      if (lastStep >= 0 && !_reduceMotion.matches) {
         for (let t = 0; t < TRACKS; t++) {
           cells[t][lastStep].classList.remove('playhead');
         }
@@ -1263,10 +1271,9 @@ const ogImage = `${siteUrl}/og.png`;
       lastStep = step;
 
       // Set new playhead + trigger sounds
-      let hits = 0;
       for (let t = 0; t < TRACKS; t++) {
-        cells[t][step].classList.add('playhead');
-        if (grid[t][step]) { playSound(t); hits++; }
+        if (!_reduceMotion.matches) cells[t][step].classList.add('playhead');
+        if (grid[t][step]) { playSound(t); }
       }
     }
 
@@ -1580,33 +1587,48 @@ const ogImage = `${siteUrl}/og.png`;
 
     const legatoVoices = new Set(['303','bass','lead','fm','wave','smpl']);
 
+    function triggerChip(chip) {
+      const v = chip.dataset.v;
+      const isLegato = legatoVoices.has(v);
+      getCtx();
+      stopActive();
+      const fn = voices[v];
+      if (fn) {
+        const result = fn();
+        activeNodes = result.nodes;
+        activeGain = result.gain;
+        activeUpdate = result.update || null;
+        if (!isLegato) {
+          setTimeout(stopActive, 300);
+        }
+      }
+      if (window._evSelect) window._evSelect(v);
+      if (window._evApplyKnobs) window._evApplyKnobs();
+      document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('hl'));
+      chip.classList.add('hl');
+    }
+
     document.querySelectorAll('.voice-chip[data-v]').forEach(chip => {
       const v = chip.dataset.v;
       const isLegato = legatoVoices.has(v);
 
       chip.addEventListener('pointerdown', e => {
         e.preventDefault();
-        getCtx();
-        stopActive();
-        const fn = voices[v];
-        if (fn) {
-          const result = fn();
-          activeNodes = result.nodes;
-          activeGain = result.gain;
-          activeUpdate = result.update || null;
-          if (!isLegato) {
-            setTimeout(stopActive, 300);
-          }
+        triggerChip(chip);
+      });
+      chip.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          triggerChip(chip);
         }
-        if (window._evSelect) window._evSelect(v);
-        if (window._evApplyKnobs) window._evApplyKnobs();
-        document.querySelectorAll('.voice-chip').forEach(c => c.classList.remove('hl'));
-        chip.classList.add('hl');
       });
       if (isLegato) {
         chip.addEventListener('pointerup', stopActive);
         chip.addEventListener('pointerleave', stopActive);
         chip.addEventListener('pointercancel', stopActive);
+        chip.addEventListener('keyup', e => {
+          if (e.key === 'Enter' || e.key === ' ') stopActive();
+        });
       }
     });
   })();
@@ -2239,11 +2261,21 @@ const ogImage = `${siteUrl}/og.png`;
     resize();
     window.addEventListener('resize', resize);
 
-    // Toggle on click
+    // Toggle on click + keyboard
+    function toggleFxNode(n) {
+      n.classList.toggle('on');
+      n.setAttribute('aria-pressed', String(n.classList.contains('on')));
+    }
     nodes.forEach(n => {
       n.addEventListener('click', e => {
         if (n._dragged) return;
-        n.classList.toggle('on');
+        toggleFxNode(n);
+      });
+      n.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleFxNode(n);
+        }
       });
     });
 
@@ -2275,7 +2307,7 @@ const ogImage = `${siteUrl}/og.png`;
     // Draw constellation lines
     let t = 0;
     function draw() {
-      requestAnimationFrame(draw);
+      if (!_reduceMotion.matches) requestAnimationFrame(draw);
       t += 0.02;
       ctx2d.clearRect(0, 0, W, H);
       const pts = [];
@@ -2299,7 +2331,7 @@ const ogImage = `${siteUrl}/og.png`;
           ctx2d.stroke();
           // Active glow between enabled nodes
           if (a.on && b.on) {
-            const wave = Math.sin(t + i * 1.3 + j * 0.7) * 0.3 + 0.7;
+            const wave = _reduceMotion.matches ? 0.7 : Math.sin(t + i * 1.3 + j * 0.7) * 0.3 + 0.7;
             ctx2d.beginPath();
             ctx2d.moveTo(a.x, a.y);
             ctx2d.lineTo(b.x, b.y);

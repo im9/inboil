@@ -23,6 +23,10 @@ export default defineConfig({
       customCss: ['./src/styles/custom.css'],
       head: [
         {
+          tag: 'meta',
+          attrs: { name: 'app-url', content: process.env.PUBLIC_APP_URL || 'https://inboil.pages.dev' },
+        },
+        {
           tag: 'script',
           content: `document.addEventListener('DOMContentLoaded',()=>{
   const a=document.querySelector('a.site-title');if(a)a.href='/';
@@ -41,7 +45,7 @@ export default defineConfig({
     home.className='home-link';
     hdr.appendChild(home);
     const lnk=document.createElement('a');
-    lnk.href=location.hostname==='localhost'?'http://localhost:5173':'https://inboil.pages.dev';
+    lnk.href=location.hostname==='localhost'?'http://localhost:5173':(document.head.querySelector('meta[name=app-url]')?.content||'https://inboil.pages.dev');
     lnk.textContent='Open App';
     lnk.className='app-link';
     lnk.target='_blank';
