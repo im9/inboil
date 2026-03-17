@@ -38,7 +38,7 @@ push / PR to main
 - E2E tests (Playwright) — add when test suite stabilizes and CI budget allows ~2min runs
 - Lighthouse performance audit on site build
 - Bundle size tracking (fail if dist exceeds threshold)
-- Tauri desktop build (cross-platform matrix)
+- Tauri desktop build on tag push (`v*`) — see ADR 073 Phase 2 for release workflow
 
 ## Consequences
 

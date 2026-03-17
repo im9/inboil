@@ -82,7 +82,7 @@ inboil/
 ## Considerations
 
 - **WebView audio latency**: WebView's Web Audio API may have slightly higher latency than native audio. Acceptable for a groove box; if problematic, Tauri commands can bridge to native audio APIs (CPAL/CoreAudio) in the future
-- **Platform testing**: need CI for macOS, Windows, Linux builds. GitHub Actions supports all three
+- **Platform testing**: need CI for macOS, Windows, Linux builds. GitHub Actions supports all three (see ADR 105 for base CI pipeline)
 - **Code signing costs**: Apple Developer Program is $99/year. Can distribute unsigned initially with "open anyway" instructions
 - **Tauri v2 vs v1**: Tauri v2 has mobile support (iOS/Android) but the mobile story is handled separately in ADR 074 with a native approach
 
