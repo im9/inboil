@@ -44,6 +44,27 @@ import { SCALE_TEMPLATES } from '../constants.ts'
 export type { WorkletCommand, WorkletPattern, WorkletTrack, WorkletEvent } from './dsp/types.ts'
 export type { WorkletTrig } from './dsp/types.ts'
 
+// ── Resize helpers (preserve existing values when track count changes) ────────
+
+function resizeTyped<T extends Int32Array | Uint32Array | Uint8Array | Float64Array>(
+  Ctor: { new(n: number): T }, src: T, n: number, fill = 0,
+): T {
+  if (src.length === n) return src
+  const dst = new Ctor(n)
+  if (fill !== 0) dst.fill(fill as never)
+  const copy = Math.min(src.length, n)
+  for (let i = 0; i < copy; i++) (dst as unknown as number[])[i] = src[i]
+  return dst
+}
+
+function resizeArray<T>(src: T[], n: number, fill: T | (() => T)): T[] {
+  if (src.length === n) return src
+  if (n < src.length) return src.slice(0, n)
+  const dst = src.slice()
+  for (let i = src.length; i < n; i++) dst.push(typeof fill === 'function' ? (fill as () => T)() : fill)
+  return dst
+}
+
 // ── Diatonic transposition — OP-XY Brain style ───────────────────────────────
 
 const BASE_SCALE = [0, 2, 4, 5, 7, 9, 11]
@@ -345,29 +366,35 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             ? (1 - this.swing) * 2 * this.samplesPerStep
             : this.swing * 2 * this.samplesPerStep
           const n = p.tracks.length
-          if (this.voices.length !== n) {
-            this.voices = p.tracks.map((t, i) => makeVoice(i, t.voiceId, sampleRate))
-            // Resize per-track arrays
-            this.playheads    = new Array(n).fill(0)
-            this.gateCounters = new Int32Array(n)
-            this.muteGains    = new Float64Array(n).fill(1.0)
-            this.panGainsL    = new Float64Array(n).fill(Math.SQRT1_2)
-            this.panGainsR    = new Float64Array(n).fill(Math.SQRT1_2)
-            this.scSource     = new Uint8Array(n)
-            this.arpNotes     = Array.from({length: n}, () => [])
-            this.arpIdx       = new Int32Array(n)
-            this.arpCounter   = new Int32Array(n)
-            this.arpTickSize  = new Int32Array(n)
-            this.arpVel       = new Float64Array(n)
-            this.arpSeed      = new Uint32Array(n).fill(77777)
-            this.insertSlots  = new Array(n).fill(null)
-          } else {
-            // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
-            for (let i = 0; i < p.tracks.length; i++) {
-              const prev = this.tracks[i]
-              if (prev && prev.voiceId !== p.tracks[i].voiceId) {
-                this.voices[i] = makeVoice(i, p.tracks[i].voiceId, sampleRate)
-              }
+          const prev = this.voices.length
+          if (prev !== n) {
+            // Grow or shrink — preserve existing voices to avoid audio glitches
+            if (n > prev) {
+              for (let i = prev; i < n; i++) this.voices.push(makeVoice(i, p.tracks[i].voiceId, sampleRate))
+            } else {
+              for (let i = n; i < prev; i++) this.voices[i]?.noteOff()
+              this.voices.length = n
+            }
+            // Resize per-track typed arrays, preserving existing values
+            this.playheads    = resizeArray(this.playheads, n, 0)
+            this.gateCounters = resizeTyped(Int32Array, this.gateCounters, n)
+            this.muteGains    = resizeTyped(Float64Array, this.muteGains, n, 1.0)
+            this.panGainsL    = resizeTyped(Float64Array, this.panGainsL, n, Math.SQRT1_2)
+            this.panGainsR    = resizeTyped(Float64Array, this.panGainsR, n, Math.SQRT1_2)
+            this.scSource     = resizeTyped(Uint8Array, this.scSource, n)
+            this.arpNotes     = resizeArray(this.arpNotes, n, () => [] as number[])
+            this.arpIdx       = resizeTyped(Int32Array, this.arpIdx, n)
+            this.arpCounter   = resizeTyped(Int32Array, this.arpCounter, n)
+            this.arpTickSize  = resizeTyped(Int32Array, this.arpTickSize, n)
+            this.arpVel       = resizeTyped(Float64Array, this.arpVel, n)
+            this.arpSeed      = resizeTyped(Uint32Array, this.arpSeed, n, 77777)
+            this.insertSlots  = resizeArray(this.insertSlots, n, null)
+          }
+          // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
+          for (let i = 0; i < n; i++) {
+            const pt = this.tracks[i]
+            if (pt && pt.voiceId !== p.tracks[i].voiceId) {
+              this.voices[i] = makeVoice(i, p.tracks[i].voiceId, sampleRate)
             }
           }
           for (let i = 0; i < p.tracks.length; i++) {

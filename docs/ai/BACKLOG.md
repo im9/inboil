@@ -7,6 +7,7 @@ Items are not prioritized — pick based on what you're already touching.
 
 - [x] **Sampler loop crossfade** — 96-sample (~2ms) Hann crossfade at loop boundary in SamplerVoice (forward + reverse).
 - [ ] **FM/WT anti-aliasing** — High-frequency operators (4×, 8× ratio) can exceed Nyquist. Consider PolyBLEP or 2× oversampling on carriers.
+- [ ] **Glitch-free track add/remove during playback** — Current resize preserves voices but main→worklet async latency causes ~1 step audio gap. Investigate pre-allocating spare voice slots or deferred resize at next cycle boundary.
 - [x] **Denormal flushing** — Added `1e-18` DC offset to all biquad filters (ResonantLP, BiquadHP, DJFilter, PeakingEQ, ShelfEQ), reverb (CombFilter, AllpassFilter), and TapeDelay feedback paths.
 
 ## Code Organization

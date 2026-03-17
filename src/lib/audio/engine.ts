@@ -111,6 +111,7 @@ export class GrooveboxEngine {
 
   /** Auto-load built-in and user samples for sampler voices (ADR 012, 020) */
   private _autoLoadSamples(wp: WorkletPattern): void {
+    const voicesResized = wp.tracks.length !== this.trackVoiceIds.length
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
       if (!vid) continue
@@ -122,7 +123,8 @@ export class GrooveboxEngine {
         continue
       }
       // User/pack samples — re-send cached buffer when voice was re-initialized
-      if (vid === 'Sampler' && prev !== vid) {
+      // Also resend when voices array was resized (worklet recreates all instances)
+      if (vid === 'Sampler' && (prev !== vid || voicesResized)) {
         const cachedPack = this.packZones.get(i)
         if (cachedPack) {
           this._sendZones(i, cachedPack)
