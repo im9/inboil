@@ -4,7 +4,7 @@
    * send/mix, sample loader, remove track.
    * Extracted from DockPanel.svelte for modularity.
    */
-  import { song, activeCell, ui, samplesByTrack, setSample, poolImportFiles } from '../state.svelte.ts'
+  import { song, activeCell, ui, samplesByTrack, setSample, poolImportFiles, pushUndo } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
   import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -397,10 +397,10 @@
 <div class="section-label">SEND / MIX</div>
 <div class="knob-grid">
   <span data-tip="Track volume" data-tip-ja="トラック音量">
-    <Knob value={track.volume} label="VOL" size={32} onchange={v => { song.tracks[ui.selectedTrack].volume = v }} />
+    <Knob value={track.volume} label="VOL" size={32} onchange={v => { pushUndo('Set volume'); song.tracks[ui.selectedTrack].volume = v }} />
   </span>
   <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-    <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
+    <Knob value={(track.pan + 1) / 2} label="PAN" size={32} onchange={v => { pushUndo('Set pan'); song.tracks[ui.selectedTrack].pan = v * 2 - 1 }} />
   </span>
   <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
     <Knob value={cell.reverbSend} label="VERB" size={32} onchange={v => setTrackSend(ui.selectedTrack, 'reverbSend', v)} />

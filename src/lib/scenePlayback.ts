@@ -2,7 +2,7 @@
  * Scene graph playback engine — graph traversal, decorator application, generative chains.
  * Extracted from state.svelte.ts for modularity.
  */
-import { song, playback, ui, fxPad, fxFlavours, cellForTrack } from './state.svelte.ts'
+import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack } from './state.svelte.ts'
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
 import type { SceneNode, SceneEdge } from './types.ts'
@@ -55,6 +55,7 @@ function applyDecorators(node: SceneNode): void {
         playback.sceneTranspose += (dec.params.semitones ?? 0)
       }
     } else if (dec.type === 'tempo') {
+      bumpSongVersion()
       song.bpm = dec.params.bpm ?? 120
     } else if (dec.type === 'repeat') {
       playback.sceneRepeatLeft = (dec.params.count ?? 2) - 1

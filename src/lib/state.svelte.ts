@@ -81,6 +81,7 @@ export function pushUndo(label: string): void {
   const now = Date.now()
   // Always mark dirty + schedule save, even if undo snapshot is debounced
   project.dirty = true
+  songVer.v++
   scheduleAutoSave()
   if (label === lastPushLabel && now - lastPushTime < 500) {
     return
@@ -93,6 +94,7 @@ export function pushUndo(label: string): void {
 }
 
 function restoreSong(src: Song): void {
+  songVer.v++
   const r = restoreSongPure(src)
   // Apply to reactive state
   song.name = r.song.name
@@ -147,6 +149,9 @@ export function redo(): boolean {
 // ── Reactive state ───────────────────────────────────────────────────
 
 export const song = $state<Song>(makeEmptySong())
+/** Monotonic counter bumped on every song mutation — cheap dependency for $effect sync */
+export const songVer = $state({ v: 0 })
+export function bumpSongVersion() { songVer.v++ }
 // Restore project name + BPM synchronously to avoid flash before async IDB load
 try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch (e) { console.warn('[state] localStorage restore failed:', e) }
 

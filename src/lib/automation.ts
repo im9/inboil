@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for modularity.
  */
 import { BPM_MIN, BPM_MAX } from './constants.ts'
-import { song, playback, perf, fxPad, fxFlavours, masterPad, cellForTrack } from './state.svelte.ts'
+import { song, bumpSongVersion, playback, perf, fxPad, fxFlavours, masterPad, cellForTrack } from './state.svelte.ts'
 import type { AutomationPoint, AutomationTarget, AutomationSnapshot } from './types.ts'
 
 /** Evaluate automation curve at progress t (0–1) */
@@ -44,6 +44,7 @@ export function snapshotAutomationTargets(): AutomationSnapshot {
 
 /** Restore values from a snapshot taken before automation was applied */
 export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
+  bumpSongVersion()
   const v = snap.values
   if (v['global:tempo'] != null) song.bpm = v['global:tempo']
   if (v['global:masterVolume'] != null) perf.masterGain = v['global:masterVolume']
@@ -80,6 +81,8 @@ export function applyAutomations(stepIndex: number, totalSteps: number): void {
 }
 
 function applyAutomationValue(target: AutomationTarget, v: number): void {
+  // Bump version for any target that mutates `song` (tempo, comp, track vol/pan)
+  if (target.kind === 'global' || target.kind === 'track') bumpSongVersion()
   switch (target.kind) {
     case 'global':
       if (target.param === 'tempo') {

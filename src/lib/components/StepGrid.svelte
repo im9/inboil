@@ -580,6 +580,7 @@
   /* ── Playhead glow ── */
   .step.playhead {
     animation: ph-glow 180ms ease-out;
+    filter: brightness(1.45);
   }
 
   /* ── Inline velocity lane ── */
@@ -701,6 +702,7 @@
   }
   .vel-fill.playhead {
     animation: vel-glow 180ms ease-out;
+    filter: brightness(1.45);
   }
 
   /* ── Chance mode (Shift+drag) ── */

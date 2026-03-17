@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, playback, ui, project, session, masterLevels, toggleSidebar, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, project, session, masterLevels, toggleSidebar, pushUndo, bumpSongVersion } from '../state.svelte.ts'
   import { BPM_MIN, BPM_MAX } from '../constants.ts'
   import { startCapture, stopCapture } from '../wavExport.ts'
   import { downloadBlob } from '../midiExport.ts'
@@ -82,7 +82,7 @@
   function commitBpmEdit() {
     editingBpm = false
     const v = Math.round(Number(editBpmValue))
-    if (!isNaN(v) && v >= 40 && v <= 240) song.bpm = v
+    if (!isNaN(v) && v >= 40 && v <= 240) { pushUndo('BPM'); song.bpm = v }
   }
   function cancelBpmEdit() { editingBpm = false }
   function onBpmKeydown(e: KeyboardEvent) {
@@ -95,6 +95,7 @@
   let bpmRepeatInterval: ReturnType<typeof setInterval> | null = null
 
   function bpmStep(dir: -1 | 1) {
+    bumpSongVersion()
     song.bpm = Math.max(BPM_MIN, Math.min(BPM_MAX, song.bpm + dir))
   }
 
