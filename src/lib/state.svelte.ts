@@ -906,10 +906,35 @@ export async function projectRename(name: string): Promise<void> {
 
 // ── Export / Import (ADR 020 Section J) ──────────────────────────────
 
+/** Encode ArrayBuffer to base64 string */
+function bufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
+}
+
+/** Decode base64 string to ArrayBuffer */
+function base64ToBuffer(b64: string): ArrayBuffer {
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes.buffer
+}
+
 /** Export current project as a downloadable .inboil.json file */
 export function exportProjectJSON(): void {
   const snapshot = cloneSong()
-  const payload = { v: 1 as const, ...snapshot, exportedAt: Date.now() }
+  // Serialize samples: pack references by packId only, user samples by base64-encoded rawBuffer
+  const samples: Record<string, { name: string; packId?: string; buffer?: string }> = {}
+  for (const [tid, meta] of Object.entries(samplesByTrack)) {
+    if (meta.packId) {
+      samples[tid] = { name: meta.name, packId: meta.packId }
+    } else if (meta.rawBuffer.byteLength > 0) {
+      samples[tid] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
+    }
+  }
+  const payload = { v: 2 as const, ...snapshot, samples, exportedAt: Date.now() }
   const json = JSON.stringify(payload, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
   const a = document.createElement('a')
@@ -936,6 +961,32 @@ export async function importProjectJSON(json: string): Promise<void> {
   redoStack.length = 0
   // Persist immediately so the imported project isn't lost on page close
   await projectSaveAs(song.name || 'Untitled')
+  // Restore embedded samples (v2+)
+  const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
+  if (samples) {
+    const { engine } = await import('./audio/engine.ts')
+    for (const [tid, entry] of Object.entries(samples)) {
+      const trackId = Number(tid)
+      if (entry.packId) {
+        try {
+          const mod = await audioPool()
+          const zones = await mod.loadPackZones(entry.packId)
+          const waveform = await engine.loadPackToTrack(trackId, zones)
+          if (waveform) {
+            setSamplePack(trackId, entry.name, waveform, new ArrayBuffer(0), entry.packId)
+          }
+        } catch (e) {
+          console.warn(`[import] pack restore failed for ${entry.packId}:`, e)
+        }
+      } else if (entry.buffer) {
+        const rawBuffer = base64ToBuffer(entry.buffer)
+        const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer)
+        if (waveform) {
+          setSample(trackId, entry.name, waveform, rawBuffer)
+        }
+      }
+    }
+  }
 }
 
 /** Load factory demo patterns as a new unsaved project */

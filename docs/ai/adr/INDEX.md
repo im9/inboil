@@ -109,6 +109,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 064 | Dynamic Sidechain Source | Implemented | Voice-registry auto-detect, replaces hardcoded track 0 |
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |
 | 106 | Multi-Sample Mapping & Factory Expansion | Implemented | Note-range zone map in SamplerVoice, factory grand piano (Salamander, PD), vocal chops+phrases (CC0), PolySampler dynamic gain |
+| 110 | Per-Cell Sample References | Proposed | Move sample storage from global per-track to per-cell (per-pattern), IDB key migration, engine cache per-cell |
 
 ## Performance / Live
 

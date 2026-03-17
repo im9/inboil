@@ -41,10 +41,31 @@ function removeTrack(s: TestSong, currentPattern: number, trackId: number): bool
   return true
 }
 
-function addTrack(s: TestSong, currentPattern: number): number {
-  const idx = s.tracks.length
-  s.tracks.push(makeTrack(idx))
-  // Only add to current pattern
+const MAX_TRACKS = 16
+
+function findOrphanTrackId(s: TestSong): number | null {
+  const usedIds = new Set<number>()
+  for (const pat of s.patterns) {
+    for (const cell of pat.cells) usedIds.add(cell.trackId)
+  }
+  for (const track of s.tracks) {
+    if (!usedIds.has(track.id)) return track.id
+  }
+  return null
+}
+
+function addTrack(s: TestSong, currentPattern: number): number | null {
+  let idx: number
+  const orphanId = s.tracks.length >= MAX_TRACKS ? findOrphanTrackId(s) : null
+  if (s.tracks.length >= MAX_TRACKS && orphanId == null) return null
+  if (orphanId != null) {
+    idx = orphanId
+    const slot = s.tracks.find(t => t.id === orphanId)!
+    slot.muted = false; slot.volume = 0.8; slot.pan = 0
+  } else {
+    idx = s.tracks.length
+    s.tracks.push(makeTrack(idx))
+  }
   const pat = s.patterns[currentPattern]
   if (pat) {
     pat.cells.push(makeEmptyCell(idx, `TR${idx + 1}`, null, 60))
@@ -160,6 +181,62 @@ describe('addTrack — per-pattern isolation', () => {
     const newCell = cellFor(s.patterns[0], 4)
     expect(newCell).toBeDefined()
     expect(newCell!.trackId).toBe(4)
+  })
+})
+
+describe('addTrack — orphan track reuse at MAX_TRACKS', () => {
+  it('reuses orphan trackId when at capacity', () => {
+    const s = makeTestSong(2, MAX_TRACKS)
+    // Remove track 3 from ALL patterns so it becomes orphan
+    removeTrack(s, 0, 3)
+    removeTrack(s, 1, 3)
+
+    const newId = addTrack(s, 0)
+    expect(newId).toBe(3) // reused orphan
+    expect(s.tracks.length).toBe(MAX_TRACKS) // no growth
+    expect(cellFor(s.patterns[0], 3)).toBeDefined()
+  })
+
+  it('returns null when at capacity with no orphans', () => {
+    const s = makeTestSong(1, MAX_TRACKS)
+    expect(addTrack(s, 0)).toBeNull()
+  })
+
+  it('resets reused track state', () => {
+    const s = makeTestSong(1, MAX_TRACKS)
+    s.tracks[5].muted = true
+    s.tracks[5].volume = 0.3
+    s.tracks[5].pan = -1
+    // Remove track 5 from all patterns
+    removeTrack(s, 0, 5)
+
+    addTrack(s, 0)
+    const slot = s.tracks.find(t => t.id === 5)!
+    expect(slot.muted).toBe(false)
+    expect(slot.volume).toBe(0.8)
+    expect(slot.pan).toBe(0)
+  })
+
+  it('does not reuse track still referenced by another pattern', () => {
+    const s = makeTestSong(2, MAX_TRACKS)
+    // Remove track 7 from pattern 0 only — still in pattern 1
+    removeTrack(s, 0, 7)
+
+    const newId = addTrack(s, 0)
+    // Track 7 is NOT orphan (still in pattern 1), so should fail
+    expect(newId).toBeNull()
+  })
+
+  it('repeated add/remove cycles can always add', () => {
+    const s = makeTestSong(1, MAX_TRACKS)
+    for (let i = 0; i < 5; i++) {
+      // Remove last cell's track
+      const lastCell = s.patterns[0].cells[s.patterns[0].cells.length - 1]
+      removeTrack(s, 0, lastCell.trackId)
+      // Should be able to add again
+      const newId = addTrack(s, 0)
+      expect(newId).not.toBeNull()
+    }
   })
 })
 

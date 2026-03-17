@@ -44,26 +44,8 @@ import { SCALE_TEMPLATES } from '../constants.ts'
 export type { WorkletCommand, WorkletPattern, WorkletTrack, WorkletEvent } from './dsp/types.ts'
 export type { WorkletTrig } from './dsp/types.ts'
 
-// ── Resize helpers (preserve existing values when track count changes) ────────
-
-function resizeTyped<T extends Int32Array | Uint32Array | Uint8Array | Float64Array>(
-  Ctor: { new(n: number): T }, src: T, n: number, fill = 0,
-): T {
-  if (src.length === n) return src
-  const dst = new Ctor(n)
-  if (fill !== 0) dst.fill(fill as never)
-  const copy = Math.min(src.length, n)
-  for (let i = 0; i < copy; i++) (dst as unknown as number[])[i] = src[i]
-  return dst
-}
-
-function resizeArray<T>(src: T[], n: number, fill: T | (() => T)): T[] {
-  if (src.length === n) return src
-  if (n < src.length) return src.slice(0, n)
-  const dst = src.slice()
-  for (let i = src.length; i < n; i++) dst.push(typeof fill === 'function' ? (fill as () => T)() : fill)
-  return dst
-}
+// Max voice slots — pre-allocated to avoid audio-thread allocation on resize
+const MAX_VOICES = 16
 
 // ── Diatonic transposition — OP-XY Brain style ───────────────────────────────
 
@@ -160,10 +142,11 @@ interface InsertFxSlot {
 // ── Processor ─────────────────────────────────────────────────────────────────
 
 class GrooveboxProcessor extends AudioWorkletProcessor {
-  private voices: (Voice | null)[] = []
+  private voices: (Voice | null)[] = new Array(MAX_VOICES).fill(null)
   private tracks: WorkletTrack[] = []
-  private playheads: number[] = new Array(8).fill(0)
-  private gateCounters = new Int32Array(8)
+  private activeCount = 0          // number of active tracks (≤ MAX_VOICES)
+  private playheads: number[] = new Array(MAX_VOICES).fill(0)
+  private gateCounters = new Int32Array(MAX_VOICES)
   private playing = false
   private bpm = 120
   private samplesPerStep = 0
@@ -224,19 +207,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private pendingBreaking: boolean | null = null
   private pendingFilling: boolean | null = null
   private pendingReversing: boolean | null = null
-  // Per-track mute fade and precomputed pan gains
-  private muteGains      = new Float64Array(8).fill(1.0)
-  private panGainsL      = new Float64Array(8).fill(Math.SQRT1_2)
-  private panGainsR      = new Float64Array(8).fill(Math.SQRT1_2)
+  // Per-track mute fade and precomputed pan gains (pre-allocated to MAX_VOICES)
+  private muteGains      = new Float64Array(MAX_VOICES).fill(1.0)
+  private panGainsL      = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)
+  private panGainsR      = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)
   // Sidechain source flags (ADR 064) — true = triggers ducker & bypasses ducking
-  private scSource       = new Uint8Array(8)  // 0 or 1
+  private scSource       = new Uint8Array(MAX_VOICES)  // 0 or 1
   // Arpeggiator — per-track state (melodic tracks only)
-  private arpNotes:    number[][] = Array.from({length: 8}, () => [])
-  private arpIdx       = new Int32Array(8)
-  private arpCounter   = new Int32Array(8)
-  private arpTickSize  = new Int32Array(8)
-  private arpVel       = new Float64Array(8)
-  private arpSeed      = new Uint32Array(8).fill(77777)
+  private arpNotes:    number[][] = Array.from({length: MAX_VOICES}, () => [])
+  private arpIdx       = new Int32Array(MAX_VOICES)
+  private arpCounter   = new Int32Array(MAX_VOICES)
+  private arpTickSize  = new Int32Array(MAX_VOICES)
+  private arpVel       = new Float64Array(MAX_VOICES)
+  private arpSeed      = new Uint32Array(MAX_VOICES).fill(77777)
   // Fill PRNG
   private fillSeed       = 12321
   // Tape delay (ADR 075 Phase 2)
@@ -255,8 +238,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchHoldR    = 0
   private glitchCounter  = 0
   private glitchSeed     = 55555
-  // Insert FX slots (ADR 077) — lazy per-track, null = bypass
-  private insertSlots: (InsertFxSlot | null)[] = []
+  // Insert FX slots (ADR 077) — pre-allocated to MAX_VOICES, null = bypass
+  private insertSlots: (InsertFxSlot | null)[] = new Array(MAX_VOICES).fill(null)
   private insertOut      = new Float64Array(2)  // reusable output buffer
   // Granular DSP
   private granular       = new GranularProcessor(sampleRate)
@@ -294,7 +277,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.playing = true; this.swingPhase = 0
           this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
           // Position playheads so first _advanceStep lands on step 0
-          for (let t = 0; t < this.tracks.length; t++) {
+          for (let t = 0; t < this.activeCount; t++) {
             const steps = this.tracks[t]?.steps ?? 16
             this.playheads[t] = steps - 1
           }
@@ -303,9 +286,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.accumulator = this.currentThreshold  // trigger step 0 immediately
           break
         case 'stop':
-          this.playing = false; this.playheads.fill(0)
-          this.gateCounters.fill(0)
-          for (const v of this.voices) v?.reset()
+          this.playing = false
+          for (let i = 0; i < this.activeCount; i++) { this.playheads[i] = 0; this.gateCounters[i] = 0 }
+          for (let i = 0; i < this.activeCount; i++) this.voices[i]?.reset()
           break
         case 'setBpm':
           if (cmd.bpm !== undefined) {
@@ -313,7 +296,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.currentThreshold = this.swingPhase === 0
               ? (1 - this.swing) * 2 * this.samplesPerStep
               : this.swing * 2 * this.samplesPerStep
-            for (const v of this.voices) v?.setParam('bpm', this.bpm)
+            for (let i = 0; i < this.activeCount; i++) this.voices[i]?.setParam('bpm', this.bpm)
           }
           break
         case 'triggerNote': {
@@ -365,31 +348,29 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.currentThreshold = this.swingPhase === 0
             ? (1 - this.swing) * 2 * this.samplesPerStep
             : this.swing * 2 * this.samplesPerStep
-          const n = p.tracks.length
-          const prev = this.voices.length
-          if (prev !== n) {
-            // Grow or shrink — preserve existing voices to avoid audio glitches
-            if (n > prev) {
-              for (let i = prev; i < n; i++) this.voices.push(makeVoice(i, p.tracks[i].voiceId, sampleRate))
-            } else {
-              for (let i = n; i < prev; i++) this.voices[i]?.noteOff()
-              this.voices.length = n
-            }
-            // Resize per-track typed arrays, preserving existing values
-            this.playheads    = resizeArray(this.playheads, n, 0)
-            this.gateCounters = resizeTyped(Int32Array, this.gateCounters, n)
-            this.muteGains    = resizeTyped(Float64Array, this.muteGains, n, 1.0)
-            this.panGainsL    = resizeTyped(Float64Array, this.panGainsL, n, Math.SQRT1_2)
-            this.panGainsR    = resizeTyped(Float64Array, this.panGainsR, n, Math.SQRT1_2)
-            this.scSource     = resizeTyped(Uint8Array, this.scSource, n)
-            this.arpNotes     = resizeArray(this.arpNotes, n, () => [] as number[])
-            this.arpIdx       = resizeTyped(Int32Array, this.arpIdx, n)
-            this.arpCounter   = resizeTyped(Int32Array, this.arpCounter, n)
-            this.arpTickSize  = resizeTyped(Int32Array, this.arpTickSize, n)
-            this.arpVel       = resizeTyped(Float64Array, this.arpVel, n)
-            this.arpSeed      = resizeTyped(Uint32Array, this.arpSeed, n, 77777)
-            this.insertSlots  = resizeArray(this.insertSlots, n, null)
+          const n = Math.min(p.tracks.length, MAX_VOICES)
+          const prev = this.activeCount
+          // Grow: instantiate new voices, align playhead to current position
+          for (let i = prev; i < n; i++) {
+            this.voices[i] = makeVoice(i, p.tracks[i].voiceId, sampleRate)
+            this.playheads[i] = this.patternPos % (p.tracks[i].steps || 16)
+            this.gateCounters[i] = 0
+            this.muteGains[i] = 1.0
+            this.arpNotes[i] = []
+            this.arpIdx[i] = 0
+            this.arpCounter[i] = 0
+            this.arpSeed[i] = 77777
+            this.insertSlots[i] = null
           }
+          // Shrink: silence removed voices, clear slots
+          for (let i = n; i < prev; i++) {
+            this.voices[i]?.noteOff()
+            this.voices[i] = null
+            this.gateCounters[i] = 0
+            this.arpNotes[i] = []
+            this.insertSlots[i] = null
+          }
+          this.activeCount = n
           // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
           for (let i = 0; i < n; i++) {
             const pt = this.tracks[i]
@@ -397,7 +378,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               this.voices[i] = makeVoice(i, p.tracks[i].voiceId, sampleRate)
             }
           }
-          for (let i = 0; i < p.tracks.length; i++) {
+          for (let i = 0; i < n; i++) {
             const vp = p.tracks[i].voiceParams
             if (vp && this.voices[i]) {
               for (const k in vp) this.voices[i]!.setParam(k, vp[k])
@@ -405,14 +386,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.voices[i]?.setParam('bpm', this.bpm)
           }
           this.tracks = p.tracks
-          for (let i = 0; i < p.tracks.length; i++) {
+          for (let i = 0; i < n; i++) {
             this.scSource[i] = p.tracks[i].sidechainSource ? 1 : 0
           }
           const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
           this.patternLen = newLen
           // Clamp patternPos if patternLen shrank (valid range: 0..patternLen)
           if (this.patternPos > newLen) this.patternPos = 0
-          for (let i = 0; i < p.tracks.length; i++) {
+          for (let i = 0; i < n; i++) {
             const angle = ((p.tracks[i].pan ?? 0) + 1) * 0.25 * Math.PI
             this.panGainsL[i] = Math.cos(angle)
             this.panGainsR[i] = Math.sin(angle)
@@ -492,7 +473,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           // Pattern switch: reset notes and rewind playheads so step 0 replays
           // with new data. Only when reset flag is set (not on normal param tweaks).
           if (cmd.reset) {
-            for (let t = 0; t < this.voices.length; t++) {
+            for (let t = 0; t < this.activeCount; t++) {
               this.voices[t]?.noteOff()
               this.gateCounters[t] = 0
               this.arpNotes[t] = []
@@ -620,7 +601,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       isCycle = true
     }
 
-    for (let t = 0; t < this.tracks.length; t++) {
+    for (let t = 0; t < this.activeCount; t++) {
       const track = this.tracks[t]
       if (!track || track.steps === 0) continue
 
@@ -738,7 +719,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       this.octave = this.pendingOctave; this.pendingOctave = null
     }
     this.patternPos++
-    this.port.postMessage({ type: 'step', playheads: [...this.playheads], cycle: isCycle } satisfies WorkletEvent)
+    this.port.postMessage({ type: 'step', playheads: this.playheads.slice(0, this.activeCount), cycle: isCycle } satisfies WorkletEvent)
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
@@ -790,7 +771,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.stutterAccum >= this.stutterThreshold) {
             this.stutterAccum -= this.stutterThreshold
             // Retrigger all active voices at current step
-            for (let t = 0; t < this.tracks.length; t++) {
+            for (let t = 0; t < this.activeCount; t++) {
               const track = this.tracks[t]
               if (!track || track.muted) continue
               const ph = this.playheads[t]
@@ -804,7 +785,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
         }
         // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceStep)
-        for (let t = 0; t < this.voices.length; t++) {
+        for (let t = 0; t < this.activeCount; t++) {
           if (this.arpNotes[t].length === 0) continue
           const arpRate = Math.round(this.tracks[t]?.voiceParams?.arpRate ?? 1)
           if (arpRate <= 1) continue
@@ -823,7 +804,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             }
           }
         }
-        for (let t = 0; t < this.voices.length; t++) {
+        for (let t = 0; t < this.activeCount; t++) {
           const track = this.tracks[t]
           const muteTarget = track?.muted ? 0.0 : 1.0
           const mc = muteTarget > this.muteGains[t] ? 0.02 : 0.002
@@ -857,7 +838,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
       } else {
         // Not playing — still tick voices for triggerNote audition
-        for (let t = 0; t < this.voices.length; t++) {
+        for (let t = 0; t < this.activeCount; t++) {
           const track = this.tracks[t]
           const voice = this.voices[t]
           if (!voice) continue

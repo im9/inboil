@@ -309,14 +309,36 @@ export function clearAllParamLocks(trackId: number, stepIdx: number) {
 
 const MAX_TRACKS = 16
 
+/** Find a track id not referenced by any pattern cell — available for reuse */
+function findOrphanTrackId(): number | null {
+  const usedIds = new Set<number>()
+  for (const pat of song.patterns) {
+    for (const cell of pat.cells) usedIds.add(cell.trackId)
+  }
+  for (const track of song.tracks) {
+    if (!usedIds.has(track.id)) return track.id
+  }
+  return null
+}
+
 export function addTrack(voiceId: VoiceId | null = null): number | null {
-  if (song.tracks.length >= MAX_TRACKS) return null
+  // Try to reuse an orphan track slot before growing the array
+  let idx: number
+  const orphanId = song.tracks.length >= MAX_TRACKS ? findOrphanTrackId() : null
+  if (song.tracks.length >= MAX_TRACKS && orphanId == null) return null
   pushUndo('Add track')
-  const idx = song.tracks.length
+  if (orphanId != null) {
+    // Reuse existing slot — reset track state
+    idx = orphanId
+    const slot = song.tracks.find(t => t.id === orphanId)!
+    slot.muted = false; slot.volume = 0.8; slot.pan = 0
+  } else {
+    idx = song.tracks.length
+    song.tracks.push(makeTrack(idx))
+  }
   const meta = voiceId ? VOICE_LIST.find(v => v.id === voiceId) : null
   const name = meta?.label ?? (voiceId ? voiceId.toUpperCase().slice(0, 4) : `TR${idx + 1}`)
   const drum = voiceId ? DRUM_VOICES.has(voiceId) : false
-  song.tracks.push(makeTrack(idx))
   // Add cell to current pattern only — other patterns get cells lazily via ensureCell
   const currentPat = song.patterns[ui.currentPattern]
   if (currentPat) {
