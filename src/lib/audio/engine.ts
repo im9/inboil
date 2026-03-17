@@ -114,9 +114,9 @@ export class GrooveboxEngine {
     const voicesResized = wp.tracks.length !== this.trackVoiceIds.length
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
-      if (!vid) continue
       const prev = this.trackVoiceIds[i]
-      this.trackVoiceIds[i] = vid
+      this.trackVoiceIds[i] = vid || ''
+      if (!vid) continue
       // Built-in drum samples (Crash, Ride) — loaded from pool OPFS
       if (vid in DRUM_POOL_NAMES) {
         if (prev !== vid) void this.loadBuiltinSample(i, vid)

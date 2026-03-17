@@ -12,7 +12,7 @@ Items are not prioritized — pick based on what you're already touching.
 
 ## Code Organization
 
-- [ ] **Split voices.ts** (1,991 LOC) — Extract by category: `drums.ts`, `bass.ts`, `melodic.ts`, `sampler.ts`. Keep `voices.ts` as registry + re-export.
+- [x] **Split voices.ts** (1,991 LOC) — Extract by category: `drums.ts`, `bass.ts`, `melodic.ts`, `sampler.ts`. Keep `voices.ts` as registry + re-export.
 - [ ] **Split SceneView.svelte** (1,465 LOC) — Extract gesture handling, edge drawing, selection logic into composable modules.
 - [ ] **Split DockPanel.svelte** (1,240 LOC) — Extract navigator, EQ section, global param tabs into child components.
 - [ ] **Split PianoRoll.svelte** (1,124 LOC) — Extract key column, octave controls, chord shape logic.

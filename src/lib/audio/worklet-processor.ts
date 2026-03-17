@@ -687,7 +687,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         // perfX modulates velocity range when touching
         const velBase = this.perfTouching ? 0.3 + this.perfX * 0.5 : 0.6
         if (rand < prob) {
-          if (this.scSource[t]) this.ducker.trigger(this.duckDepth)
+          if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
           if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, velBase + rand * 0.4)
           this.gateCounters[t] = 1
         }
@@ -698,7 +698,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           continue
         }
         const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
-        if (this.scSource[t]) this.ducker.trigger(this.duckDepth)
+        if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
         if (!track.muted) {
           // Poly chord: trigger all notes in notes[] array
           if (trig.notes && trig.notes.length > 1) {
