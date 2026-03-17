@@ -1467,8 +1467,9 @@ export class SamplerVoice implements Voice {
     this._updateEnvCoeffs()
   }
 
-  /** Peak-normalize a buffer in place to 1.0 */
+  /** Peak-normalize a buffer in place to 1.0, then RMS-normalize for consistent loudness */
   private _normalizeBuffer(buffer: Float32Array): void {
+    // Step 1: peak-normalize to 1.0
     let peak = 0
     for (let i = 0; i < buffer.length; i++) {
       const a = Math.abs(buffer[i])
@@ -1477,6 +1478,18 @@ export class SamplerVoice implements Voice {
     if (peak > 0 && peak !== 1) {
       const scale = 1 / peak
       for (let i = 0; i < buffer.length; i++) buffer[i] *= scale
+    }
+    // Step 2: RMS loudness boost — loops/pads have lower RMS than one-shots at same peak
+    // Target RMS ≈ -12 dBFS (0.25). Only boost, never attenuate. Cap peak at 0.95.
+    const TARGET_RMS = 0.25
+    let sumSq = 0
+    for (let i = 0; i < buffer.length; i++) sumSq += buffer[i] * buffer[i]
+    const rms = Math.sqrt(sumSq / buffer.length)
+    if (rms > 0 && rms < TARGET_RMS) {
+      const gain = Math.min(TARGET_RMS / rms, 0.95 / peak)
+      if (gain > 1) {
+        for (let i = 0; i < buffer.length; i++) buffer[i] *= gain
+      }
     }
   }
 
@@ -1492,7 +1505,26 @@ export class SamplerVoice implements Voice {
 
   /** Load multiple zones for multi-sample instruments (ADR 106) */
   loadZones(zones: SampleZone[]): void {
-    for (const z of zones) this._normalizeBuffer(z.buffer)
+    // Global peak normalization — preserves relative dynamics across zones
+    let globalPeak = 0
+    for (const z of zones) {
+      for (let i = 0; i < z.buffer.length; i++) {
+        const a = Math.abs(z.buffer[i])
+        if (a > globalPeak) globalPeak = a
+      }
+    }
+    if (globalPeak > 0 && globalPeak !== 1) {
+      const scale = 1 / globalPeak
+      for (const z of zones) {
+        for (let i = 0; i < z.buffer.length; i++) z.buffer[i] *= scale
+      }
+    }
+    // Short fade-in (64 samples ≈1.3ms @48kHz) to remove Opus pre-skip artifacts
+    const FADE_IN = 64
+    for (const z of zones) {
+      const n = Math.min(FADE_IN, z.buffer.length)
+      for (let i = 0; i < n; i++) z.buffer[i] *= i / n
+    }
     this.zones = zones.sort((a, b) => a.loNote - b.loNote)
     this.activeZone = this.zones[0] ?? null
   }
@@ -1687,7 +1719,7 @@ export class SamplerVoice implements Voice {
       }
     }
 
-    return sample * this.amp * 0.7
+    return sample * this.amp * 0.85
   }
 
   reset(): void {

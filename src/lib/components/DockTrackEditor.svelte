@@ -182,7 +182,7 @@
       <button
         class="cat-btn"
         class:active={currentCat === cat.id}
-        onpointerdown={() => changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId)}
+        onpointerdown={() => { changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId); if (VOICE_LIST.filter(v => v.category === cat.id).length === 1) voiceOpen = false }}
         data-tip={cat.label} data-tip-ja={cat.label}
       >{cat.label}</button>
     {/each}

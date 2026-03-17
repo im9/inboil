@@ -29,9 +29,15 @@
     if (loadingPack) return
     loadingPack = pack.id
     stopAudition()
-    await poolAssignPackToTrack(pack.id, pack.name, trackId)
-    loadingPack = null
-    onclose?.()
+    try {
+      await poolAssignPackToTrack(pack.id, pack.name, trackId)
+      onclose?.()
+    } catch (e) {
+      showToast('Pack load failed', 'error')
+      console.warn('[pool] pack assign error:', e)
+    } finally {
+      loadingPack = null
+    }
   }
 
   // Packs matching search filter
@@ -128,9 +134,15 @@
     if (assigning) return
     assigning = true
     stopAudition()
-    await poolAssignToTrack(entry, trackId)
-    assigning = false
-    onclose?.()
+    try {
+      await poolAssignToTrack(entry, trackId)
+      onclose?.()
+    } catch (e) {
+      showToast('Sample assign failed', 'error')
+      console.warn('[pool] assign error:', e)
+    } finally {
+      assigning = false
+    }
   }
 
   // ── Row actions (delete, rename, move) ──

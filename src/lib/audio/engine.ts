@@ -263,6 +263,7 @@ export class GrooveboxEngine {
     const waveform = new Float32Array(result.mono)
     // Cache decoded mono for re-send after voice re-init
     this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
+    this.packZones.delete(trackId)  // clear pack cache so single sample takes priority
     this._sendSample(trackId, result.mono, result.sampleRate)
     return { waveform, rawBuffer: rawCopy }
   }
@@ -276,6 +277,7 @@ export class GrooveboxEngine {
     const waveform = new Float32Array(result.mono)
     // Cache decoded mono — will be sent to worklet by _autoLoadSamples on next sendPattern
     this.userSamples.set(trackId, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
+    this.packZones.delete(trackId)  // clear pack cache so single sample takes priority
     return waveform
   }
 

@@ -75,8 +75,16 @@ function open(): Promise<IDBDatabase> {
   return dbPromise
 }
 
-function tx(store: string, mode: IDBTransactionMode): Promise<IDBObjectStore> {
-  return open().then(db => db.transaction(store, mode).objectStore(store))
+async function tx(store: string, mode: IDBTransactionMode): Promise<IDBObjectStore> {
+  let db = await open()
+  try {
+    return db.transaction(store, mode).objectStore(store)
+  } catch {
+    // Connection may have been closed (versionchange, tab conflict) — reconnect once
+    dbPromise = null
+    db = await open()
+    return db.transaction(store, mode).objectStore(store)
+  }
 }
 
 function req<T>(r: IDBRequest<T>): Promise<T> {

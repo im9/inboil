@@ -137,18 +137,19 @@ describe('SamplerVoice', () => {
   })
 
   describe('loadZones normalizes buffers', () => {
-    it('peak-normalizes each zone buffer independently', () => {
+    it('global peak-normalizes across all zones (preserving relative dynamics)', () => {
       const v = new SamplerVoice(44100)
-      const buf1 = new Float32Array([0.5, -0.25, 0.1])
-      const buf2 = new Float32Array([0.1, -0.2, 0.05])
+      // Buffers must be >64 samples (fade-in region)
+      const buf1 = new Float32Array(128).fill(0.25); buf1[100] = 0.5
+      const buf2 = new Float32Array(128).fill(0.05); buf2[100] = -0.2
       v.loadZones([
         { buffer: buf1, bufferSR: 44100, rootNote: 60, loNote: 0, hiNote: 63, loVel: 0, hiVel: 127 },
         { buffer: buf2, bufferSR: 44100, rootNote: 72, loNote: 64, hiNote: 127, loVel: 0, hiVel: 127 },
       ])
-      // buf1 peak was 0.5, should now be 1.0
-      expect(buf1[0]).toBeCloseTo(1.0)
-      // buf2 peak was 0.2, should now be 1.0
-      expect(buf2[1]).toBeCloseTo(-1.0)
+      // Global peak is 0.5 (buf1[100]), so scale = 2.0
+      expect(buf1[100]).toBeCloseTo(1.0)
+      // buf2[100] = -0.2 * 2.0 = -0.4 (preserves relative level)
+      expect(buf2[100]).toBeCloseTo(-0.4)
     })
   })
 })
