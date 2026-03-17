@@ -84,6 +84,7 @@
         <button
           class="btn-shelf"
           class:active={shelf}
+          aria-pressed={shelf}
           onpointerdown={() => toggleEqShelf(band.key as 'eqLow' | 'eqHigh')}
           data-tip={shelf ? 'Switch to peaking EQ' : 'Switch to shelf EQ'}
           data-tip-ja={shelf ? 'ピーキングEQに切替' : 'シェルフEQに切替'}

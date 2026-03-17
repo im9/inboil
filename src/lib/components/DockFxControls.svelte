@@ -96,6 +96,7 @@
         <button
           class="fx-dock-toggle"
           class:active={pad.on}
+          aria-pressed={pad.on}
           onpointerdown={() => toggleFxOn(node.key)}
         >{node.label}</button>
         {#if fKey}

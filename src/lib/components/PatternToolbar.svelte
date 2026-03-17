@@ -313,6 +313,7 @@
     <button
       class="btn-kbd"
       class:active={vkbd.enabled}
+      aria-pressed={vkbd.enabled}
       onpointerdown={() => { vkbd.enabled = !vkbd.enabled }}
       data-tip="Virtual keyboard — play notes with PC keys (A-;)" data-tip-ja="バーチャルキーボード — PCキーで演奏 (A-;)"
       aria-label="Virtual keyboard"
@@ -333,6 +334,7 @@
     class:active={isLooping}
     class:spinning={isLooping && isViewingPlaying}
     class:mismatch={playback.playing && !isViewingPlaying}
+    aria-pressed={isLooping}
     onpointerdown={onLoop}
     aria-label="Loop this pattern"
     data-tip="Loop this pattern (exit scene mode)" data-tip-ja="このパターンをループ再生 (シーンモード解除)"

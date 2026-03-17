@@ -50,6 +50,15 @@ button {
   user-select: none;
 }
 
+/* ── Focus-visible (a11y) ───────────────────── */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-olive);
+  outline-offset: 1px;
+}
+
 /* ── Othello flip (shared 3D card-flip structure) ── */
 .flip-host { perspective: 80px; }
 .flip-card {

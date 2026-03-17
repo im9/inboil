@@ -862,6 +862,7 @@
         class="scene-play-btn"
         class:playing={playback.mode === 'scene' && playback.playing}
         class:active={playback.mode === 'scene'}
+        aria-pressed={playback.playing && playback.mode === 'scene'}
         style="
           left: calc({PAD_INSET}px + {rootNode.x} * (100% - {PAD_INSET * 2}px) - {rootNode.type === 'pattern' ? 52 : rootNode.type === 'generative' ? 76 : 40}px);
           top: calc({PAD_INSET}px + {rootNode.y} * (100% - {PAD_INSET * 2}px));

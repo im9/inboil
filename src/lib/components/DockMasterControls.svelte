@@ -95,6 +95,7 @@
       <button
         class="fx-dock-toggle"
         class:active={st.on}
+        aria-pressed={st.on}
         onpointerdown={() => toggleMasterPadOn(node.key)}
         data-tip={node.tip}
         data-tip-ja={node.tipJa}

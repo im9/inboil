@@ -186,6 +186,7 @@
       <button
         class="btn-transport"
         class:active={playback.playing}
+        aria-pressed={playback.playing}
         onpointerdown={(e) => { (e.currentTarget as HTMLElement).blur(); wrappedPlay() }}
         aria-label="Play"
         data-tip="Play pattern" data-tip-ja="パターンを再生"
@@ -200,6 +201,7 @@
         class="btn-rec"
         class:armed={recState === 'armed'}
         class:active={recState === 'recording'}
+        aria-pressed={recState !== 'idle'}
         onpointerdown={handleRec}
         aria-label={recState === 'recording' ? 'Stop recording' : recState === 'armed' ? 'Cancel record' : 'Arm recording'}
         data-tip={recState === 'recording' ? 'Stop recording and save WAV' : recState === 'armed' ? 'Cancel recording standby' : 'Arm recording (starts on play)'}
@@ -260,6 +262,7 @@
       <button
         class="btn-header-nav desktop-only"
         class:active={ui.sidebar === 'help'}
+        aria-pressed={ui.sidebar === 'help'}
         onpointerdown={compact ? () => toggleSidebar('help') : handleHelp}
         aria-label="Help"
         data-tip="Show help" data-tip-ja="ヘルプを表示"
@@ -267,6 +270,7 @@
       <button
         class="btn-header-nav desktop-only"
         class:active={ui.sidebar === 'system'}
+        aria-pressed={ui.sidebar === 'system'}
         onpointerdown={handleSystem}
         aria-label="System settings"
         data-tip="System settings" data-tip-ja="システム設定"

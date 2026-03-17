@@ -121,6 +121,7 @@
           <button
             class="btn-toggle dec-mode"
             class:active={dec.params.mode === 1}
+            aria-pressed={dec.params.mode === 1}
             onpointerdown={() => toggleDecMode(node.id, i, dec)}
             data-tip={dec.params.mode === 1 ? 'Switch to relative' : 'Switch to absolute key'}
             data-tip-ja={dec.params.mode === 1 ? '相対モードに切替' : '絶対キーに切替'}
@@ -162,6 +163,7 @@
             <button
               class="btn-toggle"
               class:active={dec.params[key]}
+              aria-pressed={!!dec.params[key]}
               onpointerdown={() => toggleDecFx(node.id, i, dec, key)}
             >{label}</button>
             <button
