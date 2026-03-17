@@ -13,7 +13,4 @@ Items are not prioritized — pick based on what you're already touching.
 - [ ] **Split SceneView.svelte** (1,465 LOC) — Extract gesture handling, edge drawing, selection logic into composable modules.
 - [ ] **Split PianoRoll.svelte** (1,124 LOC) — Extract key column, octave controls, chord shape logic.
 
-## Accessibility
-
-- [ ] **Keyboard navigation for StepGrid** — Arrow keys to move between steps, Enter/Space to toggle.
 

@@ -184,6 +184,53 @@
     stepDragging = false
     stepStepsEl = null
   }
+
+  // ── Keyboard navigation for step buttons ──
+  function stepKeydown(e: KeyboardEvent, trackId: number, stepIdx: number) {
+    const cells = song.patterns[ui.currentPattern].cells
+    const steps = activeCell(trackId).steps
+    let targetTrack = trackId
+    let targetStep = stepIdx
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault()
+        targetStep = stepIdx > 0 ? stepIdx - 1 : steps - 1
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        targetStep = stepIdx < steps - 1 ? stepIdx + 1 : 0
+        break
+      case 'ArrowUp': {
+        e.preventDefault()
+        const idx = cells.findIndex(c => c.trackId === trackId)
+        if (idx > 0) {
+          targetTrack = cells[idx - 1].trackId
+          targetStep = Math.min(stepIdx, activeCell(targetTrack).steps - 1)
+        }
+        break
+      }
+      case 'ArrowDown': {
+        e.preventDefault()
+        const idx = cells.findIndex(c => c.trackId === trackId)
+        if (idx < cells.length - 1) {
+          targetTrack = cells[idx + 1].trackId
+          targetStep = Math.min(stepIdx, activeCell(targetTrack).steps - 1)
+        }
+        break
+      }
+      case 'Enter':
+        e.preventDefault()
+        handleToggle(trackId, stepIdx)
+        return
+      default:
+        return
+    }
+    if (targetTrack !== trackId || targetStep !== stepIdx) {
+      const btn = scrollEl?.querySelector(`button.step[data-track="${targetTrack}"][data-step="${targetStep}"]`) as HTMLElement
+      btn?.focus()
+    }
+  }
 </script>
 
 <div class="step-grid">
@@ -299,7 +346,10 @@
               class:playhead={isPlayhead}
               class:lock-selected={isLockSel}
               aria-label="Step {stepIdx + 1}"
+              data-track={trackId}
+              data-step={stepIdx}
               onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
+              onkeydown={(e) => stepKeydown(e, trackId, stepIdx)}
             >
               <span class="flip-card" class:flipped={trig.active}>
                 <span class="flip-face step-off"></span>
