@@ -349,6 +349,107 @@ export class SVFilter {
   reset() { this.ic1eq = 0; this.ic2eq = 0 }
 }
 
+/**
+ * Comb Filter — feedforward + feedback delay line.
+ * cutoff maps to delay time (pitch), resonance maps to feedback amount.
+ * Produces flanging, karplus-strong, and metallic textures.
+ */
+export class CombFilter {
+  private buf: Float32Array
+  private writeIdx = 0
+  private delaySamples = 100
+
+  constructor(private sr: number) {
+    // Max delay = ~50ms (SR * 0.05) covers lowest useful comb frequency (~20Hz)
+    this.buf = new Float32Array(Math.ceil(sr * 0.05))
+  }
+
+  /** Set comb parameters. cutoff = frequency in Hz */
+  setParams(cutoff: number, _resonance: number) {
+    // Cutoff maps to delay time: higher cutoff = shorter delay = higher pitch
+    void _resonance  // feedback is passed to process() directly
+    const freq = Math.max(20, Math.min(cutoff, this.sr * 0.45))
+    this.delaySamples = Math.max(1, Math.round(this.sr / freq))
+    // Clamp to buffer length
+    if (this.delaySamples >= this.buf.length) this.delaySamples = this.buf.length - 1
+  }
+
+  process(input: number, feedback: number): number {
+    const readIdx = (this.writeIdx - this.delaySamples + this.buf.length) % this.buf.length
+    const delayed = this.buf[readIdx]
+    // Feedback clamped to prevent runaway
+    const fb = Math.max(-0.95, Math.min(0.95, feedback))
+    const out = input + delayed * fb
+    this.buf[this.writeIdx] = out
+    this.writeIdx = (this.writeIdx + 1) % this.buf.length
+    return out
+  }
+
+  reset() {
+    this.buf.fill(0)
+    this.writeIdx = 0
+  }
+}
+
+/**
+ * Formant Filter — 3 parallel bandpass filters for vowel sounds.
+ * cutoff morphs between vowel presets (A→E→I→O→U), resonance controls bandwidth.
+ */
+export class FormantFilter {
+  // 3 parallel BPFs (implemented as SVFs in BP mode)
+  private bpf0: SVFilter
+  private bpf1: SVFilter
+  private bpf2: SVFilter
+
+  constructor(sr: number) {
+    this.bpf0 = new SVFilter(sr); this.bpf0.mode = SVFMode.BP
+    this.bpf1 = new SVFilter(sr); this.bpf1.mode = SVFMode.BP
+    this.bpf2 = new SVFilter(sr); this.bpf2.mode = SVFMode.BP
+  }
+
+  /** Set vowel morph. cutoff = vowel position (0–1 maps A→E→I→O→U), resonance = bandwidth Q */
+  setParams(cutoff: number, resonance: number) {
+    // Vowel formant frequencies (F1, F2, F3) — standard values
+    // A: 730, 1090, 2440  |  E: 660, 1720, 2410  |  I: 270, 2290, 3010
+    // O: 570, 840, 2410   |  U: 300, 870, 2240
+    const vowels: [number, number, number][] = [
+      [730, 1090, 2440],  // A
+      [660, 1720, 2410],  // E
+      [270, 2290, 3010],  // I
+      [570,  840, 2410],  // O
+      [300,  870, 2240],  // U
+    ]
+
+    // Map cutoff (originally Hz range 50-8000) to vowel position 0-4
+    const pos = Math.max(0, Math.min(1, (cutoff - 50) / (8000 - 50))) * 4
+    const idx = Math.floor(pos)
+    const frac = pos - idx
+    const idxNext = Math.min(idx + 1, 4)
+    const vA = vowels[idx], vB = vowels[idxNext]
+
+    const f0 = vA[0] + (vB[0] - vA[0]) * frac
+    const f1 = vA[1] + (vB[1] - vA[1]) * frac
+    const f2 = vA[2] + (vB[2] - vA[2]) * frac
+
+    // Resonance maps to Q — higher resonance = narrower bandwidth = more pronounced vowel
+    const q = Math.max(1, resonance)
+    this.bpf0.setParams(f0, q)
+    this.bpf1.setParams(f1, q)
+    this.bpf2.setParams(f2, q)
+  }
+
+  process(input: number): number {
+    // Parallel sum of 3 BPFs with decreasing gains (F1 loudest)
+    return this.bpf0.process(input) * 1.0 +
+           this.bpf1.process(input) * 0.7 +
+           this.bpf2.process(input) * 0.4
+  }
+
+  reset() {
+    this.bpf0.reset(); this.bpf1.reset(); this.bpf2.reset()
+  }
+}
+
 const enum Stage { Idle, Attack, Decay, Sustain, Release }
 export class ADSR {
   attack = 0.01; decay = 0.1; sustain = 0.7; release = 0.3

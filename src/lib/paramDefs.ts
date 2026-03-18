@@ -96,6 +96,7 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'envMod',     label: 'FMOD',  group: 'filter', tip: 'Filter envelope depth',      tipJa: 'フィルターエンベロープ深さ', min: 0,  max: 8000, default: 4000  },
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',              min: 0.5,  max: 10.0, default: 2.0   },
     { key: 'filterMode', label: 'FTYP',  group: 'filter', tip: 'Filter: LP → HP → BP → NTCH', tipJa: 'フィルター: LP → HP → BP → NTCH', min: 0, max: 3, step: 1, default: 0 },
+    { key: 'filterType', label: 'FALG',  group: 'filter', tip: 'Filter algorithm: SVF → COMB → FORMANT', tipJa: 'フィルターアルゴリズム: SVF → COMB → FORMANT', min: 0, max: 2, step: 1, default: 0 },
     { key: 'drive',         label: 'DRIV',  group: 'filter', tip: 'Post-filter drive (saturation)', tipJa: 'ドライブ（サチュレーション）', min: 0.0, max: 1.0, default: 0.0 },
     { key: 'unisonVoices', label: 'UNI',   group: 'osc',    tip: 'Unison voices: 1 → 3 → 5 → 7', tipJa: 'ユニゾンボイス数',     min: 1, max: 7, step: 2, default: 1 },
     { key: 'unisonSpread', label: 'SPRD',  group: 'osc',    tip: 'Unison detune spread',       tipJa: 'ユニゾンデチューン幅',    min: 0.0, max: 1.0, default: 0.3 },

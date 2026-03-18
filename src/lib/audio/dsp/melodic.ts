@@ -1,7 +1,7 @@
 /**
  * Melodic voices: Moog lead, 4-operator FM synth (ADR 068), Wavetable synth (ADR 011, 063).
  */
-import { ResonantLP, ADSR, SVFilter, SVFMode, HalfBandDown } from './filters.ts'
+import { ResonantLP, ADSR, SVFilter, SVFMode, HalfBandDown, CombFilter, FormantFilter } from './filters.ts'
 import { midiToHz } from './voice-common.ts'
 import type { Voice } from './voice-common.ts'
 
@@ -810,6 +810,7 @@ class ModMatrix {
  * Filter modes: LP, HP, BP, Notch (via SVFilter)
  */
 const enum OscCombine { Mix, FM, Ring }
+const enum WTFilterType { SVF, Comb, Formant }
 
 const MAX_UNISON = 7
 
@@ -827,6 +828,9 @@ class WTCore {
   lfo2 = new LFO(44100)
   modMatrix = new ModMatrix()
   filter: SVFilter
+  combFilter: CombFilter
+  formantFilter: FormantFilter
+  filterType: WTFilterType = WTFilterType.SVF
   freq = 220
   targetFreq = 220
   vel = 1
@@ -860,6 +864,8 @@ class WTCore {
     this.uniOscA = Array.from({ length: MAX_UNISON - 1 }, () => new WavetableOsc(sr))
     this.uniOscB = Array.from({ length: MAX_UNISON - 1 }, () => new WavetableOsc(sr))
     this.filter = new SVFilter(sr)
+    this.combFilter = new CombFilter(sr)
+    this.formantFilter = new FormantFilter(sr)
     this.lfo1 = new LFO(sr)
     this.lfo2 = new LFO(sr)
     this.ampEnv.setSampleRate(sr)
@@ -891,12 +897,31 @@ class WTCore {
 
   reset() {
     this.ampEnv.reset(); this.modEnv.reset()
-    this.filter.reset(); this.lfo1.reset(); this.lfo2.reset()
+    this.filter.reset(); this.combFilter.reset(); this.formantFilter.reset()
+    this.lfo1.reset(); this.lfo2.reset()
     this.oscA.reset(); this.oscB.reset()
     for (let i = 0; i < this.uniOscA.length; i++) {
       this.uniOscA[i].reset(); this.uniOscB[i].reset()
     }
     this.freq = this.targetFreq = 220
+  }
+
+  /** Apply the active filter type to a signal */
+  private _applyFilter(sig: number, fc: number, reso: number): number {
+    switch (this.filterType) {
+      case WTFilterType.Comb: {
+        this.combFilter.setParams(fc, reso)
+        // Map resonance to feedback: 0.5–10 → 0–0.93
+        const fb = Math.min(0.93, Math.max(0, (reso - 0.5) / 9.5 * 0.93))
+        return this.combFilter.process(sig, fb)
+      }
+      case WTFilterType.Formant:
+        this.formantFilter.setParams(fc, reso)
+        return this.formantFilter.process(sig)
+      default:
+        this.filter.setParams(fc, reso)
+        return this.filter.process(sig)
+    }
   }
 
   /** Render one osc pair at given frequency, returns mono sample */
@@ -973,8 +998,7 @@ class WTCore {
       this.sr * 0.45
     )
     const reso = Math.max(0.5, this.resonance + resoMod * 3)
-    this.filter.setParams(fc, reso)
-    sig = this.filter.process(sig)
+    sig = this._applyFilter(sig, fc, reso)
 
     // Drive
     if (this.drive > 0) {
@@ -984,7 +1008,7 @@ class WTCore {
 
     const vol = Math.max(0, 1.5 + volMod * 0.3)
     const out = sig * aenv * this.vel * vol
-    if (out !== out) { this.filter.reset(); return 0 }
+    if (out !== out) { this.filter.reset(); this.combFilter.reset(); this.formantFilter.reset(); return 0 }
     return out
   }
 
@@ -1058,9 +1082,8 @@ class WTCore {
       this.sr * 0.45
     )
     const reso = Math.max(0.5, this.resonance + resoMod * 3)
-    this.filter.setParams(fc, reso)
-    // Apply filter to mono sum for consistency (stereo filter would need 2 SVFs)
-    const sigM = this.filter.process((sigL + sigR) * 0.5)
+    // Apply filter to mono sum for consistency (stereo filter would need 2 instances)
+    const sigM = this._applyFilter((sigL + sigR) * 0.5, fc, reso)
     // Preserve stereo image: add back the difference
     const diff = (sigL - sigR) * 0.5
     sigL = sigM + diff; sigR = sigM - diff
@@ -1076,7 +1099,7 @@ class WTCore {
     const vol = Math.max(0, 1.5 + volMod * 0.3)
     out[0] = sigL * aenv * this.vel * vol
     out[1] = sigR * aenv * this.vel * vol
-    if (out[0] !== out[0] || out[1] !== out[1]) { this.filter.reset(); out[0] = 0; out[1] = 0 }
+    if (out[0] !== out[0] || out[1] !== out[1]) { this.filter.reset(); this.combFilter.reset(); this.formantFilter.reset(); out[0] = 0; out[1] = 0 }
   }
 
   /** Stereo tick — writes [L, R] into out */
@@ -1269,6 +1292,7 @@ export class WTSynth implements Voice {
         case 'envMod':       c.envMod = value; break
         case 'resonance':    c.resonance = value; break
         case 'filterMode':   c.filter.mode = Math.round(value) as SVFMode; break
+        case 'filterType':   c.filterType = Math.round(value) as WTFilterType; break
         case 'drive':        c.drive = value; break
         case 'unisonVoices': c.unisonVoices = Math.round(value) | 1; break
         case 'unisonSpread': c.unisonSpread = value; break
