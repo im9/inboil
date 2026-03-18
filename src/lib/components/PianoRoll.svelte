@@ -13,7 +13,7 @@
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import type { BrushMode, ChordShape } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
-  import { NOTE_NAMES, SCALE_DEGREES, SCALE_DEGREES_SET, SCALE_TEMPLATES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
+  import { NOTE_NAMES, SCALE_DEGREES, SCALE_TEMPLATES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { ICON } from '../icons.ts'
 
   interface Props {
@@ -92,7 +92,11 @@
     return [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12)
   }
   function isOutOfScale(note: number): boolean {
-    return prefs.scaleMode && !SCALE_DEGREES_SET.has(note % 12)
+    if (!prefs.scaleMode) return false
+    const midi = transposedMidi(note)
+    const root = perf.rootNote
+    const pc = ((midi % 12) - root + 12) % 12
+    return !SCALE_TEMPLATES[root].includes(pc)
   }
   /** Snap an out-of-scale note to the nearest in-scale degree */
   function snapToScale(note: number): number {

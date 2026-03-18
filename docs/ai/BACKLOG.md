@@ -15,10 +15,6 @@ Items are not prioritized — pick based on what you're already touching.
 - [ ] **Scene toolbar node placement UX** — Adding nodes from the toolbar is not intuitive. Improve discoverability — e.g. clearer affordance, drag-to-place, or contextual hints.
 - [ ] **Node function UX** — Function nodes are hard to understand on first use and lack visual feedback/polish. Improve onboarding (hints, animation) and presentation. May overlap with dock panel improvements.
 
-## Bugs
-
-- [ ] **Piano roll scale mode ignores key transpose** — When using scale mode in the piano roll, changing the song key does not update the scale highlighting/constraints. The scale should follow the current key.
-
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.
