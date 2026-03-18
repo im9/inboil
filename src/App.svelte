@@ -288,9 +288,10 @@
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
-    // Skip pattern-level ops when scene edge/label is selected (SceneView handles its own keys).
-    // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block pattern ops.
+    // Skip pattern-level ops when scene edges/labels are selected (SceneView handles its own keys).
+    // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block copy/paste.
     const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || ui.selectedSceneLabel != null
+    const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0 || hasSceneEdgeOrLabel
     const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
     // Copy/paste: pattern-level (matrix focus or no sheet) vs cell-level (sheet open)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -302,8 +303,8 @@
         if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
       }
     }
-    // Delete/Backspace: clear pattern (matrix focus or no sheet, no scene edge/label)
-    if ((inMatrix || (!hasSheet && !hasSceneEdgeOrLabel)) && (e.code === 'Backspace' || e.code === 'Delete')) {
+    // Delete/Backspace: clear pattern (matrix focus or no sheet, no scene selection)
+    if ((inMatrix || (!hasSheet && !hasSceneSelection)) && (e.code === 'Backspace' || e.code === 'Delete')) {
       e.preventDefault(); patternClear(ui.currentPattern)
     }
   }

@@ -3,7 +3,7 @@
   import type { SceneNode } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
 
-  import { sceneAddDecorator, sceneSetRoot } from '../sceneActions.ts'
+  import { sceneAddDecorator, sceneSetRoot, sceneDeleteNode } from '../sceneActions.ts'
   import { targetColor as autoTargetColor } from '../automationDraw.ts'
 
   import { PATTERN_COLORS } from '../constants.ts'
@@ -228,6 +228,9 @@
                   <button class="btn-set-root" onpointerdown={() => sceneSetRoot(scenePatternNode.id)}
                     data-tip="Set as scene root" data-tip-ja="ルートノードに設定"
                   >★ Root</button>
+                  <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(scenePatternNode.id); ui.selectedSceneNodes = {} }}
+                    data-tip="Remove from scene" data-tip-ja="シーンから削除"
+                  >✕ Remove</button>
                 {/if}
               </div>
             {/if}
@@ -518,6 +521,22 @@
   }
   .btn-set-root:hover {
     color: var(--dk-text);
+    background: var(--dk-bg-hover);
+  }
+  .btn-delete-node {
+    border: 1px solid var(--dk-border-mid);
+    background: transparent;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 5px 8px;
+    cursor: pointer;
+    transition: color 60ms, background 60ms;
+    white-space: nowrap;
+  }
+  .btn-delete-node:hover {
+    color: #f87171;
     background: var(--dk-bg-hover);
   }
 
