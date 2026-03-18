@@ -1,6 +1,7 @@
 <script lang="ts">
   import { perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
+  import VFader from './VFader.svelte'
 
   type MasterKnobKey = 'gain' | 'mkp' | 'atk' | 'rel' | 'swg'
   const MASTER_KNOBS: { key: MasterKnobKey; label: string; tip: string; tipJa: string }[] = [
@@ -37,11 +38,6 @@
   }
 
   type MasterPadKey = 'comp' | 'duck' | 'ret'
-  const MASTER_PAD_NODES: { key: MasterPadKey; label: string; xLabel: string; yLabel: string; tip: string; tipJa: string }[] = [
-    { key: 'comp', label: 'COMP', xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — threshold / ratio', tipJa: 'コンプレッサー — スレッショルド / レシオ' },
-    { key: 'duck', label: 'DUCK', xLabel: 'DPT', yLabel: 'REL', tip: 'Sidechain ducker — depth / release', tipJa: 'サイドチェインダッカー — 深さ / リリース' },
-    { key: 'ret',  label: 'RET',  xLabel: 'VRB', yLabel: 'DLY', tip: 'FX returns — reverb / delay level', tipJa: 'FXリターン — リバーブ / ディレイレベル' },
-  ]
 
   function masterPadXDisplay(key: MasterPadKey): string {
     const st = masterPad[key]
@@ -74,50 +70,71 @@
 </script>
 
 <span class="section-label">MASTER</span>
-<div class="master-dock-knobs">
-  {#each MASTER_KNOBS as mk}
-    <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
-      <Knob
-        value={getMasterKnobValue(mk.key)}
-        label={mk.label}
-        size={32}
-        displayValue={masterKnobDisplay(mk.key)}
-        onchange={v => setMasterKnobValue(mk.key, v)}
-      />
-    </span>
-  {/each}
+<div class="master-dock-groups">
+  <div class="master-dock-group">
+    <span class="group-label">OUTPUT</span>
+    <div class="master-dock-faders">
+      {#each MASTER_KNOBS.filter(mk => mk.key === 'gain' || mk.key === 'swg') as mk}
+        <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
+          <VFader
+            value={getMasterKnobValue(mk.key)}
+            label={mk.label}
+            height={64}
+            displayValue={masterKnobDisplay(mk.key)}
+            onchange={v => setMasterKnobValue(mk.key, v)}
+          />
+        </span>
+      {/each}
+    </div>
+  </div>
 </div>
-<span class="section-label mst-sub">XY PAD</span>
-<div class="master-dock-grid">
-  {#each MASTER_PAD_NODES as node}
-    {@const st = masterPad[node.key]}
-    <div class="master-dock-band" class:disabled={!st.on}>
-      <button
-        class="fx-dock-toggle"
-        class:active={st.on}
-        aria-pressed={st.on}
-        onpointerdown={() => toggleMasterPadOn(node.key)}
-        data-tip={node.tip}
-        data-tip-ja={node.tipJa}
-      >{node.label}</button>
+<span class="section-label">XY PAD</span>
+<div class="master-dock-groups">
+  <!-- COMP (full width — has extra knobs) -->
+  <div class="master-dock-group" class:disabled={!masterPad.comp.on}>
+    <div class="pad-header">
+      <button class="fx-dock-toggle" class:active={masterPad.comp.on} aria-pressed={masterPad.comp.on}
+        onpointerdown={() => toggleMasterPadOn('comp')}
+        data-tip="Compressor — threshold / ratio" data-tip-ja="コンプレッサー — スレッショルド / レシオ"
+      >COMP</button>
+    </div>
+    <div class="fx-dock-knobs">
+      <Knob value={masterPad.comp.x} label="THR" size={32} displayValue={masterPadXDisplay('comp')} onchange={v => setMasterPadX('comp', v)} />
+      <Knob value={masterPad.comp.y} label="RAT" size={32} displayValue={masterPadYDisplay('comp')} onchange={v => setMasterPadY('comp', v)} />
+      {#each MASTER_KNOBS.filter(mk => mk.key === 'mkp' || mk.key === 'atk' || mk.key === 'rel') as mk}
+        <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
+          <Knob value={getMasterKnobValue(mk.key)} label={mk.label} size={32} displayValue={masterKnobDisplay(mk.key)} onchange={v => setMasterKnobValue(mk.key, v)} />
+        </span>
+      {/each}
+    </div>
+  </div>
+  <!-- DUCK + RET side by side -->
+  <div class="pad-row">
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.duck.on}>
+      <div class="pad-header">
+        <button class="fx-dock-toggle" class:active={masterPad.duck.on} aria-pressed={masterPad.duck.on}
+          onpointerdown={() => toggleMasterPadOn('duck')}
+          data-tip="Sidechain ducker — depth / release" data-tip-ja="サイドチェインダッカー — 深さ / リリース"
+        >DUCK</button>
+      </div>
       <div class="fx-dock-knobs">
-        <Knob
-          value={st.x}
-          label={node.xLabel}
-          size={32}
-          displayValue={masterPadXDisplay(node.key)}
-          onchange={v => setMasterPadX(node.key, v)}
-        />
-        <Knob
-          value={st.y}
-          label={node.yLabel}
-          size={32}
-          displayValue={masterPadYDisplay(node.key)}
-          onchange={v => setMasterPadY(node.key, v)}
-        />
+        <Knob value={masterPad.duck.x} label="DPT" size={32} displayValue={masterPadXDisplay('duck')} onchange={v => setMasterPadX('duck', v)} />
+        <Knob value={masterPad.duck.y} label="REL" size={32} displayValue={masterPadYDisplay('duck')} onchange={v => setMasterPadY('duck', v)} />
       </div>
     </div>
-  {/each}
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.ret.on}>
+      <div class="pad-header">
+        <button class="fx-dock-toggle" class:active={masterPad.ret.on} aria-pressed={masterPad.ret.on}
+          onpointerdown={() => toggleMasterPadOn('ret')}
+          data-tip="FX returns — reverb / delay level" data-tip-ja="FXリターン — リバーブ / ディレイレベル"
+        >RET</button>
+      </div>
+      <div class="fx-dock-knobs">
+        <Knob value={masterPad.ret.x} label="VRB" size={32} displayValue={masterPadXDisplay('ret')} onchange={v => setMasterPadX('ret', v)} />
+        <Knob value={masterPad.ret.y} label="DLY" size={32} displayValue={masterPadYDisplay('ret')} onchange={v => setMasterPadY('ret', v)} />
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -128,27 +145,45 @@
     color: rgba(237,232,220, 0.4);
     padding-bottom: 2px;
   }
-  .master-dock-knobs {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
-  }
-  .mst-sub {
-    margin-top: 4px;
-  }
-  .master-dock-grid {
+  .master-dock-groups {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+    margin-bottom: 10px;
   }
-  .master-dock-band {
+  .master-dock-group {
+    padding: 6px 8px;
+    border: 1px solid rgba(237,232,220, 0.15);
+    border-radius: 4px;
+  }
+  .group-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: rgba(237,232,220, 0.55);
+    margin-bottom: 6px;
+  }
+  .master-dock-faders {
     display: flex;
-    align-items: center;
+    gap: 16px;
+  }
+  .master-dock-group.disabled {
+    opacity: 0.35;
+  }
+  .pad-row {
+    display: flex;
     gap: 8px;
   }
-  .master-dock-band.disabled {
-    opacity: 0.35;
+  .pad-half {
+    flex: 1;
+    min-width: 0;
+  }
+  .pad-half .fx-dock-knobs {
+    flex-wrap: wrap;
+  }
+  .pad-header {
+    margin-bottom: 6px;
   }
   .fx-dock-toggle {
     font-size: 10px;

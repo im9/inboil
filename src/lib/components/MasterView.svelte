@@ -86,12 +86,16 @@
 
   // ── VU Meter (vertical dot matrix) ──
   const VU_DOTS = 20  // number of dots per channel
+  const VU_DB_MIN = -60
+  const VU_DB_MAX = 6   // +6dB headroom above 0dB
+  const VU_DB_RANGE = VU_DB_MAX - VU_DB_MIN  // 66dB total
+  const VU_0DB_DOT = (0 - VU_DB_MIN) / VU_DB_RANGE * VU_DOTS  // ~18.18
 
-  // Convert linear peak to dot count (0–VU_DOTS), with -60dB floor
+  // Convert linear peak to dot count (0–VU_DOTS)
   function peakToDots(peak: number): number {
     if (peak < 0.001) return 0
     const db = 20 * Math.log10(peak)
-    return Math.max(0, Math.min(VU_DOTS, (db + 60) / 60 * VU_DOTS))
+    return Math.max(0, Math.min(VU_DOTS, (db - VU_DB_MIN) / VU_DB_RANGE * VU_DOTS))
   }
 
   // Peak hold with 1.5s decay (in dot units)
@@ -137,12 +141,13 @@
   const grLevel = $derived(grToDots(masterLevels.gr))
   const grIndices = Array.from({ length: GR_DOTS }, (_, i) => i)
 
-  // Dot color: olive (low) → blue (mid) → salmon (high)
+  // Dot color: olive (low) → blue (mid) → salmon (0dB) → red (over)
   const CLIP_RED = '#ff4444'
   function dotColor(index: number): string {
-    const t = index / (VU_DOTS - 1)
-    if (t < 0.5) return 'var(--color-olive)'
-    if (t < 0.85) return 'var(--color-blue)'
+    if (index >= VU_0DB_DOT) return CLIP_RED      // above 0dB
+    const t = index / VU_0DB_DOT                   // 0–1 within sub-0dB range
+    if (t < 0.55) return 'var(--color-olive)'
+    if (t < 0.88) return 'var(--color-blue)'
     return 'var(--color-salmon)'
   }
 
@@ -261,7 +266,7 @@
     <div class="vu-meters" data-tip="Output level meter" data-tip-ja="出力レベルメーター">
       <div class="vu-dot-col">
         <span class="vu-ch">L</span>
-        <div class="vu-dot-track">
+        <div class="vu-dot-track vu-dot-track-ref">
           {#each dotIndices as i}
             {@const lit = i < levelL}
             {@const hold = Math.abs(i - holdL) < 0.6 && holdL > 0.5}
@@ -269,7 +274,7 @@
               class="vu-dot"
               class:lit
               class:hold
-              class:clip={lit && clipL && i >= VU_DOTS - 2}
+              class:clip={lit && i >= VU_0DB_DOT}
               style="--dot-color: {dotColor(i)};"
             ></div>
           {/each}
@@ -285,7 +290,7 @@
               class="vu-dot"
               class:lit
               class:hold
-              class:clip={lit && clipR && i >= VU_DOTS - 2}
+              class:clip={lit && i >= VU_0DB_DOT}
               style="--dot-color: {dotColor(i)};"
             ></div>
           {/each}
@@ -467,39 +472,57 @@
     align-items: baseline;
   }
   .ro-tag {
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.08em;
     color: var(--node-color);
     opacity: 0.7;
-    min-width: 30px;
+    min-width: 36px;
   }
   .ro-label {
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
     color: rgba(237,232,220,0.40);
   }
   .ro-val {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: rgba(237,232,220,0.65);
-    min-width: 32px;
+    min-width: 36px;
   }
 
   /* ── Vertical dot-matrix VU (inside pad, right edge) ── */
   .vu-meters {
     position: absolute;
-    right: 8px;
-    top: 0;
-    bottom: 0;
+    right: 12px;
+    bottom: 12px;
     display: flex;
     flex-direction: row;
-    gap: 3px;
-    padding: 10px 0;
+    align-items: flex-end;
+    gap: 4px;
     z-index: 1;
     pointer-events: none;
+  }
+  /* 0dB reference: positioned on the L-channel dot track via pseudo-element.
+     column-reverse means dot 0 is at bottom, dot 19 at top.
+     0dB ≈ dot 18.18 from bottom → ~1.82 dots from top.
+     Each dot stride = 8px + 3px gap = 11px. Offset from top ≈ 1.82 × 11 - 4 ≈ 16px */
+  .vu-dot-track-ref {
+    position: relative;
+  }
+  .vu-dot-track-ref::before {
+    content: '0dB';
+    position: absolute;
+    top: 16px;
+    right: calc(100% + 5px);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(237,232,220,0.35);
+    line-height: 1;
+    white-space: nowrap;
+    transform: translateY(-50%);
   }
   .vu-dot-col {
     display: flex;
@@ -508,21 +531,20 @@
     gap: 4px;
   }
   .vu-ch {
-    font-size: 7px;
+    font-size: 9px;
     font-weight: 700;
     color: rgba(237,232,220,0.25);
     order: 1;
   }
   .vu-dot-track {
-    flex: 1;
     display: flex;
     flex-direction: column-reverse;
-    gap: 2px;
+    gap: 3px;
     align-items: center;
   }
   .vu-dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: color-mix(in srgb, var(--dot-color) 12%, transparent);
     transition: background 60ms linear;
@@ -546,7 +568,7 @@
     100% { transform: scale(1.4); }
   }
   /* GR meter (orange, top-down) */
-  .gr-col { margin-left: 2px; }
+  .gr-col { margin-left: 3px; }
   .gr-dot {
     --dot-color: var(--color-salmon);
     background: color-mix(in srgb, var(--color-salmon) 12%, transparent);
