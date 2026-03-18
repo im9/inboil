@@ -257,22 +257,7 @@
 <!-- Synth param knobs (multi-row grid) -->
 <div class="knob-grid">
   {#each params as p, i}
-    {#if p.key === 'polyMode'}
-      {@const modeVal = Math.round(knobValue(p) ?? p.default)}
-      {@const maxMode = Math.round(p.max)}
-      {@const modeLabels = cell?.voiceId === 'FM'
-        ? ['MONO', 'POLY 12', 'WIDE 6', 'UNISON']
-        : cell?.voiceId === 'WT'
-          ? ['MONO', 'POLY 16', 'WIDE 8', 'UNISON']
-          : ['MONO', 'POLY']}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="mode-row" onpointerdown={() => knobChange(p, (modeVal + 1) % (maxMode + 1))}
-        data-tip={p.tip} data-tip-ja={p.tipJa}>
-        <span class="mode-label">{modeLabels[modeVal] ?? 'MONO'}</span>
-        <span class="mode-switch" class:on={modeVal >= 1}><span class="mode-switch-thumb"></span></span>
-      </div>
-    {:else if p.key === 'reverse'}
+    {#if p.key === 'reverse'}
       {@const isOn = (knobValue(p) ?? p.default) >= 0.5}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -282,7 +267,7 @@
         <span class="mode-switch" class:on={isOn}><span class="mode-switch-thumb"></span></span>
       </div>
     {:else}
-      {@const prevNormalIdx = params.findLastIndex((q, j) => j < i && q.key !== 'polyMode' && q.key !== 'reverse')}
+      {@const prevNormalIdx = params.findLastIndex((q, j) => j < i && q.key !== 'reverse')}
       {#if p.group && (prevNormalIdx < 0 || p.group !== params[prevNormalIdx].group)}
         {@const groupLabels: Record<string, string> = { tone: 'OSC', noise: 'NOISE', metal: 'METAL', amp: 'AMP', filter: 'FILTER', env: 'ENV', arp: 'ARP', osc: 'OSC', lfo: 'LFO', sample: 'SAMPLE', chop: 'CHOP', sync: 'SYNC', ratio: 'RATIO', level: 'LEVEL', decay: 'DECAY' }}
         <!-- svelte-ignore a11y_click_events_have_key_events -->

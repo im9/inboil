@@ -176,6 +176,9 @@ const DISPLAY_LABELS: Record<string, string[]> = {
   stretchMode: ['RPTC', 'WSLA'],
   lfo1Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
   lfo2Shape:  ['SIN', 'TRI', 'SAW', 'SQR', 'S&H'],
+  polyMode:   ['MONO', 'POLY', 'WIDE', 'UNI'],
+  filterType: ['SVF', 'COMB', 'FMNT'],
+  driveType:  ['SOFT', 'HARD', 'FOLD', 'CRSH'],
 }
 
 /** Human-readable display string for a param's actual value (discrete params only) */

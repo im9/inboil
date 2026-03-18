@@ -217,6 +217,14 @@ export function applyPreset(trackIdx: number, params: Record<string, number>, pr
   if (presetName != null) c.presetName = presetName
 }
 
+/** Reset track params to voice defaults (INIT) */
+export function resetToDefaults(trackIdx: number) {
+  pushUndo('Reset to defaults')
+  const c = activeCell(trackIdx)
+  c.voiceParams = defaultVoiceParams(c.voiceId as VoiceId)
+  c.presetName = undefined
+}
+
 export const STEP_OPTIONS = [
   2, 3, 4, 5, 6, 7, 8,
   9, 10, 11, 12, 13, 14, 15, 16,

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { activeCell, ui } from '../state.svelte.ts'
-  import { applyPreset } from '../stepActions.ts'
+  import { applyPreset, resetToDefaults } from '../stepActions.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, loadUserPresetsIntoCache, isUserPresetsLoaded, addUserPresetToCache, removeUserPresetFromCache, renameUserPresetInCache, type UserPreset } from '../presets.ts'
 
   const { onopen }: {
@@ -171,6 +171,9 @@
         <span class="voice-current-arrow">{presetOpen ? '▾' : '▸'}</span>
       </button>
       {#if presetOpen}
+        <button class="btn-init-preset" onpointerdown={() => { resetToDefaults(ui.selectedTrack); presetOpen = false }}
+          data-tip="Reset to default parameters" data-tip-ja="デフォルトパラメータに戻す"
+        >INIT</button>
         <button class="btn-save-preset" onpointerdown={startSavePreset}
           data-tip="Save current sound as preset" data-tip-ja="現在の音色をプリセットとして保存"
         >SAVE</button>
@@ -388,6 +391,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .btn-init-preset {
+    border: 1px solid rgba(var(--dk-cream), 0.25);
+    background: transparent;
+    color: rgba(var(--dk-cream), 0.5);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 60ms, color 60ms;
+  }
+  .btn-init-preset:hover {
+    background: rgba(var(--dk-cream), 0.08);
+    color: rgba(var(--dk-cream), 0.8);
+  }
+  .btn-init-preset:active {
+    background: rgba(var(--dk-cream), 0.2);
+    color: rgba(var(--dk-cream), 0.95);
   }
   .btn-save-preset {
     border: 1px solid rgba(108,119,68,0.5);
