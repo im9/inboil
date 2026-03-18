@@ -5,17 +5,17 @@ Step sequencing, analog-modeled synthesis, scene graph arrangement — all runni
 
 ## Features
 
-- **19 voice types** — 11 drum synths, 2 sample drums (909 crash/ride), TB-303 bass, Moog lead, analog bass, 4-op FM (12-voice poly), wavetable (8-voice poly), user sampler
-- **Audio Pool** — 79 factory samples (kicks, snares, hats, loops, etc.) stored in OPFS; inline browser with folder drill-down, search, audition; user samples auto-imported
-- **Variable track count (up to 16)** — per-pattern, independent step counts (1–64), polymetric
+- **20 voice types** — 12 drum synths (incl. FM Drum with 6 machine algorithms), 2 sample drums (crash/ride), TB-303 bass, analog lead, analog bass, 4-op FM (12-voice poly), wavetable (16-voice poly), polyphonic sampler
+- **Audio Pool** — 113 factory samples (kicks, snares, hats, loops, etc.) stored in OPFS; inline browser with folder drill-down, search, audition; user samples auto-imported
+- **Variable track count (up to 16)** — per-pattern, independent step counts (2–64), per-track step scale (1/8 to 1/32), polymetric
 - **Parameter locks (P-Lock)** — per-step parameter overrides, Elektron-style
 - **Piano roll & tracker view** — note/duration editing for melodic tracks
 - **Scene graph** — node-based arrangement with pattern nodes, generative nodes (Turing Machine, Quantizer, Tonnetz), decorators, and edge-based branching
 - **Scale-aware arpeggiator** — UP / DOWN / UP-DOWN / RANDOM with diatonic chord modes
 - **Effects** — reverb, delay, glitch, granular with XY performance pads; per-track insert FX; 3-band EQ; DJ filter
 - **Sidechain ducker & bus compressor** — master bus processing with peak limiter
-- **50 factory presets** — 30 WT + 20 FM across 6 categories each
-- **100 pattern slots** — 21 factory + 79 user, IndexedDB persistence
+- **100+ factory presets** — 30 WT, 20 FM, 22 FM Drum, drum & synth presets
+- **100 pattern slots** — 4 factory + 96 user, IndexedDB persistence
 - **Performance controls** — fill, reverse, break, swing, key transpose, chord brush
 - **WAV recording** — capture master output with reverb tail
 - **Hardware MIDI** — USB + BLE MIDI input with per-note release
@@ -64,7 +64,7 @@ src/
 │   │   ├── worklet-processor.ts # AudioWorklet sequencer + DSP
 │   │   └── dsp/                # DSP modules (voices, effects, filters)
 │   ├── multiDevice/            # WebRTC multi-device jam (ADR 019)
-│   ├── components/             # Svelte 5 UI components (43)
+│   ├── components/             # Svelte 5 UI components (50)
 │   ├── types.ts                # Core data types (Song, Pattern, Cell, Trig)
 │   ├── state.svelte.ts         # Reactive state (Svelte 5 runes)
 │   ├── paramDefs.ts            # Synth parameter definitions
