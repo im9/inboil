@@ -1,7 +1,7 @@
 /**
  * Melodic voices: Moog lead, 4-operator FM synth (ADR 068), Wavetable synth (ADR 011, 063).
  */
-import { ResonantLP, ADSR, SVFilter, SVFMode } from './filters.ts'
+import { ResonantLP, ADSR, SVFilter, SVFMode, HalfBandDown } from './filters.ts'
 import { midiToHz } from './voice-common.ts'
 import type { Voice } from './voice-common.ts'
 
@@ -144,16 +144,19 @@ class FMLFO {
   }
 }
 
-/** 4-op FM core — single voice instance used by FMVoice poly wrapper (12 cores max). */
+/** 4-op FM core — single voice instance used by FMVoice poly wrapper (12 cores max).
+ *  Internally runs at 2× sample rate to suppress FM aliasing, decimated by a half-band FIR. */
 class FMCore {
   freq = 440; vel = 1
   ops: FMOp[]
   algorithm = 0
   lfo: FMLFO
+  private halfBand = new HalfBandDown()
 
   constructor(private sr: number) {
-    this.ops = [new FMOp(sr), new FMOp(sr), new FMOp(sr), new FMOp(sr)]
-    this.lfo = new FMLFO(sr)
+    const sr2 = sr * 2
+    this.ops = [new FMOp(sr2), new FMOp(sr2), new FMOp(sr2), new FMOp(sr2)]
+    this.lfo = new FMLFO(sr2)
     const [o1, o2, o3, o4] = this.ops
     o1.ratio = 1.0; o1.level = 1.0; o1.env.attack = 0.003; o1.env.decay = 0.30; o1.env.sustain = 0.20; o1.env.release = 0.4
     o2.ratio = 2.0; o2.level = 0.7; o2.env.attack = 0.001; o2.env.decay = 0.20; o2.env.sustain = 0.10; o2.env.release = 0.15
@@ -168,16 +171,17 @@ class FMCore {
     this.lfo.reset()
   }
   noteOff() { for (const op of this.ops) op.noteOff() }
-  reset() { for (const op of this.ops) op.reset(); this.lfo.reset() }
+  reset() { for (const op of this.ops) op.reset(); this.lfo.reset(); this.halfBand.reset() }
 
   isIdle(): boolean {
     for (const op of this.ops) { if (!op.env.isIdle()) return false }
     return true
   }
 
-  tick(): number {
+  /** Internal tick at 2× sample rate. */
+  private _tickInner(): number {
     const [o1, o2, o3, o4] = this.ops
-    const f = this.freq, sr = this.sr
+    const f = this.freq, sr2 = this.sr * 2
 
     // Apply LFO modulation
     const lfoVal = this.lfo.tick()
@@ -193,18 +197,25 @@ class FMCore {
 
     let out = 0
     switch (this.algorithm) {
-      case 0: { const s4 = o4.tick(f, sr, 0); const s3 = o3.tick(f, sr, s4 * TAU); const s2 = o2.tick(f, sr, s3 * TAU); out = o1.tick(f, sr, s2 * TAU); break }
-      case 1: { const s4 = o4.tick(f, sr, 0); const s3 = o3.tick(f, sr, s4 * TAU); out = o2.tick(f, sr, s3 * TAU) + o1.tick(f, sr, 0); break }
-      case 2: { const s4 = o4.tick(f, sr, 0); const s2 = o2.tick(f, sr, s4 * TAU); out = o3.tick(f, sr, s4 * TAU) + o1.tick(f, sr, s2 * TAU); break }
-      case 3: { const s4 = o4.tick(f, sr, 0); const s2 = o2.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o1.tick(f, sr, s2 * TAU); break }
-      case 4: { const s3 = o3.tick(f, sr, 0); const s4 = o4.tick(f, sr, 0); out = o2.tick(f, sr, s3 * TAU) + o1.tick(f, sr, s4 * TAU); break }
-      case 5: { const s4 = o4.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
-      case 6: { const s4 = o4.tick(f, sr, 0); out = o3.tick(f, sr, s4 * TAU) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
-      case 7: { out = o4.tick(f, sr, 0) + o3.tick(f, sr, 0) + o2.tick(f, sr, 0) + o1.tick(f, sr, 0); break }
+      case 0: { const s4 = o4.tick(f, sr2, 0); const s3 = o3.tick(f, sr2, s4 * TAU); const s2 = o2.tick(f, sr2, s3 * TAU); out = o1.tick(f, sr2, s2 * TAU); break }
+      case 1: { const s4 = o4.tick(f, sr2, 0); const s3 = o3.tick(f, sr2, s4 * TAU); out = o2.tick(f, sr2, s3 * TAU) + o1.tick(f, sr2, 0); break }
+      case 2: { const s4 = o4.tick(f, sr2, 0); const s2 = o2.tick(f, sr2, s4 * TAU); out = o3.tick(f, sr2, s4 * TAU) + o1.tick(f, sr2, s2 * TAU); break }
+      case 3: { const s4 = o4.tick(f, sr2, 0); const s2 = o2.tick(f, sr2, 0); out = o3.tick(f, sr2, s4 * TAU) + o1.tick(f, sr2, s2 * TAU); break }
+      case 4: { const s3 = o3.tick(f, sr2, 0); const s4 = o4.tick(f, sr2, 0); out = o2.tick(f, sr2, s3 * TAU) + o1.tick(f, sr2, s4 * TAU); break }
+      case 5: { const s4 = o4.tick(f, sr2, 0); out = o3.tick(f, sr2, s4 * TAU) + o2.tick(f, sr2, 0) + o1.tick(f, sr2, 0); break }
+      case 6: { const s4 = o4.tick(f, sr2, 0); out = o3.tick(f, sr2, s4 * TAU) + o2.tick(f, sr2, 0) + o1.tick(f, sr2, 0); break }
+      case 7: { out = o4.tick(f, sr2, 0) + o3.tick(f, sr2, 0) + o2.tick(f, sr2, 0) + o1.tick(f, sr2, 0); break }
     }
     // Carrier count per algorithm: 0=1, 1-4=2, 5-6=3, 7=4
     const carrierCount = this.algorithm === 0 ? 1 : this.algorithm >= 7 ? 4 : this.algorithm >= 5 ? 3 : 2
     return out / carrierCount * this.vel * 0.85
+  }
+
+  /** Tick at native sample rate — internally renders 2 samples at 2×SR and decimates. */
+  tick(): number {
+    const s0 = this._tickInner()
+    const s1 = this._tickInner()
+    return this.halfBand.process(s0, s1)
   }
 }
 
@@ -442,15 +453,34 @@ function generateTable(shape: WTShape, sr: number, baseFreq: number): Float32Arr
 
 const SHAPE_COUNT = 5
 
-/** Cached wavetable per sample rate — avoids regenerating on every voice instantiation */
-const tableCache = new Map<number, Float32Array[]>()
+// ── Mipmap wavetable generation ─────────────────────────────────────
+// One table per octave band. Higher frequencies use tables with fewer
+// harmonics, preventing aliasing without runtime oversampling.
+const MIPMAP_FREQS = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+const MIPMAP_LEVELS = MIPMAP_FREQS.length
 
-function getCachedTables(sr: number): Float32Array[] {
+/** Select mipmap level for a given playback frequency (branchless-ish). */
+function mipmapLevel(freq: number): number {
+  if (freq < 128) return freq < 64 ? 0 : 1
+  if (freq < 512) return freq < 256 ? 2 : 3
+  if (freq < 2048) return freq < 1024 ? 4 : 5
+  if (freq < 8192) return freq < 4096 ? 6 : 7
+  return 8
+}
+
+/** Cached mipmap tables per sample rate: tables[shape][mipmapLevel] */
+const tableCache = new Map<number, Float32Array[][]>()
+
+function getCachedTables(sr: number): Float32Array[][] {
   let tables = tableCache.get(sr)
   if (!tables) {
     tables = []
     for (let s = 0; s < SHAPE_COUNT; s++) {
-      tables.push(generateTable(s as WTShape, sr, 100))
+      const levels: Float32Array[] = []
+      for (let m = 0; m < MIPMAP_LEVELS; m++) {
+        levels.push(generateTable(s as WTShape, sr, MIPMAP_FREQS[m]))
+      }
+      tables.push(levels)
     }
     tableCache.set(sr, tables)
   }
@@ -458,7 +488,7 @@ function getCachedTables(sr: number): Float32Array[] {
 }
 
 class WavetableOsc {
-  private tables: Float32Array[]
+  private tables: Float32Array[][]  // [shape][mipmapLevel]
   private phase = 0
 
   /** Position 0.0–1.0 morphs between wavetable shapes */
@@ -476,7 +506,10 @@ class WavetableOsc {
     this.phase -= Math.floor(this.phase)
     if (this.phase < 0) this.phase = 0
 
-    // Morph position selects between tables
+    // Select mipmap level based on playback frequency
+    const level = mipmapLevel(freq)
+
+    // Morph position selects between shapes
     const pos = this.position * (SHAPE_COUNT - 1)
     const idx = Math.floor(pos)
     const frac = pos - idx
@@ -488,8 +521,10 @@ class WavetableOsc {
     const s1 = (s0 + 1) & (WT_SIZE - 1)
     const sf = phaseSample - Math.floor(phaseSample)
 
-    const a = this.tables[idx][s0] + (this.tables[idx][s1] - this.tables[idx][s0]) * sf
-    const b = this.tables[idxNext][s0] + (this.tables[idxNext][s1] - this.tables[idxNext][s0]) * sf
+    const tA = this.tables[idx][level]
+    const tB = this.tables[idxNext][level]
+    const a = tA[s0] + (tA[s1] - tA[s0]) * sf
+    const b = tB[s0] + (tB[s1] - tB[s0]) * sf
 
     return a + (b - a) * frac
   }
