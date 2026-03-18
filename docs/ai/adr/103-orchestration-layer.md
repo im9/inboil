@@ -212,3 +212,4 @@ Figures are stored in the scene graph alongside nodes and edges. They reference 
 - **Figure-to-figure transitions**: Define how one figure's end connects to the next figure's start (crossfade, hard cut, overlap)
 - **Generative figures**: AI proposes figure placements based on the song structure ("your intro→verse transition could use a build here")
 - **Emotion timeline**: A dedicated lane showing the overall emotional arc of the song, derived from all active figures — a macro view of the arrangement's energy profile
+- **Octatrack-style A/B scene morphing**: Rather than multiple root nodes in the scene graph, Octatrack's crossfader approach (two parameter snapshots with continuous interpolation) can be expressed through this orchestration layer. A/B snapshots map to figure endpoints, crossfader position maps to interpolation along the figure curve. This avoids the complexity of parallel scene graphs while achieving the same expressive goal.

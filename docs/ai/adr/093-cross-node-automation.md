@@ -31,6 +31,13 @@ Node B plays
 
 The restore-on-advance behavior means an automation curve's effect is always confined to a single pattern's duration. There is no concept of "this curve spans the next 4 nodes."
 
+### Known issues with current decorator automation
+
+- **Pattern length sync**: Automation curves do not sync to the pattern's step count — curves repeat mid-pattern when the pattern is longer than the curve's implicit duration, causing unintended parameter cycling
+- **UX mismatch**: The curve editor (bezier/freehand) feels disconnected from the step sequencer workflow. A step-based automation lane (like the velocity row) may be more intuitive for per-pattern automation, reserving curve-based editing for cross-node spans
+
+These issues should be addressed as part of the cross-node automation redesign rather than patched independently.
+
 ## Decision
 
 ### Cross-node flag on automation decorators
@@ -198,6 +205,27 @@ When a block contains multiple nodes, the automation editor canvas shows node bo
 - Block node count determines span automatically (no manual selector)
 - Warning for non-deterministic chains (random edges within span)
 - Undo support for snap/unsnap
+
+### Decorator migration: pattern node → function node
+
+Current decorator automation is attached directly to pattern nodes, which creates several problems:
+- Decorators are invisible/implicit — users don't know they're there until they find the editor
+- Pattern nodes conflate two concerns: "what plays" and "what parameter changes happen"
+- Hard to reason about when effects apply vs. when they're restored
+
+**Proposed change**: Move decorator/automation functionality from pattern nodes to **function nodes**:
+
+- Pattern nodes become pure "play this pattern" — no parameter overrides
+- Function nodes inserted between pattern nodes act as explicit parameter transformers ("open filter here", "reduce volume to 50%")
+- Function nodes are visible in the scene graph, making data flow obvious
+- Cross-node spans (this ADR) become a property of function nodes spanning a range of downstream pattern nodes
+
+This enables progressive disclosure:
+- Beginners: pattern nodes only, simple sequencing
+- Intermediate: add function nodes for parameter control
+- Advanced: function nodes with cross-node spans, orchestration layer (ADR 103)
+
+Pattern-level initial values (e.g., "this pattern always starts at volume 0.8") can be stored as simple node properties rather than automation curves.
 
 ## Future Extensions
 
