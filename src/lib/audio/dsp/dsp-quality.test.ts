@@ -117,15 +117,7 @@ function sineBuffer(freq: number, sr: number, samples: number, amp = 1.0): Float
   return buf
 }
 
-/** Process a buffer through a stereo effect, return L channel */
-function processEffect(effect: { process(l: number, r: number, ...args: number[]): Float64Array }, buf: Float64Array, ...extraArgs: number[]): Float64Array {
-  const out = new Float64Array(buf.length)
-  for (let i = 0; i < buf.length; i++) {
-    const r = effect.process(buf[i], buf[i], ...extraArgs)
-    out[i] = r[0]
-  }
-  return out
-}
+
 
 // ── FM Drum Voice ────────────────────────────────────────────────────
 

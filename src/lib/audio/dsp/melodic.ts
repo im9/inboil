@@ -418,29 +418,172 @@ export class FMVoice implements Voice {
 // ── Wavetable Oscillator (ADR 011) ──────────────────────────────────
 
 /** Wavetable shapes — generated mathematically at init, zero bundle cost. */
-const enum WTShape { Saw, Square, Triangle, Sine, Pulse }
+const enum WTShape {
+  // Classic (0–4)
+  Saw, Square, Triangle, Sine, Pulse,
+  // Digital / Spectral (5–9)
+  SuperSaw, PWM50, Formant1, Formant2, Spectral,
+  // Harsh / Aggressive (10–14)
+  Bitcrush, Metallic, Distorted, Noise, Feedback,
+}
 
 const WT_SIZE = 2048
 
-/** Generate a single-cycle wavetable via additive synthesis (band-limited). */
+/** Harmonic amplitude function for additive shapes */
+function harmonicAmp(shape: WTShape, h: number): number {
+  switch (shape) {
+    case WTShape.Saw:      return (h % 2 === 0 ? -1 : 1) * (1 / h)
+    case WTShape.Square:   return h % 2 === 1 ? (1 / h) : 0
+    case WTShape.Triangle: return h % 2 === 1 ? ((h % 4 === 1 ? 1 : -1) / (h * h)) : 0
+    case WTShape.Sine:     return h === 1 ? 1 : 0
+    case WTShape.Pulse:    return 1 / h  // all harmonics equal = narrow pulse
+    // SuperSaw: 7 detuned saws summed (detune spread via phase offsets)
+    case WTShape.SuperSaw: return (h % 2 === 0 ? -1 : 1) * (1 / h) * 1.4
+    // PWM50: 50% pulse width — odd harmonics only like square but different phase
+    case WTShape.PWM50:    return h % 2 === 1 ? (1 / h) : 0
+    // Spectral: odd harmonics with steep spectral tilt (darker, hollow)
+    case WTShape.Spectral: return h % 2 === 1 ? (1 / (h * h * 0.5)) : 0
+    default: return 0
+  }
+}
+
+/** Generate a single-cycle wavetable (band-limited). */
 function generateTable(shape: WTShape, sr: number, baseFreq: number): Float32Array {
   const table = new Float32Array(WT_SIZE)
   const nyquist = sr / 2
   const maxHarmonics = Math.floor(nyquist / Math.max(1, baseFreq))
 
-  for (let h = 1; h <= maxHarmonics; h++) {
-    let amp = 0
-    switch (shape) {
-      case WTShape.Saw:      amp = (h % 2 === 0 ? -1 : 1) * (1 / h); break
-      case WTShape.Square:   amp = h % 2 === 1 ? (1 / h) : 0; break
-      case WTShape.Triangle: amp = h % 2 === 1 ? ((h % 4 === 1 ? 1 : -1) / (h * h)) : 0; break
-      case WTShape.Sine:     amp = h === 1 ? 1 : 0; break
-      case WTShape.Pulse:    amp = 1 / h; break  // all harmonics equal = narrow pulse
+  // Shapes that need direct waveform construction (not pure additive)
+  switch (shape) {
+    case WTShape.SuperSaw: {
+      // 7 detuned saws — sum additive saws with phase offsets
+      const detunes = [-0.12, -0.08, -0.04, 0, 0.04, 0.08, 0.12]
+      for (const dt of detunes) {
+        for (let h = 1; h <= maxHarmonics; h++) {
+          const amp = (h % 2 === 0 ? -1 : 1) * (1 / h) / 7
+          const phaseOff = dt * h * 2.5
+          for (let i = 0; i < WT_SIZE; i++) {
+            table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE + phaseOff)
+          }
+        }
+      }
+      break
     }
-    if (amp === 0) continue
+    case WTShape.Formant1: {
+      // Vocal "A" formant — 3 resonant peaks at ~730, 1090, 2440 Hz
+      // Approximated as harmonic clusters relative to fundamental
+      for (let h = 1; h <= maxHarmonics; h++) {
+        const f = h * baseFreq
+        // Gaussian peaks centered at formant frequencies
+        const a1 = Math.exp(-0.5 * ((f - 730) / 80) ** 2)
+        const a2 = Math.exp(-0.5 * ((f - 1090) / 100) ** 2) * 0.7
+        const a3 = Math.exp(-0.5 * ((f - 2440) / 120) ** 2) * 0.4
+        const amp = (a1 + a2 + a3) / h
+        if (amp < 0.001) continue
+        for (let i = 0; i < WT_SIZE; i++) {
+          table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE)
+        }
+      }
+      break
+    }
+    case WTShape.Formant2: {
+      // Vocal "O" formant — peaks at ~570, 840, 2410 Hz
+      for (let h = 1; h <= maxHarmonics; h++) {
+        const f = h * baseFreq
+        const a1 = Math.exp(-0.5 * ((f - 570) / 70) ** 2)
+        const a2 = Math.exp(-0.5 * ((f - 840) / 90) ** 2) * 0.6
+        const a3 = Math.exp(-0.5 * ((f - 2410) / 120) ** 2) * 0.3
+        const amp = (a1 + a2 + a3) / h
+        if (amp < 0.001) continue
+        for (let i = 0; i < WT_SIZE; i++) {
+          table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE)
+        }
+      }
+      break
+    }
+    case WTShape.Bitcrush: {
+      // Quantized sine — step function with N levels
+      const levels = 8
+      for (let i = 0; i < WT_SIZE; i++) {
+        const s = Math.sin(2 * Math.PI * i / WT_SIZE)
+        table[i] = Math.round(s * levels) / levels
+      }
+      // Band-limit by zeroing harmonics above nyquist
+      _bandLimit(table, maxHarmonics)
+      break
+    }
+    case WTShape.Metallic: {
+      // Inharmonic partials — bell-like, using non-integer ratios
+      const ratios = [1, 1.47, 2.09, 2.56, 3.14, 4.2]
+      const amps  = [1, 0.7, 0.5, 0.35, 0.25, 0.15]
+      for (let r = 0; r < ratios.length; r++) {
+        const h = Math.round(ratios[r])  // snap to nearest harmonic for band-limiting
+        if (h > maxHarmonics || h < 1) continue
+        for (let i = 0; i < WT_SIZE; i++) {
+          // Use exact ratio for waveform but integer harmonic for phase coherence
+          table[i] += amps[r] * Math.sin(2 * Math.PI * ratios[r] * i / WT_SIZE)
+        }
+      }
+      break
+    }
+    case WTShape.Distorted: {
+      // Saturated sine — tanh waveshaping
+      const gain = 4.0
+      for (let i = 0; i < WT_SIZE; i++) {
+        table[i] = Math.tanh(gain * Math.sin(2 * Math.PI * i / WT_SIZE))
+      }
+      _bandLimit(table, maxHarmonics)
+      break
+    }
+    case WTShape.Noise: {
+      // Band-limited noise — random harmonics with controlled amplitudes
+      // Use deterministic seed for consistency across instances
+      let seed = 42
+      const rand = () => { seed = (seed * 1664525 + 1013904223) & 0x7fffffff; return seed / 0x7fffffff }
+      for (let h = 1; h <= maxHarmonics; h++) {
+        const amp = (0.3 + 0.7 * rand()) / Math.sqrt(h)  // pink-ish rolloff
+        const phase = rand() * 2 * Math.PI
+        for (let i = 0; i < WT_SIZE; i++) {
+          table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE + phase)
+        }
+      }
+      break
+    }
+    case WTShape.Feedback: {
+      // Simulated FM feedback — sine modulating itself
+      const fbAmount = 0.7
+      for (let i = 0; i < WT_SIZE; i++) {
+        const phase = 2 * Math.PI * i / WT_SIZE
+        // Iterate feedback 4 times for convergence
+        let out = 0
+        for (let iter = 0; iter < 4; iter++) {
+          out = Math.sin(phase + fbAmount * out)
+        }
+        table[i] = out
+      }
+      _bandLimit(table, maxHarmonics)
+      break
+    }
+    default: {
+      // Additive synthesis shapes (Saw, Square, Triangle, Sine, Pulse, PWM50, Spectral)
+      for (let h = 1; h <= maxHarmonics; h++) {
+        const amp = harmonicAmp(shape, h)
+        if (amp === 0) continue
+        for (let i = 0; i < WT_SIZE; i++) {
+          table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE)
+        }
+      }
+    }
+  }
+
+  // PWM50: shift phase by 90° compared to Square for a different character
+  if (shape === WTShape.PWM50) {
+    const shifted = new Float32Array(WT_SIZE)
+    const offset = WT_SIZE / 4  // 90° phase shift
     for (let i = 0; i < WT_SIZE; i++) {
-      table[i] += amp * Math.sin(2 * Math.PI * h * i / WT_SIZE)
+      shifted[i] = table[(i + offset) & (WT_SIZE - 1)]
     }
+    for (let i = 0; i < WT_SIZE; i++) table[i] = shifted[i]
   }
 
   // Normalize
@@ -451,7 +594,29 @@ function generateTable(shape: WTShape, sr: number, baseFreq: number): Float32Arr
   return table
 }
 
-const SHAPE_COUNT = 5
+/** Band-limit a directly-generated waveform by resynthesizing from its harmonics */
+function _bandLimit(table: Float32Array, maxHarmonics: number): void {
+  // Analyze: extract harmonic amplitudes and phases via DFT
+  const N = table.length
+  const resynth = new Float32Array(N)
+  for (let h = 1; h <= Math.min(maxHarmonics, N / 2 - 1); h++) {
+    let re = 0, im = 0
+    for (let i = 0; i < N; i++) {
+      const angle = 2 * Math.PI * h * i / N
+      re += table[i] * Math.cos(angle)
+      im -= table[i] * Math.sin(angle)
+    }
+    re *= 2 / N
+    im *= 2 / N
+    for (let i = 0; i < N; i++) {
+      const angle = 2 * Math.PI * h * i / N
+      resynth[i] += re * Math.cos(angle) - im * Math.sin(angle)
+    }
+  }
+  for (let i = 0; i < N; i++) table[i] = resynth[i]
+}
+
+const SHAPE_COUNT = 15
 
 // ── Mipmap wavetable generation ─────────────────────────────────────
 // One table per octave band. Higher frequencies use tables with fewer
