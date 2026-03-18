@@ -18,6 +18,7 @@ export type { Voice } from './voice-common.ts'
 export { DRUM_PRESETS, DrumMachine } from './drums.ts'
 export { TB303Voice, AnalogVoice } from './bass.ts'
 export { MoogVoice, FMVoice, WTSynth } from './melodic.ts'
+export { FMDrumVoice } from './fm-drum.ts'
 export { SamplerVoice, PolySampler } from './sampler.ts'
 export type { SampleZone } from './sampler.ts'
 
@@ -25,6 +26,7 @@ export type { SampleZone } from './sampler.ts'
 
 import type { Voice } from './voice-common.ts'
 import { DrumMachine } from './drums.ts'
+import { FMDrumVoice } from './fm-drum.ts'
 import { TB303Voice, AnalogVoice } from './bass.ts'
 import { MoogVoice, FMVoice, WTSynth } from './melodic.ts'
 import { SamplerVoice, PolySampler } from './sampler.ts'
@@ -32,6 +34,7 @@ import { SamplerVoice, PolySampler } from './sampler.ts'
 export type VoiceId =
   | 'Kick' | 'Kick808' | 'Snare' | 'Clap' | 'Hat' | 'OpenHat' | 'Cymbal'
   | 'Tom' | 'Rimshot' | 'Cowbell' | 'Shaker'
+  | 'FMDrum'
   | 'Bass303' | 'MoogLead' | 'Analog' | 'FM'
   | 'WT'
   | 'Crash' | 'Ride'
@@ -49,6 +52,7 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
   OpenHat:  sr => new DrumMachine(sr, 'OpenHat'),
   Cymbal:   sr => new DrumMachine(sr, 'Cymbal'),
   Cowbell:  sr => new DrumMachine(sr, 'Cowbell'),
+  FMDrum:   sr => new FMDrumVoice(sr),
   Bass303:  sr => new TB303Voice(sr),
   MoogLead: sr => new MoogVoice(sr),
   Analog:   sr => new AnalogVoice(sr),
@@ -62,6 +66,7 @@ const VOICE_REGISTRY: Record<string, (sr: number) => Voice> = {
 export const DRUM_VOICES: ReadonlySet<string> = new Set([
   'Kick', 'Kick808', 'Snare', 'Clap', 'Hat', 'OpenHat', 'Cymbal',
   'Tom', 'Rimshot', 'Cowbell', 'Shaker',
+  'FMDrum',
   'Crash', 'Ride',
 ])
 
@@ -87,6 +92,7 @@ export const VOICE_LIST: VoiceMeta[] = [
   { id: 'Rimshot',  label: 'RIM',   fullName: 'Rimshot',    category: 'drum' },
   { id: 'Cowbell',  label: 'BELL',  fullName: 'Cowbell',    category: 'drum' },
   { id: 'Shaker',   label: 'SHKR',  fullName: 'Shaker',     category: 'drum' },
+  { id: 'FMDrum',   label: 'FMD',   fullName: 'FM Drum',    category: 'drum' },
   { id: 'Crash',    label: 'CRSH',  fullName: 'Crash',      category: 'drum' },
   { id: 'Ride',     label: 'RIDE',  fullName: 'Ride',       category: 'drum' },
   { id: 'Bass303',  label: 'BASS',  fullName: 'Bass 303',    category: 'synth' },

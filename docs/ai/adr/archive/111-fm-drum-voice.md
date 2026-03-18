@@ -1,6 +1,6 @@
 # ADR 111: FM Drum Voice
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

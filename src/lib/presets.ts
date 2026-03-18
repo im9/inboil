@@ -520,6 +520,82 @@ const ANALOG_PRESETS: SynthPreset[] = [
   }},
 ]
 
+// ── FM Drum presets (ADR 111) ─────────────────────────────────────────
+const FM_DRUM_PRESETS: SynthPreset[] = [
+  // ── Kick (machine 0) ──
+  { name: 'FM Kick', voiceId: 'FMDrum', category: 'kick', params: {
+    machine: 0, color: 0.3, shape: 0.6, sweep: 0.7, contour: 0.3, punch: 0.8, decay: 0.35, tone: 0.4,
+  }},
+  { name: 'FM Kick Deep', voiceId: 'FMDrum', category: 'kick', params: {
+    machine: 0, color: 0.1, shape: 0.8, sweep: 0.9, contour: 0.2, punch: 0.5, decay: 0.6, tone: 0.2,
+  }},
+  { name: 'FM Kick Tight', voiceId: 'FMDrum', category: 'kick', params: {
+    machine: 0, color: 0.5, shape: 0.4, sweep: 0.5, contour: 0.15, punch: 0.9, decay: 0.15, tone: 0.6,
+  }},
+  { name: 'FM Kick Dist', voiceId: 'FMDrum', category: 'kick', params: {
+    machine: 0, color: 0.6, shape: 0.9, sweep: 0.8, contour: 0.25, punch: 1.0, decay: 0.3, tone: 0.7,
+  }},
+  // ── Snare (machine 1) ──
+  { name: 'FM Snare', voiceId: 'FMDrum', category: 'snare', params: {
+    machine: 1, color: 0.5, shape: 0.4, sweep: 0.3, contour: 0.5, punch: 0.6, decay: 0.2, tone: 0.6,
+  }},
+  { name: 'FM Snare Tight', voiceId: 'FMDrum', category: 'snare', params: {
+    machine: 1, color: 0.3, shape: 0.5, sweep: 0.4, contour: 0.3, punch: 0.8, decay: 0.1, tone: 0.7,
+  }},
+  { name: 'FM Snare Noise', voiceId: 'FMDrum', category: 'snare', params: {
+    machine: 1, color: 0.9, shape: 0.3, sweep: 0.2, contour: 0.4, punch: 0.5, decay: 0.25, tone: 0.5,
+  }},
+  // ── Metal (machine 2) ──
+  { name: 'FM Hat', voiceId: 'FMDrum', category: 'metal', params: {
+    machine: 2, color: 0.6, shape: 0.5, sweep: 0.1, contour: 0.2, punch: 0.3, decay: 0.04, tone: 0.8,
+  }},
+  { name: 'FM Open Hat', voiceId: 'FMDrum', category: 'metal', params: {
+    machine: 2, color: 0.6, shape: 0.5, sweep: 0.1, contour: 0.2, punch: 0.2, decay: 0.2, tone: 0.7,
+  }},
+  { name: 'FM Bell', voiceId: 'FMDrum', category: 'metal', params: {
+    machine: 2, color: 0.3, shape: 0.7, sweep: 0.3, contour: 0.4, punch: 0.4, decay: 0.5, tone: 0.5,
+  }},
+  { name: 'FM Cymbal', voiceId: 'FMDrum', category: 'metal', params: {
+    machine: 2, color: 0.8, shape: 0.6, sweep: 0.05, contour: 0.1, punch: 0.2, decay: 0.6, tone: 0.9,
+  }},
+  // ── Perc (machine 3) ──
+  { name: 'FM Tom', voiceId: 'FMDrum', category: 'perc', params: {
+    machine: 3, color: 0.2, shape: 0.3, sweep: 0.6, contour: 0.4, punch: 0.5, decay: 0.25, tone: 0.4,
+  }},
+  { name: 'FM Rim', voiceId: 'FMDrum', category: 'perc', params: {
+    machine: 3, color: 0.7, shape: 0.5, sweep: 0.3, contour: 0.1, punch: 0.9, decay: 0.05, tone: 0.8,
+  }},
+  { name: 'FM Wood', voiceId: 'FMDrum', category: 'perc', params: {
+    machine: 3, color: 0.4, shape: 0.6, sweep: 0.5, contour: 0.15, punch: 0.7, decay: 0.08, tone: 0.6,
+  }},
+  { name: 'FM Conga', voiceId: 'FMDrum', category: 'perc', params: {
+    machine: 3, color: 0.15, shape: 0.4, sweep: 0.7, contour: 0.5, punch: 0.6, decay: 0.18, tone: 0.35,
+  }},
+  // ── Tone (machine 4) ──
+  { name: 'FM Bass', voiceId: 'FMDrum', category: 'tone', params: {
+    machine: 4, color: 0.2, shape: 0.5, sweep: 0.1, contour: 0.3, punch: 0.3, decay: 0.4, tone: 0.3,
+  }},
+  { name: 'FM Lead', voiceId: 'FMDrum', category: 'tone', params: {
+    machine: 4, color: 0.5, shape: 0.6, sweep: 0.05, contour: 0.2, punch: 0.2, decay: 0.5, tone: 0.7,
+  }},
+  { name: 'FM Zap', voiceId: 'FMDrum', category: 'tone', params: {
+    machine: 4, color: 0.8, shape: 0.9, sweep: 0.3, contour: 0.1, punch: 0.7, decay: 0.15, tone: 0.9,
+  }},
+  // ── Chord (machine 5) ──
+  { name: 'FM Maj Stab', voiceId: 'FMDrum', category: 'chord', params: {
+    machine: 5, color: 0.0, shape: 0.4, sweep: 0.2, contour: 0.3, punch: 0.5, decay: 0.25, tone: 0.5,
+  }},
+  { name: 'FM Min Stab', voiceId: 'FMDrum', category: 'chord', params: {
+    machine: 5, color: 0.25, shape: 0.4, sweep: 0.2, contour: 0.3, punch: 0.5, decay: 0.25, tone: 0.5,
+  }},
+  { name: 'FM 7th', voiceId: 'FMDrum', category: 'chord', params: {
+    machine: 5, color: 0.5, shape: 0.5, sweep: 0.15, contour: 0.25, punch: 0.4, decay: 0.35, tone: 0.6,
+  }},
+  { name: 'FM Dim', voiceId: 'FMDrum', category: 'chord', params: {
+    machine: 5, color: 0.75, shape: 0.6, sweep: 0.1, contour: 0.2, punch: 0.3, decay: 0.3, tone: 0.4,
+  }},
+]
+
 // ── All presets, indexed by voiceId ──────────────────────────────────
 
 const ALL_PRESETS: SynthPreset[] = [
@@ -532,6 +608,7 @@ const ALL_PRESETS: SynthPreset[] = [
   ...MOOG_PRESETS,
   ...FM_PRESETS,
   ...ANALOG_PRESETS,
+  ...FM_DRUM_PRESETS,
 ]
 
 const PRESETS_BY_VOICE = new Map<string, SynthPreset[]>()
@@ -632,5 +709,7 @@ export function isUserPresetsLoaded(): boolean {
 
 /** Category display labels */
 export const CATEGORY_LABELS: Record<string, string> = {
-  lead: 'LEAD', bass: 'BASS', pad: 'PAD', pluck: 'PLCK', keys: 'KEYS', fx: 'FX', user: 'USER',
+  lead: 'LEAD', bass: 'BASS', pad: 'PAD', pluck: 'PLCK', keys: 'KEYS', fx: 'FX',
+  kick: 'KICK', snare: 'SNR', metal: 'METL', perc: 'PERC', tone: 'TONE', chord: 'CHRD',
+  user: 'USER',
 }
