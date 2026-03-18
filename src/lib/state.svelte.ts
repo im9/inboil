@@ -674,6 +674,29 @@ export function setSamplePack(trackId: number, patternIndex: number, name: strin
     .catch(e => { console.warn('[sample] pack save failed:', e); showToast('Sample save failed', 'error') })
 }
 
+/** Copy sample references from one pattern index to another (for pattern duplicate/paste) */
+export function copySamplesForPattern(srcIndex: number, dstIndex: number): void {
+  const pat = song.patterns[srcIndex]
+  if (!pat) return
+  for (const cell of pat.cells) {
+    const srcKey = sampleCellKey(cell.trackId, srcIndex)
+    const meta = samplesByCell[srcKey]
+    if (!meta) continue
+    const dstKey = sampleCellKey(cell.trackId, dstIndex)
+    // Copy in-memory sample metadata
+    samplesByCell[dstKey] = { ...meta }
+    // Copy engine cache (packZones / userSamples)
+    void import('./audio/engine.ts').then(({ engine }) => {
+      engine.copySampleCache(srcKey, dstKey)
+    })
+    // Persist to IDB
+    if (project.id) {
+      void storage().then(s => s.saveSample(project.id!, cell.trackId, dstIndex, meta.name, meta.rawBuffer, meta.packId))
+        .catch(e => { console.warn('[sample] copy save failed:', e) })
+    }
+  }
+}
+
 /** Persist any pending samples after project gets an id (called from projectSaveAs) */
 async function persistPendingSamples(projectId: string): Promise<void> {
   for (const [key, meta] of Object.entries(samplesByCell)) {

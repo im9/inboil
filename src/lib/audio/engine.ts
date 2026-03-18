@@ -131,7 +131,10 @@ export class GrooveboxEngine {
         const cellKey = `${trackId}_${patternIndex}`
         const sampleId = cellKey  // unique id for what should be loaded
         const alreadyLoaded = this.loadedSampleKey.get(i)
-        if (alreadyLoaded === sampleId && prev === vid && !voicesResized) continue
+        if (alreadyLoaded === sampleId && prev === vid && !voicesResized) {
+          // already loaded — skip
+          continue
+        }
         const cachedPack = this.packZones.get(cellKey)
         if (cachedPack) {
           this._sendZones(i, cachedPack)
@@ -141,6 +144,36 @@ export class GrooveboxEngine {
           if (cached) {
             this._sendSample(i, new Float32Array(cached.mono), cached.sampleRate)
             this.loadedSampleKey.set(i, sampleId)
+          } else {
+            // No exact cache for this cell key — fallback: find any cached sample for the same track
+            // This handles pattern duplication, paste, or cells sharing the same sample across patterns
+            const prefix = `${trackId}_`
+            const cell = song.patterns[patternIndex]?.cells.find(c => c.trackId === trackId)
+            const ref = cell?.sampleRef
+            let found = false
+            if (ref?.packId) {
+              // Look for a matching pack in any pattern
+              for (const [k, zones] of this.packZones) {
+                if (k.startsWith(prefix)) {
+                  this.packZones.set(cellKey, zones)
+                  this._sendZones(i, zones)
+                  this.loadedSampleKey.set(i, sampleId)
+                  found = true
+                  break
+                }
+              }
+            }
+            if (!found) {
+              for (const [k, s] of this.userSamples) {
+                if (k.startsWith(prefix)) {
+                  this.userSamples.set(cellKey, s)
+                  this._sendSample(i, new Float32Array(s.mono), s.sampleRate)
+                  this.loadedSampleKey.set(i, sampleId)
+                  found = true
+                  break
+                }
+              }
+            }
           }
         }
       }
@@ -295,6 +328,21 @@ export class GrooveboxEngine {
     this.userSamples.set(cellKey, { mono: new Float32Array(waveform), sampleRate: result.sampleRate })
     this.packZones.delete(cellKey)  // clear pack cache so single sample takes priority
     return waveform
+  }
+
+  /** Copy cached sample data from one cell key to another (for pattern duplicate/paste) */
+  copySampleCache(srcKey: string, dstKey: string): void {
+    const pack = this.packZones.get(srcKey)
+    if (pack) {
+      this.packZones.set(dstKey, pack)
+      this.userSamples.delete(dstKey)
+      return
+    }
+    const sample = this.userSamples.get(srcKey)
+    if (sample) {
+      this.userSamples.set(dstKey, sample)
+      this.packZones.delete(dstKey)
+    }
   }
 
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }

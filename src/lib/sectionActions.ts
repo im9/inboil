@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for modularity.
  */
 
-import { song, ui, pushUndo } from './state.svelte.ts'
+import { song, ui, pushUndo, copySamplesForPattern } from './state.svelte.ts'
 import type { Pattern } from './state.svelte.ts'
 import {
   makePatternId, makeEmptyCell, makeTrack,
@@ -96,6 +96,7 @@ export function duplicatePattern(srcIndex: number): number {
     color: src.color,
     cells: src.cells.map(cloneCell),
   }
+  copySamplesForPattern(srcIndex, emptyIdx)
   ui.currentPattern = emptyIdx
   return emptyIdx
 }
@@ -103,10 +104,12 @@ export function duplicatePattern(srcIndex: number): number {
 // ── Pattern clipboard ──
 
 let patternClipboard: Pattern | null = null
+let patternClipboardSrcIndex = -1
 
 /** Copy pattern to internal clipboard */
 export function patternCopy(index: number): void {
   patternClipboard = clonePattern(song.patterns[index])
+  patternClipboardSrcIndex = index
 }
 
 /** Paste clipboard into pattern slot (overwrites) */
@@ -119,6 +122,7 @@ export function patternPaste(index: number): void {
     color: patternClipboard.color,
     cells: patternClipboard.cells.map(cloneCell),
   }
+  if (patternClipboardSrcIndex !== -1) copySamplesForPattern(patternClipboardSrcIndex, index)
 }
 
 /** Returns true if the pattern clipboard has content */
