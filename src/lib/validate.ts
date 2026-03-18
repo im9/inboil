@@ -46,6 +46,8 @@ function validateCell(path: string, c: unknown): Cell {
   if (typeof raw.voiceParams !== 'object' || raw.voiceParams === null) {
     throw new ValidationError(`${path}.voiceParams`, 'expected object')
   }
+  // ADR 112: optional per-track step scale
+  assertOptionalType(`${path}.scale`, raw.scale, 'number')
   // ADR 110: optional per-cell sample reference
   if (raw.sampleRef != null) {
     if (typeof raw.sampleRef !== 'object') throw new ValidationError(`${path}.sampleRef`, 'expected object')

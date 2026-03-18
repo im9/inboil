@@ -50,6 +50,7 @@ export interface Cell {
   granularSend: number
   insertFx?: CellInsertFx  // per-track insert FX (ADR 077)
   sampleRef?: CellSampleRef // per-cell sample reference (ADR 110)
+  scale?: number            // ADR 112: step divisor (default 2 = 1/16)
 }
 
 export interface ChainFx {

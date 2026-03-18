@@ -84,6 +84,7 @@ export interface WorkletTrack {
   glitchSend: number; granularSend: number
   voiceParams: Record<string, number>
   insertFx?: WorkletInsertFx  // ADR 077: per-track insert FX
+  scale?: number              // ADR 112: step divisor (default 2 = 1/16)
 }
 
 export interface WorkletTrig {

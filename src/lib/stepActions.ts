@@ -248,6 +248,30 @@ export function setTrackSteps(trackId: number, newSteps: number) {
   c.steps = clamped
 }
 
+// ── Per-track step scale (ADR 112) ──────────────────────────────────────────
+
+export const SCALE_OPTIONS = [
+  { label: '1/8',  divisor: 4   },
+  { label: '3/16', divisor: 3   },
+  { label: '1/16', divisor: 2   },  // default
+  { label: '3/32', divisor: 1.5 },
+  { label: '1/32', divisor: 1   },
+] as const
+
+export function setTrackScale(trackId: number, divisor: number) {
+  pushUndo('Set scale')
+  const c = activeCell(trackId)
+  c.scale = divisor === 2 ? undefined : divisor  // omit default to keep saves lean
+}
+
+export function cycleTrackScale(trackId: number, direction: 1 | -1 = 1) {
+  const c = activeCell(trackId)
+  const current = c.scale ?? 2
+  const idx = SCALE_OPTIONS.findIndex(o => o.divisor === current)
+  const next = (idx + direction + SCALE_OPTIONS.length) % SCALE_OPTIONS.length
+  setTrackScale(trackId, SCALE_OPTIONS[next].divisor)
+}
+
 export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend', v: number) {
   pushUndo('Set send')
   activeCell(trackId)[send] = Math.min(1, Math.max(0, v))

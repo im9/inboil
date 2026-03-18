@@ -34,6 +34,7 @@ export function cloneCell(c: Cell): Cell {
     glitchSend: c.glitchSend, granularSend: c.granularSend,
     ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
     ...(c.sampleRef ? { sampleRef: { ...c.sampleRef } } : {}),
+    ...(c.scale != null ? { scale: c.scale } : {}),
     trigs: c.trigs.map(cloneTrig),
   }
 }

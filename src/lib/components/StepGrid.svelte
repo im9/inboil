@@ -2,7 +2,7 @@
   import { onDestroy, onMount, tick } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   // Force scroll recalc after mount — transition:fly on parent can delay layout
@@ -275,6 +275,13 @@
           </span>
         </button>
 
+        <!-- Scale (ADR 112) -->
+        <button
+          class="btn-scale"
+          onpointerdown={() => cycleTrackScale(trackId)}
+          data-tip="Step scale (click to cycle)" data-tip-ja="ステップスケール（クリックで切替）"
+        >{SCALE_OPTIONS.find(o => o.divisor === (ph.scale ?? 2))?.label ?? '1/16'}</button>
+
         <!-- Solo -->
         <button
           class="btn-solo flip-host"
@@ -431,8 +438,8 @@
 
 <style>
   .step-grid {
-    /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
-    --head-w: 136px;
+    /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-scale(28) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
+    --head-w: 168px;
     position: relative;
     flex: 1;
     min-height: 0;
@@ -675,6 +682,24 @@
   .vel-name.chance-active {
     color: #5b7dba;
     border-color: #5b7dba;
+  }
+  .btn-scale {
+    width: 28px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 1px solid var(--color-olive);
+    border-radius: 2px;
+    background: transparent;
+    font-size: 7px;
+    font-weight: 700;
+    padding: 0;
+    color: var(--color-olive);
+    cursor: pointer;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &:active { opacity: 0.6; }
   }
   .btn-steps {
     width: 20px;

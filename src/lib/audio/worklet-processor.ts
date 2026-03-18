@@ -149,8 +149,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private gateCounters = new Int32Array(MAX_VOICES)
   private playing = false
   private bpm = 120
-  private samplesPerStep = 0
-  private accumulator = 0
+  private baseSPS = 0             // samples per 1/32 base tick
+  private baseAccum = 0           // cycle detection counter (1/32 rate, no swing)
+  private breakAccum = 0          // break gate timing (isolated from per-track system)
+  // Per-track timing (ADR 112)
+  private trackAccum = new Float64Array(MAX_VOICES)
+  private trackThreshold = new Float64Array(MAX_VOICES)
+  private trackSwingPhase = new Uint8Array(MAX_VOICES)
+  private divisors = new Float64Array(MAX_VOICES).fill(2)  // default 1/16
+  private _pendingCycle = false
   private patternLen = 16   // max step count across all tracks
   private patternPos = 0    // global position within pattern cycle
   private auditionNote: Record<number, number> = {}  // trackId → last triggered MIDI note
@@ -197,8 +204,6 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private stutterThreshold = 0          // samples per stutter subdivision
   private halfAccumFrac  = 0            // fractional accumulator for half-speed
   private swing          = 0.5          // effective swing 0.5–0.75
-  private swingPhase     = 0            // 0 or 1, toggles each step
-  private currentThreshold = 0          // samples until next step (swing-adjusted)
   private gateEnv        = 1.0
   private limiter        = new PeakLimiter(sampleRate)
   // Step-quantized pending values
@@ -260,8 +265,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
   constructor(opts?: AudioWorkletNodeOptions) {
     super(opts)
-    this.samplesPerStep = this._calcSps()
-    this.currentThreshold = this.samplesPerStep
+    this.baseSPS = this._calcSps()
     this.budgetMs = 128 / sampleRate * 1000  // render quantum budget
     this.delay.setTime(375)
     this.reverb.setSize(0.72); this.reverb.setDamp(0.5)
@@ -274,16 +278,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
           if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
           if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
-          this.playing = true; this.swingPhase = 0
-          this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
-          // Position playheads so first _advanceStep lands on step 0
+          this.playing = true
+          // Position playheads so first _advanceTrack lands on step 0
           for (let t = 0; t < this.activeCount; t++) {
             const steps = this.tracks[t]?.steps ?? 16
             this.playheads[t] = steps - 1
+            this.trackSwingPhase[t] = 0
+            this.trackThreshold[t] = this._trackThresh(t)
+            this.trackAccum[t] = this.trackThreshold[t]  // trigger step 0 immediately
           }
           this.gateCounters.fill(0)
-          this.patternPos = 0  // cycle fires after patternLen advances
-          this.accumulator = this.currentThreshold  // trigger step 0 immediately
+          this.patternPos = 0
+          this.baseAccum = this.baseSPS  // trigger base tick immediately
+          this.breakAccum = 0
+          this._pendingCycle = false
           break
         case 'stop':
           this.playing = false
@@ -292,10 +300,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           break
         case 'setBpm':
           if (cmd.bpm !== undefined) {
-            this.bpm = cmd.bpm; this.samplesPerStep = this._calcSps()
-            this.currentThreshold = this.swingPhase === 0
-              ? (1 - this.swing) * 2 * this.samplesPerStep
-              : this.swing * 2 * this.samplesPerStep
+            this.bpm = cmd.bpm; this.baseSPS = this._calcSps()
+            for (let t = 0; t < this.activeCount; t++) {
+              this.trackThreshold[t] = this._trackThresh(t)
+            }
             for (let i = 0; i < this.activeCount; i++) this.voices[i]?.setParam('bpm', this.bpm)
           }
           break
@@ -343,11 +351,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         case 'setPattern': {
           if (!cmd.pattern) break
           const p = cmd.pattern
-          this.bpm = p.bpm; this.samplesPerStep = this._calcSps()
+          this.bpm = p.bpm; this.baseSPS = this._calcSps()
           this.swing = 0.5 + p.perf.swing * 0.17
-          this.currentThreshold = this.swingPhase === 0
-            ? (1 - this.swing) * 2 * this.samplesPerStep
-            : this.swing * 2 * this.samplesPerStep
           const n = Math.min(p.tracks.length, MAX_VOICES)
           const prev = this.activeCount
           // Grow: instantiate new voices, align playhead to current position
@@ -388,8 +393,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.tracks = p.tracks
           for (let i = 0; i < n; i++) {
             this.scSource[i] = p.tracks[i].sidechainSource ? 1 : 0
+            this.divisors[i] = p.tracks[i].scale ?? 2
+            this.trackThreshold[i] = this._trackThresh(i)
           }
-          const newLen = Math.max(1, ...p.tracks.map(t => t.steps))
+          // patternLen in 1/32 base ticks (steps × divisor)
+          const newLen = Math.max(1, ...p.tracks.map(t => t.steps * (t.scale ?? 2)))
           this.patternLen = newLen
           // Clamp patternPos if patternLen shrank (valid range: 0..patternLen)
           if (this.patternPos > newLen) this.patternPos = 0
@@ -479,6 +487,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               this.arpNotes[t] = []
               const steps = this.tracks[t]?.steps ?? 16
               this.playheads[t] = steps - 1
+              this.trackSwingPhase[t] = 0
+              this.trackThreshold[t] = this._trackThresh(t)
+              this.trackAccum[t] = this.trackThreshold[t]  // trigger step 0
             }
             // Apply pending perf immediately (don't wait for next step boundary)
             if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
@@ -486,10 +497,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
             if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
             if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
-            this.patternPos = 0  // cycle fires after patternLen advances
-            this.swingPhase = 0
-            this.currentThreshold = (1 - this.swing) * 2 * this.samplesPerStep
-            this.accumulator = this.currentThreshold  // trigger step 0 on next sample
+            this.patternPos = 0
+            this.baseAccum = this.baseSPS  // trigger base tick immediately
+            this.breakAccum = 0
+            this._pendingCycle = false
             this.xfadeRemain = this.xfadeLen          // fade-in to suppress click
           }
           break
@@ -498,7 +509,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     }
   }
 
-  private _calcSps() { return (60 / this.bpm / 4) * sampleRate }
+  private _calcSps() { return (60 / this.bpm / 8) * sampleRate }
+
+  /** Swing-adjusted threshold for track t (samples until next step) */
+  private _trackThresh(t: number): number {
+    return this.trackSwingPhase[t]
+      ? this.swing * 2 * this.baseSPS * this.divisors[t]
+      : (1 - this.swing) * 2 * this.baseSPS * this.divisors[t]
+  }
 
   // ── Insert FX helpers (ADR 077) ────────────────────────────────────────────
 
@@ -587,139 +605,124 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     return this.insertOut
   }
 
-  private _advanceStep() {
-    if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
-    if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
-    if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
-    if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+  /** Advance a single track's playhead and process trig/gate/arp (ADR 112) */
+  private _advanceTrack(t: number) {
+    const track = this.tracks[t]
+    if (!track || track.steps === 0) return
 
-    // Wrap patternPos when pattern cycle completes — no extra empty step.
-    // cycle flag signals the main thread (scene advance, arrangement, etc.)
-    let isCycle = false
-    if (this.patternPos >= this.patternLen) {
-      this.patternPos = 0
-      isCycle = true
+    // Advance playhead first so we can peek at the incoming trig
+    if (this.reversing) {
+      this.playheads[t] = (this.playheads[t] - 1 + track.steps) % track.steps
+    } else {
+      this.playheads[t] = (this.playheads[t] + 1) % track.steps
+    }
+    const trig = track.trigs[this.playheads[t]]
+
+    // P-Lock: restore base params, then overlay per-step locks
+    if (this.voices[t] && track.voiceParams) {
+      for (const k in track.voiceParams) this.voices[t]!.setParam(k, track.voiceParams[k])
+    }
+    if (this.voices[t] && trig?.active && trig.paramLocks) {
+      for (const k in trig.paramLocks) this.voices[t]!.setParam(k, trig.paramLocks[k])
     }
 
-    for (let t = 0; t < this.activeCount; t++) {
-      const track = this.tracks[t]
-      if (!track || track.steps === 0) continue
+    // Was the previous note's gate still open?
+    const wasGated = this.gateCounters[t] > 0
+    // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303
+    const isMelodic = track.voiceId ? !DRUM_VOICES.has(track.voiceId) : false
+    // Legato condition: suppress noteOff if incoming trig continues the phrase
+    const isLegato = trig?.active && (isMelodic || trig.slide)
 
-      // Advance playhead first so we can peek at the incoming trig
-      if (this.reversing) {
-        this.playheads[t] = (this.playheads[t] - 1 + track.steps) % track.steps
-      } else {
-        this.playheads[t] = (this.playheads[t] + 1) % track.steps
+    // Decrement gate counter — noteOff when it reaches 0,
+    // BUT suppress noteOff if incoming trig is legato (keeps envelope alive)
+    if (this.gateCounters[t] > 0) {
+      this.gateCounters[t]--
+      if (this.gateCounters[t] === 0 && !isLegato) {
+        this.voices[t]?.noteOff()
+        this.arpNotes[t] = []
       }
-      const trig = track.trigs[this.playheads[t]]
+    }
 
-      // P-Lock: restore base params, then overlay per-step locks
-      if (this.voices[t] && track.voiceParams) {
-        for (const k in track.voiceParams) this.voices[t]!.setParam(k, track.voiceParams[k])
+    // Step-synced arp: advance on step boundary for continuing notes
+    if (isMelodic && this.arpNotes[t].length > 0 && this.gateCounters[t] > 0 && !trig?.active) {
+      const rate = Math.round(track.voiceParams?.arpRate ?? 1)
+      if (rate <= 1) {
+        // Rate=1: advance arp once per step (step-synced only)
+        if (Math.round(track.voiceParams?.arpMode ?? 1) === 4) {
+          this.arpSeed[t] = (this.arpSeed[t] * 1664525 + 1013904223) >>> 0
+          this.arpIdx[t] = (this.arpSeed[t] >>> 16) % this.arpNotes[t].length
+        } else {
+          this.arpIdx[t] = (this.arpIdx[t] + 1) % this.arpNotes[t].length
+        }
+        if (!track.muted) {
+          this.voices[t]?.slideNote(this.arpNotes[t][this.arpIdx[t]], this.arpVel[t])
+        }
       }
-      if (this.voices[t] && trig?.active && trig.paramLocks) {
-        for (const k in trig.paramLocks) this.voices[t]!.setParam(k, trig.paramLocks[k])
+      // Reset sub-step counter on step boundary (keeps sub-ticks aligned)
+      this.arpCounter[t] = 0
+    }
+
+    if (this.filling && !isMelodic) {
+      // Fill mode: random hits, density controlled by perfY when touching
+      this.fillSeed = (this.fillSeed * 1664525 + 1013904223) >>> 0
+      const rand = (this.fillSeed >>> 16) / 65536
+      const baseProb = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
+      // perfY scales density: 0=sparse (0.1x), 1=dense (2x)
+      const density = this.perfTouching ? 0.1 + this.perfY * 1.9 : 1.0
+      const prob = Math.min(1.0, baseProb * density)
+      // perfX modulates velocity range when touching
+      const velBase = this.perfTouching ? 0.3 + this.perfX * 0.5 : 0.6
+      if (rand < prob) {
+        if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
+        if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, velBase + rand * 0.4)
+        this.gateCounters[t] = 1
       }
-
-      // Was the previous note's gate still open?
-      const wasGated = this.gateCounters[t] > 0
-      // Melodic tracks (Bass/Lead) auto-legato: consecutive notes connect like a 303
-      const isMelodic = track.voiceId ? !DRUM_VOICES.has(track.voiceId) : false
-      // Legato condition: suppress noteOff if incoming trig continues the phrase
-      const isLegato = trig?.active && (isMelodic || trig.slide)
-
-      // Decrement gate counter — noteOff when it reaches 0,
-      // BUT suppress noteOff if incoming trig is legato (keeps envelope alive)
-      if (this.gateCounters[t] > 0) {
-        this.gateCounters[t]--
-        if (this.gateCounters[t] === 0 && !isLegato) {
-          this.voices[t]?.noteOff()
+    } else if (trig?.active) {
+      // Step probability: skip note if chance check fails
+      if (Math.random() >= (trig.chance ?? 1.0)) {
+        this.gateCounters[t] = trig.duration ?? 1
+        return
+      }
+      const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
+      if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
+      if (!track.muted) {
+        // Poly chord: trigger all notes in notes[] array
+        if (trig.notes && trig.notes.length > 1) {
+          for (let ni = 0; ni < trig.notes.length; ni++) {
+            const cn = isMelodic ? transposeNote(trig.notes[ni], this.rootNote, this.octave) : trig.notes[ni]
+            this.voices[t]?.noteOn(cn, trig.velocity)
+          }
+        } else if (wasGated && (isMelodic || trig.slide) && Math.round(track.voiceParams?.polyMode ?? 0) === 0) {
+          // Auto-legato: MONO mode melodic tracks glide when previous note was gated (303 behavior)
+          // Explicit slide flag also enables glide on MONO tracks
+          this.voices[t]?.slideNote(note, trig.velocity)
+        } else {
+          this.voices[t]?.noteOn(note, trig.velocity)
+        }
+      }
+      this.gateCounters[t] = trig.duration ?? 1
+      // Arpeggiator: start on melodic trigs with arp enabled
+      if (isMelodic) {
+        const am = Math.round(trig.paramLocks?.arpMode  ?? track.voiceParams?.arpMode  ?? 0)
+        const ar = Math.round(trig.paramLocks?.arpRate  ?? track.voiceParams?.arpRate  ?? 1)
+        const ac = Math.round(trig.paramLocks?.arpChord ?? track.voiceParams?.arpChord ?? 0)
+        const ao = Math.round(trig.paramLocks?.arpOct   ?? track.voiceParams?.arpOct   ?? 1)
+        if (am > 0 && (ac > 0 || ao >= 2)) {
+          this.arpNotes[t] = generateArpNotes(note, am, ac, ao, this.rootNote)
+          this.arpIdx[t] = 0
+          this.arpCounter[t] = 0
+          this.arpTickSize[t] = Math.round(this.baseSPS * this.divisors[t] / Math.max(1, ar))
+          this.arpVel[t] = trig.velocity
+          this.arpSeed[t] = (note * 7919 + this.playheads[t] * 104729) >>> 0
+        } else {
           this.arpNotes[t] = []
         }
       }
-
-      // Step-synced arp: advance on step boundary for continuing notes
-      if (isMelodic && this.arpNotes[t].length > 0 && this.gateCounters[t] > 0 && !trig?.active) {
-        const rate = Math.round(track.voiceParams?.arpRate ?? 1)
-        if (rate <= 1) {
-          // Rate=1: advance arp once per step (step-synced only)
-          if (Math.round(track.voiceParams?.arpMode ?? 1) === 4) {
-            this.arpSeed[t] = (this.arpSeed[t] * 1664525 + 1013904223) >>> 0
-            this.arpIdx[t] = (this.arpSeed[t] >>> 16) % this.arpNotes[t].length
-          } else {
-            this.arpIdx[t] = (this.arpIdx[t] + 1) % this.arpNotes[t].length
-          }
-          if (!track.muted) {
-            this.voices[t]?.slideNote(this.arpNotes[t][this.arpIdx[t]], this.arpVel[t])
-          }
-        }
-        // Reset sub-step counter on step boundary (keeps sub-ticks aligned)
-        this.arpCounter[t] = 0
-      }
-
-      if (this.filling && !isMelodic) {
-        // Fill mode: random hits, density controlled by perfY when touching
-        this.fillSeed = (this.fillSeed * 1664525 + 1013904223) >>> 0
-        const rand = (this.fillSeed >>> 16) / 65536
-        const baseProb = t === 0 ? 0.25 : t === 1 ? 0.75 : t === 2 ? 0.35 : t === 3 ? 0.85 : t === 4 ? 0.20 : 0.10
-        // perfY scales density: 0=sparse (0.1x), 1=dense (2x)
-        const density = this.perfTouching ? 0.1 + this.perfY * 1.9 : 1.0
-        const prob = Math.min(1.0, baseProb * density)
-        // perfX modulates velocity range when touching
-        const velBase = this.perfTouching ? 0.3 + this.perfX * 0.5 : 0.6
-        if (rand < prob) {
-          if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
-          if (!track.muted) this.voices[t]?.noteOn(trig?.note ?? 60, velBase + rand * 0.4)
-          this.gateCounters[t] = 1
-        }
-      } else if (trig?.active) {
-        // Step probability: skip note if chance check fails
-        if (Math.random() >= (trig.chance ?? 1.0)) {
-          this.gateCounters[t] = trig.duration ?? 1
-          continue
-        }
-        const note = isMelodic ? transposeNote(trig.note, this.rootNote, this.octave) : trig.note
-        if (this.scSource[t] && !track.muted) this.ducker.trigger(this.duckDepth)
-        if (!track.muted) {
-          // Poly chord: trigger all notes in notes[] array
-          if (trig.notes && trig.notes.length > 1) {
-            for (let ni = 0; ni < trig.notes.length; ni++) {
-              const cn = isMelodic ? transposeNote(trig.notes[ni], this.rootNote, this.octave) : trig.notes[ni]
-              this.voices[t]?.noteOn(cn, trig.velocity)
-            }
-          } else if (wasGated && (isMelodic || trig.slide) && Math.round(track.voiceParams?.polyMode ?? 0) === 0) {
-            // Auto-legato: MONO mode melodic tracks glide when previous note was gated (303 behavior)
-            // Explicit slide flag also enables glide on MONO tracks
-            this.voices[t]?.slideNote(note, trig.velocity)
-          } else {
-            this.voices[t]?.noteOn(note, trig.velocity)
-          }
-        }
-        this.gateCounters[t] = trig.duration ?? 1
-        // Arpeggiator: start on melodic trigs with arp enabled
-        if (isMelodic) {
-          const am = Math.round(trig.paramLocks?.arpMode  ?? track.voiceParams?.arpMode  ?? 0)
-          const ar = Math.round(trig.paramLocks?.arpRate  ?? track.voiceParams?.arpRate  ?? 1)
-          const ac = Math.round(trig.paramLocks?.arpChord ?? track.voiceParams?.arpChord ?? 0)
-          const ao = Math.round(trig.paramLocks?.arpOct   ?? track.voiceParams?.arpOct   ?? 1)
-          if (am > 0 && (ac > 0 || ao >= 2)) {
-            this.arpNotes[t] = generateArpNotes(note, am, ac, ao, this.rootNote)
-            this.arpIdx[t] = 0
-            this.arpCounter[t] = 0
-            this.arpTickSize[t] = Math.round(this.samplesPerStep / Math.max(1, ar))
-            this.arpVel[t] = trig.velocity
-            this.arpSeed[t] = (note * 7919 + this.playheads[t] * 104729) >>> 0
-          } else {
-            this.arpNotes[t] = []
-          }
-        }
-      }
     }
-    if (this.playheads[0] === 0 && this.pendingOctave !== null) {
+    // Octave pending: commit when track 0 wraps to step 0
+    if (t === 0 && this.playheads[0] === 0 && this.pendingOctave !== null) {
       this.octave = this.pendingOctave; this.pendingOctave = null
     }
-    this.patternPos++
-    this.port.postMessage({ type: 'step', playheads: this.playheads.slice(0, this.activeCount), cycle: isCycle } satisfies WorkletEvent)
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
@@ -750,19 +753,51 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         this.halfAccumFrac += increment
         const steps = Math.floor(this.halfAccumFrac)
         this.halfAccumFrac -= steps
-        this.accumulator += steps
 
-        if (this.accumulator >= this.currentThreshold) {
-          this.accumulator -= this.currentThreshold
-          this._advanceStep()
-          this.swingPhase ^= 1
-          this.currentThreshold = this.swingPhase === 1
-            ? this.swing * 2 * this.samplesPerStep
-            : (1 - this.swing) * 2 * this.samplesPerStep
-          // Reset stutter on new step
+        // ── Base counter: cycle detection + pending state (1/32 rate, no swing) ──
+        this.baseAccum += steps
+        if (this.baseAccum >= this.baseSPS) {
+          this.baseAccum -= this.baseSPS
+          this.patternPos++
+          // Commit pending state at 1/16 boundaries (every 2 base ticks)
+          if ((this.patternPos & 1) === 0) {
+            if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
+            if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
+            if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
+            if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+          }
+          if (this.patternPos >= this.patternLen) {
+            this.patternPos = 0
+            this._pendingCycle = true
+          }
+        }
+
+        // ── Per-track step advancement (ADR 112) ──
+        let anyAdvanced = false
+        for (let t = 0; t < this.activeCount; t++) {
+          this.trackAccum[t] += steps
+          if (this.trackAccum[t] >= this.trackThreshold[t]) {
+            this.trackAccum[t] -= this.trackThreshold[t]
+            this._advanceTrack(t)
+            anyAdvanced = true
+            this.trackSwingPhase[t] ^= 1
+            this.trackThreshold[t] = this._trackThresh(t)
+          }
+        }
+        if (anyAdvanced) {
+          this.port.postMessage({ type: 'step', playheads: this.playheads.slice(0, this.activeCount), cycle: this._pendingCycle } satisfies WorkletEvent)
+          this._pendingCycle = false
+        }
+
+        // ── Stutter timing (1/16 reference = baseSPS * 2) ──
+        const stepRef = this.baseSPS * 2  // 1/16 note in samples
+        this.breakAccum += steps
+        if (this.breakAccum >= stepRef) {
+          this.breakAccum -= stepRef
+          // Reset stutter on 1/16 boundary
           this.stutterAccum = 0
-          const stutterDiv = this.perfTouching ? 2 + Math.floor(this.perfY * 6) : 4  // 2-8 subdivisions
-          this.stutterThreshold = Math.floor(this.currentThreshold / stutterDiv)
+          const stutterDiv = this.perfTouching ? 2 + Math.floor(this.perfY * 6) : 4
+          this.stutterThreshold = Math.floor(stepRef / stutterDiv)
         }
 
         // ── Glitch: stutter (retrigger within step) ──
@@ -784,7 +819,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             }
           }
         }
-        // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceStep)
+        // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceTrack)
         for (let t = 0; t < this.activeCount; t++) {
           if (this.arpNotes[t].length === 0) continue
           const arpRate = Math.round(this.tracks[t]?.voiceParams?.arpRate ?? 1)
@@ -913,7 +948,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       // perfY = duty cycle (0=choppy 10%, 1=wide 90%), perfX = subdivision (gate repeats within step)
       const brkDuty = this.perfTouching ? 0.1 + this.perfY * 0.8 : 0.5
       const brkSubDiv = this.perfTouching ? 1 + Math.floor(this.perfX * 3) : 1  // 1-4 sub-gates per step
-      const subPhase = (this.accumulator % (this.currentThreshold / brkSubDiv)) / (this.currentThreshold / brkSubDiv)
+      const brkStep = this.baseSPS * 2  // 1/16 note reference
+      const subPhase = (this.breakAccum % (brkStep / brkSubDiv)) / (brkStep / brkSubDiv)
       const gateTarget = this.breaking
         ? (subPhase < brkDuty ? 1.0 : 0.0)
         : 1.0

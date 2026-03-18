@@ -461,6 +461,7 @@ function buildWorkletPattern(
           tape:   cell.insertFx.flavour === 'tape',
           redux:  cell.insertFx.flavour === 'redux',
         } : undefined,
+        scale:       cell.scale,
         trigs:       cell.trigs.map(trig => mapTrig(trig)),
       }
     }),
