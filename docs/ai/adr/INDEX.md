@@ -28,7 +28,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 076 | Per-Pattern FX Flavours | Implemented | SceneDecorator flavourOverrides, DockPanel cycle UI, applyDecorators integration |
 | 077 | Per-Track Insert FX | Implemented | LiteReverb, insert verb/delay/glitch per track, DockPanel UI, CPU meter warnings |
 | 111 | FM Drum Voice | Implemented | FMDrumVoice: 6 machines (KICK/SNARE/METAL/PERC/TONE/CHORD), 8 macro params, 21 factory presets |
-| 113 | WT Synth Evolution | Proposed | Expanded wavetables (15 shapes), comb/formant filters, deeper mod matrix, drive types |
+| 113 | WT Synth Evolution | Implemented | 15 wavetable shapes, comb/formant filters, 8-source 9-dest mod matrix, 4 drive types |
 
 ## Sequencer / Pattern
 

@@ -687,9 +687,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               const cn = isMelodic ? transposeNote(trig.notes[ni], this.rootNote, this.octave) : trig.notes[ni]
               this.voices[t]?.noteOn(cn, trig.velocity)
             }
-          } else if (wasGated && (isMelodic || trig.slide)) {
-            // Auto-legato: melodic tracks glide when previous note was gated (303 behavior)
-            // Explicit slide flag also enables glide on any track
+          } else if (wasGated && (isMelodic || trig.slide) && Math.round(track.voiceParams?.polyMode ?? 0) === 0) {
+            // Auto-legato: MONO mode melodic tracks glide when previous note was gated (303 behavior)
+            // Explicit slide flag also enables glide on MONO tracks
             this.voices[t]?.slideNote(note, trig.velocity)
           } else {
             this.voices[t]?.noteOn(note, trig.velocity)

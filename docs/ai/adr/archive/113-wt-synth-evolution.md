@@ -1,6 +1,6 @@
 # ADR 113: WT Synth Evolution — Expanded Wavetables and Modulation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

@@ -757,8 +757,9 @@ class LFO {
 
 // ── Modulation Matrix (ADR 011) ─────────────────────────────────────
 
-const enum ModSrc { LFO1, LFO2, Env2, Velocity, Note }
-const enum ModDst { Pitch, WTPos, Cutoff, Resonance, FMIndex, Volume }
+const enum ModSrc { LFO1, LFO2, Env2, Velocity, Note, Random, ModWheel, Env1 }
+const enum ModDst { Pitch, WTPos, Cutoff, Resonance, FMIndex, Volume, PanSpread, UniDetune, Drive }
+const MOD_DST_COUNT = 9
 
 interface ModSlot {
   src: ModSrc
@@ -768,10 +769,10 @@ interface ModSlot {
 
 class ModMatrix {
   slots: ModSlot[] = []
+  private _out = new Float64Array(MOD_DST_COUNT)
 
   /** Set or update a mod slot by index (0–7). amt=0 removes the slot. */
   setSlot(idx: number, src: number, dst: number, amt: number) {
-    // Remove existing slot at this index
     while (this.slots.length <= idx) this.slots.push({ src: 0 as ModSrc, dst: 0 as ModDst, amount: 0 })
     if (amt === 0) {
       this.slots[idx] = { src: 0 as ModSrc, dst: 0 as ModDst, amount: 0 }
@@ -782,10 +783,11 @@ class ModMatrix {
 
   /** Compute modulated param offsets. Returns per-destination sum of modulations. */
   process(
-    lfo1: number, lfo2: number, env2: number, velocity: number, note: number
+    lfo1: number, lfo2: number, env2: number, velocity: number, note: number,
+    random: number, modWheel: number, env1: number,
   ): Float64Array {
-    // 6 destinations: Pitch, WTPos, Cutoff, Reso, FMIndex, Volume
-    const out = new Float64Array(6)
+    const out = this._out
+    out.fill(0)
     for (let i = 0; i < this.slots.length; i++) {
       const s = this.slots[i]
       let srcVal = 0
@@ -795,6 +797,9 @@ class ModMatrix {
         case ModSrc.Env2:     srcVal = env2; break
         case ModSrc.Velocity: srcVal = velocity * 2 - 1; break  // map 0-1 to bipolar
         case ModSrc.Note:     srcVal = (note - 60) / 48; break  // center at C4
+        case ModSrc.Random:   srcVal = random; break             // S&H random per note
+        case ModSrc.ModWheel: srcVal = modWheel * 2 - 1; break  // 0-1 to bipolar
+        case ModSrc.Env1:     srcVal = env1 * 2 - 1; break      // 0-1 to bipolar
       }
       out[s.dst] += srcVal * s.amount
     }
@@ -811,6 +816,7 @@ class ModMatrix {
  */
 const enum OscCombine { Mix, FM, Ring }
 const enum WTFilterType { SVF, Comb, Formant }
+const enum DriveType { Soft, Hard, Fold, Bitcrush }
 
 const MAX_UNISON = 7
 
@@ -851,6 +857,11 @@ class WTCore {
   envMod = 4000
   resonance = 2.0
   drive = 0            // 0.0–1.0 post-filter saturation
+  driveType: DriveType = DriveType.Soft
+
+  // Mod sources
+  randomValue = 0      // S&H random per note (-1..+1)
+  modWheel = 0         // MIDI CC1 / expression (0..1)
 
   // Unison params
   unisonVoices = 1     // 1, 3, 5, 7 (odd only)
@@ -880,6 +891,7 @@ class WTCore {
   noteOn(n: number, v: number) {
     this.freq = midiToHz(n); this.targetFreq = this.freq
     this.vel = v; this.note = n
+    this.randomValue = Math.random() * 2 - 1  // S&H random per note
     this.oscA.reset(); this.oscB.reset()
     for (let i = 0; i < this.uniOscA.length; i++) {
       this.uniOscA[i].reset(); this.uniOscB[i].reset()
@@ -921,6 +933,35 @@ class WTCore {
       default:
         this.filter.setParams(fc, reso)
         return this.filter.process(sig)
+    }
+  }
+
+  /** Apply drive/waveshaping with selectable type */
+  private _applyDrive(sig: number, amount: number): number {
+    const amt = 1 + amount * 4
+    switch (this.driveType) {
+      case DriveType.Hard: {
+        // Hard clip
+        const g = sig * amt
+        return Math.max(-1, Math.min(1, g))
+      }
+      case DriveType.Fold: {
+        // Wavefold — folds signal back when it exceeds ±1
+        let g = sig * amt
+        // Fold up to 4 times
+        for (let i = 0; i < 4 && (g > 1 || g < -1); i++) {
+          if (g > 1) g = 2 - g
+          else if (g < -1) g = -2 - g
+        }
+        return g
+      }
+      case DriveType.Bitcrush: {
+        // Reduce bit depth — quantize to N levels
+        const levels = Math.max(2, Math.round(16 - amount * 14))  // 16 → 2 levels
+        return Math.round(sig * levels) / levels
+      }
+      default: // DriveType.Soft
+        return Math.tanh(sig * amt) / Math.tanh(amt)
     }
   }
 
@@ -973,13 +1014,14 @@ class WTCore {
     const l1 = this.lfo1.tick()
     const l2 = this.lfo2.tick()
 
-    const mod = this.modMatrix.process(l1, l2, menv, this.vel, this.note)
+    const mod = this.modMatrix.process(l1, l2, menv, this.vel, this.note, this.randomValue, this.modWheel, aenv)
     const pitchMod = mod[ModDst.Pitch]
     const wtPosMod = mod[ModDst.WTPos]
     const cutMod   = mod[ModDst.Cutoff]
     const resoMod  = mod[ModDst.Resonance]
     const fmMod    = mod[ModDst.FMIndex]
     const volMod   = mod[ModDst.Volume]
+    const driveMod = mod[ModDst.Drive]
 
     const pitchMultiplier = Math.pow(2, pitchMod * 12 / 12)
     const freqA = this.freq * pitchMultiplier
@@ -1001,9 +1043,9 @@ class WTCore {
     sig = this._applyFilter(sig, fc, reso)
 
     // Drive
-    if (this.drive > 0) {
-      const amt = 1 + this.drive * 4
-      sig = Math.tanh(sig * amt) / Math.tanh(amt)
+    const effectiveDrive = Math.max(0, Math.min(1, this.drive + driveMod))
+    if (effectiveDrive > 0) {
+      sig = this._applyDrive(sig, effectiveDrive)
     }
 
     const vol = Math.max(0, 1.5 + volMod * 0.3)
@@ -1023,19 +1065,24 @@ class WTCore {
     const l1 = this.lfo1.tick()
     const l2 = this.lfo2.tick()
 
-    const mod = this.modMatrix.process(l1, l2, menv, this.vel, this.note)
+    const mod = this.modMatrix.process(l1, l2, menv, this.vel, this.note, this.randomValue, this.modWheel, aenv)
     const pitchMod = mod[ModDst.Pitch]
     const wtPosMod = mod[ModDst.WTPos]
     const cutMod   = mod[ModDst.Cutoff]
     const resoMod  = mod[ModDst.Resonance]
     const fmMod    = mod[ModDst.FMIndex]
     const volMod   = mod[ModDst.Volume]
+    const panMod   = mod[ModDst.PanSpread]
+    const uniDtMod = mod[ModDst.UniDetune]
+    const driveMod = mod[ModDst.Drive]
 
     const pitchMultiplier = Math.pow(2, pitchMod * 12 / 12)
     const baseFreqA = this.freq * pitchMultiplier
     const detuneRatio = Math.pow(2, this.oscBSemi / 12 + this.oscBDetune / 1200)
     const baseFreqB = this.freq * detuneRatio * pitchMultiplier
     const effectiveFmIndex = Math.max(0, this.fmIndex + fmMod * 4)
+    const effectiveSpread = Math.max(0, Math.min(1, this.unisonSpread + uniDtMod))
+    const effectiveWidth = Math.max(0, Math.min(1, this.unisonWidth + panMod))
 
     const n = this.unisonVoices
     const gain = 1 / n  // normalize by voice count
@@ -1049,9 +1096,9 @@ class WTCore {
     const pairs = (n - 1) >> 1  // e.g. n=5 → 2 pairs
     for (let p = 0; p < pairs; p++) {
       const pairNum = p + 1
-      const detuneCents = this.unisonSpread * 50 * pairNum / pairs  // max ~50 cents at outer pair
+      const detuneCents = effectiveSpread * 50 * pairNum / pairs  // max ~50 cents at outer pair
       const detuneMultiplier = Math.pow(2, detuneCents / 1200)
-      const pan = this.unisonWidth * pairNum / pairs  // 0..width
+      const pan = effectiveWidth * pairNum / pairs  // 0..width
 
       const idxPos = p * 2      // positive-detune side voice
       const idxNeg = p * 2 + 1  // negative-detune side voice
@@ -1089,11 +1136,10 @@ class WTCore {
     sigL = sigM + diff; sigR = sigM - diff
 
     // Drive
-    if (this.drive > 0) {
-      const amt = 1 + this.drive * 4
-      const tanhAmt = Math.tanh(amt)
-      sigL = Math.tanh(sigL * amt) / tanhAmt
-      sigR = Math.tanh(sigR * amt) / tanhAmt
+    const effectiveDrive = Math.max(0, Math.min(1, this.drive + driveMod))
+    if (effectiveDrive > 0) {
+      sigL = this._applyDrive(sigL, effectiveDrive)
+      sigR = this._applyDrive(sigR, effectiveDrive)
     }
 
     const vol = Math.max(0, 1.5 + volMod * 0.3)
@@ -1294,6 +1340,8 @@ export class WTSynth implements Voice {
         case 'filterMode':   c.filter.mode = Math.round(value) as SVFMode; break
         case 'filterType':   c.filterType = Math.round(value) as WTFilterType; break
         case 'drive':        c.drive = value; break
+        case 'driveType':    c.driveType = Math.round(value) as DriveType; break
+        case 'modWheel':     c.modWheel = value; break
         case 'unisonVoices': c.unisonVoices = Math.round(value) | 1; break
         case 'unisonSpread': c.unisonSpread = value; break
         case 'unisonWidth':  c.unisonWidth = value; break
