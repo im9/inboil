@@ -31,6 +31,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **FX Flavours** | 3 variants per send effect (e.g. reverb: room/hall/shimmer). Per-song default, per-pattern via decorators (ADR 075/076). |
 | **Insert FX** | Per-track inline effect (verb/delay/glitch) with independent mix/params. Processed before send bus (ADR 077). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
+| **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
 
 ## Synthesis Terms
 
@@ -48,7 +49,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Wavetable** | A table of waveform samples (2048 × 5 shapes). Oscillator morphs between shapes via position parameter. |
 | **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
 | **WT** | Wavetable synth (formerly iDEATH). Waldorf Protein-inspired direction (ADR 113). 16-voice poly (MONO/POLY16/WIDE8/UNISON). 2 osc (WT morph, MIX/FM/Ring combine) + SVF + unison + 2 env + 2 LFO + mod matrix + drive. VoiceId: `'WT'`. |
-| **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds share this class. |
+| **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds (except FMDrum) share this class. |
+| **FMDrum** | FM-based drum synthesizer (ADR 111). 6 machines (KICK/SNARE/METAL/PERC/TONE/CHORD), 8 macro params, 21 factory presets. VoiceId: `'FMDrum'`. |
 | **SamplerVoice** | Single-voice sample playback engine (ADR 012). Supports multi-sample zone mapping, chop, timestretch. Used directly by Crash/Ride (drum category) and as core inside PolySampler. |
 | **PolySampler** | 8-voice polyphonic sampler wrapping SamplerVoice (ADR 106). Round-robin allocation, dynamic gain `1/√N`. Used by `Sampler` VoiceId — a melodic voice supporting piano roll, transpose, and arpeggiator. |
 | **Factory preset** | Named parameter snapshot. WT: 30 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |

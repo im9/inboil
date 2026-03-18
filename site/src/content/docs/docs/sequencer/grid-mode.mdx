@@ -17,12 +17,13 @@ You can switch between Grid and Tracker input modes in **Settings → PATTERN IN
 
 ## Track Header
 
-Each track row has a header on the left with four elements:
+Each track row has a header on the left with five elements:
 
 | Element | Action |
 |---------|--------|
 | **Track name** | Tap to expand the velocity lane below the track |
 | **Step count** (number) | Tap to cycle, or long-press to pick visually on the grid (2–64) |
+| **Step scale** (e.g. 1/16) | Tap to cycle through step resolutions (1/8 → 3/16 → 1/16 → 3/32 → 1/32) |
 | **S** | Solo / unsolo the track |
 | **M** | Mute / unmute the track |
 
@@ -49,6 +50,28 @@ When tracks have different step counts, they loop at different rates — creatin
 - Percussion: 7 steps (odd loop creates evolving patterns)
 
 The grid visually stretches or compresses to fit each track's step count.
+
+## Step Scale
+
+Each track can also have an independent **step scale** — the time resolution of each step. The default is **1/16** (standard 16th notes). Available scales:
+
+| Scale | Speed | Use case |
+|-------|-------|----------|
+| **1/8** | Half speed | Slow, spacious patterns |
+| **3/16** | Dotted 16th | Triplet-adjacent feel |
+| **1/16** | Normal (default) | Standard 16th notes |
+| **3/32** | Dotted 32nd | Between 16th and 32nd |
+| **1/32** | Double speed | Fast rolls, detailed hi-hats |
+
+**To set step scale**: tap the scale label (e.g. `1/16`) in the track header to cycle through options.
+
+Combining different step counts **and** step scales creates rich **polymetric** textures. For example:
+
+- Kick: 16 steps at 1/16 (standard 4/4)
+- Hi-hat: 16 steps at 1/32 (double-speed 16th pattern)
+- Percussion: 12 steps at 1/16 (3/4 polyrhythm)
+
+Each track's playhead advances independently at its own rate.
 
 ## Pattern Toolbar
 

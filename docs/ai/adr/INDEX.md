@@ -45,7 +45,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 029 | Undo / Redo | Implemented | Desktop only (Ctrl+Z / Ctrl+Shift+Z) |
 | 033 | Mobile Velocity / Chance Editing | Implemented | 3-mode tabs (STEP/VEL/CHNC) with drag editing |
 | 067 | Piano Roll Drawing & Chord Brush | Implemented | Pen draw + drag legato, chord/strum brush with drag duration, eraser with continuation cell support |
-| 112 | Per-Track Step Scale | Proposed | Per-track 1/8–1/32 resolution via divisor, 1/32 base tick, polyrhythmic patterns |
+| 112 | Per-Track Step Scale | Implemented | Per-track 1/8–1/32 resolution via divisor, 1/32 base tick, polyrhythmic patterns |
 
 ## Song Structure / Arrangement
 

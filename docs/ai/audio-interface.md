@@ -108,6 +108,7 @@ interface WorkletTrack {
   granularSend: number      // 0.0–1.0
   voiceParams: Record<string, number>
   insertFx?: WorkletInsertFx
+  scale?: number              // ADR 112: step divisor (default 2 = 1/16)
 }
 
 interface WorkletInsertFx {

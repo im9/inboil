@@ -1,6 +1,6 @@
 # ADR 112: Per-Track Step Scale
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

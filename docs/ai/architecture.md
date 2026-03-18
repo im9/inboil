@@ -112,7 +112,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (44 files)  ← Svelte 5 UI components
+│   │   ├── components/ (49 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor

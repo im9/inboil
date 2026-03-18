@@ -34,7 +34,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 
 The TypeScript AudioWorklet implementation is fully functional with:
 - Variable track count (up to 16 tracks, ADR 056) with configurable voice assignment (any voice on any track, ADR 058)
-- 19 voice types: 11 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker), 2 sample (Crash, Ride via SamplerVoice, loaded from Audio Pool), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM 12-voice with 8 algorithms and MEGAfm-style poly modes — ADR 068), 1 wavetable synth (WT — 16-voice with MONO/POLY16/WIDE8/UNISON poly modes), 1 polyphonic sampler (PolySampler — 8-voice round-robin, multi-sample zone mapping)
+- 20 voice types: 12 drum (unified DrumMachine — Kick, Kick808, Snare, Clap, Hat, OpenHat, Cymbal, Tom, Rimshot, Cowbell, Shaker; FM Drum — 6 machines with 21 presets, ADR 111), 2 sample (Crash, Ride via SamplerVoice, loaded from Audio Pool), 2 bass (TB-303, Analog), 2 lead (Moog with arpeggiator, 4-op FM 12-voice with 8 algorithms and MEGAfm-style poly modes — ADR 068), 1 wavetable synth (WT — 16-voice with MONO/POLY16/WIDE8/UNISON poly modes), 1 polyphonic sampler (PolySampler — 8-voice round-robin, multi-sample zone mapping)
 - Audio Pool (ADR 104): OPFS-based persistent sample library with 111 factory sample files (WebM/Opus, ~1.7MB) — 90 browsable samples across 11 categories + 21 Grand Piano pack zones. Multi-sample packs, inline browser with folder drill-down, search, audition, user sample auto-import and management
 - Full effects chain (reverb, delay, sidechain, compressor, EQ, granular, glitch, limiter)
 - Performance features (KEY transposition, OCT octave shift, EQ, FILL, REV, GLT, BRK, swing)
@@ -52,6 +52,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Queued pattern switching
 - Per-step velocity, chance (probability), duration, slide, parameter locks (p-locks)
 - Piano roll with chord brush (pen/eraser/chord/strum), drag legato, poly chord input (ADR 067)
+- Per-track step scale: 1/8, 3/16, 1/16 (default), 3/32, 1/32 resolution per track for polyrhythmic patterns (ADR 112)
 - Lead arpeggiator (5 modes, chord types, octave range)
 - Factory preset browser (30 WT presets across 6 categories, 20 FM presets across 6 categories)
 - Master view with VU meter and audio-reactive visuals (ADR 035)

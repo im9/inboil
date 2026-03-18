@@ -35,6 +35,7 @@ import PlaygroundAlgoGraph from '../../../../../components/PlaygroundAlgoGraph.s
 | **RIM** | Rimshot | シャープなトランジェント |
 | **BELL** | Cowbell | メタリックベル |
 | **SHKR** | Shaker | ノイズベースのシェイカー |
+| **FMD** | FM Drum | FM パーカッション — 6 マシン (kick/snare/metal/perc/tone/chord) |
 | **CRSH** | Crash | クラッシュシンバル |
 | **RIDE** | Ride | ライドシンバル |
 
@@ -54,6 +55,21 @@ import PlaygroundAlgoGraph from '../../../../../components/PlaygroundAlgoGraph.s
 | **BRST / GAP** | AMP | バースト回数＆間隔（クラップのレイヤリング） |
 
 ドラムボイスごとに使用するパラメータの組み合わせが異なります。例えば KICK は主に OSC + AMP、C.HH は METAL + NOISE を活用します。
+
+### FMD（FM ドラム）
+
+6 種類のマシンアルゴリズムを切り替えられる FM ベースのドラムシンセサイザー。8 つのマクロパラメータが内部で FM オペレーターの比率、変調深度、エンベロープに変換されます。
+
+- **MCH** — マシンタイプ：KICK / SNARE / METAL / PERC / TONE / CHORD
+- **CLR** — カラー（倍音の明るさ）
+- **SHP** — シェイプ（波形キャラクター）
+- **SWP** — スイープ（ピッチエンベロープ深度）
+- **CNTR** — コンター（エンベロープカーブ）
+- **PNCH** — パンチ（トランジェントアタック）
+- **DCY** — ディケイ
+- **TONE** — トーンミックス
+
+6 種類のマシンタイプにわたる 21 のファクトリープリセット。TONE と CHORD マシンはピッチ対応で、ピアノロール入力が可能です。
 
 ## シンセボイス
 

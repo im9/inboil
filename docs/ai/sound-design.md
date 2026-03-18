@@ -56,6 +56,21 @@ Parameters (via `paramDefs.ts`, shared by all drum VoiceIds):
 
 Each drum VoiceId has a factory preset in `DRUM_PRESETS` that overrides these defaults for the specific drum sound.
 
+### FMDrum (ADR 111)
+
+FM-based drum synthesizer with 6 selectable machines: KICK, SNARE, METAL, PERC, TONE, CHORD. Each machine uses 2-operator FM synthesis with machine-specific routing and envelope curves. 21 factory presets across all machines. 8 macro parameters mapped to machine-specific DSP controls:
+
+| Param | Label | Range | Default | Description |
+|---|---|---|---|---|
+| machine | MCHN | 0–5 | 0 | Machine type (KICK/SNARE/METAL/PERC/TONE/CHORD) |
+| color | COLR | 0–1.0 | 0.5 | FM ratio / timbre character |
+| shape | SHPE | 0–1.0 | 0.3 | Modulation depth / waveform shape |
+| sweep | SWEP | 0–1.0 | 0.5 | Pitch envelope depth |
+| contour | CNTR | 0–1.0 | 0.5 | Envelope shape / contour |
+| punch | PNCH | 0–1.0 | 0.5 | Attack transient emphasis |
+| decay | DECY | 0–1.0 | 0.5 | Amplitude decay time |
+| tone | TONE | 0–1.0 | 0.5 | Brightness / high-frequency content |
+
 ### SamplerVoice (ADR 012) & PolySampler (ADR 106)
 
 `SamplerVoice` is the single-voice sample playback engine. It supports multi-sample zone mapping (`loadZones`), chop/timestretch (ADR 065), and BPM sync. Used directly by Crash and Ride (drum category).

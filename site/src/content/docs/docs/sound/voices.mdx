@@ -35,6 +35,7 @@ All drum voices share a common synthesis engine with four parameter groups: **OS
 | **RIM** | Rimshot | Sharp transient |
 | **BELL** | Cowbell | Metallic bell |
 | **SHKR** | Shaker | Noise-based shaker |
+| **FMD** | FM Drum | FM percussion — 6 machines (kick/snare/metal/perc/tone/chord) |
 | **CRSH** | Crash | Crash cymbal |
 | **RIDE** | Ride | Ride cymbal |
 
@@ -54,6 +55,21 @@ All drum voices share a common synthesis engine with four parameter groups: **OS
 | **BRST / GAP** | AMP | Burst count & gap (clap layering) |
 
 Different drum voices use different combinations of these parameters. For example, KICK uses mainly OSC + AMP, while C.HH emphasizes METAL + NOISE.
+
+### FMD (FM Drum)
+
+FM-based drum synthesizer with 6 switchable machine algorithms, each optimized for a different percussion type. Uses 8 macro parameters that map to FM operator ratios, modulation depths, and envelopes internally.
+
+- **MCH** — Machine type: KICK / SNARE / METAL / PERC / TONE / CHORD
+- **CLR** — Color (harmonic brightness)
+- **SHP** — Shape (waveform character)
+- **SWP** — Sweep (pitch envelope depth)
+- **CNTR** — Contour (envelope curve)
+- **PNCH** — Punch (transient attack)
+- **DCY** — Decay
+- **TONE** — Tone mix
+
+21 factory presets across the 6 machine types. The TONE and CHORD machines are pitched and support piano roll input.
 
 ## Synth Voices
 
