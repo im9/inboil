@@ -17,7 +17,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 
 | # | Title | Status | Notes |
 |---|-------|--------|-------|
-| 001 | DSP Core in C++ / WASM | Proposed | C++ code exists in `src/dsp/`, not yet integrated |
+| 001 | DSP Core in C++ / WASM | Superseded | TS AudioWorklet proved sufficient; see ADR 016 Section D for native portability |
 | 002 | TypeScript AudioWorklet | Implemented | Current DSP runtime |
 | 003 | BPM-Synced Delay | Implemented | |
 | 005 | Swing / Shuffle | Implemented | |

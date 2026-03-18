@@ -217,6 +217,22 @@ When `externalPlugin` is set, the track's internal voice is bypassed. Triggers a
 
 The CLAP plugin format has a [proposed WebAssembly extension](https://github.com/free-audio/clap) that could eventually allow running plugins directly in the browser via WASM. This is experimental and not yet viable, but worth monitoring as a long-term path to native-free plugin hosting.
 
+---
+
+### D. inboil as a Plugin (Reverse Direction)
+
+Two complementary goals exist:
+
+1. **inboil as host** — use external plugins (e.g. Serum) inside inboil → covered by Section B (Companion Bridge)
+2. **inboil as guest** — run inboil's sound engines inside Ableton/Logic as a VST3/AU plugin
+
+Goal 2 requires a **native DSP port**. The current DSP is pure TypeScript (AudioWorklet), which cannot be loaded as a VST3/AU plugin. Options:
+
+- **C++/Rust port**: Rewrite the DSP layer (voices, sequencer, FX) as a native library and build a VST3/AU wrapper (JUCE, NIH-plug, etc.). The TS AudioWorklet code serves as the reference implementation.
+- **CLAP + WASM**: If the CLAP WASM extension matures, compile the TS DSP to WASM (via AssemblyScript or similar) and load it as a CLAP plugin. This avoids a full rewrite but is not yet viable.
+
+ADR 001 originally proposed C++/WASM DSP partly to enable this portability. That approach was superseded — TS AudioWorklet proved sufficient for browser performance. If the "inboil as plugin" goal becomes a priority, a fresh native DSP layer should be written against the current TS code as reference, rather than resurrecting the old C++ prototype.
+
 ## Implementation Order
 
 1. **Phase 1: Web MIDI Output** — send notes/CC to external gear. Minimal UI (per-track toggle + port selector). Enables hardware synth integration immediately.
