@@ -108,6 +108,15 @@ export class SamplerVoice implements Voice {
     this.activeZone = this.zones[0]
   }
 
+  /** Load a pre-normalized sample (skip normalization — used by PolySampler for cores 1–7) */
+  loadSampleNormalized(buffer: Float32Array, bufferSR: number): void {
+    this.zones = [{
+      buffer, bufferSR, rootNote: this.rootNote,
+      loNote: 0, hiNote: 127, loVel: 0, hiVel: 127
+    }]
+    this.activeZone = this.zones[0]
+  }
+
   /** Load multiple zones for multi-sample instruments (ADR 106) */
   loadZones(zones: SampleZone[]): void {
     // Global peak normalization — preserves relative dynamics across zones
@@ -448,9 +457,14 @@ export class PolySampler implements Voice {
     this.cores = Array.from({ length: POLY_SAMPLER_VOICES }, () => new SamplerVoice(sr))
   }
 
-  /** Load a single sample to all cores */
+  /** Load a single sample to all cores (normalize once, then distribute) */
   loadSample(buffer: Float32Array, bufferSR: number): void {
-    for (const c of this.cores) c.loadSample(buffer, bufferSR)
+    // Normalize once on the first core, then share the already-normalized buffer
+    this.cores[0].loadSample(buffer, bufferSR)
+    // Remaining cores: assign directly (buffer already normalized by core 0)
+    for (let i = 1; i < POLY_SAMPLER_VOICES; i++) {
+      this.cores[i].loadSampleNormalized(buffer, bufferSR)
+    }
   }
 
   /** Load multi-sample zones to all cores (ADR 106) */

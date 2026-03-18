@@ -108,11 +108,11 @@ export class GrooveboxEngine {
     if (!pat) return
     const wp = buildWorkletPattern(song, pat, perf, fxPad, ctx)
     this._post({ type: 'setPattern', pattern: wp, reset })
-    this._autoLoadSamples(wp, patternIndex)
+    this._autoLoadSamples(song, wp, patternIndex)
   }
 
   /** Auto-load built-in and user samples for sampler voices (ADR 012, 020, 110) */
-  private _autoLoadSamples(wp: WorkletPattern, patternIndex: number): void {
+  private _autoLoadSamples(song: Song, wp: WorkletPattern, patternIndex: number): void {
     const voicesResized = wp.tracks.length !== this.trackVoiceIds.length
     for (let i = 0; i < wp.tracks.length; i++) {
       const vid = wp.tracks[i].voiceId
@@ -126,7 +126,9 @@ export class GrooveboxEngine {
       }
       // User/pack samples — re-send when voice changed, resized, or pattern switched (ADR 110)
       if (vid === 'Sampler') {
-        const cellKey = `${i}_${patternIndex}`
+        // Use actual trackId (not array index) — trackId may differ from index after track deletion
+        const trackId = song.tracks[i]?.id ?? i
+        const cellKey = `${trackId}_${patternIndex}`
         const sampleId = cellKey  // unique id for what should be loaded
         const alreadyLoaded = this.loadedSampleKey.get(i)
         if (alreadyLoaded === sampleId && prev === vid && !voicesResized) continue
