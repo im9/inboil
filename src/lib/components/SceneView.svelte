@@ -345,11 +345,21 @@
           const cy1 = (Math.min(r.y1, r.y2) - rect.top - panY) / zoom
           const cx2 = (Math.max(r.x1, r.x2) - rect.left - panX) / zoom
           const cy2 = (Math.max(r.y1, r.y2) - rect.top - panY) / zoom
-          if (!e.shiftKey) ui.selectedSceneNodes = {}
+          if (!e.shiftKey) {
+            ui.selectedSceneNodes = {}
+            ui.selectedSceneLabels = {}
+          }
           for (const node of song.scene.nodes) {
             const np = toPixel(node.x, node.y, WORLD_W, WORLD_H)
             if (np.x >= cx1 && np.x <= cx2 && np.y >= cy1 && np.y <= cy2) {
               ui.selectedSceneNodes[node.id] = true
+            }
+          }
+          // Hit-test labels within the selection rectangle
+          for (const label of (song.scene.labels ?? [])) {
+            const lp = toPixel(label.x, label.y, WORLD_W, WORLD_H)
+            if (lp.x >= cx1 && lp.x <= cx2 && lp.y >= cy1 && lp.y <= cy2) {
+              ui.selectedSceneLabels[label.id] = true
             }
           }
         }
@@ -415,7 +425,7 @@
     if (!viewEl) {
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
-      ui.selectedSceneLabel = null
+      ui.selectedSceneLabels = {}
       return
     }
     const rect = viewEl.getBoundingClientRect()
@@ -440,7 +450,7 @@
     if (hitEdge) {
       ui.selectedSceneEdge = hitEdge
       ui.selectedSceneNodes = {}
-      ui.selectedSceneLabel = null
+      ui.selectedSceneLabels = {}
     } else {
       // Double-click background → open bubble menu at pointer
       const now = Date.now()
@@ -455,7 +465,7 @@
           ui.selectedSceneNodes = {}
         }
         ui.selectedSceneEdge = null
-        ui.selectedSceneLabel = null
+        ui.selectedSceneLabels = {}
         selectRect = { x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY }
         viewEl?.setPointerCapture(e.pointerId)
 
@@ -481,12 +491,14 @@
     if (isTextInputTarget(e)) return
     // Delete/Backspace: allow from anywhere when scene nodes/edges/labels are selected
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
-      || ui.selectedSceneEdge || ui.selectedSceneLabel
+      || ui.selectedSceneEdge || Object.keys(ui.selectedSceneLabels).length > 0
     if (hasSceneSelection && (e.key === 'Delete' || e.key === 'Backspace')) {
       e.preventDefault()
-      if (ui.selectedSceneLabel) {
-        sceneDeleteLabel(ui.selectedSceneLabel)
-        ui.selectedSceneLabel = null
+      if (Object.keys(ui.selectedSceneLabels).length > 0) {
+        for (const id of Object.keys(ui.selectedSceneLabels)) {
+          sceneDeleteLabel(id)
+        }
+        ui.selectedSceneLabels = {}
       } else if (ui.selectedSceneEdge) {
         sceneDeleteEdge(ui.selectedSceneEdge)
       } else if (Object.keys(ui.selectedSceneNodes).length > 0) {
@@ -514,7 +526,7 @@
     if (e.key === 'Escape') {
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
-      ui.selectedSceneLabel = null
+      ui.selectedSceneLabels = {}
       sceneLabelsRef?.clearEditing()
       pickerOpen = false
     }

@@ -183,7 +183,7 @@ export const ui = $state<{
   patternSheetOrigin: { x: number; y: number } | null
   selectedSceneNodes: Record<string, true>
   selectedSceneEdge: string | null
-  selectedSceneLabel: string | null
+  selectedSceneLabels: Record<string, boolean>
   sidebar: 'help' | 'system' | null
   systemTab: 'project' | 'settings'
   lockMode: boolean
@@ -204,7 +204,7 @@ export const ui = $state<{
   patternSheetOrigin: null,
   selectedSceneNodes: {} as Record<string, true>,
   selectedSceneEdge: null,
-  selectedSceneLabel: null,
+  selectedSceneLabels: {} as Record<string, boolean>,
   sidebar: null,
   systemTab: 'project' as const,
   lockMode: false,

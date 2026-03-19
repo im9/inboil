@@ -65,7 +65,7 @@
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <span
       class="scene-label"
-      class:selected={ui.selectedSceneLabel === label.id}
+      class:selected={ui.selectedSceneLabels[label.id]}
       style="
         left: {PAD_INSET + label.x * (WORLD_W - PAD_INSET * 2)}px;
         top: {PAD_INSET + label.y * (WORLD_H - PAD_INSET * 2)}px;
@@ -76,7 +76,16 @@
         pushUndo('Move label')
         ui.selectedSceneNodes = {}
         ui.selectedSceneEdge = null
-        ui.selectedSceneLabel = label.id
+        if (e.shiftKey) {
+          // Toggle this label in multi-select
+          if (ui.selectedSceneLabels[label.id]) {
+            delete ui.selectedSceneLabels[label.id]
+          } else {
+            ui.selectedSceneLabels[label.id] = true
+          }
+        } else {
+          ui.selectedSceneLabels = { [label.id]: true }
+        }
         draggingLabel = label.id
         dragMoved = false
         startPos = { x: e.clientX, y: e.clientY }
@@ -108,7 +117,7 @@
         }
         draggingLabel = null
       }}
-    >{@html (label.text || '…').replace(/\n/g, '<br>')}{#if ui.selectedSceneLabel === label.id}<!-- svelte-ignore a11y_no_static_element_interactions --><span
+    >{@html (label.text || '…').replace(/\n/g, '<br>')}{#if ui.selectedSceneLabels[label.id]}<!-- svelte-ignore a11y_no_static_element_interactions --><span
           class="label-resize-handle"
           onpointerdown={(e: PointerEvent) => {
             e.stopPropagation()

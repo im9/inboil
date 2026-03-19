@@ -302,7 +302,7 @@
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
     // Skip pattern-level ops when scene edges/labels are selected (SceneView handles its own keys).
     // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block copy/paste.
-    const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || ui.selectedSceneLabel != null
+    const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || Object.keys(ui.selectedSceneLabels).length > 0
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0 || hasSceneEdgeOrLabel
     const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
     // Copy/paste: pattern-level (matrix focus or no sheet) vs cell-level (sheet open)
