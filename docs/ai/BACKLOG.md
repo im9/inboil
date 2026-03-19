@@ -8,10 +8,6 @@ Items are not prioritized — pick based on what you're already touching.
 - [ ] **Split SceneView.svelte** (1,465 LOC) — Extract gesture handling, edge drawing, selection logic into composable modules.
 - [ ] **Split PianoRoll.svelte** (1,124 LOC) — Extract key column, octave controls, chord shape logic.
 
-## Sampler Bugs
-
-- [ ] **Chord playback: stale note on first pattern play** — When playing a pattern for the first time, chords on Sampler tracks may trigger an unintended note. Conditions unclear — needs investigation.
-
 ## UI
 
 - [ ] **Dock panel UX improvements** — Preset/voice count has grown significantly (FMDrum 6 machines, 21 presets etc.). Review and improve navigation, grouping, and discoverability in DockPanel. Consider: category filtering, machine-aware preset grouping, better param layout for multi-machine voices. 16-step paging makes step-grid width predictable — opportunity to widen the dock panel and improve param/preset layout.

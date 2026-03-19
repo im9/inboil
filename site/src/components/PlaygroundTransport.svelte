@@ -43,7 +43,7 @@
       if (view) ui.phraseView = view
       engine.onStep = (heads: number[]) => { playback.playheads = heads }
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, ui.currentPattern)
-      engine.play()
+      await engine.play()
       playback.playing = true
     } catch {
       error = 'Audio not available'

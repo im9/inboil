@@ -207,7 +207,7 @@
     if (soloIdx2 != null) {
       soloSent = playback.soloNodeId
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx2)
-      engine.play()
+      await engine.play()
       playback.playing = true
       return
     }
@@ -232,7 +232,7 @@
       playback.queuedPattern = null
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
     }
-    engine.play()
+    await engine.play()
     playback.playing = true
   }
 

@@ -180,9 +180,9 @@ export class GrooveboxEngine {
     }
   }
 
-  play(): void {
+  async play(): Promise<void> {
     if (this.suspendTimer) { clearTimeout(this.suspendTimer); this.suspendTimer = null }
-    if (this.ctx?.state === 'suspended') void this.ctx.resume()
+    if (this.ctx?.state === 'suspended') await this.ctx.resume()
     this._post({ type: 'play' })
   }
 

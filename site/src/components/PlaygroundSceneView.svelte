@@ -58,7 +58,7 @@
       if (shouldStop) return
       perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, undefined, engineCtx, false, patternIndex)
-      engine.play()
+      await engine.play()
       playback.playing = true
     } catch (e) {
       console.error('Audio init failed', e)

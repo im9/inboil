@@ -62,7 +62,7 @@
         playback.playheads = heads
       }
       engine.sendPatternByIndex(song, perf, undefined, engineCtx, true, ui.currentPattern)
-      engine.play()
+      await engine.play()
       playback.playing = true
     } catch (e) {
       error = 'Audio not available'

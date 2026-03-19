@@ -275,6 +275,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       switch (cmd.type) {
         case 'play':
           if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
+          if (this.pendingOctave !== null) { this.octave = this.pendingOctave; this.pendingOctave = null }
           if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
           if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
           if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
@@ -286,6 +287,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.trackSwingPhase[t] = 0
             this.trackThreshold[t] = this._trackThresh(t)
             this.trackAccum[t] = this.trackThreshold[t]  // trigger step 0 immediately
+            this.voices[t]?.reset()  // clear stale voice state (activeNotes, nextVoice etc.)
           }
           this.gateCounters.fill(0)
           this.patternPos = 0
@@ -688,6 +690,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       if (!track.muted) {
         // Poly chord: trigger all notes in notes[] array
         if (trig.notes && trig.notes.length > 1) {
+          // Reset voice before chord to silence stale one-shot samples from previous chord/cycle.
+          // Without this, PolySampler round-robin allocates new voices while old ones keep playing
+          // (one-shot noteOff is a no-op), causing "ghost" notes on chord transitions.
+          this.voices[t]?.reset()
           for (let ni = 0; ni < trig.notes.length; ni++) {
             const cn = isMelodic ? transposeNote(trig.notes[ni], this.rootNote, this.octave) : trig.notes[ni]
             this.voices[t]?.noteOn(cn, trig.velocity)

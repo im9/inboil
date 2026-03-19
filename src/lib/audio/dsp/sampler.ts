@@ -143,6 +143,12 @@ export class SamplerVoice implements Voice {
     this.activeZone = this.zones[0] ?? null
   }
 
+  /** Load pre-processed zones (skip normalization — used by PolySampler for cores 1–7) */
+  loadZonesNormalized(zones: SampleZone[]): void {
+    this.zones = zones
+    this.activeZone = this.zones[0] ?? null
+  }
+
   /** Find the best zone for a given note and velocity */
   _findZone(note: number, velocity: number): SampleZone | null {
     if (this.zones.length === 0) return null
@@ -187,7 +193,6 @@ export class SamplerVoice implements Voice {
     } else {
       this.rate = Math.pow(2, semis / 12) * srRatio
     }
-
     let s = this.start
     let e = this.end
 
@@ -469,7 +474,11 @@ export class PolySampler implements Voice {
 
   /** Load multi-sample zones to all cores (ADR 106) */
   loadZones(zones: SampleZone[]): void {
-    for (const c of this.cores) c.loadZones(zones)
+    // Normalize once on core 0, then share the already-processed zones with cores 1–7
+    this.cores[0].loadZones(zones)
+    for (let i = 1; i < POLY_SAMPLER_VOICES; i++) {
+      this.cores[i].loadZonesNormalized(zones)
+    }
   }
 
   noteOn(note: number, velocity: number): void {
