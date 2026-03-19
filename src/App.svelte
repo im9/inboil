@@ -74,12 +74,13 @@
   const isMobile = $derived(windowWidth < 640)
 
   // ── Audio engine ──────────────────────────────────────────────────
-  // Sync song (incl. effects) → worklet on any state change (rAF-throttled)
+  // Sync song (incl. effects) → worklet on any state change
+  // During playback: send immediately (Svelte effect batching is sufficient)
+  // Stopped: rAF-throttled to avoid unnecessary work
   let rafId = 0
   $effect(() => {
     void (songVer.v + JSON.stringify(perf) + JSON.stringify(fxPad) + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
-    cancelAnimationFrame(rafId)
-    rafId = requestAnimationFrame(() => {
+    const sendPattern = () => {
       const soloIdx = soloPatternIndex()
       if (soloIdx != null) {
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx)
@@ -91,7 +92,15 @@
       }
       // Broadcast song deltas to connected guests
       if (session.role === 'host') syncDelta(song)
-    })
+    }
+    if (playback.playing) {
+      // During playback, send immediately to avoid stale trig data on live edits
+      cancelAnimationFrame(rafId)
+      sendPattern()
+    } else {
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(sendPattern)
+    }
     return () => cancelAnimationFrame(rafId)
   })
 

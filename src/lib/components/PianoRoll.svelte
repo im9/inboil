@@ -23,7 +23,18 @@
 
   const ph = $derived(activeCell(trackId))
   const isPoly = $derived(ph.voiceId === 'Sampler' || ((ph.voiceId === 'WT' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5))
-  const playheadCol = $derived(isViewingPlayingPattern() ? playback.playheads[trackId] : -1)
+
+  // ── Step paging ──
+  const PAGE_SIZE = 16
+  const pageStart = $derived(ui.stepPage * PAGE_SIZE)
+  const pageEnd = $derived(Math.min(ph.steps, pageStart + PAGE_SIZE))
+  const visibleSteps = $derived(pageEnd - pageStart)
+  const playheadCol = $derived.by(() => {
+    if (!isViewingPlayingPattern()) return -1
+    const raw = playback.playheads[trackId]
+    if (raw == null || raw < pageStart || raw >= pageEnd) return -1
+    return raw - pageStart
+  })
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
   // Linked to vkbd.octave (single source of truth for both piano roll and virtual keyboard)
@@ -210,7 +221,8 @@
     if (durationDragging) {
       const rect = noteGridEl.getBoundingClientRect()
       const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-      const dur = Math.max(1, Math.min(ph.steps, Math.floor((relX - durationDragStep * 26) / 26) + 1))
+      const localStep = durationDragStep - pageStart
+      const dur = Math.max(1, Math.min(ph.steps - durationDragStep, Math.floor((relX - localStep * 26) / 26) + 1))
       setTrigDuration(trackId, durationDragStep, dur)
       return
     }
@@ -218,7 +230,7 @@
     const rect = noteGridEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + noteGridEl.scrollLeft
     const relY = e.clientY - rect.top
-    const endStep = Math.max(barStartStep, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    const endStep = Math.max(barStartStep, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
     const duration = endStep - barStartStep + 1
 
     // Vertical: change note pitch during drag (snap to scale)
@@ -329,7 +341,7 @@
     const rect = noteGridEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + noteGridEl.scrollLeft
     const relY = e.clientY - rect.top
-    selectEndStep = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    selectEndStep = Math.max(pageStart, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
     selectEndNoteIdx = Math.max(0, Math.min(RANGE - 1, Math.floor(relY / (noteGridEl.scrollHeight / RANGE))))
   }
 
@@ -579,7 +591,7 @@
     const rect = noteGridEl.getBoundingClientRect()
     const relX = e.clientX - rect.left + noteGridEl.scrollLeft
     const relY = e.clientY - rect.top
-    const stepIdx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    const stepIdx = Math.max(pageStart, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
     let note = getNoteFromY(relY)
     if (note < 0) return
     if (activeBrush !== 'eraser' && !brushRightClick) note = snapToScale(note)
@@ -792,7 +804,7 @@
       data-brush={activeBrush}
       role="application"
       class:has-playhead={playheadCol >= 0}
-      style="--steps: {ph.steps}; --ph-col: {playheadCol}"
+      style="--steps: {visibleSteps}; --ph-col: {playheadCol}"
       data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
       onpointermove={noteOnMove}
       onpointerup={noteEndDrag}
@@ -801,7 +813,8 @@
     >
       {#each NOTES as note, noteIdx}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
-          {#each ph.trigs as _trig, stepIdx}
+          {#each { length: visibleSteps } as _, i}
+            {@const stepIdx = pageStart + i}
             {@const state = getCellState(stepIdx, note)}
             <button
               class="cell"

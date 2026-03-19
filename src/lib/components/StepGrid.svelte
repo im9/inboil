@@ -1,9 +1,39 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick } from 'svelte'
+  import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import PianoRoll from './PianoRoll.svelte'
+
+  // ── Step paging (hardware-style 16-step pages) ──
+  const PAGE_SIZE = 16
+  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
+  const totalPages = $derived(Math.ceil(maxSteps / PAGE_SIZE))
+  const needsPaging = $derived(maxSteps > PAGE_SIZE)
+  const pageStart = $derived(ui.stepPage * PAGE_SIZE)
+  const pageEnd = $derived(Math.min(maxSteps, pageStart + PAGE_SIZE))
+
+  // Clamp page when step count shrinks
+  $effect(() => {
+    const max = totalPages  // track reactive dep
+    const cur = untrack(() => ui.stepPage)
+    if (cur >= max) ui.stepPage = Math.max(0, max - 1)
+  })
+
+  // Auto-follow playhead during playback — track the longest track's playhead
+  $effect(() => {
+    if (!playback.playing || !needsPaging) return
+    // Find the track with the most steps (the one that actually uses multiple pages)
+    const cells = song.patterns[ui.currentPattern].cells
+    let longestTrackId = 0, longestSteps = 0
+    for (const c of cells) {
+      if (c.steps > longestSteps) { longestSteps = c.steps; longestTrackId = c.trackId }
+    }
+    const head = playback.playheads[longestTrackId]
+    if (head == null) return
+    const headPage = Math.floor(head / PAGE_SIZE)
+    if (headPage !== untrack(() => ui.stepPage)) ui.stepPage = headPage
+  })
 
   // Force scroll recalc after mount — transition:fly on parent can delay layout
   let scrollEl: HTMLDivElement | undefined = $state(undefined)
@@ -80,14 +110,15 @@
     const trackId = ui.selectedTrack
     const rect = barsEl.getBoundingClientRect()
     const relX = e.clientX - rect.left
-    const idx = Math.max(0, Math.min(activeCell(trackId).steps - 1, Math.floor(relX / 26)))
-    velApply(e, trackId, idx)
+    const visibleCount = Math.min(activeCell(trackId).steps, pageEnd) - pageStart
+    const localIdx = Math.max(0, Math.min(visibleCount - 1, Math.floor(relX / 26)))
+    velApply(e, trackId, pageStart + localIdx)
   }
 
   function velApply(e: PointerEvent, trackId: number, idx: number) {
     const barsEl = velContainer?.querySelector('.vel-bars') as HTMLElement
     if (!barsEl) return
-    const cell = barsEl.children[idx] as HTMLElement
+    const cell = barsEl.children[idx - pageStart] as HTMLElement
     if (!cell) return
     const rect = cell.getBoundingClientRect()
     const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
@@ -170,9 +201,11 @@
   function stepOnMove(e: PointerEvent) {
     if (!stepDragging || !stepStepsEl) return
     const rect = stepStepsEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left + stepStepsEl.scrollLeft
+    const relX = e.clientX - rect.left
     const ph = activeCell(stepDragTrack)
-    const idx = Math.max(0, Math.min(ph.steps - 1, Math.floor(relX / 26)))
+    const visibleCount = Math.min(ph.steps, pageEnd) - pageStart
+    const localIdx = Math.max(0, Math.min(visibleCount - 1, Math.floor(relX / 26)))
+    const idx = pageStart + localIdx
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)
     const trig = ph.trigs[idx]
@@ -234,6 +267,19 @@
 </script>
 
 <div class="step-grid">
+{#if needsPaging}
+  <div class="page-bar">
+    <div class="page-head" style="width: var(--head-w)"></div>
+    {#each { length: totalPages } as _, p}
+      <button
+        class="page-btn"
+        class:active={ui.stepPage === p}
+        onpointerdown={() => { ui.stepPage = p }}
+        data-tip="Page {p + 1}" data-tip-ja="ページ {p + 1}"
+      >{p + 1}</button>
+    {/each}
+  </div>
+{/if}
 <div class="step-grid-scroll" bind:this={scrollEl}>
   {#each song.patterns[ui.currentPattern].cells as ph}
     {@const trackId = ph.trackId}
@@ -335,16 +381,18 @@
           {/each}
         </div>
       {:else}
+        {@const visibleTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
         <div
           class="steps"
           role="application"
-          style="--steps: {ph.steps}"
+          style="--steps: {visibleTrigs.length}"
           onpointermove={stepOnMove}
           onpointerup={stepEndDrag}
           onpointercancel={stepEndDrag}
           data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
         >
-          {#each ph.trigs as trig, stepIdx}
+          {#each visibleTrigs as trig, i}
+            {@const stepIdx = pageStart + i}
             {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
             {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
             {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
@@ -372,6 +420,7 @@
 
     <!-- Inline velocity lane for selected track -->
     {#if selected}
+      {@const velTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
       <div
         class="vel-row"
         role="application"
@@ -389,13 +438,14 @@
             >{chanceMode ? 'CHNC' : 'VEL'}</span>
           </div>
         </div>
-        <div class="vel-bars" class:chance-mode={chanceMode} class:mounting={velMounting} style="--steps: {ph.steps}"
+        <div class="vel-bars" class:chance-mode={chanceMode} class:mounting={velMounting} style="--steps: {velTrigs.length}"
           data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
           data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
         >
-          {#each ph.trigs as trig, i}
-            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === i}
-            {@const isActive = trig.active || shrinking.has(`${trackId}-${i}`)}
+          {#each velTrigs as trig, i}
+            {@const stepIdx = pageStart + i}
+            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
+            {@const isActive = trig.active || shrinking.has(`${trackId}-${stepIdx}`)}
             {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}
             {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
             <div
@@ -403,13 +453,13 @@
               role="slider"
               tabindex="-1"
               aria-valuenow={chanceMode ? (trig.chance ?? 1) : trig.velocity}
-              onpointerdown={e => velStartDrag(e, trackId, i)}
+              onpointerdown={e => velStartDrag(e, trackId, stepIdx)}
             >
               <div
                 class="vel-fill"
                 class:active={isActive}
-                class:growing={growing.has(`${trackId}-${i}`)}
-                class:shrinking={shrinking.has(`${trackId}-${i}`)}
+                class:growing={growing.has(`${trackId}-${stepIdx}`)}
+                class:shrinking={shrinking.has(`${trackId}-${stepIdx}`)}
                 class:playhead={isPlayhead}
                 style="height: {barHeight}%{!chanceMode && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
               ></div>
@@ -440,17 +490,47 @@
   .step-grid {
     /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-scale(28) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
     --head-w: 168px;
-    position: relative;
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
     background: var(--color-bg);
   }
   .step-grid-scroll {
-    position: absolute;
-    inset: 0;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overscroll-behavior-y: contain;
     padding: 4px 0;
+  }
+
+  /* ── Page bar (hardware-style 16-step paging) ── */
+  .page-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px 0;
+    flex-shrink: 0;
+  }
+  .page-head {
+    flex-shrink: 0;
+  }
+  .page-btn {
+    width: 20px;
+    height: 16px;
+    border: 1px solid var(--color-olive);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--color-olive);
+    font-size: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    &:active { opacity: 0.6; }
+  }
+  .page-btn.active {
+    background: var(--color-olive);
+    color: var(--color-bg);
   }
 
   /* ── Track head (label + buttons wrapper) ── */

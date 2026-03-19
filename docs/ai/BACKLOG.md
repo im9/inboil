@@ -11,11 +11,10 @@ Items are not prioritized — pick based on what you're already touching.
 ## Sampler Bugs
 
 - [ ] **Chord playback: stale note on first pattern play** — When playing a pattern for the first time, chords on Sampler tracks may trigger an unintended note. Conditions unclear — needs investigation.
-- [ ] **Piano roll live edit plays wrong buffer** — Placing a note in Sampler piano roll during playback can trigger the previous note's buffer instead of the correct one. Switching patterns or removing and re-adding the note works around it.
 
 ## UI
 
-- [ ] **Dock panel UX improvements** — Preset/voice count has grown significantly (FMDrum 6 machines, 21 presets etc.). Review and improve navigation, grouping, and discoverability in DockPanel. Consider: category filtering, machine-aware preset grouping, better param layout for multi-machine voices.
+- [ ] **Dock panel UX improvements** — Preset/voice count has grown significantly (FMDrum 6 machines, 21 presets etc.). Review and improve navigation, grouping, and discoverability in DockPanel. Consider: category filtering, machine-aware preset grouping, better param layout for multi-machine voices. 16-step paging makes step-grid width predictable — opportunity to widen the dock panel and improve param/preset layout.
 - [ ] **Scene toolbar label multiline support** — Scene node labels currently don't support line breaks. Allow multiline text for better readability.
 - [ ] **Scene toolbar node placement UX** — Adding nodes from the toolbar is not intuitive. Improve discoverability — e.g. clearer affordance, drag-to-place, or contextual hints.
 - [ ] **Node function UX** — Function nodes are hard to understand on first use and lack visual feedback/polish. Improve onboarding (hints, animation) and presentation. May overlap with dock panel improvements.
