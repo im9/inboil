@@ -5,6 +5,7 @@
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import type { Trig } from '../types.ts'
   import PianoRoll from './PianoRoll.svelte'
+  import { relativeCoords, stepIndexFromX } from '../domHelpers.ts'
 
   // ── Step paging (hardware-style 16-step pages) ──
   const PAGE_SIZE = 16
@@ -160,10 +161,9 @@
   function velOnMove(e: PointerEvent) {
     if (!velDragging || !velContainer) return
     const trackId = ui.selectedTrack
-    const rect = velContainer.getBoundingClientRect()
-    const relX = e.clientX - rect.left
+    const { x: relX } = relativeCoords(e, velContainer)
     const visibleCount = Math.min(activeCell(trackId).steps, pageEnd) - pageStart
-    const localIdx = Math.max(0, Math.min(visibleCount - 1, Math.floor(relX / 26)))
+    const localIdx = stepIndexFromX(relX, 26, 0, visibleCount - 1)
     velApply(e, trackId, pageStart + localIdx)
   }
 
@@ -256,11 +256,10 @@
 
   function stepOnMove(e: PointerEvent) {
     if (!stepDragging || !stepStepsEl) return
-    const rect = stepStepsEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left
+    const { x: relX } = relativeCoords(e, stepStepsEl)
     const ph = activeCell(stepDragTrack)
     const visibleCount = Math.min(ph.steps, pageEnd) - pageStart
-    const localIdx = Math.max(0, Math.min(visibleCount - 1, Math.floor(relX / 26)))
+    const localIdx = stepIndexFromX(relX, 26, 0, visibleCount - 1)
     const idx = pageStart + localIdx
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)

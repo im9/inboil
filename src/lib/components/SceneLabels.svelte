@@ -2,7 +2,7 @@
   import { song, ui, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel } from '../sceneActions.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { WORLD_W, WORLD_H } from '../sceneGeometry.ts'
+  import { WORLD_W, WORLD_H, toNormScene } from '../sceneGeometry.ts'
 
   const { zoom, panX, panY, viewEl }: {
     zoom: number
@@ -23,12 +23,7 @@
 
   function toNorm(e: PointerEvent) {
     if (!viewEl) return null
-    const rect = viewEl.getBoundingClientRect()
-    const canvasX = (e.clientX - rect.left - panX) / zoom
-    const canvasY = (e.clientY - rect.top - panY) / zoom
-    const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
-    const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
-    return { x, y }
+    return toNormScene(e.clientX, e.clientY, viewEl.getBoundingClientRect(), panX, panY, zoom)
   }
 
   export function clearEditing() {
@@ -44,27 +39,28 @@
   {@const fontSize = 10 * (label.size ?? 1)}
   {#if editingLabelId === label.id}
     <!-- svelte-ignore a11y_autofocus -->
-    <input
+    <textarea
       class="scene-label-edit"
       style="
         left: {PAD_INSET + label.x * (WORLD_W - PAD_INSET * 2)}px;
         top: {PAD_INSET + label.y * (WORLD_H - PAD_INSET * 2)}px;
         font-size: {fontSize}px;
       "
-      type="text"
-      value={label.text}
-      maxlength={32}
+      rows={Math.max(2, (label.text?.split('\n').length ?? 1) + 1)}
+      maxlength={128}
       autofocus
       onpointerdown={(e: PointerEvent) => e.stopPropagation()}
       onkeydown={(e: KeyboardEvent) => {
-        if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
-        if (e.key === 'Escape') { editingLabelId = null }
+        if (e.key === 'Escape') {
+          sceneUpdateLabel(label.id, (e.currentTarget as HTMLTextAreaElement).value)
+          editingLabelId = null
+        }
       }}
       onblur={(e: FocusEvent) => {
-        sceneUpdateLabel(label.id, (e.currentTarget as HTMLInputElement).value)
+        sceneUpdateLabel(label.id, (e.currentTarget as HTMLTextAreaElement).value)
         editingLabelId = null
       }}
-    />
+    >{label.text}</textarea>
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <span
@@ -112,7 +108,7 @@
         }
         draggingLabel = null
       }}
-    >{label.text || '…'}{#if ui.selectedSceneLabel === label.id}<!-- svelte-ignore a11y_no_static_element_interactions --><span
+    >{@html (label.text || '…').replace(/\n/g, '<br>')}{#if ui.selectedSceneLabel === label.id}<!-- svelte-ignore a11y_no_static_element_interactions --><span
           class="label-resize-handle"
           onpointerdown={(e: PointerEvent) => {
             e.stopPropagation()
@@ -139,7 +135,7 @@
     transform: translate(-50%, -50%);
     font-family: var(--font-data);
     color: rgba(30, 32, 40, 0.35);
-    white-space: nowrap;
+    white-space: pre-line;
     cursor: grab;
     z-index: 1;
     padding: 2px 6px;
@@ -180,9 +176,12 @@
     border: 1px solid rgba(30, 32, 40, 0.25);
     border-radius: 0;
     padding: 2px 6px;
-    width: 100px;
+    width: 120px;
     text-align: center;
     outline: none;
     z-index: 8;
+    resize: none;
+    line-height: 1.3;
+    field-sizing: content;
   }
 </style>

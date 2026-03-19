@@ -9,6 +9,7 @@
   import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import SceneView from './lib/components/SceneView.svelte'
+  import { isTextInputTarget } from './lib/domHelpers.ts'
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MasterView from './lib/components/MasterView.svelte'
@@ -294,7 +295,7 @@
 
   function onKeydown(e: KeyboardEvent) {
     if (e.defaultPrevented) return
-    if (e.target instanceof HTMLInputElement) return
+    if (isTextInputTarget(e)) return
     if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return }
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }

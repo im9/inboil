@@ -133,7 +133,7 @@
     right: 0;
     bottom: 0;
     top: 104px;
-    width: 280px;
+    width: 340px;
     z-index: 110;
     background: var(--color-fg);
     color: var(--color-bg);

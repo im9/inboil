@@ -4,6 +4,7 @@
   import { sceneAddNode } from '../sceneActions.ts'
   // Pattern copy/paste/clear handled globally in App.svelte
   import { PATTERN_COLORS } from '../constants.ts'
+  import { isTextInputTarget } from '../domHelpers.ts'
 
   // Show all patterns in the pool
   const visibleCount = $derived(song.patterns.length)
@@ -76,7 +77,7 @@
   $effect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.defaultPrevented) return
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (isTextInputTarget(e)) return
       if (ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf') return
       // Only skip when a scene edge is selected (SceneView uses arrows for edge reorder)
       if (ui.selectedSceneEdge != null) return

@@ -5,7 +5,8 @@
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind } from '../sceneGeometry.ts'
+  import { isTextInputTarget } from '../domHelpers.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -109,12 +110,7 @@
   /** Convert client coordinates to normalized 0-1 coords (accounting for zoom/pan) */
   function toNormXY(cx: number, cy: number): { x: number; y: number } | null {
     if (!viewEl) return null
-    const rect = viewEl.getBoundingClientRect()
-    const canvasX = (cx - rect.left - panX) / zoom
-    const canvasY = (cy - rect.top - panY) / zoom
-    const x = Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
-    const y = Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
-    return { x, y }
+    return toNormScene(cx, cy, viewEl.getBoundingClientRect(), panX, panY, zoom)
   }
 
   function toNorm(e: PointerEvent) { return toNormXY(e.clientX, e.clientY) }
@@ -482,7 +478,7 @@
   function onKeydown(e: KeyboardEvent) {
     if (e.defaultPrevented) return
     if (ui.patternSheet) return
-    if (e.target instanceof HTMLInputElement) return
+    if (isTextInputTarget(e)) return
     // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
     if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
     const inSceneView = (e.target as HTMLElement)?.closest?.('.scene-view')

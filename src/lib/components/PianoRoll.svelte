@@ -15,6 +15,7 @@
   import { setTrigDuration, placeNoteBar, findNoteHead, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_DEGREES, SCALE_TEMPLATES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { ICON } from '../icons.ts'
+  import { isTextInputTarget, relativeCoords, stepIndexFromX } from '../domHelpers.ts'
 
   interface Props {
     trackId: number
@@ -209,8 +210,7 @@
 
     // Move mode: drag existing note vertically
     if (moveDragging) {
-      const relY = e.clientY - noteGridEl.getBoundingClientRect().top
-      const newNote = getNoteFromY(relY)
+      const newNote = getNoteFromY(relativeCoords(e, noteGridEl).y)
       const snapped = newNote >= 0 ? snapToScale(newNote) : -1
       if (snapped >= 0 && snapped !== ph.trigs[moveStep].note) {
         ph.trigs[moveStep].note = snapped
@@ -219,18 +219,15 @@
     }
 
     if (durationDragging) {
-      const rect = noteGridEl.getBoundingClientRect()
-      const relX = e.clientX - rect.left + noteGridEl.scrollLeft
+      const { x: relX } = relativeCoords(e, noteGridEl)
       const localStep = durationDragStep - pageStart
       const dur = Math.max(1, Math.min(ph.steps - durationDragStep, Math.floor((relX - localStep * 26) / 26) + 1))
       setTrigDuration(trackId, durationDragStep, dur)
       return
     }
     if (!barDragging) return
-    const rect = noteGridEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-    const relY = e.clientY - rect.top
-    const endStep = Math.max(barStartStep, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
+    const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
+    const endStep = stepIndexFromX(relX, 26, barStartStep, pageEnd - 1, pageStart)
     const duration = endStep - barStartStep + 1
 
     // Vertical: change note pitch during drag (snap to scale)
@@ -338,10 +335,8 @@
 
   function selectMove(e: PointerEvent) {
     if (!selectDragging || !noteGridEl) return
-    const rect = noteGridEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-    const relY = e.clientY - rect.top
-    selectEndStep = Math.max(pageStart, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
+    const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
+    selectEndStep = stepIndexFromX(relX, 26, pageStart, pageEnd - 1, pageStart)
     selectEndNoteIdx = Math.max(0, Math.min(RANGE - 1, Math.floor(relY / (noteGridEl.scrollHeight / RANGE))))
   }
 
@@ -588,10 +583,8 @@
 
   function brushMove(e: PointerEvent) {
     if (!brushDragging || !noteGridEl) return
-    const rect = noteGridEl.getBoundingClientRect()
-    const relX = e.clientX - rect.left + noteGridEl.scrollLeft
-    const relY = e.clientY - rect.top
-    const stepIdx = Math.max(pageStart, Math.min(pageEnd - 1, pageStart + Math.floor(relX / 26)))
+    const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
+    const stepIdx = stepIndexFromX(relX, 26, pageStart, pageEnd - 1, pageStart)
     let note = getNoteFromY(relY)
     if (note < 0) return
     if (activeBrush !== 'eraser' && !brushRightClick) note = snapToScale(note)
@@ -693,7 +686,7 @@
   $effect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (isTextInputTarget(e)) return
       if (vkbd.enabled) return
       // Only handle keys when select brush is active (piano roll is being interacted with)
       if (activeBrush !== 'select') return

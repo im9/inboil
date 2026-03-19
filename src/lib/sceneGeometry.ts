@@ -18,6 +18,21 @@ export function toPixel(nx: number, ny: number, w: number, h: number) {
   }
 }
 
+/** Convert client pixel coords to normalized 0–1 scene coords (inverse of toPixel). */
+export function toNormScene(
+  cx: number, cy: number,
+  viewRect: DOMRect,
+  panX: number, panY: number,
+  zoom: number,
+): { x: number; y: number } {
+  const canvasX = (cx - viewRect.left - panX) / zoom
+  const canvasY = (cy - viewRect.top - panY) / zoom
+  return {
+    x: Math.max(0, Math.min(1, (canvasX - PAD_INSET) / (WORLD_W - PAD_INSET * 2))),
+    y: Math.max(0, Math.min(1, (canvasY - PAD_INSET) / (WORLD_H - PAD_INSET * 2))),
+  }
+}
+
 /** Node size category for edge computation */
 export type NodeSizeKind = 'pattern' | 'fn' | 'generative'
 
