@@ -433,7 +433,7 @@
     min-width: 100px;
     background: var(--color-bg);
     border: 1px solid rgba(30,32,40,0.20);
-    border-radius: 4px;
+    border-radius: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     display: flex;
     flex-direction: column;
@@ -455,7 +455,7 @@
     padding: 6px 10px;
     text-align: left;
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 0;
     transition: background 40ms, color 40ms;
     white-space: nowrap;
   }
@@ -810,7 +810,7 @@
       position: fixed;
       width: var(--w);
       height: var(--h);
-      border-radius: 3px;
+      border-radius: 0;
       border: none;
       display: flex;
       align-items: flex-start;

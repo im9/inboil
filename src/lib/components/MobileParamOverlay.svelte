@@ -388,7 +388,7 @@
   .handle-pill {
     width: 32px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(var(--dk-cream), 0.25);
   }
 
@@ -706,7 +706,7 @@
     flex: 1;
     font-size: 11px;
     padding: 6px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid var(--dk-border);
     background: rgba(var(--dk-cream), 0.06);
     color: var(--dk-text);

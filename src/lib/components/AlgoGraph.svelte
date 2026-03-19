@@ -98,7 +98,7 @@
     height: 48px;
     display: block;
     margin-bottom: 4px;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(0, 0, 0, 0.2);
   }
 </style>

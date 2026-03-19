@@ -16,6 +16,10 @@
   --color-salmon:  #E8A090;   /* salmon — record / alert */
   --color-purple:  #9B6BA0;   /* soft violet — granular FX */
   --color-teal:    #4A9B9B;   /* teal — DJ filter */
+  --color-chance:  #5b7dba;   /* chance mode bars */
+  --color-danger:  #f87171;   /* destructive actions */
+  --danger-border: rgba(248,113,113,0.40);
+  --danger-bg-hover: rgba(248,113,113,0.15);
 
   --font-display: "Bebas Neue", "Anton", sans-serif;
   --font-data:    "JetBrains Mono", "Fira Code", monospace;

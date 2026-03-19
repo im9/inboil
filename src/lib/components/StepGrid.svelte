@@ -2,7 +2,7 @@
   import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import type { Trig } from '../types.ts'
   import PianoRoll from './PianoRoll.svelte'
 
@@ -91,12 +91,22 @@
 
   onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
 
+  // ── Remove track (× button in expanded vel row) ──
+  let removeTrackId: number | null = $state(null)
+
+  function confirmRemoveTrack() {
+    if (removeTrackId != null) {
+      removeTrack(removeTrackId)
+      removeTrackId = null
+    }
+  }
+
   // ── Velocity / automation row modes (ADR 093) ──
   type VelMode = 'VEL' | 'CHNC' | 'VOL' | 'PAN' | 'VERB' | 'DLY' | 'GLT' | 'GRN'
   const VEL_MODES: VelMode[] = ['VEL', 'CHNC', 'VOL', 'PAN', 'VERB', 'DLY', 'GLT', 'GRN']
   const VEL_MODE_COLORS: Record<VelMode, string> = {
-    VEL: '', CHNC: '#5b7dba', VOL: '#e8a848', PAN: '#a87de8',
-    VERB: '#48b8e8', DLY: '#48e8a8', GLT: '#e85848', GRN: '#8bc34a',
+    VEL: '', CHNC: '#4472B4', VOL: '#508080', PAN: '#508080',
+    VERB: '#787845', DLY: '#4472B4', GLT: '#E8A090', GRN: '#9B6BA0',
   }
   const VEL_MODE_KEYS: Record<VelMode, string> = {
     VEL: '', CHNC: '', VOL: 'vol', PAN: 'pan',
@@ -108,10 +118,22 @@
   let velMode: VelMode = $state('VEL')
   const modeColor = $derived(VEL_MODE_COLORS[velMode])
   const isPlkMode = $derived(velMode !== 'VEL' && velMode !== 'CHNC')
+  const MIX_MODES: VelMode[] = ['VOL', 'PAN']
+  const FX_MODES: VelMode[] = ['VERB', 'DLY', 'GLT', 'GRN']
+  const isMixMode = $derived((MIX_MODES as readonly string[]).includes(velMode))
+  const isFxMode = $derived((FX_MODES as readonly string[]).includes(velMode))
 
   function velNextMode() {
     const i = VEL_MODES.indexOf(velMode)
     velMode = VEL_MODES[(i + 1) % VEL_MODES.length]
+  }
+  function velNextMix() {
+    const i = MIX_MODES.indexOf(velMode)
+    velMode = MIX_MODES[(i + 1) % MIX_MODES.length]
+  }
+  function velNextFx() {
+    const i = FX_MODES.indexOf(velMode)
+    velMode = FX_MODES[(i + 1) % FX_MODES.length]
   }
 
   /** Read the displayed value (0–1) for a trig in the current mode */
@@ -137,10 +159,8 @@
 
   function velOnMove(e: PointerEvent) {
     if (!velDragging || !velContainer) return
-    const barsEl = velContainer.querySelector('.vel-bars') as HTMLElement
-    if (!barsEl) return
     const trackId = ui.selectedTrack
-    const rect = barsEl.getBoundingClientRect()
+    const rect = velContainer.getBoundingClientRect()
     const relX = e.clientX - rect.left
     const visibleCount = Math.min(activeCell(trackId).steps, pageEnd) - pageStart
     const localIdx = Math.max(0, Math.min(visibleCount - 1, Math.floor(relX / 26)))
@@ -148,9 +168,8 @@
   }
 
   function velApply(e: PointerEvent, trackId: number, idx: number) {
-    const barsEl = velContainer?.querySelector('.vel-bars') as HTMLElement
-    if (!barsEl) return
-    const cell = barsEl.children[idx - pageStart] as HTMLElement
+    if (!velContainer) return
+    const cell = velContainer.children[idx - pageStart] as HTMLElement
     if (!cell) return
     const rect = cell.getBoundingClientRect()
     const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
@@ -306,7 +325,7 @@
 <div class="step-grid">
 {#if needsPaging}
   <div class="page-bar">
-    <div class="page-head" style="width: var(--head-w)"></div>
+    <div class="page-head" style="width: calc(var(--head-w) + 3px)"></div>
     {#each { length: totalPages } as _, p}
       <button
         class="page-btn"
@@ -324,194 +343,205 @@
     {@const selected = ui.selectedTrack === trackId}
 
     <div
-      class="track-row"
+      class="track-group"
       class:selected
       class:muted={track?.muted}
       class:solo-muted={ui.soloTracks.size > 0 && !ui.soloTracks.has(trackId)}
     >
-      <div class="track-head">
-        <!-- Track label + expand toggle -->
-        <button
-          class="track-label"
-          class:expanded={selected}
-          onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
-          data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
-        >
-          <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}</span>
-          <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="1,1 5,5 9,1" />
-          </svg>
-        </button>
-
-        <!-- Step count -->
-        <button
-          class="btn-steps flip-host"
-          onpointerdown={(e) => stepPointerDown(e, trackId)}
-          onpointerup={() => stepPointerUp(trackId)}
-          onpointerleave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null } }}
-          oncontextmenu={(e) => stepContextMenu(e, trackId)}
-          data-tip="Tap: cycle · Hold: picker" data-tip-ja="タップ: 切替 · 長押し: 選択"
-        >
-          <span class="flip-card" class:flipped={stepSetTrack === trackId}>
-            <span class="flip-face steps-off">{ph.steps}</span>
-            <span class="flip-face back steps-on">{ph.steps}</span>
-          </span>
-        </button>
-
-        <!-- Scale (ADR 112) -->
-        <button
-          class="btn-scale"
-          onpointerdown={() => cycleTrackScale(trackId)}
-          data-tip="Step scale (click to cycle)" data-tip-ja="ステップスケール（クリックで切替）"
-        >{SCALE_OPTIONS.find(o => o.divisor === (ph.scale ?? 2))?.label ?? '1/16'}</button>
-
-        <!-- Solo -->
-        <button
-          class="btn-solo flip-host"
-          onpointerdown={() => toggleSolo(trackId)}
-          data-tip="Solo/unsolo track" data-tip-ja="トラックをソロ"
-        >
-          <span class="flip-card" class:flipped={ui.soloTracks.has(trackId)}>
-            <span class="flip-face solo-off">S</span>
-            <span class="flip-face back solo-on">S</span>
-          </span>
-        </button>
-
-        <!-- Mute -->
-        <button
-          class="btn-mute flip-host"
-          onpointerdown={() => toggleMute(trackId)}
-          data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
-        >
-          <span class="flip-card" class:flipped={track?.muted}>
-            <span class="flip-face mute-off">M</span>
-            <span class="flip-face back mute-on">M</span>
-          </span>
-        </button>
-
-      </div>
-
-      <!-- Steps -->
-      {#if stepSetTrack === trackId}
-        <!-- Step-set mode: PO-style grid tap to set step count -->
-        <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
-          {#each { length: STEP_SET_MAX } as _, stepIdx}
-            {@const isActive = stepIdx < ph.steps}
+      <div class="track-cols">
+        <!-- ── Left column: track controls (single border-right) ── -->
+        <div class="track-controls">
+          <div class="ctrl-main">
             <button
-              class="step step-set-cell"
-              class:active={isActive}
-              class:current-end={stepIdx === ph.steps - 1}
-              aria-label="Set {stepIdx + 1} steps"
-              onpointerdown={() => pickStepCount(stepIdx + 1)}
+              class="track-label"
+              class:expanded={selected}
+              onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
+              data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
             >
-              <span class="step-set-num">{stepIdx + 1}</span>
+              <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}</span>
+              <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1,1 5,5 9,1" />
+              </svg>
             </button>
-          {/each}
-          {#each EXT_STEPS as ext}
+            <span class="head-sep"></span>
             <button
-              class="step step-set-cell ext"
-              class:active={ph.steps === ext}
-              onpointerdown={() => pickStepCount(ext)}
+              class="btn-steps flip-host"
+              onpointerdown={(e) => stepPointerDown(e, trackId)}
+              onpointerup={() => stepPointerUp(trackId)}
+              onpointerleave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null } }}
+              oncontextmenu={(e) => stepContextMenu(e, trackId)}
+              data-tip="Tap: cycle · Hold: picker" data-tip-ja="タップ: 切替 · 長押し: 選択"
             >
-              <span class="step-set-num">{ext}</span>
-            </button>
-          {/each}
-        </div>
-      {:else}
-        {@const visibleTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
-        <div
-          class="steps"
-          role="application"
-          style="--steps: {visibleTrigs.length}"
-          onpointermove={stepOnMove}
-          onpointerup={stepEndDrag}
-          onpointercancel={stepEndDrag}
-          data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
-        >
-          {#each visibleTrigs as trig, i}
-            {@const stepIdx = pageStart + i}
-            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
-            {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
-            {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
-            <button
-              class="step flip-host"
-              class:playhead={isPlayhead}
-              class:lock-selected={isLockSel}
-              aria-label="Step {stepIdx + 1}"
-              data-track={trackId}
-              data-step={stepIdx}
-              onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
-              onkeydown={(e) => stepKeydown(e, trackId, stepIdx)}
-            >
-              <span class="flip-card" class:flipped={trig.active}>
-                <span class="flip-face step-off"></span>
-                <span class="flip-face back step-on"></span>
+              <span class="flip-card" class:flipped={stepSetTrack === trackId}>
+                <span class="flip-face steps-off">{ph.steps}</span>
+                <span class="flip-face back steps-on">{ph.steps}</span>
               </span>
-              {#if hasLocks}<span class="lock-dot"></span>{/if}
-              {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
             </button>
-          {/each}
-        </div>
-      {/if}
-    </div>
-
-    <!-- Inline velocity lane for selected track -->
-    {#if selected}
-      {@const velTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
-      <div
-        class="vel-row"
-        role="application"
-        bind:this={velContainer}
-        onpointermove={velOnMove}
-        onpointerup={velEndDrag}
-        onpointercancel={velEndDrag}
-      >
-        <div class="track-head">
-          <div class="vel-label">
-            <span class="vel-name" role="button" tabindex="0"
-              style={modeColor ? `color: ${modeColor}; border-color: ${modeColor}` : ''}
-              onpointerdown={() => velNextMode()}
-              data-tip="Tap to cycle mode: VEL → CHNC → VOL → PAN → VERB → DLY → GLT → GRN"
-              data-tip-ja="タップでモード切替: VEL → CHNC → VOL → PAN → VERB → DLY → GLT → GRN"
-            >{velMode}</span>
-          </div>
-        </div>
-        <div class="vel-bars" class:plk-mode={isPlkMode} class:chance-mode={velMode === 'CHNC'} class:mounting={velMounting} style="--steps: {velTrigs.length}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
-          data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
-          data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
-        >
-          {#each velTrigs as trig, i}
-            {@const stepIdx = pageStart + i}
-            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
-            {@const isActive = trig.active || shrinking.has(`${trackId}-${stepIdx}`)}
-            {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
-            {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
-            <div
-              class="vel-cell"
-              role="slider"
-              tabindex="-1"
-              aria-valuenow={velReadValue(trig)}
-              onpointerdown={e => velStartDrag(e, trackId, stepIdx)}
+            <button
+              class="btn-scale"
+              onpointerdown={() => cycleTrackScale(trackId)}
+              data-tip="Step scale (click to cycle)" data-tip-ja="ステップスケール（クリックで切替）"
+            >{SCALE_OPTIONS.find(o => o.divisor === (ph.scale ?? 2))?.label ?? '1/16'}</button>
+            <button
+              class="btn-solo flip-host"
+              onpointerdown={() => toggleSolo(trackId)}
+              data-tip="Solo/unsolo track" data-tip-ja="トラックをソロ"
             >
-              <div
-                class="vel-fill"
-                class:active={isPlkMode ? barHeight > 0 : isActive}
-                class:growing={growing.has(`${trackId}-${stepIdx}`)}
-                class:shrinking={shrinking.has(`${trackId}-${stepIdx}`)}
-                class:playhead={isPlayhead}
-                style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
-              ></div>
+              <span class="flip-card" class:flipped={ui.soloTracks.has(trackId)}>
+                <span class="flip-face solo-off">S</span>
+                <span class="flip-face back solo-on">S</span>
+              </span>
+            </button>
+            <button
+              class="btn-mute flip-host"
+              onpointerdown={() => toggleMute(trackId)}
+              data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
+            >
+              <span class="flip-card" class:flipped={track?.muted}>
+                <span class="flip-face mute-off">M</span>
+                <span class="flip-face back mute-on">M</span>
+              </span>
+            </button>
+          </div>
+          {#if selected}
+            <div class="ctrl-vel">
+              <button class="head-action" onclick={() => resetSeqParams(trackId)}
+                data-tip="Reset params to defaults" data-tip-ja="パラメータを初期値に戻す"
+              >RST</button>
+              <span class="ctrl-spacer"></span>
+              <button class="vel-tab" class:active={velMode === 'VEL'}
+                onpointerdown={() => { velMode = 'VEL' }}
+                data-tip="Velocity per step" data-tip-ja="ステップごとのベロシティ"
+              >VEL</button>
+              <button class="vel-tab" class:active={velMode === 'CHNC'}
+                style="--tab-color: {VEL_MODE_COLORS.CHNC}"
+                onpointerdown={() => { velMode = 'CHNC' }}
+                data-tip="Trigger probability" data-tip-ja="発火確率"
+              >CHNC</button>
+              <button class="vel-tab" class:active={isMixMode}
+                style={isMixMode ? `--tab-color: ${modeColor}` : `--tab-color: ${VEL_MODE_COLORS.VOL}`}
+                onpointerdown={() => { isMixMode ? velNextMix() : (velMode = 'VOL') }}
+                data-tip="Per-step VOL / PAN (tap to cycle)" data-tip-ja="ステップごとのVOL / PAN（タップで切替）"
+              >{isMixMode ? velMode : 'MIX'}</button>
+              <button class="vel-tab" class:active={isFxMode}
+                style={isFxMode ? `--tab-color: ${modeColor}` : `--tab-color: ${VEL_MODE_COLORS.VERB}`}
+                onpointerdown={() => { isFxMode ? velNextFx() : (velMode = 'VERB') }}
+                data-tip="Per-step FX sends (tap to cycle: VERB → DLY → GLT → GRN)" data-tip-ja="ステップごとのFXセンド（タップで切替: VERB → DLY → GLT → GRN）"
+              >{isFxMode ? velMode : 'FX'}</button>
             </div>
-          {/each}
+          {/if}
+        </div>
+
+        <!-- ── Right column: step sequencer + vel bars ── -->
+        <div class="track-content">
+          {#if stepSetTrack === trackId}
+            <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
+              {#each { length: STEP_SET_MAX } as _, stepIdx}
+                {@const isActive = stepIdx < ph.steps}
+                <button
+                  class="step step-set-cell"
+                  class:active={isActive}
+                  class:current-end={stepIdx === ph.steps - 1}
+                  aria-label="Set {stepIdx + 1} steps"
+                  onpointerdown={() => pickStepCount(stepIdx + 1)}
+                >
+                  <span class="step-set-num">{stepIdx + 1}</span>
+                </button>
+              {/each}
+              {#each EXT_STEPS as ext}
+                <button
+                  class="step step-set-cell ext"
+                  class:active={ph.steps === ext}
+                  onpointerdown={() => pickStepCount(ext)}
+                >
+                  <span class="step-set-num">{ext}</span>
+                </button>
+              {/each}
+            </div>
+          {:else}
+            {@const visibleTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
+            <div
+              class="steps"
+              role="application"
+              style="--steps: {visibleTrigs.length}"
+              onpointermove={stepOnMove}
+              onpointerup={stepEndDrag}
+              onpointercancel={stepEndDrag}
+              data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
+            >
+              {#each visibleTrigs as trig, i}
+                {@const stepIdx = pageStart + i}
+                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
+                {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
+                {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
+                <button
+                  class="step flip-host"
+                  class:playhead={isPlayhead}
+                  class:lock-selected={isLockSel}
+                  aria-label="Step {stepIdx + 1}"
+                  data-track={trackId}
+                  data-step={stepIdx}
+                  onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
+                  onkeydown={(e) => stepKeydown(e, trackId, stepIdx)}
+                >
+                  <span class="flip-card" class:flipped={trig.active}>
+                    <span class="flip-face step-off"></span>
+                    <span class="flip-face back step-on"></span>
+                  </span>
+                  {#if hasLocks}<span class="lock-dot"></span>{/if}
+                  {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
+          {#if selected}
+            {@const velTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
+            <div
+              class="vel-bars"
+              class:plk-mode={isPlkMode}
+              class:chance-mode={velMode === 'CHNC'}
+              class:mounting={velMounting}
+              style="--steps: {velTrigs.length}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
+              role="application"
+              bind:this={velContainer}
+              onpointermove={velOnMove}
+              onpointerup={velEndDrag}
+              onpointercancel={velEndDrag}
+              data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
+              data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
+            >
+              {#each velTrigs as trig, i}
+                {@const stepIdx = pageStart + i}
+                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
+                {@const isActive = trig.active || shrinking.has(`${trackId}-${stepIdx}`)}
+                {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
+                {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
+                <div
+                  class="vel-cell"
+                  role="slider"
+                  tabindex="-1"
+                  aria-valuenow={velReadValue(trig)}
+                  onpointerdown={e => velStartDrag(e, trackId, stepIdx)}
+                >
+                  <div
+                    class="vel-fill"
+                    class:active={isPlkMode ? barHeight > 0 : isActive}
+                    class:growing={growing.has(`${trackId}-${stepIdx}`)}
+                    class:shrinking={shrinking.has(`${trackId}-${stepIdx}`)}
+                    class:playhead={isPlayhead}
+                    style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
+                  ></div>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
       <!-- Inline piano roll for melodic tracks -->
-      {#if !isDrum(ph)}
-        <div>
-          <PianoRoll trackId={trackId} />
-        </div>
+      {#if selected && !isDrum(ph)}
+        <PianoRoll trackId={trackId} />
       {/if}
-    {/if}
+    </div>
   {/each}
   {#if song.tracks.length < 16}
     <button
@@ -523,11 +553,21 @@
 </div>
 </div>
 
+{#if removeTrackId != null}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="remove-backdrop" onpointerdown={() => removeTrackId = null}></div>
+  <div class="remove-confirm">
+    <span class="remove-label">Remove track {removeTrackId + 1}?</span>
+    <button class="remove-btn remove-yes" onpointerdown={confirmRemoveTrack}>REMOVE</button>
+    <button class="remove-btn remove-no" onpointerdown={() => removeTrackId = null}>CANCEL</button>
+  </div>
+{/if}
+
 
 <style>
   .step-grid {
-    /* track-label(64) + gap(4) + btn-steps(20) + gap(4) + btn-scale(28) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) */
-    --head-w: 168px;
+    /* track-label(112) + gap(4) + sep(9) + gap(4) + btn-steps(20) + gap(4) + btn-scale(28) + gap(4) + btn-solo(20) + gap(4) + btn-mute(20) + pad-right(8) */
+    --head-w: 237px;
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -547,7 +587,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px 0;
+    padding: 4px 8px 0;
     flex-shrink: 0;
   }
   .page-head {
@@ -557,7 +597,7 @@
     width: 20px;
     height: 16px;
     border: 1px solid var(--color-olive);
-    border-radius: 2px;
+    border-radius: 0;
     background: transparent;
     color: var(--color-olive);
     font-size: 8px;
@@ -571,33 +611,17 @@
     color: var(--color-bg);
   }
 
-  /* ── Track head (label + buttons wrapper) ── */
-  .track-head {
-    width: var(--head-w);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  /* ── Track row ── */
-  .track-row {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    height: 40px;
-    padding: 0 8px;
+  /* ── Track group (wraps track-row + vel-row + piano-roll) ── */
+  .track-group {
     border-bottom: 1px solid rgba(30,32,40,0.08);
-    overflow: hidden;
-    touch-action: none;
+    border-left: 3px solid transparent;
   }
-  .track-row.selected {
+  .track-group.selected {
     background: var(--color-surface);
-    border-left: 3px solid var(--color-olive);
-    padding-left: 5px;
+    border-left-color: var(--color-olive);
   }
-  .track-row.muted .steps,
-  .track-row.solo-muted .steps {
+  .track-group.muted .steps,
+  .track-group.solo-muted .steps {
     opacity: 0.35;
     background-image: repeating-linear-gradient(
       45deg,
@@ -606,13 +630,46 @@
     );
   }
 
+  /* ── 2-column layout: controls | sequencer ── */
+  .track-cols {
+    display: flex;
+    padding: 0 8px;
+  }
+  .track-controls {
+    width: var(--head-w);
+    flex-shrink: 0;
+    border-right: 1px solid rgba(30,32,40,0.10);
+    padding-right: 8px;
+  }
+  .ctrl-main {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 40px;
+  }
+  .ctrl-vel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 40px;
+  }
+  .ctrl-spacer {
+    flex: 1;
+  }
+  .track-content {
+    flex: 1;
+    min-width: 0;
+    touch-action: none;
+    padding-left: 4px;
+  }
+
   /* ── Track label (expand toggle) ── */
   .track-label {
-    width: 64px;
+    width: 112px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 6px;
+    padding: 4px 8px;
     border: none;
     background: transparent;
     cursor: pointer;
@@ -648,6 +705,13 @@
   }
   .track-label:hover .chevron {
     color: var(--color-fg);
+  }
+  .head-sep {
+    width: 1px;
+    height: 16px;
+    flex-shrink: 0;
+    background: rgba(30,32,40,0.12);
+    margin: 0 4px;
   }
 
   /* ── Solo button ── */
@@ -698,15 +762,14 @@
 
   /* ── Steps ── */
   .steps {
-    flex: 1;
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior: none;
+    height: 40px;
     padding: 6px 0;
-    height: 100%;
     align-items: center;
   }
 
@@ -759,51 +822,50 @@
   }
 
   /* ── Inline velocity lane ── */
-  .vel-row {
-    display: flex;
-    align-items: stretch;
-    height: 40px;
-    padding: 0 8px;
-    gap: 4px;
-    background: var(--color-surface);
-    border-bottom: 1px solid rgba(30,32,40,0.08);
-    user-select: none;
-    border-left: 3px solid var(--color-olive);
-    padding-left: 5px;
-    overflow: hidden;
-  }
-  .vel-label {
-    margin-left: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    text-align: center;
-    gap: 2px;
-    padding: 0 6px;
-  }
-  .vel-name {
+  .vel-tab {
+    width: 36px;
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--color-fg);
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
     text-transform: uppercase;
+    text-align: center;
     cursor: pointer;
     user-select: none;
-    border: 1px solid var(--color-fg);
-    padding: 2px 6px;
+    border: 1px solid rgba(30,32,40,0.15);
+    padding: 3px 0;
     background: transparent;
-    transition: color 150ms, border-color 150ms;
+    transition: color 80ms, border-color 80ms, background 80ms;
+    line-height: 1;
   }
-  .vel-name:active {
-    opacity: 0.6;
+  .vel-tab.active {
+    color: var(--tab-color, var(--color-fg));
+    border-color: var(--tab-color, var(--color-fg));
+    background: rgba(30,32,40,0.06);
   }
-  /* mode color applied via inline style */
+  .head-action {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--color-fg);
+    border: 1px solid var(--color-fg);
+    background: transparent;
+    padding: 3px 8px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 0;
+    transition: color 80ms, border-color 80ms;
+  }
+  .head-action:hover {
+    color: var(--color-fg);
+    border-color: rgba(30,32,40,0.25);
+  }
   .btn-scale {
     width: 28px;
     height: 20px;
     flex-shrink: 0;
     border: 1px solid var(--color-olive);
-    border-radius: 2px;
+    border-radius: 0;
     background: transparent;
     font-size: 7px;
     font-weight: 700;
@@ -848,11 +910,13 @@
     font-weight: 700;
   }
   .vel-bars {
-    flex: 1;
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
+    height: 40px;
     padding: 4px 0;
+    user-select: none;
+    overflow: hidden;
   }
   .vel-cell {
     display: flex;
@@ -897,7 +961,7 @@
 
   /* ── Chance mode ── */
   .vel-bars.chance-mode .vel-fill.active {
-    background: #5b7dba;
+    background: var(--color-chance);
   }
   /* ── P-Lock automation mode (ADR 093) ── */
   .vel-bars.plk-mode .vel-fill.active {
@@ -909,7 +973,7 @@
     left: 1px;
     width: 4px;
     height: 4px;
-    background: #5b7dba;
+    background: var(--color-chance);
     transform: rotate(45deg);
     z-index: 1;
     pointer-events: none;
@@ -935,7 +999,7 @@
   /* ── Step-set mode ── */
   .step-set-mode {
     background: rgba(30, 32, 40, 0.04);
-    border-radius: 2px;
+    border-radius: 0;
   }
   .step-set-cell {
     display: flex;
@@ -973,6 +1037,59 @@
   }
   .step-set-cell.current-end .step-set-num {
     color: var(--color-fg);
+  }
+
+  /* ── Remove track confirmation ── */
+  .remove-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.15);
+    z-index: 20;
+  }
+  .remove-confirm {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 21;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-fg);
+    color: rgba(237,232,220,0.85);
+    padding: 10px 16px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .remove-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .remove-btn {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 5px 12px;
+    border: 1px solid rgba(237,232,220,0.2);
+    background: transparent;
+    color: rgba(237,232,220,0.6);
+    cursor: pointer;
+    border-radius: 0;
+  }
+  .remove-btn:hover {
+    color: rgba(237,232,220,0.9);
+    border-color: rgba(237,232,220,0.4);
+  }
+  .remove-yes {
+    color: var(--color-danger);
+    border-color: var(--danger-border);
+  }
+  .remove-yes:hover {
+    background: var(--danger-bg-hover);
+    color: var(--color-danger);
+    border-color: var(--color-danger);
   }
 
 </style>

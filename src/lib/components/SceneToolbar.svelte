@@ -158,7 +158,7 @@
     display: flex;
     gap: 0;
     z-index: 5;
-    border-radius: 4px;
+    border-radius: 0;
     overflow: hidden;
     border: 1.5px solid rgba(30, 32, 40, 0.12);
   }
@@ -191,7 +191,7 @@
     top: 8px;
     width: 28px;
     height: 28px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1.5px solid rgba(30, 32, 40, 0.12);
     background: rgba(255, 255, 255, 0.8);
     color: rgba(30, 32, 40, 0.5);
@@ -207,11 +207,11 @@
   }
   .right-0 {
     right: 8px;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0;
   }
   .right-1 {
     right: 40px;
-    border-radius: 4px 0 0 4px;
+    border-radius: 0;
     border-right: none;
   }
   .right-2 {

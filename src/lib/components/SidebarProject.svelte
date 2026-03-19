@@ -330,7 +330,7 @@
     align-items: center;
     gap: 6px;
     padding: 7px 8px;
-    border-radius: 2px;
+    border-radius: 0;
     transition: background 40ms linear;
   }
   .proj-item:hover { background: rgba(237,232,220,0.04); }
@@ -391,7 +391,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     border: 1px solid rgba(237,232,220,0.15);
-    border-radius: 4px;
+    border-radius: 0;
     background: rgba(237,232,220,0.06);
     color: rgba(237,232,220,0.7);
     cursor: pointer;

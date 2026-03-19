@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, playback, selectPattern } from '../state.svelte.ts'
+  import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
   import type { SceneNode } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { sceneSetRoot, sceneDeleteNode } from '../sceneActions.ts'
@@ -166,10 +166,7 @@
               <DockGenerativeEditor node={genNode} />
             {/each}
           {:else}
-            <div class="empty-hint"
-              data-tip="Place this pattern in the scene graph to edit scene properties"
-              data-tip-ja="シーングラフにこのパターンを配置するとシーンプロパティを編集できます"
-            >No scene connection</div>
+            <div class="empty-hint">{lang.value === 'ja' ? 'ファンクションノード未接続' : 'No function nodes connected'}</div>
           {/if}
         {/if}
       {/if}
@@ -190,13 +187,13 @@
     --dk-bg-hover: rgba(var(--dk-cream), 0.08);
     --dk-bg-faint: rgba(var(--dk-cream), 0.06);
     --dk-bg-active: rgba(var(--dk-cream), 0.12);
-    --dk-fs-xs: 9px;
-    --dk-fs-sm: 10px;
-    --dk-fs-md: 11px;
-    --dk-fs-lg: 12px;
+    --dk-fs-xs: 10px;
+    --dk-fs-sm: 11px;
+    --dk-fs-md: 12px;
+    --dk-fs-lg: 13px;
 
     position: relative;
-    width: 280px;
+    width: 340px;
     flex-shrink: 0;
     background: var(--color-fg);
     color: var(--color-bg);
@@ -237,7 +234,7 @@
     gap: 0;
     margin-bottom: 8px;
     border: 1px solid var(--dk-border);
-    border-radius: 3px;
+    border-radius: 0;
     overflow: hidden;
   }
   .dock-tab {
@@ -246,7 +243,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
-    padding: 4px 0;
+    padding: 6px 0;
     border: none;
     background: transparent;
     color: var(--dk-text-dim);
@@ -266,7 +263,7 @@
     color: var(--dk-text);
   }
   .dock-tab-badge {
-    font-size: 8px;
+    font-size: 9px;
     font-weight: 700;
     vertical-align: super;
     margin-left: 1px;
@@ -281,7 +278,7 @@
 
   /* ── Content ── */
   .param-content {
-    padding: 10px 12px;
+    padding: 12px 16px;
   }
   .section-divider {
     width: 100%;
@@ -290,23 +287,23 @@
     margin: 8px 0;
   }
   .section-label {
-    font-size: 8px;
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dk-text-dim);
-    padding-bottom: 2px;
+    padding-bottom: 4px;
   }
 
   /* ── Pattern header ── */
   .pat-header {
     display: flex;
     align-items: center;
-    margin-bottom: 4px;
-    gap: 6px;
+    margin-bottom: 6px;
+    gap: 8px;
   }
   .pat-dot {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     flex-shrink: 0;
   }
@@ -319,7 +316,7 @@
     border: 1px solid var(--dk-border);
     border-bottom: 1px solid var(--dk-border-mid);
     outline: none;
-    padding: 2px 6px;
+    padding: 4px 8px;
     flex: 1;
     min-width: 0;
     text-transform: uppercase;
@@ -335,11 +332,11 @@
   }
   .color-row {
     display: flex;
-    gap: 2px;
+    gap: 3px;
   }
   .color-swatch {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     border: 1.5px solid transparent;
     cursor: pointer;
@@ -360,8 +357,8 @@
   /* ── Node actions ── */
   .node-actions {
     display: flex;
-    gap: 4px;
-    margin: 6px 0 8px;
+    gap: 6px;
+    margin: 8px 0 10px;
   }
   .btn-open-sheet {
     flex: 1;
@@ -371,7 +368,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 5px 0;
+    padding: 7px 0;
     cursor: pointer;
     transition: color 60ms, background 60ms;
   }
@@ -386,7 +383,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 5px 8px;
+    padding: 7px 10px;
     cursor: pointer;
     transition: color 60ms, background 60ms;
     white-space: nowrap;
@@ -402,13 +399,13 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 5px 8px;
+    padding: 7px 10px;
     cursor: pointer;
     transition: color 60ms, background 60ms;
     white-space: nowrap;
   }
   .btn-delete-node:hover {
-    color: #f87171;
+    color: var(--color-danger);
     background: var(--dk-bg-hover);
   }
 </style>

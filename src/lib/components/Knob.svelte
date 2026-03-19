@@ -111,14 +111,14 @@
   }
   .knob-wrap.dragging { cursor: grabbing; }
   .val {
-    font-size: 10px;
+    font-size: 11px;
     color: rgba(237,232,220,0.88);
     white-space: nowrap;
     line-height: 1;
   }
   .light .val { color: rgba(30,32,40,0.8); }
   .lbl {
-    font-size: 8px;
+    font-size: 9px;
     letter-spacing: 0.06em;
     color: rgba(237,232,220,0.38);
     text-transform: uppercase;

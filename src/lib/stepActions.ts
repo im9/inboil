@@ -225,6 +225,21 @@ export function resetToDefaults(trackIdx: number) {
   c.presetName = undefined
 }
 
+/** Reset per-step parameters controllable from the vel-row tabs */
+const SEQ_PARAM_KEYS = ['vol', 'pan', 'reverbSend', 'delaySend', 'glitchSend', 'granularSend'] as const
+export function resetSeqParams(trackIdx: number) {
+  pushUndo('Reset seq params')
+  const c = activeCell(trackIdx)
+  for (const trig of c.trigs) {
+    trig.velocity = 0.8
+    trig.chance = undefined
+    if (trig.paramLocks) {
+      for (const key of SEQ_PARAM_KEYS) delete trig.paramLocks[key]
+      if (Object.keys(trig.paramLocks).length === 0) trig.paramLocks = undefined
+    }
+  }
+}
+
 export const STEP_OPTIONS = [
   2, 3, 4, 5, 6, 7, 8,
   9, 10, 11, 12, 13, 14, 15, 16,

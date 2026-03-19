@@ -117,14 +117,14 @@
         <Knob
           value={pad.x}
           label={fxXLabel(node.key)}
-          size={32}
+          size={36}
           displayValue={fxXDisplay(node.key, pad.x)}
           onchange={v => setFxX(node.key, v)}
         />
         <Knob
           value={pad.y}
           label={fxYLabel(node.key)}
-          size={32}
+          size={36}
           displayValue={fxYDisplay(node.key, pad.y)}
           onchange={v => setFxY(node.key, v)}
         />
@@ -150,7 +150,7 @@
   .fx-dock-band {
     padding: 6px 8px;
     border: 1px solid rgba(237,232,220, 0.15);
-    border-radius: 4px;
+    border-radius: 0;
   }
   .fx-dock-band.disabled {
     opacity: 0.35;
@@ -170,7 +170,7 @@
     background: transparent;
     color: rgba(237,232,220, 0.4);
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 0;
   }
   .fx-dock-toggle.active {
     background: var(--color-olive);
@@ -191,7 +191,7 @@
     background: transparent;
     color: rgba(237,232,220, 0.4);
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 0;
   }
   .fx-flv-btn.active {
     background: var(--color-olive);

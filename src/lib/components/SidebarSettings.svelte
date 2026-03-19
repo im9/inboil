@@ -311,7 +311,7 @@
     color: rgba(237,232,220,0.7);
     font-size: 10px;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 0;
     outline: none;
   }
   .midi-select option { background: var(--color-bg); }
@@ -397,7 +397,7 @@
   .jam-qr :global(svg) {
     width: 100px;
     height: 100px;
-    border-radius: 4px;
+    border-radius: 0;
   }
   .jam-connected {
     font-size: 10px;

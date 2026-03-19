@@ -463,7 +463,7 @@
     pointer-events: none;
     background: rgba(30,32,40,0.5);
     padding: 4px 6px;
-    border-radius: 3px;
+    border-radius: 0;
     backdrop-filter: blur(4px);
   }
   .ro-group {

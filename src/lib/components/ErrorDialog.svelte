@@ -110,7 +110,7 @@
     color: rgba(237, 232, 220, 0.4);
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(237, 232, 220, 0.08);
-    border-radius: 4px;
+    border-radius: 0;
     padding: 8px;
     margin: 0 0 12px;
     max-height: 120px;
@@ -127,7 +127,7 @@
     font-size: 11px;
     font-weight: 700;
     padding: 6px 14px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid var(--color-salmon, #E8A090);
     background: var(--color-salmon, #E8A090);
     color: #1a1210;
@@ -140,7 +140,7 @@
     font-size: 11px;
     font-weight: 600;
     padding: 6px 10px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid rgba(237, 232, 220, 0.2);
     background: transparent;
     color: rgba(237, 232, 220, 0.6);
@@ -154,7 +154,7 @@
     font-size: 11px;
     font-weight: 600;
     padding: 6px 10px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1px solid rgba(237, 232, 220, 0.15);
     background: transparent;
     color: rgba(237, 232, 220, 0.4);

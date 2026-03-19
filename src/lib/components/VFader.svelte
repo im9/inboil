@@ -88,13 +88,13 @@
     position: absolute;
     bottom: 0;
     height: 100%;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(237,232,220,0.12);
   }
   .track-fill {
     position: absolute;
     bottom: 0;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(237,232,220,0.7);
     transition: height 30ms linear;
   }

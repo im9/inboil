@@ -442,7 +442,7 @@
     height: 28px;
     padding: 0 8px;
     border: 1px solid rgba(30,32,40,0.2);
-    border-radius: 4px;
+    border-radius: 0;
     background: rgba(30,32,40,0.04);
     color: var(--color-fg);
   }
@@ -621,7 +621,7 @@
     position: relative;
     margin: 4px 12px 2px;
     background: rgba(30,32,40,0.08);
-    border-radius: 4px;
+    border-radius: 0;
     flex-shrink: 0;
   }
   .edit-tab-pill {
@@ -631,7 +631,7 @@
     width: calc(33.3333% - 4px);
     height: calc(100% - 4px);
     background: var(--color-olive);
-    border-radius: 3px;
+    border-radius: 0;
     transition: left 200ms cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 0;
   }

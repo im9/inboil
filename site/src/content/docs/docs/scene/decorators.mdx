@@ -5,15 +5,11 @@ sidebar:
   order: 2
 ---
 
-import PlaygroundDockDecoratorEditor from '../../../../components/PlaygroundDockDecoratorEditor.svelte';
-
 ## Overview
 
-**Decorators** are modifiers attached to scene nodes. They change how a pattern plays without modifying the pattern itself. This means the same pattern can sound different at different points in your scene.
+**Function nodes** are modifier nodes in the scene graph that change how a pattern plays without modifying the pattern itself. Connect a function node to a pattern node via an edge, and the pattern will play differently when reached through that path.
 
-Select a scene node and open the **Dock panel** to add and edit decorators:
-
-<PlaygroundDockDecoratorEditor client:visible />
+Add function nodes from the **Scene toolbar** (transpose, tempo, repeat, FX icons) and connect them to pattern nodes with edges.
 
 ## Decorator Types
 
@@ -66,21 +62,19 @@ Automate **any parameter** over the duration of the pattern. Draw an automation 
 
 **Use case**: Filter sweep across a 4-bar build, modulation depth ramp during a drop.
 
-## Stacking Decorators
+## Chaining Function Nodes
 
-A single node can have **multiple decorators**. They apply in order from top to bottom. For example:
+Multiple function nodes can be chained via edges. For example:
 
-1. **Transpose** +7 (shift up a fifth)
-2. **Tempo** 140 (speed up)
-3. **Repeat** 2 (play twice)
+1. **Transpose** +7 (shift up a fifth) → **Tempo** 140 (speed up) → **Repeat** 2 (play twice) → Pattern
 
 The pattern plays at 140 BPM, transposed up 7 semitones, two times in a row.
 
 ## Adding and Removing
 
-- **Add**: Select a node → Dock panel → tap the decorator type button
-- **Remove**: Swipe left on a decorator row, or tap the × button
-- **Reorder**: Drag the handle to change order
+- **Add**: Click a function node type in the Scene toolbar → node appears on canvas
+- **Connect**: Drag from the node's connection handle to a pattern node
+- **Remove**: Select the node and press Delete/Backspace
 
 ## Related
 

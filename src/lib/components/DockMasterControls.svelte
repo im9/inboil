@@ -99,11 +99,11 @@
       >COMP</button>
     </div>
     <div class="fx-dock-knobs">
-      <Knob value={masterPad.comp.x} label="THR" size={32} displayValue={masterPadXDisplay('comp')} onchange={v => setMasterPadX('comp', v)} />
-      <Knob value={masterPad.comp.y} label="RAT" size={32} displayValue={masterPadYDisplay('comp')} onchange={v => setMasterPadY('comp', v)} />
+      <Knob value={masterPad.comp.x} label="THR" size={36} displayValue={masterPadXDisplay('comp')} onchange={v => setMasterPadX('comp', v)} />
+      <Knob value={masterPad.comp.y} label="RAT" size={36} displayValue={masterPadYDisplay('comp')} onchange={v => setMasterPadY('comp', v)} />
       {#each MASTER_KNOBS.filter(mk => mk.key === 'mkp' || mk.key === 'atk' || mk.key === 'rel') as mk}
         <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
-          <Knob value={getMasterKnobValue(mk.key)} label={mk.label} size={32} displayValue={masterKnobDisplay(mk.key)} onchange={v => setMasterKnobValue(mk.key, v)} />
+          <Knob value={getMasterKnobValue(mk.key)} label={mk.label} size={36} displayValue={masterKnobDisplay(mk.key)} onchange={v => setMasterKnobValue(mk.key, v)} />
         </span>
       {/each}
     </div>
@@ -118,8 +118,8 @@
         >DUCK</button>
       </div>
       <div class="fx-dock-knobs">
-        <Knob value={masterPad.duck.x} label="DPT" size={32} displayValue={masterPadXDisplay('duck')} onchange={v => setMasterPadX('duck', v)} />
-        <Knob value={masterPad.duck.y} label="REL" size={32} displayValue={masterPadYDisplay('duck')} onchange={v => setMasterPadY('duck', v)} />
+        <Knob value={masterPad.duck.x} label="DPT" size={36} displayValue={masterPadXDisplay('duck')} onchange={v => setMasterPadX('duck', v)} />
+        <Knob value={masterPad.duck.y} label="REL" size={36} displayValue={masterPadYDisplay('duck')} onchange={v => setMasterPadY('duck', v)} />
       </div>
     </div>
     <div class="master-dock-group pad-half" class:disabled={!masterPad.ret.on}>
@@ -130,8 +130,8 @@
         >RET</button>
       </div>
       <div class="fx-dock-knobs">
-        <Knob value={masterPad.ret.x} label="VRB" size={32} displayValue={masterPadXDisplay('ret')} onchange={v => setMasterPadX('ret', v)} />
-        <Knob value={masterPad.ret.y} label="DLY" size={32} displayValue={masterPadYDisplay('ret')} onchange={v => setMasterPadY('ret', v)} />
+        <Knob value={masterPad.ret.x} label="VRB" size={36} displayValue={masterPadXDisplay('ret')} onchange={v => setMasterPadX('ret', v)} />
+        <Knob value={masterPad.ret.y} label="DLY" size={36} displayValue={masterPadYDisplay('ret')} onchange={v => setMasterPadY('ret', v)} />
       </div>
     </div>
   </div>
@@ -154,7 +154,7 @@
   .master-dock-group {
     padding: 6px 8px;
     border: 1px solid rgba(237,232,220, 0.15);
-    border-radius: 4px;
+    border-radius: 0;
   }
   .group-label {
     display: block;
@@ -194,7 +194,7 @@
     background: transparent;
     color: rgba(237,232,220, 0.4);
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 0;
   }
   .fx-dock-toggle.active {
     background: var(--color-olive);

@@ -102,7 +102,7 @@
     flex-shrink: 0;
     padding: 2px 8px;
     border: 1px solid rgba(237, 232, 220, 0.15);
-    border-radius: 3px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.06);
     color: rgba(237, 232, 220, 0.55);
     font-family: var(--font-data);

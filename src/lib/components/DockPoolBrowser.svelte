@@ -342,7 +342,7 @@
 <style>
   .pool-inline {
     border: 1px solid rgba(237,232,220,0.15);
-    border-radius: 2px;
+    border-radius: 0;
     margin-top: 4px;
   }
 
@@ -358,7 +358,7 @@
     font-size: 10px;
     padding: 2px 6px;
     border: 1px solid rgba(237,232,220,0.15);
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(0,0,0,0.2);
     color: rgba(237,232,220,0.85);
     outline: none;
@@ -422,8 +422,8 @@
     cursor: pointer;
   }
   .folder-btn:not(:last-child) { border-right: none; }
-  .folder-btn:first-child { border-radius: 2px 0 0 2px; }
-  .folder-btn:last-child { border-radius: 0 2px 2px 0; }
+  .folder-btn:first-child { border-radius: 0; }
+  .folder-btn:last-child { border-radius: 0; }
   .folder-btn.active {
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.85);
@@ -448,7 +448,7 @@
     align-items: center;
     gap: 3px;
     padding: 2px 4px;
-    border-radius: 2px;
+    border-radius: 0;
     cursor: pointer;
     color: rgba(237,232,220,0.65);
   }
@@ -499,7 +499,7 @@
     flex-shrink: 0;
     padding: 0 3px;
     border: 1px solid rgba(237,232,220,0.1);
-    border-radius: 2px;
+    border-radius: 0;
   }
   .row-dur {
     font-size: 8px;
@@ -537,7 +537,7 @@
     font-weight: 600;
     padding: 1px 6px;
     border: 1px solid rgba(237,232,220,0.15);
-    border-radius: 2px;
+    border-radius: 0;
     background: transparent;
     color: rgba(237,232,220,0.5);
     cursor: pointer;
@@ -559,7 +559,7 @@
     font-size: 9px;
     padding: 1px 4px;
     border: 1px solid rgba(237,232,220,0.25);
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(0,0,0,0.2);
     color: rgba(237,232,220,0.85);
     outline: none;

@@ -6,7 +6,7 @@
    */
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles, pushUndo } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
-  import { clearAllParamLocks, setTrackSend, changeVoice, removeTrack, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
+  import { clearAllParamLocks, setTrackSend, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked, trackPlkValue, trackPlkChange, isTrackPlkLocked } from '../paramHelpers.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
@@ -40,19 +40,6 @@
   $effect(() => { void ui.selectedTrack; voiceOpen = false })
   const currentVoiceMeta = $derived(cell?.voiceId ? VOICE_LIST.find(v => v.id === cell.voiceId) : null)
   let presetBrowserRef = $state<DockPresetBrowser>(null!)
-
-  // ── Track delete (2-step confirm) ──
-  let confirmDelete = $state(false)
-  $effect(() => { void ui.selectedTrack; confirmDelete = false })
-
-  function handleDeleteTrack() {
-    if (confirmDelete) {
-      removeTrack(ui.selectedTrack)
-      confirmDelete = false
-    } else {
-      confirmDelete = true
-    }
-  }
 
   // ── Sample loader ──
   const MAX_SAMPLE_SIZE = 10 * 1024 * 1024
@@ -149,55 +136,40 @@
   })
 </script>
 
-<!-- Track selector bar -->
-<span class="track-bar-label"
-  data-tip="Select a track to edit its voice, params and sends"
-  data-tip-ja="トラックを選択して音源・パラメータ・センドを編集"
->TRACKS</span>
-<div class="track-bar">
-  {#each song.patterns[ui.currentPattern].cells as c}
-    {@const t = song.tracks[c.trackId]}
-    <button
-      class="track-btn"
-      class:active={c.trackId === ui.selectedTrack}
-      class:muted={t?.muted}
-      onpointerdown={() => { ui.selectedTrack = c.trackId }}
-      data-tip="Track {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : 'unassigned'})"
-      data-tip-ja="トラック {c.trackId + 1}: {c?.name ?? '—'} ({c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? c.voiceId) : '未割当'})"
-    ><span class="track-num">{c.trackId + 1}</span>{#if c.insertFx?.type}<span class="insert-dot" aria-label="Insert FX active">◆</span>{/if}<span class="track-voice">{c?.voiceId ? (VOICE_LIST.find(v => v.id === c.voiceId)?.label ?? '') : ''}</span></button>
-  {/each}
-</div>
-
 {#if cell && track}
 
-<!-- Voice selector (collapsible) -->
-<button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen; if (voiceOpen) presetBrowserRef?.close() }}
-  data-tip="Change instrument" data-tip-ja="楽器を変更">
-  <span class="voice-current-name">{currentVoiceMeta?.fullName ?? cell.voiceId}</span>
-  <span class="voice-current-arrow">{voiceOpen ? '▾' : '▸'}</span>
-</button>
-{#if voiceOpen}
-  <div class="picker-cats">
-    {#each CATEGORIES as cat}
-      <button
-        class="cat-btn"
-        class:active={currentCat === cat.id}
-        onpointerdown={() => { changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId); if (VOICE_LIST.filter(v => v.category === cat.id).length === 1) voiceOpen = false }}
-        data-tip={cat.label} data-tip-ja={cat.label}
-      >{cat.label}</button>
-    {/each}
-  </div>
-  <div class="picker-list">
-    {#each voicesInCat as v}
-      <button
-        class="picker-item"
-        class:selected={cell.voiceId === v.id}
-        onpointerdown={() => { changeVoice(ui.selectedTrack, v.id); voiceOpen = false; presetBrowserRef?.close() }}
-        data-tip={v.id} data-tip-ja={v.id}
-      ><span class="picker-cat-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
-    {/each}
-  </div>
-{/if}
+<!-- Voice selector (floating dropdown) -->
+<div class="voice-picker-wrap">
+  <button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen; if (voiceOpen) presetBrowserRef?.close() }}
+    data-tip="Change instrument" data-tip-ja="楽器を変更">
+    <span class="voice-current-name">{currentVoiceMeta?.fullName ?? cell.voiceId}</span>
+    <span class="voice-current-arrow">{voiceOpen ? '▾' : '▸'}</span>
+  </button>
+  {#if voiceOpen}
+    <div class="voice-dropdown">
+      <div class="picker-cats">
+        {#each CATEGORIES as cat}
+          <button
+            class="cat-btn"
+            class:active={currentCat === cat.id}
+            onpointerdown={() => { changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId); if (VOICE_LIST.filter(v => v.category === cat.id).length === 1) voiceOpen = false }}
+            data-tip={cat.label} data-tip-ja={cat.label}
+          >{cat.label}</button>
+        {/each}
+      </div>
+      <div class="picker-list">
+        {#each voicesInCat as v}
+          <button
+            class="picker-item"
+            class:selected={cell.voiceId === v.id}
+            onpointerdown={() => { changeVoice(ui.selectedTrack, v.id); voiceOpen = false; presetBrowserRef?.close() }}
+            data-tip={v.id} data-tip-ja={v.id}
+          ><span class="picker-cat-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
+        {/each}
+      </div>
+    </div>
+  {/if}
+</div>
 
 <!-- Preset browser -->
 <DockPresetBrowser bind:this={presetBrowserRef} onopen={() => { voiceOpen = false }} />
@@ -232,7 +204,9 @@
       style="display: none"
     />
     {#if poolOpen}
-      <DockPoolBrowser trackId={ui.selectedTrack} onclose={() => poolOpen = false} />
+      <div class="pool-dropdown">
+        <DockPoolBrowser trackId={ui.selectedTrack} onclose={() => poolOpen = false} />
+      </div>
     {/if}
   </div>
 {/if}
@@ -297,7 +271,7 @@
         <Knob
           value={normalizeParam(p, knobValue(p))}
           label={p.label}
-          size={32}
+          size={36}
           locked={isParamLocked(p.key)}
           steps={paramSteps(p)}
           displayValue={displayLabel(p, knobValue(p))}
@@ -364,15 +338,15 @@
 {#if insFx?.type}
   <div class="knob-grid">
     <span data-tip="Insert dry/wet mix" data-tip-ja="インサート ドライ/ウェット">
-      <Knob value={insFx.mix} label="MIX" size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'mix', v)} />
+      <Knob value={insFx.mix} label="MIX" size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'mix', v)} />
     </span>
     <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : 'S&H rate'}
           data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : 'S&Hレート'}>
-      <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'x', v)} />
+      <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'x', v)} />
     </span>
     <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : 'Bit depth'}
           data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : 'ビット深度'}>
-      <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={32} onchange={v => setInsertFxParam(ui.selectedTrack, 'y', v)} />
+      <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'y', v)} />
     </span>
   </div>
 {/if}
@@ -382,128 +356,40 @@
 <div class="section-label">SEND / MIX</div>
 <div class="knob-grid">
   <span data-tip="Track volume" data-tip-ja="トラック音量">
-    <Knob value={trackPlkValue('vol', track.volume)} label="VOL" size={32} locked={isTrackPlkLocked('vol')}
+    <Knob value={trackPlkValue('vol', track.volume)} label="VOL" size={36} locked={isTrackPlkLocked('vol')}
       onchange={v => trackPlkChange('vol', v, bv => { pushUndo('Set volume'); song.tracks[ui.selectedTrack].volume = bv })} />
   </span>
   <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-    <Knob value={(trackPlkValue('pan', track.pan) + 1) / 2} label="PAN" size={32} locked={isTrackPlkLocked('pan')}
+    <Knob value={(trackPlkValue('pan', track.pan) + 1) / 2} label="PAN" size={36} locked={isTrackPlkLocked('pan')}
       onchange={v => trackPlkChange('pan', v * 2 - 1, bv => { pushUndo('Set pan'); song.tracks[ui.selectedTrack].pan = bv })} />
   </span>
   <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-    <Knob value={trackPlkValue('reverbSend', cell.reverbSend)} label="VERB" size={32} locked={isTrackPlkLocked('reverbSend')}
+    <Knob value={trackPlkValue('reverbSend', cell.reverbSend)} label="VERB" size={36} locked={isTrackPlkLocked('reverbSend')}
       onchange={v => trackPlkChange('reverbSend', v, bv => setTrackSend(ui.selectedTrack, 'reverbSend', bv))} />
   </span>
   <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-    <Knob value={trackPlkValue('delaySend', cell.delaySend)} label="DLY" size={32} locked={isTrackPlkLocked('delaySend')}
+    <Knob value={trackPlkValue('delaySend', cell.delaySend)} label="DLY" size={36} locked={isTrackPlkLocked('delaySend')}
       onchange={v => trackPlkChange('delaySend', v, bv => setTrackSend(ui.selectedTrack, 'delaySend', bv))} />
   </span>
   <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-    <Knob value={trackPlkValue('glitchSend', cell.glitchSend)} label="GLT" size={32} locked={isTrackPlkLocked('glitchSend')}
+    <Knob value={trackPlkValue('glitchSend', cell.glitchSend)} label="GLT" size={36} locked={isTrackPlkLocked('glitchSend')}
       onchange={v => trackPlkChange('glitchSend', v, bv => setTrackSend(ui.selectedTrack, 'glitchSend', bv))} />
   </span>
   <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-    <Knob value={trackPlkValue('granularSend', cell.granularSend)} label="GRN" size={32} locked={isTrackPlkLocked('granularSend')}
+    <Knob value={trackPlkValue('granularSend', cell.granularSend)} label="GRN" size={36} locked={isTrackPlkLocked('granularSend')}
       onchange={v => trackPlkChange('granularSend', v, bv => setTrackSend(ui.selectedTrack, 'granularSend', bv))} />
   </span>
 </div>
 
-<!-- Remove track -->
 <div class="section-divider" aria-hidden="true"></div>
-<div class="track-remove-zone">
-  <button
-    class="btn-del-track"
-    class:confirm={confirmDelete}
-    onpointerdown={handleDeleteTrack}
-    data-tip={confirmDelete ? 'Tap again to confirm' : 'Remove this track from all patterns'}
-    data-tip-ja={confirmDelete ? 'もう一度タップで確定' : 'このトラックを全パターンから削除'}
-  >{confirmDelete ? 'REMOVE TRACK' : 'REMOVE TRACK'}</button>
-</div>
+<button class="btn-danger"
+  onclick={() => { if (confirm(`Remove track ${ui.selectedTrack + 1}?`)) removeTrack(ui.selectedTrack) }}
+  data-tip="Remove this track" data-tip-ja="このトラックを削除"
+>REMOVE TRACK</button>
+
 {/if}
 
 <style>
-  /* ── Track selector bar ── */
-  .track-bar-label {
-    display: block;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    color: rgba(var(--dk-cream), 0.3);
-    margin-bottom: 4px;
-  }
-  .track-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    margin-bottom: 8px;
-  }
-  .track-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    padding: 3px 4px 2px;
-    border: 1px solid var(--dk-border);
-    background: transparent;
-    color: var(--dk-text-dim);
-    font-weight: 700;
-    cursor: pointer;
-    gap: 1px;
-  }
-  .track-num {
-    font-size: 8px;
-    opacity: 0.5;
-  }
-  .insert-dot {
-    font-size: 5px;
-    color: var(--color-cyan, #6ee);
-    margin-left: 1px;
-    vertical-align: super;
-  }
-  .track-voice {
-    font-size: 7px;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 32px;
-  }
-  .track-btn.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .track-btn.active .track-num {
-    opacity: 0.7;
-  }
-  .track-btn.muted:not(.active) {
-    opacity: 0.35;
-  }
-  .track-remove-zone {
-    margin-top: 8px;
-    padding-top: 8px;
-  }
-  .btn-del-track {
-    width: 100%;
-    border: 1px solid rgba(var(--dk-cream), 0.1);
-    background: transparent;
-    color: rgba(var(--dk-cream), 0.25);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 6px 8px;
-    cursor: pointer;
-    transition: color 80ms, border-color 80ms, background 80ms;
-  }
-  .btn-del-track:hover {
-    color: rgba(var(--dk-cream), 0.5);
-    border-color: rgba(var(--dk-cream), 0.25);
-  }
-  .btn-del-track.confirm {
-    color: var(--color-salmon);
-    border-color: var(--color-salmon);
-    background: rgba(220, 80, 80, 0.1);
-  }
   .lock-step {
     font-size: var(--dk-fs-xs);
     color: var(--color-olive);
@@ -539,7 +425,7 @@
     margin-bottom: 2px;
   }
   .mode-label {
-    font-size: 10px;
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dk-text-mid);
@@ -571,11 +457,25 @@
     left: 16px;
     background: var(--color-bg);
   }
-  /* ── Voice picker ── */
+  /* ── Voice picker (floating dropdown) ── */
+  .voice-picker-wrap {
+    position: relative;
+    z-index: 5;
+  }
+  .voice-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-fg);
+    border: 1px solid rgba(var(--dk-cream), 0.2);
+    border-top: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
   .picker-cats {
     display: flex;
     gap: 2px;
-    margin-top: 4px;
+    padding: 4px;
     flex-wrap: wrap;
   }
   .cat-btn {
@@ -583,10 +483,10 @@
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text-dim);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 6px 5px;
+    padding: 7px 6px;
     cursor: pointer;
   }
   .cat-btn.active {
@@ -595,23 +495,21 @@
     color: var(--color-bg);
   }
   .picker-list {
-    max-height: 160px;
+    max-height: 200px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    margin-top: 4px;
-    border: 1px solid rgba(var(--dk-cream), 0.1);
   }
   .picker-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
     border: none;
     border-bottom: 1px solid var(--dk-bg-faint);
     background: transparent;
     color: rgba(var(--dk-cream), 0.65);
     font-size: var(--dk-fs-md);
-    padding: 5px 6px;
+    padding: 7px 8px;
     text-align: left;
     cursor: pointer;
   }
@@ -635,7 +533,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     color: rgba(var(--dk-cream), 0.35);
-    min-width: 28px;
+    min-width: 32px;
     flex-shrink: 0;
   }
   .picker-name {
@@ -653,12 +551,12 @@
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text);
-    font-size: 11px;
+    font-size: var(--dk-fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 6px 10px;
+    padding: 8px 12px;
     cursor: pointer;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     transition: border-color 80ms;
   }
   .voice-current:hover {
@@ -668,15 +566,30 @@
     text-transform: uppercase;
   }
   .voice-current-arrow {
-    font-size: 9px;
+    font-size: 10px;
     opacity: 0.4;
   }
   /* ── Sample loader ── */
   .sample-section {
+    position: relative;
+    z-index: 4;
     margin-bottom: 8px;
     border: 1px dashed var(--dk-border);
     padding: 6px;
     transition: border-color 80ms;
+  }
+  .pool-dropdown {
+    position: absolute;
+    top: 100%;
+    left: -1px;
+    right: -1px;
+    background: var(--color-fg);
+    border: 1px solid rgba(var(--dk-cream), 0.2);
+    border-top: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    max-height: 360px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .sample-section.drop-active {
     border-color: var(--color-olive);
@@ -695,7 +608,7 @@
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 2px 8px;
+    padding: 4px 10px;
     cursor: pointer;
     flex-shrink: 0;
   }
@@ -714,7 +627,7 @@
     overflow: hidden;
   }
   .sample-error {
-    color: #e57373;
+    color: var(--color-danger);
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
@@ -727,14 +640,14 @@
   }
   .insert-fx-row {
     display: flex;
-    gap: 6px;
-    padding: 4px 0;
+    gap: 8px;
+    padding: 6px 0;
   }
   .insert-select {
     flex: 1;
-    font-size: 10px;
-    padding: 3px 4px;
-    border-radius: 4px;
+    font-size: var(--dk-fs-sm);
+    padding: 5px 6px;
+    border-radius: 0;
     border: 1px solid var(--border, #444);
     background: var(--bg-input, #1a1a1a);
     color: var(--fg, #eee);
@@ -743,38 +656,55 @@
   .knob-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 12px;
-    padding: 4px 0;
+    gap: 10px 14px;
+    padding: 6px 0;
   }
   .param-group-label {
     width: 100%;
-    font-size: 8px;
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dk-text-dim);
-    margin-top: 6px;
-    padding-bottom: 2px;
+    margin-top: 8px;
+    padding-bottom: 3px;
     border-bottom: 1px solid var(--dk-bg-hover);
     cursor: pointer;
     user-select: none;
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
   }
   .param-group-label:hover { color: var(--dk-text-mid); }
   .param-group-label.collapsed { margin-bottom: 0; }
-  .group-chevron { font-size: 7px; line-height: 1; }
+  .group-chevron { font-size: 8px; line-height: 1; }
   .section-divider {
     width: 100%;
     height: 1px;
     background: var(--dk-bg-active);
-    margin: 8px 0;
+    margin: 10px 0;
   }
   .section-label {
-    font-size: 8px;
+    font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dk-text-dim);
-    padding-bottom: 2px;
+    padding-bottom: 4px;
+  }
+  .btn-danger {
+    width: 100%;
+    padding: 6px 0;
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-danger);
+    background: transparent;
+    border: 1px solid var(--danger-border);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background 80ms, border-color 80ms;
+  }
+  .btn-danger:hover {
+    background: var(--danger-bg-hover);
+    border-color: var(--color-danger);
   }
 </style>

@@ -74,26 +74,26 @@
 
 <style>
   .section-label {
-    font-size: 8px;
+    font-size: var(--dk-fs-xs, 10px);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: rgba(237,232,220, 0.4);
-    padding-bottom: 2px;
+    padding-bottom: 4px;
   }
   .nav-section {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
   .nav-list {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    margin-top: 6px;
+    gap: 2px;
+    margin-top: 8px;
   }
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 6px;
+    gap: 8px;
+    padding: 6px 8px;
     cursor: pointer;
     transition: background 60ms;
   }
@@ -104,19 +104,19 @@
     background: rgba(237,232,220, 0.12);
   }
   .nav-color {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     flex-shrink: 0;
   }
   .nav-root {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--color-olive);
     flex-shrink: 0;
     margin: 0 -2px;
   }
   .nav-name {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     color: rgba(237,232,220, 0.85);

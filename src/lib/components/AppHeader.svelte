@@ -359,7 +359,7 @@
     letter-spacing: 0.06em;
     padding: 0 4px;
     margin-left: 4px;
-    border-radius: 3px;
+    border-radius: 0;
     border: 1px solid rgba(237,232,220,0.25);
     color: rgba(237,232,220,0.45);
     position: relative;
@@ -371,7 +371,7 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: 0;
     background: var(--color-blue);
     color: var(--color-bg);
     position: relative;
@@ -509,7 +509,7 @@
     color: rgba(237,232,220,0.9);
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(237,232,220,0.25);
-    border-radius: 2px;
+    border-radius: 0;
     padding: 0 4px;
     width: 3.5ch;
     outline: none;
@@ -762,7 +762,7 @@
     margin-top: 4px;
     background: var(--color-fg);
     border: 1px solid rgba(237,232,220,0.2);
-    border-radius: 4px;
+    border-radius: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     overflow: hidden;
   }

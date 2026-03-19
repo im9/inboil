@@ -842,23 +842,21 @@
 <style>
   .piano-roll {
     display: flex;
+    gap: 4px;
     height: 244px;
     overflow: hidden;
-    background: var(--color-surface);
-    border-bottom: 1px solid rgba(30,32,40,0.08);
-    border-left: 3px solid var(--color-olive);
-    padding-left: 5px;
-    padding-right: 8px;
+    padding: 0 8px;
   }
 
   /* ── Left spacer: aligns grid with step columns ── */
   .piano-spacer {
-    /* --head-w is defined on .step-grid and inherited via CSS custom property */
-    width: calc(var(--head-w) + 4px);
+    /* --head-w matches .track-controls in StepGrid */
+    width: var(--head-w);
     flex-shrink: 0;
     display: flex;
     align-items: stretch;
     justify-content: flex-end;
+    border-right: 1px solid rgba(30,32,40,0.10);
   }
 
   /* ── Octave buttons + keys wrapper ── */
@@ -879,7 +877,6 @@
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
-    border-right: 1px solid rgba(30,32,40,0.15);
   }
   .oct-btn:hover:not(:disabled) {
     background: var(--color-olive);
@@ -897,7 +894,6 @@
     width: 28px;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid rgba(30,32,40,0.15);
   }
   .key {
     height: calc(216px / var(--rows, 24));
@@ -907,7 +903,7 @@
     justify-content: flex-end;
     padding-right: 3px;
     background: var(--color-bg);
-    border-bottom: 1px solid rgba(30,32,40,0.07);
+    border-bottom: 1px solid rgba(30,32,40,0.06);
   }
   .key.black {
     background: var(--color-surface);
@@ -948,7 +944,7 @@
     border: 1px solid var(--color-olive);
     background: var(--color-surface);
     color: var(--color-text);
-    border-radius: 3px;
+    border-radius: 0;
     padding: 1px 0;
     text-align: center;
     cursor: pointer;

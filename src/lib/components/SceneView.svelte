@@ -1116,7 +1116,7 @@
     letter-spacing: 0.04em;
     padding: 1px 5px;
     border: 1px solid rgba(237, 232, 220, 0.3);
-    border-radius: 3px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.1);
     color: rgba(237, 232, 220, 0.8);
     cursor: pointer;
@@ -1137,7 +1137,7 @@
   .turing-bit {
     width: 8px;
     height: 8px;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.2);
     flex-shrink: 0;
   }
@@ -1175,7 +1175,7 @@
     font-size: 8px;
     font-weight: 700;
     padding: 1px 3px;
-    border-radius: 2px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.2);
     color: rgba(237, 232, 220, 0.85);
   }
@@ -1242,7 +1242,7 @@
     transform: translateY(-50%);
     width: 26px;
     height: 26px;
-    border-radius: 4px;
+    border-radius: 0;
     border: 1.5px solid rgba(30, 32, 40, 0.3);
     background: rgba(255, 255, 255, 0.85);
     color: rgba(30, 32, 40, 0.5);
