@@ -120,7 +120,7 @@
   .lbl {
     font-size: 9px;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.38);
+    color: rgba(237,232,220,0.55);
     text-transform: uppercase;
     white-space: nowrap;
     line-height: 1;

@@ -10,7 +10,8 @@ Items are not prioritized — pick based on what you're already touching.
 
 ## UI
 
-- [ ] **Dock panel UX improvements** — Preset/voice count has grown significantly (FMDrum 6 machines, 21 presets etc.). Review and improve navigation, grouping, and discoverability in DockPanel. Consider: category filtering, machine-aware preset grouping, better param layout for multi-machine voices. 16-step paging makes step-grid width predictable — opportunity to widen the dock panel and improve param/preset layout.
+- [x] **Dock panel UX improvements (phase 1)** — Panel widened to 340px, font scale bumped, knobs 32→36px, voice/pool pickers as floating dropdowns, track-bar removed, label visibility improved (0.38→0.55 opacity), group dividers strengthened, preset INIT/SAVE always visible with matched height, olive rgba tokenized. VOICE_LIST reordered (FMDrum last in drum).
+- [ ] **Dock panel UX improvements (phase 2)** — Scroll/overflow: param-heavy voices (WT, FM) push SEND/MIX off-screen. Consider: collapsible SEND/MIX section (default closed), compact knob size for sends (28px), sticky section headers, or tabbed param/send/fx sub-views.
 - [ ] **Scene toolbar label multiline support** — Scene node labels currently don't support line breaks. Allow multiline text for better readability.
 - [ ] **Scene toolbar node placement UX** — Adding nodes from the toolbar is not intuitive. Improve discoverability — e.g. clearer affordance, drag-to-place, or contextual hints.
 - [ ] **Node function UX** — Function nodes are hard to understand on first use and lack visual feedback/polish. Improve onboarding (hints, animation) and presentation. May overlap with dock panel improvements.

@@ -522,7 +522,7 @@
     color: var(--color-bg);
   }
   .picker-item.selected {
-    background: rgba(108,119,68,0.2);
+    background: var(--olive-bg);
     color: rgba(var(--dk-cream), 0.95);
   }
   .picker-item.selected .picker-cat-tag {
@@ -593,7 +593,7 @@
   }
   .sample-section.drop-active {
     border-color: var(--color-olive);
-    background: rgba(108,119,68,0.1);
+    background: var(--olive-bg-subtle);
   }
   .sample-file-row {
     display: flex;
@@ -656,7 +656,7 @@
   .knob-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 14px;
+    gap: 12px 16px;
     padding: 6px 0;
   }
   .param-group-label {
@@ -667,7 +667,7 @@
     color: var(--dk-text-dim);
     margin-top: 8px;
     padding-bottom: 3px;
-    border-bottom: 1px solid var(--dk-bg-hover);
+    border-bottom: 1px solid var(--dk-bg-active);
     cursor: pointer;
     user-select: none;
     display: flex;

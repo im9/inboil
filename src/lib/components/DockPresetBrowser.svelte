@@ -170,14 +170,12 @@
         <span class="voice-current-name">{currentPreset || 'PRESETS'}</span>
         <span class="voice-current-arrow">{presetOpen ? '▾' : '▸'}</span>
       </button>
-      {#if presetOpen}
-        <button class="btn-init-preset" onpointerdown={() => { resetToDefaults(ui.selectedTrack); presetOpen = false }}
-          data-tip="Reset to default parameters" data-tip-ja="デフォルトパラメータに戻す"
-        >INIT</button>
-        <button class="btn-save-preset" onpointerdown={startSavePreset}
-          data-tip="Save current sound as preset" data-tip-ja="現在の音色をプリセットとして保存"
-        >SAVE</button>
-      {/if}
+      <button class="btn-init-preset" onpointerdown={() => { resetToDefaults(ui.selectedTrack); presetOpen = false }}
+        data-tip="Reset to default parameters" data-tip-ja="デフォルトパラメータに戻す"
+      >INIT</button>
+      <button class="btn-save-preset" onpointerdown={startSavePreset}
+        data-tip="Save current sound as preset" data-tip-ja="現在の音色をプリセットとして保存"
+      >SAVE</button>
     </div>
     {#if presetOpen}
       {#if saveMode}
@@ -257,6 +255,7 @@
     display: flex;
     gap: 4px;
     align-items: stretch;
+    margin-bottom: 4px;
   }
   .voice-current {
     display: flex;
@@ -271,7 +270,6 @@
     letter-spacing: 0.06em;
     padding: 6px 10px;
     cursor: pointer;
-    margin-bottom: 4px;
     transition: border-color 80ms;
   }
   .voice-current:hover {
@@ -337,9 +335,9 @@
     color: rgba(var(--dk-cream), 0.8);
   }
   .picker-recent-btn.selected {
-    background: rgba(108,119,68,0.2);
+    background: var(--olive-bg);
     color: rgba(var(--dk-cream), 0.9);
-    border-color: rgba(108,119,68,0.4);
+    border-color: var(--olive-border-strong);
   }
   .picker-list {
     max-height: 160px;
@@ -371,7 +369,7 @@
     color: var(--color-bg);
   }
   .picker-item.selected {
-    background: rgba(108,119,68,0.2);
+    background: var(--olive-bg);
     color: rgba(var(--dk-cream), 0.95);
   }
   .picker-item.selected .picker-cat-tag {
@@ -393,39 +391,39 @@
     white-space: nowrap;
   }
   .btn-init-preset {
-    border: 1px solid rgba(var(--dk-cream), 0.25);
+    border: 1px solid var(--dk-border-mid);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.5);
+    color: var(--dk-text-mid);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 2px 8px;
+    padding: 6px 10px;
     cursor: pointer;
     flex-shrink: 0;
     transition: background 60ms, color 60ms;
   }
   .btn-init-preset:hover {
-    background: rgba(var(--dk-cream), 0.08);
-    color: rgba(var(--dk-cream), 0.8);
+    background: var(--dk-bg-hover);
+    color: var(--dk-text);
   }
   .btn-init-preset:active {
-    background: rgba(var(--dk-cream), 0.2);
-    color: rgba(var(--dk-cream), 0.95);
+    background: var(--dk-bg-active);
+    color: var(--dk-text);
   }
   .btn-save-preset {
-    border: 1px solid rgba(108,119,68,0.5);
+    border: 1px solid var(--olive-border-strong);
     background: transparent;
     color: var(--color-olive);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
-    padding: 2px 8px;
+    padding: 6px 10px;
     cursor: pointer;
     flex-shrink: 0;
     transition: background 60ms, color 60ms;
   }
   .btn-save-preset:hover {
-    background: rgba(108,119,68,0.15);
+    background: var(--olive-bg);
   }
   .btn-save-preset:active {
     background: var(--color-olive);
@@ -456,7 +454,7 @@
     transition: color 60ms;
   }
   .preset-del:hover {
-    color: rgba(220, 80, 80, 0.8);
+    color: var(--color-danger);
   }
   .picker-item.renaming {
     background: var(--dk-bg-hover);

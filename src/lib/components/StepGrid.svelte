@@ -325,7 +325,7 @@
 <div class="step-grid">
 {#if needsPaging}
   <div class="page-bar">
-    <div class="page-head" style="width: calc(var(--head-w) + 3px)"></div>
+    <div class="page-head" style="width: calc(var(--head-w) + 8px)"></div>
     {#each { length: totalPages } as _, p}
       <button
         class="page-btn"
@@ -660,7 +660,7 @@
     flex: 1;
     min-width: 0;
     touch-action: none;
-    padding-left: 4px;
+    padding-left: 8px;
   }
 
   /* ── Track label (expand toggle) ── */

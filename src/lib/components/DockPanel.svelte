@@ -181,7 +181,7 @@
     --dk-cream: 237,232,220;
     --dk-text: rgba(var(--dk-cream), 0.85);
     --dk-text-mid: rgba(var(--dk-cream), 0.55);
-    --dk-text-dim: rgba(var(--dk-cream), 0.4);
+    --dk-text-dim: rgba(var(--dk-cream), 0.55);
     --dk-border: rgba(var(--dk-cream), 0.15);
     --dk-border-mid: rgba(var(--dk-cream), 0.3);
     --dk-bg-hover: rgba(var(--dk-cream), 0.08);

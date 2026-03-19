@@ -3,14 +3,31 @@
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import {
     isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
-    setTrigSlide, setTrigChance, toggleMute, toggleSolo,
+    setTrigSlide, setTrigChance, setParamLock, toggleMute, toggleSolo,
   } from '../stepActions.ts'
   import { NOTE_NAMES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
 
+  // ── Column definitions ──────────────────────────────────────────
+  // 0=NOTE 1=VEL 2=DUR 3=SLD 4=CHN | 5=VOL 6=PAN | 7=VERB 8=DLY 9=GLT 10=GRN
+  const COLUMNS = ['NOTE','VEL','DUR','SLD','CHN','VOL','PAN','VERB','DLY','GLT','GRN'] as const
+  type ColId = typeof COLUMNS[number]
+  const COL_COUNT = COLUMNS.length
+
+  // ParamLock key mapping for mix/fx columns
+  const PLOCK_KEYS: Partial<Record<ColId, string>> = {
+    VOL: 'vol', PAN: 'pan',
+    VERB: 'reverbSend', DLY: 'delaySend', GLT: 'glitchSend', GRN: 'granularSend',
+  }
+
+  // Column colors for active steps
+  const COL_COLORS: Partial<Record<ColId, string>> = {
+    VOL: '#508080', PAN: '#508080',
+    VERB: '#787845', DLY: '#4472B4', GLT: '#E8A090', GRN: '#9B6BA0',
+  }
+
   // ── Cursor state ─────────────────────────────────────────────────
   let cursorRow = $state(0)
-  let cursorCol = $state(0)  // 0=NOTE 1=VEL 2=DUR 3=SLD 4=CHN
-  const COL_COUNT = 5
+  let cursorCol = $state(0)
 
   const trackId = $derived(ui.selectedTrack)
   const ph = $derived(activeCell(trackId))
@@ -34,6 +51,18 @@
   function chnLabel(c: number | undefined): string {
     if (c == null) return '---'
     return `${Math.round(c * 100)}%`
+  }
+
+  function plockLabel(trig: { paramLocks?: Record<string, number> }, key: string, colId: ColId): string {
+    const v = trig.paramLocks?.[key]
+    if (v == null) return '··'
+    if (colId === 'PAN') {
+      // -1..1 → L50..R50, C for 0
+      const pct = Math.round(v * 50)
+      if (pct === 0) return ' C '
+      return pct < 0 ? `L${Math.abs(pct).toString().padStart(2, '0')}` : `R${pct.toString().padStart(2, '0')}`
+    }
+    return String(Math.round(v * 99)).padStart(2, '0')
   }
 
   // ── Continuation detection ────────────────────────────────────────
@@ -61,7 +90,6 @@
     const noteIdx = sharp ? idx + 1 : idx
     if (noteIdx > 11) return
 
-    // Find closest octave to current note
     const currentNote = ph.trigs[cursorRow]?.note ?? 60
     const currentOct = Math.floor(currentNote / 12)
     let midi = currentOct * 12 + noteIdx
@@ -78,6 +106,7 @@
     if (e.target instanceof HTMLInputElement) return
 
     const steps = ph.steps
+    const colId = COLUMNS[cursorCol]
 
     // Navigation
     if (e.key === 'ArrowUp') {
@@ -134,8 +163,7 @@
     // Enter — toggle active
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (cursorCol === 3) {
-        // SLD column: toggle slide
+      if (colId === 'SLD') {
         const trig = ph.trigs[cursorRow]
         if (trig) setTrigSlide(trackId, cursorRow, !trig.slide)
       } else {
@@ -145,8 +173,7 @@
     }
 
     // Column-specific editing
-    if (cursorCol === 0 && !drum) {
-      // NOTE column: type note letter
+    if (colId === 'NOTE' && !drum) {
       const k = e.key.toUpperCase()
       if ('CDEFGAB'.includes(k)) {
         e.preventDefault()
@@ -166,7 +193,6 @@
         noteBuffer = ''
         return
       }
-      // Octave up/down with shift+up/down handled by arrow keys + shift
       if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
         const trig = ph.trigs[cursorRow]
@@ -179,22 +205,19 @@
       }
     }
 
-    if (cursorCol === 1) {
-      // VEL column: type digits
+    if (colId === 'VEL') {
       const d = parseInt(e.key)
       if (!isNaN(d)) {
         e.preventDefault()
         const trig = ph.trigs[cursorRow]
         if (!trig?.active) return
-        // Single digit: map 1-9 = 0.1-0.9, 0 = 1.0
         const vel = d === 0 ? 1.0 : d / 10
         setTrigVelocity(trackId, cursorRow, vel)
         return
       }
     }
 
-    if (cursorCol === 2) {
-      // DUR column: type digits
+    if (colId === 'DUR') {
       const d = parseInt(e.key)
       if (!isNaN(d)) {
         e.preventDefault()
@@ -205,8 +228,7 @@
       }
     }
 
-    if (cursorCol === 3) {
-      // SLD column: space toggles
+    if (colId === 'SLD') {
       if (e.key === ' ') {
         e.preventDefault()
         const trig = ph.trigs[cursorRow]
@@ -215,16 +237,35 @@
       }
     }
 
-    if (cursorCol === 4) {
-      // CHN column: type digits for chance
+    if (colId === 'CHN') {
       const d = parseInt(e.key)
       if (!isNaN(d)) {
         e.preventDefault()
         const trig = ph.trigs[cursorRow]
         if (!trig?.active) return
-        // 0 = 100% (undefined), 1-9 = 10%-90%
         const chance = d === 0 ? 1.0 : d / 10
         setTrigChance(trackId, cursorRow, chance)
+        return
+      }
+    }
+
+    // Mix / FX columns — digit entry for paramLock values
+    const plockKey = PLOCK_KEYS[colId]
+    if (plockKey) {
+      const d = parseInt(e.key)
+      if (!isNaN(d)) {
+        e.preventDefault()
+        const trig = ph.trigs[cursorRow]
+        if (!trig?.active) return
+        if (colId === 'PAN') {
+          // 0=center, 1-4=L10-L40, 5=center, 6-9=R10-R40
+          const pan = d === 0 || d === 5 ? 0 : d < 5 ? -d / 5 : (d - 5) / 5
+          setParamLock(trackId, cursorRow, plockKey, pan)
+        } else {
+          // 0=1.0, 1-9=0.1-0.9
+          const val = d === 0 ? 1.0 : d / 10
+          setParamLock(trackId, cursorRow, plockKey, val)
+        }
         return
       }
     }
@@ -250,8 +291,8 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="tracker-view">
-  <!-- Track selector -->
-  <div class="track-bar">
+  <!-- Left: Track list -->
+  <div class="track-sidebar">
     {#each song.patterns[ui.currentPattern].cells as c}
       {@const t = song.tracks[c.trackId]}
       {#if t}
@@ -273,18 +314,22 @@
     {/each}
   </div>
 
-  <!-- Column headers -->
-  <div class="col-headers">
-    <span class="col-h col-num">#</span>
-    <span class="col-h col-note" class:col-active={cursorCol === 0}>NOTE</span>
-    <span class="col-h col-vel" class:col-active={cursorCol === 1}>VEL</span>
-    <span class="col-h col-dur" class:col-active={cursorCol === 2}>DUR</span>
-    <span class="col-h col-sld" class:col-active={cursorCol === 3}>SLD</span>
-    <span class="col-h col-chn" class:col-active={cursorCol === 4}>CHN</span>
-  </div>
+  <!-- Right: Data grid -->
+  <div class="tracker-main">
+    <!-- Column headers -->
+    <div class="col-headers">
+      <span class="col-h col-num">#</span>
+      {#each COLUMNS as col, ci}
+        <span
+          class="col-h col-{col.toLowerCase()}"
+          class:col-active={cursorCol === ci}
+          class:col-sep={col === 'VOL' || col === 'VERB'}
+        >{col}</span>
+      {/each}
+    </div>
 
-  <!-- Step rows -->
-  <div class="tracker-grid" bind:this={gridEl}>
+    <!-- Step rows -->
+    <div class="tracker-grid" bind:this={gridEl}>
     {#each ph.trigs as trig, si}
       {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === si}
       {@const isCursor = cursorRow === si}
@@ -377,80 +422,178 @@
             ---
           {/if}
         </button>
+
+        <!-- VOL -->
+        <button
+          class="cell cell-plock cell-vol"
+          class:cursor={isCursor && cursorCol === 5}
+          onpointerdown={() => clickCell(si, 5)}
+          style:color={trig.active && trig.paramLocks?.vol != null ? COL_COLORS.VOL : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'vol', 'VOL')}
+          {:else}
+            ··
+          {/if}
+        </button>
+
+        <!-- PAN -->
+        <button
+          class="cell cell-plock cell-pan"
+          class:cursor={isCursor && cursorCol === 6}
+          onpointerdown={() => clickCell(si, 6)}
+          style:color={trig.active && trig.paramLocks?.pan != null ? COL_COLORS.PAN : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'pan', 'PAN')}
+          {:else}
+            ···
+          {/if}
+        </button>
+
+        <!-- VERB -->
+        <button
+          class="cell cell-plock cell-verb"
+          class:cursor={isCursor && cursorCol === 7}
+          onpointerdown={() => clickCell(si, 7)}
+          style:color={trig.active && trig.paramLocks?.reverbSend != null ? COL_COLORS.VERB : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'reverbSend', 'VERB')}
+          {:else}
+            ··
+          {/if}
+        </button>
+
+        <!-- DLY -->
+        <button
+          class="cell cell-plock cell-dly"
+          class:cursor={isCursor && cursorCol === 8}
+          onpointerdown={() => clickCell(si, 8)}
+          style:color={trig.active && trig.paramLocks?.delaySend != null ? COL_COLORS.DLY : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'delaySend', 'DLY')}
+          {:else}
+            ··
+          {/if}
+        </button>
+
+        <!-- GLT -->
+        <button
+          class="cell cell-plock cell-glt"
+          class:cursor={isCursor && cursorCol === 9}
+          onpointerdown={() => clickCell(si, 9)}
+          style:color={trig.active && trig.paramLocks?.glitchSend != null ? COL_COLORS.GLT : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'glitchSend', 'GLT')}
+          {:else}
+            ··
+          {/if}
+        </button>
+
+        <!-- GRN -->
+        <button
+          class="cell cell-plock cell-grn"
+          class:cursor={isCursor && cursorCol === 10}
+          onpointerdown={() => clickCell(si, 10)}
+          style:color={trig.active && trig.paramLocks?.granularSend != null ? COL_COLORS.GRN : undefined}
+        >
+          {#if trig.active}
+            {plockLabel(trig, 'granularSend', 'GRN')}
+          {:else}
+            ··
+          {/if}
+        </button>
       </div>
     {/each}
+    </div>
   </div>
 </div>
 
 <style>
   .tracker-view {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex: 1;
     overflow: hidden;
     background: var(--color-fg);
     color: rgba(237,232,220,0.55);
   }
 
-  /* ── Track selector bar ── */
-  .track-bar {
+  /* ── Track sidebar (left) ── */
+  .track-sidebar {
     display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 4px 8px;
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    flex-direction: column;
     flex-shrink: 0;
-    overflow-x: auto;
+    width: 148px;
+    border-right: 1px solid rgba(237,232,220,0.08);
+    overflow-y: auto;
+    padding: 4px 0;
   }
 
   .track-btn {
     display: flex;
     align-items: center;
-    gap: 3px;
-    padding: 0 2px;
-    flex-shrink: 0;
-    border-bottom: 2px solid transparent;
+    gap: 2px;
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-bottom: 1px solid rgba(237,232,220,0.05);
     transition: background 40ms;
   }
   .track-btn.selected {
-    border-bottom-color: var(--color-olive);
-    background: rgba(237,232,220,0.04);
+    border-color: var(--color-olive);
+    background: rgba(120,120,69,0.12);
   }
+  .track-btn:last-child { border-bottom-color: transparent; }
   .track-btn.muted { opacity: 0.4; }
   .track-btn.soloed .track-label { color: var(--color-olive); }
 
   .track-label {
     border: none;
     background: transparent;
-    color: rgba(237,232,220,0.35);
+    color: rgba(237,232,220,0.40);
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     cursor: pointer;
-    padding: 4px 4px;
-    max-width: 64px;
+    padding: 2px 4px;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
-  .track-btn.selected .track-label { color: rgba(237,232,220,0.85); }
+  .track-btn.selected .track-label { color: rgba(237,232,220,0.90); }
 
   .track-act {
     border: 1px solid rgba(237,232,220,0.15);
     background: transparent;
-    color: rgba(237,232,220,0.25);
-    width: 16px;
-    height: 14px;
-    font-size: 7px;
+    color: rgba(237,232,220,0.30);
+    width: 18px;
+    height: 18px;
+    font-size: 8px;
     font-weight: 700;
     font-family: var(--font-data);
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
   .track-act:active { background: rgba(237,232,220,0.10); }
   .track-act.active { color: var(--color-olive); border-color: var(--color-olive); }
+
+  /* ── Data area (right) ── */
+  .tracker-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
 
   /* ── Column headers ── */
   .col-headers {
@@ -470,6 +613,7 @@
     text-align: center;
   }
   .col-h.col-active { color: var(--color-olive); }
+  .col-h.col-sep { margin-left: 6px; }
 
   .col-num  { width: 28px; flex-shrink: 0; }
   .col-note { width: 48px; flex-shrink: 0; }
@@ -477,12 +621,19 @@
   .col-dur  { width: 36px; flex-shrink: 0; }
   .col-sld  { width: 36px; flex-shrink: 0; }
   .col-chn  { width: 40px; flex-shrink: 0; }
+  .col-vol  { width: 32px; flex-shrink: 0; }
+  .col-pan  { width: 32px; flex-shrink: 0; }
+  .col-verb { width: 36px; flex-shrink: 0; }
+  .col-dly  { width: 32px; flex-shrink: 0; }
+  .col-glt  { width: 32px; flex-shrink: 0; }
+  .col-grn  { width: 32px; flex-shrink: 0; }
 
   /* ── Grid ── */
   .tracker-grid {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-top: 1px;
   }
 
   /* ── Row ── */
@@ -520,7 +671,8 @@
   .cell-vel,
   .cell-dur,
   .cell-sld,
-  .cell-chn {
+  .cell-chn,
+  .cell-plock {
     border: 1px solid transparent;
     background: transparent;
     color: inherit;
@@ -534,6 +686,12 @@
   .cell-dur  { width: 36px; flex-shrink: 0; }
   .cell-sld  { width: 36px; flex-shrink: 0; }
   .cell-chn  { width: 40px; flex-shrink: 0; }
+  .cell-vol  { width: 32px; flex-shrink: 0; margin-left: 6px; }
+  .cell-pan  { width: 32px; flex-shrink: 0; }
+  .cell-verb { width: 36px; flex-shrink: 0; margin-left: 6px; }
+  .cell-dly  { width: 32px; flex-shrink: 0; }
+  .cell-glt  { width: 32px; flex-shrink: 0; }
+  .cell-grn  { width: 32px; flex-shrink: 0; }
 
   /* Active step styling */
   .tracker-row.active .cell-note { color: var(--color-olive); }
@@ -541,6 +699,7 @@
   .tracker-row.active .cell-dur  { color: rgba(237,232,220,0.55); }
   .tracker-row.active .cell-sld  { color: var(--color-blue); }
   .tracker-row.active .cell-chn  { color: rgba(237,232,220,0.50); }
+  .tracker-row.active .cell-plock { color: rgba(237,232,220,0.35); }
 
   /* Cursor cell */
   .cell.cursor {
@@ -550,8 +709,20 @@
 
   /* ── Mobile ── */
   @media (max-width: 639px) {
-    .track-bar { padding: 2px 4px; }
-    .track-btn { padding: 3px 6px; font-size: 8px; }
+    .tracker-view { flex-direction: column; }
+    .track-sidebar {
+      flex-direction: row;
+      width: auto;
+      border-right: none;
+      border-bottom: 1px solid rgba(237,232,220,0.08);
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 2px 4px;
+    }
+    .track-btn { border-bottom: none; border-right: 1px solid rgba(237,232,220,0.05); padding: 2px 4px; }
+    .track-btn:last-child { border-right-color: transparent; }
+    .track-label { font-size: 9px; max-width: 64px; }
+
     .col-h { font-size: 7px; }
     .cell { font-size: 10px; }
     .cell-num { font-size: 8px; }
@@ -562,5 +733,11 @@
     .col-dur, .cell-dur   { width: 32px; }
     .col-sld, .cell-sld   { width: 32px; }
     .col-chn, .cell-chn   { width: 36px; }
+    .col-vol, .cell-vol   { width: 28px; }
+    .col-pan, .cell-pan   { width: 28px; }
+    .col-verb, .cell-verb { width: 28px; }
+    .col-dly, .cell-dly   { width: 28px; }
+    .col-glt, .cell-glt   { width: 28px; }
+    .col-grn, .cell-grn   { width: 28px; }
   }
 </style>

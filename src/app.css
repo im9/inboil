@@ -21,6 +21,12 @@
   --danger-border: rgba(248,113,113,0.40);
   --danger-bg-hover: rgba(248,113,113,0.15);
 
+  /* Olive accent overlays (base: 120,120,69 = --color-olive) */
+  --olive-bg-subtle: rgba(120,120,69,0.08);
+  --olive-bg:        rgba(120,120,69,0.15);
+  --olive-border:    rgba(120,120,69,0.30);
+  --olive-border-strong: rgba(120,120,69,0.40);
+
   --font-display: "Bebas Neue", "Anton", sans-serif;
   --font-data:    "JetBrains Mono", "Fira Code", monospace;
 }
