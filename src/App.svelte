@@ -295,8 +295,30 @@
   const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf')
 
   // ── Keyboard routing (ADR 115) ─────────────────────────────────
+
+  // Sheet layer (Phase 4): registered only when a sheet is open.
+  // Handles Escape, cell-level copy/paste, and consumes Delete to prevent
+  // pattern-level clear from firing through the app layer.
+  function sheetKeyHandler(e: KeyboardEvent): boolean | void {
+    if (e.code === 'Escape') { e.preventDefault(); closeAllSheets(); return true }
+    // Cell-level copy/paste (not in select brush mode — that uses its own selection copy)
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && ui.brushMode !== 'select') {
+      if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack); return true }
+      if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack); return true }
+    }
+    // Consume Delete/Backspace so it doesn't fall through to pattern clear in app layer
+    if (e.code === 'Backspace' || e.code === 'Delete') { return true }
+  }
+
+  $effect(() => {
+    if (hasSheet) {
+      registerKeyLayer('sheet', sheetKeyHandler)
+      return () => unregisterKeyLayer('sheet')
+    }
+  })
+
+  // App layer: global fallback (play/stop, undo/redo, pattern-level copy/paste/delete)
   function appKeyHandler(e: KeyboardEvent): boolean | void {
-    if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return true }
     if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play(); return true }
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo(); return true }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo(); return true }
@@ -304,19 +326,15 @@
     // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block copy/paste.
     const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || Object.keys(ui.selectedSceneLabels).length > 0
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0 || hasSceneEdgeOrLabel
-    const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
-    // Copy/paste: pattern-level (matrix focus or no sheet) vs cell-level (sheet open)
+    // Pattern-level copy/paste (skip when scene edge/label is selected — scene layer handles those)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-      if (inMatrix || (!hasSheet && !hasSceneEdgeOrLabel)) {
+      if (!hasSceneEdgeOrLabel) {
         if (e.code === 'KeyC') { patternCopy(ui.currentPattern); return true }
         if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern); return true }
-      } else if (hasSheet && ui.brushMode !== 'select') {
-        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack); return true }
-        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack); return true }
       }
     }
-    // Delete/Backspace: clear pattern (matrix focus or no sheet, but never when scene nodes/edges/labels are selected)
-    if (!hasSceneSelection && (inMatrix || !hasSheet) && (e.code === 'Backspace' || e.code === 'Delete')) {
+    // Delete/Backspace: clear pattern (never when scene nodes/edges/labels are selected)
+    if (!hasSceneSelection && (e.code === 'Backspace' || e.code === 'Delete')) {
       e.preventDefault(); patternClear(ui.currentPattern); return true
     }
   }

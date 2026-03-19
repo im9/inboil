@@ -52,6 +52,7 @@
       onpointerdown={(e: PointerEvent) => e.stopPropagation()}
       onkeydown={(e: KeyboardEvent) => {
         if (e.key === 'Escape') {
+          e.preventDefault()
           sceneUpdateLabel(label.id, (e.currentTarget as HTMLTextAreaElement).value)
           editingLabelId = null
         }

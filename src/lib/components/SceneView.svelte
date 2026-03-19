@@ -487,8 +487,6 @@
   }
 
   function handleSceneKeys(e: KeyboardEvent): boolean | void {
-    // Scene shouldn't handle keys when sheet is open
-    if (ui.patternSheet) return
     // Delete/Backspace: allow from anywhere when scene nodes/edges/labels are selected
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
       || ui.selectedSceneEdge || Object.keys(ui.selectedSceneLabels).length > 0
@@ -509,11 +507,7 @@
       }
       return true
     }
-    // Remaining shortcuts only apply when focus is inside the scene view
-    // (MatrixView auto-selects scene nodes but focus stays on matrix grid)
-    const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
-    if (inMatrix) return
-    // Space key → pan mode (only when scene view has focus)
+    // Space key → pan mode
     if (e.code === 'Space' && !e.repeat) {
       spaceHeld = true
       // Don't consume — let app layer handle play/stop
