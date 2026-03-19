@@ -67,12 +67,12 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
 | 052 | Scene Free-Floating Labels | Implemented | Canvas text labels independent of nodes |
-| 053 | Scene Automation Node | Implemented | Graphical curve editor, decorator-based automation, snapshot/restore, mini-curve visualization |
+| 053 | Scene Automation Node | Implemented | *Curve automation removed (ADR 093) — replaced by per-step paramLocks. Snapshot/restore preserved for fn nodes* |
 | 054 | Overlay Sheet Model | Implemented | Pattern/FX/EQ as overlay sheets over SceneView |
 | 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
 | 059 | Scene Multi-Select | Implemented | Rectangle select, group drag, alignment tools, partial auto-layout, multi-copy/paste |
-| 066 | Scene Node Decorators | Implemented | Snap-attach function nodes to patterns as decorators, edge branching = probabilistic routing |
-| 069 | Dock Panel Decorator Editor | Implemented | Full-size Knob/toggle editing in DockPanel, Add dropdown, SceneNodePopup read-only labels |
+| 066 | Scene Node Decorators | Implemented | *Decorators migrated to standalone function nodes (ADR 093). Snap-attach removed, fn nodes wired via edges* |
+| 069 | Dock Panel Decorator Editor | Implemented | *Decorator editor removed (ADR 093). Function nodes edited via DockPanel when selected in scene* |
 | 070 | Scene Navigator | Implemented | Pattern list in DockPanel, tap-to-select, BPM-synced playback pulse, context-aware display for EQ/Master/FX sheets |
 | 078 | Generative Scene Nodes | Implemented | Generative nodes (Quantizer/Tonnetz/Turing Machine), write+live modes, Freeze, presets+seed, DockPanel editing |
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |
@@ -92,7 +92,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 047 | FX / EQ as Main Views | Superseded | Replaced by 054 (overlay sheets) |
 | 057 | Pattern Toolbar | Implemented | RAND/KEY/VKBD in pattern sheet, PerfBar merged into AppHeader sub-header |
 | 085 | System Sidebar Tabs & REC Button | Implemented | PROJECT/SETTINGS tabs in sidebar, REC ● button in sub-header, MIDI export in PROJECT tab |
-| 092 | DockPanel Tab — Scene & Tracks | Implemented | TRACKS/SCENE tab switcher in DockPanel, decorators + generative nodes accessible from pattern sheet |
+| 092 | DockPanel Tab — Scene & Tracks | Implemented | TRACKS/SCENE tab switcher in DockPanel, generative nodes accessible from pattern sheet |
 | 095 | Mobile UI Redesign | Implemented | PO-style calculator main view, MobileMatrixView, header redesign, swipe nav, overlay animations |
 | 098 | Mobile Landscape Orientation | Proposed | Landscape-specific layout for mobile (split from ADR 095) |
 
@@ -127,7 +127,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 039 | Solo Button | Implemented | Per-track additive solo via DockPanel / MobileParamOverlay |
 | 097 | Mobile Punch-In Effects | Implemented | Kaoss Pad UI with 4 tabs, DJFilter routing, accelerometer/gyroscope, Canvas visualizer |
 | 087 | Looper / Tape Node | Proposed | OP-1 Field style tape looper as scene function node, 4-track overdub, BPM-synced |
-| 093 | Cross-Node Automation | Proposed | Automation decorators that span multiple chained pattern nodes, gradual parameter transitions |
+| 093 | Decorator Migration & Step Automation | Implemented | Per-step paramLocks (worklet interpolation), decorator→function node migration, curve automation removed, DockPanel simplified |
 | 094 | Interactive Docs & Playground | Proposed | Tutorial JSON snapshots, SceneCanvas sandbox, in-app onboarding (split from ADR 072) |
 
 ## Data / Infrastructure

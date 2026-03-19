@@ -256,14 +256,22 @@ describe('song round-trip: scene graph', () => {
     expect(patNodes.length).toBeGreaterThan(0)
   })
 
-  it('preserves scene node decorators', () => {
+  it('migrates legacy decorators to fn nodes on restore', () => {
+    // Simulate old saved data with decorators (pre-ADR 093)
     const song = makeDefaultSong()
-    const pNode = song.scene.nodes.find(n => n.type === 'pattern')
+    const raw = JSON.parse(JSON.stringify(song))
+    const pNode = raw.scene.nodes.find((n: any) => n.type === 'pattern')
     if (pNode) {
       pNode.decorators = [{ type: 'transpose', params: { semitones: 5 } }]
-      const r = roundTrip(song)
+      const r = restoreSongPure(raw)
+      // Decorator should be migrated to a fn node
+      const fnNodes = r.song.scene.nodes.filter(n => n.type === 'transpose')
+      expect(fnNodes.length).toBeGreaterThanOrEqual(1)
+      const migrated = fnNodes.find(n => n.fnParams?.transpose?.semitones === 5)
+      expect(migrated).toBeDefined()
+      // Pattern node should not have decorators
       const rNode = r.song.scene.nodes.find(n => n.id === pNode.id)
-      expect(rNode?.decorators?.[0]).toEqual({ type: 'transpose', params: { semitones: 5 } })
+      expect(rNode?.decorators).toBeUndefined()
     }
   })
 

@@ -43,38 +43,43 @@ export function soloPatternIndex(): number | null {
   return idx >= 0 ? idx : null
 }
 
-// ── Decorators & generative chains ──────────────────────────────────
+// ── Function nodes & generative chains (ADR 093) ────────────────────
 
-/** Apply decorators attached to a pattern node before playback (ADR 062) */
-function applyDecorators(node: SceneNode): void {
-  for (const dec of node.decorators ?? []) {
-    if (dec.type === 'transpose') {
-      if (dec.params.mode === 1) {
-        playback.sceneAbsoluteKey = dec.params.key ?? 0
-      } else {
-        playback.sceneTranspose += (dec.params.semitones ?? 0)
-      }
-    } else if (dec.type === 'tempo') {
-      bumpSongVersion()
-      song.bpm = dec.params.bpm ?? 120
-    } else if (dec.type === 'repeat') {
-      playback.sceneRepeatLeft = (dec.params.count ?? 2) - 1
-    } else if (dec.type === 'fx') {
-      fxPad.verb.on     = !!dec.params.verb
-      fxPad.delay.on    = !!dec.params.delay
-      fxPad.glitch.on   = !!dec.params.glitch
-      fxPad.granular.on = !!dec.params.granular
-      // ADR 076: apply per-decorator flavour overrides
-      if (dec.flavourOverrides) {
-        if (dec.flavourOverrides.verb)     fxFlavours.verb     = dec.flavourOverrides.verb
-        if (dec.flavourOverrides.delay)    fxFlavours.delay    = dec.flavourOverrides.delay
-        if (dec.flavourOverrides.glitch)   fxFlavours.glitch   = dec.flavourOverrides.glitch
-        if (dec.flavourOverrides.granular) fxFlavours.granular = dec.flavourOverrides.granular
-      }
-    } else if (dec.type === 'automation' && dec.automationParams) {
-      playback.activeAutomations.push(dec.automationParams)
+/** Apply a function node's effect during scene traversal (pass-through) */
+function applyFunctionNode(node: SceneNode): void {
+  const fp = node.fnParams
+  if (!fp) return
+  if (fp.transpose) {
+    if (fp.transpose.mode === 'abs') {
+      playback.sceneAbsoluteKey = fp.transpose.key ?? 0
+    } else {
+      playback.sceneTranspose += fp.transpose.semitones
     }
   }
+  if (fp.tempo) {
+    bumpSongVersion()
+    song.bpm = fp.tempo.bpm
+  }
+  if (fp.repeat) {
+    playback.sceneRepeatLeft = fp.repeat.count - 1
+  }
+  if (fp.fx) {
+    fxPad.verb.on     = fp.fx.verb
+    fxPad.delay.on    = fp.fx.delay
+    fxPad.glitch.on   = fp.fx.glitch
+    fxPad.granular.on = fp.fx.granular
+    if (fp.fx.flavourOverrides) {
+      if (fp.fx.flavourOverrides.verb)     fxFlavours.verb     = fp.fx.flavourOverrides.verb
+      if (fp.fx.flavourOverrides.delay)    fxFlavours.delay    = fp.fx.flavourOverrides.delay
+      if (fp.fx.flavourOverrides.glitch)   fxFlavours.glitch   = fp.fx.flavourOverrides.glitch
+      if (fp.fx.flavourOverrides.granular) fxFlavours.granular = fp.fx.flavourOverrides.granular
+    }
+  }
+}
+
+/** True if node type is a pass-through function node */
+function isFnNode(node: SceneNode): boolean {
+  return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx'
 }
 
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
@@ -149,16 +154,16 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     restoreAutomationSnapshot(playback.automationSnapshot)
     playback.automationSnapshot = null
   }
-  playback.activeAutomations = []
   if (node.type === 'pattern') {
     playback.automationSnapshot = snapshotAutomationTargets()
-    applyDecorators(node)
     applyLiveGenerative(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
+  // Function nodes: apply effect and follow outgoing edge (pass-through)
+  if (isFnNode(node)) applyFunctionNode(node)
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
     const pick = edges[Math.floor(Math.random() * edges.length)]
@@ -182,9 +187,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       if (playback.automationSnapshot) {
         restoreAutomationSnapshot(playback.automationSnapshot)
       }
-      playback.activeAutomations = []
       playback.automationSnapshot = snapshotAutomationTargets()
-      applyDecorators(node)
       applyLiveGenerative(node)
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
@@ -193,6 +196,9 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       playback.playingPattern = idx
       return { advanced: true, patternIndex: idx }
     }
+
+    // Function nodes: apply effect and continue traversal (pass-through)
+    if (isFnNode(node)) applyFunctionNode(node)
 
     const outEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
     if (outEdges.length === 0) {

@@ -18,7 +18,7 @@
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
-  import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, applyAutomations, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
+  import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
@@ -104,45 +104,56 @@
     return () => cancelAnimationFrame(rafId)
   })
 
-  // ── Loop-mode decorator application ──────────────────────────────
-  // Apply scene decorators (transpose, FX) to the current pattern in loop mode
-  // so SCENE tab edits are heard without switching to scene playback.
+  // ── Loop-mode function node application (ADR 093) ───────────────
+  // Apply fn nodes (transpose, FX) connected to the current pattern in loop mode
+  // so edits are heard without switching to scene playback.
   // Skips tempo (user controls BPM directly) and repeat (meaningless in loop).
-  function applyLoopDecorators(): void {
+  function applyLoopFnNodes(): void {
     const pat = song.patterns[ui.currentPattern]
     if (!pat) return
-    const node = song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === pat.id)
-    if (!node) {
+    const patNode = song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === pat.id)
+    if (!patNode) {
       perf.rootNote = song.rootNote
       return
     }
+    // Walk backward through incoming fn node edges
     let transpose = 0
     let absKey: number | null = null
-    for (const dec of node.decorators ?? []) {
-      if (dec.type === 'transpose') {
-        if (dec.params.mode === 1) absKey = dec.params.key ?? 0
-        else transpose += (dec.params.semitones ?? 0)
-      } else if (dec.type === 'fx') {
-        fxPad.verb.on = !!dec.params.verb
-        fxPad.delay.on = !!dec.params.delay
-        fxPad.glitch.on = !!dec.params.glitch
-        fxPad.granular.on = !!dec.params.granular
-        if (dec.flavourOverrides) {
-          if (dec.flavourOverrides.verb)     fxFlavours.verb     = dec.flavourOverrides.verb
-          if (dec.flavourOverrides.delay)    fxFlavours.delay    = dec.flavourOverrides.delay
-          if (dec.flavourOverrides.glitch)   fxFlavours.glitch   = dec.flavourOverrides.glitch
-          if (dec.flavourOverrides.granular) fxFlavours.granular = dec.flavourOverrides.granular
+    const visited = new Set<string>()
+    let currentId = patNode.id
+    while (true) {
+      const inEdge = song.scene.edges.find(e => e.to === currentId)
+      if (!inEdge) break
+      const src = song.scene.nodes.find(n => n.id === inEdge.from)
+      if (!src?.fnParams || visited.has(src.id)) break
+      visited.add(src.id)
+      const fp = src.fnParams
+      if (fp.transpose) {
+        if (fp.transpose.mode === 'abs') absKey = fp.transpose.key ?? 0
+        else transpose += fp.transpose.semitones
+      }
+      if (fp.fx) {
+        fxPad.verb.on = fp.fx.verb
+        fxPad.delay.on = fp.fx.delay
+        fxPad.glitch.on = fp.fx.glitch
+        fxPad.granular.on = fp.fx.granular
+        if (fp.fx.flavourOverrides) {
+          if (fp.fx.flavourOverrides.verb)     fxFlavours.verb     = fp.fx.flavourOverrides.verb
+          if (fp.fx.flavourOverrides.delay)    fxFlavours.delay    = fp.fx.flavourOverrides.delay
+          if (fp.fx.flavourOverrides.glitch)   fxFlavours.glitch   = fp.fx.flavourOverrides.glitch
+          if (fp.fx.flavourOverrides.granular) fxFlavours.granular = fp.fx.flavourOverrides.granular
         }
       }
+      currentId = src.id
     }
     const raw = absKey ?? (song.rootNote + transpose)
-    perf.rootNote = ((raw % 12) + 12) % 12  // clamp to 0–11 for SCALE_TEMPLATES
+    perf.rootNote = ((raw % 12) + 12) % 12
   }
 
-  // Reactively apply decorators when playing in loop mode
+  // Reactively apply fn nodes when playing in loop mode
   $effect(() => {
     if (playback.mode !== 'loop' || !playback.playing) return
-    applyLoopDecorators()
+    applyLoopFnNodes()
   })
 
   let soloSent: string | null = null // tracks which solo node was last sent to engine
@@ -151,14 +162,6 @@
     playback.playheads = heads
     // Broadcast playhead to connected guests
     if (session.role === 'host') sendPlayhead()
-    // Apply automation curves on every step (ADR 053)
-    if (playback.mode === 'scene' && playback.activeAutomations.length > 0 && playback.playingPattern != null) {
-      const pat = song.patterns[playback.playingPattern]
-      if (pat) {
-        const totalSteps = Math.max(1, ...pat.cells.map(c => c.steps))
-        applyAutomations(heads[0], totalSteps)
-      }
-    }
     // Solo node — only loop when scene has reached the target node
     if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
       if (cycle && playback.soloNodeId !== soloSent) {
@@ -175,7 +178,7 @@
         const next = playback.queuedPattern
         playback.playingPattern = next
         playback.queuedPattern = null
-        applyLoopDecorators()
+        applyLoopFnNodes()
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, next)
       }
       return
@@ -227,7 +230,7 @@
       perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else {
-      applyLoopDecorators()
+      applyLoopFnNodes()
       playback.playingPattern = ui.currentPattern
       playback.queuedPattern = null
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
@@ -257,7 +260,6 @@
       restoreAutomationSnapshot(playback.automationSnapshot)
       playback.automationSnapshot = null
     }
-    playback.activeAutomations = []
     playback.mode = 'loop'
     playback.playingPattern = null
     playback.queuedPattern = null

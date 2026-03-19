@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, SceneDecorator, VoiceId } from './types.ts'
+import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, FnParams, VoiceId } from './types.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
 
@@ -410,74 +410,68 @@ export const FACTORY_COUNT = FACTORY.length
  * shimmer    normal      tape dly    EQ sweep     stutter      fade out
  */
 export function makeDefaultScene(patterns: Pattern[]): Scene {
-  type Seq = {
-    patIdx: number; x: number; y: number
-    decorators?: SceneDecorator[]
-  }
+  // ADR 093: function nodes for repeat/FX, pattern nodes are pure
+  type Seq = { patIdx: number; x: number; y: number; fnBefore?: FnParams[] }
 
   const seq: Seq[] = [
     // 0 — HAZE ×3: shimmer reverb + tape delay (atmospheric intro)
-    { patIdx: 0, x: 0.06, y: 0.42, decorators: [
-      { type: 'repeat', params: { count: 3 } },
-      { type: 'fx', params: { verb: 1, delay: 1, glitch: 0, granular: 0 },
-        flavourOverrides: { verb: 'shimmer', delay: 'tape' } },
+    { patIdx: 0, x: 0.16, y: 0.42, fnBefore: [
+      { repeat: { count: 3 } },
+      { fx: { verb: true, delay: true, glitch: false, granular: false, flavourOverrides: { verb: 'shimmer', delay: 'tape' } } },
     ] },
-    // 1 — VELVET ×2: main groove, no FX overrides
-    { patIdx: 1, x: 0.22, y: 0.35, decorators: [
-      { type: 'repeat', params: { count: 2 } },
-    ] },
+    // 1 — VELVET ×2: main groove
+    { patIdx: 1, x: 0.32, y: 0.35, fnBefore: [{ repeat: { count: 2 } }] },
     // 2 — DRIFT ×3: tape delay for spacious breakdown
-    { patIdx: 2, x: 0.38, y: 0.45, decorators: [
-      { type: 'repeat', params: { count: 3 } },
-      { type: 'fx', params: { verb: 1, delay: 1, glitch: 0, granular: 0 },
-        flavourOverrides: { delay: 'tape' } },
+    { patIdx: 2, x: 0.48, y: 0.45, fnBefore: [
+      { repeat: { count: 3 } },
+      { fx: { verb: true, delay: true, glitch: false, granular: false, flavourOverrides: { delay: 'tape' } } },
     ] },
-    // 3 — VELVET ×2: EQ mid sweep builds energy
-    { patIdx: 1, x: 0.54, y: 0.35, decorators: [
-      { type: 'repeat', params: { count: 2 } },
-      { type: 'automation', params: {},
-        automationParams: {
-          target: { kind: 'eq', band: 'eqMid', param: 'gain' },
-          points: [{ t: 0, v: 0.5 }, { t: 0.6, v: 0.7 }, { t: 1, v: 0.85 }],
-          interpolation: 'smooth',
-        } },
-    ] },
+    // 3 — VELVET ×2
+    { patIdx: 1, x: 0.64, y: 0.35, fnBefore: [{ repeat: { count: 2 } }] },
     // 4 — BLOOM ×2: stutter glitch for climax energy
-    { patIdx: 3, x: 0.70, y: 0.45, decorators: [
-      { type: 'repeat', params: { count: 2 } },
-      { type: 'fx', params: { verb: 1, delay: 0, glitch: 1, granular: 0 },
-        flavourOverrides: { glitch: 'stutter' } },
+    { patIdx: 3, x: 0.80, y: 0.45, fnBefore: [
+      { repeat: { count: 2 } },
+      { fx: { verb: true, delay: false, glitch: true, granular: false, flavourOverrides: { glitch: 'stutter' } } },
     ] },
-    // 5 — VELVET ×2: master volume fade-out (ending)
-    { patIdx: 1, x: 0.86, y: 0.35, decorators: [
-      { type: 'repeat', params: { count: 2 } },
-      { type: 'automation', params: {},
-        automationParams: {
-          target: { kind: 'global', param: 'masterVolume' },
-          points: [{ t: 0, v: 1.0 }, { t: 0.8, v: 0.3 }, { t: 1, v: 0 }],
-          interpolation: 'smooth',
-        } },
-    ] },
+    // 5 — VELVET ×2: ending
+    { patIdx: 1, x: 0.94, y: 0.35, fnBefore: [{ repeat: { count: 2 } }] },
   ]
 
-  const nodes: SceneNode[] = seq.map((s, i) => ({
-    id: `sn_${String(i).padStart(2, '0')}`,
-    type: 'pattern' as const,
-    x: s.x,
-    y: s.y,
-    root: i === 0,
-    patternId: patterns[s.patIdx].id,
-    decorators: s.decorators,
-  }))
-
+  const nodes: SceneNode[] = []
   const edges: SceneEdge[] = []
-  for (let i = 0; i < nodes.length - 1; i++) {
-    edges.push({
-      id: `se_${String(i).padStart(2, '0')}`,
-      from: nodes[i].id,
-      to: nodes[i + 1].id,
-      order: 0,
-    })
+  let fnIdx = 0
+  let prevPatId: string | null = null
+
+  for (let i = 0; i < seq.length; i++) {
+    const s = seq[i]
+    const patId = `sn_${String(i).padStart(2, '0')}`
+    // Create fn nodes before the pattern node
+    const fnIds: string[] = []
+    for (const fp of s.fnBefore ?? []) {
+      const fnId = `fn_${String(fnIdx++).padStart(2, '0')}`
+      const fnType = fp.repeat ? 'repeat' : fp.tempo ? 'tempo' : fp.transpose ? 'transpose' : 'fx'
+      nodes.push({ id: fnId, type: fnType, x: s.x - 0.04 * (s.fnBefore!.length - fnIds.length), y: s.y, root: false, fnParams: fp })
+      fnIds.push(fnId)
+    }
+    // Chain fn nodes together
+    for (let j = 0; j < fnIds.length - 1; j++) {
+      edges.push({ id: `fe_${fnIdx++}`, from: fnIds[j], to: fnIds[j + 1], order: 0 })
+    }
+    // Last fn node → pattern node
+    if (fnIds.length > 0) {
+      edges.push({ id: `fe_${fnIdx++}`, from: fnIds[fnIds.length - 1], to: patId, order: 0 })
+    }
+    // Pattern node
+    const isFirst = i === 0
+    nodes.push({ id: patId, type: 'pattern', x: s.x, y: s.y, root: isFirst && fnIds.length === 0, patternId: patterns[s.patIdx].id })
+    // If first node and has fn nodes, root is the first fn node
+    if (isFirst && fnIds.length > 0) nodes.find(n => n.id === fnIds[0])!.root = true
+    // Edge from previous pattern to this chain head
+    if (prevPatId) {
+      const chainHead = fnIds.length > 0 ? fnIds[0] : patId
+      edges.push({ id: `se_${String(i).padStart(2, '0')}`, from: prevPatId, to: chainHead, order: 0 })
+    }
+    prevPatId = patId
   }
 
   return { name: 'Main', nodes, edges, labels: [] }

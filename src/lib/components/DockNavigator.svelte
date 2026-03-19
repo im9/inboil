@@ -1,10 +1,7 @@
 <script lang="ts">
   import { song, ui, playback } from '../state.svelte.ts'
   import type { SceneNode } from '../types.ts'
-  import { decoratorLabel } from '../sceneGeometry.ts'
   import { PATTERN_COLORS } from '../constants.ts'
-
-  let { filterAutomation = false }: { filterAutomation?: boolean } = $props()
 
   // BFS from root to order patterns by playback traversal; unreachable nodes appended at end
   type NavEntry = { node: SceneNode; depth: number }
@@ -66,23 +63,6 @@
           <span class="nav-color" style="background: {PATTERN_COLORS[pat.color ?? 0]}"></span>
           {#if node.root}<span class="nav-root">★</span>{/if}
           <span class="nav-name">{pat.name}</span>
-          {#if filterAutomation}
-            {#if (node.decorators ?? []).some(d => d.type !== 'automation')}
-              <span class="nav-decs">
-                {#each (node.decorators ?? []).filter(d => d.type !== 'automation') as dec}
-                  <span class="nav-dec-tag">{decoratorLabel(dec)}</span>
-                {/each}
-              </span>
-            {/if}
-          {:else}
-            {#if node.decorators?.length}
-              <span class="nav-decs">
-                {#each node.decorators as dec}
-                  <span class="nav-dec-tag">{decoratorLabel(dec)}</span>
-                {/each}
-              </span>
-            {/if}
-          {/if}
         </div>
       {/if}
     {/each}
@@ -157,29 +137,6 @@
     0%, 100% { background: rgba(237,232,220, 0.12); }
     50% { background: rgba(237,232,220, 0.2); }
   }
-  .nav-decs {
-    display: flex;
-    gap: 3px;
-    margin-left: auto;
-    flex-shrink: 0;
-  }
-  .nav-dec-tag {
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: rgba(237,232,220, 0.4);
-    background: rgba(237,232,220, 0.06);
-    border: none;
-    border-radius: 2px;
-    padding: 1px 3px;
-    white-space: nowrap;
-  }
-  .dec-empty {
-    font-size: 10px;
-    color: rgba(237,232,220, 0.4);
-    padding: 12px 0;
-    font-style: italic;
-  }
   @media (max-width: 639px) {
     .nav-item {
       padding: 8px 8px;
@@ -191,10 +148,6 @@
     }
     .nav-name {
       font-size: 11px;
-    }
-    .nav-dec-tag {
-      font-size: 8px;
-      padding: 2px 4px;
     }
   }
 </style>

@@ -2,7 +2,8 @@
   import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
+  import type { Trig } from '../types.ts'
   import PianoRoll from './PianoRoll.svelte'
 
   // ── Step paging (hardware-style 16-step pages) ──
@@ -90,15 +91,46 @@
 
   onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
 
-  // ── Velocity drag state ──
+  // ── Velocity / automation row modes (ADR 093) ──
+  type VelMode = 'VEL' | 'CHNC' | 'VOL' | 'PAN' | 'VERB' | 'DLY' | 'GLT' | 'GRN'
+  const VEL_MODES: VelMode[] = ['VEL', 'CHNC', 'VOL', 'PAN', 'VERB', 'DLY', 'GLT', 'GRN']
+  const VEL_MODE_COLORS: Record<VelMode, string> = {
+    VEL: '', CHNC: '#5b7dba', VOL: '#e8a848', PAN: '#a87de8',
+    VERB: '#48b8e8', DLY: '#48e8a8', GLT: '#e85848', GRN: '#8bc34a',
+  }
+  const VEL_MODE_KEYS: Record<VelMode, string> = {
+    VEL: '', CHNC: '', VOL: 'vol', PAN: 'pan',
+    VERB: 'reverbSend', DLY: 'delaySend', GLT: 'glitchSend', GRN: 'granularSend',
+  }
+
   let velContainer: HTMLDivElement | undefined = $state(undefined)
   let velDragging = $state(false)
-  let chanceMode = $state(false)
+  let velMode: VelMode = $state('VEL')
+  const modeColor = $derived(VEL_MODE_COLORS[velMode])
+  const isPlkMode = $derived(velMode !== 'VEL' && velMode !== 'CHNC')
+
+  function velNextMode() {
+    const i = VEL_MODES.indexOf(velMode)
+    velMode = VEL_MODES[(i + 1) % VEL_MODES.length]
+  }
+
+  /** Read the displayed value (0–1) for a trig in the current mode */
+  function velReadValue(trig: Trig): number {
+    switch (velMode) {
+      case 'VEL': return trig.velocity
+      case 'CHNC': return trig.chance ?? 1
+      case 'PAN': return (trig.paramLocks?.pan ?? 0) * 0.5 + 0.5  // -1..1 → 0..1
+      default: {
+        const key = VEL_MODE_KEYS[velMode]
+        return key ? (trig.paramLocks?.[key] ?? 0) : 0
+      }
+    }
+  }
 
   function velStartDrag(e: PointerEvent, trackId: number, idx: number) {
     e.preventDefault()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    if (e.shiftKey) chanceMode = !chanceMode
+    if (e.shiftKey) velNextMode()
     velDragging = true
     velApply(e, trackId, idx)
   }
@@ -122,10 +154,15 @@
     if (!cell) return
     const rect = cell.getBoundingClientRect()
     const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
-    if (chanceMode) {
-      setTrigChance(trackId, idx, v)
-    } else {
+    if (velMode === 'VEL') {
       setTrigVelocity(trackId, idx, v)
+    } else if (velMode === 'CHNC') {
+      setTrigChance(trackId, idx, v)
+    } else if (velMode === 'PAN') {
+      setParamLock(trackId, idx, 'pan', v * 2 - 1)  // 0..1 → -1..1
+    } else {
+      const key = VEL_MODE_KEYS[velMode]
+      if (key) setParamLock(trackId, idx, key, v)
     }
   }
 
@@ -431,37 +468,38 @@
       >
         <div class="track-head">
           <div class="vel-label">
-            <span class="vel-name" class:chance-active={chanceMode} role="button" tabindex="0"
-              onpointerdown={() => { chanceMode = !chanceMode }}
-              data-tip={chanceMode ? "Chance — tap to switch to VEL" : "Velocity — tap to switch to CHNC"}
-              data-tip-ja={chanceMode ? "チャンス — タップでVELに切替" : "ベロシティ — タップでCHNCに切替"}
-            >{chanceMode ? 'CHNC' : 'VEL'}</span>
+            <span class="vel-name" role="button" tabindex="0"
+              style={modeColor ? `color: ${modeColor}; border-color: ${modeColor}` : ''}
+              onpointerdown={() => velNextMode()}
+              data-tip="Tap to cycle mode: VEL → CHNC → VOL → PAN → VERB → DLY → GLT → GRN"
+              data-tip-ja="タップでモード切替: VEL → CHNC → VOL → PAN → VERB → DLY → GLT → GRN"
+            >{velMode}</span>
           </div>
         </div>
-        <div class="vel-bars" class:chance-mode={chanceMode} class:mounting={velMounting} style="--steps: {velTrigs.length}"
-          data-tip={chanceMode ? "Shift+drag to set step probability" : "Drag up/down to adjust velocity"}
-          data-tip-ja={chanceMode ? "Shift+ドラッグで発火確率を調整" : "上下ドラッグでベロシティを調整"}
+        <div class="vel-bars" class:plk-mode={isPlkMode} class:chance-mode={velMode === 'CHNC'} class:mounting={velMounting} style="--steps: {velTrigs.length}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
+          data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
+          data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
         >
           {#each velTrigs as trig, i}
             {@const stepIdx = pageStart + i}
             {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
             {@const isActive = trig.active || shrinking.has(`${trackId}-${stepIdx}`)}
-            {@const barHeight = chanceMode && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100}
+            {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
             {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
             <div
               class="vel-cell"
               role="slider"
               tabindex="-1"
-              aria-valuenow={chanceMode ? (trig.chance ?? 1) : trig.velocity}
+              aria-valuenow={velReadValue(trig)}
               onpointerdown={e => velStartDrag(e, trackId, stepIdx)}
             >
               <div
                 class="vel-fill"
-                class:active={isActive}
+                class:active={isPlkMode ? barHeight > 0 : isActive}
                 class:growing={growing.has(`${trackId}-${stepIdx}`)}
                 class:shrinking={shrinking.has(`${trackId}-${stepIdx}`)}
                 class:playhead={isPlayhead}
-                style="height: {barHeight}%{!chanceMode && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
+                style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
               ></div>
             </div>
           {/each}
@@ -759,10 +797,7 @@
   .vel-name:active {
     opacity: 0.6;
   }
-  .vel-name.chance-active {
-    color: #5b7dba;
-    border-color: #5b7dba;
-  }
+  /* mode color applied via inline style */
   .btn-scale {
     width: 28px;
     height: 20px;
@@ -860,9 +895,13 @@
     filter: brightness(1.45);
   }
 
-  /* ── Chance mode (Shift+drag) ── */
+  /* ── Chance mode ── */
   .vel-bars.chance-mode .vel-fill.active {
     background: #5b7dba;
+  }
+  /* ── P-Lock automation mode (ADR 093) ── */
+  .vel-bars.plk-mode .vel-fill.active {
+    background: var(--plk-color, var(--color-olive));
   }
   .chance-dot {
     position: absolute;

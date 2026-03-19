@@ -178,21 +178,33 @@ export interface TonnetzParams {
   voicing: 'close' | 'spread' | 'drop2'
 }
 
+/** Function node types (ADR 093) */
+export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx'
+
+/** Function node parameters — type-specific (ADR 093) */
+export interface FnParams {
+  transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
+  tempo?: { bpm: number }
+  repeat?: { count: number }
+  fx?: { verb: boolean; delay: boolean; glitch: boolean; granular: boolean; flavourOverrides?: Partial<import('./constants.ts').FxFlavours> }
+}
+
 /** Legacy function node types — kept for migration only */
 type LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
 
-/** Node on the scene canvas (ADR 044, updated ADR 078) */
+/** Node on the scene canvas (ADR 044, updated ADR 093) */
 export interface SceneNode {
   id: string
-  type: 'pattern' | 'generative' | LegacyFnType
+  type: 'pattern' | 'generative' | 'probability' | FnNodeType | LegacyFnType
   x: number               // canvas position (normalized 0–1)
   y: number
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
-  params?: Record<string, number>
-  automationParams?: AutomationParams  // for type === 'automation' (legacy)
-  decorators?: SceneDecorator[]  // function decorators attached to pattern nodes (ADR 062)
-  generative?: GenerativeConfig  // for type === 'generative' (ADR 078)
+  params?: Record<string, number>       // legacy fn node params (migration only)
+  automationParams?: AutomationParams   // legacy automation (migration only)
+  fnParams?: FnParams                   // function node params (ADR 093)
+  decorators?: SceneDecorator[]         // deprecated (ADR 093) — migrated to fn nodes
+  generative?: GenerativeConfig         // for type === 'generative' (ADR 078)
 }
 
 /** Directed edge between nodes (ADR 044) */

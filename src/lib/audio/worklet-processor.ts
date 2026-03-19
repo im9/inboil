@@ -216,6 +216,22 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private muteGains      = new Float64Array(MAX_VOICES).fill(1.0)
   private panGainsL      = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)
   private panGainsR      = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)
+  // Per-track paramLock interpolation (ADR 093 Phase 1)
+  private plkVol         = new Float64Array(MAX_VOICES).fill(0.8)   // current interpolated volume
+  private plkVolTgt      = new Float64Array(MAX_VOICES).fill(0.8)   // target volume
+  private plkPanL        = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)  // current pan L gain
+  private plkPanLTgt     = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)  // target pan L
+  private plkPanR        = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)  // current pan R gain
+  private plkPanRTgt     = new Float64Array(MAX_VOICES).fill(Math.SQRT1_2)  // target pan R
+  private plkVerb        = new Float64Array(MAX_VOICES)  // current reverb send
+  private plkVerbTgt     = new Float64Array(MAX_VOICES)  // target reverb send
+  private plkDly         = new Float64Array(MAX_VOICES)  // current delay send
+  private plkDlyTgt      = new Float64Array(MAX_VOICES)  // target delay send
+  private plkGlt         = new Float64Array(MAX_VOICES)  // current glitch send
+  private plkGltTgt      = new Float64Array(MAX_VOICES)  // target glitch send
+  private plkGrn         = new Float64Array(MAX_VOICES)  // current granular send
+  private plkGrnTgt      = new Float64Array(MAX_VOICES)  // target granular send
+  private plkRamp        = new Float64Array(MAX_VOICES)  // ramp coefficient per track (1/samplesPerStep)
   // Sidechain source flags (ADR 064) — true = triggers ducker & bypasses ducking
   private scSource       = new Uint8Array(MAX_VOICES)  // 0 or 1
   // Arpeggiator — per-track state (melodic tracks only)
@@ -407,6 +423,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             const angle = ((p.tracks[i].pan ?? 0) + 1) * 0.25 * Math.PI
             this.panGainsL[i] = Math.cos(angle)
             this.panGainsR[i] = Math.sin(angle)
+            // Initialize paramLock interpolation from track baselines (ADR 093)
+            const vol = p.tracks[i].volume ?? 0.8
+            this.plkVol[i] = vol; this.plkVolTgt[i] = vol
+            this.plkPanL[i] = this.panGainsL[i]; this.plkPanLTgt[i] = this.panGainsL[i]
+            this.plkPanR[i] = this.panGainsR[i]; this.plkPanRTgt[i] = this.panGainsR[i]
+            const vs = p.tracks[i].reverbSend ?? 0
+            const ds = p.tracks[i].delaySend ?? 0
+            const gs = p.tracks[i].glitchSend ?? 0
+            const grs = p.tracks[i].granularSend ?? 0
+            this.plkVerb[i] = vs; this.plkVerbTgt[i] = vs
+            this.plkDly[i] = ds; this.plkDlyTgt[i] = ds
+            this.plkGlt[i] = gs; this.plkGltTgt[i] = gs
+            this.plkGrn[i] = grs; this.plkGrnTgt[i] = grs
+            this.plkRamp[i] = 1.0 / (this.baseSPS * (p.tracks[i].scale ?? 2))
           }
           this.reverb.setSize(p.fx.reverb.size)
           this.reverb.setDamp(p.fx.reverb.damp)
@@ -626,6 +656,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     }
     if (this.voices[t] && trig?.active && trig.paramLocks) {
       for (const k in trig.paramLocks) this.voices[t]!.setParam(k, trig.paramLocks[k])
+    }
+    // Track-level paramLock targets (ADR 093) — update target only if key present (hold otherwise)
+    const pl = trig?.paramLocks
+    if (pl) {
+      if (pl.vol != null) this.plkVolTgt[t] = pl.vol
+      if (pl.pan != null) {
+        const a = (pl.pan + 1) * 0.25 * Math.PI
+        this.plkPanLTgt[t] = Math.cos(a)
+        this.plkPanRTgt[t] = Math.sin(a)
+      }
+      if (pl.reverbSend != null) this.plkVerbTgt[t] = pl.reverbSend
+      if (pl.delaySend != null) this.plkDlyTgt[t] = pl.delaySend
+      if (pl.glitchSend != null) this.plkGltTgt[t] = pl.glitchSend
+      if (pl.granularSend != null) this.plkGrnTgt[t] = pl.granularSend
     }
 
     // Was the previous note's gate still open?
@@ -853,7 +897,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.muteGains[t] < 0.0001 && track?.muted) continue
           const voice = this.voices[t]
           if (!voice) continue
-          const gain = this.muteGains[t] * (track?.volume ?? 0.8)
+          // Smooth paramLock interpolation (ADR 093) — ramp toward targets per sample
+          const rc = this.plkRamp[t]
+          this.plkVol[t]  += (this.plkVolTgt[t]  - this.plkVol[t])  * rc
+          this.plkPanL[t] += (this.plkPanLTgt[t] - this.plkPanL[t]) * rc
+          this.plkPanR[t] += (this.plkPanRTgt[t] - this.plkPanR[t]) * rc
+          this.plkVerb[t] += (this.plkVerbTgt[t] - this.plkVerb[t]) * rc
+          this.plkDly[t]  += (this.plkDlyTgt[t]  - this.plkDly[t])  * rc
+          this.plkGlt[t]  += (this.plkGltTgt[t]  - this.plkGlt[t])  * rc
+          this.plkGrn[t]  += (this.plkGrnTgt[t]  - this.plkGrn[t])  * rc
+          const gain = this.muteGains[t] * this.plkVol[t]
           let sL: number, sR: number
           if (voice.tickStereo) {
             voice.tickStereo(this._stereoTmp)
@@ -870,20 +923,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             sL = io[0]; sR = io[1]
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
-          else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
+          else { restL += sL * this.plkPanL[t]; restR += sR * this.plkPanR[t] }
           const sendMono = (sL + sR) * 0.5
-          reverbIn   += sendMono * (track?.reverbSend   ?? 0)
-          delayIn    += sendMono * (track?.delaySend    ?? 0)
-          glitchIn   += sendMono * (track?.glitchSend   ?? 0)
-          granularIn += sendMono * (track?.granularSend ?? 0)
+          reverbIn   += sendMono * this.plkVerb[t]
+          delayIn    += sendMono * this.plkDly[t]
+          glitchIn   += sendMono * this.plkGlt[t]
+          granularIn += sendMono * this.plkGrn[t]
         }
       } else {
         // Not playing — still tick voices for triggerNote audition
         for (let t = 0; t < this.activeCount; t++) {
-          const track = this.tracks[t]
           const voice = this.voices[t]
           if (!voice) continue
-          const vol = track?.volume ?? 0.8
+          const vol = this.plkVol[t]
           let sL: number, sR: number
           if (voice.tickStereo) {
             voice.tickStereo(this._stereoTmp)
@@ -901,9 +953,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             sL = io[0]; sR = io[1]
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
-          else { restL += sL * this.panGainsL[t]; restR += sR * this.panGainsR[t] }
-          reverbIn   += (sL + sR) * 0.5 * (track?.reverbSend   ?? 0)
-          delayIn    += (sL + sR) * 0.5 * (track?.delaySend    ?? 0)
+          else { restL += sL * this.plkPanL[t]; restR += sR * this.plkPanR[t] }
+          const sendMono = (sL + sR) * 0.5
+          reverbIn   += sendMono * this.plkVerb[t]
+          delayIn    += sendMono * this.plkDly[t]
+          glitchIn   += sendMono * this.plkGlt[t]
+          granularIn += sendMono * this.plkGrn[t]
         }
       }
 

@@ -17,6 +17,7 @@ export type {
   VoiceId, BrushMode, ChordShape,
   Trig, CellInsertFx, CellSampleRef, Cell, ChainFx, Pattern, Section, Track, Effects,
   SceneDecorator, AutomationPoint, AutomationTarget, AutomationParams, AutomationSnapshot,
+  FnNodeType, FnParams,
   GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams,
   SceneNode, SceneEdge, SceneLabel, Scene, Song,
   MidiDevice, SampleMeta, Lang,
@@ -25,7 +26,7 @@ export type {
 import type {
   BrushMode, ChordShape,
   Cell, Pattern, Song,
-  AutomationParams, AutomationSnapshot,
+  AutomationSnapshot,
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
 import { showToast } from './toast.svelte.ts'
@@ -170,8 +171,6 @@ export const playback = $state({
   playingPattern: null as number | null,
   // Pattern queue: next pattern to play at cycle boundary (loop mode)
   queuedPattern: null as number | null,
-  // ADR 053: active automation curves during scene playback
-  activeAutomations: [] as AutomationParams[],
   automationSnapshot: null as AutomationSnapshot | null,
 })
 
@@ -191,8 +190,6 @@ export const ui = $state<{
   selectedStep: number | null
   soloTracks: Set<number>
   mobileOverlay: boolean
-  editingAutomationDecorator: { nodeId: string; decoratorIndex: number } | null
-  editingAutomationInline: { nodeId: string; decoratorIndex: number } | null
   focusSceneNodeId: string | null
   dockTab: 'tracks' | 'scene'
   brushMode: BrushMode
@@ -214,8 +211,6 @@ export const ui = $state<{
   selectedStep: null,
   soloTracks: new Set<number>(),
   mobileOverlay: false,
-  editingAutomationDecorator: null,
-  editingAutomationInline: null,
   focusSceneNodeId: null,
   dockTab: 'tracks' as const,
   brushMode: 'draw' as BrushMode,
@@ -450,8 +445,6 @@ export function factoryReset(): void {
   ui.mobileOverlay = false
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
-  ui.editingAutomationDecorator = null
-  ui.editingAutomationInline = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote
@@ -480,7 +473,6 @@ export function factoryReset(): void {
   if (playback.automationSnapshot) {
     restoreAutomationSnapshot(playback.automationSnapshot)
   }
-  playback.activeAutomations = []
   playback.automationSnapshot = null
   playback.soloNodeId = null
   // Reset project
@@ -506,7 +498,7 @@ export {
 } from './scenePlayback.ts'
 
 // Automation
-export { restoreAutomationSnapshot, applyAutomations } from './automation.ts'
+export { restoreAutomationSnapshot } from './automation.ts'
 import { restoreAutomationSnapshot } from './automation.ts'
 
 // Randomize

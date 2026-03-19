@@ -1,8 +1,7 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
-  import type { AutomationPoint } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, FN_HALF_W, FN_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -20,62 +19,6 @@
 
   let canvasEl = $state<HTMLCanvasElement>() as HTMLCanvasElement
   let animFrameId: number | null = null
-
-  /** Draw a mini automation curve with playhead dot */
-  function drawMiniCurve(
-    ctx: CanvasRenderingContext2D,
-    points: AutomationPoint[],
-    interpolation: string,
-    x: number, y: number, w: number, h: number,
-    progress: number,
-  ) {
-    if (points.length < 2) return
-
-    // Background
-    ctx.fillStyle = 'rgba(30, 32, 40, 0.08)'
-    ctx.beginPath()
-    ctx.roundRect(x, y, w, h, 2)
-    ctx.fill()
-
-    // Draw curve
-    ctx.strokeStyle = 'rgba(120, 120, 69, 0.7)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let i = 0; i <= 40; i++) {
-      const t = i / 40
-      const v = evalCurve(points, t, interpolation)
-      const px = x + t * w
-      const py = y + (1 - v) * h
-      if (i === 0) ctx.moveTo(px, py)
-      else ctx.lineTo(px, py)
-    }
-    ctx.stroke()
-
-    // Playhead dot
-    const dotV = evalCurve(points, progress, interpolation)
-    const dotX = x + progress * w
-    const dotY = y + (1 - dotV) * h
-    ctx.fillStyle = 'rgba(120, 120, 69, 1)'
-    ctx.beginPath()
-    ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  /** Evaluate automation curve value at t */
-  function evalCurve(points: AutomationPoint[], t: number, interpolation: string): number {
-    if (points.length === 0) return 0.5
-    if (t <= points[0].t) return points[0].v
-    if (t >= points[points.length - 1].t) return points[points.length - 1].v
-    let i = 0
-    while (i < points.length - 1 && points[i + 1].t <= t) i++
-    const p0 = points[i], p1 = points[i + 1]
-    const segT = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t)
-    if (interpolation === 'smooth') {
-      const s = segT * segT * (3 - 2 * segT)
-      return p0.v + (p1.v - p0.v) * s
-    }
-    return p0.v + (p1.v - p0.v) * segT
-  }
 
   function draw() {
     if (!canvasEl) { animFrameId = requestAnimationFrame(draw); return }
@@ -212,33 +155,6 @@
           ctx.roundRect(bx, by, barW * progress, barH, 1)
           ctx.fill()
 
-          // Mini automation curves below pattern node (ADR 053 Phase 4)
-          if (playback.activeAutomations.length > 0) {
-            const curveW = barW
-            const curveH = 14
-            const curveY = by + barH + 3
-            for (let ai = 0; ai < playback.activeAutomations.length; ai++) {
-              const auto = playback.activeAutomations[ai]
-              const cy0 = curveY + ai * (curveH + 2)
-              drawMiniCurve(ctx, auto.points, auto.interpolation, bx, cy0, curveW, curveH, progress)
-            }
-          }
-        }
-      }
-
-      // Highlight active automation nodes
-      for (const auto of playback.activeAutomations) {
-        for (const n of nodes) {
-          if (n.type === 'automation' && n.automationParams === auto) {
-            const np = toPixel(n.x, n.y, WORLD_W, WORLD_H)
-            ctx.strokeStyle = 'rgba(120, 120, 69, 0.6)'
-            ctx.lineWidth = 1.5
-            ctx.setLineDash([3, 3])
-            ctx.beginPath()
-            ctx.roundRect(np.x - FN_HALF_W - 2, np.y - FN_HALF_H - 2, (FN_HALF_W + 2) * 2, (FN_HALF_H + 2) * 2, 14)
-            ctx.stroke()
-            ctx.setLineDash([])
-          }
         }
       }
     }

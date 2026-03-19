@@ -150,8 +150,8 @@
       title: L === 'ja' ? 'シーンビュー' : 'SCENE VIEW',
       docsUrl: '/docs/scene/nodes/',
       body: L === 'ja'
-        ? 'ノードグラフで曲構成。エッジで再生順を定義\nルートから開始、分岐ランダム、末端で停止\nノード: Pattern (マトリクスからドラッグ) / Generative (右クリック)\nGenerative: Turing Machine / Quantizer / Tonnetz\nデコレーター (Transpose/Tempo/Repeat/FX/Automation): ドックの Add から追加'
-        : 'Node graph for arrangement. Edges define playback order\nStarts at root, random at forks, stops at terminals\nNodes: Pattern (drag from matrix) / Generative (right-click)\nGenerative: Turing Machine / Quantizer / Tonnetz\nDecorators (Transpose/Tempo/Repeat/FX/Automation): add from Dock',
+        ? 'ノードグラフで曲構成。エッジで再生順を定義\nルートから開始、分岐ランダム、末端で停止\nノード: Pattern (マトリクスからドラッグ) / Generative (右クリック)\nGenerative: Turing Machine / Quantizer / Tonnetz\nFunction nodes (Transpose/Tempo/Repeat/FX): バブルメニューから追加'
+        : 'Node graph for arrangement. Edges define playback order\nStarts at root, random at forks, stops at terminals\nNodes: Pattern (drag from matrix) / Generative (right-click)\nGenerative: Turing Machine / Quantizer / Tonnetz\nFunction nodes (Transpose/Tempo/Repeat/FX): add from bubble menu',
     },
     // ── 5: PERFORMANCE ──
     {

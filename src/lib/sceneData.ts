@@ -1,19 +1,18 @@
 /**
- * Pure data transformation functions for scene graph (ADR 062).
+ * Pure data transformation functions for scene graph (ADR 062, updated ADR 093).
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 
-import type { SceneNode, SceneEdge, Scene, SceneDecorator } from './types.ts'
+import type { SceneNode, SceneEdge, Scene, SceneDecorator, FnParams, FnNodeType } from './types.ts'
 
 // ── Clone helpers ──
 
-function cloneDecorator(d: SceneDecorator): SceneDecorator {
-  const clone: SceneDecorator = { type: d.type, params: { ...d.params } }
-  if (d.automationParams) {
-    const ap = d.automationParams
-    clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
-  }
-  if (d.flavourOverrides) clone.flavourOverrides = { ...d.flavourOverrides }
+function cloneFnParams(fp: FnParams): FnParams {
+  const clone: FnParams = {}
+  if (fp.transpose) clone.transpose = { ...fp.transpose }
+  if (fp.tempo) clone.tempo = { ...fp.tempo }
+  if (fp.repeat) clone.repeat = { ...fp.repeat }
+  if (fp.fx) clone.fx = { ...fp.fx, ...(fp.fx.flavourOverrides ? { flavourOverrides: { ...fp.fx.flavourOverrides } } : {}) }
   return clone
 }
 
@@ -21,8 +20,8 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
   const clone: SceneNode = {
     ...n,
     ...(n.params ? { params: { ...n.params } } : {}),
-    decorators: (n.decorators ?? []).map(cloneDecorator),
   }
+  if (n.fnParams) clone.fnParams = cloneFnParams(n.fnParams)
   if (n.automationParams) {
     const ap = n.automationParams
     clone.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
@@ -39,6 +38,8 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
       if (Array.isArray(p[k])) cp[k] = [...(p[k] as unknown[])]
     }
   }
+  // Strip legacy decorator field after migration
+  delete clone.decorators
   return clone
 }
 
@@ -52,18 +53,23 @@ export function cloneScene(sc: Scene): Scene {
 }
 
 /** Restore a scene from saved data, filling in defaults for missing fields.
- *  Auto-migrates legacy function nodes to decorators and purges orphans (ADR 078). */
+ *  Auto-migrates decorators to function nodes and legacy fn node formats (ADR 093). */
 export function restoreScene(src: Scene | undefined): Scene {
   if (!src) return { name: 'Main', nodes: [], edges: [], labels: [] }
-  let nodes = src.nodes.map(cloneSceneNode)
+  // Clone nodes preserving decorators (migration will strip them)
+  let nodes = src.nodes.map(n => {
+    const clone = cloneSceneNode(n)
+    if (n.decorators?.length) clone.decorators = n.decorators.map(d => ({ ...d, params: { ...d.params } }))
+    return clone
+  })
   let edges = src.edges.map(e => ({ ...e }))
-  // ADR 078: auto-migrate legacy function nodes
-  if (hasMigratableFnNodes(nodes, edges)) {
-    const m = migrateFnToDecorators(nodes, edges)
-    nodes = m.nodes; edges = m.edges
-  }
-  // ADR 078: purge any remaining standalone legacy nodes
-  const p = purgeStandaloneFnNodes(nodes, edges)
+  // ADR 093: migrate decorators on pattern nodes → standalone function nodes
+  const dm = migrateDecoratorsToFnNodes(nodes, edges)
+  nodes = dm.nodes; edges = dm.edges
+  // ADR 093: migrate legacy fn nodes (params → fnParams)
+  migrateLegacyFnParams(nodes)
+  // Remove orphan automation/probability nodes
+  const p = purgeOrphanFnNodes(nodes, edges)
   nodes = p.nodes; edges = p.edges
   return {
     name: src.name,
@@ -73,77 +79,126 @@ export function restoreScene(src: Scene | undefined): Scene {
   }
 }
 
-// ── Migration (ADR 062 Phase 4) ──
+// ── Migration (ADR 093) ──
 
-const LEGACY_FN_TYPES = new Set(['transpose', 'tempo', 'repeat', 'probability', 'fx', 'automation'])
+const FN_NODE_TYPES = new Set<string>(['transpose', 'tempo', 'repeat', 'fx'])
 
-function isLegacyFnNode(node: SceneNode): boolean {
-  return LEGACY_FN_TYPES.has(node.type)
-}
-
-/** Check if a scene has function nodes in edge chains that can be migrated to decorators */
-export function hasMigratableFnNodes(nodes: SceneNode[], edges: SceneEdge[]): boolean {
-  for (const fn of nodes) {
-    if (!isLegacyFnNode(fn) || fn.type === 'probability') continue
-    const outEdges = edges.filter(e => e.from === fn.id)
-    if (outEdges.length !== 1) continue
-    const target = nodes.find(n => n.id === outEdges[0].to)
-    if (target?.type === 'pattern') return true
+/** Convert decorator params to typed FnParams */
+function decoratorToFnParams(dec: SceneDecorator): FnParams | null {
+  const p = dec.params
+  switch (dec.type) {
+    case 'transpose': return { transpose: { semitones: p.semitones ?? 0, mode: p.mode === 1 ? 'abs' : 'rel', key: p.key } }
+    case 'tempo': return { tempo: { bpm: p.bpm ?? 120 } }
+    case 'repeat': return { repeat: { count: p.count ?? 2 } }
+    case 'fx': return { fx: { verb: !!p.verb, delay: !!p.delay, glitch: !!p.glitch, granular: !!p.granular, flavourOverrides: dec.flavourOverrides } }
+    case 'automation': return null  // dropped (ADR 093 — replaced by per-step paramLocks)
   }
-  return false
 }
 
-/** Migrate edge-chain function nodes to decorators (pure, mutates in place).
- *  Returns the number of nodes converted and the mutated arrays. */
-export function migrateFnToDecorators(
+/** Convert legacy fn node params (Record<string, number>) to typed FnParams */
+function legacyParamsToFnParams(type: string, params: Record<string, number>): FnParams | null {
+  switch (type) {
+    case 'transpose': return { transpose: { semitones: params.semitones ?? 0, mode: params.mode === 1 ? 'abs' : 'rel', key: params.key } }
+    case 'tempo': return { tempo: { bpm: params.bpm ?? 120 } }
+    case 'repeat': return { repeat: { count: params.count ?? 2 } }
+    case 'fx': return { fx: { verb: !!params.verb, delay: !!params.delay, glitch: !!params.glitch, granular: !!params.granular } }
+    default: return null  // automation, probability — not convertible
+  }
+}
+
+let _fnIdCounter = 0
+
+/** Migrate decorators on pattern nodes to standalone function nodes (ADR 093).
+ *  For each decorator, creates a fn node wired before the pattern node. */
+export function migrateDecoratorsToFnNodes(
   nodes: SceneNode[],
   edges: SceneEdge[],
 ): { converted: number; nodes: SceneNode[]; edges: SceneEdge[] } {
   let converted = 0
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const fn of nodes) {
-      if (!isLegacyFnNode(fn) || fn.type === 'probability') continue
-      const outEdges = edges.filter(e => e.from === fn.id)
-      const inEdges = edges.filter(e => e.to === fn.id)
-      if (outEdges.length !== 1) continue
-      const targetNode = nodes.find(n => n.id === outEdges[0].to)
-      if (!targetNode || targetNode.type !== 'pattern') continue
-      const decType = fn.type as SceneDecorator['type']
-      const dec: SceneDecorator = { type: decType, params: { ...(fn.params ?? {}) } }
-      if (fn.type === 'automation' && fn.automationParams) {
-        const ap = fn.automationParams
-        dec.automationParams = { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation }
+  const newNodes: SceneNode[] = []
+  const newEdges: SceneEdge[] = []
+
+  for (const node of nodes) {
+    if (!node.decorators?.length) continue
+
+    // Build chain of fn nodes from decorators (order preserved)
+    const fnChain: SceneNode[] = []
+    for (const dec of node.decorators) {
+      const fp = decoratorToFnParams(dec)
+      if (!fp) continue  // skip automation decorators
+      const fnNode: SceneNode = {
+        id: `fn_mig_${++_fnIdCounter}`,
+        type: dec.type as FnNodeType,
+        x: node.x - 0.06 * (fnChain.length + 1),
+        y: node.y,
+        root: false,
+        fnParams: fp,
       }
-      targetNode.decorators ??= []
-      targetNode.decorators.push(dec)
-      for (const ie of inEdges) {
-        ie.to = targetNode.id
-      }
-      edges = edges.filter(e => e.from !== fn.id)
-      nodes = nodes.filter(n => n.id !== fn.id)
+      fnChain.push(fnNode)
       converted++
-      changed = true
-      break
     }
+
+    if (fnChain.length > 0) {
+      // Rewire incoming edges → first fn node in chain
+      const headId = fnChain[0].id
+      for (const e of edges) {
+        if (e.to === node.id) e.to = headId
+      }
+      // Chain fn nodes together
+      for (let i = 0; i < fnChain.length - 1; i++) {
+        newEdges.push({ id: `e_mig_${++_fnIdCounter}`, from: fnChain[i].id, to: fnChain[i + 1].id, order: 0 })
+      }
+      // Last fn node → pattern node
+      newEdges.push({ id: `e_mig_${++_fnIdCounter}`, from: fnChain[fnChain.length - 1].id, to: node.id, order: 0 })
+      newNodes.push(...fnChain)
+    }
+
+    // Clear decorators from pattern node
+    delete node.decorators
   }
-  return { converted, nodes, edges }
+
+  return {
+    converted,
+    nodes: [...nodes, ...newNodes],
+    edges: [...edges, ...newEdges],
+  }
 }
 
-/** Remove all remaining standalone legacy function nodes (ADR 078 consolidation).
- *  Orphan fn nodes that couldn't be migrated are removed with a warning. */
-export function purgeStandaloneFnNodes(
+/** Migrate legacy fn nodes that use params → fnParams format */
+function migrateLegacyFnParams(nodes: SceneNode[]): void {
+  for (const n of nodes) {
+    if (n.fnParams) continue  // already migrated
+    if (!FN_NODE_TYPES.has(n.type)) continue
+    if (!n.params) continue
+    const fp = legacyParamsToFnParams(n.type, n.params)
+    if (fp) {
+      n.fnParams = fp
+      delete n.params
+      delete n.automationParams
+    }
+  }
+}
+
+/** Remove orphaned automation/probability nodes and dead-end fn nodes */
+export function purgeOrphanFnNodes(
   nodes: SceneNode[],
   edges: SceneEdge[],
 ): { removed: number; nodes: SceneNode[]; edges: SceneEdge[] } {
   const toRemove = new Set<string>()
   for (const n of nodes) {
-    if (isLegacyFnNode(n)) toRemove.add(n.id)
+    // Remove legacy automation nodes (no longer supported)
+    if (n.type === 'automation') {
+      toRemove.add(n.id)
+      continue
+    }
+    // Remove fn nodes with no outgoing edges (dead ends)
+    if (FN_NODE_TYPES.has(n.type) && !edges.some(e => e.from === n.id)) {
+      toRemove.add(n.id)
+    }
   }
   if (toRemove.size === 0) return { removed: 0, nodes, edges }
   if (typeof console !== 'undefined') {
-    console.warn(`[ADR 078] Removing ${toRemove.size} orphan legacy node(s):`, [...toRemove])
+    console.warn(`[ADR 093] Removing ${toRemove.size} orphan node(s):`, [...toRemove])
   }
   edges = edges.filter(e => !toRemove.has(e.from) && !toRemove.has(e.to))
   nodes = nodes.filter(n => !toRemove.has(n.id))

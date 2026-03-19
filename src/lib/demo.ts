@@ -7,7 +7,7 @@ import { makeTrig, TRACK_DEFAULTS, makeEmptyPattern, makeTrack, PATTERN_POOL_SIZ
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { defaultVoiceParams } from './paramDefs.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
-import type { Cell, Song, VoiceId, SceneNode, SceneDecorator } from './types.ts'
+import type { Cell, Song, VoiceId, SceneNode } from './types.ts'
 
 type FDef = {
   name: string; bpm: number; key: number
@@ -139,20 +139,21 @@ export function makeDemoSong(): Song {
     patterns.push(makeEmptyPattern(i))
   }
 
-  // Scene graph: Verse → Chorus → (Break | Break2) → Verse
-  const fxDec: SceneDecorator = { type: 'fx', params: { verb: 1, glitch: 1 } }
+  // Scene graph: Repeat → FX → Verse → Chorus → (Break | Break2) → Verse
   const nodes: SceneNode[] = [
-    { id: 'n1', type: 'pattern', patternId: patterns[0].id, x: 0.48, y: 0.37, root: true,
-      decorators: [{ type: 'repeat', params: { count: 2 } }, fxDec] },
-    { id: 'n2', type: 'pattern', patternId: patterns[1].id, x: 0.52, y: 0.48, root: false,
-      decorators: [{ type: 'repeat', params: { count: 2 } }, fxDec] },
-    { id: 'n3', type: 'pattern', patternId: patterns[2].id, x: 0.36, y: 0.63, root: false,
-      decorators: [fxDec] },
-    { id: 'n4', type: 'pattern', patternId: patterns[3].id, x: 0.62, y: 0.66, root: false,
-      decorators: [fxDec] },
+    { id: 'fn_rpt1', type: 'repeat', x: 0.38, y: 0.37, root: true, fnParams: { repeat: { count: 2 } } },
+    { id: 'fn_fx1', type: 'fx', x: 0.43, y: 0.37, root: false, fnParams: { fx: { verb: true, delay: false, glitch: true, granular: false } } },
+    { id: 'n1', type: 'pattern', patternId: patterns[0].id, x: 0.48, y: 0.37, root: false },
+    { id: 'fn_rpt2', type: 'repeat', x: 0.42, y: 0.48, root: false, fnParams: { repeat: { count: 2 } } },
+    { id: 'n2', type: 'pattern', patternId: patterns[1].id, x: 0.52, y: 0.48, root: false },
+    { id: 'n3', type: 'pattern', patternId: patterns[2].id, x: 0.36, y: 0.63, root: false },
+    { id: 'n4', type: 'pattern', patternId: patterns[3].id, x: 0.62, y: 0.66, root: false },
   ]
   const edges = [
-    { id: 'e1', from: 'n1', to: 'n2', order: 0 },
+    { id: 'e_rpt1', from: 'fn_rpt1', to: 'fn_fx1', order: 0 },
+    { id: 'e_fx1', from: 'fn_fx1', to: 'n1', order: 0 },
+    { id: 'e1', from: 'n1', to: 'fn_rpt2', order: 0 },
+    { id: 'e_rpt2', from: 'fn_rpt2', to: 'n2', order: 0 },
     { id: 'e2', from: 'n2', to: 'n3', order: 0 },
     { id: 'e3', from: 'n2', to: 'n4', order: 1 },
     { id: 'e4', from: 'n3', to: 'n1', order: 0 },

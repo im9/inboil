@@ -1,27 +1,9 @@
 /**
- * Automation evaluation, snapshot, and application logic.
- * Extracted from state.svelte.ts for modularity.
+ * Scene playback snapshot/restore — preserves globals mutated by function nodes.
+ * Curve automation removed (ADR 093 — replaced by per-step paramLocks).
  */
-import { BPM_MIN, BPM_MAX } from './constants.ts'
-import { song, bumpSongVersion, playback, perf, fxPad, fxFlavours, masterPad, cellForTrack } from './state.svelte.ts'
-import type { AutomationPoint, AutomationTarget, AutomationSnapshot } from './types.ts'
-
-/** Evaluate automation curve at progress t (0–1) */
-function evaluateAutomation(points: AutomationPoint[], t: number, interpolation: string): number {
-  if (points.length === 0) return 0.5
-  if (t <= points[0].t) return points[0].v
-  if (t >= points[points.length - 1].t) return points[points.length - 1].v
-  let i = 0
-  while (i < points.length - 1 && points[i + 1].t <= t) i++
-  const p0 = points[i], p1 = points[i + 1]
-  const segT = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t)
-  if (interpolation === 'smooth') {
-    // Smoothstep
-    const s = segT * segT * (3 - 2 * segT)
-    return p0.v + (p1.v - p0.v) * s
-  }
-  return p0.v + (p1.v - p0.v) * segT
-}
+import { song, bumpSongVersion, perf, fxPad, fxFlavours, masterPad } from './state.svelte.ts'
+import type { AutomationSnapshot } from './types.ts'
 
 /** Snapshot current values of all automation targets so they can be restored later */
 export function snapshotAutomationTargets(): AutomationSnapshot {
@@ -52,7 +34,7 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
     if (v[`track:${i}:volume`] != null) song.tracks[i].volume = v[`track:${i}:volume`]
     if (v[`track:${i}:pan`] != null) song.tracks[i].pan = v[`track:${i}:pan`]
   }
-  // Restore FX pad & flavours mutated by decorators
+  // Restore FX pad & flavours mutated by function nodes
   const FX_PAD_KEYS = ['verb', 'delay', 'glitch', 'granular', 'filter', 'eqLow', 'eqMid', 'eqHigh'] as const
   for (const key of FX_PAD_KEYS) Object.assign(fxPad[key], snap.fxPad[key])
   Object.assign(fxFlavours, snap.fxFlavours)
@@ -69,90 +51,3 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
   if (snap.values['global:swing'] != null) perf.swing = snap.values['global:swing']
 }
 
-/** Apply active automations at current step progress. Called from App.svelte onStep. */
-export function applyAutomations(stepIndex: number, totalSteps: number): void {
-  if (playback.activeAutomations.length === 0) return
-  const t = totalSteps > 1 ? stepIndex / (totalSteps - 1) : 0
-
-  for (const auto of playback.activeAutomations) {
-    const v = evaluateAutomation(auto.points, t, auto.interpolation)
-    applyAutomationValue(auto.target, v)
-  }
-}
-
-function applyAutomationValue(target: AutomationTarget, v: number): void {
-  // Bump version for any target that mutates `song` (tempo, comp, track vol/pan)
-  if (target.kind === 'global' || target.kind === 'track') bumpSongVersion()
-  switch (target.kind) {
-    case 'global':
-      if (target.param === 'tempo') {
-        song.bpm = Math.round(BPM_MIN + v * (BPM_MAX - BPM_MIN))
-      } else if (target.param === 'masterVolume') {
-        perf.masterGain = v
-      } else if (target.param === 'swing') {
-        perf.swing = v
-      } else if (target.param === 'compThreshold') {
-        masterPad.comp = { ...masterPad.comp, x: v }
-      } else if (target.param === 'compRatio') {
-        masterPad.comp = { ...masterPad.comp, y: v }
-      } else if (target.param === 'compMakeup') {
-        song.effects.comp.makeup = 1 + v * 3
-      } else if (target.param === 'compAttack') {
-        song.effects.comp.attack = 0.1 + v * 29.9
-      } else if (target.param === 'compRelease') {
-        song.effects.comp.release = 10 + v * 290
-      } else if (target.param === 'duckDepth') {
-        masterPad.duck = { ...masterPad.duck, x: v }
-      } else if (target.param === 'duckRelease') {
-        masterPad.duck = { ...masterPad.duck, y: v }
-      } else if (target.param === 'retVerb') {
-        masterPad.ret = { ...masterPad.ret, x: v }
-      } else if (target.param === 'retDelay') {
-        masterPad.ret = { ...masterPad.ret, y: v }
-      }
-      break
-    case 'track': {
-      const track = song.tracks[target.trackIndex]
-      if (!track) break
-      if (target.param === 'volume') {
-        track.volume = v
-      } else if (target.param === 'pan') {
-        track.pan = v * 2 - 1  // 0–1 → -1..1
-      }
-      break
-    }
-    case 'fx':
-      switch (target.param) {
-        case 'reverbWet':      fxPad.verb.x     = v; break
-        case 'reverbDamp':     fxPad.verb.y     = v; break
-        case 'delayTime':      fxPad.delay.x    = v; break
-        case 'delayFeedback':  fxPad.delay.y    = v; break
-        case 'filterCutoff':   fxPad.filter.x   = v; break
-        case 'glitchX':        fxPad.glitch.x   = v; break
-        case 'glitchY':        fxPad.glitch.y   = v; break
-        case 'granularSize':   fxPad.granular.x = v; break
-        case 'granularDensity': fxPad.granular.y = v; break
-      }
-      break
-    case 'eq': {
-      const band = fxPad[target.band!]
-      if (target.param === 'freq') band.x = v
-      else if (target.param === 'gain') band.y = v
-      else band.q = 0.3 + v * 7.7
-      break
-    }
-    case 'send': {
-      const pat = playback.playingPattern != null ? song.patterns[playback.playingPattern] : null
-      if (!pat) break
-      const cell = cellForTrack(pat, target.trackIndex)
-      if (!cell) break
-      switch (target.param) {
-        case 'reverbSend':   cell.reverbSend = v; break
-        case 'delaySend':    cell.delaySend = v; break
-        case 'glitchSend':   cell.glitchSend = v; break
-        case 'granularSend': cell.granularSend = v; break
-      }
-      break
-    }
-  }
-}

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAttachDecorator } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind, decoratorLabel } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -14,7 +14,6 @@
   import SceneLabels from './SceneLabels.svelte'
   import SceneToolbar from './SceneToolbar.svelte'
   import SceneNodePopup from './SceneNodePopup.svelte'
-  import AutomationEditor from './AutomationEditor.svelte'
 
   const { onplay, onstop }: { onplay?: () => void, onstop?: () => void } = $props()
 
@@ -76,35 +75,6 @@
   let activePointers = new Map<number, { x: number; y: number }>()
   let pinchStartDist = 0
   let pinchStartZoom = 1
-
-  // ── Automation mini-curve on playing pattern nodes ──
-  const MINI_W = 48, MINI_H = 14
-
-  function evaluateMiniCurve(points: import('../state.svelte.ts').AutomationPoint[], t: number): number {
-    if (points.length === 0) return 0.5
-    if (t <= points[0].t) return points[0].v
-    if (t >= points[points.length - 1].t) return points[points.length - 1].v
-    let i = 0
-    while (i < points.length - 1 && points[i + 1].t <= t) i++
-    const p0 = points[i], p1 = points[i + 1]
-    const segT = p1.t === p0.t ? 0 : (t - p0.t) / (p1.t - p0.t)
-    return p0.v + (p1.v - p0.v) * segT
-  }
-
-  function autoMiniPolyline(points: import('../state.svelte.ts').AutomationPoint[]): string {
-    if (points.length < 2) return ''
-    return points.map(p => `${(p.t * MINI_W).toFixed(1)},${((1 - p.v) * MINI_H).toFixed(1)}`).join(' ')
-  }
-
-  /** Playback progress 0–1 for the currently playing pattern */
-  const autoProgress = $derived.by(() => {
-    if (!playback.playing || playback.playingPattern == null) return 0
-    const pat = song.patterns[playback.playingPattern]
-    if (!pat) return 0
-    const totalSteps = Math.max(1, ...pat.cells.map(c => c.steps))
-    const step = playback.playheads[0] ?? 0
-    return totalSteps > 1 ? step / (totalSteps - 1) : 0
-  })
 
   /** Center the world in the viewport */
   function centerPan() {
@@ -300,14 +270,12 @@
   function endNodeDrag(e: PointerEvent, nodeId: string) {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
 
-    // Snap-attach: function node dropped near pattern node (ADR 062)
+    // Snap-attach: function node dropped near pattern node — auto-connect edge (ADR 093)
     if (dragMoved && snapTarget) {
-      const attached = sceneAttachDecorator(nodeId, snapTarget)
-      if (attached) {
-        justAttached = snapTarget
-        const id = snapTarget
-        setTimeout(() => { if (justAttached === id) justAttached = null }, 200)
-      }
+      sceneAddEdge(nodeId, snapTarget)
+      justAttached = snapTarget
+      const id = snapTarget
+      setTimeout(() => { if (justAttached === id) justAttached = null }, 200)
       snapTarget = null
       dragging = null
       return
@@ -744,7 +712,6 @@
       {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
       {@const isSnapTarget = snapTarget === node.id}
       {@const isBouncing = justAttached === node.id}
-      {@const decs = node.decorators ?? []}
       {@const nc = nodeColor(node, song.patterns)}
       {@const handleOffset = isGen ? GEN_HALF_W : isFn ? FN_HALF_W : PAT_HALF_W}
       <button
@@ -826,24 +793,6 @@
           {/if}
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
-        {/if}
-        {#if !isFn && !isGen && decs.length > 0}
-          <span class="dec-row">
-            {#each decs as dec}
-              <span class="dec-tag">{decoratorLabel(dec)}</span>
-            {/each}
-          </span>
-        {/if}
-        {#if isPlaying && !isFn && !isGen && decs.some(d => d.type === 'automation' && d.automationParams)}
-          {@const autoDecs = decs.filter(d => d.type === 'automation' && d.automationParams)}
-          <span class="auto-mini-row">
-            {#each autoDecs as ad}
-              <svg class="auto-mini" viewBox="0 0 {MINI_W} {MINI_H}" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points={autoMiniPolyline(ad.automationParams!.points)} fill="none" stroke="rgba(120,120,69,0.5)" stroke-width="1.2" />
-                <circle cx={autoProgress * MINI_W} cy={(1 - (ad.automationParams!.points.length > 0 ? evaluateMiniCurve(ad.automationParams!.points, autoProgress) : 0.5)) * MINI_H} r="2" fill="rgba(120,120,69,0.9)" />
-              </svg>
-            {/each}
-          </span>
         {/if}
       </button>
       <!-- Output handle for edge creation -->
@@ -932,7 +881,6 @@
     {/each}
 
     <SceneNodePopup />
-    <AutomationEditor />
 
     <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} />
   </div>
@@ -1093,63 +1041,6 @@
   @keyframes dec-bounce {
     0%   { transform: translate(-50%, -50%) scale(1.08); }
     100% { transform: translate(-50%, -50%) scale(1); }
-  }
-
-  /* ── Decorator row on pattern nodes (ADR 062) ── */
-  .dec-row {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 2px;
-    padding-top: 2px;
-    pointer-events: none;
-  }
-  .dec-tag {
-    background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.7);
-    font-family: var(--font-data);
-    font-size: 7px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 1px 4px;
-    border-radius: 6px;
-    white-space: nowrap;
-    animation: dec-pop-in 120ms cubic-bezier(0.2, 0, 0, 1.3);
-  }
-  .scene-node.playing .dec-tag {
-    animation: dec-flash 80ms ease-out;
-  }
-  @keyframes dec-pop-in {
-    0%   { transform: scale(0.8); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  @keyframes dec-flash {
-    0%   { filter: brightness(1.6); }
-    100% { filter: brightness(1); }
-  }
-  .dec-tag:hover {
-    transform: translateY(-1px);
-    transition: transform 60ms ease-out;
-  }
-
-  /* ── Automation mini-curve on playing pattern nodes ── */
-  .auto-mini-row {
-    position: absolute;
-    bottom: 2px;
-    left: 4px;
-    right: 4px;
-    display: flex;
-    gap: 2px;
-    pointer-events: none;
-    overflow: hidden;
-  }
-  .auto-mini {
-    opacity: 0.8;
-    flex: 1 1 0;
-    min-width: 0;
-    height: 12px;
   }
 
   .scene-node.selected {

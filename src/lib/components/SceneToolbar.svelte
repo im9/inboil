@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
-  import { sceneFormatNodes, sceneHasMigratableFnNodes, sceneMigrateFnToDecorators } from '../sceneActions.ts'
+  import { sceneFormatNodes } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { WORLD_W, WORLD_H, toPixel } from '../sceneGeometry.ts'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
@@ -138,19 +138,6 @@
     </button>
   {/if}
 {/if}
-{#if sceneHasMigratableFnNodes()}
-  <button
-    class="scene-toolbar-btn migrate-btn"
-    aria-label="Convert chain nodes to decorators"
-    data-tip="Convert chain nodes to decorators" data-tip-ja="チェーンノードをデコレーターに変換"
-    onpointerdown={() => sceneMigrateFnToDecorators()}
-  >
-    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-      <path d="M3 8h10M10 5l3 3-3 3"/>
-      <circle cx="3" cy="8" r="1.5" fill="currentColor"/>
-    </svg>
-  </button>
-{/if}
 {#if zoom !== 1}
   <button
     class="scene-toolbar-btn zoom-reset"
@@ -241,13 +228,6 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.04em;
-  }
-
-  .migrate-btn {
-    bottom: 8px;
-    left: 8px;
-    top: auto;
-    color: var(--color-olive);
   }
 
   @keyframes node-pulse {

@@ -4,8 +4,8 @@
  */
 
 import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, SceneDecorator, AutomationParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
-import { hasMigratableFnNodes, migrateFnToDecorators, cloneSceneNode } from './sceneData.ts'
+import type { SceneNode, SceneEdge, FnNodeType, FnParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
+import { cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 import { randomPatternName } from './factory.ts'
 
@@ -172,12 +172,6 @@ export function sceneResizeLabel(labelId: string, delta: number): void {
 }
 
 // ── Generative nodes (ADR 078) ──
-
-const DEFAULT_AUTOMATION_PARAMS: AutomationParams = {
-  target: { kind: 'global', param: 'tempo' },
-  points: [{ t: 0, v: 0.25 }, { t: 1, v: 0.5 }],  // ~120→180 BPM
-  interpolation: 'linear',
-}
 
 /** Default configs per generative engine */
 function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generative'] {
@@ -399,106 +393,45 @@ export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
   return result
 }
 
-/** Update a function node's params (legacy, kept for decorator use) */
-export function sceneUpdateNodeParams(nodeId: string, params: Record<string, number>): void {
-  pushUndo('Update node params')
+// ── Function nodes (ADR 093) ──
+
+const FN_DEFAULTS: Record<FnNodeType, FnParams> = {
+  transpose: { transpose: { semitones: 0, mode: 'rel' } },
+  tempo: { tempo: { bpm: 120 } },
+  repeat: { repeat: { count: 2 } },
+  fx: { fx: { verb: false, delay: false, glitch: false, granular: false } },
+}
+
+/** Add a function node, optionally wired before a pattern node */
+export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string): string {
+  pushUndo('Add function node')
+  const patNode = patternNodeId ? findNode(patternNodeId) : null
+  const id = `fn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const node: SceneNode = {
+    id,
+    type,
+    x: patNode ? patNode.x - 0.06 : 0.5,
+    y: patNode ? patNode.y : 0.5,
+    root: false,
+    fnParams: structuredClone(FN_DEFAULTS[type]),
+  }
+  song.scene.nodes.push(node)
+  if (patNode) {
+    // Rewire incoming edges → fn node, fn node → pattern
+    for (const e of song.scene.edges) {
+      if (e.to === patNode.id) e.to = id
+    }
+    song.scene.edges.push({ id: `e_${id}`, from: id, to: patNode.id, order: 0 })
+  }
+  return id
+}
+
+/** Update function node params */
+export function sceneUpdateFnParams(nodeId: string, fnParams: FnParams): void {
   const node = findNode(nodeId)
   if (!node) return
-  node.params = { ...params }
-}
-
-// ── Decorators (ADR 066) ──
-
-/** Attach a legacy function node as a decorator on a pattern node (migration support) */
-export function sceneAttachDecorator(fnNodeId: string, patternNodeId: string): boolean {
-  const fnNode = findNode(fnNodeId)
-  const patNode = findNode(patternNodeId)
-  if (!fnNode || !patNode || patNode.type !== 'pattern') return false
-  if (fnNode.type === 'pattern' || fnNode.type === 'probability' || fnNode.type === 'generative') return false
-  pushUndo('Attach decorator')
-  let dec: SceneDecorator
-  if (fnNode.type === 'automation') {
-    const ap = fnNode.automationParams ?? DEFAULT_AUTOMATION_PARAMS
-    dec = { type: 'automation', params: {}, automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation } }
-  } else {
-    dec = { type: fnNode.type as SceneDecorator['type'], params: { ...(fnNode.params ?? {}) } }
-  }
-  patNode.decorators ??= []
-  patNode.decorators.push(dec)
-  song.scene.edges = song.scene.edges.filter(e => e.from !== fnNodeId && e.to !== fnNodeId)
-  song.scene.nodes = song.scene.nodes.filter(n => n.id !== fnNodeId)
-  return true
-}
-
-/** Remove a decorator from a pattern node (ADR 069) */
-export function sceneRemoveDecorator(patternNodeId: string, decoratorIndex: number): void {
-  const patNode = findNode(patternNodeId)
-  if (!patNode?.decorators?.[decoratorIndex]) return
-  pushUndo('Remove decorator')
-  patNode.decorators.splice(decoratorIndex, 1)
-}
-
-/** Update a decorator's params on a pattern node */
-export function sceneUpdateDecorator(patternNodeId: string, decoratorIndex: number, params: Record<string, number>): void {
-  const patNode = findNode(patternNodeId)
-  if (!patNode?.decorators?.[decoratorIndex]) return
-  pushUndo('Update decorator')
-  patNode.decorators[decoratorIndex].params = { ...params }
-}
-
-const DECORATOR_DEFAULTS: Record<string, Record<string, number>> = {
-  transpose: { mode: 0, semitones: 0, key: 0 },
-  tempo: { bpm: 120 },
-  repeat: { count: 2 },
-  fx: { verb: 0, delay: 0, glitch: 0, granular: 0 },
-}
-
-/** Add a decorator directly to a pattern node (ADR 069) */
-export function sceneAddDecorator(patternNodeId: string, type: SceneDecorator['type']): void {
-  const patNode = findNode(patternNodeId)
-  if (!patNode || patNode.type !== 'pattern') return
-  pushUndo('Add decorator')
-  patNode.decorators ??= []
-  if (type === 'automation') {
-    const ap = DEFAULT_AUTOMATION_PARAMS
-    patNode.decorators.push({
-      type: 'automation',
-      params: {},
-      automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation },
-    })
-  } else {
-    patNode.decorators.push({ type, params: { ...DECORATOR_DEFAULTS[type] } })
-  }
-  // Auto-switch to DECO tab when adding from pattern sheet (ADR 092)
-  if (ui.patternSheet) ui.dockTab = 'scene'
-}
-
-/** Add an automation decorator directly to a pattern node */
-export function sceneAddAutomationDecorator(patternNodeId: string): void {
-  const patNode = findNode(patternNodeId)
-  if (!patNode || patNode.type !== 'pattern') return
-  pushUndo('Add automation decorator')
-  const ap = DEFAULT_AUTOMATION_PARAMS
-  patNode.decorators ??= []
-  patNode.decorators.push({
-    type: 'automation',
-    params: {},
-    automationParams: { target: { ...ap.target }, points: ap.points.map(p => ({ ...p })), interpolation: ap.interpolation },
-  })
-}
-
-/** Check if there are function nodes in edge chains that can be migrated to decorators */
-export function sceneHasMigratableFnNodes(): boolean {
-  return hasMigratableFnNodes(song.scene.nodes, song.scene.edges)
-}
-
-/** Migrate edge-chain function nodes to decorators (ADR 066 Phase 4) */
-export function sceneMigrateFnToDecorators(): number {
-  pushUndo('Migrate to decorators')
-  const result = migrateFnToDecorators(song.scene.nodes, song.scene.edges)
-  song.scene.nodes = result.nodes
-  song.scene.edges = result.edges
-  return result.converted
+  pushUndo('Update function node')
+  node.fnParams = { ...node.fnParams, ...fnParams }
 }
 
 // ── Layout ──

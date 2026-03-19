@@ -91,7 +91,7 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, SceneDecorator, Pattern, AutomationTarget } from './types.ts'
+import type { SceneNode, Pattern } from './types.ts'
 import { PATTERN_COLORS } from './constants.ts'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -105,26 +105,28 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
   if (node.type === 'generative' && node.generative) {
     return generativeLabel(node.generative)
   }
-  // Legacy function node labels (migration support)
-  if (node.type === 'transpose') {
-    if (node.params?.mode === 1) return `KEY ${NOTE_NAMES[node.params?.key ?? 0]}`
-    const s = node.params?.semitones ?? 0
+  // Function node labels (ADR 093)
+  if (node.type === 'probability') return '?%'
+  return fnNodeLabel(node)
+}
+
+/** Get compact label for a function node (ADR 093) */
+export function fnNodeLabel(node: SceneNode): string {
+  const fp = node.fnParams
+  if (fp?.transpose) {
+    if (fp.transpose.mode === 'abs') return `KEY ${NOTE_NAMES[fp.transpose.key ?? 0]}`
+    const s = fp.transpose.semitones
     return `T${s >= 0 ? '+' : ''}${s}`
   }
-  if (node.type === 'tempo') return `×${node.params?.bpm ?? 120}`
-  if (node.type === 'repeat') return `RPT${node.params?.count ?? 2}`
-  if (node.type === 'probability') return '?%'
-  if (node.type === 'fx') {
-    const p = node.params ?? {}
+  if (fp?.tempo) return `×${fp.tempo.bpm}`
+  if (fp?.repeat) return `RPT${fp.repeat.count}`
+  if (fp?.fx) {
     const tags = []
-    if (p.verb) tags.push('V')
-    if (p.delay) tags.push('D')
-    if (p.glitch) tags.push('G')
-    if (p.granular) tags.push('R')
+    if (fp.fx.verb) tags.push('V')
+    if (fp.fx.delay) tags.push('D')
+    if (fp.fx.glitch) tags.push('G')
+    if (fp.fx.granular) tags.push('R')
     return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
-  }
-  if (node.type === 'automation') {
-    return '~' + automationTargetLabel(node.automationParams?.target)
   }
   return '?'
 }
@@ -147,50 +149,6 @@ function generativeLabel(gen: NonNullable<SceneNode['generative']>): string {
   }
 }
 
-/** Short label for an automation target */
-export function automationTargetLabel(target?: AutomationTarget): string {
-  if (!target) return 'AUTO'
-  switch (target.kind) {
-    case 'global': {
-      const labels: Record<string, string> = {
-        tempo: 'TEMPO', masterVolume: 'VOL', swing: 'SWG',
-        compThreshold: 'CMP THR', compRatio: 'CMP RAT', compMakeup: 'CMP MKP',
-        compAttack: 'CMP ATK', compRelease: 'CMP REL',
-        duckDepth: 'DCK DPT', duckRelease: 'DCK REL', retVerb: 'RET VRB', retDelay: 'RET DLY',
-      }
-      return labels[target.param] ?? target.param.toUpperCase()
-    }
-    case 'track':  return `T${target.trackIndex + 1} ${target.param === 'volume' ? 'VOL' : 'PAN'}`
-    case 'fx':     return target.param.replace(/([A-Z])/g, ' $1').trim().toUpperCase().slice(0, 8)
-    case 'eq':     return `${target.band.replace('eq', '').toUpperCase()} ${target.param.toUpperCase()}`
-    case 'send':   return `T${target.trackIndex + 1} ${target.param.replace('Send', '').toUpperCase()}`
-    default:       return 'AUTO'
-  }
-}
-
-/** Get compact label for a decorator (ADR 062) */
-export function decoratorLabel(dec: SceneDecorator): string {
-  if (dec.type === 'transpose') {
-    if (dec.params.mode === 1) return `KEY ${NOTE_NAMES[dec.params.key ?? 0]}`
-    const s = dec.params.semitones ?? 0
-    return `T${s >= 0 ? '+' : ''}${s}`
-  }
-  if (dec.type === 'tempo') return `×${dec.params.bpm ?? 120}`
-  if (dec.type === 'repeat') return `RPT${dec.params.count ?? 2}`
-  if (dec.type === 'fx') {
-    const p = dec.params
-    const tags = []
-    if (p.verb) tags.push('V')
-    if (p.delay) tags.push('D')
-    if (p.glitch) tags.push('G')
-    if (p.granular) tags.push('R')
-    return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
-  }
-  if (dec.type === 'automation') {
-    return '~' + automationTargetLabel(dec.automationParams?.target)
-  }
-  return '?'
-}
 
 /** Accent colors per generative engine (ADR 078) */
 const GEN_COLORS: Record<string, string> = {
