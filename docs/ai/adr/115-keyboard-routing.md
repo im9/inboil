@@ -1,6 +1,6 @@
 # ADR 115: Centralized Keyboard Routing
 
-## Status: Proposed
+## Status: Accepted
 
 ## Context
 

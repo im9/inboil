@@ -71,7 +71,7 @@ See [adr/](./adr/) for full rationale.
 - **Full synth engines** (IMPLEMENTED) — Wavetable osc, SVF, WT synth, factory presets. → [adr/011-synth-engines.md](./adr/011-synth-engines.md)
 - **Scene multi-select** (IMPLEMENTED) — Rectangle select, group drag, alignment tools, multi-copy/paste. → [adr/059-scene-multi-select.md](./adr/059-scene-multi-select.md)
 - **Per-pattern voice assignment** (IMPLEMENTED) — voiceId + name moved from Track to Cell. → [adr/062-per-pattern-voice.md](./adr/062-per-pattern-voice.md)
-- **Scene node decorators** (IMPLEMENTED) — Snap-attach function nodes to patterns as decorators. → [adr/066-scene-decorators.md](./adr/066-scene-decorators.md)
+- **Scene node decorators** (IMPLEMENTED) — Function decorators on pattern nodes, migrated to standalone function nodes wired via edges (ADR 093). → [adr/066-scene-decorators.md](./adr/066-scene-decorators.md)
 - **Piano roll drawing & chord brush** (IMPLEMENTED) — Pen draw, chord/strum brush, eraser. → [adr/067-piano-roll-drawing.md](./adr/067-piano-roll-drawing.md)
 - **4-operator FM synth** (IMPLEMENTED) — 4-op, 8 algorithms, 12-voice poly. → [adr/068-fm-synth.md](./adr/068-fm-synth.md)
 - **FX flavours** (IMPLEMENTED) — Tape delay, shimmer, stutter, per-pattern FX variant. → [adr/075-fx-improvements.md](./adr/075-fx-improvements.md)
@@ -112,7 +112,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (49 files)  ← Svelte 5 UI components
+│   │   ├── components/ (46 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -128,14 +128,11 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockTrackEditor.svelte ← Track param knobs, send/mixer, sample LOAD/POOL
 │   │   │   ├── DockPoolBrowser.svelte ← Inline audio pool browser (ADR 104)
 │   │   │   ├── DockPresetBrowser.svelte ← Factory preset browser (WT/FM)
-│   │   │   ├── DockDecoratorEditor.svelte ← Dock decorator knobs (ADR 069)
 │   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
-│   │   │   ├── DockAutomationEditor.svelte ← Dock inline automation editor
 │   │   │   ├── DockNavigator.svelte  ← Scene BFS navigator (ADR 070)
 │   │   │   ├── DockFxControls.svelte ← FX knobs/toggles/flavours
 │   │   │   ├── DockEqControls.svelte ← EQ band controls (freq/gain/Q)
 │   │   │   ├── DockMasterControls.svelte ← Master gain/comp/duck/return
-│   │   │   ├── AutomationEditor.svelte ← Automation curve editor (ADR 053)
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
 │   │   │   ├── PerfButtons.svelte  ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte        ← FX XY pad, audio visualizer, per-track sends
@@ -157,6 +154,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── EnvGraph.svelte     ← ADSR envelope visualization
 │   │   │   ├── WaveGraph.svelte    ← Wavetable preview visualization
 │   │   │   ├── Knob.svelte         ← SVG rotary knob control
+│   │   │   ├── VFader.svelte      ← Vertical fader control
 │   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
@@ -197,7 +195,6 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── songClone.ts            ← Pure data clone/restore for Song serialization
 │   │   ├── generative.ts           ← Turing Machine, Quantizer, Tonnetz algorithms
 │   │   ├── automation.ts           ← Automation curve evaluation
-│   │   ├── automationDraw.ts       ← Automation drawing/editing helpers
 │   │   ├── randomize.ts            ← Pattern randomization
 │   │   ├── audioPool.ts            ← OPFS audio pool: factory install, import, browse (ADR 104)
 │   │   ├── storage.ts              ← IndexedDB access layer (ADR 020)
@@ -205,6 +202,10 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── midi.ts                 ← Web MIDI API integration (ADR 081)
 │   │   ├── midiExport.ts           ← MIDI Type 1 export
 │   │   ├── wavExport.ts            ← WAV recording capture
+│   │   ├── domHelpers.ts            ← DOM utilities (isTextInputTarget, relativeCoords, stepIndexFromX)
+│   │   ├── validate.ts              ← Song data validation (validateSongData, validateRecoverySnapshot)
+│   │   ├── keyRouter.ts             ← Keyboard event routing (ADR 115)
+│   │   ├── fatalError.svelte.ts     ← Fatal error state for ErrorDialog
 │   │   ├── icons.ts                ← SVG icon definitions
 │   │   ├── padHelpers.ts           ← XY pad coordinate helpers
 │   │   └── qr.ts                   ← QR code generation (multi-device)

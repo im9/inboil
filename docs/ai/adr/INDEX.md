@@ -96,7 +96,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 092 | DockPanel Tab — Scene & Tracks | Implemented | TRACKS/SCENE tab switcher in DockPanel, generative nodes accessible from pattern sheet |
 | 095 | Mobile UI Redesign | Implemented | PO-style calculator main view, MobileMatrixView, header redesign, swipe nav, overlay animations |
 | 098 | Mobile Landscape Orientation | Proposed | Landscape-specific layout for mobile (split from ADR 095) |
-| 115 | Centralized Keyboard Routing | Proposed | Single dispatcher replaces distributed `<svelte:window onkeydown>`, priority-based layer routing |
+| 115 | Centralized Keyboard Routing | Accepted | Single dispatcher replaces distributed `<svelte:window onkeydown>`, priority-based layer routing (Phases 1-3 done) |
 
 ## Instruments / Sound Design
 

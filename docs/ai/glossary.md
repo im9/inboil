@@ -14,7 +14,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
 | **SceneNode** | A node on the scene canvas: pattern, generative, or legacy function type (transpose/tempo/repeat/probability/fx/automation). |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
-| **SceneDecorator** | Function decorator (transpose/tempo/repeat/fx/automation) attached to a pattern node (ADR 066). Snap-attaches visually. |
+| **SceneDecorator** | Function decorator (transpose/tempo/repeat/fx/automation) on a pattern node (ADR 066). Migrated to standalone function nodes wired via edges (ADR 093). |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
 | **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |

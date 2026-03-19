@@ -61,7 +61,10 @@ sidebar:
 | Shortcut | Action |
 |----------|--------|
 | **Click** node | Select node |
-| **Drag** node | Reposition |
+| **Shift+Click** node | Toggle node in multi-selection |
+| **Shift+Click** label | Toggle label in multi-selection |
+| **Drag** node | Reposition (moves all selected if multi-selected) |
+| **Drag** background | Rectangle select (box-select nodes and labels) |
 | **Click** edge | Select edge |
 | **Drag** node handle (right side) | Start edge-draw (drag to target) |
 

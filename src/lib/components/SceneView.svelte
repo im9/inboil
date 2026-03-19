@@ -5,7 +5,8 @@
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
-  import { isTextInputTarget } from '../domHelpers.ts'
+  import { registerKeyLayer, unregisterKeyLayer, registerKeyUpLayer, unregisterKeyUpLayer } from '../keyRouter.ts'
+  import { onMount } from 'svelte'
   import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
@@ -485,10 +486,9 @@
     }
   }
 
-  function onKeydown(e: KeyboardEvent) {
-    if (e.defaultPrevented) return
+  function handleSceneKeys(e: KeyboardEvent): boolean | void {
+    // Scene shouldn't handle keys when sheet is open
     if (ui.patternSheet) return
-    if (isTextInputTarget(e)) return
     // Delete/Backspace: allow from anywhere when scene nodes/edges/labels are selected
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
       || ui.selectedSceneEdge || Object.keys(ui.selectedSceneLabels).length > 0
@@ -507,21 +507,22 @@
         }
         ui.selectedSceneNodes = {}
       }
-      return
+      return true
     }
-    // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
-    if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
-    const inSceneView = (e.target as HTMLElement)?.closest?.('.scene-view')
-    // Remaining shortcuts require focus inside scene canvas
-    if (!inSceneView) return
+    // Remaining shortcuts only apply when focus is inside the scene view
+    // (MatrixView auto-selects scene nodes but focus stays on matrix grid)
+    const inMatrix = !!(e.target as HTMLElement)?.closest?.('.matrix-view')
+    if (inMatrix) return
     // Space key → pan mode (only when scene view has focus)
     if (e.code === 'Space' && !e.repeat) {
       spaceHeld = true
+      // Don't consume — let app layer handle play/stop
       return
     }
     if (ui.selectedSceneEdge && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault()
       sceneReorderEdge(ui.selectedSceneEdge, e.key === 'ArrowUp' ? 'up' : 'down')
+      return true
     }
     if (e.key === 'Escape') {
       ui.selectedSceneNodes = {}
@@ -529,6 +530,7 @@
       ui.selectedSceneLabels = {}
       sceneLabelsRef?.clearEditing()
       pickerOpen = false
+      return true
     }
     const selectedCount = Object.keys(ui.selectedSceneNodes).length
     const primary = primarySelectedNode()
@@ -537,6 +539,7 @@
       if (e.shiftKey) sceneCopySubgraph(primary)
       else if (selectedCount > 1) sceneCopySelected(ui.selectedSceneNodes)
       else sceneCopyNode(primary)
+      return true
     }
     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard()) {
       e.preventDefault()
@@ -546,6 +549,7 @@
         for (const id of ids) ui.selectedSceneNodes[id] = true
         ui.selectedSceneEdge = null
       }
+      return true
     }
     // Alt+key alignment shortcuts (2+ nodes selected)
     if (e.altKey && Object.keys(ui.selectedSceneNodes).length >= 2) {
@@ -556,15 +560,26 @@
       if (mode) {
         e.preventDefault()
         sceneAlignNodes(ui.selectedSceneNodes, mode)
+        return true
       }
     }
   }
 
-  function onKeyup(e: KeyboardEvent) {
+  function handleSceneKeyUp(e: KeyboardEvent): boolean | void {
     if (e.code === 'Space') {
       spaceHeld = false
+      return true
     }
   }
+
+  onMount(() => {
+    registerKeyLayer('scene', handleSceneKeys)
+    registerKeyUpLayer('scene', handleSceneKeyUp)
+    return () => {
+      unregisterKeyLayer('scene')
+      unregisterKeyUpLayer('scene')
+    }
+  })
 
   // ── Root node helper ──
   const rootNode = $derived(song.scene.nodes.find(n => n.root) ?? null)
@@ -676,7 +691,6 @@
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} onkeyup={onKeyup} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div

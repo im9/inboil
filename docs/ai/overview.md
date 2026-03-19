@@ -42,9 +42,9 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
 - Song model: pattern pool (100 patterns: 21 factory + 79 user), sections, scene graph
-- Scene graph: node-based directed graph for arrangement (pattern nodes + decorators via ADR 066)
+- Scene graph: node-based directed graph for arrangement (pattern nodes + function nodes via ADR 066/093)
 - Generative scene nodes: Turing Machine, Quantizer, Tonnetz neo-Riemannian transforms (ADR 078/089)
-- Graphic score automation: per-node parameter curves with linear/smooth interpolation (ADR 026/053)
+- Graphic score automation: inline DockPanel editor with EQ/Master/FX automation targets (ADR 026). Curve automation removed (ADR 093) — replaced by per-step paramLocks
 - FX flavours: 3 variants per send effect — reverb (room/hall/shimmer), delay (digital/dotted/tape), glitch (bitcrush/redux/stutter), granular (cloud/freeze/stretch) (ADR 075/076)
 - Per-track insert FX: LiteReverb, delay, glitch per track (ADR 077)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)

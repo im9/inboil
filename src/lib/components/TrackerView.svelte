@@ -6,7 +6,8 @@
     setTrigSlide, setTrigChance, setParamLock, toggleMute, toggleSolo,
   } from '../stepActions.ts'
   import { NOTE_NAMES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
-  import { isTextInputTarget } from '../domHelpers.ts'
+  import { registerKeyLayer, unregisterKeyLayer } from '../keyRouter.ts'
+  import { onMount } from 'svelte'
 
   // ── Column definitions ──────────────────────────────────────────
   // 0=NOTE 1=VEL 2=DUR 3=SLD 4=CHN | 5=VOL 6=PAN | 7=VERB 8=DLY 9=GLT 10=GRN
@@ -101,10 +102,13 @@
     setTrigNote(trackId, cursorRow, midi)
   }
 
-  // ── Keyboard navigation ──────────────────────────────────────────
-  function onKeydown(e: KeyboardEvent) {
-    if (e.defaultPrevented) return
-    if (isTextInputTarget(e)) return
+  // ── Keyboard navigation (ADR 115: 'tracker' layer) ─────────────
+  onMount(() => {
+    registerKeyLayer('tracker', handleTrackerKeys)
+    return () => unregisterKeyLayer('tracker')
+  })
+
+  function handleTrackerKeys(e: KeyboardEvent): boolean | void {
 
     const steps = ph.steps
     const colId = COLUMNS[cursorCol]
@@ -289,7 +293,6 @@
   })
 </script>
 
-<svelte:window onkeydown={onKeydown} />
 
 <div class="tracker-view">
   <!-- Left: Track list -->

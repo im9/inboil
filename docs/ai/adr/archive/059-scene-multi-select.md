@@ -13,7 +13,7 @@ SceneView currently supports single-node selection only (`ui.selectedSceneNode: 
 export const ui = $state({
   selectedSceneNode: null as string | null,   // single node
   selectedSceneEdge: null as string | null,
-  selectedSceneLabel: null as string | null,
+  selectedSceneLabels: {} as Record<string, boolean>,
 })
 ```
 
@@ -85,9 +85,9 @@ The `cursor` changes to reflect the current mode:
 ```typescript
 // state.svelte.ts
 export const ui = $state({
-  selectedSceneNodes: new Set<string>(),    // replaces selectedSceneNode
+  selectedSceneNodes: {} as Record<string, true>,    // replaces selectedSceneNode
   selectedSceneEdge: null as string | null,
-  selectedSceneLabel: null as string | null,
+  selectedSceneLabels: {} as Record<string, boolean>,
 })
 ```
 

@@ -154,7 +154,7 @@ SceneNode {
   id:                string
   type:              'pattern' | 'generative' | LegacyFnType
                      // LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
-                     // Legacy fn types retained for backwards compat; new nodes use decorators (ADR 066)
+                     // Function types used as standalone nodes wired via edges (ADR 066/093)
   x:                 number           // canvas position (normalized 0–1)
   y:                 number
   root:              boolean          // true = playback entry point (exactly one)
@@ -274,9 +274,9 @@ See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
 Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `cell.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in DockPanel (desktop) or MobileParamOverlay (mobile). See ADR 014.
 
-## Scale (per-track time multiplier) — DEFERRED
+## Step Scale (per-track resolution) — IMPLEMENTED
 
-The `scale` field (0.5 | 1 | 2) for per-track speed multiplier is not yet implemented.
+Per-track step resolution via the `scale` divisor on Cell (ADR 112). Values: 4 (1/8), 3 (3/16), 2 (1/16, default), 1.5 (3/32), 1 (1/32). The sequencer base tick is 1/32; each track's step advance is multiplied by its divisor. Different divisors across tracks create polyrhythmic patterns.
 
 ## Randomize — DECIDED
 

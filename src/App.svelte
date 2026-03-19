@@ -9,7 +9,7 @@
   import MatrixView from './lib/components/MatrixView.svelte'
   import TrackerView from './lib/components/TrackerView.svelte'
   import SceneView from './lib/components/SceneView.svelte'
-  import { isTextInputTarget } from './lib/domHelpers.ts'
+  import { dispatch, dispatchUp, registerKeyLayer, unregisterKeyLayer } from './lib/keyRouter.ts'
   import FxPad from './lib/components/FxPad.svelte'
   import FilterView from './lib/components/FilterView.svelte'
   import MasterView from './lib/components/MasterView.svelte'
@@ -37,6 +37,7 @@
     masterPad,
     soloTracks: ui.soloTracks,
   })
+  import { onMount } from 'svelte'
   import { fade, fly } from 'svelte/transition'
 
   // ── Project restore (once) + save on page hide ───────────────────
@@ -293,13 +294,12 @@
 
   const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf')
 
-  function onKeydown(e: KeyboardEvent) {
-    if (e.defaultPrevented) return
-    if (isTextInputTarget(e)) return
-    if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return }
-    if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play() }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo() }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo() }
+  // ── Keyboard routing (ADR 115) ─────────────────────────────────
+  function appKeyHandler(e: KeyboardEvent): boolean | void {
+    if (e.code === 'Escape' && hasSheet) { e.preventDefault(); closeAllSheets(); return true }
+    if (e.code === 'Space') { e.preventDefault(); playback.playing ? stop() : play(); return true }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); undo(); return true }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo(); return true }
     // Skip pattern-level ops when scene edges/labels are selected (SceneView handles its own keys).
     // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block copy/paste.
     const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || Object.keys(ui.selectedSceneLabels).length > 0
@@ -308,22 +308,27 @@
     // Copy/paste: pattern-level (matrix focus or no sheet) vs cell-level (sheet open)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
       if (inMatrix || (!hasSheet && !hasSceneEdgeOrLabel)) {
-        if (e.code === 'KeyC') { patternCopy(ui.currentPattern) }
-        if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern) }
+        if (e.code === 'KeyC') { patternCopy(ui.currentPattern); return true }
+        if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern); return true }
       } else if (hasSheet && ui.brushMode !== 'select') {
-        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack) }
-        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
+        if (e.code === 'KeyC') { cellCopy(ui.currentPattern, ui.selectedTrack); return true }
+        if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack); return true }
       }
     }
     // Delete/Backspace: clear pattern (matrix focus or no sheet, but never when scene nodes/edges/labels are selected)
     if (!hasSceneSelection && (inMatrix || !hasSheet) && (e.code === 'Backspace' || e.code === 'Delete')) {
-      e.preventDefault(); patternClear(ui.currentPattern)
+      e.preventDefault(); patternClear(ui.currentPattern); return true
     }
   }
 
+  onMount(() => {
+    registerKeyLayer('app', appKeyHandler)
+    return () => unregisterKeyLayer('app')
+  })
+
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={dispatch} onkeyup={dispatchUp} />
 
 <div class="app">
   {#if isMobile}
