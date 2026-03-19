@@ -479,9 +479,6 @@
     if (e.defaultPrevented) return
     if (ui.patternSheet) return
     if (isTextInputTarget(e)) return
-    // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
-    if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
-    const inSceneView = (e.target as HTMLElement)?.closest?.('.scene-view')
     // Delete/Backspace: allow from anywhere when scene nodes/edges/labels are selected
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
       || ui.selectedSceneEdge || ui.selectedSceneLabel
@@ -498,7 +495,11 @@
         }
         ui.selectedSceneNodes = {}
       }
+      return
     }
+    // Let MatrixView / App.svelte handle keys when focus is outside scene canvas
+    if ((e.target as HTMLElement)?.closest?.('.matrix-view')) return
+    const inSceneView = (e.target as HTMLElement)?.closest?.('.scene-view')
     // Remaining shortcuts require focus inside scene canvas
     if (!inSceneView) return
     // Space key → pan mode (only when scene view has focus)

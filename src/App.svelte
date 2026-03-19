@@ -315,8 +315,8 @@
         if (e.code === 'KeyV') { e.preventDefault(); cellPaste(ui.currentPattern, ui.selectedTrack) }
       }
     }
-    // Delete/Backspace: clear pattern (matrix focus or no sheet, no scene selection)
-    if ((inMatrix || (!hasSheet && !hasSceneSelection)) && (e.code === 'Backspace' || e.code === 'Delete')) {
+    // Delete/Backspace: clear pattern (matrix focus or no sheet, but never when scene nodes/edges/labels are selected)
+    if (!hasSceneSelection && (inMatrix || !hasSheet) && (e.code === 'Backspace' || e.code === 'Delete')) {
       e.preventDefault(); patternClear(ui.currentPattern)
     }
   }

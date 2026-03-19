@@ -594,3 +594,239 @@ test.describe('pattern randomize', () => {
     expect(undone).toEqual(before)
   })
 })
+
+// ── Scene keyboard interactions ──
+// Regression tests for keyboard shortcuts in scene view.
+// Covers: Delete with various selection states, textarea editing guards,
+// and ensuring pattern data is never accidentally cleared.
+
+test.describe('scene keyboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => localStorage.clear())
+    await page.evaluate(async () => {
+      const dbs = await indexedDB.databases()
+      for (const db of dbs) if (db.name) indexedDB.deleteDatabase(db.name)
+    })
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await dismissHelp(page)
+  })
+
+  /** Add a scene node via the → button and wait for it to appear */
+  async function addSceneNode(page: import('@playwright/test').Page) {
+    await page.locator('.head-scene').click()
+    await page.waitForTimeout(400)
+  }
+
+  /** Add a step to pattern 0 so it has data, then close sheet */
+  async function addStepData(page: import('@playwright/test').Page) {
+    await openPatternSheet(page)
+    await page.locator('[aria-label="Step 1"]').first().click()
+    await page.waitForTimeout(200)
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+  }
+
+  /** Check pattern 0 step 1 is active */
+  async function stepIsActive(page: import('@playwright/test').Page): Promise<boolean> {
+    await openPatternSheet(page)
+    const flipCard = page.locator('[aria-label="Step 1"]').first().locator('.flip-card')
+    const active = await flipCard.evaluate(el => el.classList.contains('flipped'))
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(200)
+    return active
+  }
+
+  /** Add a scene label via the toolbar and exit edit mode so .scene-label span is visible */
+  async function addSceneLabel(page: import('@playwright/test').Page) {
+    await page.locator('[aria-label="Label"]').click()
+    await page.waitForTimeout(400)
+    // Label is created in edit mode (textarea). Press Escape to confirm and show the span.
+    const textarea = page.locator('.scene-label-edit')
+    if (await textarea.isVisible({ timeout: 500 }).catch(() => false)) {
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    }
+  }
+
+  test('delete node does not clear pattern data', async ({ page }) => {
+    // Set up: add step data, add scene node
+    await addStepData(page)
+    await addSceneNode(page)
+    await expect(page.locator('.scene-node').first()).toBeVisible()
+
+    // Select the scene node by clicking it
+    await page.locator('.scene-node').first().click()
+    await page.waitForTimeout(300)
+
+    // Verify node is selected (has .selected class)
+    await expect(page.locator('.scene-node.selected')).toBeVisible()
+
+    // Delete the selected node
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+
+    // Node should be gone
+    expect(await page.locator('.scene-node').count()).toBe(0)
+
+    // Pattern data should be intact
+    const active = await stepIsActive(page)
+    expect(active).toBe(true)
+  })
+
+  test('delete with no selection clears pattern', async ({ page }) => {
+    // Set up: add step data, add scene node
+    await addStepData(page)
+    await addSceneNode(page)
+
+    // Click scene background to deselect everything
+    const sceneView = page.locator('.scene-view')
+    const box = await sceneView.boundingBox()
+    if (box) {
+      await page.mouse.click(box.x + 20, box.y + 20)
+      await page.waitForTimeout(200)
+    }
+
+    // Press Delete — should clear pattern (no scene selection)
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+
+    // Pattern data should be cleared
+    const active = await stepIsActive(page)
+    expect(active).toBe(false)
+  })
+
+  test('delete label does not clear pattern data', async ({ page }) => {
+    // Set up: add step data, add label
+    await addStepData(page)
+    await addSceneLabel(page)
+    const labels = page.locator('.scene-label')
+    await expect(labels.first()).toBeVisible()
+
+    // Click label to select it
+    await labels.first().click()
+    await page.waitForTimeout(200)
+
+    // Delete should remove label, not clear pattern
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+
+    expect(await page.locator('.scene-label').count()).toBe(0)
+    const active = await stepIsActive(page)
+    expect(active).toBe(true)
+  })
+
+  test('textarea editing does not trigger shortcuts', async ({ page }) => {
+    // Set up: add step data, add label
+    await addStepData(page)
+    await addSceneLabel(page)
+    await expect(page.locator('.scene-label').first()).toBeVisible()
+
+    // Double-click label to enter edit mode
+    await page.locator('.scene-label').first().dblclick()
+    await page.waitForTimeout(300)
+
+    // Textarea should be visible
+    const textarea = page.locator('.scene-label-edit')
+    await expect(textarea).toBeVisible()
+
+    // Type text with Backspace — should edit text, not delete label
+    await textarea.fill('Hello')
+    await page.keyboard.press('Backspace')
+    await page.waitForTimeout(100)
+
+    // Textarea should still be visible (not dismissed)
+    await expect(textarea).toBeVisible()
+
+    // Space key should type space, not toggle playback
+    await page.keyboard.type(' World')
+    await page.waitForTimeout(100)
+
+    // Escape to confirm edit
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+
+    // Label should show the edited text
+    const labelText = await page.locator('.scene-label').first().textContent()
+    expect(labelText).toContain('Hell')
+    expect(labelText).toContain('World')
+
+    // Pattern data should be intact
+    const active = await stepIsActive(page)
+    expect(active).toBe(true)
+  })
+
+  test('multiline label editing with Enter', async ({ page }) => {
+    await addSceneLabel(page)
+    const label = page.locator('.scene-label').first()
+    await expect(label).toBeVisible()
+
+    // Double-click to enter edit mode
+    await label.dblclick()
+    await page.waitForTimeout(300)
+
+    const textarea = page.locator('.scene-label-edit')
+    await expect(textarea).toBeVisible()
+
+    // Type multiline text (Enter = newline in our model)
+    await textarea.fill('')
+    await page.keyboard.type('Line 1')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('Line 2')
+
+    // Escape to confirm
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+
+    // Label should contain both lines (rendered as <br>)
+    const html = await page.locator('.scene-label').first().innerHTML()
+    expect(html).toContain('Line 1')
+    expect(html).toContain('Line 2')
+  })
+
+  test('scene node delete with multiple nodes selected', async ({ page }) => {
+    // Add two nodes
+    await addSceneNode(page)
+    // Select pattern 1 in matrix
+    await page.locator('[aria-label="Pattern 1"]').click()
+    await page.waitForTimeout(200)
+    await addSceneNode(page)
+    await expect(page.locator('.scene-node')).toHaveCount(2)
+
+    // Box-select both nodes: drag across the scene canvas
+    const sceneView = page.locator('.scene-view')
+    const box = await sceneView.boundingBox()
+    if (box) {
+      // Drag from top-left to bottom-right to select all
+      await page.mouse.move(box.x + 10, box.y + 10)
+      await page.mouse.down()
+      await page.mouse.move(box.x + box.width - 10, box.y + box.height - 10, { steps: 5 })
+      await page.mouse.up()
+      await page.waitForTimeout(300)
+    }
+
+    // Delete all selected nodes
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+
+    expect(await page.locator('.scene-node').count()).toBe(0)
+  })
+
+  test('undo restores deleted scene node', async ({ page }) => {
+    await addSceneNode(page)
+    await expect(page.locator('.scene-node')).toHaveCount(1)
+
+    // Select and delete
+    await page.locator('.scene-node').first().click()
+    await page.waitForTimeout(200)
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(300)
+    expect(await page.locator('.scene-node').count()).toBe(0)
+
+    // Undo
+    await page.keyboard.press('Control+z')
+    await page.waitForTimeout(400)
+    await expect(page.locator('.scene-node')).toHaveCount(1)
+  })
+})
