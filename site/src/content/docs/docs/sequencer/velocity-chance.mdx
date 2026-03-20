@@ -1,6 +1,6 @@
 ---
-title: Velocity & Chance
-description: Per-step volume control and trigger probability for dynamic patterns.
+title: Velocity, Chance & P-Lock Lanes
+description: Per-step volume, trigger probability, and parameter locks for dynamic patterns.
 sidebar:
   order: 3
 ---
@@ -9,7 +9,18 @@ import PlaygroundStepGrid from '../../../../components/PlaygroundStepGrid.svelte
 
 ## Overview
 
-Tap a **track name** in the step grid to expand the velocity lane below it. The lane shows a vertical bar for each step, and a **VEL / CHNC** toggle button lets you switch between velocity and chance editing.
+Tap a **track name** in the step grid to expand the velocity lane below it. The lane shows a vertical bar for each step. Click the mode tabs to switch between **8 modes**:
+
+| Mode | Function |
+|------|----------|
+| **VEL** | Per-step velocity (volume) |
+| **CHNC** | Trigger probability 0–100% |
+| **VOL** | Per-step track volume (P-Lock) |
+| **PAN** | Per-step pan position (P-Lock) |
+| **VERB** | Per-step reverb send (P-Lock) |
+| **DLY** | Per-step delay send (P-Lock) |
+| **GLT** | Per-step glitch send (P-Lock) |
+| **GRN** | Per-step granular send (P-Lock) |
 
 <PlaygroundStepGrid client:visible />
 
@@ -34,6 +45,16 @@ Click the **CHNC** button (or **Shift+drag** a bar) to switch to chance mode. Ba
 Steps with chance set below 100% show a small **blue diamond** in the bottom-left corner of the step cell.
 
 Chance creates **generative variation** — the same pattern sounds different each loop. Combined with the Scene graph's weighted edges, you can build arrangements that never repeat exactly.
+
+## P-Lock Lanes (VOL / PAN / VERB / DLY / GLT / GRN)
+
+The remaining 6 modes are **per-step parameter locks** (P-Locks). Each bar sets that parameter's value for a single step, overriding the track-level setting.
+
+- Drag a bar **up/down** to set the value
+- Steps with P-Lock values show a teal-colored bar
+- The parameter map corresponds to the track-level knobs in the Dock panel (VOL, PAN, and the four send knobs)
+
+**Use case**: Automate reverb send on specific steps for rhythmic wash effects, or pan individual hits across the stereo field.
 
 ## Practical Uses
 

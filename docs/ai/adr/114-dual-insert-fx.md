@@ -4,30 +4,30 @@
 
 ## Context
 
-現在 1 トラックにつき Insert FX は 1 スロットのみ（ADR 077）。FX タイプは verb / delay / glitch の 3 種で、`CellInsertFx` として `Cell` に格納される。
+Currently each track has a single Insert FX slot (ADR 077). FX types are verb / delay / glitch, stored as `CellInsertFx` on `Cell`.
 
-1 スロットだと組み合わせの面白さが出ない — Delay → Bitcrush、Reverb → Delay 等のチェーンは音作りの基本。ハードウェアの先例：
+A single slot limits creative combinations — Delay → Bitcrush, Reverb → Delay, etc. are fundamental sound design chains. Hardware precedents:
 
-- **Elektron Digitakt/Syntakt**: 2 insert per track（固定スロット）
+- **Elektron Digitakt/Syntakt**: 2 inserts per track (fixed slots)
 - **Roland SP-404**: 1 insert + master
-- **Ableton Push**: 無制限チェーン（PC パワー前提）
+- **Ableton Push**: unlimited chain (relies on PC power)
 
-CPU バジェットを考慮すると、Elektron 方式の **2 スロット固定** が最適。上限が決まるため DSP のリソース予測が立つ。
+Given CPU budget constraints, the Elektron-style **2 fixed slots** approach is optimal. A known upper bound makes DSP resource usage predictable.
 
-### 現在のコード構造
+### Current Code Structure
 
-- `CellInsertFx` — `src/lib/types.ts:24` — 単一 FX スロット型
-- `Cell.insertFx?: CellInsertFx` — `src/lib/types.ts:51` — 単一オプショナル
-- `InsertFxSlot` — `worklet-processor.ts:121` — DSP 側の単一スロット
-- `insertSlots: (InsertFxSlot | null)[]` — トラックごとに 1 スロット
-- `_processInsert(slot, inL, inR)` — 単一スロット処理
-- `engine.ts:502` — `patternToWorklet` で `cell.insertFx` → `WorkletInsertFx` に変換
+- `CellInsertFx` — `src/lib/types.ts:24` — single FX slot type
+- `Cell.insertFx?: CellInsertFx` — `src/lib/types.ts:51` — single optional
+- `InsertFxSlot` — `worklet-processor.ts:121` — DSP-side single slot
+- `insertSlots: (InsertFxSlot | null)[]` — one slot per track
+- `_processInsert(slot, inL, inR)` — single slot processing
+- `engine.ts:502` — `patternToWorklet` converts `cell.insertFx` → `WorkletInsertFx`
 
 ## Decision
 
-### 1. データモデル
+### 1. Data Model
 
-`Cell.insertFx` を単一オブジェクトから **2 要素固定配列** に変更：
+Change `Cell.insertFx` from a single object to a **fixed 2-element array**:
 
 ```typescript
 // types.ts
@@ -37,7 +37,7 @@ export interface Cell {
 }
 ```
 
-`CellInsertFx` 型自体は変更なし。スロットが `null` ならバイパス。
+`CellInsertFx` type itself is unchanged. A `null` slot is bypassed.
 
 ### 2. WorkletTrack
 
@@ -49,24 +49,24 @@ export interface WorkletTrack {
 }
 ```
 
-### 3. DSP（worklet-processor.ts）
+### 3. DSP (worklet-processor.ts)
 
-`insertSlots` を 2 次元化：
+Make `insertSlots` 2-dimensional:
 
 ```typescript
 private insertSlots: [InsertFxSlot | null, InsertFxSlot | null][] = []
 ```
 
-処理はシリアルチェーン：
+Processing is a serial chain:
 
 ```typescript
-// slot 0 の出力が slot 1 の入力
+// slot 0 output feeds slot 1 input
 for (const slot of this.insertSlots[t]) {
   if (slot) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
 }
 ```
 
-### 4. engine.ts（patternToWorklet）
+### 4. engine.ts (patternToWorklet)
 
 ```typescript
 insertFx: cell.insertFx ? [
@@ -75,11 +75,11 @@ insertFx: cell.insertFx ? [
 ] : undefined,
 ```
 
-共通の `serializeInsertFx()` ヘルパーを抽出。
+Extract a shared `serializeInsertFx()` helper.
 
 ### 5. stepActions.ts
 
-スロットインデックスを引数に追加：
+Add slot index parameter:
 
 ```typescript
 export function setInsertFxType(trackId: number, slot: 0 | 1, type: ...)
@@ -87,9 +87,9 @@ export function setInsertFxFlavour(trackId: number, slot: 0 | 1, flavour: string
 export function setInsertFxParam(trackId: number, slot: 0 | 1, param: 'mix' | 'x' | 'y', v: number)
 ```
 
-### 6. UI（DockTrackEditor.svelte）
+### 6. UI (DockTrackEditor.svelte)
 
-2 スロットを縦に並べる：
+Stack two slots vertically:
 
 ```
 ┌─────────────────────────────────┐
@@ -103,14 +103,14 @@ export function setInsertFxParam(trackId: number, slot: 0 | 1, param: 'mix' | 'x
 └─────────────────────────────────┘
 ```
 
-- スロット番号 `[1]` `[2]` をラベル表示
-- 各スロット独立で type / flavour / params を設定
-- 両方 OFF なら折りたたんで 1 行のみ表示（Dock スクロール対策）
-- 信号フロー: Voice → Slot 1 → Slot 2 → Send/Mix
+- Slot numbers `[1]` `[2]` as labels
+- Each slot independently sets type / flavour / params
+- Both OFF: collapse to a single row (Dock scroll optimization)
+- Signal flow: Voice → Slot 1 → Slot 2 → Send/Mix
 
-### 7. マイグレーション
+### 7. Migration
 
-既存の `cell.insertFx` (単一オブジェクト) を `[existingFx, null]` に変換：
+Convert existing `cell.insertFx` (single object) to `[existingFx, null]`:
 
 ```typescript
 // restoreSong or validate
@@ -119,32 +119,32 @@ if (cell.insertFx && !Array.isArray(cell.insertFx)) {
 }
 ```
 
-`validateSongData()` にも配列チェックを追加。
+Add array check to `validateSongData()`.
 
-### 8. 実装フェーズ
+### 8. Implementation Phases
 
-**Phase 1: データ + DSP**
-- `CellInsertFx` 配列化、`WorkletTrack` 更新
-- `worklet-processor.ts` のシリアルチェーン処理
-- `engine.ts` の serialize 更新
-- マイグレーション + validation
-- 既存テスト修正
+**Phase 1: Data + DSP**
+- Convert `CellInsertFx` to array, update `WorkletTrack`
+- Serial chain processing in `worklet-processor.ts`
+- Update serialize in `engine.ts`
+- Migration + validation
+- Fix existing tests
 
 **Phase 2: UI**
-- DockTrackEditor の 2 スロット表示
-- スロット折りたたみ（OFF 時）
-- StepGrid の insert-dot 表示更新（2 つのドットにする？）
+- 2-slot display in DockTrackEditor
+- Slot collapse (when OFF)
+- Update StepGrid insert-dot display (two dots?)
 
 ## Considerations
 
-- **CPU**: 最悪ケースは全トラック × 2 スロット = 16 FX インスタンス。現在の verb/delay/glitch はいずれも軽量なので問題ないが、将来重い FX を追加する場合は注意
-- **3 スロット以上**: 2 で十分。3 つ以上は diminishing returns で UI 複雑度だけ上がる
-- **P-Lock**: Insert FX パラメータの P-Lock は現在未対応。将来的にスロットごとの P-Lock を検討可能だが、この ADR のスコープ外
-- **並列 vs 直列**: 直列（シリアル）チェーンのみ。並列ルーティングは複雑度が跳ね上がるため見送り
+- **CPU**: Worst case is all tracks × 2 slots = 16 FX instances. Current verb/delay/glitch are all lightweight, but be cautious if heavier FX are added later
+- **3+ slots**: 2 is sufficient. 3 or more hits diminishing returns while increasing UI complexity
+- **P-Lock**: Insert FX parameter P-Locks are currently unsupported. Per-slot P-Locks could be considered in the future but are out of scope for this ADR
+- **Parallel vs serial**: Serial chain only. Parallel routing dramatically increases complexity — deferred
 
 ## Future Extensions
 
-- Insert FX パラメータの P-Lock 対応
-- FX タイプ追加（chorus、phaser、EQ 等）
-- ドラッグでスロット順序入れ替え
-- Dock panel phase 2 との統合（折りたたみセクション）
+- P-Lock support for Insert FX parameters
+- Additional FX types (chorus, phaser, EQ, etc.)
+- Drag to reorder slots
+- Integration with Dock panel phase 2 (collapsible sections)

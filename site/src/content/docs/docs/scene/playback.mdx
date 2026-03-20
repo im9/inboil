@@ -26,8 +26,8 @@ Tap **▶** (or **Space**) to play in Loop mode. In the Scene view, tap the **�
 
 1. **Start at the root node** — the node marked with a dot
 2. **Play the pattern** — the pattern referenced by the node plays from start to end
-3. **Apply decorators** — transpose, tempo, repeat, FX, automation are applied during playback
-4. **Repeat** — if a Repeat decorator exists, the pattern loops N times
+3. **Apply function node modifiers** — transpose, tempo, repeat, and FX are applied during playback
+4. **Repeat** — if a Repeat modifier exists, the pattern loops N times
 5. **Choose next edge** — if the node has outgoing edges, pick one randomly (equal probability)
 6. **Move to next node** — playback continues at the destination node
 7. **Stop at terminal** — if there are no outgoing edges, playback ends
@@ -50,21 +50,21 @@ During scene playback, the engine automatically moves through the graph. You can
 
 ## Tempo Changes
 
-When playback enters a node with a **Tempo** decorator:
+When playback enters a node with a **Tempo** modifier:
 - The tempo changes immediately (no crossfade)
 - When leaving that node, tempo reverts to the previous value
-- If the next node also has a Tempo decorator, its value takes effect
+- If the next node also has a Tempo modifier, its value takes effect
 
 Tempo changes are node-scoped, not global — they don't permanently alter the project tempo.
 
 ## Performance During Scene Playback
 
-Performance effects work during scene playback, layering on top of any decorators in real-time.
+Performance effects work during scene playback, layering on top of any function node modifiers in real-time.
 
 On **desktop**, use the transport bar buttons (FILL / REV / BRK). On **mobile**, tap the **PERF** tab in the header to open the Perf Sheet — a Kaoss Pad-style controller with four effect tabs (PERF, GLITCH, FILTER, MOTION) including XY pad control and sensor-driven effects.
 
 ## Related
 
 - [Scene Nodes](/docs/scene/nodes/) — node types and properties
-- [Decorators](/docs/scene/decorators/) — per-node modifiers
+- [Function Node Modifiers](/docs/scene/decorators/) — per-node modifiers
 - [Build a Scene](/docs/getting-started/arrangement/) — tutorial

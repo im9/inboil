@@ -67,8 +67,8 @@
       title: L === 'ja' ? 'ベロシティ & 確率' : 'VELOCITY & CHANCE',
       docsUrl: '/docs/sequencer/velocity-chance/',
       body: L === 'ja'
-        ? 'トラック下部のバーを3モードで切替:\nSTEP — トリガー ON/OFF\nVEL — 各ステップの音量 (上下ドラッグ)\nCHNC — 発音確率 0–100%\nステップ数: 数字タップで 2–64'
-        : 'Switch 3 modes in the bar below each track:\nSTEP — toggle triggers\nVEL — per-step volume (drag up/down)\nCHNC — trigger probability 0–100%\nStep count: tap number for 2–64',
+        ? 'トラック下部のバーを8モードで切替:\nSTEP — トリガー ON/OFF\nVEL — 各ステップの音量\nCHNC — 発音確率 0–100%\nVOL / PAN / VERB / DLY / GLT / GRN — ステップごとの P-Lock\nステップ数: 数字タップで 2–64'
+        : 'Switch 8 modes in the bar below each track:\nSTEP — toggle triggers\nVEL — per-step volume\nCHNC — trigger probability 0–100%\nVOL / PAN / VERB / DLY / GLT / GRN — per-step P-Lock\nStep count: tap number for 2–64',
     },
     {
       category: 1,

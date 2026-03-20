@@ -1,6 +1,6 @@
 ---
-title: Decorators
-description: Modify playback per-node with transpose, tempo, repeat, FX, and automation.
+title: Function Node Modifiers
+description: Modify playback per-node with transpose, tempo, repeat, and FX.
 sidebar:
   order: 2
 ---
@@ -11,7 +11,7 @@ sidebar:
 
 Add function nodes from the **Scene toolbar** (transpose, tempo, repeat, FX icons) and connect them to pattern nodes with edges.
 
-## Decorator Types
+## Modifier Types
 
 ### Transpose
 
@@ -30,7 +30,7 @@ Changes the BPM for this node's pattern.
 
 - Value is in BPM (e.g., 120, 140)
 - When playback enters this node, tempo changes immediately
-- When playback leaves, tempo returns to the previous value (or the next node's tempo decorator)
+- When playback leaves, tempo returns to the previous value (or the next node's tempo modifier)
 
 **Use case**: Speed up for a build section, slow down for a breakdown.
 
@@ -52,16 +52,6 @@ Enables or modifies effects for this node.
 
 **Use case**: Add heavy reverb only during the ambient breakdown section.
 
-### Automation
-
-Automate **any parameter** over the duration of the pattern. Draw an automation curve that modulates a knob value from start to end of the pattern.
-
-- Select a parameter target (any voice or FX knob)
-- Draw a curve in the automation editor
-- The curve repeats with each repeat cycle
-
-**Use case**: Filter sweep across a 4-bar build, modulation depth ramp during a drop.
-
 ## Chaining Function Nodes
 
 Multiple function nodes can be chained via edges. For example:
@@ -79,5 +69,5 @@ The pattern plays at 140 BPM, transposed up 7 semitones, two times in a row.
 ## Related
 
 - [Scene Nodes](/docs/scene/nodes/) — node types and edges
-- [Playback](/docs/scene/playback/) — how decorators interact with the engine
+- [Playback](/docs/scene/playback/) — how function nodes interact with the engine
 - [Effects](/docs/sound/fx/) — FX Pad details

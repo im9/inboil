@@ -5,7 +5,7 @@ The user communicates in Japanese; all specs are written in English.
 
 ## Project in One Sentence
 
-A web-based groovebox inspired by Elektron hardware and OP-XY, built with Svelte 5 on the frontend and TypeScript AudioWorklet DSP — with a parallel C++ core designed for future iOS and VST portability.
+A web-based groovebox inspired by Elektron hardware and OP-XY, built with Svelte 5 on the frontend and TypeScript AudioWorklet DSP.
 
 ## Document Map
 

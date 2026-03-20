@@ -4,7 +4,7 @@
 
 Up to 16 tracks (variable, ADR 056) with configurable voice assignment via VoiceId registry (ADR 009).
 All synthesis is implemented in **TypeScript** and runs inside the AudioWorklet processor.
-A parallel C++ DSP core exists in `src/dsp/` (compiled via Emscripten) but is not yet integrated.
+The C++ WASM approach was superseded (ADR 001). All DSP is TypeScript.
 
 ## Default Track Assignment — DECIDED
 
@@ -217,7 +217,7 @@ Factory presets: 30 presets across 6 categories (Lead, Bass, Pad, Pluck, Keys, F
 
 ## DSP Building Blocks
 
-Located in `src/lib/audio/dsp/`. Split into modules for maintainability and C++ porting.
+Located in `src/lib/audio/dsp/`. Split into modules for maintainability.
 
 | Module | Class | Description |
 |---|---|---|

@@ -8,8 +8,8 @@ The goal is a focused, expressive tool for composing and performing electronic m
 ## Goals
 
 - Real-time step sequencing with per-track parameter control
-- Low-latency audio synthesis via AudioWorklet (TypeScript now, WASM future)
-- Portable DSP core (C++) reusable for iOS and VST without rewrite (long-term)
+- Low-latency audio synthesis via TypeScript AudioWorklet
+- Potential future native port for iOS/VST (ADR 001 superseded C++ WASM approach)
 - Minimalist, distraction-free UI that respects the hardware groovebox workflow
 - Performance features for live playing (KEY, OCT, EQ, FILL, REV, GLT, BRK)
 - FxPad XY performance surface with real-time FX control and audio visualization
@@ -24,7 +24,7 @@ The goal is a focused, expressive tool for composing and performing electronic m
 | Constraint | Detail |
 |---|---|
 | Browser audio | Web Audio API + AudioWorklet |
-| DSP runtime | TypeScript (current); C++17 via Emscripten (future) |
+| DSP runtime | TypeScript AudioWorklet |
 | Frontend | Svelte 5 (runes API) |
 | No external audio libs (v1) | All synthesis written from scratch in TypeScript |
 | Package manager | pnpm |
@@ -41,7 +41,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - FxPad: XY performance controller with 4 draggable FX nodes (VERB, DLY, GLT, GRN)
 - Audio visualizer: 3D wireframe terrain on FxPad canvas background, driven by AnalyserNode FFT data
 - Per-track send mixer on FxPad (VERB, DLY, GLT, GRN per selected track)
-- Song model: pattern pool (100 patterns: 21 factory + 79 user), sections, scene graph
+- Song model: pattern pool (100 slots, 4 pre-populated in default song), scene graph
 - Scene graph: node-based directed graph for arrangement (pattern nodes + function nodes via ADR 066/093)
 - Generative scene nodes: Turing Machine, Quantizer, Tonnetz neo-Riemannian transforms (ADR 078/089)
 - Graphic score automation: inline DockPanel editor with EQ/Master/FX automation targets (ADR 026). Curve automation removed (ADR 093) — replaced by per-step paramLocks
@@ -68,12 +68,12 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Sidebar (fixed right drawer): Help + System (PROJECT/SETTINGS tabs, REC button) (ADR 055/085)
 - Desktop + mobile responsive UI (with mobile velocity/chance editing tabs)
 
-The C++ DSP core (`src/dsp/`) is being developed in parallel but is not yet integrated into the web build.
+The C++ DSP approach was superseded (ADR 001). All DSP runs as TypeScript in `src/lib/audio/dsp/`.
 
 ## Future Platforms (DEFERRED)
 
-- **iOS app** — DSP core reused via C++ static library; Swift/SwiftUI frontend
-- **VST3 plugin** — DSP core compiled with JUCE; DAW integration
+- **iOS app** — native port of TS DSP; Swift/SwiftUI frontend
+- **VST3 plugin** — native DSP port with JUCE; DAW integration
 
 ## Inspiration
 

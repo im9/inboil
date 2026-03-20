@@ -7,7 +7,7 @@
 │              Svelte 5 UI (browser)           │
 │  Components / $state / $derived / $effect    │
 └─────────────────┬───────────────────────────┘
-                  │  engine.ts (sendPattern / onStep / getAnalyser)
+                  │  engine.ts (sendPatternByIndex / onStep / getAnalyser)
 ┌─────────────────▼───────────────────────────┐
 │         AudioWorklet Bridge (TypeScript)     │
 │  Serializes state → MessagePort commands     │
@@ -170,6 +170,8 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │       ├── bass.ts         ← Bass voice implementations
 │   │   │       ├── melodic.ts      ← Melodic voice implementations (Lead, FM, WT)
 │   │   │       ├── sampler.ts      ← Sampler/PolySampler voices
+│   │   │       ├── fm-drum.ts      ← FM drum synthesis (ADR 111)
+│   │   │       ├── voice-common.ts ← Shared voice utilities
 │   │   │       └── voices.ts       ← Voice registry + re-export (makeVoice)
 │   │   ├── multiDevice/            ← WebRTC multi-device jam (ADR 019)
 │   │   │   ├── index.ts            ← Public API (host/guest handlers, signaling)

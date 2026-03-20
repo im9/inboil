@@ -162,7 +162,6 @@ Located at `src/lib/audio/engine.ts`.
 ```typescript
 class GrooveboxEngine {
   async init(callbacks?: EngineCallbacks): Promise<void>                          // Create AudioContext + load worklet + AnalyserNode
-  sendPattern(song, perf?, fxPad?, ctx?, reset?, sectionIndex?): void             // Serialize section's pattern & post
   sendPatternByIndex(song, perf?, fxPad?, ctx?, reset?, patternIndex?): void      // Serialize pattern by index & post
   play(): void                                                                   // Resume AudioContext + post play
   stop(): void                                                                   // Post stop (suspends context after 8s idle)
@@ -180,7 +179,7 @@ class GrooveboxEngine {
 }
 ```
 
-`sendPattern()` resolves a section's `patternIndex` then delegates to `buildWorkletPattern()`. `sendPatternByIndex()` takes a pattern index directly — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad`, and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
+`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad`, and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
 
 ## State Serialization
 

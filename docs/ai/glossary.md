@@ -122,9 +122,8 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **DSP** | Digital Signal Processing. The mathematical operations that produce and transform audio. |
 | **Audio block** | 128 samples processed in one `process()` call of the AudioWorklet. |
 | **Runes** | Svelte 5's reactivity system (`$state`, `$derived`, `$effect`). |
-| **WASM / WebAssembly** | Binary instruction format. Used by the C++ DSP core (not yet integrated). |
-| **Emscripten** | Compiler toolchain for C++ → WebAssembly. Used for `src/dsp/`. |
-| **VST3** | Plugin format for DAWs. Future target platform for C++ DSP core. |
+| **WASM / WebAssembly** | Binary instruction format. C++ WASM approach was superseded (ADR 001); all DSP is TypeScript. |
+| **VST3** | Plugin format for DAWs. Potential future native port target. |
 | **OPFS** | Origin Private File System. Browser-native filesystem API used by the Audio Pool for persistent sample storage. |
 | **Audio Pool** | OPFS-based sample library (ADR 104). 111 factory samples (90 browsable + 21-zone Grand Piano pack) auto-installed at startup. User samples auto-added on LOAD. Browsable via DockPoolBrowser. |
 

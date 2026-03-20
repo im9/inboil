@@ -28,7 +28,7 @@ New here? Start with the tutorial:
 
 ### Scene Graph
 - [Nodes](/docs/scene/nodes/) — pattern and generative node types
-- [Decorators](/docs/scene/decorators/) — transpose, tempo, repeat, FX, automation
+- [Function Node Modifiers](/docs/scene/decorators/) — transpose, tempo, repeat, FX
 - [Playback](/docs/scene/playback/) — how the scene engine traverses the graph
 - [Function Nodes](/docs/scene/function/) — generative engines (Turing Machine, Quantizer, Tonnetz)
 
