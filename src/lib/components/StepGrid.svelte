@@ -13,15 +13,30 @@
   import { trackPlkValue, trackPlkChange, isTrackPlkLocked } from '../paramHelpers.ts'
   import { relativeCoords, stepIndexFromX } from '../domHelpers.ts'
 
-  // ── Step paging (hardware-style 16-step pages) ──
-  const PAGE_SIZE = 16
-  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
-  const totalPages = $derived(Math.ceil(maxSteps / PAGE_SIZE))
-  const needsPaging = $derived(maxSteps > PAGE_SIZE)
-  const pageStart = $derived(ui.stepPage * PAGE_SIZE)
-  const pageEnd = $derived(Math.min(maxSteps, pageStart + PAGE_SIZE))
+  // ── Responsive step paging ──
+  // Measure available width in .track-seq and fit 16 or 32 steps
+  const STEP_CELL = 26  // 24px cell + 2px gap
+  let seqEl: HTMLDivElement | undefined = $state(undefined)
 
-  // Clamp page when step count shrinks
+  $effect(() => {
+    if (!seqEl) return
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width
+      // 32 steps need 32*26 = 832px; use 16 otherwise
+      ui.stepPageSize = w >= STEP_CELL * 32 ? 32 : 16
+    })
+    ro.observe(seqEl)
+    return () => ro.disconnect()
+  })
+
+  const pageSize = $derived(ui.stepPageSize)
+  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
+  const totalPages = $derived(Math.ceil(maxSteps / pageSize))
+  const needsPaging = $derived(maxSteps > pageSize)
+  const pageStart = $derived(ui.stepPage * pageSize)
+  const pageEnd = $derived(Math.min(maxSteps, pageStart + pageSize))
+
+  // Clamp page when step count or page size changes
   $effect(() => {
     const max = totalPages  // track reactive dep
     const cur = untrack(() => ui.stepPage)
@@ -39,7 +54,7 @@
     }
     const head = playback.playheads[longestTrackId]
     if (head == null) return
-    const headPage = Math.floor(head / PAGE_SIZE)
+    const headPage = Math.floor(head / pageSize)
     if (headPage !== untrack(() => ui.stepPage)) ui.stepPage = headPage
   })
 
@@ -339,6 +354,11 @@
 </script>
 
 <div class="step-grid">
+<!-- Hidden measure div mirrors track-cols layout to get seq area width -->
+<div class="track-cols seq-measure" aria-hidden="true">
+  <div class="track-controls"></div>
+  <div class="track-content"><div class="track-seq" bind:this={seqEl}></div><div class="track-mix"></div></div>
+</div>
 <div class="step-grid-scroll" bind:this={scrollEl}>
   {#each song.patterns[ui.currentPattern].cells as ph}
     {@const trackId = ph.trackId}
@@ -633,6 +653,11 @@
     flex: 1;
     min-height: 0;
     background: var(--color-bg);
+  }
+  .seq-measure {
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
   .step-grid-scroll {
     flex: 1;

@@ -29,10 +29,10 @@
   const ph = $derived(activeCell(trackId))
   const isPoly = $derived(ph.voiceId === 'Sampler' || ((ph.voiceId === 'WT' || ph.voiceId === 'FM') && (ph.voiceParams?.polyMode ?? 0) >= 0.5))
 
-  // ── Step paging ──
-  const PAGE_SIZE = 16
-  const pageStart = $derived(ui.stepPage * PAGE_SIZE)
-  const pageEnd = $derived(Math.min(ph.steps, pageStart + PAGE_SIZE))
+  // ── Step paging (responsive — synced with StepGrid) ──
+  const pageSize = $derived(ui.stepPageSize)
+  const pageStart = $derived(ui.stepPage * pageSize)
+  const pageEnd = $derived(Math.min(ph.steps, pageStart + pageSize))
   const visibleSteps = $derived(pageEnd - pageStart)
   const playheadCol = $derived.by(() => {
     if (!isViewingPlayingPattern()) return -1

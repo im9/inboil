@@ -101,11 +101,11 @@
   })
   const octDisplay = $derived(perf.octave > 0 ? `+${perf.octave}` : `${perf.octave}`)
 
-  // ── Step paging (mirrored from StepGrid constants) ──
-  const PAGE_SIZE = 16
+  // ── Step paging (responsive — synced with StepGrid) ──
+  const pageSize = $derived(ui.stepPageSize)
   const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
-  const totalPages = $derived(Math.ceil(maxSteps / PAGE_SIZE))
-  const needsPaging = $derived(maxSteps > PAGE_SIZE && prefs.patternEditor === 'grid')
+  const totalPages = $derived(Math.ceil(maxSteps / pageSize))
+  const needsPaging = $derived(maxSteps > pageSize && prefs.patternEditor === 'grid')
 
   // ── Mobile key menu ──
   const WHITE_IDX = [0, 2, 4, 5, 7, 9, 11]

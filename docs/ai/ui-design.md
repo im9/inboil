@@ -136,7 +136,7 @@ Each track row's `.track-content` is a two-column flex row:
 
 ```
 ┌─ track-seq (flex:1) ──────────────────┐│┌─ track-mix (128px fixed) ─┐
-│  steps row (16 step cells + page btns) │││  mix-knobs: VOL PAN       │
+│  steps row (16 or 32 cells + page btns) │││  mix-knobs: VOL PAN       │
 │  vel-bars / chance bars (if selected)  │││  send-knobs (selected):   │
 │                                        │││  VERB DLY GLT GRN         │
 └────────────────────────────────────────┘│└────────────────────────────┘
@@ -149,6 +149,14 @@ Each track row's `.track-content` is a two-column flex row:
 - P-Lock indicators (olive arc) shown only on the selected track where `trackPlkValue`/`isTrackPlkLocked` helpers apply.
 - Non-selected tracks use raw baseline values directly (helpers use `ui.selectedTrack` internally).
 - RST button resets both per-step automation and baseline mix/send values (VOL→0.8, PAN→0, sends→0).
+
+### Responsive step paging
+
+Step page size adapts to the available width of `.track-seq`:
+- **≥ 832px** (32 × 26px): show 32 steps per page
+- **< 832px**: show 16 steps per page (default)
+
+Measured via `ResizeObserver` on a hidden `.seq-measure` div. The value is stored in `ui.stepPageSize` and shared across StepGrid, PianoRoll, and PatternToolbar.
 
 ## AppHeader Element Spec — DECIDED
 

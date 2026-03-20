@@ -195,6 +195,7 @@ export const ui = $state<{
   brushMode: BrushMode
   chordShape: ChordShape
   stepPage: number
+  stepPageSize: number
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -216,6 +217,7 @@ export const ui = $state<{
   brushMode: 'draw' as BrushMode,
   chordShape: 'triad' as ChordShape,
   stepPage: 0,
+  stepPageSize: 16,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
