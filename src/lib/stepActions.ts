@@ -230,6 +230,7 @@ const SEQ_PARAM_KEYS = ['vol', 'pan', 'reverbSend', 'delaySend', 'glitchSend', '
 export function resetSeqParams(trackIdx: number) {
   pushUndo('Reset seq params')
   const c = activeCell(trackIdx)
+  // Reset per-step automation
   for (const trig of c.trigs) {
     trig.velocity = 0.8
     trig.chance = undefined
@@ -238,6 +239,10 @@ export function resetSeqParams(trackIdx: number) {
       if (Object.keys(trig.paramLocks).length === 0) trig.paramLocks = undefined
     }
   }
+  // Reset baseline mix/send values
+  const track = song.tracks[trackIdx]
+  if (track) { track.volume = 0.8; track.pan = 0 }
+  c.reverbSend = 0; c.delaySend = 0; c.glitchSend = 0; c.granularSend = 0
 }
 
 export const STEP_OPTIONS = [

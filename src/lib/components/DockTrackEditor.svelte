@@ -1,14 +1,14 @@
 <script lang="ts">
   /**
    * Track parameter editor — voice picker, synth knobs, P-Lock, insert FX,
-   * send/mix, sample loader, remove track.
+   * sample loader, remove track. (SEND/MIX moved to StepGrid)
    * Extracted from DockPanel.svelte for modularity.
    */
-  import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles, pushUndo } from '../state.svelte.ts'
+  import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
-  import { clearAllParamLocks, setTrackSend, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
+  import { clearAllParamLocks, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
-  import { knobValue, knobChange, isParamLocked, trackPlkValue, trackPlkChange, isTrackPlkLocked } from '../paramHelpers.ts'
+  import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
   import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import { engine } from '../audio/engine.ts'
   import Knob from './Knob.svelte'
@@ -350,36 +350,6 @@
     </span>
   </div>
 {/if}
-
-<!-- Send + Mixer -->
-<div class="section-divider" aria-hidden="true"></div>
-<div class="section-label">SEND / MIX</div>
-<div class="knob-grid">
-  <span data-tip="Track volume" data-tip-ja="トラック音量">
-    <Knob value={trackPlkValue('vol', track.volume)} label="VOL" size={36} locked={isTrackPlkLocked('vol')}
-      onchange={v => trackPlkChange('vol', v, bv => { pushUndo('Set volume'); song.tracks[ui.selectedTrack].volume = bv })} />
-  </span>
-  <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-    <Knob value={(trackPlkValue('pan', track.pan) + 1) / 2} label="PAN" size={36} locked={isTrackPlkLocked('pan')}
-      onchange={v => trackPlkChange('pan', v * 2 - 1, bv => { pushUndo('Set pan'); song.tracks[ui.selectedTrack].pan = bv })} />
-  </span>
-  <span data-tip="Reverb send amount" data-tip-ja="リバーブセンド量">
-    <Knob value={trackPlkValue('reverbSend', cell.reverbSend)} label="VERB" size={36} locked={isTrackPlkLocked('reverbSend')}
-      onchange={v => trackPlkChange('reverbSend', v, bv => setTrackSend(ui.selectedTrack, 'reverbSend', bv))} />
-  </span>
-  <span data-tip="Delay send amount" data-tip-ja="ディレイセンド量">
-    <Knob value={trackPlkValue('delaySend', cell.delaySend)} label="DLY" size={36} locked={isTrackPlkLocked('delaySend')}
-      onchange={v => trackPlkChange('delaySend', v, bv => setTrackSend(ui.selectedTrack, 'delaySend', bv))} />
-  </span>
-  <span data-tip="Glitch send amount" data-tip-ja="グリッチセンド量">
-    <Knob value={trackPlkValue('glitchSend', cell.glitchSend)} label="GLT" size={36} locked={isTrackPlkLocked('glitchSend')}
-      onchange={v => trackPlkChange('glitchSend', v, bv => setTrackSend(ui.selectedTrack, 'glitchSend', bv))} />
-  </span>
-  <span data-tip="Granular send amount" data-tip-ja="グラニュラーセンド量">
-    <Knob value={trackPlkValue('granularSend', cell.granularSend)} label="GRN" size={36} locked={isTrackPlkLocked('granularSend')}
-      onchange={v => trackPlkChange('granularSend', v, bv => setTrackSend(ui.selectedTrack, 'granularSend', bv))} />
-  </span>
-</div>
 
 <div class="section-divider" aria-hidden="true"></div>
 <button class="btn-danger"

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onDestroy, onMount, tick, untrack } from 'svelte'
-  import { song, activeCell, playback, ui, trackDisplayName } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, isDrum, STEP_OPTIONS, addTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import type { Trig } from '../types.ts'
   import PianoRoll from './PianoRoll.svelte'
+  import Knob from './Knob.svelte'
+  import { trackPlkValue, trackPlkChange, isTrackPlkLocked } from '../paramHelpers.ts'
   import { relativeCoords, stepIndexFromX } from '../domHelpers.ts'
 
   // ── Step paging (hardware-style 16-step pages) ──
@@ -431,8 +433,9 @@
           {/if}
         </div>
 
-        <!-- ── Right column: step sequencer + vel bars ── -->
+        <!-- ── Right column: step sequencer + mix/send ── -->
         <div class="track-content">
+          <div class="track-seq">
           {#if stepSetTrack === trackId}
             <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
               {#each { length: STEP_SET_MAX } as _, stepIdx}
@@ -534,6 +537,57 @@
               {/each}
             </div>
           {/if}
+          </div>
+          <div class="track-mix">
+            <div class="mix-knobs">
+              <span data-tip="Track volume" data-tip-ja="トラック音量">
+                <Knob
+                  value={selected ? trackPlkValue('vol', track.volume) : track.volume}
+                  label="VOL" size={24} light compact
+                  locked={selected && isTrackPlkLocked('vol')}
+                  onchange={v => {
+                    if (selected) trackPlkChange('vol', v, bv => { pushUndo('Set volume'); song.tracks[trackId].volume = bv })
+                    else { pushUndo('Set volume'); song.tracks[trackId].volume = v }
+                  }}
+                />
+              </span>
+              <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
+                <Knob
+                  value={selected ? (trackPlkValue('pan', track.pan) + 1) / 2 : (track.pan + 1) / 2}
+                  label="PAN" size={24} light compact
+                  locked={selected && isTrackPlkLocked('pan')}
+                  onchange={v => {
+                    if (selected) trackPlkChange('pan', v * 2 - 1, bv => { pushUndo('Set pan'); song.tracks[trackId].pan = bv })
+                    else { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1 }
+                  }}
+                />
+              </span>
+            </div>
+            {#if selected}
+              <div class="send-knobs">
+                <span data-tip="Reverb send" data-tip-ja="リバーブセンド">
+                  <Knob value={trackPlkValue('reverbSend', ph.reverbSend)} label="VERB" size={24} light compact
+                    locked={isTrackPlkLocked('reverbSend')}
+                    onchange={v => trackPlkChange('reverbSend', v, bv => setTrackSend(trackId, 'reverbSend', bv))} />
+                </span>
+                <span data-tip="Delay send" data-tip-ja="ディレイセンド">
+                  <Knob value={trackPlkValue('delaySend', ph.delaySend)} label="DLY" size={24} light compact
+                    locked={isTrackPlkLocked('delaySend')}
+                    onchange={v => trackPlkChange('delaySend', v, bv => setTrackSend(trackId, 'delaySend', bv))} />
+                </span>
+                <span data-tip="Glitch send" data-tip-ja="グリッチセンド">
+                  <Knob value={trackPlkValue('glitchSend', ph.glitchSend)} label="GLT" size={24} light compact
+                    locked={isTrackPlkLocked('glitchSend')}
+                    onchange={v => trackPlkChange('glitchSend', v, bv => setTrackSend(trackId, 'glitchSend', bv))} />
+                </span>
+                <span data-tip="Granular send" data-tip-ja="グラニュラーセンド">
+                  <Knob value={trackPlkValue('granularSend', ph.granularSend)} label="GRN" size={24} light compact
+                    locked={isTrackPlkLocked('granularSend')}
+                    onchange={v => trackPlkChange('granularSend', v, bv => setTrackSend(trackId, 'granularSend', bv))} />
+                </span>
+              </div>
+            {/if}
+          </div>
         </div>
       </div>
       <!-- Inline piano roll for melodic tracks -->
@@ -656,10 +710,36 @@
     flex: 1;
   }
   .track-content {
+    display: flex;
     flex: 1;
     min-width: 0;
     touch-action: none;
-    padding-left: 8px;
+    padding-left: 4px;
+  }
+  .track-seq {
+    flex: 1;
+    min-width: 0;
+  }
+  .track-mix {
+    width: 128px;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(30,32,40,0.10);
+    padding-left: 4px;
+    margin-left: 4px;
+  }
+  .mix-knobs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+  }
+  .send-knobs {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
   }
 
   /* ── Track label (expand toggle) ── */

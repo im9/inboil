@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { song, playback, ui, activeCell, trackDisplayName } from '../state.svelte.ts'
+  import { song, playback, ui, activeCell, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import {
     isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
-    setTrigSlide, setTrigChance, setParamLock, toggleMute, toggleSolo,
+    setTrigSlide, setTrigChance, setParamLock, setTrackSend, toggleMute, toggleSolo,
   } from '../stepActions.ts'
   import { NOTE_NAMES, PIANO_ROLL_MIN, PIANO_ROLL_MAX } from '../constants.ts'
   import { registerKeyLayer, unregisterKeyLayer } from '../keyRouter.ts'
   import { onMount } from 'svelte'
+  import Knob from './Knob.svelte'
 
   // ── Column definitions ──────────────────────────────────────────
   // 0=NOTE 1=VEL 2=DUR 3=SLD 4=CHN | 5=VOL 6=PAN | 7=VERB 8=DLY 9=GLT 10=GRN
@@ -32,6 +33,7 @@
   let cursorCol = $state(0)
 
   const trackId = $derived(ui.selectedTrack)
+  const track = $derived(song.tracks[trackId])
   const ph = $derived(activeCell(trackId))
   const drum = $derived(isDrum(ph))
 
@@ -316,6 +318,40 @@
       </div>
       {/if}
     {/each}
+    {#if track}
+      <div class="sidebar-mix">
+        <div class="sidebar-mix-label">MIX</div>
+        <div class="sidebar-mix-row">
+          <span data-tip="Track volume" data-tip-ja="トラック音量">
+            <Knob value={track.volume} label="VOL" size={20} compact
+              onchange={v => { pushUndo('Set volume'); song.tracks[trackId].volume = v }} />
+          </span>
+          <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
+            <Knob value={(track.pan + 1) / 2} label="PAN" size={20} compact
+              onchange={v => { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1 }} />
+          </span>
+        </div>
+        <div class="sidebar-mix-label">SEND</div>
+        <div class="sidebar-mix-row">
+          <span data-tip="Reverb send" data-tip-ja="リバーブセンド">
+            <Knob value={ph.reverbSend} label="VERB" size={20} compact
+              onchange={v => setTrackSend(trackId, 'reverbSend', v)} />
+          </span>
+          <span data-tip="Delay send" data-tip-ja="ディレイセンド">
+            <Knob value={ph.delaySend} label="DLY" size={20} compact
+              onchange={v => setTrackSend(trackId, 'delaySend', v)} />
+          </span>
+          <span data-tip="Glitch send" data-tip-ja="グリッチセンド">
+            <Knob value={ph.glitchSend} label="GLT" size={20} compact
+              onchange={v => setTrackSend(trackId, 'glitchSend', v)} />
+          </span>
+          <span data-tip="Granular send" data-tip-ja="グラニュラーセンド">
+            <Knob value={ph.granularSend} label="GRN" size={20} compact
+              onchange={v => setTrackSend(trackId, 'granularSend', v)} />
+          </span>
+        </div>
+      </div>
+    {/if}
   </div>
 
   <!-- Right: Data grid -->
@@ -589,6 +625,30 @@
   }
   .track-act:active { background: rgba(237,232,220,0.10); }
   .track-act.active { color: var(--color-olive); border-color: var(--color-olive); }
+
+  /* ── Sidebar mix/send ── */
+  .sidebar-mix {
+    margin-top: auto;
+    padding: 8px 6px;
+    border-top: 1px solid rgba(237,232,220,0.08);
+  }
+  .sidebar-mix-label {
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(237,232,220,0.25);
+    margin-bottom: 4px;
+  }
+  .sidebar-mix-row {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .sidebar-mix-row:last-child {
+    margin-bottom: 0;
+  }
 
   /* ── Data area (right) ── */
   .tracker-main {
