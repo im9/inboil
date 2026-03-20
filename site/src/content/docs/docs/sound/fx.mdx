@@ -71,13 +71,28 @@ The Master section controls the final output stage.
 
 The VU meter shows real-time **L/R peak levels** and gain reduction (GR). Keep peaks below 0 dB to avoid clipping.
 
+## Insert FX
+
+Each track has a **2-slot serial insert chain** — processed inline before send effects. Slot 1 feeds into Slot 2 (Voice → Slot 1 → Slot 2 → Sends/Mix).
+
+| Setting | Options |
+|---------|---------|
+| **Type** | OFF / Reverb / Delay / Glitch |
+| **Flavour** | Same as send FX (Room/Hall, Digital/Dotted/Tape, Bitcrush/Redux) |
+| **MIX** | Dry/wet blend (0–100%) |
+| **X / Y** | Type-dependent (e.g. Size/Damp for reverb, Time/FB for delay) |
+
+Each slot is independent — combine Reverb → Delay, Delay → Glitch, or any other pairing. Per-step **P-Locks** are supported for all insert parameters (MIX, X, Y per slot) via the **INS** tab in the velocity lane.
+
+Set both slots to OFF to collapse the UI to a single row.
+
 ## Signal Flow
 
 ```
-Voice → Per-Track Sends ──► Reverb / Delay / Glitch / Granular
-                                        │
-                                  FX Return (RET)
-                                        ↓
+Voice → Insert FX (Slot 1 → Slot 2) → Per-Track Sends ──► Reverb / Delay / Glitch / Granular
+                                                                    │
+                                                              FX Return (RET)
+                                                                    ↓
 Voice ──► Sidechain Ducker ──► Bus Compressor ──► 3-Band EQ
               ──► DJ Filter ──► Break Gate ──► Master Gain
               ──► Peak Limiter ──► Output

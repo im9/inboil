@@ -71,13 +71,28 @@ Master セクションは最終出力段を制御します。
 
 VU メーターはリアルタイムの **L/R ピークレベル**とゲインリダクション（GR）を表示します。クリッピングを防ぐため、ピークを 0 dB 以下に保ちましょう。
 
+## インサート FX
+
+各トラックには **2 スロットの直列インサートチェーン**があり、センドエフェクトの前にインラインで処理されます（Voice → Slot 1 → Slot 2 → Send/Mix）。
+
+| 設定 | 選択肢 |
+|------|--------|
+| **タイプ** | OFF / Reverb / Delay / Glitch |
+| **フレーバー** | センド FX と同じ（Room/Hall、Digital/Dotted/Tape、Bitcrush/Redux） |
+| **MIX** | ドライ／ウェットブレンド（0〜100%） |
+| **X / Y** | タイプ依存（例: リバーブは Size/Damp、ディレイは Time/FB） |
+
+各スロットは独立しており、Reverb → Delay、Delay → Glitch などの組み合わせが可能です。ベロシティレーンの **INS** タブから、すべてのインサートパラメータ（MIX、X、Y × 各スロット）のステップごとの **P-Lock** に対応しています。
+
+両スロットを OFF にすると UI が1行に折りたたまれます。
+
 ## 信号フロー
 
 ```
-Voice → トラックごとの Send ──► Reverb / Delay / Glitch / Granular
-                                        │
-                                  FX Return (RET)
-                                        ↓
+Voice → Insert FX (Slot 1 → Slot 2) → トラックごとの Send ──► Reverb / Delay / Glitch / Granular
+                                                                       │
+                                                                 FX Return (RET)
+                                                                       ↓
 Voice ──► Sidechain Ducker ──► Bus Compressor ──► 3-Band EQ
               ──► DJ Filter ──► Break Gate ──► Master Gain
               ──► Peak Limiter ──► Output

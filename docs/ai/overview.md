@@ -46,7 +46,7 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Generative scene nodes: Turing Machine, Quantizer, Tonnetz neo-Riemannian transforms (ADR 078/089)
 - Graphic score automation: inline DockPanel editor with EQ/Master/FX automation targets (ADR 026). Curve automation removed (ADR 093) — replaced by per-step paramLocks
 - FX flavours: 3 variants per send effect — reverb (room/hall/shimmer), delay (digital/dotted/tape), glitch (bitcrush/redux/stutter), granular (cloud/freeze/stretch) (ADR 075/076)
-- Per-track insert FX: LiteReverb, delay, glitch per track (ADR 077)
+- Per-track dual insert FX chain: 2-slot serial chain (verb/delay/glitch) with per-step P-Locks (ADR 077/114)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
 - Queued pattern switching

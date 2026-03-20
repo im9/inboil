@@ -372,14 +372,16 @@ Each send effect has 3 flavour variants, selectable per-song and overridable per
 | Glitch | **bitcrush** (S&H + quantize) | **redux** (OctaveShifter pitch shift) | **stutter** (StutterBuffer loop capture) |
 | Granular | **cloud** (standard grains) | **freeze** (frozen buffer position) | **stretch** (time-stretch mode) |
 
-### Per-Track Insert FX — DECIDED (ADR 077)
+### Per-Track Insert FX — DECIDED (ADR 077/114)
 
-Each track can have one insert effect (`cell.insertFx`) with independent type, flavour, mix, and XY params:
+Each track has a **dual insert FX chain** (`cell.insertFx: [slot0, slot1]`) — two serial slots processed inline before the send bus (Voice → Slot 1 → Slot 2 → Send/Mix). Each slot independently selects type, flavour, mix, and XY params. A `null` slot is bypassed.
+
+Available types:
 - **verb**: LiteReverb (lightweight 2-comb reverb)
 - **delay**: PingPongDelay or TapeDelay (per flavour)
 - **glitch**: Sample-and-hold downsample
 
-Insert FX are processed inline per-track before the send bus. They do not affect send levels.
+Per-step P-Locks supported via `trig.paramLocks` keys: `ins0mix`, `ins0x`, `ins0y`, `ins1mix`, `ins1x`, `ins1y` (ADR 114 Phase 3). Insert FX do not affect send levels.
 
 ### PeakLimiter
 

@@ -29,7 +29,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Undo** | Snapshot-based undo/redo stack (max 50). `pushUndo()` before mutations, debounced 500ms. |
 | **Generative Node** | Scene node running algorithmic composition: Turing Machine, Quantizer, or Tonnetz (ADR 078). |
 | **FX Flavours** | 3 variants per send effect (e.g. reverb: room/hall/shimmer). Per-song default, per-pattern via decorators (ADR 075/076). |
-| **Insert FX** | Per-track inline effect (verb/delay/glitch) with independent mix/params. Processed before send bus (ADR 077). |
+| **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 | **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
 

@@ -107,7 +107,7 @@ interface WorkletTrack {
   glitchSend: number        // 0.0–1.0
   granularSend: number      // 0.0–1.0
   voiceParams: Record<string, number>
-  insertFx?: WorkletInsertFx
+  insertFx?: [WorkletInsertFx | null, WorkletInsertFx | null]  // ADR 077/114: dual insert FX chain
   scale?: number              // ADR 112: step divisor (default 2 = 1/16)
 }
 

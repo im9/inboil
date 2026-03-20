@@ -76,6 +76,7 @@ See [adr/](./adr/) for full rationale.
 - **4-operator FM synth** (IMPLEMENTED) — 4-op, 8 algorithms, 12-voice poly. → [adr/068-fm-synth.md](./adr/068-fm-synth.md)
 - **FX flavours** (IMPLEMENTED) — Tape delay, shimmer, stutter, per-pattern FX variant. → [adr/075-fx-improvements.md](./adr/075-fx-improvements.md)
 - **Per-track insert FX** (IMPLEMENTED) — LiteReverb, insert verb/delay/glitch per track. → [adr/077-per-track-insert-fx.md](./adr/077-per-track-insert-fx.md)
+- **Dual insert FX chain** (IMPLEMENTED) — 2-slot serial insert chain with per-step P-Locks. → [adr/archive/114-dual-insert-fx.md](./adr/archive/114-dual-insert-fx.md)
 - **Generative scene nodes** (IMPLEMENTED) — Turing Machine, Quantizer, Tonnetz. → [adr/078-generative-nodes.md](./adr/078-generative-nodes.md)
 - **Cell.trackId** (IMPLEMENTED) — Explicit trackId on Cell, decouples array position from identity. → [adr/079-cell-trackid.md](./adr/079-cell-trackid.md)
 - **Hardware MIDI input** (IMPLEMENTED) — Web MIDI API, USB + BLE MIDI. → [adr/081-midi-input.md](./adr/081-midi-input.md)

@@ -92,8 +92,8 @@
       title: L === 'ja' ? 'トラック & 楽器' : 'TRACKS & VOICES',
       docsUrl: '/docs/sound/voices/',
       body: L === 'ja'
-        ? '最大16トラック (+で追加、REMOVEで削除)\nドックの DRUM/BASS/LEAD/SMPL から楽器変更\nM ミュート、S ソロ (複数可)\nInsert FX — トラック毎にverb/delay/glitchを追加'
-        : 'Up to 16 tracks (+ to add, REMOVE to delete)\nDock tabs: DRUM/BASS/LEAD/SMPL\nM mute, S solo (additive)\nInsert FX — per-track verb/delay/glitch',
+        ? '最大16トラック (+で追加、REMOVEで削除)\nドックの DRUM/BASS/LEAD/SMPL から楽器変更\nM ミュート、S ソロ (複数可)\nInsert FX — 2スロット直列チェーン (verb/delay/glitch)'
+        : 'Up to 16 tracks (+ to add, REMOVE to delete)\nDock tabs: DRUM/BASS/LEAD/SMPL\nM mute, S solo (additive)\nInsert FX — 2-slot serial chain (verb/delay/glitch)',
     },
     {
       category: 2,

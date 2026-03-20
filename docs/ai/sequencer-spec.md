@@ -66,7 +66,7 @@ Cell {
   delaySend:    number         // 0.0–1.0 send level to delay
   glitchSend:   number         // 0.0–1.0 send level to glitch
   granularSend: number         // 0.0–1.0 send level to granular
-  insertFx?:    CellInsertFx   // per-track insert effect (ADR 077)
+  insertFx?:    [CellInsertFx | null, CellInsertFx | null]  // dual insert FX chain (ADR 077/114)
   sampleRef?:   CellSampleRef  // per-cell sample reference (ADR 110)
   scale?:       number         // step divisor: 4=1/8, 3=3/16, 2=1/16 (default), 1.5=3/32, 1=1/32 (ADR 112)
 }
