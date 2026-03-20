@@ -576,7 +576,7 @@
   }
   .insert-slot-label {
     font-size: var(--dk-fs-sm);
-    color: var(--fg-dim, #888);
+    color: var(--dk-text-dim);
     min-width: 1em;
     text-align: center;
   }
@@ -585,9 +585,9 @@
     font-size: var(--dk-fs-sm);
     padding: 5px 6px;
     border-radius: 0;
-    border: 1px solid var(--border, #444);
-    background: var(--bg-input, #1a1a1a);
-    color: var(--fg, #eee);
+    border: 1px solid var(--dk-border);
+    background: rgba(var(--dk-cream), 0.06);
+    color: var(--dk-text);
     cursor: pointer;
   }
   .knob-grid {

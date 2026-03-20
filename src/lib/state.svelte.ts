@@ -646,9 +646,6 @@ export function sampleCellKey(trackId: number, patternIndex: number): string {
   return `${trackId}_${patternIndex}`
 }
 
-/** @deprecated Use samplesByCell — kept temporarily for migration */
-export const samplesByTrack = $state<Record<number, SampleMeta>>({})
-
 /** Store a loaded sample in memory + persist to IndexedDB + set cell.sampleRef (ADR 110) */
 export function setSample(trackId: number, patternIndex: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
   samplesByCell[sampleCellKey(trackId, patternIndex)] = { name, waveform, rawBuffer }
@@ -753,7 +750,6 @@ export async function restoreSamples(projectId: string): Promise<void> {
 /** Clear all in-memory sample state */
 function clearSamples(): void {
   for (const k of Object.keys(samplesByCell)) delete samplesByCell[k]
-  for (const k of Object.keys(samplesByTrack)) delete samplesByTrack[Number(k)]
 }
 
 /** Display name for a track: use sampleRef first, then in-memory lookup (ADR 110) */

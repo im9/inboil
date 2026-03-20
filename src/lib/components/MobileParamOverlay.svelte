@@ -562,7 +562,7 @@
     white-space: nowrap;
   }
   .sample-error {
-    color: #e57373;
+    color: var(--color-danger, #e57373);
   }
   .waveform-canvas {
     width: 100%;
