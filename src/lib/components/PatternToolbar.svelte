@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, playback, ui, vkbd, midiIn, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo } from '../state.svelte.ts'
+  import { perf, playback, ui, vkbd, midiIn, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo, prefs } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { ICON } from '../icons.ts'
   import { PATTERN_COLORS } from '../constants.ts'
@@ -100,6 +100,12 @@
     prevHead0 = h
   })
   const octDisplay = $derived(perf.octave > 0 ? `+${perf.octave}` : `${perf.octave}`)
+
+  // ── Step paging (mirrored from StepGrid constants) ──
+  const PAGE_SIZE = 16
+  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
+  const totalPages = $derived(Math.ceil(maxSteps / PAGE_SIZE))
+  const needsPaging = $derived(maxSteps > PAGE_SIZE && prefs.patternEditor === 'grid')
 
   // ── Mobile key menu ──
   const WHITE_IDX = [0, 2, 4, 5, 7, 9, 11]
@@ -327,6 +333,21 @@
       >MIDI</span>
     {/if}
   </div>
+
+  <!-- Step page buttons (when pattern has >16 steps) -->
+  {#if needsPaging}
+    <div class="sep" aria-hidden="true"></div>
+    <div class="page-group">
+      {#each { length: totalPages } as _, p}
+        <button
+          class="page-btn"
+          class:active={ui.stepPage === p}
+          onpointerdown={() => { ui.stepPage = p }}
+          data-tip="Page {p + 1}" data-tip-ja="ページ {p + 1}"
+        >{p + 1}</button>
+      {/each}
+    </div>
+  {/if}
 
   <!-- Loop button (right-aligned) -->
   <button
@@ -665,6 +686,29 @@
     height: 24px;
     max-width: 72px;
     flex-shrink: 0;
+  }
+
+  /* ── Page buttons ── */
+  .page-group {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .page-btn {
+    width: 20px;
+    height: 16px;
+    border: 1px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+    font-size: 8px;
+    font-weight: 700;
+    padding: 0;
+    cursor: pointer;
+  }
+  .page-btn:active { opacity: 0.6; }
+  .page-btn.active {
+    background: var(--color-olive);
+    color: var(--color-bg);
   }
 
   /* ── VKBD ── */

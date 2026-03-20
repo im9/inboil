@@ -324,19 +324,6 @@
 </script>
 
 <div class="step-grid">
-{#if needsPaging}
-  <div class="page-bar">
-    <div class="page-head" style="width: calc(var(--head-w) + 8px)"></div>
-    {#each { length: totalPages } as _, p}
-      <button
-        class="page-btn"
-        class:active={ui.stepPage === p}
-        onpointerdown={() => { ui.stepPage = p }}
-        data-tip="Page {p + 1}" data-tip-ja="ページ {p + 1}"
-      >{p + 1}</button>
-    {/each}
-  </div>
-{/if}
 <div class="step-grid-scroll" bind:this={scrollEl}>
   {#each song.patterns[ui.currentPattern].cells as ph}
     {@const trackId = ph.trackId}
@@ -636,34 +623,6 @@
   }
 
   /* ── Page bar (hardware-style 16-step paging) ── */
-  .page-bar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px 0;
-    flex-shrink: 0;
-  }
-  .page-head {
-    flex-shrink: 0;
-  }
-  .page-btn {
-    width: 20px;
-    height: 16px;
-    border: 1px solid var(--color-olive);
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-olive);
-    font-size: 8px;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 0;
-    &:active { opacity: 0.6; }
-  }
-  .page-btn.active {
-    background: var(--color-olive);
-    color: var(--color-bg);
-  }
-
   /* ── Track group (wraps track-row + vel-row + piano-roll) ── */
   .track-group {
     border-bottom: 1px solid rgba(30,32,40,0.08);
