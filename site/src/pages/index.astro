@@ -88,27 +88,43 @@ const ogImage = `${siteUrl}/og.png`;
     .page{
       display:flex;
       flex-direction:column;
-      align-items:center;
+      align-items:flex-start;
       justify-content:center;
-      gap:64px;
-      /* header 42px + 余白 — extra bottom for breathing room before first section */
+      gap:48px;
       padding:120px 48px 140px;
-      text-align:center;
+      padding-left:max(48px, 8vw);
+      text-align:left;
+      position:relative;
+      max-width:1400px;
+      margin:0 auto;
+      width:100%;
+    }
+    .hero-geo{
+      position:absolute;
+      top:40px;right:0;
+      width:45%;
+      height:calc(100% + 40px);
+      pointer-events:none;
     }
     @media(max-width:768px){
+      .hero-geo{display:none}
       .page{
         padding:80px 24px 32px;
         gap:32px;
-        overflow-x:hidden;
+        align-items:center;
+        text-align:center;
       }
       .hero-visual{min-width:0}
+      .hero-text{align-items:center}
       .tagline{white-space:normal;font-size:1.5rem}
       .cta{padding:0.6rem 1.4rem;font-size:0.85rem}
       .cta-row{flex-wrap:wrap}
     }
     .hero-text{
       display:flex;flex-direction:column;
-      align-items:center;
+      align-items:flex-start;
+      position:relative;
+      z-index:1;
     }
     .brand{
       display:flex;align-items:center;gap:20px;
@@ -138,10 +154,12 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .hero-visual{
       display:flex;flex-direction:column;
-      align-items:center;
+      align-items:flex-start;
       gap:8px;
       width:100%;
       max-width:640px;
+      position:relative;
+      z-index:1;
     }
 
     /* ── Sequencer grid ── */
@@ -289,6 +307,24 @@ const ogImage = `${siteUrl}/og.png`;
       border-color:#8a8a50;
     }
 
+    /* ── Section geo decorations ── */
+    .section-geo{
+      position:absolute;
+      pointer-events:none;
+      z-index:2;
+    }
+    .section-geo-mobile{
+      display:none;
+      position:absolute;
+      pointer-events:none;
+      z-index:2;
+      top:-18px;
+    }
+    @media(max-width:768px){
+      .section-geo{display:none}
+      .section-geo-mobile{display:block}
+    }
+
     /* ── Feature sections ── */
     .feat-section{
       width:100%;
@@ -297,6 +333,8 @@ const ogImage = `${siteUrl}/og.png`;
       grid-template-columns:2fr 3fr;
       align-items:start;
       gap:48px;
+      position:relative;
+      overflow:visible;
     }
     .feat-section:nth-child(even){background:rgba(30,32,40,0.03)}
     /* 奇数: テキスト上、ビジュアル下げる */
@@ -594,6 +632,8 @@ const ogImage = `${siteUrl}/og.png`;
       padding:96px 48px;
       display:flex;
       justify-content:center;
+      position:relative;
+      overflow:visible;
     }
     .story-content{
       max-width:560px;
@@ -645,6 +685,8 @@ const ogImage = `${siteUrl}/og.png`;
     .specs-section{
       width:100%;
       padding:96px 48px;
+      position:relative;
+      overflow:visible;
     }
     .specs-title{
       font-family:"JetBrains Mono",monospace;
@@ -705,6 +747,34 @@ const ogImage = `${siteUrl}/og.png`;
       background:#1E2028;
       gap:24px;
       text-align:center;
+      position:relative;
+      overflow:visible;
+      z-index:0;
+    }
+    .cta-geo{
+      position:absolute;
+      left:0;top:-20%;
+      width:100%;
+      height:180%;
+      pointer-events:none;
+      opacity:0.25;
+    }
+    .cta-geo-mobile-wrap{display:none}
+    @media(max-width:768px){
+      .cta-geo-desktop{display:none}
+      .cta-geo-mobile-wrap{
+        display:block;
+        position:absolute;
+        left:0;top:0;
+        width:100%;height:100%;
+        pointer-events:none;
+        overflow:visible;
+      }
+      .cta-geo-m{
+        position:absolute;
+        pointer-events:none;
+        opacity:0.25;
+      }
     }
     .final-cta-heading{
       font-family:"JetBrains Mono",monospace;
@@ -820,6 +890,115 @@ const ogImage = `${siteUrl}/og.png`;
   <main id="main">
   <!-- ── Hero ── -->
   <div class="page">
+    <!-- Hero geometric composition — Y2K brutalist shapes -->
+    <svg class="hero-geo" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <pattern id="gp-dots" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.2" fill="#1E2028"/>
+        </pattern>
+        <pattern id="gp-stripes" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#1E2028" stroke-width="1"/>
+        </pattern>
+      </defs>
+
+      <!-- Large border squares — background layer -->
+      <rect x="120" y="180" width="90" height="90" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+      <rect x="240" y="120" width="70" height="70" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <rect x="60" y="440" width="80" height="80" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+      <rect x="300" y="460" width="65" height="65" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <!-- Striped-fill square -->
+      <rect x="180" y="330" width="70" height="70" fill="url(#gp-stripes)" opacity="0.3"/>
+      <!-- Rotated border square -->
+      <rect x="0" y="0" width="50" height="50" fill="none" stroke="#1E2028" stroke-width="1" transform="translate(340,230) rotate(15)"/>
+
+      <!-- 4-pointed star — large, upper area -->
+      <path d="M200,40 L215,90 L260,100 L215,110 L200,160 L185,110 L140,100 L185,90 Z" fill="#1E2028"/>
+
+      <!-- Starburst/radial — center-right -->
+      <g transform="translate(310,200)">
+        <circle r="4" fill="#1E2028"/>
+        <line x1="0" y1="-30" x2="0" y2="30" stroke="#1E2028" stroke-width="1.5"/>
+        <line x1="-30" y1="0" x2="30" y2="0" stroke="#1E2028" stroke-width="1.5"/>
+        <line x1="-21" y1="-21" x2="21" y2="21" stroke="#1E2028" stroke-width="1"/>
+        <line x1="-21" y1="21" x2="21" y2="-21" stroke="#1E2028" stroke-width="1"/>
+        <line x1="0" y1="-22" x2="0" y2="22" stroke="#1E2028" stroke-width="0.5" transform="rotate(22.5)"/>
+        <line x1="0" y1="-22" x2="0" y2="22" stroke="#1E2028" stroke-width="0.5" transform="rotate(67.5)"/>
+      </g>
+
+      <!-- Orbital ring — large -->
+      <ellipse cx="200" cy="280" rx="100" ry="35" fill="none" stroke="#1E2028" stroke-width="1.5" transform="rotate(-20 200 280)"/>
+      <circle cx="200" cy="280" r="8" fill="#1E2028"/>
+
+      <!-- Flower/clover — 4 petals -->
+      <g transform="translate(80,160)">
+        <circle cx="0" cy="-14" r="12" fill="#1E2028"/>
+        <circle cx="14" cy="0" r="12" fill="#1E2028"/>
+        <circle cx="0" cy="14" r="12" fill="#1E2028"/>
+        <circle cx="-14" cy="0" r="12" fill="#1E2028"/>
+        <circle cx="0" cy="0" r="6" fill="#EDE8DC"/>
+      </g>
+
+      <!-- Crosshair — upper right -->
+      <g transform="translate(340,80)">
+        <circle r="20" fill="none" stroke="#1E2028" stroke-width="1.2"/>
+        <circle r="8" fill="none" stroke="#1E2028" stroke-width="1"/>
+        <line x1="-28" y1="0" x2="28" y2="0" stroke="#1E2028" stroke-width="0.8"/>
+        <line x1="0" y1="-28" x2="0" y2="28" stroke="#1E2028" stroke-width="0.8"/>
+      </g>
+
+      <!-- Dot grid block -->
+      <rect x="20" y="300" width="80" height="80" fill="url(#gp-dots)"/>
+
+      <!-- Diamond -->
+      <rect x="0" y="0" width="24" height="24" fill="#1E2028" transform="translate(320,340) rotate(45)"/>
+
+      <!-- Crescent — left area -->
+      <path d="M60,380 a35,35 0 1,1 0,60 a27,27 0 1,0 0,-60" fill="#1E2028"/>
+
+      <!-- Wave line -->
+      <path d="M30,240 Q60,220 90,240 Q120,260 150,240 Q180,220 210,240" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+
+      <!-- Small 4-point stars scattered -->
+      <path d="M60,80 L65,92 L78,96 L65,100 L60,112 L55,100 L42,96 L55,92 Z" fill="#1E2028"/>
+      <path d="M350,400 L354,410 L364,413 L354,416 L350,426 L346,416 L336,413 L346,410 Z" fill="#1E2028"/>
+
+      <!-- Half-filled circle — right half filled -->
+      <clipPath id="half-clip"><rect x="340" y="318" width="32" height="64"/></clipPath>
+      <circle cx="340" cy="350" r="30" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+      <circle cx="340" cy="350" r="30" fill="#1E2028" clip-path="url(#half-clip)"/>
+
+      <!-- Olive accent shapes -->
+      <rect x="160" y="350" width="16" height="16" fill="#787845"/>
+      <circle cx="280" cy="310" r="10" fill="#787845"/>
+
+      <!-- Thin concentric circles — mid-right -->
+      <circle cx="260" cy="460" r="35" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <circle cx="260" cy="460" r="24" fill="none" stroke="#1E2028" stroke-width="0.8"/>
+      <circle cx="260" cy="460" r="13" fill="none" stroke="#1E2028" stroke-width="0.6"/>
+      <circle cx="260" cy="460" r="3" fill="#1E2028"/>
+
+      <!-- Downward arrow — center bottom -->
+      <path d="M120,500 L120,530 L108,530 L130,555 L152,530 L140,530 L140,500 Z" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+      <!-- Shrinking chevrons below arrow -->
+      <path d="M115,568 L130,580 L145,568" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <path d="M120,588 L130,596 L140,588" fill="none" stroke="#1E2028" stroke-width="0.7"/>
+
+      <!-- Small decorative dots -->
+      <circle cx="160" cy="60" r="3" fill="#1E2028"/>
+      <circle cx="380" cy="150" r="3" fill="#1E2028"/>
+      <circle cx="380" cy="480" r="3" fill="#1E2028"/>
+      <circle cx="50" cy="320" r="2" fill="#1E2028"/>
+
+      <!-- Plus signs -->
+      <g transform="translate(30,140)">
+        <line x1="-6" y1="0" x2="6" y2="0" stroke="#1E2028" stroke-width="2"/>
+        <line x1="0" y1="-6" x2="0" y2="6" stroke="#1E2028" stroke-width="2"/>
+      </g>
+      <g transform="translate(370,300)">
+        <line x1="-5" y1="0" x2="5" y2="0" stroke="#1E2028" stroke-width="1.5"/>
+        <line x1="0" y1="-5" x2="0" y2="5" stroke="#1E2028" stroke-width="1.5"/>
+      </g>
+    </svg>
     <div class="hero-text">
       <div class="brand">
         <svg id="hero-logo" class="logo-flap" viewBox="0 0 32 32" aria-hidden="true">
@@ -854,6 +1033,25 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Feature 1: Voices ── -->
   <section class="feat-section">
+    <!-- Boundary 0: Hero→Voices — left -->
+    <svg class="section-geo" style="left:4%;top:-70px;width:240px;height:160px" viewBox="0 0 240 160" aria-hidden="true">
+      <!-- Crescent -->
+      <path d="M50,15 a32,32 0 1,1 0,55 a25,25 0 1,0 0,-55" fill="#1E2028"/>
+      <!-- Tilted outlined rect -->
+      <rect x="0" y="0" width="50" height="50" fill="none" stroke="#1E2028" stroke-width="1.5" transform="translate(120,30) rotate(15)"/>
+      <!-- 4-point star -->
+      <path d="M185,25 L189,40 L204,44 L189,48 L185,63 L181,48 L166,44 L181,40 Z" fill="#1E2028"/>
+      <!-- Accent -->
+      <circle cx="80" cy="110" r="3" fill="#1E2028"/>
+      <circle cx="150" cy="120" r="2" fill="#1E2028"/>
+      <rect x="210" y="85" width="12" height="12" fill="#787845"/>
+    </svg>
+    <!-- B0 mobile -->
+    <svg class="section-geo-mobile" style="right:20px" viewBox="0 0 72 48" width="72" height="48" aria-hidden="true">
+      <path d="M18,4 a14,14 0 1,1 0,24 a11,11 0 1,0 0,-24" fill="#1E2028"/>
+      <path d="M50,10 L53,20 L63,23 L53,26 L50,36 L47,26 L37,23 L47,20 Z" fill="#1E2028"/>
+      <circle cx="30" cy="42" r="2" fill="#1E2028"/>
+    </svg>
     <div class="feat-text reveal">
       <h2 id="feat-voice-title" class="feat-title">Sound Engines</h2>
       <p id="feat-voice-desc" class="feat-desc">20 voices — from drum machines to FM percussion and wavetable synths, plus a polyphonic sampler with 90 built-in samples and a multi-sampled grand piano. Choose a different engine for each track.</p>
@@ -898,6 +1096,34 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Feature 2: Scene Graph ── -->
   <section class="feat-section">
+    <!-- Boundary 1: cushion + crosshair + border square + star — Voices→SceneGraph — right -->
+    <svg class="section-geo" style="right:6%;top:-75px;width:240px;height:180px" viewBox="0 0 240 180" aria-hidden="true">
+      <!-- Cushion (concave square) — primary -->
+      <path d="M55,18 Q95,38 135,18 Q115,58 135,98 Q95,78 55,98 Q75,58 55,18Z" fill="#1E2028"/>
+      <!-- Rotated border square — overlapping lower -->
+      <rect x="110" y="75" width="60" height="60" fill="none" stroke="#1E2028" stroke-width="1.5" transform="rotate(12 140 105)"/>
+      <!-- Crosshair — upper right -->
+      <g transform="translate(200,35)">
+        <circle r="16" fill="none" stroke="#1E2028" stroke-width="1"/>
+        <circle r="6" fill="none" stroke="#1E2028" stroke-width="0.8"/>
+        <line x1="-22" y1="0" x2="22" y2="0" stroke="#1E2028" stroke-width="0.6"/>
+        <line x1="0" y1="-22" x2="0" y2="22" stroke="#1E2028" stroke-width="0.6"/>
+      </g>
+      <!-- Thin arc connecting cushion to crosshair -->
+      <path d="M140,55 Q175,20 195,55" fill="none" stroke="#1E2028" stroke-width="0.8"/>
+      <!-- 4-point star -->
+      <path d="M175,110 L179,122 L191,126 L179,130 L175,142 L171,130 L159,126 L171,122Z" fill="#1E2028"/>
+      <!-- Accent dots -->
+      <circle cx="35" cy="130" r="4" fill="#1E2028"/>
+      <circle cx="220" cy="155" r="3" fill="#1E2028"/>
+      <circle cx="25" cy="55" r="2" fill="#1E2028"/>
+    </svg>
+    <!-- B1 mobile -->
+    <svg class="section-geo-mobile" style="left:16px" viewBox="0 0 60 48" width="60" height="48" aria-hidden="true">
+      <path d="M8,6 Q22,14 36,6 Q28,20 36,34 Q22,26 8,34 Q16,20 8,6Z" fill="#1E2028"/>
+      <rect x="34" y="20" width="20" height="20" fill="none" stroke="#1E2028" stroke-width="1" transform="rotate(12 44 30)"/>
+      <circle cx="18" cy="42" r="2" fill="#1E2028"/>
+    </svg>
     <div class="feat-text reveal">
       <h2 id="feat-scene-title" class="feat-title">Scene Graph</h2>
       <p id="feat-scene-desc" class="feat-desc">Connect patterns as nodes to build song structure visually. Add branches for arrangements that play differently every time. Switch scenes on the fly with fills, reverse, and breaks.</p>
@@ -912,6 +1138,36 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Feature 3: Effects / FX Pad ── -->
   <section class="feat-section full">
+    <!-- Boundary 2: 6-pointed star + orbital ellipse + dot grid — SceneGraph→FXPad — left -->
+    <svg class="section-geo" style="left:4%;top:-70px;width:240px;height:180px" viewBox="0 0 240 180" aria-hidden="true">
+      <!-- 6-pointed star — primary -->
+      <path d="M60,12 L72,42 L104,38 L82,62 L104,86 L72,82 L60,112 L48,82 L16,86 L38,62 L16,38 L48,42Z" fill="#1E2028"/>
+      <!-- Orbital ellipse crossing the star -->
+      <ellipse cx="80" cy="62" rx="70" ry="24" fill="none" stroke="#1E2028" stroke-width="1.2" transform="rotate(-20 80 62)"/>
+      <!-- Dot grid block — lower right -->
+      <defs>
+        <pattern id="b2-dots" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.2" fill="#1E2028"/>
+        </pattern>
+      </defs>
+      <rect x="155" y="85" width="55" height="55" fill="url(#b2-dots)"/>
+      <!-- Outlined circle — upper right -->
+      <circle cx="175" cy="40" r="22" fill="none" stroke="#1E2028" stroke-width="1.2"/>
+      <!-- Small diamond -->
+      <rect x="0" y="0" width="12" height="12" fill="#1E2028" transform="translate(210,70) rotate(45)"/>
+      <!-- Wave line -->
+      <path d="M140,140 Q160,125 180,140 Q200,155 220,140" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <!-- Accent dots -->
+      <circle cx="135" cy="30" r="3" fill="#1E2028"/>
+      <circle cx="30" cy="145" r="4" fill="#1E2028"/>
+      <circle cx="225" cy="160" r="2" fill="#1E2028"/>
+    </svg>
+    <!-- B2 mobile -->
+    <svg class="section-geo-mobile" style="right:16px" viewBox="0 0 60 48" width="60" height="48" aria-hidden="true">
+      <path d="M24,2 L28,12 L38,11 L31,18 L38,25 L28,24 L24,34 L20,24 L10,25 L17,18 L10,11 L20,12Z" fill="#1E2028"/>
+      <ellipse cx="38" cy="30" rx="18" ry="7" fill="none" stroke="#1E2028" stroke-width="1" transform="rotate(-15 38 30)"/>
+      <rect x="2" cy="36" width="8" height="8" fill="#787845"/>
+    </svg>
     <div class="feat-text reveal">
       <h2 id="feat-fx-title" class="feat-title">FX Pad</h2>
       <p id="feat-fx-desc" class="feat-desc">Drag effect nodes across a 2D pad to shape your sound in real time. Reverb, delay, glitch, and granular — each with three flavours. The canvas reacts to your audio, drawing constellations between active effects.</p>
@@ -929,6 +1185,20 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Feature 4: Multi-Device Jam ── -->
   <section class="feat-section full">
+    <!-- Boundary 3: concentric circles + small outlined square — FXPad→Jam — right -->
+    <svg class="section-geo" style="right:12%;top:-50px;width:130px;height:110px" viewBox="0 0 130 110" aria-hidden="true">
+      <circle cx="50" cy="48" r="35" fill="none" stroke="#1E2028" stroke-width="1.2"/>
+      <circle cx="50" cy="48" r="20" fill="none" stroke="#1E2028" stroke-width="0.8"/>
+      <circle cx="50" cy="48" r="3" fill="#1E2028"/>
+      <rect x="95" y="65" width="25" height="25" fill="none" stroke="#1E2028" stroke-width="1" transform="rotate(10 107 77)"/>
+    </svg>
+    <!-- B3 mobile -->
+    <svg class="section-geo-mobile" style="left:16px" viewBox="0 0 60 48" width="60" height="48" aria-hidden="true">
+      <circle cx="20" cy="22" r="16" fill="none" stroke="#1E2028" stroke-width="1.2"/>
+      <circle cx="20" cy="22" r="8" fill="none" stroke="#1E2028" stroke-width="0.8"/>
+      <circle cx="20" cy="22" r="2.5" fill="#1E2028"/>
+      <rect x="40" y="28" width="14" height="14" fill="none" stroke="#1E2028" stroke-width="1" transform="rotate(10 47 35)"/>
+    </svg>
     <div class="feat-text reveal">
       <h2 id="feat-jam-title" class="feat-title">Multi-Device Jam</h2>
       <p id="feat-jam-desc" class="feat-desc">Turn any phone into a live controller. The host runs the DAW on a PC — a friend opens the URL on their phone, enters a 4-character room code, and instantly joins as a guest controller. Edit steps, trigger fills, tweak parameters — all synced in real time over WebRTC. Audio stays on the host. Control comes from the phone. No app install. No setup. Just share a code and jam.</p>
@@ -986,6 +1256,24 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Specs ── -->
   <section class="specs-section reveal">
+    <!-- Boundary 4: clustered composition with downward weight — Jam→Specs -->
+    <svg class="section-geo" style="left:52%;top:-75px;width:240px;height:180px" viewBox="0 0 240 180" aria-hidden="true">
+      <!-- Filled rect — upper area -->
+      <rect x="110" y="85" width="30" height="30" fill="#1E2028"/>
+      <!-- Arc — wraps around the cluster, sweeping down-right -->
+      <path d="M100,40 Q160,50 155,110 Q150,145 180,155" fill="none" stroke="#1E2028" stroke-width="1.2"/>
+      <!-- Small circle — at arc's end, final weight -->
+      <circle cx="185" cy="155" r="6" fill="#1E2028"/>
+      <!-- Tiny dot — detached, below cluster -->
+      <circle cx="130" cy="150" r="2.5" fill="#1E2028"/>
+    </svg>
+    <!-- B4 mobile -->
+    <svg class="section-geo-mobile" style="right:16px" viewBox="0 0 60 48" width="60" height="48" aria-hidden="true">
+      <rect x="12" y="6" width="18" height="18" fill="#1E2028"/>
+      <path d="M14,4 Q42,10 38,32" fill="none" stroke="#1E2028" stroke-width="1"/>
+      <circle cx="40" cy="36" r="4" fill="#1E2028"/>
+      <rect x="0" y="28" width="12" height="12" fill="none" stroke="#1E2028" stroke-width="1"/>
+    </svg>
     <h2 id="specs-title" class="specs-title">Specs</h2>
     <div class="specs-grid">
       <div class="spec-cell">
@@ -1049,6 +1337,187 @@ const ogImage = `${siteUrl}/og.png`;
 
   <!-- ── Final CTA ── -->
   <section class="final-cta reveal">
+    <!-- Echo of hero geometry — mirrored/inverted on dark bg, straddles into story section -->
+    <svg class="cta-geo cta-geo-desktop" viewBox="0 0 1400 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <pattern id="cta-dots" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.2" fill="#EDE8DC"/>
+        </pattern>
+        <pattern id="cta-stripes" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#EDE8DC" stroke-width="1"/>
+        </pattern>
+        <pattern id="cta-stripes-dk" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#1E2028" stroke-width="1"/>
+        </pattern>
+        <pattern id="cta-dots-dk" width="8" height="8" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="4" r="1.2" fill="#1E2028"/>
+        </pattern>
+        <!-- Boundary clip regions for color inversion -->
+        <clipPath id="cta-above"><rect x="0" y="0" width="1400" height="400"/></clipPath>
+        <clipPath id="cta-below"><rect x="0" y="400" width="1400" height="200"/></clipPath>
+      </defs>
+
+      <!-- boundary = y400. Shapes crossing boundary rendered twice with color inversion -->
+
+      <!-- ═══ ABOVE-ONLY shapes (cream on dark) ═══ -->
+      <rect x="40" y="280" width="120" height="120" fill="url(#cta-stripes)" opacity="0.35"/>
+      <rect x="0" y="0" width="80" height="80" fill="none" stroke="#EDE8DC" stroke-width="1.5" transform="translate(180,300) rotate(-12)"/>
+      <rect x="1220" y="280" width="70" height="70" fill="url(#cta-dots)" opacity="0.3"/>
+      <rect x="0" y="0" width="35" height="35" fill="#EDE8DC" transform="translate(1370,270) rotate(45)"/>
+
+      <!-- ═══ BELOW-ONLY shapes (dark on light) ═══ -->
+      <rect x="240" y="450" width="60" height="60" fill="#1E2028"/>
+      <circle cx="380" cy="480" r="18" fill="#787845"/>
+      <circle cx="1080" cy="480" r="12" fill="#787845"/>
+      <rect x="1140" y="450" width="50" height="50" fill="#1E2028"/>
+
+      <!-- ═══ LEFT CROSS-BOUNDARY shapes (rendered twice) ═══ -->
+
+      <!-- Large outlined rect -->
+      <rect x="0" y="260" width="160" height="180" fill="none" stroke="#EDE8DC" stroke-width="2.5" clip-path="url(#cta-above)"/>
+      <rect x="0" y="260" width="160" height="180" fill="none" stroke="#1E2028" stroke-width="2.5" clip-path="url(#cta-below)"/>
+
+      <!-- Half-circle (cx=130 cy=390 r=55) -->
+      <clipPath id="cta-half-a"><rect x="130" y="335" width="60" height="65"/></clipPath>
+      <clipPath id="cta-half-b"><rect x="130" y="400" width="60" height="50"/></clipPath>
+      <circle cx="130" cy="390" r="55" fill="none" stroke="#EDE8DC" stroke-width="2.5" clip-path="url(#cta-above)"/>
+      <circle cx="130" cy="390" r="55" fill="none" stroke="#1E2028" stroke-width="2.5" clip-path="url(#cta-below)"/>
+      <circle cx="130" cy="390" r="55" fill="#EDE8DC" clip-path="url(#cta-half-a)"/>
+      <circle cx="130" cy="390" r="55" fill="#1E2028" clip-path="url(#cta-half-b)"/>
+
+      <!-- Ellipse orbit -->
+      <ellipse cx="300" cy="375" rx="80" ry="30" fill="none" stroke="#EDE8DC" stroke-width="1.8" transform="rotate(-18 300 375)" clip-path="url(#cta-above)"/>
+      <ellipse cx="300" cy="375" rx="80" ry="30" fill="none" stroke="#1E2028" stroke-width="1.8" transform="rotate(-18 300 375)" clip-path="url(#cta-below)"/>
+
+      <!-- Star (bottom tip at y=415) -->
+      <path d="M350,290 L365,340 L410,350 L365,360 L350,415 L335,360 L290,350 L335,340 Z" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <path d="M350,290 L365,340 L410,350 L365,360 L350,415 L335,360 L290,350 L335,340 Z" fill="#1E2028" clip-path="url(#cta-below)"/>
+
+      <!-- Dot-fill rect -->
+      <rect x="0" y="370" width="200" height="120" fill="url(#cta-dots)" opacity="0.25" clip-path="url(#cta-above)"/>
+      <rect x="0" y="370" width="200" height="120" fill="url(#cta-dots-dk)" opacity="0.25" clip-path="url(#cta-below)"/>
+
+      <!-- Starburst (centered at y=400) -->
+      <g clip-path="url(#cta-above)">
+        <g transform="translate(100,400)">
+          <circle r="8" fill="#EDE8DC"/>
+          <line x1="0" y1="-45" x2="0" y2="45" stroke="#EDE8DC" stroke-width="2.5"/>
+          <line x1="-45" y1="0" x2="45" y2="0" stroke="#EDE8DC" stroke-width="2.5"/>
+          <line x1="-32" y1="-32" x2="32" y2="32" stroke="#EDE8DC" stroke-width="1.8"/>
+          <line x1="-32" y1="32" x2="32" y2="-32" stroke="#EDE8DC" stroke-width="1.8"/>
+        </g>
+      </g>
+      <g clip-path="url(#cta-below)">
+        <g transform="translate(100,400)">
+          <circle r="8" fill="#1E2028"/>
+          <line x1="0" y1="-45" x2="0" y2="45" stroke="#1E2028" stroke-width="2.5"/>
+          <line x1="-45" y1="0" x2="45" y2="0" stroke="#1E2028" stroke-width="2.5"/>
+          <line x1="-32" y1="-32" x2="32" y2="32" stroke="#1E2028" stroke-width="1.8"/>
+          <line x1="-32" y1="32" x2="32" y2="-32" stroke="#1E2028" stroke-width="1.8"/>
+        </g>
+      </g>
+
+      <!-- Outlined rect -->
+      <rect x="220" y="380" width="100" height="100" fill="none" stroke="#EDE8DC" stroke-width="2" clip-path="url(#cta-above)"/>
+      <rect x="220" y="380" width="100" height="100" fill="none" stroke="#1E2028" stroke-width="2" clip-path="url(#cta-below)"/>
+
+      <!-- Crescent -->
+      <path d="M420,370 a50,50 0 1,1 0,80 a40,40 0 1,0 0,-80" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <path d="M420,370 a50,50 0 1,1 0,80 a40,40 0 1,0 0,-80" fill="#1E2028" clip-path="url(#cta-below)"/>
+
+      <!-- Stepping dots inward -->
+      <circle cx="480" cy="405" r="8" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <circle cx="480" cy="405" r="8" fill="#1E2028" clip-path="url(#cta-below)"/>
+      <circle cx="530" cy="400" r="5" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <circle cx="530" cy="400" r="5" fill="#1E2028" clip-path="url(#cta-below)"/>
+
+      <!-- ═══ RIGHT CROSS-BOUNDARY shapes (rendered twice) ═══ -->
+
+      <!-- Large outlined rect -->
+      <rect x="1200" y="280" width="110" height="160" fill="none" stroke="#EDE8DC" stroke-width="2" clip-path="url(#cta-above)"/>
+      <rect x="1200" y="280" width="110" height="160" fill="none" stroke="#1E2028" stroke-width="2" clip-path="url(#cta-below)"/>
+
+      <!-- Ellipse orbit -->
+      <ellipse cx="1100" cy="375" rx="70" ry="25" fill="none" stroke="#EDE8DC" stroke-width="1.8" transform="rotate(12 1100 375)" clip-path="url(#cta-above)"/>
+      <ellipse cx="1100" cy="375" rx="70" ry="25" fill="none" stroke="#1E2028" stroke-width="1.8" transform="rotate(12 1100 375)" clip-path="url(#cta-below)"/>
+      <circle cx="1100" cy="375" r="8" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <circle cx="1100" cy="375" r="8" fill="#1E2028" clip-path="url(#cta-below)"/>
+
+      <!-- Crosshair -->
+      <g clip-path="url(#cta-above)">
+        <g transform="translate(1020,380)">
+          <circle r="25" fill="none" stroke="#EDE8DC" stroke-width="1.5"/>
+          <circle r="10" fill="none" stroke="#EDE8DC" stroke-width="1"/>
+          <line x1="-35" y1="0" x2="35" y2="0" stroke="#EDE8DC" stroke-width="0.8"/>
+          <line x1="0" y1="-35" x2="0" y2="35" stroke="#EDE8DC" stroke-width="0.8"/>
+        </g>
+      </g>
+      <g clip-path="url(#cta-below)">
+        <g transform="translate(1020,380)">
+          <circle r="25" fill="none" stroke="#1E2028" stroke-width="1.5"/>
+          <circle r="10" fill="none" stroke="#1E2028" stroke-width="1"/>
+          <line x1="-35" y1="0" x2="35" y2="0" stroke="#1E2028" stroke-width="0.8"/>
+          <line x1="0" y1="-35" x2="0" y2="35" stroke="#1E2028" stroke-width="0.8"/>
+        </g>
+      </g>
+
+      <!-- Stripe-fill rect -->
+      <rect x="1250" y="360" width="150" height="120" fill="url(#cta-stripes)" opacity="0.25" clip-path="url(#cta-above)"/>
+      <rect x="1250" y="360" width="150" height="120" fill="url(#cta-stripes-dk)" opacity="0.25" clip-path="url(#cta-below)"/>
+
+      <!-- Flower/clover (centered at y=400) -->
+      <g clip-path="url(#cta-above)">
+        <g transform="translate(1320,400)">
+          <circle cx="0" cy="-15" r="14" fill="#EDE8DC"/>
+          <circle cx="15" cy="0" r="14" fill="#EDE8DC"/>
+          <circle cx="0" cy="15" r="14" fill="#EDE8DC"/>
+          <circle cx="-15" cy="0" r="14" fill="#EDE8DC"/>
+          <circle cx="0" cy="0" r="7" fill="#1E2028"/>
+        </g>
+      </g>
+      <g clip-path="url(#cta-below)">
+        <g transform="translate(1320,400)">
+          <circle cx="0" cy="-15" r="14" fill="#1E2028"/>
+          <circle cx="15" cy="0" r="14" fill="#1E2028"/>
+          <circle cx="0" cy="15" r="14" fill="#1E2028"/>
+          <circle cx="-15" cy="0" r="14" fill="#1E2028"/>
+          <circle cx="0" cy="0" r="7" fill="#EDE8DC"/>
+        </g>
+      </g>
+
+      <!-- Outlined rect -->
+      <rect x="1120" y="380" width="90" height="90" fill="none" stroke="#EDE8DC" stroke-width="2" clip-path="url(#cta-above)"/>
+      <rect x="1120" y="380" width="90" height="90" fill="none" stroke="#1E2028" stroke-width="2" clip-path="url(#cta-below)"/>
+
+      <!-- Star -->
+      <path d="M960,375 L968,403 L995,410 L968,417 L960,445 L952,417 L925,410 L952,403 Z" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <path d="M960,375 L968,403 L995,410 L968,417 L960,445 L952,417 L925,410 L952,403 Z" fill="#1E2028" clip-path="url(#cta-below)"/>
+
+      <!-- Stepping dots inward -->
+      <circle cx="910" cy="402" r="6" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <circle cx="910" cy="402" r="6" fill="#1E2028" clip-path="url(#cta-below)"/>
+      <circle cx="860" cy="400" r="4" fill="#EDE8DC" clip-path="url(#cta-above)"/>
+      <circle cx="860" cy="400" r="4" fill="#1E2028" clip-path="url(#cta-below)"/>
+    </svg>
+    <!-- Mobile: individually positioned compositions -->
+    <div class="cta-geo-mobile-wrap" aria-hidden="true">
+      <!-- Left composition — star + outlined rect + dot -->
+      <svg class="cta-geo-m" style="left:8px;bottom:-22px" viewBox="0 0 70 56" width="70" height="56">
+        <path d="M18,2 L22,16 L36,20 L22,24 L18,38 L14,24 L0,20 L14,16 Z" fill="#EDE8DC"/>
+        <rect x="30" y="14" width="24" height="24" fill="none" stroke="#EDE8DC" stroke-width="1.2"/>
+        <circle cx="62" cy="44" r="3" fill="#EDE8DC"/>
+      </svg>
+      <!-- Right composition — flower + rect + olive -->
+      <svg class="cta-geo-m" style="right:8px;bottom:-20px" viewBox="0 0 70 56" width="70" height="56">
+        <circle cx="48" cy="16" r="8" fill="#EDE8DC"/>
+        <circle cx="56" cy="24" r="8" fill="#EDE8DC"/>
+        <circle cx="48" cy="32" r="8" fill="#EDE8DC"/>
+        <circle cx="40" cy="24" r="8" fill="#EDE8DC"/>
+        <circle cx="48" cy="24" r="4" fill="#1E2028"/>
+        <rect x="4" y="22" width="18" height="18" fill="none" stroke="#EDE8DC" stroke-width="1"/>
+        <circle cx="12" cy="48" r="3" fill="#787845"/>
+      </svg>
+    </div>
     <h2 id="final-cta-title" class="final-cta-heading">Ready to make some noise?</h2>
     <p id="final-cta-desc" class="final-cta-sub">No install. No signup. Just open and play.</p>
     <div class="cta-row" style="justify-content:center">
