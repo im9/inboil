@@ -554,7 +554,7 @@
               <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
                 <Knob
                   value={selected ? (trackPlkValue('pan', track.pan) + 1) / 2 : (track.pan + 1) / 2}
-                  label="PAN" size={24} light compact
+                  label="PAN" size={24} light compact defaultValue={0.5}
                   locked={selected && isTrackPlkLocked('pan')}
                   onchange={v => {
                     if (selected) trackPlkChange('pan', v * 2 - 1, bv => { pushUndo('Set pan'); song.tracks[trackId].pan = bv })

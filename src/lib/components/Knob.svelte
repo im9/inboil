@@ -8,10 +8,10 @@
     locked?: boolean    // true = P-Lock active (olive value arc)
     steps?: number      // number of discrete positions (e.g. 5 for 0-4) — snaps knob
     displayValue?: string // override displayed value text (e.g. "UP", "OFF")
-    defaultValue?: number // value to reset to on double-click (0.0–1.0)
+    defaultValue?: number // value to reset to on double-click (0.0–1.0); also shows tick mark when set
     onchange: (v: number) => void
   }
-  let { value, label, size = 32, light = false, compact = false, locked = false, steps = 0, displayValue, defaultValue = 0.5, onchange }: Props = $props()
+  let { value, label, size = 32, light = false, compact = false, locked = false, steps = 0, displayValue, defaultValue, onchange }: Props = $props()
 
   function snap(v: number): number {
     if (steps < 2) return v
@@ -35,6 +35,14 @@
   const dash    = $derived(value * arcFull)
   const dashArr = $derived(`${dash} 1000`)
 
+  // Default-value tick mark (only when explicitly provided and not at extremes)
+  const showTick = $derived(defaultValue != null && defaultValue > 0 && defaultValue < 1)
+  const tickAngle = $derived((-135 + (defaultValue ?? 0) * 270) * Math.PI / 180)
+  const tickX1 = $derived(cx + (r - 2) * Math.cos(tickAngle))
+  const tickY1 = $derived(cy + (r - 2) * Math.sin(tickAngle))
+  const tickX2 = $derived(cx + (r + 2) * Math.cos(tickAngle))
+  const tickY2 = $derived(cy + (r + 2) * Math.sin(tickAngle))
+
   // Drag state
   let dragging = $state(false)
   let startY   = 0
@@ -55,7 +63,7 @@
     onchange(snap(raw))
   }
   function onPointerUp() { dragging = false }
-  function onDblClick() { onchange(snap(defaultValue)) }
+  function onDblClick() { if (defaultValue != null) onchange(snap(defaultValue)) }
 </script>
 
 <!-- svelte-ignore a11y_interactive_supports_focus -->
@@ -84,6 +92,11 @@
       stroke-linecap="round"
       transform="rotate(-135 {cx} {cy})"
     />
+    <!-- Default-value tick -->
+    {#if showTick}
+      <line x1={tickX1} y1={tickY1} x2={tickX2} y2={tickY2}
+        stroke={trackStroke} stroke-width="1.5" />
+    {/if}
     <!-- Value arc -->
     <circle
       {cx} {cy} r={r}

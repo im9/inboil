@@ -324,7 +324,7 @@
       <div class="section-label">SEND / MIX</div>
       <div class="knob-grid">
         <Knob value={track.volume} label="VOL" size={48} onchange={v => setParam('volume', v)} />
-        <Knob value={(track.pan + 1) / 2} label="PAN" size={48} onchange={v => setParam('pan', v * 2 - 1)} />
+        <Knob value={(track.pan + 1) / 2} label="PAN" size={48} defaultValue={0.5} onchange={v => setParam('pan', v * 2 - 1)} />
         <Knob value={cell.reverbSend} label="VERB" size={48} onchange={v => handleSend('reverbSend', v)} />
         <Knob value={cell.delaySend} label="DLY" size={48} onchange={v => handleSend('delaySend', v)} />
         <Knob value={cell.glitchSend} label="GLT" size={48} onchange={v => handleSend('glitchSend', v)} />

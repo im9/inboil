@@ -67,6 +67,8 @@ Strict specifications for every interactive element in StepGrid. All new element
 | Page btn | 20px | 16px | 0 | Olive tier |
 | Add track btn | 24px | 24px | 0 | Dashed border |
 | Head-sep | 1px | 16px | 0 | Vertical separator within head |
+| Track-mix column | 128px | auto | 0 | Fixed width, right of track-seq |
+| Mix/Send knob | 24px | 24px | — | Light, compact Knob in track-mix |
 | Chevron | 10px | 6px | 0 | Track label expand arrow |
 | Lock dot | 4px | 4px | 50% | P-lock indicator on step |
 | Chance dot | 4px | 4px | 0 | Rotated 45° diamond |
@@ -107,6 +109,7 @@ Strict specifications for every interactive element in StepGrid. All new element
 | track-group bottom | `--lz-border-subtle` | `1px solid rgba(30,32,40,0.08)` | Separates track rows |
 | track-group left | — | `3px solid transparent` / `--color-olive` | Selected indicator |
 | head-sep | `--lz-border-mid` | `1px, rgba(30,32,40,0.12)` | Separator within head |
+| track-mix left | `--lz-border` | `1px solid rgba(30,32,40,0.10)` | Separates seq from mix column |
 
 ### Spacing
 
@@ -114,7 +117,9 @@ Strict specifications for every interactive element in StepGrid. All new element
 |---|---|---|---|
 | track-cols | padding | `0 8px` | Horizontal padding |
 | track-controls | padding-right | `8px` | Gap before vertical border |
-| track-content | padding-left | `4px` | Gap after vertical border |
+| track-content | padding-left | `4px` | Gap after vertical border (flex row) |
+| track-mix | padding-left / margin-left | `4px` / `4px` | Gap around mix border |
+| mix-knobs / send-knobs | height / gap | `40px` / `4px` | Fixed height, centered |
 | ctrl-main | height / gap | `40px` / `4px` | Fixed height row |
 | ctrl-vel | height / gap | `40px` / `4px` | Fixed height row |
 | steps row | padding / gap | `6px 0` / `2px` | Vertical padding, cell gap |
@@ -124,6 +129,26 @@ Strict specifications for every interactive element in StepGrid. All new element
 | add-track btn | margin | `4px 8px` | Below last track |
 | --head-w | — | `237px` | label(112) + gaps + buttons |
 | page-head width | — | `calc(var(--head-w) + 3px)` | Accounts for left border |
+
+### Track-content layout
+
+Each track row's `.track-content` is a two-column flex row:
+
+```
+┌─ track-seq (flex:1) ──────────────────┐│┌─ track-mix (128px fixed) ─┐
+│  steps row (16 step cells + page btns) │││  mix-knobs: VOL PAN       │
+│  vel-bars / chance bars (if selected)  │││  send-knobs (selected):   │
+│                                        │││  VERB DLY GLT GRN         │
+└────────────────────────────────────────┘│└────────────────────────────┘
+                                          │ ← border-left 1px --lz-border
+```
+
+- **track-mix width is fixed at 128px** so the vertical border aligns across all tracks regardless of content.
+- VOL/PAN knobs appear on every track (24px, light, compact).
+- VERB/DLY/GLT/GRN send knobs appear only on the selected track (24px, light, compact).
+- P-Lock indicators (olive arc) shown only on the selected track where `trackPlkValue`/`isTrackPlkLocked` helpers apply.
+- Non-selected tracks use raw baseline values directly (helpers use `ui.selectedTrack` internally).
+- RST button resets both per-step automation and baseline mix/send values (VOL→0.8, PAN→0, sends→0).
 
 ## AppHeader Element Spec — DECIDED
 
@@ -643,12 +668,12 @@ SVG-based rotary knob with 270° travel arc.
 - Drag vertically to change value (up = increase).
 - Shows arc indicator and ALL CAPS label below.
 - Cursor: `ns-resize` on hover.
-- Default size: 32px. DockPanel knobs: 36px. PerfBar knobs: 36px. StepGrid inline knobs: 20px.
+- Default size: 32px. DockPanel knobs: 36px. PerfBar knobs: 36px. StepGrid inline knobs: 24px. TrackerView sidebar knobs: 20px.
 - Value is 0.0–1.0 normalized; actual value computed by `paramDefs.ts`.
 
 Props:
 - `light`: dark strokes for use on cream background (StepGrid track row).
-- `compact`: hides the numeric value display, keeps label visible. Used for inline VOL/PAN knobs in track rows.
+- `compact`: hides the numeric value display, keeps label visible. Used for inline mix/send knobs in StepGrid and TrackerView.
 
 ### PatternToolbar (formerly PerfBar) — DECIDED
 
@@ -699,7 +724,7 @@ XY performance surface (dark zone). Rendered as an overlay sheet over SceneView 
 **Sends bar** (compact dark footer):
 - Track dots (8, olive active), track name label
 - VERB, DLY, GLT, GRN send knobs (28px) for selected track
-- This is the sole location for per-track FX send controls
+- Per-track FX send baselines are also editable inline in StepGrid and TrackerView
 
 ### FilterView — DECIDED
 
@@ -721,6 +746,8 @@ XY filter/EQ surface (dark zone). Rendered as an overlay sheet over SceneView (A
 ### TrackerView — DECIDED
 
 M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Shows columns: NOTE/VEL/DUR/SLD/CHN. Keyboard-navigable with arrow keys. Uses `activeCell(trackId)` — edits the same data as StepGrid. Track selector bar at the top.
+
+**Sidebar mix/send**: Bottom of the track sidebar, pushed down with `margin-top: auto`. Baseline-only knobs (20px, compact, dark theme) for VOL/PAN (MIX section) and VERB/DLY/GLT/GRN (SEND section). Per-step P-Lock editing uses the tracker columns instead.
 
 ### VoicePicker (in DockPanel) — DECIDED
 
@@ -804,8 +831,7 @@ Contents (multi-mode, context-dependent):
 - **Sample loader** (Sampler/Crash/Ride): LOAD button for file input, POOL button for inline Audio Pool browser (ADR 104). Uploaded samples auto-added to pool. Pool browser provides folder drill-down, search, audition (▸), and one-tap assign. User samples support rename, move, and delete.
 - **Lock toolbar**: LOCK/STEP/CLR for parameter lock mode
 - **Synth knob grid**: Voice parameters from `paramDefs.ts`
-- **Send knobs**: VERB, DLY, GLT, GRN per selected track
-- **Mixer knobs**: VOL, PAN per selected track
+- ~~Send/Mixer knobs~~ — moved to StepGrid inline (VOL/PAN for all tracks, VERB/DLY/GLT/GRN for selected track) and TrackerView sidebar
 
 **Track editor tabs** (ADR 092): DockTrackEditor with TRACKS / SCENE tabs when pattern sheet is open.
 

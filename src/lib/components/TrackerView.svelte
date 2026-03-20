@@ -327,7 +327,7 @@
               onchange={v => { pushUndo('Set volume'); song.tracks[trackId].volume = v }} />
           </span>
           <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
-            <Knob value={(track.pan + 1) / 2} label="PAN" size={20} compact
+            <Knob value={(track.pan + 1) / 2} label="PAN" size={20} compact defaultValue={0.5}
               onchange={v => { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1 }} />
           </span>
         </div>
