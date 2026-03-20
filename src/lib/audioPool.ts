@@ -486,13 +486,16 @@ export async function installFactorySamples(
 
 /** Cached manifest for pack lookups (populated during factory install). */
 let cachedManifest: FactoryManifest | null = null
+let cachedManifestTime = 0
+const MANIFEST_TTL = 5 * 60 * 1000 // 5 minutes
 
-/** Get the factory manifest (fetches once, then caches). */
+/** Get the factory manifest (fetches once per session, re-fetches after TTL). */
 export async function getFactoryManifest(): Promise<FactoryManifest> {
-  if (cachedManifest) return cachedManifest
+  if (cachedManifest && Date.now() - cachedManifestTime < MANIFEST_TTL) return cachedManifest
   const res = await fetch(FACTORY_MANIFEST_URL)
   if (!res.ok) throw new Error(`Factory manifest fetch failed: ${res.status}`)
   cachedManifest = await res.json()
+  cachedManifestTime = Date.now()
   return cachedManifest!
 }
 

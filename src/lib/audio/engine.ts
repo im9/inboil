@@ -28,11 +28,6 @@ const DRUM_POOL_NAMES: Record<string, string> = {
   Ride:  '909-ride',
 }
 
-/** Sampler category presets (user-selectable via preset browser) */
-export const SAMPLER_PRESETS: Record<string, string> = {
-  // Future: add preset samples here (e.g. breaks, one-shots, foley)
-}
-
 type PerfState = {
   rootNote: number; octave: number
   breaking: boolean; masterGain: number

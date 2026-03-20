@@ -686,7 +686,7 @@ export function copySamplesForPattern(srcIndex: number, dstIndex: number): void 
     // Persist to IDB
     if (project.id) {
       void storage().then(s => s.saveSample(project.id!, cell.trackId, dstIndex, meta.name, meta.rawBuffer, meta.packId))
-        .catch(e => { console.warn('[sample] copy save failed:', e) })
+        .catch(e => { console.warn('[sample] copy save failed:', e); showToast('Sample save failed', 'error') })
     }
   }
 }
@@ -716,6 +716,8 @@ export async function restoreSamples(projectId: string): Promise<void> {
       : [s.patternIndex]
 
     for (const pi of patternIndices) {
+      // Guard: pattern may have been removed/replaced during async restore
+      if (!song.patterns[pi]) continue
       const key = sampleCellKey(s.trackId, pi)
       if (s.packId) {
         try {

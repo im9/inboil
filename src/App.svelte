@@ -26,12 +26,6 @@
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
   import { showToast } from './lib/toast.svelte.ts'
 
-  // ── Global unhandled rejection handler ──────────────────────────
-  window.addEventListener('unhandledrejection', (e) => {
-    console.error('[unhandled]', e.reason)
-    showToast('Unexpected error', 'error')
-  })
-
   const engineCtx: EngineContext = $derived({
     fxFlavours,
     masterPad,
@@ -45,7 +39,10 @@
   $effect(() => {
     if (!restored) { restored = true; void projectRestore(); void initPool() }
     const onVisChange = () => { if (document.visibilityState === 'hidden') { writeRecoverySnapshot(); void projectAutoSave() } }
-    const onBeforeUnload = () => { writeRecoverySnapshot(); void projectAutoSave() }
+    const onBeforeUnload = () => {
+      writeRecoverySnapshot(); void projectAutoSave()
+      if (session.role !== 'solo') { disconnect(); resetDeltaSync() }
+    }
     document.addEventListener('visibilitychange', onVisChange)
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => {
@@ -61,10 +58,6 @@
   initGuestHandlers()
   setOnGuestConnected(() => sendSnapshot())
   setOnError((msg) => showToast(msg, 'warn'))
-  // Clean disconnect on page unload
-  window.addEventListener('beforeunload', () => {
-    if (session.role !== 'solo') { disconnect(); resetDeltaSync() }
-  })
 
   // ── Responsive ────────────────────────────────────────────────────
   let windowWidth = $state(window.innerWidth)
@@ -81,7 +74,12 @@
   // Stopped: rAF-throttled to avoid unnecessary work
   let rafId = 0
   $effect(() => {
-    void (songVer.v + JSON.stringify(perf) + JSON.stringify(fxPad) + ui.currentPattern + playback.mode + playback.playingPattern + JSON.stringify([...ui.soloTracks]))
+    // Touch reactive deps without string allocation (perf/fxPad are $state proxies)
+    void songVer.v; void ui.currentPattern; void playback.mode; void playback.playingPattern
+    for (const v of Object.values(perf)) void v
+    for (const k of ['verb', 'delay', 'glitch', 'granular', 'filter', 'eqLow', 'eqMid', 'eqHigh'] as const)
+      for (const v of Object.values(fxPad[k])) void v
+    for (const _ of ui.soloTracks) void _
     const sendPattern = () => {
       const soloIdx = soloPatternIndex()
       if (soloIdx != null) {

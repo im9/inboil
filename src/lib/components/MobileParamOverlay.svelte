@@ -8,6 +8,7 @@
   import { engine } from '../audio/engine.ts'
   import { isGuest, guestSetParam, guestSetSend } from '../multiDevice/guest.ts'
   import { fade, fly } from 'svelte/transition'
+  import { drawWaveform } from '../domHelpers.ts'
   import Knob from './Knob.svelte'
 
   const CATEGORIES: { id: VoiceCategory; label: string }[] = [
@@ -71,53 +72,6 @@
     const file = input.files?.[0]
     if (file) void loadSampleFile(file)
     input.value = ''
-  }
-
-  function drawWaveform(canvas: HTMLCanvasElement, waveform: Float32Array, slices = 0) {
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const dpr = window.devicePixelRatio || 1
-    const w = canvas.clientWidth
-    const h = canvas.clientHeight
-    canvas.width = w * dpr
-    canvas.height = h * dpr
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'
-    ctx.fillRect(0, 0, w, h)
-    ctx.strokeStyle = 'rgba(237,232,220,0.6)'
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    const step = Math.max(1, Math.floor(waveform.length / w))
-    const mid = h / 2
-    for (let x = 0; x < w; x++) {
-      const idx = Math.floor((x / w) * waveform.length)
-      let min = 1, max = -1
-      for (let j = 0; j < step; j++) {
-        const v = waveform[idx + j] ?? 0
-        if (v < min) min = v
-        if (v > max) max = v
-      }
-      ctx.moveTo(x + 0.5, mid - max * mid)
-      ctx.lineTo(x + 0.5, mid - min * mid)
-    }
-    ctx.stroke()
-    ctx.strokeStyle = 'rgba(237,232,220,0.15)'
-    ctx.beginPath()
-    ctx.moveTo(0, mid)
-    ctx.lineTo(w, mid)
-    ctx.stroke()
-    if (slices > 0) {
-      ctx.strokeStyle = 'rgba(108,119,68,0.6)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      for (let i = 1; i < slices; i++) {
-        const sx = Math.round((i / slices) * w) + 0.5
-        ctx.moveTo(sx, 0)
-        ctx.lineTo(sx, h)
-      }
-      ctx.stroke()
-    }
   }
 
   $effect(() => {
