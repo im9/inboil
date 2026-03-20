@@ -1,4 +1,9 @@
 <script lang="ts">
+  // NOTE: Large file by design — drag, edge-draw, selection, and keyboard logic
+  // all share tightly coupled $state (dragging, edgeFrom, viewEl, etc.).
+  // Visual parts are already extracted (SceneCanvas, SceneBubbleMenu, SceneLabels,
+  // SceneToolbar, SceneNodePopup). Remaining logic resists splitting without
+  // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'

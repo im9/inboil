@@ -1,4 +1,8 @@
 <script lang="ts">
+  // NOTE: Large file by design — step drag-selection, note input, context menus,
+  // and piano-roll coordination all share reactive $state that would require
+  // extensive prop drilling if split. Utility functions already extracted to
+  // stepActions.ts; further splitting adds complexity without benefit.
   import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'

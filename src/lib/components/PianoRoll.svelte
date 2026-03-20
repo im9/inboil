@@ -1,4 +1,8 @@
 <script module lang="ts">
+  // NOTE: Large file by design — note drawing, drag, resize, snap, and selection
+  // all share canvas coordinates and reactive $state. Canvas-based components are inherently monolithic; splitting would
+  // duplicate coordinate logic.
+
   // Module-level note clipboard — persists across track switches
   interface ClipNote {
     stepOffset: number; note: number  // stepOffset from selection start, note is absolute

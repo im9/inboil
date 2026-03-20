@@ -19,7 +19,7 @@ Identify and fix code quality issues across the project without changing behavio
 Launch an Explore agent to scan `src/` for issues in these categories:
 
 1. **Dead code**: unused imports, unreachable branches, commented-out code, unused exports
-2. **Oversized components**: `.svelte` files > 300 lines that mix unrelated concerns and could be split
+2. **Oversized components**: `.svelte` files > 300 lines that mix unrelated concerns and could be split (skip files with a `// NOTE: Large file by design` comment — these have been reviewed and deemed unsplittable)
 3. **Redundant state**: `$state` that duplicates or could be `$derived` from other state
 4. **Copy-paste**: near-duplicate code blocks across files that should share a helper
 5. **Bug risks**: unguarded async, missing cleanup, event listener leaks, race conditions
