@@ -27,6 +27,7 @@
   --sl-font: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
   --sl-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
+  --sl-content-width: 55rem;           /* wider for embedded sequencer (default 45rem) */
   --sl-text-body: 0.8125rem;          /* 13px — compact like the app */
   --sl-line-height: 1.6;
 }
