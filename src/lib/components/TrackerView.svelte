@@ -579,12 +579,12 @@
     gap: 2px;
     padding: 3px 6px;
     border: 1px solid transparent;
-    border-bottom: 1px solid rgba(237,232,220,0.05);
+    border-bottom: 1px solid rgba(237,232,220,0.06);
     transition: background 40ms;
   }
   .track-btn.selected {
     border-color: var(--color-olive);
-    background: rgba(120,120,69,0.12);
+    background: rgba(120,120,69,0.15);
   }
   .track-btn:last-child { border-bottom-color: transparent; }
   .track-btn.muted { opacity: 0.4; }
@@ -593,7 +593,7 @@
   .track-label {
     border: none;
     background: transparent;
-    color: rgba(237,232,220,0.40);
+    color: rgba(237,232,220,0.45);
     font-family: var(--font-data);
     font-size: 10px;
     font-weight: 700;
@@ -705,13 +705,13 @@
     display: flex;
     align-items: center;
     height: 24px;
-    border-bottom: 1px solid rgba(237,232,220,0.03);
+    border-bottom: 1px solid rgba(237,232,220,0.06);
     transition: background 40ms;
   }
   .tracker-row.beat { border-bottom-color: rgba(237,232,220,0.08); }
-  .tracker-row.playhead { background: rgba(120,120,69,0.18); }
-  .tracker-row.cursor-row { background: rgba(237,232,220,0.04); }
-  .tracker-row.playhead.cursor-row { background: rgba(120,120,69,0.25); }
+  .tracker-row.playhead { background: rgba(120,120,69,0.15); }
+  .tracker-row.cursor-row { background: rgba(237,232,220,0.06); }
+  .tracker-row.playhead.cursor-row { background: rgba(120,120,69,0.3); }
   .tracker-row.cont { opacity: 0.30; }
 
   /* ── Cells ── */
@@ -727,7 +727,7 @@
     width: 28px;
     flex-shrink: 0;
     font-size: 9px;
-    color: rgba(237,232,220,0.18);
+    color: rgba(237,232,220,0.15);
   }
   .tracker-row.beat .cell-num { color: rgba(237,232,220,0.30); }
 
@@ -762,13 +762,13 @@
   .tracker-row.active .cell-vel  { color: rgba(237,232,220,0.70); }
   .tracker-row.active .cell-dur  { color: rgba(237,232,220,0.55); }
   .tracker-row.active .cell-sld  { color: var(--color-blue); }
-  .tracker-row.active .cell-chn  { color: rgba(237,232,220,0.50); }
+  .tracker-row.active .cell-chn  { color: rgba(237,232,220,0.45); }
   .tracker-row.active .cell-plock { color: rgba(237,232,220,0.35); }
 
   /* Cursor cell */
   .cell.cursor {
     border-color: var(--color-olive);
-    background: rgba(120,120,69,0.12);
+    background: rgba(120,120,69,0.15);
   }
 
   /* ── Mobile ── */
@@ -783,7 +783,7 @@
       overflow-y: hidden;
       padding: 2px 4px;
     }
-    .track-btn { border-bottom: none; border-right: 1px solid rgba(237,232,220,0.05); padding: 2px 4px; }
+    .track-btn { border-bottom: none; border-right: 1px solid rgba(237,232,220,0.06); padding: 2px 4px; }
     .track-btn:last-child { border-right-color: transparent; }
     .track-label { font-size: 9px; max-width: 64px; }
 

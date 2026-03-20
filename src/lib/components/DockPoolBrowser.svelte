@@ -359,7 +359,7 @@
     padding: 2px 6px;
     border: 1px solid rgba(237,232,220,0.15);
     border-radius: 0;
-    background: rgba(0,0,0,0.2);
+    background: rgba(30,32,40,0.15);
     color: rgba(237,232,220,0.85);
     outline: none;
     font-family: inherit;
@@ -401,7 +401,7 @@
     cursor: pointer;
     padding: 0 2px;
   }
-  .crumb:hover { color: rgba(237,232,220,0.75); }
+  .crumb:hover { color: rgba(237,232,220,0.7); }
   .crumb.active { color: rgba(237,232,220,0.85); cursor: default; }
   .crumb-sep { font-size: 8px; color: rgba(237,232,220,0.25); }
 
@@ -418,7 +418,7 @@
     padding: 1px 5px;
     border: 1px solid rgba(237,232,220,0.15);
     background: transparent;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
     cursor: pointer;
   }
   .folder-btn:not(:last-child) { border-right: none; }
@@ -450,7 +450,7 @@
     padding: 2px 4px;
     border-radius: 0;
     cursor: pointer;
-    color: rgba(237,232,220,0.65);
+    color: rgba(237,232,220,0.7);
   }
   .pool-row:hover {
     background: rgba(237,232,220,0.06);
@@ -490,7 +490,7 @@
     padding: 0;
   }
   .row-name:hover {
-    color: rgba(237,232,220,0.95);
+    color: rgba(237,232,220,0.9);
   }
 
   .row-folder {
@@ -509,7 +509,7 @@
   }
   .row-more {
     font-size: 10px;
-    color: rgba(237,232,220,0.2);
+    color: rgba(237,232,220,0.15);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -519,7 +519,7 @@
     transition: opacity 60ms;
   }
   .pool-row:hover .row-more { opacity: 1; }
-  .row-more:hover { color: rgba(237,232,220,0.6); }
+  .row-more:hover { color: rgba(237,232,220,0.55); }
 
   .row-actions {
     display: flex;
@@ -539,12 +539,12 @@
     border: 1px solid rgba(237,232,220,0.15);
     border-radius: 0;
     background: transparent;
-    color: rgba(237,232,220,0.5);
+    color: rgba(237,232,220,0.45);
     cursor: pointer;
   }
   .action-btn:hover {
     background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.8);
+    color: rgba(237,232,220,0.85);
   }
   .action-del {
     color: rgba(232,80,80,0.6);
@@ -552,7 +552,7 @@
   }
   .action-del:hover {
     background: rgba(232,80,80,0.1);
-    color: #e85050;
+    color: var(--color-danger);
   }
   .rename-input {
     flex: 1;
@@ -560,7 +560,7 @@
     padding: 1px 4px;
     border: 1px solid rgba(237,232,220,0.25);
     border-radius: 0;
-    background: rgba(0,0,0,0.2);
+    background: rgba(30,32,40,0.15);
     color: rgba(237,232,220,0.85);
     outline: none;
     font-family: inherit;

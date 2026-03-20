@@ -181,7 +181,7 @@
     min-width: 48px;
     padding: 6px 8px 5px;
     border: 1.5px solid rgba(237,232,220,0.18);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: rgba(237,232,220,0.45);
     font-family: inherit;
@@ -265,7 +265,7 @@
     width: 100%;
     height: 44px;
     border: 1.5px solid #787845;
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     background: transparent;
     color: #787845;
     font-family: inherit;
@@ -294,7 +294,7 @@
   .piano-key {
     flex: 1;
     border: 1px solid rgba(237,232,220,0.2);
-    border-radius: 0 0 4px 4px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     background: rgba(237,232,220,0.08);
     color: rgba(237,232,220,0.5);
     font-family: inherit;

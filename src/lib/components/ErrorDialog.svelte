@@ -66,20 +66,20 @@
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(30, 32, 40, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
   }
   .error-dialog {
-    background: #1a1210;
+    background: var(--color-fg);
     border: 1px solid var(--color-salmon, #E8A090);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     max-width: 440px;
     width: 100%;
     padding: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 8px 32px rgba(30, 32, 40, 0.55);
     font-family: var(--font-data, monospace);
   }
   .error-header {
@@ -107,8 +107,8 @@
   .error-detail {
     font-size: 10px;
     line-height: 1.4;
-    color: rgba(237, 232, 220, 0.4);
-    background: rgba(0, 0, 0, 0.3);
+    color: rgba(237, 232, 220, 0.45);
+    background: rgba(30, 32, 40, 0.35);
     border: 1px solid rgba(237, 232, 220, 0.08);
     border-radius: 0;
     padding: 8px;
@@ -130,7 +130,7 @@
     border-radius: 0;
     border: 1px solid var(--color-salmon, #E8A090);
     background: var(--color-salmon, #E8A090);
-    color: #1a1210;
+    color: var(--color-fg);
     cursor: pointer;
   }
   .btn-action:hover {
@@ -141,9 +141,9 @@
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 0;
-    border: 1px solid rgba(237, 232, 220, 0.2);
+    border: 1px solid rgba(237, 232, 220, 0.15);
     background: transparent;
-    color: rgba(237, 232, 220, 0.6);
+    color: rgba(237, 232, 220, 0.55);
     cursor: pointer;
   }
   .btn-copy:hover {
@@ -157,7 +157,7 @@
     border-radius: 0;
     border: 1px solid rgba(237, 232, 220, 0.15);
     background: transparent;
-    color: rgba(237, 232, 220, 0.4);
+    color: rgba(237, 232, 220, 0.45);
     cursor: pointer;
   }
   .btn-dismiss:hover {

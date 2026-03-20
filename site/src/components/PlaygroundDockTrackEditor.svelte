@@ -77,7 +77,7 @@
     min-width: 48px;
     padding: 6px 8px 5px;
     border: 1.5px solid rgba(237,232,220,0.18);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     background: transparent;
     color: rgba(237,232,220,0.45);
     font-family: inherit;

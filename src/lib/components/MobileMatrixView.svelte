@@ -90,7 +90,7 @@
     height: 20px;
     flex-shrink: 0;
     position: relative;
-    border: 1px solid rgba(30,32,40,0.4);
+    border: 1px solid rgba(30,32,40,0.35);
     background: var(--color-bg);
     padding: 0;
     cursor: pointer;

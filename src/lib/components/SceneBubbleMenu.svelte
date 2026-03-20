@@ -113,17 +113,17 @@
     border-radius: 50%;
     border: 1.5px solid rgba(30, 32, 40, 0.15);
     background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.8);
+    color: rgba(237, 232, 220, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.2);
+    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
     animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .bubble-item:hover {
-    background: rgba(30, 32, 40, 0.9);
+    background: rgba(30, 32, 40, 0.7);
     color: white;
     transform: scale(1.15);
   }

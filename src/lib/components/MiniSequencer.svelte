@@ -49,7 +49,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237, 232, 220, 0.40);
+    color: rgba(237, 232, 220, 0.45);
     white-space: nowrap;
     min-width: 40px;
   }
@@ -72,7 +72,7 @@
     flex: 1;
     min-width: 0;
     background: rgba(237, 232, 220, 0.06);
-    border-radius: 0.5px;
+    border-radius: 0;
   }
 
   .mini-step.on {

@@ -255,7 +255,7 @@
     transition: background 0.15s;
   }
   .full-docs-link:hover {
-    background: rgba(68,114,180,0.1);
+    background: rgba(68,114,180,0.08);
   }
   .search-bar {
     position: relative;
@@ -265,7 +265,7 @@
     width: 100%;
     background: rgba(237,232,220,0.06);
     border: 1px solid rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.8);
+    color: rgba(237,232,220,0.85);
     font-size: 10px;
     letter-spacing: 0.04em;
     padding: 6px 28px 6px 8px;
@@ -285,7 +285,7 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
     font-size: 14px;
     padding: 0 4px;
     cursor: pointer;
@@ -295,7 +295,7 @@
     padding: 0 12px 10px;
   }
   .section-title {
-    color: rgba(237,232,220,0.8);
+    color: rgba(237,232,220,0.85);
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;

@@ -483,13 +483,13 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.40);
+    color: rgba(237,232,220,0.45);
   }
   .ro-val {
     font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgba(237,232,220,0.65);
+    color: rgba(237,232,220,0.7);
     min-width: 36px;
   }
 
@@ -559,7 +559,7 @@
     opacity: 0.7;
   }
   .vu-dot.clip {
-    background: #ff4444;
+    background: var(--color-danger);
     box-shadow: 0 0 8px rgba(255,68,68,0.7);
     animation: clip-throb 200ms ease-in-out infinite alternate;
   }
@@ -578,7 +578,7 @@
     box-shadow: 0 0 4px color-mix(in srgb, var(--color-salmon) 40%, transparent);
   }
   .master-pad.clipping .vu-ch {
-    color: #ff4444;
+    color: var(--color-danger);
     transition: color 60ms;
   }
 

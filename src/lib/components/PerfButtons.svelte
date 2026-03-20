@@ -90,7 +90,7 @@
     color: var(--color-bg);
   }
   .btn-perf.stopped {
-    border-color: rgba(237,232,220,0.18);
+    border-color: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.25);
     cursor: default;
   }
@@ -104,7 +104,7 @@
     color: var(--color-bg);
   }
   .btn-brk.stopped {
-    border-color: rgba(237,232,220,0.18);
+    border-color: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.25);
   }
 
@@ -113,9 +113,9 @@
     position: absolute;
     width: 44px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     border: 1.5px solid var(--color-blue);
-    background: rgba(30,32,40,0.90);
+    background: rgba(30,32,40,0.7);
     color: var(--color-blue);
     font-size: 9px;
     font-weight: 700;

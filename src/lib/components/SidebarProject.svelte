@@ -211,7 +211,7 @@
   }
   .btn-proj-primary {
     flex: 1;
-    border: 1.5px solid rgba(237,232,220,0.5);
+    border: 1.5px solid rgba(237,232,220,0.45);
     background: rgba(237,232,220,0.12);
     color: rgba(237,232,220,0.9);
     font-size: 11px;
@@ -223,11 +223,11 @@
     transition: background 40ms linear, color 40ms linear;
   }
   .btn-proj-primary:hover {
-    background: rgba(237,232,220,0.18);
-    color: rgba(237,232,220,1);
+    background: rgba(237,232,220,0.15);
+    color: rgba(237,232,220,0.9);
   }
   .btn-proj-primary:active {
-    background: rgba(237,232,220,0.24);
+    background: rgba(237,232,220,0.25);
   }
   .btn-proj-primary.outline {
     background: transparent;
@@ -291,12 +291,12 @@
     outline: none;
   }
   .proj-name-input:focus {
-    border-color: rgba(237,232,220,0.5);
+    border-color: rgba(237,232,220,0.45);
   }
   .proj-confirm {
     margin: 0 16px 8px;
     padding: 10px 12px;
-    background: rgba(237,232,220,0.04);
+    background: rgba(237,232,220,0.06);
     border: 1px solid rgba(237,232,220,0.12);
   }
   .proj-confirm-text {
@@ -316,7 +316,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
     text-transform: uppercase;
     padding: 8px 0 4px;
   }
@@ -333,7 +333,7 @@
     border-radius: 0;
     transition: background 40ms linear;
   }
-  .proj-item:hover { background: rgba(237,232,220,0.04); }
+  .proj-item:hover { background: rgba(237,232,220,0.06); }
   .proj-item.current { background: rgba(237,232,220,0.08); }
   .proj-item-name {
     flex: 1;
@@ -343,7 +343,7 @@
     white-space: nowrap;
     background: none;
     border: none;
-    color: rgba(237,232,220,0.65);
+    color: rgba(237,232,220,0.7);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -351,9 +351,9 @@
     cursor: pointer;
     padding: 0;
   }
-  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.95); }
+  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.9); }
   .proj-item-name:hover { color: rgba(237,232,220,0.9); }
-  .proj-item-name.factory { color: rgba(237,232,220,0.5); font-style: italic; }
+  .proj-item-name.factory { color: rgba(237,232,220,0.45); font-style: italic; }
   .proj-item-date {
     font-size: 9px;
     color: rgba(237,232,220,0.35);
@@ -362,14 +362,14 @@
   .proj-item-del {
     background: none;
     border: none;
-    color: rgba(237,232,220,0.2);
+    color: rgba(237,232,220,0.15);
     font-size: 11px;
     cursor: pointer;
     padding: 2px 4px;
     flex-shrink: 0;
     transition: color 40ms linear;
   }
-  .proj-item-del:hover { color: rgba(237,232,220,0.6); }
+  .proj-item-del:hover { color: rgba(237,232,220,0.55); }
   .proj-item-del.confirm {
     color: var(--color-salmon);
     font-size: 10px;

@@ -139,7 +139,7 @@
     color: var(--color-bg);
     display: flex;
     flex-direction: column;
-    box-shadow: -4px 0 16px rgba(0,0,0,0.3);
+    box-shadow: -4px 0 16px rgba(30,32,40,0.35);
     overflow: hidden;
     animation: sidebar-in 50ms ease-out;
   }
@@ -167,7 +167,7 @@
   .sidebar-title {
     font-size: 10px;
     letter-spacing: 0.14em;
-    color: rgba(237,232,220,0.5);
+    color: rgba(237,232,220,0.45);
     text-transform: uppercase;
   }
 
@@ -247,10 +247,10 @@
     transform: translateX(-50%);
     max-width: 480px;
     width: calc(100% - 32px);
-    background: rgba(30,32,40,0.92);
+    background: rgba(30,32,40,0.7);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(237,232,220,0.1);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     padding: 6px 12px;
     z-index: 120;
     display: flex;
@@ -304,7 +304,7 @@
     display: block;
     font-size: 10px;
     font-family: var(--font-mono);
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
     text-decoration: none;
     letter-spacing: 0.04em;
     padding-bottom: 12px;
@@ -318,7 +318,7 @@
   .setting-label {
     font-size: 10px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.5);
+    color: rgba(237,232,220,0.45);
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;

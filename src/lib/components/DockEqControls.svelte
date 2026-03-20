@@ -99,7 +99,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.4);
+    color: rgba(237,232,220, 0.45);
     padding-bottom: 2px;
   }
   .eq-dock-grid {
@@ -138,7 +138,7 @@
     letter-spacing: 0.06em;
     border: 1px solid rgba(237,232,220, 0.15);
     background: transparent;
-    color: rgba(237,232,220, 0.4);
+    color: rgba(237,232,220, 0.45);
     cursor: pointer;
     border-radius: 0;
   }

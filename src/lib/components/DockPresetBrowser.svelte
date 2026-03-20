@@ -320,7 +320,7 @@
   }
   .picker-recent-btn {
     border: 1px solid rgba(var(--dk-cream), 0.12);
-    background: rgba(var(--dk-cream), 0.04);
+    background: rgba(var(--dk-cream), 0.06);
     color: rgba(var(--dk-cream), 0.55);
     font-size: var(--dk-fs-xs);
     padding: 2px 6px;
@@ -332,7 +332,7 @@
   }
   .picker-recent-btn:hover {
     background: var(--dk-bg-hover);
-    color: rgba(var(--dk-cream), 0.8);
+    color: rgba(var(--dk-cream), 0.85);
   }
   .picker-recent-btn.selected {
     background: var(--olive-bg);
@@ -354,7 +354,7 @@
     border: none;
     border-bottom: 1px solid var(--dk-bg-faint);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.65);
+    color: rgba(var(--dk-cream), 0.7);
     font-size: var(--dk-fs-md);
     padding: 5px 6px;
     text-align: left;
@@ -370,7 +370,7 @@
   }
   .picker-item.selected {
     background: var(--olive-bg);
-    color: rgba(var(--dk-cream), 0.95);
+    color: rgba(var(--dk-cream), 0.9);
   }
   .picker-item.selected .picker-cat-tag {
     color: var(--color-olive);

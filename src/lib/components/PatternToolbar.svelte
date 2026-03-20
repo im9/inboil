@@ -453,9 +453,9 @@
     z-index: 200;
     min-width: 100px;
     background: var(--color-bg);
-    border: 1px solid rgba(30,32,40,0.20);
+    border: 1px solid rgba(30,32,40,0.15);
     border-radius: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 12px rgba(30,32,40,0.12);
     display: flex;
     flex-direction: column;
     padding: 2px;
@@ -485,7 +485,7 @@
     color: var(--color-fg);
   }
   .tmpl-option:active {
-    background: rgba(30,32,40,0.14);
+    background: rgba(30,32,40,0.15);
   }
 
   /* ── Loop button ── */
@@ -508,7 +508,7 @@
     background: rgba(120,120,69,0.08);
   }
   .btn-loop.mismatch {
-    color: rgba(30,32,40,0.20);
+    color: rgba(30,32,40,0.15);
     border-color: rgba(30,32,40,0.10);
   }
   .btn-loop.spinning :global(svg) {
@@ -581,7 +581,7 @@
   .key.black {
     width: 16px;
     background: var(--color-fg);
-    color: rgba(237,232,220,0.50);
+    color: rgba(237,232,220,0.45);
   }
 
   .key.active:not(.black) {
@@ -618,7 +618,7 @@
     font-family: var(--font-display);
     font-size: 22px;
     line-height: 1;
-    color: rgba(30,32,40,0.60);
+    color: rgba(30,32,40,0.55);
     display: inline-block;
     min-width: 2ch;
     text-align: right;
@@ -665,7 +665,7 @@
     color: var(--color-bg);
   }
   .btn-gen.armed {
-    background: rgba(120,120,69,0.12);
+    background: rgba(120,120,69,0.15);
     border-color: var(--color-olive);
     animation: gen-pulse 800ms ease-in-out infinite;
   }
@@ -679,7 +679,7 @@
     font-size: 8px;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.65);
+    color: rgba(30,32,40,0.7);
     background: transparent;
     border: 1px solid rgba(30,32,40,0.15);
     padding: 2px 4px;
@@ -774,9 +774,9 @@
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      border: 1.5px solid rgba(30,32,40,0.25);
+      border: 1.5px solid rgba(30,32,40,0.15);
       background: rgba(255,255,255,0.5);
-      color: rgba(30,32,40,0.75);
+      color: rgba(30,32,40,0.7);
       font-family: var(--font-data);
       font-size: 11px;
       font-weight: 700;
@@ -789,7 +789,7 @@
     }
     .key-menu-trigger:active {
       background: rgba(30,32,40,0.08);
-      border-color: rgba(30,32,40,0.40);
+      border-color: rgba(30,32,40,0.35);
     }
 
     .oct-mini {
@@ -839,7 +839,7 @@
     .key-arc-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(0,0,0,0.25);
+      background: rgba(30,32,40,0.15);
       border: none;
       opacity: 0;
       pointer-events: none;
@@ -869,15 +869,15 @@
       z-index: 201;
     }
     .key-fan:not(.black) {
-      background: rgba(237,232,220,0.92);
+      background: rgba(237,232,220,0.9);
       color: var(--color-fg);
-      box-shadow: inset 0 -1px 3px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.12);
+      box-shadow: inset 0 -1px 3px rgba(30,32,40,0.06), 0 1px 3px rgba(30,32,40,0.12);
     }
     .key-fan.black {
       background: rgba(40,38,34,0.95);
       color: rgba(237,232,220,0.55);
       z-index: 202;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      box-shadow: 0 1px 4px rgba(30,32,40,0.35);
     }
     .key-fan.active-note {
       background: var(--color-olive) !important;

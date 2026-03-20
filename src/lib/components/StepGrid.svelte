@@ -657,7 +657,7 @@
     opacity: 0.35;
     background-image: repeating-linear-gradient(
       45deg,
-      rgba(30,32,40,0.07) 0px, rgba(30,32,40,0.07) 1px,
+      rgba(30,32,40,0.08) 0px, rgba(30,32,40,0.08) 1px,
       transparent 1px, transparent 6px
     );
   }
@@ -731,7 +731,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transition: background 100ms;
   }
   .track-label:hover {
@@ -926,7 +926,7 @@
   }
   .head-action:hover {
     color: var(--color-fg);
-    border-color: rgba(30,32,40,0.25);
+    border-color: rgba(30,32,40,0.15);
   }
   .btn-scale {
     width: 28px;
@@ -995,7 +995,7 @@
   .vel-fill {
     width: 100%;
     background: rgba(237,232,220,0.12);
-    border-radius: 1px 1px 0 0;
+    border-radius: 0;
     transition: height 180ms ease-out;
     min-height: 2px;
     transform-origin: bottom;
@@ -1052,7 +1052,7 @@
     width: 24px;
     height: 24px;
     margin: 4px 8px;
-    border: 1px dashed rgba(30,32,40,0.2);
+    border: 1px dashed rgba(30,32,40,0.15);
     background: transparent;
     color: var(--color-muted);
     font-size: 14px;
@@ -1066,7 +1066,7 @@
 
   /* ── Step-set mode ── */
   .step-set-mode {
-    background: rgba(30, 32, 40, 0.04);
+    background: rgba(30, 32, 40, 0.06);
     border-radius: 0;
   }
   .step-set-cell {
@@ -1074,7 +1074,7 @@
     align-items: center;
     justify-content: center;
     background: var(--color-bg);
-    border: 1px solid rgba(30, 32, 40, 0.2);
+    border: 1px solid rgba(30, 32, 40, 0.15);
     cursor: pointer;
     transition: background 60ms, border-color 60ms;
   }
@@ -1111,7 +1111,7 @@
   .remove-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.15);
+    background: rgba(30,32,40,0.15);
     z-index: 20;
   }
   .remove-confirm {
@@ -1126,8 +1126,8 @@
     background: var(--color-fg);
     color: rgba(237,232,220,0.85);
     padding: 10px 16px;
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 16px rgba(30,32,40,0.35);
   }
   .remove-label {
     font-size: 12px;
@@ -1140,15 +1140,15 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 5px 12px;
-    border: 1px solid rgba(237,232,220,0.2);
+    border: 1px solid rgba(237,232,220,0.15);
     background: transparent;
-    color: rgba(237,232,220,0.6);
+    color: rgba(237,232,220,0.55);
     cursor: pointer;
     border-radius: 0;
   }
   .remove-btn:hover {
     color: rgba(237,232,220,0.9);
-    border-color: rgba(237,232,220,0.4);
+    border-color: rgba(237,232,220,0.45);
   }
   .remove-yes {
     color: var(--color-danger);

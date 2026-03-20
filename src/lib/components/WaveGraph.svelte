@@ -49,6 +49,6 @@
     display: block;
     margin-bottom: 4px;
     border-radius: 0;
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(30, 32, 40, 0.15);
   }
 </style>

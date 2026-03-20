@@ -122,7 +122,7 @@
     width: 28px;
     height: 22px;
     flex-shrink: 0;
-    border: 1px solid rgba(30,32,40,0.25);
+    border: 1px solid rgba(30,32,40,0.15);
     background: transparent;
     font-size: 10px;
     color: rgba(30,32,40,0.5);
@@ -155,13 +155,13 @@
 
   .ribbon-arrow {
     font-size: 9px;
-    color: rgba(30,32,40,0.2);
+    color: rgba(30,32,40,0.15);
     flex-shrink: 0;
   }
 
   .ribbon-node {
     padding: 3px 8px;
-    border: 1px solid rgba(30,32,40,0.2);
+    border: 1px solid rgba(30,32,40,0.15);
     background: transparent;
     font-family: var(--font-data);
     font-size: 8px;

@@ -198,7 +198,7 @@
     justify-content: center;
     padding: 0;
     cursor: pointer;
-    color: rgba(30,32,40,0.45);
+    color: rgba(30,32,40,0.5);
   }
   .head-scene:hover {
     background: rgba(30,32,40,0.06);
@@ -209,7 +209,7 @@
     border-color: rgba(120,120,69,0.3);
   }
   .head-scene:hover {
-    background: rgba(120,120,69,0.1);
+    background: rgba(120,120,69,0.08);
     color: var(--color-olive);
   }
 

@@ -33,7 +33,7 @@
     width: 28px;
     height: 28px;
     border: 1px solid var(--color-muted) !important;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     color: var(--color-muted);
     font-size: 12px;
   }

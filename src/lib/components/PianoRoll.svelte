@@ -999,7 +999,7 @@
     border-bottom: 1px solid rgba(30,32,40,0.06);
   }
   .row.black {
-    background: rgba(30,32,40,0.025);
+    background: rgba(30,32,40,0.06);
   }
   .row.disabled {
     background: rgba(232,160,144,0.06);
@@ -1027,13 +1027,13 @@
   .cell.active {
     background: var(--color-olive);
     margin: 1px;
-    border-radius: 1px;
+    border-radius: 0;
     border-color: transparent;
   }
   .cell.continuation {
     background: rgba(108,119,68,0.3);
     margin: 1px;
-    border-radius: 1px;
+    border-radius: 0;
   }
   .cell.selected {
     outline: 1.5px solid var(--color-blue);
@@ -1057,7 +1057,7 @@
       repeating-linear-gradient(90deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 100% / 100% 1.5px no-repeat,
       repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 0 / 1.5px 100% no-repeat,
       repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 100% 0 / 1.5px 100% no-repeat,
-      rgba(68,114,180,0.06);
+      rgba(68,114,180,0.08);
     animation: march 0.3s linear infinite;
   }
   @keyframes march {
@@ -1070,7 +1070,7 @@
     bottom: 0;
     width: 5px;
     cursor: ew-resize;
-    background: rgba(0,0,0,0.15);
+    background: rgba(30,32,40,0.15);
     border-radius: 0 1px 1px 0;
   }
   /* ── Playhead column overlay ── */
@@ -1119,7 +1119,7 @@
     }
     .oct-keys { width: 26px; }
     .keys { width: 26px; }
-    .key-label { font-size: 6px; }
+    .key-label { font-size: 7px; }
     .grid { overflow-x: auto; }
     .row {
       grid-template-columns: repeat(var(--steps), 18px);

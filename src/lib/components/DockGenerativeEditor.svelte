@@ -365,7 +365,7 @@
     font-family: var(--font-data);
     font-size: var(--dk-fs-sm);
     background: transparent;
-    border: 1px solid rgba(237, 232, 220, 0.2);
+    border: 1px solid rgba(237, 232, 220, 0.15);
     color: inherit;
     padding: 2px 4px;
   }

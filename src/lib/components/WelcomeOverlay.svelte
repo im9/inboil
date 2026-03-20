@@ -69,7 +69,7 @@
     position: fixed;
     inset: 0;
     z-index: 300;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(30, 32, 40, 0.55);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,7 +78,7 @@
   .welcome-card {
     background: var(--color-fg);
     color: var(--color-bg);
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 40px 36px 32px;
     text-align: center;
     max-width: 340px;
@@ -118,7 +118,7 @@
     cursor: pointer;
     width: 100%;
     padding: 10px 0;
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     font-family: var(--font-data);
     font-size: 12px;
     letter-spacing: 0.04em;
@@ -139,7 +139,7 @@
   }
 
   .welcome-btn.primary:hover {
-    background: #8a8a50;
+    background: var(--color-olive);
     border-color: transparent;
   }
 

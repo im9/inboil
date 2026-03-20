@@ -364,7 +364,7 @@
     margin-left: auto;
     width: 28px;
     height: 14px;
-    border-radius: 7px;
+    border-radius: var(--radius-md);
     background: rgba(var(--dk-cream), 0.15);
     position: relative;
     flex-shrink: 0;
@@ -398,9 +398,9 @@
     left: 0;
     right: 0;
     background: var(--color-fg);
-    border: 1px solid rgba(var(--dk-cream), 0.2);
+    border: 1px solid rgba(var(--dk-cream), 0.15);
     border-top: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(30,32,40,0.35);
   }
   .picker-cats {
     display: flex;
@@ -437,7 +437,7 @@
     border: none;
     border-bottom: 1px solid var(--dk-bg-faint);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.65);
+    color: rgba(var(--dk-cream), 0.7);
     font-size: var(--dk-fs-md);
     padding: 7px 8px;
     text-align: left;
@@ -453,7 +453,7 @@
   }
   .picker-item.selected {
     background: var(--olive-bg);
-    color: rgba(var(--dk-cream), 0.95);
+    color: rgba(var(--dk-cream), 0.9);
   }
   .picker-item.selected .picker-cat-tag {
     color: var(--color-olive);
@@ -514,9 +514,9 @@
     left: -1px;
     right: -1px;
     background: var(--color-fg);
-    border: 1px solid rgba(var(--dk-cream), 0.2);
+    border: 1px solid rgba(var(--dk-cream), 0.15);
     border-top: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(30,32,40,0.35);
     max-height: 360px;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -534,7 +534,7 @@
   .btn-load {
     border: 1px solid var(--dk-border-mid);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.6);
+    color: rgba(var(--dk-cream), 0.55);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -544,7 +544,7 @@
   }
   .btn-load:hover {
     color: rgba(var(--dk-cream), 0.9);
-    border-color: rgba(var(--dk-cream), 0.5);
+    border-color: rgba(var(--dk-cream), 0.45);
   }
   .btn-load.btn-active {
     background: rgba(var(--dk-cream), 0.12);

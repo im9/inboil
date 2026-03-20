@@ -154,8 +154,8 @@
     transition: color 80ms, background 80ms;
   }
   .scene-label:hover {
-    color: rgba(30, 32, 40, 0.6);
-    background: rgba(30, 32, 40, 0.04);
+    color: rgba(30, 32, 40, 0.55);
+    background: rgba(30, 32, 40, 0.06);
   }
   .scene-label.selected {
     color: rgba(30, 32, 40, 0.7);
@@ -169,12 +169,12 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(30, 32, 40, 0.3);
+    background: rgba(30, 32, 40, 0.35);
     cursor: ns-resize;
     touch-action: none;
   }
   .label-resize-handle:hover {
-    background: rgba(30, 32, 40, 0.6);
+    background: rgba(30, 32, 40, 0.55);
     transform: scale(1.3);
   }
   .scene-label-edit {
@@ -183,7 +183,7 @@
     font-family: var(--font-data);
     color: var(--color-fg);
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(30, 32, 40, 0.25);
+    border: 1px solid rgba(30, 32, 40, 0.15);
     border-radius: 0;
     padding: 2px 6px;
     width: 120px;

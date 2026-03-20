@@ -964,13 +964,13 @@
     cursor: grabbing;
   }
   .scene-view.drop-active {
-    outline: 2px dashed rgba(30,32,40,0.25);
+    outline: 2px dashed rgba(30,32,40,0.15);
     outline-offset: -2px;
   }
 
   .select-rect {
     position: absolute;
-    border: 1px dashed rgba(30, 32, 40, 0.4);
+    border: 1px dashed rgba(30, 32, 40, 0.35);
     background: rgba(30, 32, 40, 0.06);
     z-index: 8;
     pointer-events: none;
@@ -1018,7 +1018,7 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid rgba(30, 32, 40, 0.3);
+    border: 2px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.95);
     color: rgba(30, 32, 40, 0.5);
     display: flex;
@@ -1038,7 +1038,7 @@
     border-color: var(--color-fg);
     background: white;
     color: var(--color-fg);
-    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.2);
+    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15);
   }
   .scene-play-btn.playing {
     border-color: var(--color-fg);
@@ -1080,7 +1080,7 @@
   .scene-node.fn {
     min-width: 48px;
     height: 24px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     background: var(--color-fg);
     color: rgba(237, 232, 220, 0.7);
     padding: 0 6px;
@@ -1099,7 +1099,7 @@
   .scene-node.gen {
     width: 120px;
     height: 72px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: var(--nc, var(--color-fg));
     color: rgba(237, 232, 220, 0.9);
     border: 1.5px dashed rgba(237, 232, 220, 0.3);
@@ -1109,7 +1109,7 @@
     gap: 2px;
   }
   .scene-node.gen.selected {
-    outline: 2px solid rgba(237, 232, 220, 0.8);
+    outline: 2px solid rgba(237, 232, 220, 0.85);
     outline-offset: 2px;
   }
   .gen-faceplate {
@@ -1140,7 +1140,7 @@
     border: 1px solid rgba(237, 232, 220, 0.3);
     border-radius: 0;
     background: rgba(237, 232, 220, 0.1);
-    color: rgba(237, 232, 220, 0.8);
+    color: rgba(237, 232, 220, 0.85);
     cursor: pointer;
   }
   .gen-run-btn:hover {
@@ -1160,7 +1160,7 @@
     width: 8px;
     height: 8px;
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.2);
+    background: rgba(237, 232, 220, 0.15);
     flex-shrink: 0;
   }
   .turing-bit.on {
@@ -1174,7 +1174,7 @@
   }
   .quant-key {
     flex: 1;
-    border-radius: 1px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.15);
   }
   .quant-key.black {
@@ -1182,10 +1182,10 @@
     margin-top: 2px;
   }
   .quant-key.active {
-    background: rgba(237, 232, 220, 0.75);
+    background: rgba(237, 232, 220, 0.7);
   }
   .quant-key.black.active {
-    background: rgba(237, 232, 220, 0.6);
+    background: rgba(237, 232, 220, 0.55);
   }
   /* Tonnetz transform ops */
   .tonnetz-ops {
@@ -1198,7 +1198,7 @@
     font-weight: 700;
     padding: 1px 3px;
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.2);
+    background: rgba(237, 232, 220, 0.15);
     color: rgba(237, 232, 220, 0.85);
   }
 
@@ -1236,8 +1236,8 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: rgba(30, 32, 40, 0.25);
-    border: 1.5px solid rgba(30, 32, 40, 0.4);
+    background: rgba(30, 32, 40, 0.15);
+    border: 1.5px solid rgba(30, 32, 40, 0.35);
     transform: translate(-50%, -50%);
     cursor: crosshair;
     z-index: 4;
@@ -1265,7 +1265,7 @@
     width: 26px;
     height: 26px;
     border-radius: 0;
-    border: 1.5px solid rgba(30, 32, 40, 0.3);
+    border: 1.5px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.85);
     color: rgba(30, 32, 40, 0.5);
     font-size: 10px;
@@ -1284,8 +1284,8 @@
   }
   .solo-btn.armed {
     background: rgba(30, 32, 40, 0.06);
-    border-color: rgba(30, 32, 40, 0.4);
-    color: rgba(30, 32, 40, 0.4);
+    border-color: rgba(30, 32, 40, 0.35);
+    color: rgba(30, 32, 40, 0.35);
     border-style: dashed;
   }
   .solo-btn.active {
@@ -1373,7 +1373,7 @@
     .scene-node.fn {
       min-width: 56px;
       height: 28px;
-      border-radius: 14px;
+      border-radius: var(--radius-md);
       padding: 0 8px;
       gap: 4px;
     }

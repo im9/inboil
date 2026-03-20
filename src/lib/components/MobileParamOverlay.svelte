@@ -314,7 +314,7 @@
     position: fixed;
     inset: 0;
     z-index: 50;
-    background: rgba(0,0,0,0.5);
+    background: rgba(30,32,40,0.5);
     display: flex;
     align-items: flex-end;
   }
@@ -322,7 +322,7 @@
     --dk-cream: 237,232,220;
     --dk-text: rgba(var(--dk-cream), 0.85);
     --dk-text-mid: rgba(var(--dk-cream), 0.55);
-    --dk-text-dim: rgba(var(--dk-cream), 0.4);
+    --dk-text-dim: rgba(var(--dk-cream), 0.45);
     --dk-border: rgba(var(--dk-cream), 0.15);
     --dk-border-mid: rgba(var(--dk-cream), 0.3);
     --dk-bg-hover: rgba(var(--dk-cream), 0.08);
@@ -331,7 +331,7 @@
 
     width: 100%;
     background: var(--color-fg);
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
     display: flex;
     flex-direction: column;
     height: calc(100dvh - 180px);
@@ -496,7 +496,7 @@
     border: none;
     border-bottom: 1px solid var(--dk-bg-faint);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.65);
+    color: rgba(var(--dk-cream), 0.7);
     font-size: 12px;
     padding: 8px;
     text-align: left;
@@ -507,7 +507,7 @@
   }
   .picker-item.selected {
     background: rgba(108,119,68,0.2);
-    color: rgba(var(--dk-cream), 0.95);
+    color: rgba(var(--dk-cream), 0.9);
   }
   .picker-item.selected .picker-tag {
     color: var(--color-olive);
@@ -543,7 +543,7 @@
   .btn-load {
     border: 1px solid var(--dk-border-mid);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.6);
+    color: rgba(var(--dk-cream), 0.55);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -552,7 +552,7 @@
   }
   .btn-load:active {
     color: rgba(var(--dk-cream), 0.9);
-    border-color: rgba(var(--dk-cream), 0.5);
+    border-color: rgba(var(--dk-cream), 0.45);
   }
   .sample-name {
     font-size: 10px;
@@ -589,7 +589,7 @@
     margin-left: auto;
     width: 32px;
     height: 16px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background: rgba(var(--dk-cream), 0.15);
     position: relative;
     flex-shrink: 0;

@@ -77,7 +77,7 @@
     font-size: var(--dk-fs-xs, 10px);
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.4);
+    color: rgba(237,232,220, 0.45);
     padding-bottom: 4px;
   }
   .nav-section {
@@ -135,7 +135,7 @@
   }
   @keyframes nav-pulse {
     0%, 100% { background: rgba(237,232,220, 0.12); }
-    50% { background: rgba(237,232,220, 0.2); }
+    50% { background: rgba(237,232,220, 0.15); }
   }
   @media (max-width: 639px) {
     .nav-item {

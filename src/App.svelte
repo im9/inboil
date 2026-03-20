@@ -455,7 +455,7 @@
   .sheet-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.18);
+    background: rgba(30, 32, 40, 0.15);
     z-index: 50;
   }
 
@@ -489,7 +489,7 @@
   .handle-bar {
     width: 28px;
     height: 3px;
-    border-radius: 1.5px;
+    border-radius: 0;
     background: rgba(237, 232, 220, 0.12);
   }
 

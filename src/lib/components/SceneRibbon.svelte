@@ -121,10 +121,10 @@
   }
 
   .ribbon-node.fn {
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     font-size: 7px;
     padding: 2px 6px;
-    color: rgba(237, 232, 220, 0.40);
+    color: rgba(237, 232, 220, 0.45);
   }
 
   .ribbon-node.playing {
@@ -135,7 +135,7 @@
 
   .ribbon-node.selected {
     border-color: var(--color-olive);
-    color: rgba(237, 232, 220, 0.75);
+    color: rgba(237, 232, 220, 0.7);
   }
 
   .ribbon-node:active {

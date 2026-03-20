@@ -73,7 +73,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.38);
+    color: rgba(237,232,220,0.35);
     text-transform: uppercase;
     white-space: nowrap;
     line-height: 1;
@@ -102,7 +102,7 @@
     position: absolute;
     border-radius: 50%;
     background: rgba(237,232,220,0.9);
-    box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    box-shadow: 0 0 4px rgba(30,32,40,0.35);
     transition: bottom 30ms linear;
   }
   .val {

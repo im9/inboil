@@ -27,6 +27,9 @@
   --olive-border:    rgba(120,120,69,0.30);
   --olive-border-strong: rgba(120,120,69,0.40);
 
+  --radius-sm: 4px;   /* track label */
+  --radius-md: 6px;   /* overlay, toast, sheet, popup */
+
   --font-display: "Bebas Neue", "Anton", sans-serif;
   --font-data:    "JetBrains Mono", "Fira Code", monospace;
 }

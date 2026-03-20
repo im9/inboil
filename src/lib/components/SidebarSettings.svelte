@@ -247,7 +247,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(237,232,220,0.04);
+    border-bottom: 1px solid rgba(237,232,220,0.06);
   }
   .setting-row:last-child { border-bottom: none; }
   .setting-row-text {
@@ -260,12 +260,12 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.8);
+    color: rgba(237,232,220,0.85);
     text-transform: uppercase;
   }
   .setting-row-desc {
     font-size: 10px;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
     line-height: 1.3;
   }
   .setting-group {
@@ -274,7 +274,7 @@
   .setting-label {
     font-size: 10px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.5);
+    color: rgba(237,232,220,0.45);
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;
@@ -300,8 +300,8 @@
   }
   .btn-toggle:active { opacity: 0.7; }
   .btn-toggle.danger {
-    border-color: #e85050;
-    color: #e85050;
+    border-color: var(--color-danger);
+    color: var(--color-danger);
   }
 
   /* ── MIDI (ADR 081) ── */
@@ -343,7 +343,7 @@
   .jam-input {
     background: transparent;
     border: 1px solid rgba(237,232,220,0.3);
-    color: rgba(237,232,220,0.8);
+    color: rgba(237,232,220,0.85);
     font-family: var(--font-data);
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -361,7 +361,7 @@
   }
   .jam-error {
     font-size: 10px;
-    color: #e85050;
+    color: var(--color-danger);
     padding: 0 12px 8px;
     margin: 0;
   }
@@ -401,7 +401,7 @@
   }
   .jam-connected {
     font-size: 10px;
-    color: rgba(237,232,220,0.4);
+    color: rgba(237,232,220,0.45);
   }
   .jam-connected.on {
     color: var(--color-olive);
@@ -413,7 +413,7 @@
   }
   .jam-peer {
     font-size: 10px;
-    color: rgba(237,232,220,0.6);
+    color: rgba(237,232,220,0.55);
     padding-left: 8px;
   }
 </style>

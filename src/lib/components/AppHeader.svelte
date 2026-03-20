@@ -402,7 +402,7 @@
   .cpu-dot {
     width: 4px;
     height: 8px;
-    border-radius: 1px;
+    border-radius: 0;
     background: rgba(237,232,220,0.12);
     transition: background 120ms linear;
   }
@@ -422,7 +422,7 @@
   }
   .btn-header-nav {
     border: 1.5px solid rgba(237,232,220,0.35);
-    background: rgba(237,232,220,0.04);
+    background: rgba(237,232,220,0.06);
     color: rgba(237,232,220,0.55);
     padding: 4px 10px;
     font-size: 9px;
@@ -438,9 +438,9 @@
   }
   .btn-header-nav:active,
   .btn-header-nav.active {
-    background: rgba(237,232,220,0.14);
+    background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.90);
-    border-color: rgba(237,232,220,0.50);
+    border-color: rgba(237,232,220,0.45);
   }
   .btn-nav-inner {
     position: relative;
@@ -491,7 +491,7 @@
   .bpm-adj {
     border: 1px solid rgba(237,232,220,0.3);
     background: transparent;
-    color: rgba(237,232,220,0.6);
+    color: rgba(237,232,220,0.55);
     width: 24px;
     height: 24px;
     font-size: 14px;
@@ -597,7 +597,7 @@
 
   .btn-view {
     border: 1.5px solid rgba(237,232,220,0.35);
-    background: rgba(237,232,220,0.04);
+    background: rgba(237,232,220,0.06);
     color: rgba(237,232,220,0.55);
     padding: 4px 10px;
     font-size: 9px;
@@ -612,9 +612,9 @@
     color: rgba(237,232,220,0.70);
   }
   .btn-view.active {
-    background: rgba(237,232,220,0.14);
+    background: rgba(237,232,220,0.15);
     color: rgba(237,232,220,0.90);
-    border-color: rgba(237,232,220,0.50);
+    border-color: rgba(237,232,220,0.45);
   }
 
   /* ── Performance buttons ── */
@@ -741,7 +741,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(237,232,220,0.5);
+    color: rgba(237,232,220,0.45);
   }
   .btn-overflow:active,
   .btn-overflow.active {
@@ -761,9 +761,9 @@
     min-width: 140px;
     margin-top: 4px;
     background: var(--color-fg);
-    border: 1px solid rgba(237,232,220,0.2);
+    border: 1px solid rgba(237,232,220,0.15);
     border-radius: 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(30,32,40,0.35);
     overflow: hidden;
   }
   .overflow-item {

@@ -25,6 +25,8 @@
   --color-salmon:  #E8A090;
   --color-purple:  #9B6BA0;
   --color-teal:    #4A9B9B;
+  --radius-sm: 4px;
+  --radius-md: 6px;
   --font-display: "Bebas Neue", "Anton", sans-serif;
   --font-data:    "JetBrains Mono", "Fira Code", monospace;
 

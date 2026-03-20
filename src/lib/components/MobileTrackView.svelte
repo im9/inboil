@@ -441,9 +441,9 @@
     min-width: 0;
     height: 28px;
     padding: 0 8px;
-    border: 1px solid rgba(30,32,40,0.2);
+    border: 1px solid rgba(30,32,40,0.15);
     border-radius: 0;
-    background: rgba(30,32,40,0.04);
+    background: rgba(30,32,40,0.06);
     color: var(--color-fg);
   }
   .voice-icon {
@@ -513,9 +513,9 @@
     flex-shrink: 0;
   }
   .solo-off, .mute-off {
-    border: 1px solid rgba(30,32,40,0.3);
+    border: 1px solid rgba(30,32,40,0.35);
     background: transparent;
-    color: rgba(30,32,40,0.4);
+    color: rgba(30,32,40,0.35);
     font-size: 11px;
     font-weight: 700;
     display: flex;
@@ -569,7 +569,7 @@
   }
   .calc-btn.sp-cell {
     background: var(--color-bg);
-    border: 1.5px solid rgba(30,32,40,0.2);
+    border: 1.5px solid rgba(30,32,40,0.15);
   }
   .calc-btn.sp-cell .step-num {
     color: rgba(30,32,40,0.5);
@@ -720,7 +720,7 @@
     color: var(--color-bg);
     z-index: 2;
     pointer-events: none;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    text-shadow: 0 1px 2px rgba(30,32,40,0.35);
   }
   .vel-pct.chance {
     color: var(--color-sky, #5b9bd5);
