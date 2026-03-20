@@ -83,7 +83,7 @@ export interface WorkletTrack {
   reverbSend: number; delaySend: number
   glitchSend: number; granularSend: number
   voiceParams: Record<string, number>
-  insertFx?: WorkletInsertFx  // ADR 077: per-track insert FX
+  insertFx?: [WorkletInsertFx | null, WorkletInsertFx | null]  // ADR 077/114: dual insert FX chain
   scale?: number              // ADR 112: step divisor (default 2 = 1/16)
 }
 

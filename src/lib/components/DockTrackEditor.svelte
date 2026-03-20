@@ -283,73 +283,76 @@
   {/each}
 </div>
 
-<!-- Insert FX (ADR 077) -->
+<!-- Insert FX (ADR 077/114: dual chain) -->
 <div class="section-divider" aria-hidden="true"></div>
 <div class="section-label">INSERT FX</div>
-{@const insFx = cell.insertFx}
-<div class="insert-fx-row">
-  <select
-    class="insert-select"
-    value={insFx?.type ?? ''}
-    onchange={e => {
-      const v = (e.target as HTMLSelectElement).value
-      setInsertFxType(ui.selectedTrack, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
-    }}
-    data-tip="Insert FX type" data-tip-ja="インサートFXタイプ"
-  >
-    <option value="">OFF</option>
-    <option value="verb">REVERB</option>
-    <option value="delay">DELAY</option>
-    <option value="glitch">GLITCH</option>
-  </select>
-  {#if insFx?.type === 'verb'}
+{#each [0, 1] as slot}
+  {@const insFx = cell.insertFx?.[slot as 0 | 1] ?? null}
+  <div class="insert-fx-row">
+    <span class="insert-slot-label">{slot + 1}</span>
     <select
       class="insert-select"
-      value={insFx.flavour}
-      onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
-      data-tip="Reverb flavour" data-tip-ja="リバーブフレーバー"
+      value={insFx?.type ?? ''}
+      onchange={e => {
+        const v = (e.target as HTMLSelectElement).value
+        setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
+      }}
+      data-tip="Insert FX slot {slot + 1} type" data-tip-ja="インサートFX スロット{slot + 1} タイプ"
     >
-      <option value="room">Room</option>
-      <option value="hall">Hall</option>
+      <option value="">OFF</option>
+      <option value="verb">REVERB</option>
+      <option value="delay">DELAY</option>
+      <option value="glitch">GLITCH</option>
     </select>
-  {:else if insFx?.type === 'delay'}
-    <select
-      class="insert-select"
-      value={insFx.flavour}
-      onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
-      data-tip="Delay flavour" data-tip-ja="ディレイフレーバー"
-    >
-      <option value="digital">Digital</option>
-      <option value="dotted">Dotted</option>
-      <option value="tape">Tape</option>
-    </select>
-  {:else if insFx?.type === 'glitch'}
-    <select
-      class="insert-select"
-      value={insFx.flavour}
-      onchange={e => setInsertFxFlavour(ui.selectedTrack, (e.target as HTMLSelectElement).value)}
-      data-tip="Glitch flavour" data-tip-ja="グリッチフレーバー"
-    >
-      <option value="bitcrush">Bitcrush</option>
-      <option value="redux">Redux</option>
-    </select>
-  {/if}
-</div>
-{#if insFx?.type}
-  <div class="knob-grid">
-    <span data-tip="Insert dry/wet mix" data-tip-ja="インサート ドライ/ウェット">
-      <Knob value={insFx.mix} label="MIX" size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'mix', v)} />
-    </span>
-    <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : 'S&H rate'}
-          data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : 'S&Hレート'}>
-      <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'x', v)} />
-    </span>
-    <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : 'Bit depth'}
-          data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : 'ビット深度'}>
-      <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, 'y', v)} />
-    </span>
+    {#if insFx?.type === 'verb'}
+      <select
+        class="insert-select"
+        value={insFx.flavour}
+        onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}
+        data-tip="Reverb flavour" data-tip-ja="リバーブフレーバー"
+      >
+        <option value="room">Room</option>
+        <option value="hall">Hall</option>
+      </select>
+    {:else if insFx?.type === 'delay'}
+      <select
+        class="insert-select"
+        value={insFx.flavour}
+        onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}
+        data-tip="Delay flavour" data-tip-ja="ディレイフレーバー"
+      >
+        <option value="digital">Digital</option>
+        <option value="dotted">Dotted</option>
+        <option value="tape">Tape</option>
+      </select>
+    {:else if insFx?.type === 'glitch'}
+      <select
+        class="insert-select"
+        value={insFx.flavour}
+        onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}
+        data-tip="Glitch flavour" data-tip-ja="グリッチフレーバー"
+      >
+        <option value="bitcrush">Bitcrush</option>
+        <option value="redux">Redux</option>
+      </select>
+    {/if}
   </div>
-{/if}
+  {#if insFx?.type}
+    <div class="knob-grid">
+      <span data-tip="Insert {slot + 1} dry/wet mix" data-tip-ja="インサート{slot + 1} ドライ/ウェット">
+        <Knob value={insFx.mix} label="MIX" size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'mix', v)} />
+      </span>
+      <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : 'S&H rate'}
+            data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : 'S&Hレート'}>
+        <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
+      </span>
+      <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : 'Bit depth'}
+            data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : 'ビット深度'}>
+        <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
+      </span>
+    </div>
+  {/if}
+{/each}
 
 <div class="section-divider" aria-hidden="true"></div>
 <button class="btn-danger"
@@ -612,6 +615,13 @@
     display: flex;
     gap: 8px;
     padding: 6px 0;
+    align-items: center;
+  }
+  .insert-slot-label {
+    font-size: var(--dk-fs-sm);
+    color: var(--fg-dim, #888);
+    min-width: 1em;
+    text-align: center;
   }
   .insert-select {
     flex: 1;

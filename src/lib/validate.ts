@@ -46,6 +46,22 @@ function validateCell(path: string, c: unknown): Cell {
   if (typeof raw.voiceParams !== 'object' || raw.voiceParams === null) {
     throw new ValidationError(`${path}.voiceParams`, 'expected object')
   }
+  // ADR 114: insertFx is either array [slot0, slot1] or legacy single object (migrated in restoreCellPure)
+  if (raw.insertFx != null) {
+    if (Array.isArray(raw.insertFx)) {
+      if (raw.insertFx.length !== 2) throw new ValidationError(`${path}.insertFx`, 'expected array of length 2')
+      for (let i = 0; i < 2; i++) {
+        const fx = raw.insertFx[i] as Record<string, unknown> | null
+        if (fx == null) continue
+        if (typeof fx !== 'object') throw new ValidationError(`${path}.insertFx[${i}]`, 'expected object or null')
+        assertType(`${path}.insertFx[${i}].mix`, fx.mix, 'number')
+        assertType(`${path}.insertFx[${i}].x`, fx.x, 'number')
+        assertType(`${path}.insertFx[${i}].y`, fx.y, 'number')
+      }
+    } else if (typeof raw.insertFx !== 'object') {
+      throw new ValidationError(`${path}.insertFx`, 'expected array or object')
+    }
+  }
   // ADR 112: optional per-track step scale
   assertOptionalType(`${path}.scale`, raw.scale, 'number')
   // ADR 110: optional per-cell sample reference

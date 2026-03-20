@@ -259,8 +259,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchHoldR    = 0
   private glitchCounter  = 0
   private glitchSeed     = 55555
-  // Insert FX slots (ADR 077) — pre-allocated to MAX_VOICES, null = bypass
-  private insertSlots: (InsertFxSlot | null)[] = new Array(MAX_VOICES).fill(null)
+  // Insert FX slots (ADR 077/114) — 2 slots per track, serial chain
+  private insertSlots: [InsertFxSlot | null, InsertFxSlot | null][] = []
   private insertOut      = new Float64Array(2)  // reusable output buffer
   // Granular DSP
   private granular       = new GranularProcessor(sampleRate)
@@ -383,7 +383,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.arpIdx[i] = 0
             this.arpCounter[i] = 0
             this.arpSeed[i] = 77777
-            this.insertSlots[i] = null
+            this.insertSlots[i] = [null, null]
           }
           // Shrink: silence removed voices, clear slots
           for (let i = n; i < prev; i++) {
@@ -391,7 +391,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.voices[i] = null
             this.gateCounters[i] = 0
             this.arpNotes[i] = []
-            this.insertSlots[i] = null
+            this.insertSlots[i] = [null, null]
           }
           this.activeCount = n
           // Re-instantiate voices whose voiceId changed (ADR 009 Phase 2)
@@ -492,21 +492,22 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               this.shelfEq[1].setActive(b.on)
             }
           }
-          // Insert FX slots (ADR 077) — lazy instantiation
+          // Insert FX slots (ADR 077/114) — dual chain, lazy instantiation
           if (this.insertSlots.length !== n) {
-            this.insertSlots = new Array(n).fill(null)
+            this.insertSlots = Array.from({ length: n }, () => [null, null] as [InsertFxSlot | null, InsertFxSlot | null])
           }
           for (let i = 0; i < n; i++) {
             const ins = p.tracks[i].insertFx
-            if (!ins || !ins.type) {
-              this.insertSlots[i] = null
-              continue
-            }
-            const prev = this.insertSlots[i]
-            if (!prev || prev.type !== ins.type) {
-              this.insertSlots[i] = this._createInsertSlot(ins)
-            } else {
-              this._updateInsertParams(prev, ins)
+            if (!ins) { this.insertSlots[i] = [null, null]; continue }
+            for (let s = 0; s < 2; s++) {
+              const fxData = ins[s]
+              if (!fxData || !fxData.type) { this.insertSlots[i][s] = null; continue }
+              const prev = this.insertSlots[i][s]
+              if (!prev || prev.type !== fxData.type) {
+                this.insertSlots[i][s] = this._createInsertSlot(fxData)
+              } else {
+                this._updateInsertParams(prev, fxData)
+              }
             }
           }
           this.masterGain = p.perf.masterGain
@@ -916,11 +917,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             const sig = voice.tick() * gain
             sL = sig; sR = sig
           }
-          // Insert FX (ADR 077): process after voice output, before pan/send
-          const ins = this.insertSlots[t]
-          if (ins) {
-            const io = this._processInsert(ins, sL, sR)
-            sL = io[0]; sR = io[1]
+          // Insert FX (ADR 077/114): serial chain slot 0 → slot 1
+          const insSlots = this.insertSlots[t]
+          if (insSlots) {
+            for (let s = 0; s < 2; s++) {
+              const slot = insSlots[s]
+              if (slot) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
+            }
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
           else { restL += sL * this.plkPanL[t]; restR += sR * this.plkPanR[t] }
@@ -946,11 +949,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             if (!sig) continue
             sL = sig * vol; sR = sig * vol
           }
-          // Insert FX (ADR 077)
-          const ins = this.insertSlots[t]
-          if (ins) {
-            const io = this._processInsert(ins, sL, sR)
-            sL = io[0]; sR = io[1]
+          // Insert FX (ADR 077/114): serial chain
+          const insSlots2 = this.insertSlots[t]
+          if (insSlots2) {
+            for (let s = 0; s < 2; s++) {
+              const slot = insSlots2[s]
+              if (slot) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
+            }
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
           else { restL += sL * this.plkPanL[t]; restR += sR * this.plkPanR[t] }

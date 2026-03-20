@@ -297,19 +297,20 @@ export function setTrackSend(trackId: number, send: 'reverbSend' | 'delaySend' |
   activeCell(trackId)[send] = Math.min(1, Math.max(0, v))
 }
 
-// ── Insert FX (ADR 077) ─────────────────────────────────────────────────────
+// ── Insert FX (ADR 077, 114: dual chain) ────────────────────────────────────
 
 const DEFAULT_INSERT_FX: CellInsertFx = { type: null, flavour: 'room', mix: 0.5, x: 0.5, y: 0.5 }
 
-function ensureInsertFx(trackId: number): CellInsertFx {
+function ensureInsertFx(trackId: number, slot: 0 | 1): CellInsertFx {
   const cell = activeCell(trackId)
-  if (!cell.insertFx) cell.insertFx = { ...DEFAULT_INSERT_FX }
-  return cell.insertFx
+  if (!cell.insertFx) cell.insertFx = [null, null]
+  if (!cell.insertFx[slot]) cell.insertFx[slot] = { ...DEFAULT_INSERT_FX }
+  return cell.insertFx[slot]!
 }
 
-export function setInsertFxType(trackId: number, type: CellInsertFx['type']) {
+export function setInsertFxType(trackId: number, slot: 0 | 1, type: CellInsertFx['type']) {
   pushUndo('Set insert FX type')
-  const fx = ensureInsertFx(trackId)
+  const fx = ensureInsertFx(trackId, slot)
   fx.type = type
   // Reset flavour to default for new type
   if (type === 'verb') fx.flavour = 'room'
@@ -317,19 +318,23 @@ export function setInsertFxType(trackId: number, type: CellInsertFx['type']) {
   else if (type === 'glitch') fx.flavour = 'bitcrush'
 }
 
-export function setInsertFxFlavour(trackId: number, flavour: string) {
+export function setInsertFxFlavour(trackId: number, slot: 0 | 1, flavour: string) {
   pushUndo('Set insert FX flavour')
-  ensureInsertFx(trackId).flavour = flavour
+  ensureInsertFx(trackId, slot).flavour = flavour
 }
 
-export function setInsertFxParam(trackId: number, param: 'mix' | 'x' | 'y', v: number) {
+export function setInsertFxParam(trackId: number, slot: 0 | 1, param: 'mix' | 'x' | 'y', v: number) {
   pushUndo('Set insert FX param')
-  ensureInsertFx(trackId)[param] = Math.min(1, Math.max(0, v))
+  ensureInsertFx(trackId, slot)[param] = Math.min(1, Math.max(0, v))
 }
 
-export function clearInsertFx(trackId: number) {
+export function clearInsertFx(trackId: number, slot: 0 | 1) {
   pushUndo('Clear insert FX')
-  activeCell(trackId).insertFx = undefined
+  const cell = activeCell(trackId)
+  if (cell.insertFx) {
+    cell.insertFx[slot] = null
+    if (!cell.insertFx[0] && !cell.insertFx[1]) cell.insertFx = undefined
+  }
 }
 
 export function setVoiceParam(trackId: number, key: string, value: number) {

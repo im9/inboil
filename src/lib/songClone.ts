@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for testability (ADR 082).
  */
 
-import type { Trig, Cell, Pattern, Track, Song, Effects, VoiceId } from './types.ts'
+import type { Trig, Cell, CellInsertFx, Pattern, Track, Song, Effects, VoiceId } from './types.ts'
 import type { FxFlavours } from './constants.ts'
 import { DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
 import { cloneScene, restoreScene } from './sceneData.ts'
@@ -32,7 +32,10 @@ export function cloneCell(c: Cell): Cell {
     ...(c.presetName ? { presetName: c.presetName } : {}),
     reverbSend: c.reverbSend, delaySend: c.delaySend,
     glitchSend: c.glitchSend, granularSend: c.granularSend,
-    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
+    ...(c.insertFx ? { insertFx: [
+      c.insertFx[0] ? { ...c.insertFx[0] } : null,
+      c.insertFx[1] ? { ...c.insertFx[1] } : null,
+    ] as Cell['insertFx'] } : {}),
     ...(c.sampleRef ? { sampleRef: { ...c.sampleRef } } : {}),
     ...(c.scale != null ? { scale: c.scale } : {}),
     trigs: c.trigs.map(cloneTrig),
@@ -96,8 +99,17 @@ export function restoreCellPure(c: Cell, fallbackTrackId: number): Cell {
       slide: tr.slide ?? false,
       ...(tr.paramLocks ? { paramLocks: { ...tr.paramLocks } } : {}),
     })),
-    ...(c.insertFx ? { insertFx: { ...c.insertFx } } : {}),
+    ...(c.insertFx ? { insertFx: migrateInsertFx(c.insertFx as Cell['insertFx'] | CellInsertFx) } : {}),
   }
+}
+
+/** Migrate legacy single CellInsertFx to [fx, null] array format (ADR 114) */
+function migrateInsertFx(raw: Cell['insertFx'] | CellInsertFx): Cell['insertFx'] {
+  if (Array.isArray(raw)) {
+    return [raw[0] ? { ...raw[0] } : null, raw[1] ? { ...raw[1] } : null]
+  }
+  // Legacy single object → slot 0
+  return [{ ...(raw as CellInsertFx) }, null]
 }
 
 // ── restoreSong (pure) ──────────────────────────────────────────────────────

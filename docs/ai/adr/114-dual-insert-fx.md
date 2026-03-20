@@ -1,6 +1,6 @@
 # ADR 114: Dual Insert FX Chain
 
-## Status: Proposed
+## Status: Accepted — Phase 1 done
 
 ## Context
 
@@ -130,10 +130,12 @@ Add array check to `validateSongData()`.
 - Migration + validation
 - Fix existing tests
 
-**Phase 2: UI**
-- 2-slot display in DockTrackEditor
-- Slot collapse (when OFF)
+**Phase 2: UI Polish**
+- Slot collapse (both OFF → single row)
 - Update StepGrid insert-dot display (two dots?)
+
+**Phase 3: P-Lock Support**
+- Per-slot Insert FX parameter P-Locks (per-step mix/x/y overrides)
 
 ## Considerations
 

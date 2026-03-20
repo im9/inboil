@@ -2,7 +2,8 @@
  * engine.ts — main thread audio engine API.
  */
 import type { WorkletCommand, WorkletEvent, WorkletPattern } from './worklet-processor.ts'
-import type { Song, Pattern, Cell } from '../types.ts'
+import type { Song, Pattern, Cell, CellInsertFx } from '../types.ts'
+import type { WorkletInsertFx } from './dsp/types.ts'
 import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import { showToast } from '../toast.svelte.ts'
@@ -386,6 +387,20 @@ function granularFlavourParams(
   }
 }
 
+function serializeInsertFx(fx: CellInsertFx | null): WorkletInsertFx | null {
+  if (!fx?.type) return null
+  return {
+    type: fx.type,
+    mix: fx.mix,
+    x: fx.x,
+    y: fx.y,
+    hall:   fx.flavour === 'hall',
+    dotted: fx.flavour === 'dotted',
+    tape:   fx.flavour === 'tape',
+    redux:  fx.flavour === 'redux',
+  }
+}
+
 function buildWorkletPattern(
   s: Song, pat: Pattern, perf?: PerfState, fxPad?: FxPadState, ctx?: EngineContext,
 ): WorkletPattern {
@@ -499,16 +514,10 @@ function buildWorkletPattern(
         glitchSend:    Math.min(1, cell.glitchSend   + (fxPad?.glitch.on  ? 0.3 : 0)),
         granularSend:  Math.min(1, cell.granularSend + (fxPad?.granular.on ? 0.3 : 0)),
         voiceParams: { ...cell.voiceParams },
-        insertFx: cell.insertFx?.type ? {
-          type: cell.insertFx.type,
-          mix: cell.insertFx.mix,
-          x: cell.insertFx.x,
-          y: cell.insertFx.y,
-          hall:   cell.insertFx.flavour === 'hall',
-          dotted: cell.insertFx.flavour === 'dotted',
-          tape:   cell.insertFx.flavour === 'tape',
-          redux:  cell.insertFx.flavour === 'redux',
-        } : undefined,
+        insertFx: cell.insertFx ? [
+          serializeInsertFx(cell.insertFx[0]),
+          serializeInsertFx(cell.insertFx[1]),
+        ] : undefined,
         scale:       cell.scale,
         trigs:       cell.trigs.map(trig => mapTrig(trig)),
       }

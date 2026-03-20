@@ -83,16 +83,16 @@ describe('cloneTrig', () => {
 
 describe('cloneCell', () => {
   it('deep copies trigs and voiceParams', () => {
-    const orig = makeCell({ insertFx: { type: 'verb', flavour: 'room', mix: 0.5, x: 0.3, y: 0.7 } })
+    const orig = makeCell({ insertFx: [{ type: 'verb', flavour: 'room', mix: 0.5, x: 0.3, y: 0.7 }, null] })
     const copy = cloneCell(orig)
 
     expect(copy).toEqual(orig)
     copy.voiceParams.tone = 1.0
     copy.trigs[0].velocity = 0.1
-    copy.insertFx!.mix = 1.0
+    copy.insertFx![0]!.mix = 1.0
     expect(orig.voiceParams.tone).toBe(0.5)
     expect(orig.trigs[0].velocity).toBe(0.8)
-    expect(orig.insertFx!.mix).toBe(0.5)
+    expect(orig.insertFx![0]!.mix).toBe(0.5)
   })
 
   it('omits presetName when absent', () => {
@@ -213,10 +213,18 @@ describe('restoreCellPure', () => {
   })
 
   it('deep copies insertFx', () => {
-    const cell = makeCell({ insertFx: { type: 'delay', flavour: 'tape', mix: 0.4, x: 0.5, y: 0.5 } })
+    const cell = makeCell({ insertFx: [{ type: 'delay', flavour: 'tape', mix: 0.4, x: 0.5, y: 0.5 }, null] })
     const restored = restoreCellPure(cell, 0)
-    restored.insertFx!.mix = 1.0
-    expect(cell.insertFx!.mix).toBe(0.4)
+    restored.insertFx![0]!.mix = 1.0
+    expect(cell.insertFx![0]!.mix).toBe(0.4)
+  })
+
+  it('migrates legacy single insertFx to array', () => {
+    const cell = makeCell({ insertFx: { type: 'verb', flavour: 'room', mix: 0.5, x: 0.3, y: 0.7 } as any })
+    const restored = restoreCellPure(cell, 0)
+    expect(Array.isArray(restored.insertFx)).toBe(true)
+    expect(restored.insertFx![0]).toEqual({ type: 'verb', flavour: 'room', mix: 0.5, x: 0.3, y: 0.7 })
+    expect(restored.insertFx![1]).toBeNull()
   })
 })
 

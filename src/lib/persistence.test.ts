@@ -151,17 +151,44 @@ describe('song round-trip: patterns and cells', () => {
 })
 
 describe('song round-trip: insertFx', () => {
-  it('preserves insertFx per cell', () => {
+  it('preserves dual insertFx per cell', () => {
     const song = makeDefaultSong()
-    song.patterns[0].cells[0].insertFx = { type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 }
+    song.patterns[0].cells[0].insertFx = [
+      { type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 },
+      { type: 'delay', flavour: 'tape', mix: 0.5, x: 0.5, y: 0.5 },
+    ]
     const r = roundTrip(song)
-    expect(r.song.patterns[0].cells[0].insertFx).toEqual({ type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 })
+    expect(r.song.patterns[0].cells[0].insertFx).toEqual([
+      { type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 },
+      { type: 'delay', flavour: 'tape', mix: 0.5, x: 0.5, y: 0.5 },
+    ])
+  })
+
+  it('preserves single-slot insertFx with null', () => {
+    const song = makeDefaultSong()
+    song.patterns[0].cells[0].insertFx = [
+      { type: 'glitch', flavour: 'bitcrush', mix: 0.3, x: 0.4, y: 0.6 },
+      null,
+    ]
+    const r = roundTrip(song)
+    expect(r.song.patterns[0].cells[0].insertFx![0]).toEqual({ type: 'glitch', flavour: 'bitcrush', mix: 0.3, x: 0.4, y: 0.6 })
+    expect(r.song.patterns[0].cells[0].insertFx![1]).toBeNull()
   })
 
   it('omits insertFx when not set', () => {
     const song = makeEmptySong()
     const r = roundTrip(song)
     expect(r.song.patterns[0].cells[0].insertFx).toBeUndefined()
+  })
+
+  it('migrates legacy single insertFx object to array', () => {
+    // Simulate loading legacy save data (goes through restoreSongPure directly)
+    const song = makeDefaultSong()
+    ;(song.patterns[0].cells[0] as any).insertFx = { type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 }
+    const r = restoreSongPure(song)
+    expect(Array.isArray(r.song.patterns[0].cells[0].insertFx)).toBe(true)
+    expect(r.song.patterns[0].cells[0].insertFx![0]).toEqual({ type: 'verb', flavour: 'room', mix: 0.4, x: 0.6, y: 0.3 })
+    expect(r.song.patterns[0].cells[0].insertFx![1]).toBeNull()
   })
 })
 

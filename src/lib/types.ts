@@ -48,7 +48,7 @@ export interface Cell {
   delaySend: number
   glitchSend: number
   granularSend: number
-  insertFx?: CellInsertFx  // per-track insert FX (ADR 077)
+  insertFx?: [CellInsertFx | null, CellInsertFx | null]  // dual insert FX chain (ADR 077, 114)
   sampleRef?: CellSampleRef // per-cell sample reference (ADR 110)
   scale?: number            // ADR 112: step divisor (default 2 = 1/16)
 }
