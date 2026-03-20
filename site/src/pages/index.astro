@@ -68,10 +68,11 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .logo-flap .flap-cell{
       transform-origin:center;
-      animation:flap 0.6s ease-in-out calc(var(--i) * 0.1s) both;
+      transform-box:fill-box;
+      animation:flap 0.6s ease-in-out calc(var(--i) * 0.12s) both;
     }
     .logo-flap:hover .flap-cell{
-      animation:flap 0.6s ease-in-out calc(var(--i) * 0.1s);
+      animation:flap 0.6s ease-in-out calc(var(--i) * 0.12s);
     }
 
     /* ── Scroll reveal ── */
@@ -90,8 +91,8 @@ const ogImage = `${siteUrl}/og.png`;
       align-items:center;
       justify-content:center;
       gap:64px;
-      /* header 42px + 余白 */
-      padding:120px 48px 96px;
+      /* header 42px + 余白 — extra bottom for breathing room before first section */
+      padding:120px 48px 140px;
       text-align:center;
     }
     @media(max-width:768px){
@@ -291,7 +292,7 @@ const ogImage = `${siteUrl}/og.png`;
     /* ── Feature sections ── */
     .feat-section{
       width:100%;
-      padding:96px 48px;
+      padding:120px 48px;
       display:grid;
       grid-template-columns:2fr 3fr;
       align-items:start;
@@ -424,7 +425,7 @@ const ogImage = `${siteUrl}/og.png`;
       background:#1E2028;
       border-radius:0;
       padding:20px 24px;
-      box-shadow:0 8px 32px rgba(0,0,0,0.18);
+      box-shadow:0 12px 48px rgba(0,0,0,0.25), 0 0 0 1px rgba(30,32,40,0.15);
       font-family:"JetBrains Mono",monospace;
     }
     .ev-header{
@@ -489,6 +490,7 @@ const ogImage = `${siteUrl}/og.png`;
       touch-action:none;
       user-select:none;
       cursor:crosshair;
+      box-shadow:0 12px 48px rgba(0,0,0,0.25), 0 0 0 1px rgba(30,32,40,0.15);
     }
     .fx-demo canvas{position:absolute;top:0;left:0;width:100%;height:100%}
     .fx-node{
@@ -592,7 +594,6 @@ const ogImage = `${siteUrl}/og.png`;
       padding:96px 48px;
       display:flex;
       justify-content:center;
-      background:rgba(30,32,40,0.03);
     }
     .story-content{
       max-width:560px;
@@ -602,6 +603,8 @@ const ogImage = `${siteUrl}/og.png`;
     .story-group{
       display:flex;flex-direction:column;
       gap:20px;
+      border-left:3px solid #787845;
+      padding-left:24px;
     }
     .story-heading{
       font-family:"JetBrains Mono",monospace;
@@ -674,10 +677,10 @@ const ogImage = `${siteUrl}/og.png`;
     }
     .spec-value{
       font-family:"JetBrains Mono",monospace;
-      font-size:0.95rem;
+      font-size:1.4rem;
       font-weight:700;
       color:#1E2028;
-      line-height:1.4;
+      line-height:1.2;
     }
     .spec-note{
       font-family:system-ui, -apple-system, sans-serif;
@@ -699,7 +702,7 @@ const ogImage = `${siteUrl}/og.png`;
       padding:96px 48px;
       display:flex;flex-direction:column;
       align-items:center;
-      background:rgba(30,32,40,0.03);
+      background:#1E2028;
       gap:24px;
       text-align:center;
     }
@@ -708,13 +711,31 @@ const ogImage = `${siteUrl}/og.png`;
       font-size:clamp(1.8rem, 4vw, 3rem);
       font-weight:700;
       letter-spacing:0.06em;
-      color:#1E2028;
+      color:#EDE8DC;
     }
     .final-cta-sub{
       font-family:system-ui, -apple-system, sans-serif;
       font-size:0.95rem;
-      color:rgba(30,32,40,0.65);
+      color:rgba(237,232,220,0.6);
       letter-spacing:0.01em;
+    }
+    .final-cta .cta{
+      border-color:rgba(237,232,220,0.25);
+      color:rgba(237,232,220,0.6);
+    }
+    .final-cta .cta:hover{
+      background:rgba(237,232,220,0.08);
+      border-color:rgba(237,232,220,0.4);
+      color:#EDE8DC;
+    }
+    .final-cta .cta.primary{
+      background:#787845;
+      border-color:#787845;
+      color:#EDE8DC;
+    }
+    .final-cta .cta.primary:hover{
+      background:#8a8a50;
+      border-color:#8a8a50;
     }
     @media(max-width:768px){
       .final-cta{padding:64px 24px}
@@ -913,26 +934,52 @@ const ogImage = `${siteUrl}/og.png`;
       <p id="feat-jam-desc" class="feat-desc">Turn any phone into a live controller. The host runs the DAW on a PC — a friend opens the URL on their phone, enters a 4-character room code, and instantly joins as a guest controller. Edit steps, trigger fills, tweak parameters — all synced in real time over WebRTC. Audio stays on the host. Control comes from the phone. No app install. No setup. Just share a code and jam.</p>
     </div>
     <div class="feat-visual reveal" style="flex-direction:column;gap:16px">
-      <svg class="jam-diagram" viewBox="0 0 520 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:640px">
-        <!-- Host (PC) -->
-        <rect x="20" y="50" width="160" height="100" rx="12" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
-        <text x="100" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="rgba(30,32,40,0.7)">HOST</text>
-        <text x="100" y="112" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Audio + State</text>
-        <text x="100" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Full DAW UI</text>
-        <!-- Connection line -->
-        <line x1="180" y1="100" x2="340" y2="100" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <svg class="jam-diagram" viewBox="0 0 520 220" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:640px">
+        <!-- Host: Laptop silhouette -->
+        <g>
+          <!-- Screen -->
+          <rect x="30" y="40" width="140" height="90" rx="4" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.30)" stroke-width="1.5"/>
+          <!-- Screen content hint (mini grid) -->
+          <rect x="50" y="55" width="8" height="8" fill="rgba(120,120,69,0.4)"/>
+          <rect x="60" y="55" width="8" height="8" fill="rgba(30,32,40,0.08)"/>
+          <rect x="70" y="55" width="8" height="8" fill="rgba(120,120,69,0.4)"/>
+          <rect x="80" y="55" width="8" height="8" fill="rgba(30,32,40,0.08)"/>
+          <rect x="50" y="65" width="8" height="8" fill="rgba(30,32,40,0.08)"/>
+          <rect x="60" y="65" width="8" height="8" fill="rgba(120,120,69,0.4)"/>
+          <rect x="70" y="65" width="8" height="8" fill="rgba(30,32,40,0.08)"/>
+          <rect x="80" y="65" width="8" height="8" fill="rgba(30,32,40,0.08)"/>
+          <!-- Base / keyboard -->
+          <path d="M20 130 L30 130 L30 130 L170 130 L180 130 L180 140 Q180 146 174 146 L26 146 Q20 146 20 140 Z" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
+          <!-- Text -->
+          <text x="100" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="rgba(30,32,40,0.6)">HOST</text>
+          <text x="100" y="116" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.35)">Audio + DAW</text>
+        </g>
+        <!-- Connection -->
+        <line x1="185" y1="100" x2="335" y2="100" stroke="rgba(30,32,40,0.18)" stroke-width="1.5" stroke-dasharray="6 4"/>
         <text x="260" y="88" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.35)">WebRTC P2P</text>
         <!-- Room code badge -->
         <rect x="232" y="104" width="56" height="22" rx="4" fill="rgba(30,32,40,0.08)"/>
         <text x="260" y="119" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="rgba(30,32,40,0.55)">A3F7</text>
-        <!-- Guest (Phone) -->
-        <rect x="340" y="55" width="90" height="90" rx="12" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.25)" stroke-width="1.5"/>
-        <text x="385" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="rgba(30,32,40,0.7)">GUEST</text>
-        <text x="385" y="112" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Controller</text>
-        <text x="385" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="rgba(30,32,40,0.4)">Mobile UI</text>
+        <!-- Guest: Phone silhouette -->
+        <g>
+          <!-- Phone body -->
+          <rect x="352" y="40" width="66" height="120" rx="10" fill="rgba(30,32,40,0.06)" stroke="rgba(30,32,40,0.30)" stroke-width="1.5"/>
+          <!-- Screen area -->
+          <rect x="358" y="54" width="54" height="90" rx="2" fill="rgba(30,32,40,0.04)" stroke="rgba(30,32,40,0.10)" stroke-width="0.5"/>
+          <!-- Notch -->
+          <rect x="375" y="44" width="20" height="4" rx="2" fill="rgba(30,32,40,0.12)"/>
+          <!-- Screen content hint -->
+          <rect x="366" y="70" width="6" height="6" fill="rgba(120,120,69,0.4)"/>
+          <rect x="374" y="70" width="6" height="6" fill="rgba(30,32,40,0.08)"/>
+          <rect x="382" y="70" width="6" height="6" fill="rgba(120,120,69,0.4)"/>
+          <rect x="390" y="70" width="6" height="6" fill="rgba(30,32,40,0.08)"/>
+          <!-- Text -->
+          <text x="385" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="rgba(30,32,40,0.6)">GUEST</text>
+          <text x="385" y="114" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="rgba(30,32,40,0.35)">Controller</text>
+        </g>
         <!-- Labels -->
-        <text x="100" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">🖥 PC / Laptop</text>
-        <text x="385" y="167" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">📱 Phone / Tablet</text>
+        <text x="100" y="170" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">PC / Laptop</text>
+        <text x="385" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="rgba(30,32,40,0.3)">Phone / Tablet</text>
       </svg>
     </div>
   </section>
