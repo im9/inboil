@@ -1,6 +1,6 @@
 # ADR 114: Dual Insert FX Chain
 
-## Status: Accepted — Phase 1 done
+## Status: Implemented
 
 ## Context
 
@@ -136,6 +136,9 @@ Add array check to `validateSongData()`.
 
 **Phase 3: P-Lock Support**
 - Per-slot Insert FX parameter P-Locks (per-step mix/x/y overrides)
+- Keys: `ins0mix`, `ins0x`, `ins0y`, `ins1mix`, `ins1x`, `ins1y` in `trig.paramLocks`
+- INS tab in vel-row (cycles I1M → I1X → I1Y → I2M → I2X → I2Y)
+- Worklet resets to baseline then applies P-Lock overrides per step
 
 ## Considerations
 

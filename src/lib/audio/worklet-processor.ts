@@ -672,6 +672,23 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       if (pl.glitchSend != null) this.plkGltTgt[t] = pl.glitchSend
       if (pl.granularSend != null) this.plkGrnTgt[t] = pl.granularSend
     }
+    // Insert FX P-Locks (ADR 114 Phase 3): override slot params per-step
+    const insSlots = this.insertSlots[t]
+    if (insSlots) {
+      const insFx = this.tracks[t]?.insertFx
+      for (let s = 0; s < 2; s++) {
+        const slot = insSlots[s]
+        if (!slot) continue
+        const base = insFx?.[s]
+        if (base) { slot.mix = base.mix; slot.x = base.x; slot.y = base.y }
+        if (pl) {
+          const pre = s === 0 ? 'ins0' : 'ins1'
+          if (pl[pre + 'mix'] != null) slot.mix = pl[pre + 'mix']
+          if (pl[pre + 'x'] != null) slot.x = pl[pre + 'x']
+          if (pl[pre + 'y'] != null) slot.y = pl[pre + 'y']
+        }
+      }
+    }
 
     // Was the previous note's gate still open?
     const wasGated = this.gateCounters[t] > 0

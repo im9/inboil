@@ -106,14 +106,19 @@
 
   // ── Velocity / automation row modes (ADR 093) ──
   type VelMode = 'VEL' | 'CHNC' | 'VOL' | 'PAN' | 'VERB' | 'DLY' | 'GLT' | 'GRN'
-  const VEL_MODES: VelMode[] = ['VEL', 'CHNC', 'VOL', 'PAN', 'VERB', 'DLY', 'GLT', 'GRN']
+    | 'I1M' | 'I1X' | 'I1Y' | 'I2M' | 'I2X' | 'I2Y'
+  const VEL_MODES: VelMode[] = ['VEL', 'CHNC', 'VOL', 'PAN', 'VERB', 'DLY', 'GLT', 'GRN', 'I1M', 'I1X', 'I1Y', 'I2M', 'I2X', 'I2Y']
   const VEL_MODE_COLORS: Record<VelMode, string> = {
     VEL: '', CHNC: '#4472B4', VOL: '#508080', PAN: '#508080',
     VERB: '#787845', DLY: '#4472B4', GLT: '#E8A090', GRN: '#9B6BA0',
+    I1M: '#6B8E8E', I1X: '#6B8E8E', I1Y: '#6B8E8E',
+    I2M: '#8E6B8E', I2X: '#8E6B8E', I2Y: '#8E6B8E',
   }
   const VEL_MODE_KEYS: Record<VelMode, string> = {
     VEL: '', CHNC: '', VOL: 'vol', PAN: 'pan',
     VERB: 'reverbSend', DLY: 'delaySend', GLT: 'glitchSend', GRN: 'granularSend',
+    I1M: 'ins0mix', I1X: 'ins0x', I1Y: 'ins0y',
+    I2M: 'ins1mix', I2X: 'ins1x', I2Y: 'ins1y',
   }
 
   let velContainer: HTMLDivElement | undefined = $state(undefined)
@@ -123,8 +128,10 @@
   const isPlkMode = $derived(velMode !== 'VEL' && velMode !== 'CHNC')
   const MIX_MODES: VelMode[] = ['VOL', 'PAN']
   const FX_MODES: VelMode[] = ['VERB', 'DLY', 'GLT', 'GRN']
+  const INS_MODES: VelMode[] = ['I1M', 'I1X', 'I1Y', 'I2M', 'I2X', 'I2Y']
   const isMixMode = $derived((MIX_MODES as readonly string[]).includes(velMode))
   const isFxMode = $derived((FX_MODES as readonly string[]).includes(velMode))
+  const isInsMode = $derived((INS_MODES as readonly string[]).includes(velMode))
 
   function velNextMode() {
     const i = VEL_MODES.indexOf(velMode)
@@ -137,6 +144,10 @@
   function velNextFx() {
     const i = FX_MODES.indexOf(velMode)
     velMode = FX_MODES[(i + 1) % FX_MODES.length]
+  }
+  function velNextIns() {
+    const i = INS_MODES.indexOf(velMode)
+    velMode = INS_MODES[(i + 1) % INS_MODES.length]
   }
 
   /** Read the displayed value (0–1) for a trig in the current mode */
@@ -346,7 +357,7 @@
               onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
               data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
             >
-              <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}</span>
+              <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}{#if ph.insertFx?.[0]?.type || ph.insertFx?.[1]?.type}<span class="ins-fx-dot" data-tip="Insert FX active" data-tip-ja="インサートFX有効"></span>{/if}</span>
               <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="1,1 5,5 9,1" />
               </svg>
@@ -416,6 +427,11 @@
                 onpointerdown={() => { isFxMode ? velNextFx() : (velMode = 'VERB') }}
                 data-tip="Per-step FX sends (tap to cycle: VERB → DLY → GLT → GRN)" data-tip-ja="ステップごとのFXセンド（タップで切替: VERB → DLY → GLT → GRN）"
               >{isFxMode ? velMode : 'FX'}</button>
+              <button class="vel-tab" class:active={isInsMode}
+                style={isInsMode ? `--tab-color: ${modeColor}` : `--tab-color: ${VEL_MODE_COLORS.I1M}`}
+                onpointerdown={() => { isInsMode ? velNextIns() : (velMode = 'I1M') }}
+                data-tip="Per-step insert FX (tap to cycle: I1 MIX/X/Y → I2 MIX/X/Y)" data-tip-ja="ステップごとのインサートFX（タップで切替: I1 MIX/X/Y → I2 MIX/X/Y）"
+              >{isInsMode ? velMode : 'INS'}</button>
             </div>
           {/if}
         </div>
@@ -730,6 +746,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ins-fx-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-accent, #4af);
+    flex-shrink: 0;
   }
   .chevron {
     width: 10px;
@@ -861,7 +887,7 @@
 
   /* ── Inline velocity lane ── */
   .vel-tab {
-    width: 36px;
+    width: 32px;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;

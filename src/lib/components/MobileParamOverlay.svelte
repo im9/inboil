@@ -277,49 +277,52 @@
       <div class="section-divider"></div>
       <div class="section-label">INSERT FX</div>
       {#each [0, 1] as slot}
-        {@const insFx = cell.insertFx?.[slot as 0 | 1] ?? null}
-        <div class="insert-fx-row">
-          <span class="insert-slot-label">{slot + 1}</span>
-          <select
-            class="insert-select"
-            value={insFx?.type ?? ''}
-            onchange={e => {
-              const v = (e.target as HTMLSelectElement).value
-              setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
-            }}
-          >
-            <option value="">OFF</option>
-            <option value="verb">REVERB</option>
-            <option value="delay">DELAY</option>
-            <option value="glitch">GLITCH</option>
-          </select>
-          {#if insFx?.type === 'verb'}
-            <select class="insert-select" value={insFx.flavour}
-              onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
-              <option value="room">Room</option>
-              <option value="hall">Hall</option>
+        {#if slot === 0 || !!cell.insertFx?.[0]?.type || !!cell.insertFx?.[1]?.type}
+          {@const insFx = cell.insertFx?.[slot as 0 | 1] ?? null}
+          {@const showLabels = !!cell.insertFx?.[0]?.type || !!cell.insertFx?.[1]?.type}
+          <div class="insert-fx-row">
+            {#if showLabels}<span class="insert-slot-label">{slot + 1}</span>{/if}
+            <select
+              class="insert-select"
+              value={insFx?.type ?? ''}
+              onchange={e => {
+                const v = (e.target as HTMLSelectElement).value
+                setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
+              }}
+            >
+              <option value="">OFF</option>
+              <option value="verb">REVERB</option>
+              <option value="delay">DELAY</option>
+              <option value="glitch">GLITCH</option>
             </select>
-          {:else if insFx?.type === 'delay'}
-            <select class="insert-select" value={insFx.flavour}
-              onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
-              <option value="digital">Digital</option>
-              <option value="dotted">Dotted</option>
-              <option value="tape">Tape</option>
-            </select>
-          {:else if insFx?.type === 'glitch'}
-            <select class="insert-select" value={insFx.flavour}
-              onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
-              <option value="bitcrush">Bitcrush</option>
-              <option value="redux">Redux</option>
-            </select>
-          {/if}
-        </div>
-        {#if insFx?.type}
-          <div class="knob-grid">
-            <Knob value={insFx.mix} label="MIX" size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'mix', v)} />
-            <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
-            <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
+            {#if insFx?.type === 'verb'}
+              <select class="insert-select" value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
+                <option value="room">Room</option>
+                <option value="hall">Hall</option>
+              </select>
+            {:else if insFx?.type === 'delay'}
+              <select class="insert-select" value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
+                <option value="digital">Digital</option>
+                <option value="dotted">Dotted</option>
+                <option value="tape">Tape</option>
+              </select>
+            {:else if insFx?.type === 'glitch'}
+              <select class="insert-select" value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
+                <option value="bitcrush">Bitcrush</option>
+                <option value="redux">Redux</option>
+              </select>
+            {/if}
           </div>
+          {#if insFx?.type}
+            <div class="knob-grid">
+              <Knob value={insFx.mix} label="MIX" size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'mix', v)} />
+              <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
+              <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
+            </div>
+          {/if}
         {/if}
       {/each}
 
