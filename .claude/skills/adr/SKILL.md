@@ -46,7 +46,7 @@ Create a new ADR document for: $ARGUMENTS
 
 ## Guidelines
 
-- Write in a mix of Japanese and English matching the existing ADR style (Japanese prose, English for code/technical terms)
+- Write in English (per CLAUDE.md conventions). Discussion in Japanese is fine, but the ADR document itself should be in English
 - Include ASCII layout diagrams for UI-related ADRs
 - Reference specific files and line numbers for current code
 - Break complex features into phased implementation steps
