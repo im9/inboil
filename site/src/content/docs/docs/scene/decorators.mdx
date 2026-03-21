@@ -7,9 +7,9 @@ sidebar:
 
 ## Overview
 
-**Function nodes** are modifier nodes in the scene graph that change how a pattern plays without modifying the pattern itself. Connect a function node to a pattern node via an edge, and the pattern will play differently when reached through that path.
+**Function nodes** are modifier nodes in the scene graph that change how a pattern plays without modifying the pattern itself. They attach as **satellites** to pattern nodes — click a pattern node while in placement mode, and the function node icon appears above it.
 
-Add function nodes from the **Scene toolbar** (transpose, tempo, repeat, FX icons) and connect them to pattern nodes with edges.
+Add function nodes from the **tool palette** (circular buttons at the top of the scene) and click a pattern node to attach. Each function type has a distinctive icon: ♪↕ (transpose), ⟳ (repeat), metronome (tempo), ✦ (FX).
 
 ## Modifier Types
 
@@ -38,33 +38,34 @@ Changes the BPM for this node's pattern.
 
 Plays this node's pattern N times before following an outgoing edge.
 
-- Value: 1–16 (default 1 = play once)
-- Repeat happens before the edge decision
+- Value: 1–16 (default 2)
+- During playback, a countdown label shows remaining repeats
 
 **Use case**: Play the chorus 4 times before moving to the bridge.
 
 ### FX
 
-Enables or modifies effects for this node.
+Enables or disables effects for this node.
 
-- Toggle individual effects on/off per node
-- Adjust send levels per node
+- Toggle individual effects on/off: Verb, Delay, Glitch, Granular
+- Each active effect adds a colored sparkle to the node icon (olive/blue/salmon/purple)
 
 **Use case**: Add heavy reverb only during the ambient breakdown section.
 
-## Chaining Function Nodes
+## Satellite Attachment
 
-Multiple function nodes can be chained via edges. For example:
+Function nodes use a **satellite model** instead of manual edge wiring:
 
-1. **Transpose** +7 (shift up a fifth) → **Tempo** 140 (speed up) → **Repeat** 2 (play twice) → Pattern
+- **Attach**: Select a function type from the tool palette, then click a pattern node
+- **Detach**: Drag the satellite icon away from its parent pattern
+- **Reattach**: Drop a detached function node onto a different pattern
+- **Duplicate prevention**: Only one of each type per pattern (adding a second replaces the first)
 
-The pattern plays at 140 BPM, transposed up 7 semitones, two times in a row.
+Satellites are positioned above the parent node, sorted by type (transpose → repeat → tempo → FX), and follow the parent when dragged.
 
-## Adding and Removing
+## Editing Parameters
 
-- **Add**: Click a function node type in the Scene toolbar → node appears on canvas
-- **Connect**: Drag from the node's connection handle to a pattern node
-- **Remove**: Select the node and press Delete/Backspace
+Select a function node in the scene view to edit its parameters in the **Dock panel**. Parameters are also accessible from the **SCENE tab** in the Dock when viewing the parent pattern's step sequencer.
 
 ## Related
 

@@ -5,7 +5,7 @@ sidebar:
   order: 0
 ---
 
-Function nodes create musical material algorithmically instead of playing a stored pattern. Add one from the **toolbar** at the top of the Scene canvas, or by **double-clicking** (long-pressing on mobile) empty space to open the bubble menu.
+Function nodes create musical material algorithmically instead of playing a stored pattern. Add one from the **tool palette** (circular buttons with colored accent rings) at the top of the Scene canvas, or by **double-clicking** (long-pressing on mobile) empty space to open the bubble menu.
 
 Select a function node to edit its parameters in the **Dock panel**.
 
@@ -17,15 +17,24 @@ Select a function node to edit its parameters in the **Dock panel**.
 | **[Quantizer](/docs/scene/function/quantizer/)** | Snaps incoming notes to a scale — most useful chained after a Turing Machine |
 | **[Tonnetz](/docs/scene/function/tonnetz/)** | Navigates harmonic relationships to generate chord progressions |
 
+## Auto-generate on Connect
+
+When you connect a generative node to a pattern, generation runs **automatically** — you see results immediately without pressing any button. Parameter changes also trigger automatic regeneration (debounced 300ms).
+
+The **GEN** button on the node faceplate is for manual re-generation when you want a fresh result.
+
 ## Merge Mode
 
 When a function node writes to a pattern, the **merge mode** controls how generated notes combine with existing content:
 
 | Mode | Behavior |
 |------|----------|
-| **Replace** | Generated notes fully replace the target track |
-| **Merge** | Generated notes fill only empty (inactive) steps — existing content is preserved |
-| **Layer** | Generated notes are added as chords on top of existing notes |
+| **Replace** | Generated notes fully replace the target track (default) |
+| **Fill** | Generated notes fill only empty (inactive) steps — existing content is preserved |
+
+## Target Track
+
+Each generative node targets a specific track in the connected pattern. The target track name is shown on the node faceplate (e.g., `→ KICK`). When connecting, the first unused track is automatically selected.
 
 ## Seed
 
@@ -45,8 +54,6 @@ When a function node is connected upstream of a pattern, a **sparkle button (✦
 1. **Arm** — tap the sparkle button to arm generative mode (button highlights)
 2. **Generate on loop head** — while Loop playback is running, generation fires automatically at the start of each loop, writing fresh content to the pattern
 3. **Disarm** — tap again to stop generating
-
-A **track selector** next to the sparkle button lets you choose which track receives the generated notes. This mirrors the **target track** setting on the function node itself.
 
 This workflow is ideal for live experimentation: loop a pattern, arm the generator, and tweak parameters in the Dock while hearing results on every loop.
 
