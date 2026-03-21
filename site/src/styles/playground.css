@@ -123,6 +123,11 @@
   display: block;
 }
 
+/* ── Narrow screen: hide mixer knobs to fit step grid ── */
+@media (max-width: 640px) {
+  .playground .track-mix { display: none; }
+}
+
 /* ── Dark zone variant (for components that expect dark background) ── */
 .playground.dark-zone {
   background: var(--color-fg);
