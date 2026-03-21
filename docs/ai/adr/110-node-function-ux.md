@@ -1,6 +1,6 @@
 # ADR 110: Node Function UX — Playful Visual Redesign
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -152,29 +152,36 @@ Replace the current text display (`T P·L·R`) with a hexagonal lattice UI:
 
 ### Phase 3: Toolbar Redesign
 
-#### 3a. Unified Single-bar Layout
+#### 3a. Tool Palette vs UI Controls
 
-Replace current split layout (center add-bar + absolute-positioned right buttons) with
-one flexbox toolbar bar. Left-to-right by frequency of use:
+Creative tools and UI controls have **different visual identities**:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ [↕][⟳][⏖][✦] │ [TM][Q][Tn] │ [T] ║ [→][↓] │ [◎] │ 129% │
-│   fn (frequent) │ generative  │util ║ layout  │focus│ zoom │
-│   ← add nodes →                     ← view controls →      │
-└─────────────────────────────────────────────────────────────┘
+  center (tool palette)                      right (UI controls)
+  ○ ○ ○ ○   ◉ ◉ ◉   ○                      [→][↓] [◎] 129%
+  fn         gen      label                  layout  focus zoom
+  (round, inviting)                          (flat, recessive)
 ```
 
-- Fn nodes first (most commonly added), generative next, label last
-- `║` thicker separator between "add" and "view" sections
-- All buttons same height, same style — no more `position: absolute` for right-side buttons
-- Consistent border/background treatment across all groups
+- **Tool palette**: 34px circular buttons, drop-shadow, hover scale(1.1) — "objects you pick up"
+- **UI controls**: 28px square buttons, flat, subtle — "settings you adjust"
+- Spatial separation communicates the role difference
 
-#### 3b. Hover Preview
+#### 3b. Category Differentiation
 
-- Toolbar buttons show a mini preview (48×32) on hover, not just a tooltip
-- Preview is a miniature version of the actual node (icon + color)
-- Placement mode ghost node made richer (currently just a semi-transparent rectangle)
+Three tool categories distinguished by visual style:
+
+- **FN tools**: white circles, neutral color (most common, lowest friction)
+- **GEN tools**: colored border ring matching engine accent (olive/teal/purple) — instantly recognizable as generative
+- **Label**: white circle, standalone (utility)
+
+Active state: FN fills dark, GEN fills with its accent color
+
+#### 3c. Layout
+
+- Tool palette centered, fn-first ordering (transpose, repeat, tempo, fx → turing, quantizer, tonnetz → label)
+- Groups separated by 4px spacing (no labels needed — icon style + color communicates)
+- Right controls bottom-aligned with tool palette buttons
 
 ## Implementation
 
@@ -182,69 +189,72 @@ one flexbox toolbar bar. Left-to-right by frequency of use:
 
 | File | Changes |
 |------|---------|
-| `icons.ts` | Redesigned icons: transpose→arrows, tempo→metronome, fx→sparkle |
+| `icons.ts` | Redesigned icons: transpose→♪↕, tempo→metronome, fx→sparkle, repeat→stroke arrows |
 | `sceneGeometry.ts` | `FN_HALF_W/H` = 18×18, `fnNodeIcon()`, `fnNodeValue()` helpers |
-| `SceneView.svelte` | Naked icon template, satellite positioning, drag-detach, parameter CSS vars, micro-interactions |
-| `SceneToolbar.svelte` | Fn types in ADD_ITEMS with separators |
+| `SceneView.svelte` | Naked icon template, satellite positioning, drag-detach, parameter CSS vars, micro-interactions, generative live viz |
+| `SceneToolbar.svelte` | Tool palette (circular buttons), fn-first ordering, GEN accent colors |
 | `SceneBubbleMenu.svelte` | `BubblePickType` extended with fn types |
-| `DockPanel.svelte` | Fn node parameter editing UI (stepper/toggle) |
-| `sceneActions.ts` | `sceneAddFnNode()` with x/y params, satellite positioning helpers |
-
-### Phasing
-
-- **Phase 1** (pre-beta): naked icons + satellite attachment + DockPanel editing + micro-interactions
-- **Phase 2** (post-beta): generative node live visualization — experience enhancement
-- **Phase 3** (post-beta): toolbar redesign — overall consistency
+| `SceneCanvas.svelte` | Hide edge rendering for fn satellite nodes |
+| `DockPanel.svelte` | Fn + generative node editing in both scene view and SCENE tab |
+| `sceneActions.ts` | `sceneAddFnNode()` with x/y, `repositionSatellites()`, `findAttachedFnNodes()` |
+| `scenePlayback.ts` | `applySatelliteFnNodes()` — apply fn effects via pattern lookup |
 
 ### Implementation Checklist
 
-Only Phase 1 detailed here — Phase 2/3 checklists to be added when work begins.
-
 #### Phase 1a: Naked Icon Nodes ✅
-- [x] Redesign SVG icons: transpose→up/down arrows, tempo→metronome, fx→sparkle
+- [x] Redesign SVG icons: transpose→♪+arrow, tempo→metronome (filled body), fx→sparkle
 - [x] `fnNodeIcon()` helper in `sceneGeometry.ts`
-- [x] Naked icon template in SceneView (no background/border, 20×20 icon, 36×36 hit area)
-- [x] Value in `data-tip` tooltip
-- [x] `FN_HALF_W/H` = 18×18 for edge computation
+- [x] Naked icon template (no background/border, 20×20 icon, 36×36 hit area)
+- [x] Value labels below icons, repeat countdown during playback
+- [x] FX: stacked colored sparkles per active effect
 - [x] Selected state: dashed outline + background tint
 
-#### Phase 1b: Toolbar & Creation UI ✅
-- [x] `BubblePickType` extended with `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'`
-- [x] ADD_ITEMS with separators between generative / function / utility groups
-- [x] Placement mode: `sceneAddFnNode()` with x/y coordinates
-- [x] Ghost preview matches naked icon style
+#### Phase 1b: Satellite Attachment ✅
+- [x] Placement on pattern node → auto-attach (`sceneAddFnNode(type, patternNodeId)`)
+- [x] Satellite positioning: fn icons arranged above parent, sorted by type
+- [x] Parent drag → satellites follow (`repositionSatellites()`)
+- [x] Drag fn away → detach, drop on other pattern → reattach
+- [x] Hide edge rendering and handles for fn nodes
+- [x] Canvas click → free-floating (existing behavior preserved)
 
 #### Phase 1c: DockPanel Parameter Editing ✅
-- [x] Fn node detection via `selectedFnNode` derived state
-- [x] Transpose: REL/ABS toggle, semitone ±stepper, key selector (ABS)
-- [x] Repeat: count ±stepper
-- [x] Tempo: BPM ±stepper (step 5)
-- [x] FX: per-effect ON/OFF toggles
-- [x] Wired through `sceneUpdateFnParams()` with undo
+- [x] Fn node editor in scene view (selected fn node) and SCENE tab (connected fn nodes)
+- [x] Generative node editor in scene view (selected gen node)
+- [x] Transpose: REL/ABS toggle, semitone ±stepper, key selector
+- [x] Repeat: count ±stepper / Tempo: BPM ±stepper / FX: per-effect toggles
+- [x] Section dividers between nodes in SCENE tab
 
 #### Phase 1d: Parameter-driven Micro-interactions ✅
 - [x] CSS custom properties: `--fn-semi`, `--fn-count`, `--fn-bpm`, `--fn-fx-n`
-- [x] Transpose: bounce (±3px)
-- [x] Repeat: rotate (duration = beat × count)
-- [x] Tempo: sway ±8° (duration = 60/bpm)
-- [x] FX: drop-shadow glow pulse
+- [x] Transpose: icon-only bounce (label stays) / Repeat: icon rotate
+- [x] Tempo: metronome needle sway (duration = 60/bpm)
+- [x] FX: per-layer colored glow with staggered delay
+- [x] Fn plays when parent pattern plays (satellite lookup, not graph traversal)
 
-#### Phase 1e: Satellite Attachment
-- [ ] Placement on pattern node → auto-attach (call `sceneAddFnNode(type, patternNodeId)`)
-- [ ] Satellite positioning: fn icons arranged around parent node top edge
-- [ ] Parent drag → satellites follow
-- [ ] Drag fn away from parent → detach (remove edge, become free-floating)
-- [ ] Drop fn onto different pattern → re-attach (rewire edge)
-- [ ] Hide edge handle for fn nodes
-- [ ] Canvas click in placement mode → free-floating (existing behavior)
+#### Phase 1e: Satellite Runtime ✅
+- [x] `applySatelliteFnNodes()` in scenePlayback — apply fn effects on pattern entry
+- [x] Both `startSceneNode` and `walkToNode` call satellite lookup
+
+#### Phase 2: Generative Live Visualization ✅
+- [x] Turing: live bit register from actual trigs, current step glow
+- [x] Quantizer: playing note pitch class highlights on mini keyboard
+- [x] Tonnetz: current operation highlights based on stepsPerChord
+
+#### Phase 3: Toolbar Redesign ✅
+- [x] Tool palette: 34px circular buttons with drop-shadow, hover scale(1.1)
+- [x] UI controls: 28px square, flat — visually distinct role
+- [x] GEN tools: accent color border ring (olive/teal/purple), active fills accent
+- [x] FN tools: neutral white circles
+- [x] Fn-first ordering, groups separated by spacing (no labels needed)
+- [x] Bottom-aligned with right-side controls
 
 ## Considerations
 
-- **Performance**: Animations are CSS-only via CSS custom properties. No JS timers
-- **Satellite positioning**: Multiple fn nodes on one pattern need even spacing. Max ~4 satellites before visual clutter
-- **Naked icon legibility**: 20×20px icons remain legible at zoom levels ≥ 50%. Below that, tooltip becomes essential
-- **Drag-detach threshold**: Need sufficient drag distance before detaching to avoid accidental detachment
-- **Tonnetz hex lattice** (Phase 2): Realistic to fit a small 3×3 lattice within generative node size (120×72)
+- **Performance**: All animations are CSS-only via custom properties. No JS timers
+- **Satellite positioning**: Multiple fn nodes on one pattern spaced evenly, sorted by type. Max ~4 satellites before visual clutter
+- **Naked icon legibility**: 20×20px icons remain legible at zoom ≥ 50%. Tooltip + value label below icon for detail
+- **Tool palette vs UI controls**: Shape difference (circle vs square) communicates role at a glance — tools are "objects", controls are "settings"
+- **GEN accent colors**: Match the generative node faceplate colors, creating visual consistency between toolbar and canvas
 
 ## Future Extensions
 

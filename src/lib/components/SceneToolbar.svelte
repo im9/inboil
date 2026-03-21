@@ -6,17 +6,23 @@
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
 
   const ADD_ITEMS: { type: BubblePickType | 'sep'; tip: string; tipJa: string }[] = [
-    { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
-    { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
-    { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
-    { type: 'sep', tip: '', tipJa: '' },
     { type: 'fn-transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
     { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
     { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
     { type: 'sep', tip: '', tipJa: '' },
+    { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
+    { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
+    { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
+    { type: 'sep', tip: '', tipJa: '' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
+
+  const TOOL_ACCENT: Record<string, string> = {
+    turing: '#787845',
+    quantizer: '#458078',
+    tonnetz: '#785a87',
+  }
 
   const { zoom, viewEl, onpan, onreset, onadd, activeType }: {
     zoom: number
@@ -61,54 +67,50 @@
   }
 </script>
 
-<!-- Center: add-node buttons -->
-<div class="add-bar">
+<!-- Center: add-node tool palette -->
+<div class="tool-palette">
   {#each ADD_ITEMS as item}
     {#if item.type === 'sep'}
-      <div class="add-sep"></div>
+      <div class="tool-sep"></div>
     {:else}
+      {@const accent = TOOL_ACCENT[item.type as string]}
       <button
-        class="add-btn"
+        class="tool-btn"
         class:active={activeType === item.type}
         aria-label={item.tip}
         data-tip={item.tip} data-tip-ja={item.tipJa}
+        style={accent ? `--tool-accent: ${accent}` : ''}
         onpointerdown={(e: PointerEvent) => { e.stopPropagation(); onadd?.(item.type as BubblePickType) }}
       >
-        {#if item.type === 'turing'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-            <rect x="1" y="5" width="2" height="4" rx="0.5"/>
-            <rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
-            <rect x="7" y="5" width="2" height="4" rx="0.5"/>
-            <rect x="10" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+        {#if item.type === 'fn-transpose'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
+        {:else if item.type === 'fn-repeat'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.repeat}</svg>
+        {:else if item.type === 'fn-tempo'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.tempo}</svg>
+        {:else if item.type === 'fn-fx'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.fx}</svg>
+        {:else if item.type === 'turing'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <rect x="1" y="5" width="2" height="4" rx="0.5"/><rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+            <rect x="7" y="5" width="2" height="4" rx="0.5"/><rect x="10" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
             <rect x="1" y="10" width="11" height="1.5" rx="0.5" opacity="0.3"/>
           </svg>
         {:else if item.type === 'quantizer'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-            <rect x="2" y="9" width="2" height="3" rx="0.5"/>
-            <rect x="5" y="6" width="2" height="6" rx="0.5"/>
-            <rect x="8" y="3" width="2" height="9" rx="0.5"/>
-            <rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <rect x="2" y="9" width="2" height="3" rx="0.5"/><rect x="5" y="6" width="2" height="6" rx="0.5"/>
+            <rect x="8" y="3" width="2" height="9" rx="0.5"/><rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
             <rect x="1" y="2" width="12" height="1" rx="0.5" opacity="0.2"/>
           </svg>
         {:else if item.type === 'tonnetz'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-            <circle cx="3" cy="3" r="1.5" opacity="0.4"/>
-            <circle cx="11" cy="3" r="1.5" opacity="0.4"/>
-            <circle cx="7" cy="11" r="1.5"/>
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <circle cx="3" cy="3" r="1.5" opacity="0.4"/><circle cx="11" cy="3" r="1.5" opacity="0.4"/><circle cx="7" cy="11" r="1.5"/>
             <line x1="3" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1" opacity="0.3"/>
             <line x1="3" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
             <line x1="11" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
           </svg>
-        {:else if item.type === 'fn-transpose'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" stroke="currentColor" stroke-width="0.6" aria-hidden="true">{@html ICON.transpose}</svg>
-        {:else if item.type === 'fn-repeat'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html ICON.repeat}</svg>
-        {:else if item.type === 'fn-tempo'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" aria-hidden="true">{@html ICON.tempo}</svg>
-        {:else if item.type === 'fn-fx'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">{@html ICON.fx}</svg>
         {:else if item.type === 'label'}
-          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
         {/if}
       </button>
     {/if}
@@ -170,51 +172,60 @@
 {/if}
 
 <style>
-  .add-bar {
+  /* ── Tool palette (creative tools — distinct from UI controls) ── */
+  .tool-palette {
     position: absolute;
     top: 8px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 0;
+    align-items: center;
+    gap: 4px;
     z-index: 5;
-    border-radius: 0;
-    overflow: hidden;
-    border: 1.5px solid rgba(30, 32, 40, 0.12);
   }
-  .add-btn {
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.8);
-    color: rgba(30, 32, 40, 0.5);
+  .tool-sep {
+    width: 4px;
+  }
+  .tool-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(30, 32, 40, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    border: none;
-    border-right: 1px solid rgba(30, 32, 40, 0.08);
+    box-shadow: 0 1px 3px rgba(30, 32, 40, 0.1);
+    transition: transform 80ms, box-shadow 80ms, color 80ms, background 80ms;
   }
-  .add-btn:last-child {
-    border-right: none;
-  }
-  .add-sep {
-    width: 1px;
-    background: rgba(30, 32, 40, 0.15);
-    align-self: stretch;
-  }
-  .add-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
+  .tool-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(30, 32, 40, 0.15);
     color: var(--color-fg);
   }
-  .add-btn:active,
-  .add-btn.active {
-    background: var(--color-fg);
+  .tool-btn:active {
+    transform: scale(0.95);
+  }
+  .tool-btn.active {
+    background: var(--tool-accent, var(--color-fg));
     color: rgba(237, 232, 220, 0.9);
+    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.25);
+  }
+  /* Generative tool accent ring */
+  .tool-btn[style*="--tool-accent"] {
+    border: 2px solid var(--tool-accent);
+    color: var(--tool-accent);
+  }
+  .tool-btn[style*="--tool-accent"]:hover {
+    color: var(--tool-accent);
+    background: rgba(255, 255, 255, 0.95);
   }
 
   .scene-toolbar-btn {
     position: absolute;
-    top: 8px;
+    top: 14px;
     width: 28px;
     height: 28px;
     border-radius: 0;
