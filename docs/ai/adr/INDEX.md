@@ -160,4 +160,4 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 107 | Pattern Sharing API | Proposed | Beginner backend: REST CRUD, D1/SQLite, pattern/preset sharing, anonymous auth |
 | 108 | Collaboration Server & Media Processing | Proposed | Intermediate backend: WebSocket rooms (DO), BullMQ job queue, FFmpeg audio conversion |
 | 109 | AI Composer API | Proposed | Advanced backend: algorithmic variation, LLM-assisted composition (Claude API), real-time suggestions |
-| 110 | Node Function UX | Proposed | Playful visual redesign: fn node icons + micro-interactions, repeat/tempo UI, Tonnetz lattice, toolbar grouping |
+| 110 | Node Function UX | Implemented | Naked icon fn nodes, satellite attachment, tool palette with GEN accent colors, generative live visualization |
