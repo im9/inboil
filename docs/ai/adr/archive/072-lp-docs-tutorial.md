@@ -65,6 +65,30 @@ app.inboil.app/       ← Main app (separate CF Pages project)
 
 Single-page design. The first view must immediately communicate brand, concept, and "this is alive."
 
+#### Design Direction
+
+The LP extends the app's **Warm Brutalist + Geometric Graphic Design** direction (see ui-design.md) to a marketing context.
+
+**Visual identity:**
+- **Cream/navy palette** — cream `#EDE8DC` background with navy `#1E2028` text, inverted in dark zones. Deliberately avoids the black-on-white or dark-neon clichés of typical music software. Warmth and sophistication over "pro audio."
+- **Color is reserved for state** — olive `#787845` indicates active/interactive elements only. All other variation is opacity-based grayscale (`rgba(30,32,40, 0.8–0.04)`). No decorative color.
+- **No gradients, no shadows** — depth through zone inversion and border weight only. One exception: engine viewer and FX pad canvas have subtle lift shadows.
+- **Border-radius: 0** — consistent with app's brutalist decision. No soft rounding anywhere.
+
+**Typography:**
+- **JetBrains Mono 700** — all headings, feature titles, labels, specs. Uppercase with wide letter-spacing (`0.04–0.12em`). Feature titles scale large (`clamp(3.5rem, 8vw, 7rem)`) for graphic impact.
+- **System UI sans-serif** — tagline, descriptions, story body. Sentence case, generous line-height (2.0) for readability. The contrast between monospace display and proportional body creates clear hierarchy.
+
+**Geometric decorations:**
+- SVG compositions placed at **section boundaries** to guide the eye between content zones. They are compositional texture, not illustration — they don't depict features.
+- Each boundary has a unique composition (crescents, stars, crosshairs, dot grids, orbital rings, etc.) to create visual rhythm without repetition.
+- Hero section has a larger decorative SVG composition on the right side as a visual counterweight to the text/sequencer on the left.
+- Shapes that straddle dark/light zone boundaries render twice with inverted colors (via `<clipPath>`) for continuity.
+- Olive accent dots/shapes are used sparingly within compositions to tie back to the interactive color.
+- Mobile: simplified or hidden to preserve content density.
+
+**Differentiation intent:** Most DAW/groovebox marketing pages use dark themes, neon accents, and product screenshots. The cream palette, geometric art direction, and interactive demos position inboil as something different — approachable, design-conscious, and alive.
+
 #### First View (Hero)
 
 The hero section has three jobs in under 3 seconds:
@@ -73,46 +97,57 @@ The hero section has three jobs in under 3 seconds:
 3. **It's alive** — something is already moving when the page loads
 
 ```
-┌──────────────────────────────────────────┐
-│  [logo] inboil           Docs [OPEN →]  │  ← dark header
-├──────────────────────────────────────────┤
-│                                          │
-│  tagline (left, 2fr)  │ sequencer (3fr) │
-│  + [sound] button      │ 4×16 step grid │
-│                        │ + playhead      │
-│                                          │
-└──────────────────────────────────────────┘
+┌───────────────────────────────────────────────────┐
+│  [logo] inboil        [JA/EN] Docs GitHub [OPEN]  │  ← dark header
+├───────────────────────────────────────────────────┤
+│                                          │         │
+│  logo (large, 80px)                      │  geo    │
+│  tagline (JA primary / EN sub)           │  SVG    │
+│  [Open App] [Tutorial →]                 │  comp   │
+│  ┌─────────────────────────────────┐     │         │
+│  │  4×16 step sequencer + playhead │     │         │
+│  │  [▶ sound toggle]               │     │         │
+│  └─────────────────────────────────┘     │         │
+│                                          │         │
+└───────────────────────────────────────────────────┘
 ```
 
-**Layout**: 2fr (text) : 3fr (sequencer) grid to fill the hero width.
+**Layout**: Text, CTAs, and interactive sequencer stacked on the left; decorative geometric SVG composition on the right. The sequencer is part of the hero content, not a separate column.
 
-**Logo**: 4-cell grid with rotateY flap animation on load, re-trigger on hover.
+**Logo**: 4-cell grid with rotateY flap animation on load, re-trigger on hover. 80px size.
 
-**Step sequencer**: 4-track × 16-step DOM grid with Othello-flip toggle cells, animated playhead, Web Audio preview. Pre-populated with a basic pattern. Sound button triggers audio playback.
+**Step sequencer**: 4-track × 16-step DOM grid with Othello-flip toggle cells (48px), animated playhead, Web Audio preview. Pre-populated with a basic pattern. Sound toggle triggers audio playback.
 
-**Tagline**: "No install. No signup. Just play." + sub-line "A groove box that lives in your browser."
+**Tagline**: JA "いつでも、どこでも、すぐ作曲" (primary, 2.2rem) + EN sub-line "No install. No signup. Just play." Bilingual, auto-detected.
 
 #### Page Flow
 
 ```
-┌──────────────────────────────────┐
-│  Hero                            │  ← brand + tagline + interactive step sequencer
-├──────────────────────────────────┤
-│  Sound Engines (2-col 2:3)       │  ← voice chips + engine viewer with SVG graphs
-├──────────────────────────────────┤
-│  Scene Graph (2-col 3:2 reversed)│  ← draggable nodes, bezier edges, arrowheads
-├──────────────────────────────────┤
-│  FX Pad (full-width centered)    │  ← draggable effect nodes with constellation lines
-├──────────────────────────────────┤
-│  Story + Support                 │  ← personal dev story → Ko-fi donate link
-├──────────────────────────────────┤
-│  Specs                           │  ← technical spec grid (tracks, voices, effects, etc.)
-├──────────────────────────────────┤
-│  Final CTA                       │  ← "Ready to make some noise?" + app/tutorial links
-└──────────────────────────────────┘
+┌───────────────────────────────────┐
+│  Hero                             │  ← brand + tagline + interactive step sequencer
+│          ·bg0·                    │  ← section boundary geo decoration
+├───────────────────────────────────┤
+│  Sound Engines (2-col 2:3)        │  ← voice chips + engine viewer with SVG graphs
+│          ·bg1·                    │
+├───────────────────────────────────┤
+│  Scene Graph (2-col 3:2 reversed) │  ← draggable nodes, bezier edges, arrowheads
+│          ·bg2·                    │
+├───────────────────────────────────┤
+│  FX Pad (full-width, dark bg)     │  ← draggable effect nodes with constellation lines
+│          ·bg3·                    │
+├───────────────────────────────────┤
+│  Multi-Device Jam (full-width)    │  ← WebRTC jam session, host/guest SVG diagram
+│          ·bg4·                    │
+├───────────────────────────────────┤
+│  Specs                            │  ← technical spec grid (tracks, voices, effects, etc.)
+├───────────────────────────────────┤
+│  Final CTA (dark bg)              │  ← "さっそく始めよう" + app/tutorial links
+├───────────────────────────────────┤
+│  Story + Support                  │  ← personal dev story → Ko-fi donate link
+└───────────────────────────────────┘
 ```
 
-Feature sections are grouped together, followed by Story + CTA. Sections use mixed layouts (2-col, 2-col reversed, full-width) to break visual monotony. Sections fade-in on scroll (subtle, not distracting).
+Feature sections are grouped together, followed by Specs → CTA → Story. Sections use mixed layouts (2-col, 2-col reversed, full-width) to break visual monotony. Alternating subtle background tints (`rgba(30,32,40,0.03)`) create visual rhythm. Sections fade-in on scroll with `translateY(24px)` reveal (once, not repeating).
 
 #### Micro-interactions
 
@@ -237,32 +272,34 @@ Quick lookup during use         Sit down and learn
 ### LP (`site/src/pages/index.astro`)
 
 **Done:**
-- SceneCanvas-style grid background (cream #EDE8DC + 40px lines)
-- Dark header with nav (Docs link + olive "Open App" CTA button)
-- Hero: asymmetric layout (text top-left, sequencer bottom-right) with 2fr:3fr grid
-- Hero: interactive 4-track × 16-step DOM sequencer with Othello-flip cells, playhead, Web Audio preview
-- Hero: tagline "Make music anywhere, right now" + sub-line "No install. No signup. Just play."
-- Hero: larger logo (80px), larger tagline (2.2rem), larger sequencer cells (48px)
+- Cream `#EDE8DC` background with SceneCanvas-style 40px grid lines
+- Dark header with nav (language toggle, Docs, GitHub, olive "Open App" CTA)
+- Hero: logo + tagline + CTAs + sequencer stacked left, geometric SVG composition right
+- Hero: interactive 4-track × 16-step DOM sequencer with Othello-flip cells (48px), playhead, Web Audio preview
+- Hero: JA tagline "いつでも、どこでも、すぐ作曲" (2.2rem) + EN sub-line, bilingual auto-detect
+- Hero: logo 80px, flap animation on load + hover
 - Sound Engines section: 2:3 grid, 19 voice chips with audio preview, voice ↔ engine viewer param sync
-- Engine viewer: dark panel showing real-time SVG graphs (waveform, ADSR, FM routing) with draggable arc knobs
+- Engine viewer: dark panel with real-time SVG graphs (waveform, ADSR, FM routing) + draggable arc knobs
 - Audio params matched to app presets (paramDefs.ts / DRUM_PRESETS)
 - Scene Graph section: 3:2 reversed grid, draggable nodes with dynamic bezier edges, ray-box intersection
 - Scene nodes match app style (height:32, no border-radius, root border, playing pulse, decorator pills)
-- FX Pad section: full-width, draggable effect nodes on canvas with constellation lines
+- FX Pad section: full-width dark bg, draggable effect nodes on canvas with constellation lines
 - FX node colors match app exactly (VERB=#787845, DLY=#4472B4, GLT=#E8A090, GRN=#9B6BA0)
-- Story + Support section with Ko-fi donate link (after all feature sections)
-- Specs section: grid of technical specs (tracks, voices, sequencer, effects, export, MIDI, browser, etc.)
-- Final CTA section: "Ready to make some noise?" + app/tutorial links
+- Multi-Device Jam section: full-width, host/guest WebRTC SVG diagram
+- Specs section: responsive grid of technical specs (tracks, voices, sequencer, effects, export, MIDI, browser, etc.)
+- Final CTA section: dark bg, "さっそく始めよう" + app/tutorial links
+- Story + Support section with Ko-fi donate link (after CTA)
 - OGP image: og.svg source + og.png 1200×630 (logo + tagline + step sequencer pattern)
-- Logo flap animation: 4-cell rotateY keyframes on load, re-trigger on hover
-- Feature titles: large (7rem max), white-space:nowrap, hover bounce + accent-line pulse
+- Geometric section boundary decorations: unique SVG compositions at each section transition (B0–B4), hero geo, CTA geo with dark/light zone straddling via clipPath
+- Feature titles: large (`clamp(3.5rem, 8vw, 7rem)`), uppercase, hover bounce + accent-line pulse
 - CTA primary button glow sweep on hover
-- Alternating section backgrounds (rgba(30,32,40,0.03)) for visual rhythm
-- Asymmetric vertical offsets between text and visual columns (120px / 200px)
-- Bilingual i18n for all sections (EN/JA auto-detect)
-- Typography: JetBrains Mono for headings, system-ui sans-serif for body text
-- Text color opacity tuned for readability (tagline 0.8, descriptions 0.7, labels 0.55)
-- Responsive breakpoints at 768px (2-col → 1-col, CTA/chip sizing)
+- Alternating section backgrounds (`rgba(30,32,40,0.03)`) for visual rhythm
+- Bilingual i18n for all sections (EN/JA auto-detect via `navigator.language`)
+- Typography: JetBrains Mono 700 for headings, system-ui sans-serif for body
+- Text color: opacity-based hierarchy (tagline 0.8, descriptions 0.7, labels 0.55)
+- Scroll reveal: `translateY(24px)` fade-in via IntersectionObserver (once per section)
+- `prefers-reduced-motion: reduce` disables all animations
+- Responsive breakpoints at 768px (2-col → 1-col, geo simplified/hidden)
 
 **TODO (LP):**
 - Desktop download links → ADR 073

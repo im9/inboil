@@ -15,6 +15,8 @@ Treats the UI as graphic design first — geometric shapes, bold typography, and
 6. **Color is reserved for state** — Olive for active trigs, blue for playhead, salmon for alerts.
 7. **Geometric elements as texture** — Decorative shapes in zones for visual rhythm.
 
+The landing page (`site/`) extends this direction to a marketing context — see ADR 072 for LP-specific design decisions (palette rationale, typography, geometric boundary decorations, differentiation intent).
+
 ## Button Border System — DECIDED
 
 Two tiers based on function:
