@@ -112,6 +112,25 @@ export function sceneAddEdge(from: string, to: string): string | null {
     .filter(e => e.from === from)
     .reduce((m, e) => Math.max(m, e.order), -1)
   song.scene.edges.push({ id, from, to, order: maxOrder + 1 })
+  // Auto-select unused target track on connect (ADR 117 Phase 2)
+  const fromNode = findNode(from)
+  const toNode = findNode(to)
+  if (fromNode?.generative && toNode?.type === 'pattern' && toNode.patternId) {
+    const pat = song.patterns.find(p => p.id === toNode.patternId)
+    if (pat) {
+      // Find tracks already targeted by other gen nodes on this pattern
+      const usedTracks = new Set(
+        song.scene.edges
+          .filter(e => e.to === to && e.from !== from)
+          .map(e => findNode(e.from))
+          .filter(n => n?.generative)
+          .map(n => n!.generative!.targetTrack ?? 0)
+      )
+      // Pick first unused track
+      const unused = pat.cells.find(c => !usedTracks.has(c.trackId))
+      if (unused) fromNode.generative.targetTrack = unused.trackId
+    }
+  }
   // Auto-generate on connect (ADR 117)
   autoGenerateFromNode(from)
   return id

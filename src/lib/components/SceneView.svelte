@@ -718,6 +718,20 @@
     return intervals.includes((pc - root + 12) % 12)
   }
 
+  /** Get target track name for a generative node (ADR 117 Phase 2) */
+  function genTargetTrackName(node: import('../types.ts').SceneNode): string | null {
+    if (!node.generative) return null
+    const edge = song.scene.edges.find(e => e.from === node.id)
+    if (!edge) return null
+    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    if (!patNode?.patternId) return null
+    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    if (!pat) return null
+    const trackIdx = node.generative.targetTrack ?? 0
+    const cell = pat.cells.find(c => c.trackId === trackIdx) ?? pat.cells[0]
+    return cell?.name ?? `T${trackIdx + 1}`
+  }
+
   /** Get the target cell's trigs and current playhead for a generative node (Phase 2) */
   function genNodePlayState(node: import('../types.ts').SceneNode): { trigs: import('../types.ts').Trig[]; step: number } | null {
     if (!playback.playing || !node.generative) return null
@@ -882,6 +896,7 @@
       >
         {#if isGen && node.generative}
           <!-- Generative node faceplate (ADR 078) -->
+          {@const genTrack = genTargetTrackName(node)}
           {#if node.generative.engine === 'turing'}
             {@const tp = node.generative.params as import('../state.svelte.ts').TuringParams}
             {@const gps = genNodePlayState(node)}
@@ -891,7 +906,10 @@
                   <span class="turing-bit" class:on={gps ? gps.trigs[i]?.active : i % 3 === 0} class:current={gps?.step === i}></span>
                 {/each}
               </div>
-              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-label-row">
+                <span class="gen-label">{nodeName(node, song.patterns)}</span>
+                {#if genTrack}<span class="gen-target">→ {genTrack}</span>{/if}
+              </div>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
                 <span class="gen-run-btn" role="button" tabindex="-1"
@@ -911,7 +929,10 @@
                   <span class="quant-key" class:black={isBlack} class:active={isScaleDegree(qp.root, qp.scale, pc)} class:playing={playingPc === pc}></span>
                 {/each}
               </div>
-              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-label-row">
+                <span class="gen-label">{nodeName(node, song.patterns)}</span>
+                {#if genTrack}<span class="gen-target">→ {genTrack}</span>{/if}
+              </div>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
                 <span class="gen-run-btn" role="button" tabindex="-1"
@@ -930,7 +951,10 @@
                   <span class="tonnetz-op" class:current={currentOpIdx === i}>{op}</span>
                 {/each}
               </div>
-              <span class="gen-label">{nodeName(node, song.patterns)}</span>
+              <div class="gen-label-row">
+                <span class="gen-label">{nodeName(node, song.patterns)}</span>
+                {#if genTrack}<span class="gen-target">→ {genTrack}</span>{/if}
+              </div>
               <div class="gen-controls">
                 <!-- svelte-ignore node_invalid_placement_ssr -->
                 <span class="gen-run-btn" role="button" tabindex="-1"
@@ -1321,12 +1345,24 @@
     width: 100%;
     height: 100%;
   }
+  .gen-label-row {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
   .gen-label {
     font-family: var(--font-data);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
     opacity: 0.9;
+  }
+  .gen-target {
+    font-family: var(--font-data);
+    font-size: 7px;
+    font-weight: 700;
+    opacity: 0.5;
+    white-space: nowrap;
   }
   .gen-controls {
     display: flex;
