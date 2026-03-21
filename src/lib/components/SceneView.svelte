@@ -6,7 +6,7 @@
   // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, findAttachedFnNodes, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
@@ -333,8 +333,15 @@
       const oldParentId = currentEdge?.to ?? null
 
       if (snapTarget && snapTarget !== oldParentId) {
-        // Reattach to new parent
+        // Reattach to new parent — replace same-type fn if exists
         pushUndo('Reattach function node')
+        const existing = findAttachedFnNodes(snapTarget).find(n => n.type === droppedNode.type && n.id !== nodeId)
+        if (existing) {
+          const eidx = song.scene.edges.findIndex(e => e.from === existing.id)
+          if (eidx >= 0) song.scene.edges.splice(eidx, 1)
+          const nidx = song.scene.nodes.findIndex(n => n.id === existing.id)
+          if (nidx >= 0) song.scene.nodes.splice(nidx, 1)
+        }
         if (currentEdge) {
           song.scene.edges.splice(song.scene.edges.indexOf(currentEdge), 1)
         }

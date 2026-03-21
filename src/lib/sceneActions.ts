@@ -444,6 +444,14 @@ export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string, x?: num
   }
   song.scene.nodes.push(node)
   if (patNode) {
+    // Replace existing fn node of same type on this pattern (ADR 116)
+    const existing = findAttachedFnNodes(patNode.id).find(n => n.type === type)
+    if (existing) {
+      const edgeIdx = song.scene.edges.findIndex(e => e.from === existing.id)
+      if (edgeIdx >= 0) song.scene.edges.splice(edgeIdx, 1)
+      const nodeIdx = song.scene.nodes.findIndex(n => n.id === existing.id)
+      if (nodeIdx >= 0) song.scene.nodes.splice(nodeIdx, 1)
+    }
     song.scene.edges.push({ id: `e_${id}`, from: id, to: patNode.id, order: 0 })
     repositionSatellites(patNode.id)
   }
