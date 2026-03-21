@@ -1,4 +1,4 @@
-# ADR 110: Node Function UX — Playful Visual Redesign
+# ADR 116: Node Function UX — Playful Visual Redesign
 
 ## Status: Implemented
 
