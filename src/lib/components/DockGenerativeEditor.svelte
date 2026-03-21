@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SceneNode, TuringParams, QuantizerParams, TonnetzParams } from '../state.svelte.ts'
   import { song, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset } from '../sceneActions.ts'
+  import { sceneUpdateGenerativeParams, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset, autoGenerateFromNode } from '../sceneActions.ts'
   import { SCALE_NAMES, GENERATIVE_PRESETS } from '../generative.ts'
   import Knob from './Knob.svelte'
 
@@ -219,7 +219,7 @@
         role="tab"
         aria-selected={gen.mergeMode === m}
         class:active={gen.mergeMode === m}
-        onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer' }}
+        onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer'; autoGenerateFromNode(nodeId) }}
       >{m.toUpperCase().slice(0, 3)}</button>
     {/each}
   </div>
@@ -228,7 +228,7 @@
     <div class="gen-scale-row">
       <span class="gen-range-label">TARGET</span>
       <select class="gen-scale-select"
-        onchange={e => sceneSetTargetTrack(nodeId, parseInt((e.target as HTMLSelectElement).value))}
+        onchange={e => { sceneSetTargetTrack(nodeId, parseInt((e.target as HTMLSelectElement).value)); autoGenerateFromNode(nodeId) }}
       >
         {#each targetPatCells as cell}
           <option value={cell.trackId} selected={(gen.targetTrack ?? 0) === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
@@ -247,15 +247,15 @@
     {#if gen.seed != null}
       <span class="gen-seed-val">{gen.seed}</span>
       <button class="btn-icon" title="Randomize seed" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
-        onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
+        onpointerdown={() => { sceneSetSeed(nodeId, Math.floor(Math.random() * 100000)); autoGenerateFromNode(nodeId) }}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 3A5 5 0 1 1 1 6.5"/><path d="M1 1v2.5h2.5"/></svg></button>
       <button class="btn-icon" title="Remove seed" data-tip="Remove seed (non-deterministic)" data-tip-ja="シード解除"
-        onpointerdown={() => sceneSetSeed(nodeId, undefined)}
+        onpointerdown={() => { sceneSetSeed(nodeId, undefined); autoGenerateFromNode(nodeId) }}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
     {:else}
       <span class="gen-seed-val" style="color: var(--dk-text-dim)">off</span>
       <button class="btn-icon" title="Set random seed" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
-        onpointerdown={() => sceneSetSeed(nodeId, Math.floor(Math.random() * 100000))}
+        onpointerdown={() => { sceneSetSeed(nodeId, Math.floor(Math.random() * 100000)); autoGenerateFromNode(nodeId) }}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg></button>
     {/if}
   </div>
@@ -267,7 +267,7 @@
         const sel = (e.target as HTMLSelectElement)
         const presets = GENERATIVE_PRESETS.filter(p => p.engine === gen.engine)
         const idx = parseInt(sel.value)
-        if (idx >= 0 && presets[idx]) sceneApplyGenerativePreset(nodeId, presets[idx].params)
+        if (idx >= 0 && presets[idx]) { sceneApplyGenerativePreset(nodeId, presets[idx].params); autoGenerateFromNode(nodeId) }
         sel.value = '-1'
       }}
     >

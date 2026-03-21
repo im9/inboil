@@ -101,7 +101,8 @@ export function sceneSetRoot(nodeId: string): void {
 
 // ── Edge CRUD ──
 
-/** Create a directed edge (prevents duplicates and self-loops) */
+/** Create a directed edge (prevents duplicates and self-loops).
+ *  Auto-generates if source is a generative node targeting a pattern (ADR 117). */
 export function sceneAddEdge(from: string, to: string): string | null {
   if (from === to) return null
   if (song.scene.edges.some(e => e.from === from && e.to === to)) return null
@@ -111,7 +112,28 @@ export function sceneAddEdge(from: string, to: string): string | null {
     .filter(e => e.from === from)
     .reduce((m, e) => Math.max(m, e.order), -1)
   song.scene.edges.push({ id, from, to, order: maxOrder + 1 })
+  // Auto-generate on connect (ADR 117)
+  autoGenerateFromNode(from)
   return id
+}
+
+/** Trigger generation if nodeId is (or leads to) a generative node with a reachable pattern.
+ *  Skips pushUndo — caller is responsible for undo grouping (ADR 117). */
+export function autoGenerateFromNode(nodeId: string): void {
+  const node = findNode(nodeId)
+  if (!node?.generative) return
+  const target = findTargetPattern(nodeId)
+  if (!target) return
+  // Inline generate (no extra undo — already in caller's undo group)
+  const pat = song.patterns.find(p => p.id === target.patternId)
+  if (!pat || pat.cells.length === 0) return
+  const trackIdx = node.generative.targetTrack ?? 0
+  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+  const chain = collectGenChain(nodeId)
+  const trigs = executeGenChain(chain, cell, cell.steps)
+  if (trigs) {
+    applyGeneratedTrigs(cell.trigs, trigs, chain[chain.length - 1].generative!.mergeMode)
+  }
 }
 
 /** Delete an edge */
@@ -210,11 +232,17 @@ export function sceneAddGenerativeNode(engine: GenerativeEngine, x: number, y: n
 }
 
 /** Update generative node params */
+let _regenTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Update generative node params and debounce auto-regenerate (ADR 117) */
 export function sceneUpdateGenerativeParams(nodeId: string, params: Partial<TuringParams | QuantizerParams | TonnetzParams>): void {
   pushUndo('Update generative params')
   const node = findNode(nodeId)
   if (!node?.generative) return
   Object.assign(node.generative.params, params)
+  // Debounced auto-regenerate
+  if (_regenTimer) clearTimeout(_regenTimer)
+  _regenTimer = setTimeout(() => { _regenTimer = null; autoGenerateFromNode(nodeId) }, 300)
 }
 
 /** Run generative engine (write mode): generate notes and write to target pattern.
