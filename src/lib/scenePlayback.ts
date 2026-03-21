@@ -82,13 +82,23 @@ function isFnNode(node: SceneNode): boolean {
   return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx'
 }
 
-/** Apply satellite fn nodes attached to a pattern node (ADR 110) */
+/** Apply satellite fn nodes attached to a pattern node (ADR 110).
+ *  FX resets to OFF when no FX fn node is attached — scoped to pattern. */
 function applySatelliteFnNodes(patternNodeId: string): void {
+  const satellites: SceneNode[] = []
   for (const edge of song.scene.edges) {
     if (edge.to !== patternNodeId) continue
     const src = findNode(edge.from)
-    if (src && isFnNode(src)) applyFunctionNode(src)
+    if (src && isFnNode(src)) satellites.push(src)
   }
+  // Reset FX if no FX satellite on this pattern
+  if (!satellites.some(n => n.type === 'fx')) {
+    fxPad.verb.on = false
+    fxPad.delay.on = false
+    fxPad.glitch.on = false
+    fxPad.granular.on = false
+  }
+  for (const src of satellites) applyFunctionNode(src)
 }
 
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
