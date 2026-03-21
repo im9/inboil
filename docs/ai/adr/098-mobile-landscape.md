@@ -34,6 +34,14 @@ Add landscape-specific layout for mobile using `orientation: landscape` media qu
 - Touch targets remain ≥ 44px
 - Test on common phone landscape sizes (667×375, 812×375, 844×390)
 
+### Desktop StepGrid in Landscape
+
+Landscape right column (~650px) has enough width to show the desktop StepGrid (track label 112px + 16×24px steps = 496px) with the mix knob column hidden. This would give mobile users the same sequencer experience as desktop, and also fix the tutorial playground cutoff on narrow screens.
+
+### SceneRibbon
+
+SceneRibbon (existing but unused component) could fit in the landscape left column below transport, providing a mini scene status view without switching to the full scene canvas.
+
 ## Considerations
 
 - **Tablets**: Landscape tablets (≥768px width) use the desktop layout, not this mobile landscape layout
