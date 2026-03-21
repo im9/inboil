@@ -41,6 +41,15 @@
     return (node && FN_TYPES.includes(node.type as FnNodeType)) ? node : null
   })
 
+  // Selected generative node (for generative node display in scene view)
+  const selectedGenNode = $derived.by(() => {
+    if (ui.patternSheet || isOverlaySheet) return null
+    const selected = Object.keys(ui.selectedSceneNodes)
+    if (selected.length !== 1) return null
+    const node = song.scene.nodes.find(n => n.id === selected[0])
+    return (node?.type === 'generative' && node.generative) ? node : null
+  })
+
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
   // Find scene node for current pattern (for SCENE tab generative nodes)
@@ -63,7 +72,15 @@
       .map(e => song.scene.nodes.find(n => n.id === e.from))
       .filter((n): n is SceneNode => n?.type === 'generative' && !!n.generative)
   })
-  const sceneTabCount = $derived(connectedGenerativeNodes.length)
+  // Fn nodes attached to current pattern (satellite edges, ADR 110)
+  const connectedFnNodes = $derived.by(() => {
+    if (!currentPatternSceneNode) return []
+    const inEdges = song.scene.edges.filter(e => e.to === currentPatternSceneNode.id)
+    return inEdges
+      .map(e => song.scene.nodes.find(n => n.id === e.from))
+      .filter((n): n is SceneNode => !!n && FN_TYPES.includes(n.type as FnNodeType))
+  })
+  const sceneTabCount = $derived(connectedGenerativeNodes.length + connectedFnNodes.length)
 
   function openPatternSheet() {
     if (!scenePatternNode?.patternId) return
@@ -243,6 +260,17 @@
         <div class="section-divider" aria-hidden="true"></div>
       {/if}
 
+      <!-- Generative node editor (when selected in scene view) -->
+      {#if selectedGenNode}
+        <DockGenerativeEditor node={selectedGenNode} />
+        <div class="node-actions">
+          <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedGenNode.id); ui.selectedSceneNodes = {} }}
+            data-tip="Remove node" data-tip-ja="ノードを削除"
+          >✕ Remove</button>
+        </div>
+        <div class="section-divider" aria-hidden="true"></div>
+      {/if}
+
       <!-- Scene Navigator -->
       {#if showNavigator}
         <DockNavigator />
@@ -274,8 +302,100 @@
             {#each connectedGenerativeNodes as genNode}
               <DockGenerativeEditor node={genNode} />
             {/each}
-          {:else}
-            <div class="empty-hint">{lang.value === 'ja' ? 'ファンクションノード未接続' : 'No function nodes connected'}</div>
+          {/if}
+          {#if connectedFnNodes.length > 0}
+            {#each connectedFnNodes as fnNode}
+              <div class="section-divider" aria-hidden="true"></div>
+              <span class="section-label">
+                {fnNode.type === 'transpose' ? 'TRANSPOSE' : fnNode.type === 'repeat' ? 'REPEAT' : fnNode.type === 'tempo' ? 'TEMPO' : 'FX'}
+              </span>
+              <div class="fn-editor">
+                {#if fnNode.fnParams?.transpose}
+                  {@const tp = fnNode.fnParams.transpose}
+                  <div class="fn-row">
+                    <span class="fn-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
+                    <div class="fn-toggle">
+                      <button class="fn-toggle-btn" class:active={tp.mode === 'rel'}
+                        onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, mode: 'rel' } })}
+                      >REL</button>
+                      <button class="fn-toggle-btn" class:active={tp.mode === 'abs'}
+                        onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, mode: 'abs' } })}
+                      >ABS</button>
+                    </div>
+                  </div>
+                  {#if tp.mode === 'rel'}
+                    <div class="fn-row">
+                      <span class="fn-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
+                      <div class="fn-stepper">
+                        <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
+                        <span class="fn-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
+                        <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
+                      </div>
+                    </div>
+                  {:else}
+                    <div class="fn-row">
+                      <span class="fn-label">Key</span>
+                      <div class="fn-key-row">
+                        {#each NOTE_NAMES as name, i}
+                          <button class="fn-key-btn" class:active={(tp.key ?? 0) === i}
+                            onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, key: i } })}
+                          >{name}</button>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+                {:else if fnNode.fnParams?.repeat}
+                  {@const rp = fnNode.fnParams.repeat}
+                  <div class="fn-row">
+                    <span class="fn-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
+                    <div class="fn-stepper">
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
+                      <span class="fn-step-val">×{rp.count}</span>
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
+                    </div>
+                  </div>
+                {:else if fnNode.fnParams?.tempo}
+                  {@const tmp = fnNode.fnParams.tempo}
+                  <div class="fn-row">
+                    <span class="fn-label">BPM</span>
+                    <div class="fn-stepper">
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 5) } })}>−</button>
+                      <span class="fn-step-val">{tmp.bpm}</span>
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 5) } })}>+</button>
+                    </div>
+                  </div>
+                {:else if fnNode.fnParams?.fx}
+                  {@const fxp = fnNode.fnParams.fx}
+                  <div class="fn-row">
+                    <span class="fn-label">Verb</span>
+                    <button class="fn-toggle-btn wide" class:active={fxp.verb}
+                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
+                    >{fxp.verb ? 'ON' : 'OFF'}</button>
+                  </div>
+                  <div class="fn-row">
+                    <span class="fn-label">Delay</span>
+                    <button class="fn-toggle-btn wide" class:active={fxp.delay}
+                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
+                    >{fxp.delay ? 'ON' : 'OFF'}</button>
+                  </div>
+                  <div class="fn-row">
+                    <span class="fn-label">Glitch</span>
+                    <button class="fn-toggle-btn wide" class:active={fxp.glitch}
+                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
+                    >{fxp.glitch ? 'ON' : 'OFF'}</button>
+                  </div>
+                  <div class="fn-row">
+                    <span class="fn-label">Granular</span>
+                    <button class="fn-toggle-btn wide" class:active={fxp.granular}
+                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
+                    >{fxp.granular ? 'ON' : 'OFF'}</button>
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          {/if}
+          {#if connectedGenerativeNodes.length === 0 && connectedFnNodes.length === 0}
+            <div class="empty-hint">{lang.value === 'ja' ? 'ノード未接続' : 'No nodes connected'}</div>
           {/if}
         {/if}
       {/if}

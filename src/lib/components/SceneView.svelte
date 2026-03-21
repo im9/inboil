@@ -711,6 +711,22 @@
     return intervals.includes((pc - root + 12) % 12)
   }
 
+  /** Get the target cell's trigs and current playhead for a generative node (Phase 2) */
+  function genNodePlayState(node: import('../types.ts').SceneNode): { trigs: import('../types.ts').Trig[]; step: number } | null {
+    if (!playback.playing || !node.generative) return null
+    // Follow outgoing edge to find pattern node
+    const edge = song.scene.edges.find(e => e.from === node.id)
+    if (!edge) return null
+    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    if (!patNode?.patternId) return null
+    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    if (!pat) return null
+    const trackIdx = node.generative.targetTrack ?? 0
+    const cell = pat.cells[trackIdx]
+    if (!cell) return null
+    return { trigs: cell.trigs, step: playback.playheads[trackIdx] ?? 0 }
+  }
+
   function pickBubbleItem(type: BubblePickType) {
     // Convert picker pixel position to normalized coords (accounting for zoom/pan)
     const canvasX = (pickerPos.x - panX) / zoom
@@ -860,11 +876,12 @@
         {#if isGen && node.generative}
           <!-- Generative node faceplate (ADR 078) -->
           {#if node.generative.engine === 'turing'}
-            {@const tp = node.generative.params}
+            {@const tp = node.generative.params as import('../state.svelte.ts').TuringParams}
+            {@const gps = genNodePlayState(node)}
             <div class="gen-faceplate turing">
               <div class="turing-bits">
-                {#each Array(tp.engine === 'turing' ? (tp as import('../state.svelte.ts').TuringParams).length : 8) as _, i}
-                  <span class="turing-bit" class:on={i % 3 === 0}></span>
+                {#each Array(tp.length) as _, i}
+                  <span class="turing-bit" class:on={gps ? gps.trigs[i]?.active : i % 3 === 0} class:current={gps?.step === i}></span>
                 {/each}
               </div>
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
@@ -878,11 +895,13 @@
             </div>
           {:else if node.generative.engine === 'quantizer'}
             {@const qp = node.generative.params as import('../state.svelte.ts').QuantizerParams}
+            {@const gps = genNodePlayState(node)}
+            {@const playingPc = gps?.trigs[gps.step]?.active ? gps.trigs[gps.step].note % 12 : -1}
             <div class="gen-faceplate quantizer">
               <div class="quant-keys">
                 {#each [0,1,2,3,4,5,6,7,8,9,10,11] as pc}
                   {@const isBlack = [1,3,6,8,10].includes(pc)}
-                  <span class="quant-key" class:black={isBlack} class:active={isScaleDegree(qp.root, qp.scale, pc)}></span>
+                  <span class="quant-key" class:black={isBlack} class:active={isScaleDegree(qp.root, qp.scale, pc)} class:playing={playingPc === pc}></span>
                 {/each}
               </div>
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
@@ -896,10 +915,12 @@
             </div>
           {:else if node.generative.engine === 'tonnetz'}
             {@const tnp = node.generative.params as import('../state.svelte.ts').TonnetzParams}
+            {@const gps = genNodePlayState(node)}
+            {@const currentOpIdx = gps ? Math.floor(gps.step / Math.max(1, tnp.stepsPerChord)) % tnp.sequence.length : -1}
             <div class="gen-faceplate tonnetz">
               <div class="tonnetz-ops">
-                {#each tnp.sequence.slice(0, 5) as op}
-                  <span class="tonnetz-op">{op}</span>
+                {#each tnp.sequence.slice(0, 5) as op, i}
+                  <span class="tonnetz-op" class:current={currentOpIdx === i}>{op}</span>
                 {/each}
               </div>
               <span class="gen-label">{nodeName(node, song.patterns)}</span>
@@ -1340,6 +1361,10 @@
   .turing-bit.on {
     background: rgba(237, 232, 220, 0.85);
   }
+  .turing-bit.current {
+    background: rgba(237, 232, 220, 1);
+    box-shadow: 0 0 4px rgba(237, 232, 220, 0.6);
+  }
   /* Quantizer mini keyboard */
   .quant-keys {
     display: flex;
@@ -1361,6 +1386,10 @@
   .quant-key.black.active {
     background: rgba(237, 232, 220, 0.55);
   }
+  .quant-key.playing {
+    background: rgba(237, 232, 220, 1);
+    box-shadow: 0 0 4px rgba(237, 232, 220, 0.6);
+  }
   /* Tonnetz transform ops */
   .tonnetz-ops {
     display: flex;
@@ -1374,6 +1403,11 @@
     border-radius: 0;
     background: rgba(237, 232, 220, 0.15);
     color: rgba(237, 232, 220, 0.85);
+    transition: background 80ms, color 80ms;
+  }
+  .tonnetz-op.current {
+    background: rgba(237, 232, 220, 0.7);
+    color: rgba(30, 32, 40, 0.9);
   }
 
   .scene-node.playing {
