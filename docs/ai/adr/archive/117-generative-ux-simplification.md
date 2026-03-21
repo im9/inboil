@@ -1,6 +1,6 @@
 # ADR 117: Generative UX Simplification
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
