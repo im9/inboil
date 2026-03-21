@@ -6,33 +6,50 @@ allowed-tools: Read, Glob, Grep, Agent, Bash(ls *)
 
 # Check Docs Consistency
 
-Scan all documentation in `docs/ai/` and report inconsistencies with the actual codebase. **Do not modify any files.**
+Scan all documentation in `docs/ai/`, site docs, and app help for inconsistencies with the actual codebase. **Do not modify any files.**
 
 ## Scope
 
 Check these doc files against implementation:
 
-1. `docs/ai/architecture.md` — ADR statuses, component list, directory structure, commands
-2. `docs/ai/overview.md` — current state, non-goals
-3. `docs/ai/sequencer-spec.md` — Pattern/Track/Trig interfaces, playback behavior
-4. `docs/ai/audio-interface.md` — WorkletCommand, WorkletPattern, WorkletTrig, Engine API
-5. `docs/ai/sound-design.md` — voice params, paramDefs ranges/defaults
-6. `docs/ai/ui-design.md` — component descriptions, layout, mobile views
-7. `docs/ai/glossary.md` — term accuracy, missing terms
-8. `docs/ai/adr/INDEX.md` — ADR statuses (Implemented vs actual state)
-9. All ADR files marked as "Implemented" in INDEX.md — check against code
+### AI / internal docs (`docs/ai/`)
+
+1. `CLAUDE.md` — project description, build commands, conventions, key architecture notes
+2. `docs/ai/BACKLOG.md` — check completed items against code, remove if done
+3. `docs/ai/architecture.md` — ADR statuses, component list, directory structure, commands
+4. `docs/ai/overview.md` — current state, non-goals
+5. `docs/ai/sequencer-spec.md` — Pattern/Track/Trig interfaces, playback behavior
+6. `docs/ai/audio-interface.md` — WorkletCommand, WorkletPattern, WorkletTrig, Engine API
+7. `docs/ai/sound-design.md` — voice params, paramDefs ranges/defaults
+8. `docs/ai/ui-design.md` — component descriptions, layout, mobile views
+9. `docs/ai/glossary.md` — term accuracy, missing terms
+10. `docs/ai/adr/INDEX.md` — ADR statuses (Implemented vs actual state)
+11. All ADR files marked as "Implemented" in INDEX.md — check against code
+
+### Site docs (`site/src/content/docs/`)
+
+12. All `.mdx` files under `site/src/content/docs/docs/` (EN) and `site/src/content/docs/ja/docs/` (JA) — tutorials, feature guides, getting-started pages
+13. Feature descriptions must match current implementation (e.g. number of FX slots, available parameters, signal flow)
+14. EN and JA versions must stay in sync with each other
+
+### App help (`src/lib/components/SidebarHelp.svelte`)
+
+15. Help card text — feature descriptions, parameter lists, workflow descriptions
 
 ## Process
 
 1. **Read all doc files** listed above.
 
 2. **Cross-reference with codebase** by reading/grepping these key source files:
-   - `src/lib/state.svelte.ts` — Pattern, Track, Trig types, state shape
+   - `src/lib/types.ts` — Song, Pattern, Cell, Trig, Track interfaces
+   - `src/lib/state.svelte.ts` — reactive state shape
    - `src/lib/audio/engine.ts` — Engine API, patternToWorklet serialization
-   - `src/lib/audio/worklet-processor.ts` — WorkletCommand handling, WorkletPattern/WorkletTrig usage
+   - `src/lib/audio/dsp/types.ts` — WorkletCommand, WorkletPattern, WorkletTrig, WorkletInsertFx
+   - `src/lib/audio/worklet-processor.ts` — WorkletCommand handling
    - `src/lib/audio/paramDefs.ts` — voice parameter definitions (names, ranges, defaults)
    - `src/lib/components/*.svelte` — component names and existence
-   - `src/lib/audio/voices/*.ts` — voice implementations
+   - `src/lib/audio/dsp/voices.ts` — voice registry
+   - `src/lib/components/SidebarHelp.svelte` — app help text
 
 3. **Check for these types of inconsistencies**:
    - Type/interface field mismatches (missing fields, wrong field names, wrong types)
