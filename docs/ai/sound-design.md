@@ -62,13 +62,13 @@ FM-based drum synthesizer with 6 selectable machines: KICK, SNARE, METAL, PERC, 
 
 | Param | Label | Range | Default | Description |
 |---|---|---|---|---|
-| machine | MCHN | 0–5 | 0 | Machine type (KICK/SNARE/METAL/PERC/TONE/CHORD) |
+| machine | MACH | 0–5 | 0 | Machine type (KICK/SNARE/METAL/PERC/TONE/CHORD) |
 | color | COLR | 0–1.0 | 0.5 | FM ratio / timbre character |
-| shape | SHPE | 0–1.0 | 0.3 | Modulation depth / waveform shape |
+| shape | SHPE | 0–1.0 | 0.5 | Modulation depth / waveform shape |
 | sweep | SWEP | 0–1.0 | 0.5 | Pitch envelope depth |
-| contour | CNTR | 0–1.0 | 0.5 | Envelope shape / contour |
+| contour | CNTR | 0–1.0 | 0.3 | Envelope shape / contour |
 | punch | PNCH | 0–1.0 | 0.5 | Attack transient emphasis |
-| decay | DECY | 0–1.0 | 0.5 | Amplitude decay time |
+| decay | DCY | 0.01–2.0 s | 0.3 | Amplitude decay time |
 | tone | TONE | 0–1.0 | 0.5 | Brightness / high-frequency content |
 
 ### SamplerVoice (ADR 012) & PolySampler (ADR 106)
@@ -197,7 +197,9 @@ Parameters (via `paramDefs.ts`):
 | envMod | FMOD | 0–8000 Hz | 4000 | Filter envelope depth |
 | resonance | RESO | 0.5–10.0 | 2.0 | Filter resonance |
 | filterMode | FTYP | 0–3 (step 1) | 0 | Filter: LP/HP/BP/Notch |
+| filterType | FALG | 0–2 (step 1) | 0 | Filter algorithm: SVF/COMB/FORMANT (ADR 113) |
 | drive | DRIV | 0.0–1.0 | 0.0 | Post-filter drive (saturation) |
+| driveType | DTYP | 0–3 (step 1) | 0 | Drive: SOFT/HARD/FOLD/CRUSH (ADR 113) |
 | unisonVoices | UNI | 1–7 (step 2) | 1 | Unison voices: 1/3/5/7 |
 | unisonSpread | SPRD | 0.0–1.0 | 0.3 | Unison detune spread |
 | unisonWidth | WIDE | 0.0–1.0 | 0.8 | Unison stereo width |
