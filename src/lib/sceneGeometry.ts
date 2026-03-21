@@ -4,7 +4,7 @@ export type BezierEdge = { p0: Pt; cp: Pt; p1: Pt }
 import { PAD_INSET } from './constants.ts'
 
 export const PAT_HALF_W = 36, PAT_HALF_H = 17
-export const FN_HALF_W = 24, FN_HALF_H = 12
+export const FN_HALF_W = 18, FN_HALF_H = 18
 export const GEN_HALF_W = 60, GEN_HALF_H = 36  // generative node faceplate (ADR 078)
 
 /** Fixed scene world size (independent of viewport) */
@@ -106,8 +106,9 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, Pattern } from './types.ts'
+import type { SceneNode, Pattern, FnNodeType } from './types.ts'
 import { PATTERN_COLORS } from './constants.ts'
+import { ICON } from './icons.ts'
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -142,6 +143,37 @@ export function fnNodeLabel(node: SceneNode): string {
     if (fp.fx.glitch) tags.push('G')
     if (fp.fx.granular) tags.push('R')
     return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
+  }
+  return '?'
+}
+
+/** SVG inner content for a function node icon (ADR 110) */
+export function fnNodeIcon(type: FnNodeType): string {
+  switch (type) {
+    case 'transpose': return ICON.transpose
+    case 'repeat': return ICON.repeat
+    case 'tempo': return ICON.tempo
+    case 'fx': return ICON.fx
+  }
+}
+
+/** Short value label for a function node (used alongside icon, ADR 110) */
+export function fnNodeValue(node: SceneNode): string {
+  const fp = node.fnParams
+  if (fp?.transpose) {
+    if (fp.transpose.mode === 'abs') return NOTE_NAMES[fp.transpose.key ?? 0]
+    const s = fp.transpose.semitones
+    return `${s >= 0 ? '+' : ''}${s}`
+  }
+  if (fp?.tempo) return `${fp.tempo.bpm}`
+  if (fp?.repeat) return `×${fp.repeat.count}`
+  if (fp?.fx) {
+    const tags = []
+    if (fp.fx.verb) tags.push('V')
+    if (fp.fx.delay) tags.push('D')
+    if (fp.fx.glitch) tags.push('G')
+    if (fp.fx.granular) tags.push('R')
+    return tags.length > 0 ? tags.join('·') : '—'
   }
   return '?'
 }

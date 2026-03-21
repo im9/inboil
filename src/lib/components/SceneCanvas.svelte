@@ -63,10 +63,13 @@
     // Edges (bezier curves)
     const { nodes, edges } = song.scene
     const fg = { r: 30, g: 32, b: 40 } // --color-fg navy
+    const FN_TYPES = new Set(['transpose', 'tempo', 'repeat', 'fx'])
     for (const edge of edges) {
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
       if (!fromNode || !toNode) continue
+      // Hide edges from fn nodes — they are satellite-attached (ADR 110)
+      if (FN_TYPES.has(fromNode.type)) continue
 
       const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
       const to = toPixel(toNode.x, toNode.y, WORLD_W, WORLD_H)
@@ -80,9 +83,13 @@
       )
     }
 
-    // Edge order badges (only when source has >1 outgoing)
+    // Edge order badges (only when source has >1 outgoing, skip fn nodes)
     const edgeCounts = new Map<string, number>()
-    for (const e of edges) edgeCounts.set(e.from, (edgeCounts.get(e.from) || 0) + 1)
+    for (const e of edges) {
+      const src = nodes.find(n => n.id === e.from)
+      if (src && FN_TYPES.has(src.type)) continue
+      edgeCounts.set(e.from, (edgeCounts.get(e.from) || 0) + 1)
+    }
     for (const edge of edges) {
       if ((edgeCounts.get(edge.from) || 0) <= 1) continue
       const fn = nodes.find(n => n.id === edge.from)

@@ -82,6 +82,15 @@ function isFnNode(node: SceneNode): boolean {
   return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx'
 }
 
+/** Apply satellite fn nodes attached to a pattern node (ADR 110) */
+function applySatelliteFnNodes(patternNodeId: string): void {
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = findNode(edge.from)
+    if (src && isFnNode(src)) applyFunctionNode(src)
+  }
+}
+
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
 function applyLiveGenerative(patternNode: SceneNode): void {
   if (patternNode.type !== 'pattern') return
@@ -155,6 +164,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     playback.automationSnapshot = null
   }
   if (node.type === 'pattern') {
+    applySatelliteFnNodes(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
     applyLiveGenerative(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
@@ -162,7 +172,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
-  // Function nodes: apply effect and follow outgoing edge (pass-through)
+  // Function nodes: apply effect and follow outgoing edge (pass-through — legacy)
   if (isFnNode(node)) applyFunctionNode(node)
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
@@ -184,6 +194,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
+      applySatelliteFnNodes(node.id)  // ADR 110: apply attached fn satellites
       if (playback.automationSnapshot) {
         restoreAutomationSnapshot(playback.automationSnapshot)
       }

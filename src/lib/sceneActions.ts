@@ -402,26 +402,50 @@ const FN_DEFAULTS: Record<FnNodeType, FnParams> = {
   fx: { fx: { verb: false, delay: false, glitch: false, granular: false } },
 }
 
-/** Add a function node, optionally wired before a pattern node */
-export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string): string {
+const FN_TYPE_ORDER: Record<string, number> = { transpose: 0, repeat: 1, tempo: 2, fx: 3 }
+
+/** Find fn nodes attached (wired) to a pattern node, sorted by type */
+export function findAttachedFnNodes(patternNodeId: string): SceneNode[] {
+  const fnTypes: string[] = ['transpose', 'tempo', 'repeat', 'fx']
+  return song.scene.edges
+    .filter(e => e.to === patternNodeId)
+    .map(e => findNode(e.from))
+    .filter((n): n is SceneNode => !!n && fnTypes.includes(n.type))
+    .sort((a, b) => (FN_TYPE_ORDER[a.type] ?? 9) - (FN_TYPE_ORDER[b.type] ?? 9))
+}
+
+/** Reposition fn satellites around a pattern node's top edge */
+export function repositionSatellites(patternNodeId: string): void {
+  const satellites = findAttachedFnNodes(patternNodeId)
+  if (satellites.length === 0) return
+  const patNode = findNode(patternNodeId)
+  if (!patNode) return
+  const spacing = 0.03  // horizontal spacing between satellites (normalized)
+  const offsetY = -0.04 // above the pattern node
+  const startX = patNode.x - (satellites.length - 1) * spacing / 2
+  for (let i = 0; i < satellites.length; i++) {
+    satellites[i].x = Math.max(0, Math.min(1, startX + i * spacing))
+    satellites[i].y = Math.max(0, Math.min(1, patNode.y + offsetY))
+  }
+}
+
+/** Add a function node, optionally wired before a pattern node or placed at x/y */
+export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string, x?: number, y?: number): string {
   pushUndo('Add function node')
   const patNode = patternNodeId ? findNode(patternNodeId) : null
   const id = `fn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
   const node: SceneNode = {
     id,
     type,
-    x: patNode ? patNode.x - 0.06 : 0.5,
-    y: patNode ? patNode.y : 0.5,
+    x: x ?? (patNode ? patNode.x : 0.5),
+    y: y ?? (patNode ? patNode.y - 0.04 : 0.5),
     root: false,
     fnParams: structuredClone(FN_DEFAULTS[type]),
   }
   song.scene.nodes.push(node)
   if (patNode) {
-    // Rewire incoming edges → fn node, fn node → pattern
-    for (const e of song.scene.edges) {
-      if (e.to === patNode.id) e.to = id
-    }
     song.scene.edges.push({ id: `e_${id}`, from: id, to: patNode.id, order: 0 })
+    repositionSatellites(patNode.id)
   }
   return id
 }

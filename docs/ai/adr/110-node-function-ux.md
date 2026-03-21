@@ -25,91 +25,95 @@ This is the last major UI improvement before beta release.
 
 ## Decision
 
-### Phase 1: Function Node Icons and UI Addition
+### Phase 1: Naked Icon Nodes with Satellite Attachment
 
-#### 1a. Icon-based Nodes
+#### 1a. Naked SVG Icon Nodes
 
-Replace text labels with SVG icon + value:
-
-```
-Current:                 After:
-┌──────┐              ┌────────────┐
-│ T+5  │    →         │ 🎹↑ +5    │  transpose
-└──────┘              └────────────┘
-
-┌──────┐              ┌────────────┐
-│ RPT2 │    →         │ 🔄 ×2     │  repeat
-└──────┘              └────────────┘
-
-┌──────┐              ┌────────────┐
-│ ×140 │    →         │ ⏱ 140     │  tempo
-└──────┘              └────────────┘
-
-┌──────┐              ┌────────────┐
-│FX VD │    →         │ ✦ V·D     │  fx
-└──────┘              └────────────┘
-```
-
-- Dedicated SVG icon (14×14) per type
-- Two-element layout: icon + value
-- Slightly larger node size: 56×28px (current 48×24px)
-
-#### 1b. Function Node Micro-interactions
-
-During playback, animate function nodes when they are applied:
-
-- **Transpose**: icon bounces slightly in the semitone direction (up/down)
-- **Repeat**: loop arrow icon rotates once (rotation speed varies with count)
-- **Tempo**: metronome-like left/right sway (synced to BPM)
-- **FX**: pulse glow (in active effect color)
-
-Implemented with CSS animation. Triggered by adding a `playing` class.
-
-#### 1c. Repeat / Tempo Creation UI
-
-Add function node types to SceneToolbar's `ADD_ITEMS`:
+Function nodes are rendered as **bare SVG icons on the canvas** — no background box, no border.
+Each type has a distinctive icon that doubles as the node's entire visual identity:
 
 ```
-Current toolbar:
-[TM] [Q] [Tn] [Lbl]
+Current:               After:
+┌──────┐
+│ T+5  │    →          ↕     (up/down arrows)
+└──────┘
 
-Extended toolbar:
-[TM] [Q] [Tn] | [T↕] [RPT] [BPM] [FX] | [Lbl]
-                 ← function nodes →
+┌──────┐
+│ RPT2 │    →          ⟳     (circular arrows)
+└──────┘
+
+┌──────┐
+│ ×140 │    →          ⏖     (metronome)
+└──────┘
+
+┌──────┐
+│FX VD │    →          ✦     (sparkle)
+└──────┘
 ```
 
-- Separators visually divide generative / function / utility groups
-- Add `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'` to `BubblePickType`
-- Placement reuses the existing placement mode
-- Parameter editing in DockPanel (extending ADR 069's decorator editor)
+- **No background/border** — icon floats directly on canvas
+- Icon size: 20×20px SVG in a 36×36 hit area
+- Value shown via `data-tip` tooltip on hover, editing in DockPanel
+- Selected state: dashed outline + subtle background tint
+- `drop-shadow` for depth against canvas
 
-#### 1d. DockPanel Parameter Editing
+#### 1b. Satellite Attachment Model
+
+Function nodes attach to pattern nodes as **satellites** — no manual edge wiring needed.
+
+**Attach**: Click fn tool in toolbar, then click a pattern node → fn icon appears
+attached to that pattern (auto-wired via `sceneAddFnNode(type, patternNodeId)`).
+
+**Detach**: Drag the attached fn icon away from its parent pattern → edge removed,
+fn node becomes free-floating. Drop onto another pattern → re-attach.
+
+**Delete**: Delete key or DockPanel ✕ button.
+
+```
+Attached:              Drag away:           Re-attach:
+  ↕ ⟳                    ↕ ~~>                  ↕
+┌──────┐              ┌──────┐             ┌──────┐
+│GLINT │              │GLINT │             │VERSE │
+└──────┘              └──────┘             └──────┘
+```
+
+- Satellites position themselves around the parent node (top edge, spaced evenly)
+- Satellites follow parent when parent is dragged
+- Edge handle hidden for fn nodes (attachment is the connection)
+- Click on empty canvas in placement mode → free-floating fn node (legacy behavior)
+
+#### 1c. Parameter-driven Micro-interactions
+
+During playback, fn nodes animate with parameters influencing the animation:
+
+- **Transpose**: bounce up/down (amplitude scales with `|semitones|`)
+- **Repeat**: circular arrow rotates (duration = `beat × count`)
+- **Tempo**: metronome sway (speed = `60 / node.bpm`)
+- **FX**: drop-shadow glow pulse (intensity scales with active effect count)
+
+All CSS-only via custom properties: `--fn-semi`, `--fn-count`, `--fn-bpm`, `--fn-fx-n`.
+
+#### 1d. Toolbar & Creation UI
+
+```
+[TM] [Q] [Tn] | [↕] [⟳] [⏖] [✦] | [T]
+  generative   │    function      │util
+```
+
+- `BubblePickType` extended: `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'`
+- Separators between generative / function / utility groups
+- Placement mode: click pattern → attach, click canvas → free placement
+
+#### 1e. DockPanel Parameter Editing
 
 Show editing UI in DockPanel when a function node is selected:
 
-```
-┌─ DockPanel ──────────────┐
-│ ♪ Transpose              │
-│ ┌──────────────────────┐ │
-│ │  Mode: [REL] [ABS]   │ │
-│ │  Semitones: [-] 5 [+]│ │
-│ │  Key: C  (ABS mode)  │ │
-│ └──────────────────────┘ │
-│                          │
-│ 🔄 Repeat                │
-│ ┌──────────────────────┐ │
-│ │  Count: [-] 2 [+]    │ │
-│ └──────────────────────┘ │
-│                          │
-│ ⏱ Tempo                  │
-│ ┌──────────────────────┐ │
-│ │  BPM: [-] 140 [+]    │ │
-│ └──────────────────────┘ │
-└──────────────────────────┘
-```
+- **Transpose**: REL/ABS mode toggle, semitone ±stepper, key selector (ABS mode)
+- **Repeat**: count ±stepper
+- **Tempo**: BPM ±stepper (step 5)
+- **FX**: per-effect ON/OFF toggles (verb, delay, glitch, granular)
 
-Displayed when a function node is selected via existing `ui.selectedSceneNodes`.
-Values updated through `sceneUpdateFnParams()`.
+Values updated through `sceneUpdateFnParams()`. Undo via `pushUndo`.
 
 ### Phase 2: Live Visualization of Generative Nodes
 
@@ -148,23 +152,29 @@ Replace the current text display (`T P·L·R`) with a hexagonal lattice UI:
 
 ### Phase 3: Toolbar Redesign
 
-#### 3a. Hover Preview
+#### 3a. Unified Single-bar Layout
+
+Replace current split layout (center add-bar + absolute-positioned right buttons) with
+one flexbox toolbar bar. Left-to-right by frequency of use:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ [↕][⟳][⏖][✦] │ [TM][Q][Tn] │ [T] ║ [→][↓] │ [◎] │ 129% │
+│   fn (frequent) │ generative  │util ║ layout  │focus│ zoom │
+│   ← add nodes →                     ← view controls →      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+- Fn nodes first (most commonly added), generative next, label last
+- `║` thicker separator between "add" and "view" sections
+- All buttons same height, same style — no more `position: absolute` for right-side buttons
+- Consistent border/background treatment across all groups
+
+#### 3b. Hover Preview
 
 - Toolbar buttons show a mini preview (48×32) on hover, not just a tooltip
 - Preview is a miniature version of the actual node (icon + color)
 - Placement mode ghost node made richer (currently just a semi-transparent rectangle)
-
-#### 3b. Toolbar Grouping
-
-```
-┌─────────────────────────────────────────┐
-│ [TM][Q][Tn] │ [T↕][RPT][BPM][FX] │[Lbl]│
-│  generative  │     function        │util │
-└─────────────────────────────────────────┘
-```
-
-- Separators (1px vertical line) for visual grouping
-- Each group's purpose is immediately clear
 
 ## Implementation
 
@@ -172,17 +182,17 @@ Replace the current text display (`T P·L·R`) with a hexagonal lattice UI:
 
 | File | Changes |
 |------|---------|
-| `sceneGeometry.ts` | Increase FN_HALF_W/H, add `fnNodeIcon()` function |
-| `SceneView.svelte` | Update fn node template (icon + value), playback animation classes |
-| `SceneToolbar.svelte` | Add fn types to ADD_ITEMS, separators, hover preview |
-| `SceneBubbleMenu.svelte` | Add fn types to `BubblePickType` |
-| `DockPanel.svelte` | Fn node parameter editing UI |
-| `icons.ts` | Per-type SVG icons |
-| `sceneActions.ts` | Make `sceneAddFnNode()` callable from toolbar |
+| `icons.ts` | Redesigned icons: transpose→arrows, tempo→metronome, fx→sparkle |
+| `sceneGeometry.ts` | `FN_HALF_W/H` = 18×18, `fnNodeIcon()`, `fnNodeValue()` helpers |
+| `SceneView.svelte` | Naked icon template, satellite positioning, drag-detach, parameter CSS vars, micro-interactions |
+| `SceneToolbar.svelte` | Fn types in ADD_ITEMS with separators |
+| `SceneBubbleMenu.svelte` | `BubblePickType` extended with fn types |
+| `DockPanel.svelte` | Fn node parameter editing UI (stepper/toggle) |
+| `sceneActions.ts` | `sceneAddFnNode()` with x/y params, satellite positioning helpers |
 
 ### Phasing
 
-- **Phase 1** (pre-beta): fn node icons + repeat/tempo UI + DockPanel editing — practical minimum
+- **Phase 1** (pre-beta): naked icons + satellite attachment + DockPanel editing + micro-interactions
 - **Phase 2** (post-beta): generative node live visualization — experience enhancement
 - **Phase 3** (post-beta): toolbar redesign — overall consistency
 
@@ -190,39 +200,51 @@ Replace the current text display (`T P·L·R`) with a hexagonal lattice UI:
 
 Only Phase 1 detailed here — Phase 2/3 checklists to be added when work begins.
 
-#### Phase 1a: Icon-based Nodes
-- [ ] Add SVG icons to `icons.ts` (transpose, repeat, tempo, fx — 14×14 each)
-- [ ] Update `FN_HALF_W/H` in `sceneGeometry.ts` (48×24 → 56×28)
-- [ ] Add `fnNodeIcon()` helper in `sceneGeometry.ts` to map FnNodeType → icon
-- [ ] Replace text labels with icon + value layout in `SceneView.svelte` fn node template
-- [ ] Adjust `sceneFormatNodes()` spacing for new node size
-- [ ] Verify zoom-out legibility — text fallback if icon unreadable
+#### Phase 1a: Naked Icon Nodes ✅
+- [x] Redesign SVG icons: transpose→up/down arrows, tempo→metronome, fx→sparkle
+- [x] `fnNodeIcon()` helper in `sceneGeometry.ts`
+- [x] Naked icon template in SceneView (no background/border, 20×20 icon, 36×36 hit area)
+- [x] Value in `data-tip` tooltip
+- [x] `FN_HALF_W/H` = 18×18 for edge computation
+- [x] Selected state: dashed outline + background tint
 
-#### Phase 1b: Micro-interactions
-- [ ] Add CSS `@keyframes` per fn type (bounce / rotate / sway / pulse)
-- [ ] Toggle `playing` class on fn nodes during playback in `SceneView.svelte`
-- [ ] Verify no layout shift during animation (`transform`-only, no width/height changes)
+#### Phase 1b: Toolbar & Creation UI ✅
+- [x] `BubblePickType` extended with `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'`
+- [x] ADD_ITEMS with separators between generative / function / utility groups
+- [x] Placement mode: `sceneAddFnNode()` with x/y coordinates
+- [x] Ghost preview matches naked icon style
 
-#### Phase 1c: Repeat / Tempo Creation UI
-- [ ] Add `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'` to `BubblePickType`
-- [ ] Add fn types to `ADD_ITEMS` in `SceneToolbar.svelte` with separator
-- [ ] Wire placement mode to call `sceneAddFnNode()` from `sceneActions.ts`
-- [ ] Verify placement + undo works for new fn node types
+#### Phase 1c: DockPanel Parameter Editing ✅
+- [x] Fn node detection via `selectedFnNode` derived state
+- [x] Transpose: REL/ABS toggle, semitone ±stepper, key selector (ABS)
+- [x] Repeat: count ±stepper
+- [x] Tempo: BPM ±stepper (step 5)
+- [x] FX: per-effect ON/OFF toggles
+- [x] Wired through `sceneUpdateFnParams()` with undo
 
-#### Phase 1d: DockPanel Parameter Editing
-- [ ] Show fn node editor in `DockPanel.svelte` when fn node selected
-- [ ] Transpose: REL/ABS mode toggle, semitone +/- stepper, key selector (ABS mode)
-- [ ] Repeat: count +/- stepper
-- [ ] Tempo: BPM +/- stepper
-- [ ] Wire edits through `sceneUpdateFnParams()`
-- [ ] Verify undo integration (`pushUndo` before param changes)
+#### Phase 1d: Parameter-driven Micro-interactions ✅
+- [x] CSS custom properties: `--fn-semi`, `--fn-count`, `--fn-bpm`, `--fn-fx-n`
+- [x] Transpose: bounce (±3px)
+- [x] Repeat: rotate (duration = beat × count)
+- [x] Tempo: sway ±8° (duration = 60/bpm)
+- [x] FX: drop-shadow glow pulse
+
+#### Phase 1e: Satellite Attachment
+- [ ] Placement on pattern node → auto-attach (call `sceneAddFnNode(type, patternNodeId)`)
+- [ ] Satellite positioning: fn icons arranged around parent node top edge
+- [ ] Parent drag → satellites follow
+- [ ] Drag fn away from parent → detach (remove edge, become free-floating)
+- [ ] Drop fn onto different pattern → re-attach (rewire edge)
+- [ ] Hide edge handle for fn nodes
+- [ ] Canvas click in placement mode → free-floating (existing behavior)
 
 ## Considerations
 
-- **Performance**: Animations are CSS-only (no JS timers). `will-change` only when needed
-- **Tonnetz hex lattice**: Realistic to fit a small 3×3 lattice within the node size (120×72). Full Tonnetz better expanded in DockPanel
-- **Function node size change**: Expanding to 56×28px may affect existing scene layouts. `sceneFormatNodes()` spacing adjustments needed
-- **Icon legibility**: 14×14px SVG icons may become unreadable when zoomed out. Keep text fallback as minimum
+- **Performance**: Animations are CSS-only via CSS custom properties. No JS timers
+- **Satellite positioning**: Multiple fn nodes on one pattern need even spacing. Max ~4 satellites before visual clutter
+- **Naked icon legibility**: 20×20px icons remain legible at zoom levels ≥ 50%. Below that, tooltip becomes essential
+- **Drag-detach threshold**: Need sufficient drag distance before detaching to avoid accidental detachment
+- **Tonnetz hex lattice** (Phase 2): Realistic to fit a small 3×3 lattice within generative node size (120×72)
 
 ## Future Extensions
 

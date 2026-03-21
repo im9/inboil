@@ -6,13 +6,13 @@
   // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { registerKeyLayer, unregisterKeyLayer, registerKeyUpLayer, unregisterKeyUpLayer } from '../keyRouter.ts'
   import { onMount } from 'svelte'
-  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, nodeColor, nodeSizeKind } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, fnNodeLabel, fnNodeValue, nodeColor, nodeSizeKind, fnNodeIcon } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -142,6 +142,21 @@
   function startDrag(e: PointerEvent, nodeId: string) {
     e.preventDefault()
     e.stopPropagation()
+
+    // Fn placement mode: clicking a pattern node → attach fn to it
+    if (placingType?.startsWith('fn-')) {
+      const target = song.scene.nodes.find(n => n.id === nodeId)
+      if (target?.type === 'pattern') {
+        const fnType = placingType.slice(3) as import('../types.ts').FnNodeType
+        const id = sceneAddFnNode(fnType, nodeId)
+        ui.selectedSceneNodes = {}
+        ui.selectedSceneNodes[id] = true
+        ui.selectedSceneEdge = null
+        placingType = null
+        return
+      }
+    }
+
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 
     dragging = nodeId
@@ -274,8 +289,33 @@
         } else {
           sceneUpdateNode(dragging, pos.x, pos.y)
         }
-        // Snap detection disabled — legacy fn nodes no longer created (ADR 078)
-        snapTarget = null
+        // Reposition satellites when dragging pattern nodes (ADR 110)
+        const draggedNode = song.scene.nodes.find(n => n.id === dragging)
+        if (draggedNode?.type === 'pattern') {
+          repositionSatellites(dragging)
+        }
+        // Also reposition satellites for group drag
+        if (nodeStartPositions.size > 1) {
+          for (const id of nodeStartPositions.keys()) {
+            const n = song.scene.nodes.find(n => n.id === id)
+            if (n?.type === 'pattern') repositionSatellites(id)
+          }
+        }
+        // Snap detection for fn nodes dragged near pattern nodes (ADR 110)
+        const FN_TYPES = ['transpose', 'tempo', 'repeat', 'fx']
+        if (draggedNode && FN_TYPES.includes(draggedNode.type)) {
+          const SNAP_DIST = 0.06
+          let closest: string | null = null
+          let closestDist = SNAP_DIST
+          for (const n of song.scene.nodes) {
+            if (n.type !== 'pattern') continue
+            const d = Math.hypot(n.x - draggedNode.x, n.y - draggedNode.y)
+            if (d < closestDist) { closestDist = d; closest = n.id }
+          }
+          snapTarget = closest
+        } else {
+          snapTarget = null
+        }
       }
     }
   }
@@ -284,7 +324,40 @@
   function endNodeDrag(e: PointerEvent, nodeId: string) {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
 
-    // Snap-attach: function node dropped near pattern node — auto-connect edge (ADR 093)
+    // Fn node drop: attach/reattach to pattern node, or detach (ADR 110)
+    const FN_TYPES_SET = ['transpose', 'tempo', 'repeat', 'fx']
+    const droppedNode = song.scene.nodes.find(n => n.id === nodeId)
+    if (dragMoved && droppedNode && FN_TYPES_SET.includes(droppedNode.type)) {
+      // Find current parent (edge from this fn → pattern)
+      const currentEdge = song.scene.edges.find(e => e.from === nodeId)
+      const oldParentId = currentEdge?.to ?? null
+
+      if (snapTarget && snapTarget !== oldParentId) {
+        // Reattach to new parent
+        pushUndo('Reattach function node')
+        if (currentEdge) {
+          song.scene.edges.splice(song.scene.edges.indexOf(currentEdge), 1)
+        }
+        song.scene.edges.push({ id: `e_${nodeId}`, from: nodeId, to: snapTarget, order: 0 })
+        if (oldParentId) repositionSatellites(oldParentId)
+        repositionSatellites(snapTarget)
+        justAttached = snapTarget
+        const id = snapTarget
+        setTimeout(() => { if (justAttached === id) justAttached = null }, 200)
+      } else if (snapTarget && snapTarget === oldParentId) {
+        // Dropped back on same parent — reposition
+        repositionSatellites(snapTarget)
+      } else if (!snapTarget && currentEdge) {
+        // Dragged away from parent — detach (keep as free-floating)
+        pushUndo('Detach function node')
+        song.scene.edges.splice(song.scene.edges.indexOf(currentEdge), 1)
+        if (oldParentId) repositionSatellites(oldParentId)
+      }
+      snapTarget = null
+      dragging = null
+      return
+    }
+    // Legacy snap-attach for non-fn nodes
     if (dragMoved && snapTarget) {
       sceneAddEdge(nodeId, snapTarget)
       justAttached = snapTarget
@@ -427,6 +500,11 @@
           const id = sceneAddLabel(norm.x, norm.y)
           ui.selectedSceneNodes = {}
           requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
+        } else if (placingType.startsWith('fn-')) {
+          const fnType = placingType.slice(3) as import('../types.ts').FnNodeType
+          const id = sceneAddFnNode(fnType, undefined, norm.x, norm.y)
+          ui.selectedSceneNodes = {}
+          ui.selectedSceneNodes[id] = true
         } else {
           const id = sceneAddGenerativeNode(placingType as GenerativeEngine, norm.x, norm.y)
           ui.selectedSceneNodes = {}
@@ -745,7 +823,10 @@
       {@const isSelected = ui.selectedSceneNodes[node.id]}
       {@const isDragging = dragging === node.id}
       {@const isEdgeSource = edgeFrom === node.id}
-      {@const isPlaying = playback.playing && playback.sceneNodeId === node.id}
+      {@const isPlaying = playback.playing && (
+        playback.sceneNodeId === node.id ||
+        (isFn && song.scene.edges.some(e => e.from === node.id && e.to === playback.sceneNodeId))
+      )}
       {@const isSnapTarget = snapTarget === node.id}
       {@const isBouncing = justAttached === node.id}
       {@const nc = nodeColor(node, song.patterns)}
@@ -761,11 +842,17 @@
         class:playing={isPlaying}
         class:snap-target={isSnapTarget}
         class:just-attached={isBouncing}
+        data-fn={isFn ? node.type : undefined}
+        data-tip={isFn ? fnNodeLabel(node) : undefined}
         style="
           left: {PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)}px;
           top: {PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)}px;
           {nc ? `--nc: ${nc};` : ''}
-          {isPlaying ? `--beat: ${30 / song.bpm}s` : ''}
+          {isPlaying ? `--beat: ${30 / song.bpm}s;` : ''}
+          {isFn && node.fnParams?.transpose ? `--fn-semi: ${node.fnParams.transpose.semitones};` : ''}
+          {isFn && node.fnParams?.repeat ? `--fn-count: ${node.fnParams.repeat.count};` : ''}
+          {isFn && node.fnParams?.tempo ? `--fn-bpm: ${node.fnParams.tempo.bpm};` : ''}
+          {isFn && node.fnParams?.fx ? `--fn-fx-n: ${[node.fnParams.fx.verb, node.fnParams.fx.delay, node.fnParams.fx.glitch, node.fnParams.fx.granular].filter(Boolean).length}; color: ${node.fnParams.fx.verb ? 'var(--color-olive)' : node.fnParams.fx.delay ? 'var(--color-blue)' : node.fnParams.fx.glitch ? 'var(--color-salmon)' : node.fnParams.fx.granular ? 'var(--color-purple)' : 'var(--color-fg)'};` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
         onpointerup={e => endNodeDrag(e, node.id)}
@@ -827,23 +914,27 @@
           {:else}
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
+        {:else if isFn}
+          <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(node.type as import('../types.ts').FnNodeType)}</svg>
+          <span class="fn-label">{#if isPlaying && node.fnParams?.repeat}×{(playback.sceneRepeatLeft ?? 0) + 1}{:else}{fnNodeValue(node)}{/if}</span>
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
       </button>
-      <!-- Output handle for edge creation -->
-      <div
-        class="edge-handle"
-        class:fn={isFn}
-        class:gen={isGen}
-        style="
-          left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + {handleOffset}px);
-          top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
-        "
-        onpointerdown={e => startEdgeDraw(e, node.id)}
-        role="button"
-        tabindex="-1"
-      ></div>
+      <!-- Output handle for edge creation (hidden for fn nodes — use satellite attach) -->
+      {#if !isFn}
+        <div
+          class="edge-handle"
+          class:gen={isGen}
+          style="
+            left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + {handleOffset}px);
+            top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+          "
+          onpointerdown={e => startEdgeDraw(e, node.id)}
+          role="button"
+          tabindex="-1"
+        ></div>
+      {/if}
     {/each}
 
     <!-- Scene play/stop button next to root node -->
@@ -942,14 +1033,21 @@
 
   <!-- Ghost node preview during placement mode -->
   {#if placingType && placingCursorActive}
+    {@const isFnGhost = placingType.startsWith('fn-')}
+    {@const isGenGhost = !isFnGhost && placingType !== 'label'}
     <div
       class="placing-ghost"
-      class:gen={placingType !== 'label'}
+      class:gen={isGenGhost}
+      class:fn-ghost={isFnGhost}
       style="left: {placingCursor.x}px; top: {placingCursor.y}px"
     >
-      <span class="ghost-label">
-        {placingType === 'turing' ? 'Turing' : placingType === 'quantizer' ? 'Quantizer' : placingType === 'tonnetz' ? 'Tonnetz' : 'Label'}
-      </span>
+      {#if isFnGhost}
+        <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(placingType.slice(3) as import('../types.ts').FnNodeType)}</svg>
+      {:else}
+        <span class="ghost-label">
+          {placingType === 'turing' ? 'Turing' : placingType === 'quantizer' ? 'Quantizer' : placingType === 'tonnetz' ? 'Tonnetz' : 'Label'}
+        </span>
+      {/if}
     </div>
   {/if}
 
@@ -1107,23 +1205,41 @@
     transform: translate(-50%, -50%) scale(1.04);
   }
 
-  /* ── Function nodes (pill-shaped with SVG icons) ── */
+  /* ── Function nodes (naked icon + label, ADR 110) ── */
   .scene-node.fn {
-    min-width: 48px;
-    height: 24px;
-    border-radius: var(--radius-md);
-    background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.7);
-    padding: 0 6px;
-    gap: 3px;
+    width: 36px;
+    height: auto;
+    min-width: unset;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--color-fg);
+    padding: 2px 0;
+    flex-direction: column;
+    gap: 1px;
+    filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.2));
   }
-  .scene-node.fn .node-label {
+  .scene-node.fn .fn-icon {
+    flex-shrink: 0;
+  }
+  .scene-node.fn .fn-label {
+    font-family: var(--font-data);
     font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    opacity: 0.6;
+    line-height: 1;
+  }
+  .scene-node.fn.playing .fn-label {
+    opacity: 0.9;
   }
   .scene-node.fn.selected {
-    color: var(--color-bg);
+    background: rgba(30, 32, 40, 0.08);
     outline: 1.5px dashed var(--color-fg);
     outline-offset: 2px;
+  }
+  .scene-node.fn.root {
+    border: none;
   }
 
   /* ── Generative node faceplate (ADR 078) ── */
@@ -1241,16 +1357,45 @@
     color: white;
   }
   .scene-node.fn.playing {
-    border: 1.5px solid rgba(255, 255, 255, 0.75);
-    animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
+    border: none;
+  }
+  /* Per-fn-type micro-interactions — parameter-driven (ADR 110) */
+  .scene-node.fn.playing[data-fn="transpose"] .fn-icon {
+    animation: fn-bounce var(--beat, 0.25s) ease-out infinite alternate;
+  }
+  .scene-node.fn.playing[data-fn="repeat"] .fn-icon {
+    /* Rotation duration scales with repeat count */
+    animation: fn-rotate calc(var(--beat, 0.25s) * var(--fn-count, 2)) linear infinite;
+  }
+  .scene-node.fn.playing[data-fn="tempo"] :global(.metronome-needle) {
+    /* Needle sway speed tied to the node's own BPM */
+    transform-origin: 7px 12px; /* pivot at base of needle */
+    animation: fn-sway calc(60s / var(--fn-bpm, 120)) ease-in-out infinite alternate;
+  }
+  .scene-node.fn.playing[data-fn="fx"] {
+    /* Glow radius scales with number of active effects */
+    animation: fn-glow var(--beat, 0.25s) ease-out infinite alternate;
   }
 
   @keyframes node-pulse {
     from { filter: brightness(1.35); }
     to   { filter: brightness(1.0); }
   }
-  .scene-node.fn.playing .node-label {
-    color: rgba(255, 255, 255, 0.9);
+  @keyframes fn-bounce {
+    from { transform: translateY(-2px); }
+    to   { transform: translateY(2px); }
+  }
+  @keyframes fn-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes fn-sway {
+    from { transform: rotate(-20deg); }
+    to   { transform: rotate(20deg); }
+  }
+  @keyframes fn-glow {
+    from { filter: drop-shadow(0 0 8px rgba(30, 32, 40, 0.6)); }
+    to   { filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.15)); }
   }
 
   .scene-node.edge-source {
@@ -1358,6 +1503,16 @@
     border-radius: var(--radius-md);
     background: var(--color-fg);
     border: 1.5px dashed rgba(237, 232, 220, 0.3);
+  }
+  .placing-ghost.fn-ghost {
+    width: 36px;
+    height: 36px;
+    min-width: unset;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--color-fg);
   }
   .ghost-label {
     font-family: var(--font-data);

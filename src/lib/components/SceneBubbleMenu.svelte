@@ -2,12 +2,16 @@
   import type { GenerativeEngine } from '../types.ts'
   import { ICON } from '../icons.ts'
 
-  export type BubblePickType = GenerativeEngine | 'label'
+  export type BubblePickType = GenerativeEngine | 'label' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'
 
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
     { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
     { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
     { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
+    { type: 'fn-transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
+    { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
+    { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
+    { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -94,6 +98,14 @@
         <line x1="3" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
         <line x1="11" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
       </svg>
+    {:else if item.type === 'fn-transpose'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="0.6" aria-hidden="true">{@html ICON.transpose}</svg>
+    {:else if item.type === 'fn-repeat'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html ICON.repeat}</svg>
+    {:else if item.type === 'fn-tempo'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" aria-hidden="true">{@html ICON.tempo}</svg>
+    {:else if item.type === 'fn-fx'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">{@html ICON.fx}</svg>
     {:else if item.type === 'label'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
     {/if}

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
-  import type { SceneNode } from '../types.ts'
+  import type { SceneNode, FnNodeType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
-  import { sceneSetRoot, sceneDeleteNode } from '../sceneActions.ts'
+  import { sceneSetRoot, sceneDeleteNode, sceneUpdateFnParams } from '../sceneActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import DockTrackEditor from './DockTrackEditor.svelte'
@@ -29,6 +29,19 @@
     const node = song.scene.nodes.find(n => n.id === selected[0])
     return (node?.type === 'pattern') ? node : null
   })
+
+  const FN_TYPES: FnNodeType[] = ['transpose', 'tempo', 'repeat', 'fx']
+
+  // Selected function node (for fn node editing in scene view)
+  const selectedFnNode = $derived.by(() => {
+    if (ui.patternSheet || isOverlaySheet) return null
+    const selected = Object.keys(ui.selectedSceneNodes)
+    if (selected.length !== 1) return null
+    const node = song.scene.nodes.find(n => n.id === selected[0])
+    return (node && FN_TYPES.includes(node.type as FnNodeType)) ? node : null
+  })
+
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
   // Find scene node for current pattern (for SCENE tab generative nodes)
   const currentPatternSceneNode = $derived.by(() => {
@@ -131,6 +144,102 @@
             {/if}
           </div>
         {/if}
+        <div class="section-divider" aria-hidden="true"></div>
+      {/if}
+
+      <!-- Function node editor (ADR 110) -->
+      {#if selectedFnNode}
+        <span class="section-label">
+          {selectedFnNode.type === 'transpose' ? 'TRANSPOSE' : selectedFnNode.type === 'repeat' ? 'REPEAT' : selectedFnNode.type === 'tempo' ? 'TEMPO' : 'FX'}
+        </span>
+        <div class="fn-editor">
+          {#if selectedFnNode.fnParams?.transpose}
+            {@const tp = selectedFnNode.fnParams.transpose}
+            <div class="fn-row">
+              <span class="fn-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
+              <div class="fn-toggle">
+                <button class="fn-toggle-btn" class:active={tp.mode === 'rel'}
+                  onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, mode: 'rel' } })}
+                >REL</button>
+                <button class="fn-toggle-btn" class:active={tp.mode === 'abs'}
+                  onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, mode: 'abs' } })}
+                >ABS</button>
+              </div>
+            </div>
+            {#if tp.mode === 'rel'}
+              <div class="fn-row">
+                <span class="fn-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
+                <div class="fn-stepper">
+                  <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
+                  <span class="fn-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
+                  <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
+                </div>
+              </div>
+            {:else}
+              <div class="fn-row">
+                <span class="fn-label">Key</span>
+                <div class="fn-key-row">
+                  {#each NOTE_NAMES as name, i}
+                    <button class="fn-key-btn" class:active={(tp.key ?? 0) === i}
+                      onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, key: i } })}
+                    >{name}</button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          {:else if selectedFnNode.fnParams?.repeat}
+            {@const rp = selectedFnNode.fnParams.repeat}
+            <div class="fn-row">
+              <span class="fn-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
+              <div class="fn-stepper">
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
+                <span class="fn-step-val">×{rp.count}</span>
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
+              </div>
+            </div>
+          {:else if selectedFnNode.fnParams?.tempo}
+            {@const tmp = selectedFnNode.fnParams.tempo}
+            <div class="fn-row">
+              <span class="fn-label">BPM</span>
+              <div class="fn-stepper">
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 5) } })}>−</button>
+                <span class="fn-step-val">{tmp.bpm}</span>
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 5) } })}>+</button>
+              </div>
+            </div>
+          {:else if selectedFnNode.fnParams?.fx}
+            {@const fxp = selectedFnNode.fnParams.fx}
+            <div class="fn-row">
+              <span class="fn-label">Verb</span>
+              <button class="fn-toggle-btn wide" class:active={fxp.verb}
+                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
+              >{fxp.verb ? 'ON' : 'OFF'}</button>
+            </div>
+            <div class="fn-row">
+              <span class="fn-label">Delay</span>
+              <button class="fn-toggle-btn wide" class:active={fxp.delay}
+                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
+              >{fxp.delay ? 'ON' : 'OFF'}</button>
+            </div>
+            <div class="fn-row">
+              <span class="fn-label">Glitch</span>
+              <button class="fn-toggle-btn wide" class:active={fxp.glitch}
+                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
+              >{fxp.glitch ? 'ON' : 'OFF'}</button>
+            </div>
+            <div class="fn-row">
+              <span class="fn-label">Granular</span>
+              <button class="fn-toggle-btn wide" class:active={fxp.granular}
+                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
+              >{fxp.granular ? 'ON' : 'OFF'}</button>
+            </div>
+          {/if}
+        </div>
+        <div class="node-actions">
+          <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedFnNode.id); ui.selectedSceneNodes = {} }}
+            data-tip="Remove node" data-tip-ja="ノードを削除"
+          >✕ Remove</button>
+        </div>
         <div class="section-divider" aria-hidden="true"></div>
       {/if}
 
@@ -407,5 +516,121 @@
   .btn-delete-node:hover {
     color: var(--color-danger);
     background: var(--dk-bg-hover);
+  }
+
+  /* ── Fn node editor (ADR 110) ── */
+  .fn-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .fn-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fn-label {
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    color: var(--dk-text-mid);
+    min-width: 64px;
+  }
+  .fn-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--dk-border);
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .fn-toggle-btn {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border: none;
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    transition: background 60ms, color 60ms;
+  }
+  .fn-toggle-btn:not(:last-child) {
+    border-right: 1px solid var(--dk-border);
+  }
+  .fn-toggle-btn:hover {
+    background: var(--dk-bg-hover);
+  }
+  .fn-toggle-btn.active {
+    background: var(--dk-bg-active);
+    color: var(--dk-text);
+  }
+  .fn-toggle-btn.wide {
+    border: 1px solid var(--dk-border);
+    min-width: 48px;
+  }
+  .fn-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--dk-border);
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .fn-step-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--dk-text-mid);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 60ms;
+  }
+  .fn-step-btn:hover {
+    background: var(--dk-bg-hover);
+    color: var(--dk-text);
+  }
+  .fn-step-btn:active {
+    background: var(--dk-bg-active);
+  }
+  .fn-step-val {
+    font-family: var(--font-data);
+    font-size: var(--dk-fs-md);
+    font-weight: 700;
+    color: var(--dk-text);
+    min-width: 40px;
+    text-align: center;
+    border-left: 1px solid var(--dk-border);
+    border-right: 1px solid var(--dk-border);
+    padding: 4px 0;
+  }
+  .fn-key-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  .fn-key-btn {
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 5px;
+    border: 1px solid var(--dk-border);
+    background: transparent;
+    color: var(--dk-text-dim);
+    cursor: pointer;
+    transition: background 60ms, color 60ms;
+  }
+  .fn-key-btn:hover {
+    background: var(--dk-bg-hover);
+  }
+  .fn-key-btn.active {
+    background: var(--dk-bg-active);
+    color: var(--dk-text);
+    border-color: var(--dk-border-mid);
   }
 </style>

@@ -5,21 +5,28 @@
 export const ICON = {
   // ── Scene function node icons (viewBox 0 0 14 14) ──
 
-  transpose: `<rect x="3" y="2" width="5" height="1.5" rx="0.5"/><rect x="3" y="2" width="1.5" height="8"/>`
-    + `<circle cx="3.5" cy="11" r="2"/><rect x="6.5" y="2" width="1.5" height="6.5"/><circle cx="7.5" cy="9.5" r="2"/>`,
+  /** Musical note with up/down arrow — transpose (ADR 110) */
+  transpose: `<circle cx="4.5" cy="10.5" r="2.2" fill="currentColor"/><rect x="6.2" y="3" width="1.4" height="7.5" fill="currentColor"/>`
+    + `<path d="M10.5 2 L12.5 4.5 H11 V8.5 H12.5 L10.5 11 L8.5 8.5 H10 V4.5 H8.5 Z" fill="currentColor" opacity="0.7"/>`,
 
-  tempo: `<circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>`
-    + `<line x1="7" y1="7" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
-    + `<line x1="7" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
-    + `<circle cx="7" cy="7" r="0.7" fill="currentColor"/>`,
+  /** Metronome — tempo (ADR 110). Body is the trapezoid (filled), needle is the line */
+  tempo: `<path d="M4.5 13 H9.5 L8.5 4 H5.5 Z" fill="currentColor" opacity="0.25"/>`
+    + `<path d="M4.5 13 H9.5 L8.5 4 H5.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>`
+    + `<line class="metronome-needle" x1="7" y1="12" x2="5" y2="2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>`
+    + `<circle cx="7" cy="12" r="1" fill="currentColor"/>`,
 
-  repeat: `<path d="M11 5.5A4.5 4.5 0 0 0 3.5 4"/><path d="M3 8.5A4.5 4.5 0 0 0 10.5 10"/>`
-    + `<polyline points="3.5,1.5 3.5,4.5 6.5,4.5"/><polyline points="10.5,12.5 10.5,9.5 7.5,9.5"/>`,
+  /** Circular arrows — repeat */
+  repeat: `<path d="M11 5.5A4.5 4.5 0 0 0 3.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+    + `<path d="M3 8.5A4.5 4.5 0 0 0 10.5 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+    + `<polyline points="3.5,1.5 3.5,4.5 6.5,4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`
+    + `<polyline points="10.5,12.5 10.5,9.5 7.5,9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`,
 
   probability: `<rect x="1" y="1" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>`
     + `<circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/><circle cx="10" cy="4" r="1.3" fill="currentColor"/>`,
 
-  fx: `<path d="M1 5 Q3.5 3 7 5 Q10.5 7 13 5"/><path d="M1 9 Q3.5 7 7 9 Q10.5 11 13 9"/>`,
+  /** 4-point sparkle — FX (ADR 110) */
+  fx: `<path d="M7 0.5 L8 5.5 L13 7 L8 8.5 L7 13.5 L6 8.5 L1 7 L6 5.5 Z" fill="currentColor"/>`
+    + `<path d="M11.5 1.5 L12 3 L13.5 3.5 L12 4 L11.5 5.5 L11 4 L9.5 3.5 L11 3 Z" fill="currentColor" opacity="0.5"/>`,
 
   automation: `<polyline points="1,12 4,10 7,4 10,6 13,2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`
     + `<circle cx="4" cy="10" r="1.2" fill="currentColor"/><circle cx="7" cy="4" r="1.2" fill="currentColor"/><circle cx="10" cy="6" r="1.2" fill="currentColor"/>`,

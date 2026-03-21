@@ -5,10 +5,16 @@
   import { WORLD_W, WORLD_H, toPixel } from '../sceneGeometry.ts'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
 
-  const ADD_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
+  const ADD_ITEMS: { type: BubblePickType | 'sep'; tip: string; tipJa: string }[] = [
     { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
     { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
     { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
+    { type: 'sep', tip: '', tipJa: '' },
+    { type: 'fn-transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
+    { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
+    { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
+    { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'sep', tip: '', tipJa: '' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -58,42 +64,54 @@
 <!-- Center: add-node buttons -->
 <div class="add-bar">
   {#each ADD_ITEMS as item}
-    <button
-      class="add-btn"
-      class:active={activeType === item.type}
-      aria-label={item.tip}
-      data-tip={item.tip} data-tip-ja={item.tipJa}
-      onpointerdown={(e: PointerEvent) => { e.stopPropagation(); onadd?.(item.type) }}
-    >
-      {#if item.type === 'turing'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-          <rect x="1" y="5" width="2" height="4" rx="0.5"/>
-          <rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
-          <rect x="7" y="5" width="2" height="4" rx="0.5"/>
-          <rect x="10" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
-          <rect x="1" y="10" width="11" height="1.5" rx="0.5" opacity="0.3"/>
-        </svg>
-      {:else if item.type === 'quantizer'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-          <rect x="2" y="9" width="2" height="3" rx="0.5"/>
-          <rect x="5" y="6" width="2" height="6" rx="0.5"/>
-          <rect x="8" y="3" width="2" height="9" rx="0.5"/>
-          <rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
-          <rect x="1" y="2" width="12" height="1" rx="0.5" opacity="0.2"/>
-        </svg>
-      {:else if item.type === 'tonnetz'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
-          <circle cx="3" cy="3" r="1.5" opacity="0.4"/>
-          <circle cx="11" cy="3" r="1.5" opacity="0.4"/>
-          <circle cx="7" cy="11" r="1.5"/>
-          <line x1="3" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1" opacity="0.3"/>
-          <line x1="3" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
-          <line x1="11" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
-        </svg>
-      {:else if item.type === 'label'}
-        <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
-      {/if}
-    </button>
+    {#if item.type === 'sep'}
+      <div class="add-sep"></div>
+    {:else}
+      <button
+        class="add-btn"
+        class:active={activeType === item.type}
+        aria-label={item.tip}
+        data-tip={item.tip} data-tip-ja={item.tipJa}
+        onpointerdown={(e: PointerEvent) => { e.stopPropagation(); onadd?.(item.type as BubblePickType) }}
+      >
+        {#if item.type === 'turing'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <rect x="1" y="5" width="2" height="4" rx="0.5"/>
+            <rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+            <rect x="7" y="5" width="2" height="4" rx="0.5"/>
+            <rect x="10" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>
+            <rect x="1" y="10" width="11" height="1.5" rx="0.5" opacity="0.3"/>
+          </svg>
+        {:else if item.type === 'quantizer'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <rect x="2" y="9" width="2" height="3" rx="0.5"/>
+            <rect x="5" y="6" width="2" height="6" rx="0.5"/>
+            <rect x="8" y="3" width="2" height="9" rx="0.5"/>
+            <rect x="11" y="7" width="2" height="5" rx="0.5" opacity="0.5"/>
+            <rect x="1" y="2" width="12" height="1" rx="0.5" opacity="0.2"/>
+          </svg>
+        {:else if item.type === 'tonnetz'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <circle cx="3" cy="3" r="1.5" opacity="0.4"/>
+            <circle cx="11" cy="3" r="1.5" opacity="0.4"/>
+            <circle cx="7" cy="11" r="1.5"/>
+            <line x1="3" y1="3" x2="11" y2="3" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+            <line x1="3" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+            <line x1="11" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+          </svg>
+        {:else if item.type === 'fn-transpose'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" stroke="currentColor" stroke-width="0.6" aria-hidden="true">{@html ICON.transpose}</svg>
+        {:else if item.type === 'fn-repeat'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html ICON.repeat}</svg>
+        {:else if item.type === 'fn-tempo'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" aria-hidden="true">{@html ICON.tempo}</svg>
+        {:else if item.type === 'fn-fx'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">{@html ICON.fx}</svg>
+        {:else if item.type === 'label'}
+          <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
+        {/if}
+      </button>
+    {/if}
   {/each}
 </div>
 
@@ -178,6 +196,11 @@
   }
   .add-btn:last-child {
     border-right: none;
+  }
+  .add-sep {
+    width: 1px;
+    background: rgba(30, 32, 40, 0.15);
+    align-self: stretch;
   }
   .add-btn:hover {
     background: rgba(255, 255, 255, 0.95);
