@@ -86,13 +86,9 @@
             cell.trigs[s] = src
           } else if (buf.mergeMode === 'merge') {
             if (!cell.trigs[s].active) cell.trigs[s] = src
-          } else if (buf.mergeMode === 'layer' && src.active) {
-            if (cell.trigs[s].active) {
-              const existing = cell.trigs[s].notes ?? [cell.trigs[s].note]
-              if (!existing.includes(src.note)) cell.trigs[s].notes = [...existing, src.note]
-            } else {
-              cell.trigs[s] = src
-            }
+          } else if (buf.mergeMode === 'layer') {
+            // Legacy fallback: layer treated as replace (ADR 117)
+            cell.trigs[s] = src
           }
         }
       }

@@ -118,15 +118,9 @@ function applyLiveGenerative(patternNode: SceneNode): void {
           cell.trigs[i] = trigs[i]
         } else if (mode === 'merge') {
           if (!cell.trigs[i].active) cell.trigs[i] = trigs[i]
-        } else if (mode === 'layer' && trigs[i].active) {
-          if (cell.trigs[i].active) {
-            const existing = cell.trigs[i].notes ?? [cell.trigs[i].note]
-            if (!existing.includes(trigs[i].note)) {
-              cell.trigs[i].notes = [...existing, trigs[i].note]
-            }
-          } else {
-            cell.trigs[i] = trigs[i]
-          }
+        } else if (mode === 'layer') {
+          // Legacy fallback: layer treated as replace (ADR 117)
+          cell.trigs[i] = trigs[i]
         }
       }
     }

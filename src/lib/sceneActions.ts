@@ -378,18 +378,8 @@ function applyGeneratedTrigs(
         existing[i] = generated[i]
       }
     } else if (mode === 'layer') {
-      // Add generated notes as chord on active steps
-      if (generated[i].active) {
-        if (existing[i].active) {
-          const existingNotes = existing[i].notes ?? [existing[i].note]
-          const newNote = generated[i].note
-          if (!existingNotes.includes(newNote)) {
-            existing[i].notes = [...existingNotes, newNote]
-          }
-        } else {
-          existing[i] = generated[i]
-        }
-      }
+      // Legacy fallback: layer mode treated as replace (ADR 117)
+      existing[i] = generated[i]
     }
   }
 }

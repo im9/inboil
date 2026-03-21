@@ -213,14 +213,14 @@
   <!-- Common: merge mode -->
   <div class="gen-merge-row" role="tablist" aria-label="Merge mode">
     <span class="gen-range-label">MERGE</span>
-    {#each ['replace', 'merge', 'layer'] as m}
+    {#each [['replace', 'REPLACE'], ['merge', 'FILL']] as [m, label]}
       <button
         class="btn-toggle gen-mode-btn"
         role="tab"
         aria-selected={gen.mergeMode === m}
-        class:active={gen.mergeMode === m}
-        onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge' | 'layer'; autoGenerateFromNode(nodeId) }}
-      >{m.toUpperCase().slice(0, 3)}</button>
+        class:active={gen.mergeMode === m || (m === 'replace' && gen.mergeMode === 'layer')}
+        onpointerdown={() => { pushUndo('Change merge mode'); gen.mergeMode = m as 'replace' | 'merge'; autoGenerateFromNode(nodeId) }}
+      >{label}</button>
     {/each}
   </div>
   <!-- Target track selector -->
