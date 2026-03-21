@@ -3,10 +3,6 @@
 Known improvements that don't require design decisions (no ADR needed).
 Items are not prioritized — pick based on what you're already touching.
 
-## UI
-
-- [ ] **Node function UX** — Function nodes are hard to understand on first use and lack visual feedback/polish. Improve onboarding (hints, animation) and presentation. May overlap with dock panel improvements.
-
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.
