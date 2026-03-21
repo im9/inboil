@@ -4,64 +4,62 @@
 
 ## Context
 
-Generative ノード（Turing / Quantizer / Tonnetz）は強力だが、現状の UX では「繋いだら何が起きるか分からない」状態になっている。
+Generative nodes (Turing / Quantizer / Tonnetz) are powerful but the current UX makes it unclear what happens when you connect one.
 
-**問題点:**
+**Problems:**
 
-1. **繋いだだけでは何も起きない**: エッジ接続は topology のみ。GEN ボタンを押すまで結果が見えない → 「何のために繋いだの？」
-2. **target track が不明瞭**: 1 ノードにつき 1 track しか対象にできないが、どの track に効いてるか faceplate から読み取れない
-3. **merge mode が直感的でない**: replace / merge / layer の違いが初見で理解できない。特に「layer = 和音追加」は予測困難
-4. **複数ノード接続時の混乱**: 同じパターンに Turing × 2 を繋ぐと、同じ track を上書きし合って結果が予測不能
-5. **armed generation フロー**: PatternToolbar のスパークルボタンでループ頭に自動生成できるが、この機能の発見性が低い
+1. **Nothing happens on connect**: Edge creation is topology only. No result is visible until the GEN button is pressed — "why did I connect this?"
+2. **Target track is opaque**: Each node targets a single track, but the faceplate doesn't show which one
+3. **Merge mode is unintuitive**: The difference between replace / merge / layer is hard to grasp at first sight. "layer = chord stacking" is especially unpredictable
+4. **Multiple nodes cause confusion**: Two Turing nodes on the same pattern overwrite the same track with unpredictable results
+5. **Armed generation is hidden**: The sparkle button in PatternToolbar enables loop-head auto-generation, but discoverability is low
 
-**現状のフロー:**
+**Current flow:**
 ```
-1. Generative ノード作成
-2. パターンノードにエッジ接続
-3. DockPanel で target track / merge mode / パラメータ設定
-4. GEN ボタン押下 → 初めて結果が見える
-5. Scene playback 時は自動で live generation
+1. Create generative node
+2. Connect to pattern node via edge
+3. Configure target track / merge mode / parameters in DockPanel
+4. Press GEN button → first time results are visible
+5. Scene playback auto-applies live generation
 ```
 
-ステップ 3–4 が初心者にとって壁になっている。
+Steps 3–4 are a wall for beginners.
 
 ## Decision
 
-### 原則: 繋いだら即・効果発動
+### Principle: Connect = Immediate Effect
 
-Generative ノードは**接続した瞬間に結果が見える**べき。設定は後から調整。
+Generative nodes should produce **visible results the moment they are connected**. Configuration comes after.
 
-### Phase 1: Auto-generate on Connect
+### Phase 1: Auto-generate on Connect ✅
 
-#### エッジ接続時の自動生成
+#### Auto-generate on edge creation
 
-`sceneAddEdge()` でエッジを作成した際、source が generative ノードで target が pattern ノードなら、自動で `sceneGenerateWrite()` を実行する。
+When `sceneAddEdge()` creates an edge from a generative node to a pattern node, automatically run generation.
 
 ```
-現状:
+Before:
   connect → (nothing) → manual GEN → see result
 
-改善:
+After:
   connect → auto generate → see result immediately
 ```
 
-- `sceneAddGenerativeNode()` でノード作成 + エッジ接続時にも自動生成
-- 既存の GEN ボタンは「再生成」として残す（パラメータ変更後に使う）
-- undo は接続 + 生成をまとめて 1 アクション
+- GEN button remains as "regenerate" (for manual re-rolls)
+- Undo groups connect + generate as a single action
 
-#### パラメータ変更時の自動再生成
+#### Auto-regenerate on parameter change
 
-DockPanel で generative パラメータを変更したら、自動で再生成する:
+When generative parameters are changed in the DockPanel, auto-regenerate:
 
-- デバウンス 300ms（knob ドラッグ中に毎回生成しない）
-- `seed` 固定時のみ即再生成（結果が決定的だから）
-- `seed` なしの場合はパラメータ変更で再生成するとランダム結果が変わるため、任意（ユーザー設定可能）
+- Debounced 300ms (avoid regenerating on every knob drag frame)
+- Immediate regenerate on merge mode, target track, seed, and preset changes
 
-### Phase 2: Target Track の可視化と簡略化
+### Phase 2: Target Track Visibility
 
-#### Faceplate に target track 表示
+#### Show target track name on faceplate
 
-Generative ノードの faceplate に対象 track 名を表示する:
+Display the target track name on the generative node faceplate:
 
 ```
 ┌─ Turing Node ──────────┐
@@ -71,23 +69,24 @@ Generative ノードの faceplate に対象 track 名を表示する:
 └─────────────────────────┘
 ```
 
-#### 1 パターン 1 generative（推奨）
+#### Prefer one generative per pattern
 
-- 同じ pattern に複数の generative ノードを繋ぐことは許可するが、target track が重複する場合は警告表示
-- 初回接続時の target track はパターンの最初の空き track を自動選択（現状は `ui.selectedTrack`）
+- Multiple generative nodes on one pattern are allowed, but warn when target tracks overlap
+- On first connect, auto-select the first unused track (currently defaults to `ui.selectedTrack`)
 
-### Phase 3: Merge Mode の簡略化
+### Phase 3: Merge Mode Simplification
 
-現状の 3 モードを 2 モードに削減:
+Reduce 3 modes to 2:
 
-| 現状 | 改善 | 理由 |
-|------|------|------|
-| replace | **書き換え** | そのまま。デフォルト |
-| merge | **追記** | 空きステップのみ埋める |
-| layer | 削除 | 和音追加は P-Lock で十分。使用頻度が極めて低い |
+| Current | After | Reason |
+|---------|-------|--------|
+| replace | **replace** | Keep as-is. Default |
+| merge | **fill** | Only fills empty steps |
+| layer | removed | Chord stacking is achievable via P-Locks. Extremely low usage |
 
-- デフォルトは「書き換え」（一番予測しやすい）
-- DockPanel のトグルは 2 ボタンに簡略化
+- Default is "replace" (most predictable)
+- DockPanel toggle simplified to 2 buttons
+- Existing song data with `mergeMode: 'layer'` falls back to `'replace'`
 
 ## Implementation
 
@@ -95,26 +94,25 @@ Generative ノードの faceplate に対象 track 名を表示する:
 
 | File | Changes |
 |------|---------|
-| `sceneActions.ts` | `sceneAddEdge()` に auto-generate、パラメータ変更時の再生成 |
-| `SceneView.svelte` | エッジ接続後の自動生成フロー |
-| `DockGenerativeEditor.svelte` | パラメータ変更のデバウンス再生成、target track 表示、merge mode 2択 |
-| `scenePlayback.ts` | 変更なし（live mode は現状のまま） |
+| `sceneActions.ts` | `autoGenerateFromNode()`, auto-generate in `sceneAddEdge()`, debounced regen in `sceneUpdateGenerativeParams()` |
+| `DockGenerativeEditor.svelte` | Auto-regenerate on merge mode / target track / seed / preset changes, target track display, merge mode 2-button |
+| `scenePlayback.ts` | No changes (live mode unchanged) |
 
 ### Phasing
 
-- **Phase 1**: auto-generate on connect + パラメータ変更再生成 — 即効性のある改善
-- **Phase 2**: target track 可視化 — 理解しやすさの向上
-- **Phase 3**: merge mode 簡略化 — 認知負荷の削減
+- **Phase 1** ✅: Auto-generate on connect + parameter change regeneration
+- **Phase 2**: Target track visibility on faceplate
+- **Phase 3**: Merge mode simplification (remove layer)
 
 ## Considerations
 
-- **Auto-generate のパフォーマンス**: 生成自体は軽量（数ms）。UI 更新のコストが支配的だが、1 回の生成なら問題ない
-- **Undo の粒度**: 接続 + 生成を 1 undo にまとめることで「繋いだのを外す」だけで元に戻る
-- **layer モード削除の影響**: 既存の song データで `mergeMode: 'layer'` を持つノードは `'replace'` にフォールバック
-- **Quantizer の特殊性**: Quantizer は入力 trigs を変換するノードであり、単体では生成しない。Turing → Quantizer → Pattern のチェーンでは、接続完了時（最後のエッジ接続時）に自動生成すべき
+- **Auto-generate performance**: Generation itself is lightweight (~ms). UI update cost dominates but a single generation is fine
+- **Undo granularity**: Connect + generate grouped as one undo — disconnecting reverts both
+- **Layer mode removal**: Existing songs with `mergeMode: 'layer'` fall back to `'replace'`
+- **Quantizer specifics**: Quantizer transforms input trigs rather than generating from scratch. In a Turing → Quantizer → Pattern chain, auto-generate fires on the last edge connection
 
 ## Future Extensions
 
-- Generative ノードのプレビュー音再生（接続前に「こんな音が出る」を試聴）
-- Drag-and-drop で generative ノードをパターンに直接ドロップ（エッジ不要）
-- Generative ノードのパラメータをシーン再生中にリアルタイム変更（ADR 090 worklet 連携）
+- Preview audio playback before connecting (audition what a generative node would produce)
+- Drag-and-drop generative nodes directly onto patterns (no manual edge required)
+- Real-time parameter modulation during scene playback (ADR 090 worklet integration)
