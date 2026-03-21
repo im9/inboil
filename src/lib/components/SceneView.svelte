@@ -67,6 +67,11 @@
   let snapTarget: string | null = $state(null)  // pattern node id for snap highlight
   let justAttached: string | null = $state(null)  // pattern node id for bounce animation
 
+  // ── Placement mode (toolbar → click-to-place) ──
+  let placingType: BubblePickType | null = $state(null)
+  let placingCursor = $state({ x: 0, y: 0 })  // pixel position within .scene-view
+  let placingCursorActive = $state(false)       // true after first mousemove in placement mode
+
   // ── Drop from MatrixView ──
   let dropActive = $state(false)
 
@@ -180,6 +185,13 @@
   }
 
   function onMove(e: PointerEvent) {
+    // Placement mode ghost tracking
+    if (placingType && viewEl) {
+      const rect = viewEl.getBoundingClientRect()
+      placingCursor = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      placingCursorActive = true
+    }
+
     // Pan / pinch zoom
     if (isPanning) {
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -398,12 +410,33 @@
 
   function onContextMenu(e: MouseEvent) {
     e.preventDefault()
+    if (placingType) { placingType = null; return }
     openPickerAt(e.clientX, e.clientY)
   }
 
   function onBgDown(e: PointerEvent) {
     // Close bubble menu on any background interaction
     if (pickerOpen) { pickerOpen = false }
+
+    // Placement mode: click to place node at cursor position
+    if (placingType && e.button === 0 && !e.ctrlKey && !spaceHeld) {
+      e.preventDefault()
+      const norm = toNormXY(e.clientX, e.clientY)
+      if (norm) {
+        if (placingType === 'label') {
+          const id = sceneAddLabel(norm.x, norm.y)
+          ui.selectedSceneNodes = {}
+          requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
+        } else {
+          const id = sceneAddGenerativeNode(placingType as GenerativeEngine, norm.x, norm.y)
+          ui.selectedSceneNodes = {}
+          ui.selectedSceneNodes[id] = true
+        }
+        ui.selectedSceneEdge = null
+        placingType = null
+      }
+      return
+    }
 
     // Middle mouse, Ctrl+left, or Space+left → start pan
     if (e.button === 1 || (e.ctrlKey && e.button === 0) || (spaceHeld && e.button === 0)) {
@@ -524,6 +557,7 @@
       return true
     }
     if (e.key === 'Escape') {
+      if (placingType) { placingType = null; return true }
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabels = {}
@@ -618,27 +652,6 @@
     pickerOpen = false
   }
 
-  /** Add a node near the viewport center with slight random offset to avoid stacking */
-  function addNodeAtCenter(type: BubblePickType) {
-    if (!viewEl) return
-    const rect = viewEl.getBoundingClientRect()
-    const jitter = 40 / zoom
-    const cx = (rect.width / 2 - panX) / zoom + (Math.random() - 0.5) * jitter * 2
-    const cy = (rect.height / 2 - panY) / zoom + (Math.random() - 0.5) * jitter * 2
-    const nx = Math.max(0.05, Math.min(0.95, (cx - PAD_INSET) / (WORLD_W - PAD_INSET * 2)))
-    const ny = Math.max(0.05, Math.min(0.95, (cy - PAD_INSET) / (WORLD_H - PAD_INSET * 2)))
-    if (type === 'label') {
-      const id = sceneAddLabel(nx, ny)
-      ui.selectedSceneNodes = {}
-      requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
-    } else {
-      const id = sceneAddGenerativeNode(type as GenerativeEngine, nx, ny)
-      ui.selectedSceneNodes = {}
-      ui.selectedSceneNodes[id] = true
-    }
-    ui.selectedSceneEdge = null
-  }
-
   // ── Zoom/Pan interactions ──
 
   function onWheel(e: WheelEvent) {
@@ -696,6 +709,7 @@
   class="scene-view"
   class:drop-active={dropActive}
   class:space-pan={spaceHeld}
+  class:placing={placingType !== null}
   bind:this={viewEl}
   tabindex="-1"
   onpointermove={onMove}
@@ -911,7 +925,8 @@
   <SceneToolbar {zoom} {viewEl}
     onpan={(x, y) => { panX = x; panY = y }}
     onreset={(x, y) => { zoom = 1; panX = x; panY = y }}
-    onadd={addNodeAtCenter}
+    onadd={(type) => { placingType = placingType === type ? null : type; placingCursorActive = false }}
+    activeType={placingType}
   />
 
   <!-- Radial bubble menu for function nodes (appears at pointer position) -->
@@ -923,6 +938,19 @@
       onpick={pickBubbleItem}
       onclose={() => { pickerOpen = false }}
     />
+  {/if}
+
+  <!-- Ghost node preview during placement mode -->
+  {#if placingType && placingCursorActive}
+    <div
+      class="placing-ghost"
+      class:gen={placingType !== 'label'}
+      style="left: {placingCursor.x}px; top: {placingCursor.y}px"
+    >
+      <span class="ghost-label">
+        {placingType === 'turing' ? 'Turing' : placingType === 'quantizer' ? 'Quantizer' : placingType === 'tonnetz' ? 'Tonnetz' : 'Label'}
+      </span>
+    </div>
   {/if}
 
   {#if true}
@@ -962,6 +990,9 @@
   }
   .scene-view.space-pan:active {
     cursor: grabbing;
+  }
+  .scene-view.placing {
+    cursor: crosshair;
   }
   .scene-view.drop-active {
     outline: 2px dashed rgba(30,32,40,0.15);
@@ -1302,6 +1333,38 @@
     to { transform: rotate(360deg); }
   }
   .solo-icon {
+    pointer-events: none;
+  }
+
+  /* ── Placement ghost ── */
+  .placing-ghost {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.6;
+    min-width: 72px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    background: var(--color-olive);
+    border: 1.5px dashed rgba(30, 32, 40, 0.3);
+  }
+  .placing-ghost.gen {
+    width: 120px;
+    height: 72px;
+    border-radius: var(--radius-md);
+    background: var(--color-fg);
+    border: 1.5px dashed rgba(237, 232, 220, 0.3);
+  }
+  .ghost-label {
+    font-family: var(--font-data);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(237, 232, 220, 0.9);
     pointer-events: none;
   }
 

@@ -12,12 +12,13 @@
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
-  const { zoom, viewEl, onpan, onreset, onadd }: {
+  const { zoom, viewEl, onpan, onreset, onadd, activeType }: {
     zoom: number
     viewEl: HTMLDivElement
     onpan?: (x: number, y: number) => void
     onreset?: (x: number, y: number) => void
     onadd?: (type: BubblePickType) => void
+    activeType?: BubblePickType | null
   } = $props()
 
 
@@ -59,9 +60,10 @@
   {#each ADD_ITEMS as item}
     <button
       class="add-btn"
+      class:active={activeType === item.type}
       aria-label={item.tip}
       data-tip={item.tip} data-tip-ja={item.tipJa}
-      onpointerdown={() => onadd?.(item.type)}
+      onpointerdown={(e: PointerEvent) => { e.stopPropagation(); onadd?.(item.type) }}
     >
       {#if item.type === 'turing'}
         <svg viewBox="0 0 14 14" width="13" height="13" fill="currentColor" aria-hidden="true">
@@ -181,7 +183,8 @@
     background: rgba(255, 255, 255, 0.95);
     color: var(--color-fg);
   }
-  .add-btn:active {
+  .add-btn:active,
+  .add-btn.active {
     background: var(--color-fg);
     color: rgba(237, 232, 220, 0.9);
   }

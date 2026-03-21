@@ -1,6 +1,6 @@
 <script lang="ts">
   import { song, ui, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel } from '../sceneActions.ts'
+  import { sceneUpdateLabel, sceneMoveLabel, sceneResizeLabel, sceneDeleteLabel } from '../sceneActions.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { WORLD_W, WORLD_H, toNormScene } from '../sceneGeometry.ts'
 
@@ -53,14 +53,19 @@
       onkeydown={(e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           e.preventDefault()
-          sceneUpdateLabel(label.id, (e.currentTarget as HTMLTextAreaElement).value)
+          const text = (e.currentTarget as HTMLTextAreaElement).value.trim()
+          if (text) sceneUpdateLabel(label.id, text)
+          else sceneDeleteLabel(label.id)
           editingLabelId = null
         }
       }}
       onblur={(e: FocusEvent) => {
-        sceneUpdateLabel(label.id, (e.currentTarget as HTMLTextAreaElement).value)
+        const text = (e.currentTarget as HTMLTextAreaElement).value.trim()
+        if (text) sceneUpdateLabel(label.id, text)
+        else sceneDeleteLabel(label.id)
         editingLabelId = null
       }}
+      placeholder="Label..."
     >{label.text}</textarea>
   {:else}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -118,7 +123,7 @@
         }
         draggingLabel = null
       }}
-    >{@html (label.text || '…').replace(/\n/g, '<br>')}{#if ui.selectedSceneLabels[label.id]}<!-- svelte-ignore a11y_no_static_element_interactions --><span
+    >{#if label.text}{@html label.text.replace(/\n/g, '<br>')}{/if}{#if ui.selectedSceneLabels[label.id]}<!-- svelte-ignore a11y_no_static_element_interactions --><span
           class="label-resize-handle"
           onpointerdown={(e: PointerEvent) => {
             e.stopPropagation()

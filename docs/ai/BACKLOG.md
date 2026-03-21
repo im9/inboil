@@ -5,7 +5,6 @@ Items are not prioritized — pick based on what you're already touching.
 
 ## UI
 
-- [ ] **Scene toolbar node placement UX** — Adding nodes from the toolbar is not intuitive. Improve discoverability — e.g. clearer affordance, drag-to-place, or contextual hints.
 - [ ] **Node function UX** — Function nodes are hard to understand on first use and lack visual feedback/polish. Improve onboarding (hints, animation) and presentation. May overlap with dock panel improvements.
 
 ## Ideas
