@@ -152,17 +152,27 @@ AutomationParams {
 
 SceneNode {
   id:                string
-  type:              'pattern' | 'generative' | LegacyFnType
-                     // LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
-                     // Function types used as standalone nodes wired via edges (ADR 066/093)
+  type:              'pattern' | 'generative' | FnNodeType | LegacyFnType
+                     // FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' (ADR 093/116)
+                     // LegacyFnType = 'probability' | 'automation' (migration only)
   x:                 number           // canvas position (normalized 0–1)
   y:                 number
   root:              boolean          // true = playback entry point (exactly one)
   patternId?:        string           // for type === 'pattern'
-  params?:           Record<string, number>
-  automationParams?: AutomationParams // for type === 'automation' (ADR 053)
-  decorators?:       SceneDecorator[] // function decorators attached to pattern nodes (ADR 066)
+  params?:           Record<string, number>       // legacy fn node params (migration only)
+  automationParams?: AutomationParams // legacy automation (migration only)
+  fnParams?:         FnParams         // function node params (ADR 093/116)
+  decorators?:       SceneDecorator[] // deprecated (ADR 093) — migrated to fn nodes
   generative?:       GenerativeConfig // for type === 'generative' (ADR 078)
+}
+
+FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx'
+
+FnParams {
+  transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
+  tempo?:     { bpm: number }
+  repeat?:    { count: number }
+  fx?:        { verb: boolean; delay: boolean; glitch: boolean; granular: boolean }
 }
 
 SceneEdge {
@@ -188,14 +198,22 @@ SceneLabel {
 ```typescript
 GenerativeConfig {
   engine:      GenerativeEngine  // 'turing' | 'quantizer' | 'tonnetz'
-  mergeMode:   'replace' | 'merge' | 'layer'
-  targetTrack: number
+  mergeMode:   'replace' | 'merge' | 'layer'  // 'layer' deprecated → treated as 'replace' (ADR 117)
+  targetTrack: number            // auto-selected on connect to first unused track
   seed?:       number
   params:      TuringParams | QuantizerParams | TonnetzParams
 }
 ```
 
-See ADR 044 for scene graph design and playback traversal, ADR 053 for automation, ADR 066 for decorators, ADR 078 for generative nodes.
+### Function Node Satellite Model (ADR 116)
+
+Function nodes (transpose/repeat/tempo/fx) attach as **satellites** to pattern nodes — no manual edge wiring needed. They are rendered as naked SVG icons positioned above their parent pattern node. Edges from fn nodes are hidden visually but maintained in data for playback. Drag a satellite away to detach; drop on another pattern to reattach. Same-type duplicates on one pattern are replaced automatically. During scene playback, satellite fn effects are applied via `applySatelliteFnNodes()` when entering a pattern.
+
+### Auto-generate on Connect (ADR 117)
+
+Connecting a generative node to a pattern triggers automatic generation. Parameter changes debounce-regenerate (300ms). Target track auto-selects the first unused track. Merge mode simplified to replace (default) and fill (empty steps only).
+
+See ADR 044 for scene graph design, ADR 053 for automation, ADR 078 for generative nodes, ADR 116 for function node UX, ADR 117 for generative UX simplification.
 
 ## Trig — DECIDED
 

@@ -14,7 +14,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
 | **SceneNode** | A node on the scene canvas: pattern, generative, or legacy function type (transpose/tempo/repeat/probability/fx/automation). |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
-| **SceneDecorator** | Function decorator (transpose/tempo/repeat/fx/automation) on a pattern node (ADR 066). Migrated to standalone function nodes wired via edges (ADR 093). |
+| **SceneDecorator** | Legacy function decorator on pattern nodes (ADR 066). Migrated to standalone function nodes with satellite attachment (ADR 093/116). Type retained for data migration. |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
 | **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
@@ -32,6 +32,10 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 | **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
+| **Function Node** | Scene node applying a transform to a pattern: transpose, repeat, tempo, or FX. Rendered as naked SVG icons that satellite-attach to pattern nodes (ADR 116). |
+| **Satellite Attach** | Function nodes attach to pattern nodes by clicking the pattern in placement mode. Drag to detach/reattach. No manual edge wiring needed (ADR 116). |
+| **Tool Palette** | Circular button bar in SceneView for adding nodes. FN tools (neutral), GEN tools (accent-colored rings), Label. Visually distinct from flat square UI controls (ADR 116). |
+| **Auto-generate** | Generative nodes auto-generate on edge connect and debounce-regenerate on parameter changes (ADR 117). |
 
 ## Synthesis Terms
 

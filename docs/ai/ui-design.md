@@ -774,10 +774,11 @@ Node-based directed graph canvas. Always the main view (ADR 054). Full arrangeme
 - Edge creation: drag from blue connection handle (dot) on node to another node; long-press node on mobile
 - Node click: selects pattern and syncs `ui.currentPattern` to Grid/Tracker
 - Double-tap pattern node: open pattern sheet; double-tap function node: set as root
-- Snap-attach: drag function node near pattern node to attach as decorator (ADR 066)
+- Satellite attach: fn nodes (transpose/repeat/tempo/fx) attach to pattern nodes as satellites — click pattern in placement mode to attach, drag to detach/reattach (ADR 116)
 - Rectangle select: background drag to select multiple nodes
 - Delete/Backspace: delete selected node or edge
-- Toolbar: add-node icon buttons (transpose/tempo/repeat/probability/fx/label), auto-layout (horizontal/vertical), focus root, focus playing, zoom reset
+- Tool palette (center): 34px circular buttons for adding nodes, grouped by category — FN tools (neutral), GEN tools (accent-colored border: olive/teal/purple), Label. Distinct from UI controls (ADR 116)
+- View controls (right): 28px square buttons — auto-layout (horizontal/vertical), focus root, focus playing, zoom reset. Flat style, visually recessive
 - Long-press background: opens bubble menu for adding nodes/labels (mobile)
 - Drag from MatrixView: drop pattern onto canvas to add pattern node
 - Copy/paste (Ctrl+C, Ctrl+Shift+C for subgraph, Ctrl+V)
