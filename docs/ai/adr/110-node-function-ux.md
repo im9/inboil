@@ -186,6 +186,37 @@ Replace the current text display (`T P·L·R`) with a hexagonal lattice UI:
 - **Phase 2** (post-beta): generative node live visualization — experience enhancement
 - **Phase 3** (post-beta): toolbar redesign — overall consistency
 
+### Implementation Checklist
+
+Only Phase 1 detailed here — Phase 2/3 checklists to be added when work begins.
+
+#### Phase 1a: Icon-based Nodes
+- [ ] Add SVG icons to `icons.ts` (transpose, repeat, tempo, fx — 14×14 each)
+- [ ] Update `FN_HALF_W/H` in `sceneGeometry.ts` (48×24 → 56×28)
+- [ ] Add `fnNodeIcon()` helper in `sceneGeometry.ts` to map FnNodeType → icon
+- [ ] Replace text labels with icon + value layout in `SceneView.svelte` fn node template
+- [ ] Adjust `sceneFormatNodes()` spacing for new node size
+- [ ] Verify zoom-out legibility — text fallback if icon unreadable
+
+#### Phase 1b: Micro-interactions
+- [ ] Add CSS `@keyframes` per fn type (bounce / rotate / sway / pulse)
+- [ ] Toggle `playing` class on fn nodes during playback in `SceneView.svelte`
+- [ ] Verify no layout shift during animation (`transform`-only, no width/height changes)
+
+#### Phase 1c: Repeat / Tempo Creation UI
+- [ ] Add `'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'` to `BubblePickType`
+- [ ] Add fn types to `ADD_ITEMS` in `SceneToolbar.svelte` with separator
+- [ ] Wire placement mode to call `sceneAddFnNode()` from `sceneActions.ts`
+- [ ] Verify placement + undo works for new fn node types
+
+#### Phase 1d: DockPanel Parameter Editing
+- [ ] Show fn node editor in `DockPanel.svelte` when fn node selected
+- [ ] Transpose: REL/ABS mode toggle, semitone +/- stepper, key selector (ABS mode)
+- [ ] Repeat: count +/- stepper
+- [ ] Tempo: BPM +/- stepper
+- [ ] Wire edits through `sceneUpdateFnParams()`
+- [ ] Verify undo integration (`pushUndo` before param changes)
+
 ## Considerations
 
 - **Performance**: Animations are CSS-only (no JS timers). `will-change` only when needed

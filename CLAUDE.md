@@ -31,6 +31,22 @@ pnpm deploy    # build + Cloudflare Pages
 - Technical backlog in `docs/ai/BACKLOG.md` — for items that don't need an ADR
 - Docs, code, and commit messages in English (conversation in Japanese is OK)
 
+## Workflow
+
+### Feature development
+1. Brainstorm in conversation → `/adr` when design solidifies
+2. Add Implementation Checklist to ADR (current phase only)
+3. Implement checklist items
+4. `/audit-styles` after UI changes
+5. `/commit`
+6. `/adr-done` only after user confirms phase complete
+
+### Maintenance
+- `/refactor` — after a feature lands, not during
+- `/check-docs` — before beta release or after large changes
+- `/sync-docs` — when check-docs finds drift
+- `/simplify` — after PR-sized chunk of work
+
 ## Data Validation
 
 - Use `validateSongData()` / `validateRecoverySnapshot()` from `src/lib/validate.ts` when loading Song data from external sources (JSON import, localStorage recovery, IDB)
