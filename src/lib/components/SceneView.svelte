@@ -852,7 +852,7 @@
           {isFn && node.fnParams?.transpose ? `--fn-semi: ${node.fnParams.transpose.semitones};` : ''}
           {isFn && node.fnParams?.repeat ? `--fn-count: ${node.fnParams.repeat.count};` : ''}
           {isFn && node.fnParams?.tempo ? `--fn-bpm: ${node.fnParams.tempo.bpm};` : ''}
-          {isFn && node.fnParams?.fx ? `--fn-fx-n: ${[node.fnParams.fx.verb, node.fnParams.fx.delay, node.fnParams.fx.glitch, node.fnParams.fx.granular].filter(Boolean).length}; color: ${node.fnParams.fx.verb ? 'var(--color-olive)' : node.fnParams.fx.delay ? 'var(--color-blue)' : node.fnParams.fx.glitch ? 'var(--color-salmon)' : node.fnParams.fx.granular ? 'var(--color-purple)' : 'var(--color-fg)'};` : ''}
+          {isFn && node.fnParams?.fx ? `--fn-fx-n: ${[node.fnParams.fx.verb, node.fnParams.fx.delay, node.fnParams.fx.glitch, node.fnParams.fx.granular].filter(Boolean).length};` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
         onpointerup={e => endNodeDrag(e, node.id)}
@@ -914,6 +914,22 @@
           {:else}
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
+        {:else if isFn && node.type === 'fx' && node.fnParams?.fx}
+          {@const fxColors = [
+            node.fnParams.fx.verb     ? 'var(--color-olive)'  : null,
+            node.fnParams.fx.delay    ? 'var(--color-blue)'   : null,
+            node.fnParams.fx.glitch   ? 'var(--color-salmon)' : null,
+            node.fnParams.fx.granular ? 'var(--color-purple)' : null,
+          ].filter(Boolean) as string[]}
+          <div class="fn-fx-stack">
+            {#each fxColors as c, i}
+              <svg class="fn-icon fn-fx-layer" style="color: {c}; --fx-i: {i}; --fx-n: {fxColors.length}" viewBox="0 0 14 14" width="18" height="18" fill="currentColor" aria-hidden="true">{@html fnNodeIcon('fx')}</svg>
+            {/each}
+            {#if fxColors.length === 0}
+              <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon('fx')}</svg>
+            {/if}
+          </div>
+          <span class="fn-label">{fnNodeValue(node)}</span>
         {:else if isFn}
           <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(node.type as import('../types.ts').FnNodeType)}</svg>
           <span class="fn-label">{#if isPlaying && node.fnParams?.repeat}×{(playback.sceneRepeatLeft ?? 0) + 1}{:else}{fnNodeValue(node)}{/if}</span>
@@ -1241,6 +1257,17 @@
   .scene-node.fn.root {
     border: none;
   }
+  .fn-fx-stack {
+    position: relative;
+    width: 28px;
+    height: 22px;
+  }
+  .fn-fx-layer {
+    position: absolute;
+    left: calc((var(--fx-i, 0) - (var(--fx-n, 1) - 1) / 2) * 5px + 50% - 9px);
+    top: calc(var(--fx-i, 0) * -1.5px + 2px);
+    filter: drop-shadow(0 0 1px currentColor);
+  }
 
   /* ── Generative node faceplate (ADR 078) ── */
   .scene-node.gen {
@@ -1372,9 +1399,10 @@
     transform-origin: 7px 12px; /* pivot at base of needle */
     animation: fn-sway calc(60s / var(--fn-bpm, 120)) ease-in-out infinite alternate;
   }
-  .scene-node.fn.playing[data-fn="fx"] {
-    /* Glow radius scales with number of active effects */
+  .scene-node.fn.playing[data-fn="fx"] .fn-fx-layer {
+    /* Each layer glows in its own effect color */
     animation: fn-glow var(--beat, 0.25s) ease-out infinite alternate;
+    animation-delay: calc(var(--fx-i, 0) * 60ms);
   }
 
   @keyframes node-pulse {
@@ -1394,8 +1422,8 @@
     to   { transform: rotate(20deg); }
   }
   @keyframes fn-glow {
-    from { filter: drop-shadow(0 0 8px rgba(30, 32, 40, 0.6)); }
-    to   { filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.15)); }
+    from { filter: drop-shadow(0 0 6px currentColor); transform: scale(1.1); }
+    to   { filter: drop-shadow(0 0 1px currentColor); transform: scale(1); }
   }
 
   .scene-node.edge-source {
