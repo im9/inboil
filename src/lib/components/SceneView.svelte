@@ -1285,7 +1285,7 @@
     padding: 2px 0;
     flex-direction: column;
     gap: 1px;
-    filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.2));
+    filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.15));
   }
   .scene-node.fn .fn-icon {
     flex-shrink: 0;
@@ -1406,7 +1406,7 @@
   }
   .turing-bit.current {
     background: rgba(237, 232, 220, 1);
-    box-shadow: 0 0 4px rgba(237, 232, 220, 0.6);
+    box-shadow: 0 0 4px rgba(237, 232, 220, 0.55);
   }
   /* Quantizer mini keyboard */
   .quant-keys {
@@ -1431,7 +1431,7 @@
   }
   .quant-key.playing {
     background: rgba(237, 232, 220, 1);
-    box-shadow: 0 0 4px rgba(237, 232, 220, 0.6);
+    box-shadow: 0 0 4px rgba(237, 232, 220, 0.55);
   }
   /* Tonnetz transform ops */
   .tonnetz-ops {
@@ -1449,8 +1449,8 @@
     transition: background 80ms, color 80ms;
   }
   .tonnetz-op.current {
-    background: rgba(237, 232, 220, 0.7);
-    color: rgba(30, 32, 40, 0.9);
+    background: rgba(237, 232, 220, 0.70);
+    color: rgba(30, 32, 40, 0.70);
   }
 
   .scene-node.playing {
@@ -1600,7 +1600,7 @@
     justify-content: center;
     padding: 0 12px;
     background: var(--color-olive);
-    border: 1.5px dashed rgba(30, 32, 40, 0.3);
+    border: 1.5px dashed rgba(30, 32, 40, 0.35);
   }
   .placing-ghost.gen {
     width: 120px;

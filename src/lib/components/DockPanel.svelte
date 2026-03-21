@@ -597,7 +597,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 7px 0;
+    padding: 8px 0;
     cursor: pointer;
     transition: color 60ms, background 60ms;
   }
@@ -612,7 +612,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 7px 10px;
+    padding: 8px 12px;
     cursor: pointer;
     transition: color 60ms, background 60ms;
     white-space: nowrap;
@@ -628,7 +628,7 @@
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 7px 10px;
+    padding: 8px 12px;
     cursor: pointer;
     transition: color 60ms, background 60ms;
     white-space: nowrap;
@@ -738,7 +738,7 @@
     font-family: var(--font-data);
     font-size: 9px;
     font-weight: 700;
-    padding: 3px 5px;
+    padding: 4px 4px;
     border: 1px solid var(--dk-border);
     background: transparent;
     color: var(--dk-text-dim);

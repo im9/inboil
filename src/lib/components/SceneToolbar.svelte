@@ -192,7 +192,7 @@
     border-radius: 50%;
     border: none;
     background: rgba(255, 255, 255, 0.85);
-    color: rgba(30, 32, 40, 0.45);
+    color: rgba(30, 32, 40, 0.50);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -211,7 +211,7 @@
   .tool-btn.active {
     background: var(--tool-accent, var(--color-fg));
     color: rgba(237, 232, 220, 0.9);
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.25);
+    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
   }
   /* Generative tool accent ring */
   .tool-btn[style*="--tool-accent"] {
