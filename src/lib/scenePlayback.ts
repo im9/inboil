@@ -91,12 +91,16 @@ function applySatelliteFnNodes(patternNodeId: string): void {
     const src = findNode(edge.from)
     if (src && isFnNode(src)) satellites.push(src)
   }
-  // Reset FX if no FX satellite on this pattern
+  // Reset scoped fn effects if no matching satellite on this pattern
   if (!satellites.some(n => n.type === 'fx')) {
     fxPad.verb.on = false
     fxPad.delay.on = false
     fxPad.glitch.on = false
     fxPad.granular.on = false
+  }
+  if (!satellites.some(n => n.type === 'transpose')) {
+    playback.sceneTranspose = 0
+    playback.sceneAbsoluteKey = null
   }
   for (const src of satellites) applyFunctionNode(src)
 }
