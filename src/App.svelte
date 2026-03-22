@@ -244,7 +244,17 @@
       playback.sceneTranspose = 0
       playback.sceneAbsoluteKey = null
       const { patternIndex, stop: shouldStop } = advanceSceneNode()
-      if (shouldStop) return
+      if (shouldStop) {
+        // Scene graph can't advance (e.g. root has no outgoing edges) — fall back to loop
+        playback.mode = 'loop'
+        applyLoopFnNodes()
+        playback.playingPattern = ui.currentPattern
+        playback.queuedPattern = null
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
+        await engine.play()
+        playback.playing = true
+        return
+      }
       perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else {
