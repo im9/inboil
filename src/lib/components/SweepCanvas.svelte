@@ -24,6 +24,7 @@
     target: SweepTarget
     color: string
     isMix?: boolean  // true for volume, pan, sends — outline dot; false for voice params — filled dot
+    category: 'mix' | 'synth' | 'send'
   }
 
   const PARAM_COLORS = [
@@ -56,9 +57,9 @@
     if (!cell) return []
     const items: PaletteItem[] = []
     let colorIdx = 0
-    // Track-level params
-    items.push({ label: 'Volume', target: { kind: 'track', trackId: expandedTrackId, param: 'volume' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
-    items.push({ label: 'Pan', target: { kind: 'track', trackId: expandedTrackId, param: 'pan' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
+    // Mix params
+    items.push({ label: 'Volume', target: { kind: 'track', trackId: expandedTrackId, param: 'volume' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'mix' })
+    items.push({ label: 'Pan', target: { kind: 'track', trackId: expandedTrackId, param: 'pan' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'mix' })
     // Voice-specific params from paramDefs
     const voiceId = cell.voiceId
     if (voiceId) {
@@ -68,12 +69,15 @@
           label: def.label,
           target: { kind: 'track', trackId: expandedTrackId, param: def.key as 'cutoff' },
           color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length],
+          category: 'synth',
         })
       }
     }
     // Send levels
-    items.push({ label: 'Verb Send', target: { kind: 'send', trackId: expandedTrackId, param: 'reverbSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
-    items.push({ label: 'Dly Send', target: { kind: 'send', trackId: expandedTrackId, param: 'delaySend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
+    items.push({ label: 'Verb', target: { kind: 'send', trackId: expandedTrackId, param: 'reverbSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
+    items.push({ label: 'Delay', target: { kind: 'send', trackId: expandedTrackId, param: 'delaySend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
+    items.push({ label: 'Glitch', target: { kind: 'send', trackId: expandedTrackId, param: 'glitchSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
+    items.push({ label: 'Grain', target: { kind: 'send', trackId: expandedTrackId, param: 'granularSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
     return items
   })
 
@@ -944,27 +948,6 @@
             <span class="palette-track-arrow">›</span>
           </div>
         {/each}
-        <!-- FX params -->
-        <div class="palette-group-sep">FX</div>
-        {#each [
-          { label: 'Verb Wet', target: { kind: 'fx' as const, param: 'reverbWet' as const }, color: '#6a9a8a' },
-          { label: 'Verb Damp', target: { kind: 'fx' as const, param: 'reverbDamp' as const }, color: '#5a8a7a' },
-          { label: 'Dly Time', target: { kind: 'fx' as const, param: 'delayTime' as const }, color: '#7a8a6a' },
-          { label: 'Dly Fb', target: { kind: 'fx' as const, param: 'delayFeedback' as const }, color: '#8a7a5a' },
-        ] as fxItem}
-          {@const hasCurve = sweepData.curves.some(c => targetsEqual(c.target, fxItem.target))}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="palette-item" style="--accent: {fxItem.color}"
-            onpointerdown={() => {
-              expandedTrackId = null
-              const idx = paletteItems.findIndex(p => targetsEqual(p.target, fxItem.target))
-              if (idx >= 0) activeBrushIdx = idx
-            }}
-          >
-            <span class="palette-dot" class:has-curve={hasCurve}></span>
-            <span class="palette-label">{fxItem.label}</span>
-          </div>
-        {/each}
       {:else}
         <!-- Back button + param list for selected track -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -973,6 +956,10 @@
         </div>
         {#each paletteItems as item, i}
           {@const hasCurve = sweepData.curves.some(c => targetsEqual(c.target, item.target))}
+          {@const prevCat = i > 0 ? paletteItems[i - 1].category : null}
+          {#if prevCat && prevCat !== item.category}
+            <div class="palette-cat-sep"></div>
+          {/if}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="palette-item"
@@ -1204,14 +1191,6 @@
     font-size: 12px;
     opacity: 0.4;
   }
-  .palette-group-sep {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-    padding: 8px 8px 4px;
-    text-transform: uppercase;
-  }
   .palette-back {
     display: flex;
     align-items: center;
@@ -1274,6 +1253,11 @@
     padding: 0 2px;
     width: 12px;
     text-align: center;
+  }
+  .palette-cat-sep {
+    height: 1px;
+    background: rgba(30, 32, 40, 0.10);
+    margin: 4px 8px;
   }
   .palette-del-placeholder {
     width: 12px;
