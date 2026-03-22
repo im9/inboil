@@ -23,12 +23,13 @@
     label: string
     target: SweepTarget
     color: string
+    isMix?: boolean  // true for volume, pan, sends — outline dot; false for voice params — filled dot
   }
 
   const PARAM_COLORS = [
-    '#e07040', '#40a0e0', '#e0c040', '#60c080',
-    '#c060c0', '#e08080', '#60a0a0', '#a0a060',
-    '#c09060', '#8080e0', '#60c0c0', '#c0c060',
+    '#d94030', '#2878c0', '#c8a020', '#28a060',
+    '#a838a8', '#e06848', '#1898a0', '#889020',
+    '#c07828', '#5858d0', '#20a8a8', '#a0a030',
   ]
 
   // ── Drill-down palette ──
@@ -56,8 +57,8 @@
     const items: PaletteItem[] = []
     let colorIdx = 0
     // Track-level params
-    items.push({ label: 'Volume', target: { kind: 'track', trackId: expandedTrackId, param: 'volume' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length] })
-    items.push({ label: 'Pan', target: { kind: 'track', trackId: expandedTrackId, param: 'pan' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length] })
+    items.push({ label: 'Volume', target: { kind: 'track', trackId: expandedTrackId, param: 'volume' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
+    items.push({ label: 'Pan', target: { kind: 'track', trackId: expandedTrackId, param: 'pan' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
     // Voice-specific params from paramDefs
     const voiceId = cell.voiceId
     if (voiceId) {
@@ -71,8 +72,8 @@
       }
     }
     // Send levels
-    items.push({ label: 'Verb Send', target: { kind: 'send', trackId: expandedTrackId, param: 'reverbSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length] })
-    items.push({ label: 'Dly Send', target: { kind: 'send', trackId: expandedTrackId, param: 'delaySend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length] })
+    items.push({ label: 'Verb Send', target: { kind: 'send', trackId: expandedTrackId, param: 'reverbSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
+    items.push({ label: 'Dly Send', target: { kind: 'send', trackId: expandedTrackId, param: 'delaySend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true })
     return items
   })
 
@@ -157,9 +158,9 @@
     ctx.fillRect(0, 0, w, h)
 
     // ── Timeline header ──
-    ctx.fillStyle = isZoomed ? 'rgba(160, 140, 110, 0.12)' : 'rgba(160, 140, 110, 0.08)'
+    ctx.fillStyle = isZoomed ? 'rgba(30, 32, 40, 0.08)' : 'rgba(30, 32, 40, 0.05)'
     ctx.fillRect(0, 0, w, TIMELINE_H)
-    ctx.strokeStyle = 'rgba(160, 140, 110, 0.15)'
+    ctx.strokeStyle = 'rgba(30, 32, 40, 0.1)'
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(0, TIMELINE_H)
@@ -174,7 +175,7 @@
       const isBeat = s % 4 === 0
       const isRepeatBoundary = s % spp === 0 && s > 0
       if (isRepeatBoundary && !isZoomed) {
-        ctx.strokeStyle = 'rgba(160, 140, 110, 0.3)'
+        ctx.strokeStyle = 'rgba(30, 32, 40, 0.2)'
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, 0)
@@ -184,7 +185,7 @@
       // Tick in timeline header
       const showTick = isZoomed ? true : isBeat
       if (showTick) {
-        ctx.strokeStyle = 'rgba(160, 140, 110, 0.25)'
+        ctx.strokeStyle = 'rgba(30, 32, 40, 0.15)'
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, TIMELINE_H - (isBeat ? 8 : 4))
@@ -194,7 +195,7 @@
     }
 
     // Timeline labels
-    ctx.fillStyle = 'rgba(120, 100, 70, 0.5)'
+    ctx.fillStyle = 'rgba(30, 32, 40, 0.5)'
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
     if (isZoomed) {
@@ -209,7 +210,7 @@
     } else {
       for (let r = 0; r < rc; r++) {
         const x = tToX(r / rc, w) + 4
-        ctx.fillText(`${r + 1}`, x, 12)
+        ctx.fillText(`R${r + 1}`, x, 12)
       }
     }
 
@@ -218,7 +219,7 @@
     const drawY = TIMELINE_H
 
     // Grid dots in drawing area
-    ctx.fillStyle = 'rgba(160, 140, 110, 0.12)'
+    ctx.fillStyle = 'rgba(30, 32, 40, 0.08)'
     for (let s = 0; s < totalSteps; s++) {
       const showDot = isZoomed ? true : s % 4 === 0
       if (!showDot) continue
@@ -239,7 +240,7 @@
     ctx.clip()
 
     // Center line (±0)
-    ctx.strokeStyle = 'rgba(160, 140, 110, 0.3)'
+    ctx.strokeStyle = 'rgba(30, 32, 40, 0.2)'
     ctx.lineWidth = 1
     ctx.setLineDash([6, 4])
     ctx.beginPath()
@@ -274,20 +275,52 @@
       drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.2)
     }
 
-    // Draw current freehand stroke
+    // Draw current freehand stroke — thick brush feel
     if (drawing && rawPoints.length > 1 && activeBrush) {
-      ctx.strokeStyle = activeBrush.color
-      ctx.lineWidth = 3
-      ctx.globalAlpha = 0.85
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
+      // Outer thick stroke
+      ctx.strokeStyle = activeBrush.color
+      ctx.lineWidth = 8
+      ctx.globalAlpha = 0.3
       ctx.beginPath()
       ctx.moveTo(tToX(rawPoints[0].t, w), drawY + (0.5 - rawPoints[0].v / 2) * drawH)
       for (let i = 1; i < rawPoints.length; i++) {
         ctx.lineTo(tToX(rawPoints[i].t, w), drawY + (0.5 - rawPoints[i].v / 2) * drawH)
       }
       ctx.stroke()
+      // Inner bright stroke
+      ctx.lineWidth = 3
+      ctx.globalAlpha = 0.8
+      ctx.stroke()
       ctx.globalAlpha = 1.0
+    }
+
+    // Halation clear effect
+    if (halationProgress !== null) {
+      const cx = w / 2
+      const cy = drawY + drawH / 2
+      const maxR = Math.sqrt(w * w + drawH * drawH)
+      const r = halationProgress * maxR * 1.2
+      const ringW = maxR * 0.15
+
+      // Expanding ring of amber
+      for (let i = 3; i >= 0; i--) {
+        const ri = r - i * ringW * 0.3
+        if (ri <= 0) continue
+        ctx.beginPath()
+        ctx.arc(cx, cy, ri, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(196, 122, 42, ${0.08 * (4 - i)})`
+        ctx.fill()
+      }
+
+      // White-out behind the ring (erase effect)
+      if (r > ringW) {
+        ctx.beginPath()
+        ctx.arc(cx, cy, r - ringW, 0, Math.PI * 2)
+        ctx.fillStyle = '#f5f0e6'
+        ctx.fill()
+      }
     }
 
     // Restore clip (curves done)
@@ -297,9 +330,9 @@
     ctx.fillStyle = '#f5f0e6'
     ctx.fillRect(0, 0, w, TIMELINE_H)
     // Re-draw timeline header content
-    ctx.fillStyle = isZoomed ? 'rgba(160, 140, 110, 0.12)' : 'rgba(160, 140, 110, 0.08)'
+    ctx.fillStyle = isZoomed ? 'rgba(30, 32, 40, 0.08)' : 'rgba(30, 32, 40, 0.05)'
     ctx.fillRect(0, 0, w, TIMELINE_H)
-    ctx.strokeStyle = 'rgba(160, 140, 110, 0.15)'
+    ctx.strokeStyle = 'rgba(30, 32, 40, 0.1)'
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(0, TIMELINE_H)
@@ -313,7 +346,7 @@
       const isBeat = s % 4 === 0
       const showTick = isZoomed ? true : isBeat
       if (showTick) {
-        ctx.strokeStyle = 'rgba(160, 140, 110, 0.25)'
+        ctx.strokeStyle = 'rgba(30, 32, 40, 0.15)'
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, TIMELINE_H - (isBeat ? 8 : 4))
@@ -322,7 +355,7 @@
       }
     }
     // Re-draw labels
-    ctx.fillStyle = 'rgba(120, 100, 70, 0.5)'
+    ctx.fillStyle = 'rgba(30, 32, 40, 0.5)'
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
     if (isZoomed) {
@@ -335,7 +368,7 @@
     } else {
       for (let r = 0; r < rc; r++) {
         const x = tToX(r / rc, w) + 4
-        ctx.fillText(`${r + 1}`, x, 12)
+        ctx.fillText(`R${r + 1}`, x, 12)
       }
     }
 
@@ -360,6 +393,12 @@
         ctx.fill()
       }
     }
+  }
+
+  function isMixTarget(target: SweepTarget): boolean {
+    if (target.kind === 'send') return true
+    if (target.kind === 'track' && (target.param === 'volume' || target.param === 'pan')) return true
+    return false
   }
 
   function drawCurve(ctx: CanvasRenderingContext2D, curve: SweepCurve, w: number, drawY: number, drawH: number, alpha: number) {
@@ -440,29 +479,60 @@
       }
     }
 
-    // Filled area
-    ctx.globalAlpha = alpha * 0.15
-    ctx.fillStyle = curve.color
+    const mix = isMixTarget(curve.target)
+
+    // Fill — solid for synth, hatched for mix
+    ctx.save()
+    ctx.globalAlpha = alpha * 0.35
+    if (mix) {
+      // Diagonal stripe pattern
+      const pat = document.createElement('canvas')
+      pat.width = 6; pat.height = 6
+      const pc = pat.getContext('2d')!
+      pc.strokeStyle = curve.color
+      pc.lineWidth = 1.5
+      pc.beginPath()
+      pc.moveTo(0, 6); pc.lineTo(6, 0)
+      pc.stroke()
+      const pattern = ctx.createPattern(pat, 'repeat')
+      if (pattern) {
+        ctx.fillStyle = pattern
+        ctx.globalAlpha = alpha * 0.25
+      }
+    } else {
+      ctx.fillStyle = curve.color
+    }
     pathFn('fill')
     ctx.fill()
+    ctx.restore()
 
-    // Stroke
+    // Thick brush stroke
     ctx.strokeStyle = curve.color
-    ctx.lineWidth = isActive ? 3 : 1.5
-    ctx.globalAlpha = alpha
+    ctx.lineWidth = isActive ? 6 : 3
+    ctx.globalAlpha = alpha * 0.7
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     pathFn('stroke')
     ctx.stroke()
 
-    // Dots on anchor points for active curve
+    // Bright center line for definition
     if (isActive) {
+      ctx.strokeStyle = curve.color
+      ctx.lineWidth = 2
+      ctx.globalAlpha = alpha
+      pathFn('stroke')
+      ctx.stroke()
+    }
+
+    // Anchor dots in bézier mode
+    if (isActive && drawMode === 'bezier') {
       ctx.fillStyle = curve.color
+      ctx.globalAlpha = alpha
       for (const p of pts) {
         const px = xFor(p.t)
         if (px < -5 || px > w + 5) continue
         ctx.beginPath()
-        ctx.arc(px, yForV(p.v), drawMode === 'bezier' ? 5 : 3, 0, Math.PI * 2)
+        ctx.arc(px, yForV(p.v), 5, 0, Math.PI * 2)
         ctx.fill()
       }
     }
@@ -709,6 +779,55 @@
     return Math.abs(dx * (a.v - p.v) - (a.t - p.t) * dy) / len
   }
 
+  // ── Presets ──
+  const SWEEP_PRESETS = [
+    { name: '╱', tip: 'Ramp Up', tipJa: 'ランプアップ',
+      points: [{ t: 0, v: 0 }, { t: 1, v: 1 }] },
+    { name: '╲', tip: 'Ramp Down', tipJa: 'ランプダウン',
+      points: [{ t: 0, v: 0 }, { t: 1, v: -1 }] },
+    { name: '╱╲', tip: 'Triangle', tipJa: 'トライアングル',
+      points: [{ t: 0, v: 0 }, { t: 0.5, v: 1 }, { t: 1, v: 0 }] },
+    { name: '╲╱', tip: 'V (Dip)', tipJa: 'V (ディップ)',
+      points: [{ t: 0, v: 0 }, { t: 0.5, v: -1 }, { t: 1, v: 0 }] },
+    { name: '⌒', tip: 'S-Curve Up', tipJa: 'S字上昇',
+      points: [{ t: 0, v: 0 }, { t: 0.2, v: 0.05 }, { t: 0.5, v: 0.4 }, { t: 0.8, v: 0.9 }, { t: 1, v: 1 }] },
+  ] as const
+
+  let presetOpen = $state(false)
+
+  function applyPreset(preset: typeof SWEEP_PRESETS[number]) {
+    if (!activeBrush || !sweepNode) return
+    pushUndo('Apply sweep preset')
+    commitCurve(activeBrush.target, activeBrush.color, [...preset.points])
+    presetOpen = false
+    redraw()
+  }
+
+  // ── Clear all with halation effect ──
+  let halationProgress = $state<number | null>(null)
+  function clearAllWithHalation() {
+    if (!sweepNode || halationProgress !== null) return
+    const startTime = performance.now()
+    const duration = 600  // ms
+
+    function animate() {
+      const elapsed = performance.now() - startTime
+      halationProgress = Math.min(1, elapsed / duration)
+      redraw()
+
+      if (halationProgress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        // Actually clear
+        pushUndo('Clear all sweep curves')
+        sceneUpdateFnParams(sweepNode!.id, { sweep: { curves: [] } })
+        halationProgress = null
+        redraw()
+      }
+    }
+    requestAnimationFrame(animate)
+  }
+
   // ── Commit curve to sweep data ──
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
     if (!sweepNode) return
@@ -779,6 +898,30 @@
         data-tip="Click to add, drag to move, double-click to delete" data-tip-ja="クリックで追加、ドラッグで移動、ダブルクリックで削除"
       >Point</button>
     </div>
+    <span class="sweep-toolbar-sep"></span>
+    <div class="sweep-preset-wrap">
+      <button class="sweep-preset-btn" class:open={presetOpen}
+        onpointerdown={() => { presetOpen = !presetOpen }}
+        data-tip="Apply preset shape" data-tip-ja="プリセット形状を適用"
+      >Shape</button>
+      {#if presetOpen}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="sweep-preset-backdrop" onpointerdown={() => { presetOpen = false }}></div>
+        <div class="sweep-preset-dropdown">
+          {#each SWEEP_PRESETS as preset}
+            <button class="sweep-preset-option" onpointerdown={() => applyPreset(preset)}
+              data-tip={preset.tip} data-tip-ja={preset.tipJa}
+            >
+              <span class="sweep-preset-icon">{preset.name}</span>
+              <span class="sweep-preset-label">{preset.tip}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+    <button class="sweep-preset-btn" onpointerdown={clearAllWithHalation}
+      data-tip="Clear all curves" data-tip-ja="全カーブを消去"
+    >Clear</button>
     <div class="sweep-toolbar-spacer"></div>
     <button class="sweep-close" onpointerdown={onClose}
       aria-label="Close sweep editor" data-tip="Close" data-tip-ja="閉じる"
@@ -837,12 +980,14 @@
             style="--accent: {item.color}"
             onpointerdown={() => { activeBrushIdx = i }}
           >
-            <span class="palette-dot" class:has-curve={hasCurve}></span>
+            <span class="palette-dot" class:has-curve={hasCurve} class:mix={item.isMix}></span>
             <span class="palette-label">{item.label}</span>
             {#if hasCurve}
               <button class="palette-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteCurve(item.target) }}
                 data-tip="Delete curve" data-tip-ja="カーブを削除"
               >✕</button>
+            {:else}
+              <span class="palette-del-placeholder"></span>
             {/if}
           </div>
         {/each}
@@ -888,13 +1033,13 @@
     gap: 12px;
     padding: 8px 12px 10px;
     background: var(--color-bg);
-    border-bottom: 1px solid rgba(30, 32, 40, 0.08);
+    border-bottom: 1px solid rgba(30, 32, 40, 0.10);
     flex-shrink: 0;
   }
   .sweep-pat-indicator {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     flex-shrink: 0;
   }
   .sweep-pat-dot {
@@ -905,31 +1050,107 @@
   .sweep-pat-name {
     font-size: 11px;
     font-weight: 600;
-    color: rgba(80, 70, 50, 0.7);
+    color: var(--color-muted);
   }
   .sweep-mode-toggle {
     display: flex;
-    gap: 1px;
-    background: rgba(80, 70, 50, 0.06);
-    border: 1px solid rgba(80, 70, 50, 0.1);
-    border-radius: 4px;
-    padding: 1px;
+    gap: 0;
+  }
+  .sweep-mode-btn + .sweep-mode-btn {
+    margin-left: -1px;
   }
   .sweep-mode-btn {
-    all: unset;
-    padding: 3px 10px;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: rgba(80, 70, 50, 0.4);
-    border-radius: 3px;
+    height: 24px;
+    padding: 0 12px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--color-muted);
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid rgba(30, 32, 40, 0.15);
+    background: transparent;
+    transition: color 80ms, border-color 80ms, background 80ms;
+    line-height: 24px;
+  }
+  .sweep-mode-btn.active {
+    color: var(--color-fg);
+    border-color: var(--color-fg);
+    background: rgba(30, 32, 40, 0.06);
+  }
+  .sweep-preset-wrap {
+    position: relative;
+  }
+  .sweep-preset-btn {
+    border: 1.5px solid var(--color-olive);
+    background: transparent;
+    color: var(--color-olive);
+    height: 24px;
+    padding: 0 8px;
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     cursor: pointer;
   }
-  .sweep-mode-btn:hover { color: rgba(80, 70, 50, 0.7); }
-  .sweep-mode-btn.active {
-    background: rgba(80, 70, 50, 0.12);
-    color: rgba(80, 70, 50, 0.9);
+  .sweep-preset-btn.open {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+  .sweep-preset-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9;
+  }
+  .sweep-preset-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 10;
+    min-width: 120px;
+    background: var(--color-bg);
+    border: 1px solid rgba(30, 32, 40, 0.15);
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+  }
+  .sweep-preset-option {
+    font-family: var(--font-data);
+    font-size: 9px;
     font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(30, 32, 40, 0.70);
+    background: none;
+    border: none;
+    padding: 6px 8px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    transition: background 40ms, color 40ms;
+  }
+  .sweep-preset-option:hover {
+    background: rgba(30, 32, 40, 0.06);
+    color: var(--color-fg);
+  }
+  .sweep-preset-icon {
+    font-size: 11px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .sweep-preset-label {
+    font-weight: 600;
+  }
+  .sweep-toolbar-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(30, 32, 40, 0.12);
+    margin: 0 4px;
+    flex-shrink: 0;
   }
   .sweep-toolbar-spacer { flex: 1; }
   .sweep-close {
@@ -960,7 +1181,7 @@
     flex-shrink: 0;
     overflow-y: auto;
     padding: 4px 0;
-    border-right: 1px solid rgba(237, 232, 220, 0.08);
+    border-right: 1px solid rgba(30, 32, 40, 0.10);
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -972,23 +1193,23 @@
     padding: 6px 8px;
     cursor: pointer;
     border-radius: 4px;
-    color: rgba(80, 70, 50, 0.7);
+    color: var(--color-muted);
     font-size: 11px;
     font-weight: 600;
   }
-  .palette-track:hover { background: rgba(80, 70, 50, 0.06); }
-  .palette-track.has-curve { color: rgba(80, 70, 50, 0.9); }
+  .palette-track:hover { background: rgba(30, 32, 40, 0.06); }
+  .palette-track.has-curve { color: var(--color-fg); }
   .palette-track-name { flex: 1; }
   .palette-track-arrow {
-    font-size: 14px;
+    font-size: 12px;
     opacity: 0.4;
   }
   .palette-group-sep {
     font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.06em;
-    color: rgba(80, 70, 50, 0.4);
-    padding: 10px 8px 3px;
+    color: var(--color-muted);
+    padding: 8px 8px 4px;
     text-transform: uppercase;
   }
   .palette-back {
@@ -999,19 +1220,19 @@
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    color: rgba(80, 70, 50, 0.7);
-    border-bottom: 1px solid rgba(80, 70, 50, 0.1);
+    color: var(--color-muted);
+    border-bottom: 1px solid rgba(30, 32, 40, 0.1);
     margin-bottom: 4px;
   }
-  .palette-back:hover { background: rgba(80, 70, 50, 0.06); }
+  .palette-back:hover { background: rgba(30, 32, 40, 0.06); }
   .palette-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 8px 3px 16px;
+    gap: 4px;
+    padding: 4px 8px 4px 16px;
     border: none;
     background: transparent;
-    color: rgba(80, 70, 50, 0.55);
+    color: var(--color-muted);
     font-size: 11px;
     cursor: pointer;
     border-radius: 4px;
@@ -1019,20 +1240,24 @@
     position: relative;
   }
   .palette-item:hover {
-    background: rgba(80, 70, 50, 0.06);
+    background: rgba(30, 32, 40, 0.06);
   }
   .palette-item.active {
-    background: rgba(80, 70, 50, 0.1);
-    color: rgba(80, 70, 50, 0.9);
+    background: rgba(30, 32, 40, 0.08);
+    color: var(--color-fg);
   }
   .palette-dot {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    border: 1.5px solid var(--accent);
+    border: 2px solid var(--accent);
+    background: var(--accent);
     flex-shrink: 0;
   }
-  .palette-dot.has-curve {
+  .palette-dot.mix {
+    background: transparent;
+  }
+  .palette-dot.has-curve.mix {
     background: var(--accent);
   }
   .palette-label {
@@ -1043,13 +1268,16 @@
   }
   .palette-del {
     all: unset;
-    font-size: 9px;
-    opacity: 0.4;
+    font-size: 12px;
+    color: var(--color-muted);
     cursor: pointer;
     padding: 0 2px;
+    width: 12px;
+    text-align: center;
   }
-  .palette-del:hover {
-    opacity: 1;
+  .palette-del-placeholder {
+    width: 12px;
+    flex-shrink: 0;
   }
 
   /* ── Canvas ── */
@@ -1059,9 +1287,7 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    border-radius: 6px;
-    border: 1px solid rgba(160, 140, 110, 0.2);
-    box-shadow: inset 0 1px 4px rgba(120, 100, 70, 0.08);
+    border: 1px solid rgba(30, 32, 40, 0.10);
   }
   .sweep-canvas {
     display: block;
@@ -1087,7 +1313,7 @@
   }
   .sweep-axis-labels span {
     font-size: 9px;
-    color: rgba(120, 100, 70, 0.4);
+    color: var(--color-muted);
   }
 
 </style>
