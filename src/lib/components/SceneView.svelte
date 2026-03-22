@@ -1381,7 +1381,7 @@
     gap: 2px;
   }
   .scene-node.gen.selected {
-    outline: 2px solid var(--nc, var(--color-fg));
+    outline: 1.5px dashed var(--color-fg);
     outline-offset: 2px;
   }
   .gen-faceplate {

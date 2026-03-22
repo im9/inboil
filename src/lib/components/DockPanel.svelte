@@ -256,12 +256,23 @@
               <span class="fn-label">Curves</span>
               <span class="fn-step-val">{swp.curves.length}</span>
             </div>
-            <div class="fn-row">
-              <span class="fn-label" data-tip="Connect to a pattern node, then open pattern sheet to edit sweep curves" data-tip-ja="パターンノードに接続し、パターンシートでスウィープカーブを編集">Open pattern sheet to edit</span>
-            </div>
           {/if}
         </div>
         <div class="node-actions">
+          {#if selectedFnNode.fnParams?.sweep}
+            <button class="btn-action-node" onpointerdown={() => {
+              const edge = song.scene.edges.find(e => e.from === selectedFnNode.id)
+              const targetNode = edge ? song.scene.nodes.find(n => n.id === edge.to) : null
+              if (targetNode?.type === 'pattern' && targetNode.patternId) {
+                const pi = song.patterns.findIndex(p => p.id === targetNode.patternId)
+                if (pi >= 0) selectPattern(pi)
+                ui.sweepTab = true
+                ui.patternSheet = true
+              }
+            }}
+              data-tip="Edit sweep curves" data-tip-ja="スウィープカーブを編集"
+            >Edit</button>
+          {/if}
           <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedFnNode.id); ui.selectedSceneNodes = {} }}
             data-tip="Remove node" data-tip-ja="ノードを削除"
           >✕ Remove</button>
@@ -632,6 +643,22 @@
     white-space: nowrap;
   }
   .btn-set-root:hover {
+    color: var(--dk-text);
+    background: var(--dk-bg-hover);
+  }
+  .btn-action-node {
+    border: 1px solid var(--dk-border-mid);
+    background: transparent;
+    color: var(--dk-text-mid);
+    font-size: var(--dk-fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: color 60ms, background 60ms;
+    white-space: nowrap;
+  }
+  .btn-action-node:hover {
     color: var(--dk-text);
     background: var(--dk-bg-hover);
   }

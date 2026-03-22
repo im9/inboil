@@ -262,20 +262,16 @@
       }
     }
 
-    // Draw only curves for the selected track (or FX when at top level)
+    // Draw curves: all at top level, filtered when track is expanded
     for (const curve of sweepData.curves) {
-      // Skip legacy mute curves (removed from SweepTarget in ADR 118)
       if (curve.target.kind === 'mute' as string) continue
-      // Filter: only show curves belonging to the expanded track
       if (expandedTrackId !== null) {
+        // Track drill-down: only show this track's curves
         if (curve.target.kind === 'fx') continue
         if ('trackId' in curve.target && curve.target.trackId !== expandedTrackId) continue
-      } else {
-        // Top-level: only show FX curves
-        if (curve.target.kind !== 'fx') continue
       }
       const isActive = activeBrush && targetsEqual(curve.target, activeBrush.target)
-      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3)
+      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.2)
     }
 
     // Draw current freehand stroke
