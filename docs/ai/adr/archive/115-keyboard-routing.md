@@ -193,6 +193,8 @@ Incremental migration, one component at a time:
 
 - **keyup routing**: Must mirror keydown priority. SceneView needs Space keyup for pan mode release. The `scene` layer registers both keydown and keyup handlers.
 
+- **Scene stamps vs pattern copy/paste (ADR 119)**: `selectedSceneStamps` must NOT be included in `hasSceneEdgeOrLabel` — stamps are purely decorative and should not block pattern-level Ctrl+C/V. Only edges, labels (structural scene elements) block pattern ops. Stamps handle Delete/Backspace in the `scene` layer but do not intercept copy/paste.
+
 - **Hot-reloading**: Svelte HMR may re-run mount effects, causing double registration. `registerKeyLayer` is idempotent (Map.set overwrites) so this is safe.
 
 - **Future modal/dialog support**: A new `modal` layer at priority 0 (highest) can be added without touching any existing handler. This is a direct benefit of the layered architecture.

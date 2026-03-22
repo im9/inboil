@@ -341,7 +341,7 @@
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyZ') { e.preventDefault(); redo(); return true }
     // Skip pattern-level ops when scene edges/labels are selected (SceneView handles its own keys).
     // Note: selectedSceneNodes is auto-set by MatrixView's selectAndFocus, so it must NOT block copy/paste.
-    const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || Object.keys(ui.selectedSceneLabels).length > 0 || Object.keys(ui.selectedSceneStamps).length > 0
+    const hasSceneEdgeOrLabel = ui.selectedSceneEdge != null || Object.keys(ui.selectedSceneLabels).length > 0
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0 || hasSceneEdgeOrLabel
     // Pattern-level copy/paste (skip when scene edge/label is selected — scene layer handles those)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {

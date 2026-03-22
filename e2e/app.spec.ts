@@ -813,6 +813,52 @@ test.describe('scene keyboard', () => {
     expect(await page.locator('.scene-node').count()).toBe(0)
   })
 
+  test('delete stamp does not clear pattern data', async ({ page }) => {
+    // Set up: add step data
+    await addStepData(page)
+
+    // Place a stamp: toolbar stamp button → picker → click canvas
+    const stampBtn = page.locator('.tool-btn[data-tip="Stamp"]')
+    if (await stampBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+      await stampBtn.click()
+      await page.waitForTimeout(400)
+
+      // Pick first stamp from picker
+      const pickerItem = page.locator('.stamp-picker-item').first()
+      if (await pickerItem.isVisible({ timeout: 500 }).catch(() => false)) {
+        await pickerItem.click()
+        await page.waitForTimeout(300)
+
+        // Click scene canvas to place stamp
+        const sceneView = page.locator('.scene-view')
+        const box = await sceneView.boundingBox()
+        if (box) {
+          await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+          await page.waitForTimeout(300)
+        }
+
+        // Stamp should be visible and selected
+        const stamp = page.locator('.scene-stamp')
+        if (await stamp.isVisible({ timeout: 500 }).catch(() => false)) {
+          // Click stamp to select it
+          await stamp.first().click()
+          await page.waitForTimeout(200)
+
+          // Delete stamp — should NOT clear pattern data
+          await page.keyboard.press('Delete')
+          await page.waitForTimeout(300)
+
+          // Stamp should be gone
+          expect(await page.locator('.scene-stamp').count()).toBe(0)
+
+          // Pattern data should be intact
+          const active = await stepIsActive(page)
+          expect(active).toBe(true)
+        }
+      }
+    }
+  })
+
   test('undo restores deleted scene node', async ({ page }) => {
     await addSceneNode(page)
     await expect(page.locator('.scene-node')).toHaveCount(1)
