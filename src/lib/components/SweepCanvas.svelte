@@ -790,6 +790,7 @@
   </div>
   <div class="sweep-layout">
     <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <!-- Palette — drill-down by track -->
     <div class="sweep-palette" tabindex="0" onkeydown={onKeyDown}>
       {#if expandedTrackId === null}

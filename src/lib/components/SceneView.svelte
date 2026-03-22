@@ -975,37 +975,39 @@
                 >GEN</span>
               </div>
             </div>
-          {:else if isSweep}
-            {@const curves = node.fnParams?.sweep?.curves ?? []}
-            <div class="gen-faceplate sweep">
-              <div class="sweep-preview">
-                <svg viewBox="0 0 80 28" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                  <line x1="0" y1="14" x2="80" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
-                  {#each curves as curve}
-                    {#if curve.points.length >= 2}
-                      <polyline
-                        points={curve.points.map(p => `${p.t * 80},${14 - p.v * 13}`).join(' ')}
-                        stroke={curve.color}
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        opacity="0.8"
-                      />
-                    {/if}
-                  {/each}
-                  {#if curves.length === 0}
-                    <text x="40" y="17" text-anchor="middle" fill="currentColor" font-size="8" opacity="0.3">no curves</text>
-                  {/if}
-                </svg>
-              </div>
-              <div class="gen-label-row">
-                <span class="gen-label">SWEEP</span>
-                <span class="gen-target">{curves.length} curve{curves.length !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
           {:else}
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
+        {:else if isSweep}
+          {@const curves = (node.fnParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
+          {@const targetPatNode = song.scene.edges.find(e => e.from === node.id) ? song.scene.nodes.find(n => n.id === song.scene.edges.find(e => e.from === node.id)?.to) : null}
+          {@const targetPatName = targetPatNode?.patternId ? (song.patterns.find(p => p.id === targetPatNode.patternId)?.name || 'Pattern') : 'unlinked'}
+          <div class="gen-faceplate sweep">
+            <div class="sweep-preview">
+              <svg viewBox="0 0 104 36" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                <line x1="0" y1="18" x2="104" y2="18" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+                {#each curves as curve}
+                  {#if curve.points.length >= 2}
+                    <polyline
+                      points={curve.points.map(p => `${p.t * 104},${18 - p.v * 16}`).join(' ')}
+                      stroke={curve.color}
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      opacity="0.7"
+                    />
+                  {/if}
+                {/each}
+                {#if curves.length === 0}
+                  <text x="52" y="21" text-anchor="middle" fill="currentColor" font-size="9" opacity="0.25">no curves</text>
+                {/if}
+              </svg>
+            </div>
+            <div class="gen-label-row">
+              <span class="gen-label">→ {targetPatName}</span>
+              <span class="gen-target">{curves.length}</span>
+            </div>
+          </div>
         {:else if isFn && node.type === 'fx' && node.fnParams?.fx}
           {@const fxColors = [
             node.fnParams.fx.verb     ? 'var(--color-olive)'  : null,
@@ -1370,16 +1372,16 @@
     width: 120px;
     height: 72px;
     border-radius: var(--radius-md);
-    background: var(--nc, var(--color-fg));
-    color: rgba(237, 232, 220, 0.9);
-    border: 1.5px dashed rgba(237, 232, 220, 0.3);
+    background: rgba(245, 240, 230, 0.95);
+    color: rgba(30, 32, 40, 0.85);
+    border: 2px solid var(--nc, var(--color-fg));
     padding: 6px 8px;
     flex-direction: column;
     align-items: stretch;
     gap: 2px;
   }
   .scene-node.gen.selected {
-    outline: 2px solid rgba(237, 232, 220, 0.85);
+    outline: 2px solid var(--nc, var(--color-fg));
     outline-offset: 2px;
   }
   .gen-faceplate {
@@ -1399,13 +1401,13 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    opacity: 0.9;
+    color: rgba(30, 32, 40, 0.8);
   }
   .gen-target {
     font-family: var(--font-data);
     font-size: 7px;
     font-weight: 700;
-    opacity: 0.5;
+    color: rgba(30, 32, 40, 0.4);
     white-space: nowrap;
   }
   .gen-controls {
@@ -1419,15 +1421,15 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 5px;
-    border: 1px solid rgba(237, 232, 220, 0.3);
+    border: 1px solid rgba(30, 32, 40, 0.2);
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.1);
-    color: rgba(237, 232, 220, 0.85);
+    background: rgba(30, 32, 40, 0.06);
+    color: rgba(30, 32, 40, 0.7);
     cursor: pointer;
   }
   .gen-run-btn:hover {
-    background: rgba(237, 232, 220, 0.25);
-    color: white;
+    background: rgba(30, 32, 40, 0.15);
+    color: rgba(30, 32, 40, 0.9);
   }
   .gen-run-btn:active {
     transform: scale(0.95);
@@ -1442,15 +1444,15 @@
     width: 8px;
     height: 8px;
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.15);
+    background: rgba(30, 32, 40, 0.1);
     flex-shrink: 0;
   }
   .turing-bit.on {
-    background: rgba(237, 232, 220, 0.85);
+    background: rgba(30, 32, 40, 0.7);
   }
   .turing-bit.current {
-    background: rgba(237, 232, 220, 1);
-    box-shadow: 0 0 4px rgba(237, 232, 220, 0.55);
+    background: rgba(30, 32, 40, 0.9);
+    box-shadow: 0 0 4px rgba(30, 32, 40, 0.3);
   }
   /* Quantizer mini keyboard */
   .quant-keys {
@@ -1461,21 +1463,21 @@
   .quant-key {
     flex: 1;
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.15);
+    background: rgba(30, 32, 40, 0.08);
   }
   .quant-key.black {
-    background: rgba(237, 232, 220, 0.08);
+    background: rgba(30, 32, 40, 0.15);
     margin-top: 2px;
   }
   .quant-key.active {
-    background: rgba(237, 232, 220, 0.7);
+    background: rgba(30, 32, 40, 0.5);
   }
   .quant-key.black.active {
-    background: rgba(237, 232, 220, 0.55);
+    background: rgba(30, 32, 40, 0.65);
   }
   .quant-key.playing {
-    background: rgba(237, 232, 220, 1);
-    box-shadow: 0 0 4px rgba(237, 232, 220, 0.55);
+    background: rgba(30, 32, 40, 0.85);
+    box-shadow: 0 0 4px rgba(30, 32, 40, 0.3);
   }
   /* Tonnetz transform ops */
   .tonnetz-ops {
@@ -1488,18 +1490,34 @@
     font-weight: 700;
     padding: 1px 3px;
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.15);
-    color: rgba(237, 232, 220, 0.85);
+    background: rgba(30, 32, 40, 0.08);
+    color: rgba(30, 32, 40, 0.6);
     transition: background 80ms, color 80ms;
   }
   .tonnetz-op.current {
-    background: rgba(237, 232, 220, 0.70);
-    color: rgba(30, 32, 40, 0.70);
+    background: rgba(30, 32, 40, 0.7);
+    color: rgba(245, 240, 230, 0.9);
+  }
+
+  /* ── Sweep node faceplate ── */
+  .sweep-preview {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .sweep-preview svg {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 
   .scene-node.playing {
     border: 1.5px solid rgba(255, 255, 255, 0.75);
     animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
+  }
+  .scene-node.gen.playing {
+    border: 2px solid var(--nc, var(--color-fg));
+    box-shadow: 0 0 8px var(--nc, rgba(30, 32, 40, 0.3));
   }
   .scene-node.playing .node-label {
     color: white;

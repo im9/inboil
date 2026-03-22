@@ -292,13 +292,10 @@ Called on each step advance (same timing as paramLock application). For smooth r
 
 ### Phase 5: Playback visual effects
 
-The sweep's impact should be **visible and dramatic** on the scene canvas during playback — not just a tiny indicator, but effects that communicate the parameter changes happening in real-time:
-
-- **Glow**: Pattern node border glows in the active sweep curve's color, intensity tracks the current offset magnitude
-- **Color shift**: Pattern node background color shifts with sweep progress (e.g., warmer as cutoff opens, cooler as it closes)
-- **Edge particles**: Particles flow along the edge from sweep node → pattern node, speed/density reflects sweep intensity
-- **Sweep progress arc**: A progress arc around the sweep node itself, showing how far through the full repeat cycle the sweep has progressed
-- **SWEEP tab live cursor**: When the pattern sheet SWEEP tab is open during playback, a vertical playhead line moves across the canvas showing current position
+- **Edge glow**: Sweep → pattern edge glows amber during playback, intensity tracks sweep progress
+- **Pattern node glow ring**: Amber glow ring around playing pattern node, intensity tracks progress
+- **Sweep progress bar**: Progress bar on sweep node faceplate showing repeat cycle position
+- **SWEEP tab live cursor**: ✅ Playhead line in sweep canvas
 
 ## Future Extensions
 
