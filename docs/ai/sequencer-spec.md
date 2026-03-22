@@ -26,7 +26,7 @@ Song {
   bpm:             number            // 40–240
   rootNote:        number            // 0–11 (C=0, C#=1, ..., B=11) — song-level key
   tracks:          Track[]           // up to 16 (mixer-only, ADR 056/080)
-  patterns:        Pattern[]         // pattern pool (100 slots: 21 factory + 79 user)
+  patterns:        Pattern[]         // pattern pool (currently 4 factory; count will change with demo song updates)
   sections:        Section[]         // arrangement slots referencing patterns
   scene:           Scene             // arrangement graph (ADR 044)
   effects:         Effects           // global send/bus FX params
@@ -126,7 +126,8 @@ Scene {
 SceneDecorator {
   type:              'transpose' | 'tempo' | 'repeat' | 'fx' | 'automation'
   params:            Record<string, number>
-  automationParams?: AutomationParams  // for type === 'automation' (ADR 053)
+  automationParams?: AutomationParams       // for type === 'automation' (ADR 053)
+  flavourOverrides?: Partial<FxFlavours>    // for type === 'fx' (ADR 076)
 }
 
 AutomationPoint {
@@ -152,27 +153,43 @@ AutomationParams {
 
 SceneNode {
   id:                string
-  type:              'pattern' | 'generative' | FnNodeType | LegacyFnType
-                     // FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' (ADR 093/116)
-                     // LegacyFnType = 'probability' | 'automation' (migration only)
+  type:              'pattern' | 'generative' | 'probability' | FnNodeType | LegacyFnType
+                     // FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep' (ADR 093/116/118)
+                     // LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation' (migration only)
   x:                 number           // canvas position (normalized 0–1)
   y:                 number
   root:              boolean          // true = playback entry point (exactly one)
   patternId?:        string           // for type === 'pattern'
   params?:           Record<string, number>       // legacy fn node params (migration only)
   automationParams?: AutomationParams // legacy automation (migration only)
-  fnParams?:         FnParams         // function node params (ADR 093/116)
+  fnParams?:         FnParams         // function node params (ADR 093/116/118)
   decorators?:       SceneDecorator[] // deprecated (ADR 093) — migrated to fn nodes
   generative?:       GenerativeConfig // for type === 'generative' (ADR 078)
 }
 
-FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx'
+FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
+
+SweepTarget =
+  | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
+  | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
+  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff' }
+
+SweepCurve {
+  target: SweepTarget
+  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: -1 to +1 (relative offset)
+  color:  string
+}
+
+SweepData {
+  curves: SweepCurve[]
+}
 
 FnParams {
   transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
   tempo?:     { bpm: number }
   repeat?:    { count: number }
   fx?:        { verb: boolean; delay: boolean; glitch: boolean; granular: boolean }
+  sweep?:     SweepData                // repeat sweep automation (ADR 118)
 }
 
 SceneEdge {
@@ -207,13 +224,13 @@ GenerativeConfig {
 
 ### Function Node Satellite Model (ADR 116)
 
-Function nodes (transpose/repeat/tempo/fx) attach as **satellites** to pattern nodes — no manual edge wiring needed. They are rendered as naked SVG icons positioned above their parent pattern node. Edges from fn nodes are hidden visually but maintained in data for playback. Drag a satellite away to detach; drop on another pattern to reattach. Same-type duplicates on one pattern are replaced automatically. During scene playback, satellite fn effects are applied via `applySatelliteFnNodes()` when entering a pattern.
+Function nodes (transpose/repeat/tempo/fx/sweep) attach as **satellites** to pattern nodes — no manual edge wiring needed. They are rendered as naked SVG icons positioned above their parent pattern node. Edges from fn nodes are hidden visually but maintained in data for playback. Drag a satellite away to detach; drop on another pattern to reattach. Same-type duplicates on one pattern are replaced automatically. During scene playback, satellite fn effects are applied via `applySatelliteFnNodes()` when entering a pattern.
 
 ### Auto-generate on Connect (ADR 117)
 
 Connecting a generative node to a pattern triggers automatic generation. Parameter changes debounce-regenerate (300ms). Target track auto-selects the first unused track. Merge mode simplified to replace (default) and fill (empty steps only).
 
-See ADR 044 for scene graph design, ADR 053 for automation, ADR 078 for generative nodes, ADR 116 for function node UX, ADR 117 for generative UX simplification.
+See ADR 044 for scene graph design, ADR 053 for automation, ADR 078 for generative nodes, ADR 116 for function node UX, ADR 117 for generative UX simplification, ADR 118 for repeat sweep automation.
 
 ## Trig — DECIDED
 
@@ -282,6 +299,10 @@ Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and se
 
 ### Scene graph playback
 When the scene graph is active (has a root node) and `playback.mode === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
+
+Repeat phase tracking (ADR 118): `playback.sceneRepeatIndex` (0-based current repeat) and `playback.sceneRepeatTotal` (total repeat count from repeat fn node) enable sweep automation to compute progress across the full repeat cycle.
+
+Sweep automation (ADR 118): When a sweep function node is connected to a pattern, `applySweepStep()` in `scenePlayback.ts` evaluates painted curves on each step advance. `ui.sweepTab` toggles the SWEEP tab in the pattern sheet. `findConnectedSweepNode()` and `findSweepNodeForPattern()` in `sceneActions.ts` locate connected sweep nodes. Automation snapshot (`automation.ts`) captures voice params and mute state for restore on stop.
 
 ### Solo pattern
 `playback.soloNodeId` targets a scene node for solo repeat. When the scene reaches that node, the engine loops its pattern exclusively. If the node is not yet playing, solo enters an "armed" state until the scene reaches it. Solo switches happen at cycle boundaries.

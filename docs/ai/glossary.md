@@ -2,6 +2,30 @@
 
 Domain-specific terms used throughout the docs. When a term appears in specs, it means exactly what is defined here.
 
+## JA naming conventions
+
+General nouns use katakana. Proper nouns / engine names stay in English. Abbreviations (P-Lock, FX) stay as-is.
+
+| EN | JA | Notes |
+|---|---|---|
+| Grid mode | グリッドモード | |
+| Tracker mode | トラッカーモード | |
+| Piano Roll | ピアノロール | |
+| Velocity | ベロシティ | |
+| Sampler | サンプラー | |
+| Voice | ボイス | |
+| Effect | エフェクト | |
+| Scene Node | シーンノード | |
+| Function Node | ファンクションノード | |
+| Sweep | スウィープ | not "スウィープオートメーション" |
+| Playback | 再生 | |
+| Shortcut | ショートカット | |
+| Turing Machine | Turing Machine | proper noun — keep English |
+| Quantizer | Quantizer | proper noun — keep English |
+| Tonnetz | Tonnetz | proper noun — keep English |
+| P-Lock | P-Lock | abbreviation — keep English |
+| FX | FX | abbreviation — keep English |
+
 ## Sequencer Terms
 
 | Term | Definition |
@@ -12,10 +36,11 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Track** | Mixer channel only: id, muted, volume, pan (ADR 080). Name and voiceId moved to Cell (ADR 062). |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
-| **SceneNode** | A node on the scene canvas: pattern, generative, or legacy function type (transpose/tempo/repeat/probability/fx/automation). |
+| **SceneNode** | A node on the scene canvas: pattern, generative, or function type (transpose/tempo/repeat/fx/sweep). Legacy types (probability/automation) kept for migration only. |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **SceneDecorator** | Legacy function decorator on pattern nodes (ADR 066). Migrated to standalone function nodes with satellite attachment (ADR 093/116). Type retained for data migration. |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
+| **Sweep** | Function node for painting parameter automation curves across repeat cycles (ADR 118). Kidpix-inspired freehand/bézier canvas. Applies relative offsets to volume, pan, voice params, and sends during scene playback. |
 | **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
@@ -32,7 +57,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 | **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
-| **Function Node** | Scene node applying a transform to a pattern: transpose, repeat, tempo, or FX. Rendered as naked SVG icons that satellite-attach to pattern nodes (ADR 116). |
+| **Function Node** | Scene node applying a transform to a pattern: transpose, repeat, tempo, FX, or sweep. Satellite types (transpose/repeat/tempo/fx) attach to pattern nodes (ADR 116). Sweep is an independent generative-sized node (ADR 118). |
 | **Satellite Attach** | Function nodes attach to pattern nodes by clicking the pattern in placement mode. Drag to detach/reattach. No manual edge wiring needed (ADR 116). |
 | **Tool Palette** | Circular button bar in SceneView for adding nodes. FN tools (neutral), GEN tools (accent-colored rings), Label. Visually distinct from flat square UI controls (ADR 116). |
 | **Auto-generate** | Generative nodes auto-generate on edge connect and debounce-regenerate on parameter changes (ADR 117). |
@@ -86,7 +111,7 @@ Domain-specific terms used throughout the docs. When a term appears in specs, it
 | **MobilePerfSheet** | Mobile Kaoss Pad XY controller. 4 tabs (PERF/GLITCH/FILTER/MOTION) with per-zone effects, Canvas visualizer, accelerometer/gyroscope support. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
-| **VoicePicker** | Voice selection UI (inline in DockPanel, not a standalone component) for changing a cell's instrument. Category tabs (DRUM/BASS/LEAD/SAMPLER) + voice list (ADR 009/058). |
+| **VoicePicker** | Voice selection UI (inline in DockPanel, not a standalone component) for changing a cell's instrument. Category tabs (DRUM/SYNTH/SMPL) + voice list (ADR 009/058). |
 | **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 | **Hardware MIDI** | Web MIDI API integration for USB + BLE MIDI keyboards. Per-note release, CC1→DJ Filter (ADR 081). |

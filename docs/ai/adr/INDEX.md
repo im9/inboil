@@ -133,6 +133,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 093 | Decorator Migration & Step Automation | Implemented | Per-step paramLocks (worklet interpolation), decorator→function node migration, curve automation removed, DockPanel simplified |
 | 094 | Interactive Docs & Playground | Proposed | Tutorial JSON snapshots, SceneCanvas sandbox, in-app onboarding (split from ADR 072) |
 | 118 | Repeat Sweep Automation | Implemented | Sweep fn node, paint canvas (freehand/bézier), per-step playback, presets, halation clear |
+| 119 | Scene Stamps | Proposed | Kidpix-inspired decorative SVG stamps with beat-synced animations, free placement on scene canvas |
 
 ## Data / Infrastructure
 

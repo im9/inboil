@@ -113,7 +113,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (46 files)  ← Svelte 5 UI components
+│   │   ├── components/ (47 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -158,6 +158,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── VFader.svelte      ← Vertical fader control
 │   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
+│   │   │   ├── SweepCanvas.svelte  ← Sweep automation paint canvas (ADR 118)
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
 │   │   │   └── SceneRibbon.svelte  ← Playback scrubber (unused, future mobile)
 │   │   ├── audio/
@@ -197,7 +198,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── stepActions.ts          ← Step-level mutations (toggle, velocity, etc.)
 │   │   ├── songClone.ts            ← Pure data clone/restore for Song serialization
 │   │   ├── generative.ts           ← Turing Machine, Quantizer, Tonnetz algorithms
-│   │   ├── automation.ts           ← Automation curve evaluation
+│   │   ├── automation.ts           ← Scene playback snapshot/restore (voice params, mute, FX)
 │   │   ├── randomize.ts            ← Pattern randomization
 │   │   ├── audioPool.ts            ← OPFS audio pool: factory install, import, browse (ADR 104)
 │   │   ├── storage.ts              ← IndexedDB access layer (ADR 020)
@@ -225,7 +226,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 User action (click/drag)
   → Svelte $state mutation (state.svelte.ts)
     → $effect in App.svelte detects change via JSON.stringify
-      → engine.sendPatternByIndex(song, perf, fxPad, false, patternIndex)
+      → engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
         → MessagePort.postMessage({ type: 'setPattern', pattern: {...} })
           → AudioWorklet applies new state on next process() cycle
 

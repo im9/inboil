@@ -140,7 +140,7 @@ a.site-title span {
 }
 
 /* ── Docs button styling — match LP ── */
-.sl-markdown-content a[href*="pages.dev"],
+.sl-markdown-content a[href*="pages.dev"]:not(.starlight-aside a),
 .sl-markdown-content a.action {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.8rem;
@@ -151,7 +151,7 @@ a.site-title span {
   padding: 0.5rem 1.4rem;
   transition: all 0.2s;
 }
-.sl-markdown-content a[href*="pages.dev"]:hover,
+.sl-markdown-content a[href*="pages.dev"]:not(.starlight-aside a):hover,
 .sl-markdown-content a.action:hover {
   background: var(--sl-color-accent);
   color: var(--sl-color-black);

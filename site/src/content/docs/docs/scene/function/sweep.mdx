@@ -1,0 +1,86 @@
+---
+title: Sweep Automation
+description: Paint parameter automation curves across repeat cycles for evolving textures and filter sweeps.
+sidebar:
+  order: 1
+---
+
+A sweep node lets you **draw parameter changes over time** — perfect for acid-style filter sweeps, volume fades, and evolving textures across multiple repeats of a pattern.
+
+## How It Works
+
+1. **Add a Sweep node** from the tool palette or bubble menu
+2. **Connect it** to a pattern node with an edge
+3. **Double-tap the Sweep node** to open the paint canvas
+4. **Select a parameter** from the palette (e.g., KICK → Volume, or BASS → CUT)
+5. **Draw a curve** on the canvas — the X axis is time (across all repeats), the Y axis is the parameter offset
+
+The sweep applies **relative offsets** to the parameter's base value. Drawing above the center line increases the value; below decreases it.
+
+## Paint Canvas
+
+The canvas shows a timeline spanning all repeats of the connected pattern. Click a repeat number (R1, R2, ...) in the timeline header to zoom into that repeat for finer control.
+
+### Drawing Modes
+
+| Mode | Behavior |
+|------|----------|
+| **Draw** | Freehand painting — drag to draw curves with automatic smoothing |
+| **Point** | Click to place anchor points, drag to reposition, double-click to delete |
+
+### Shape Presets
+
+Use the **Shape** button to apply preset curve shapes instantly:
+
+| Shape | Effect |
+|-------|--------|
+| ╱ Ramp Up | Gradual increase from 0 to +1 |
+| ╲ Ramp Down | Gradual decrease from 0 to −1 |
+| ╱╲ Triangle | Rise to peak then return (swell) |
+| ╲╱ V (Dip) | Dip down then return |
+| ⌒ S-Curve | Slow start, accelerating rise |
+
+### Clear
+
+The **Clear** button removes all curves.
+
+## Parameters
+
+The palette shows all available parameters for each track, organized into categories:
+
+| Category | Examples |
+|----------|----------|
+| **Mix** (○ outline dots) | Volume, Pan |
+| **Synth** (● filled dots) | All voice-specific params (TONE, CUT, RESO, DECAY, etc.) |
+| **Send** (○ outline dots) | Verb, Delay, Glitch, Grain send levels |
+
+Synth parameters vary per voice type — a drum track shows different params than a bass synth.
+
+## Playback
+
+Sweep automation applies during **scene playback** only (not pattern loop mode). The sweep evaluates its curves on every step and updates parameters in real-time.
+
+- A **playhead** line moves across the canvas during playback
+- The **sweep node** in the scene view shows a playhead moving across its curve preview
+- Connected edges glow with the sweep's accent color during playback
+
+After playback stops, all parameters are **restored to their original values** via the automation snapshot system.
+
+## Scene View
+
+The sweep node appears as a generative-sized node with:
+- A **curve preview** showing all drawn curves
+- The **target pattern name** (e.g., → FROST)
+- The number of active curves
+
+## Tips
+
+- **Use with Repeat nodes** — a Repeat ×6 node gives you 6 repeats to sweep across. Without a repeat node, the sweep spans a single pattern play-through.
+- **Volume as mute** — draw Volume to −1 to effectively mute a track for part of the sweep
+- **Layer multiple curves** — draw different parameters on the same sweep node for complex evolving textures
+- **Zoom for precision** — click a repeat number to zoom in, then use Point mode for exact control
+
+## Related
+
+- [Scene Nodes](/docs/scene/nodes/) — node types overview
+- [Playback](/docs/scene/playback/) — how sweep integrates with scene playback
