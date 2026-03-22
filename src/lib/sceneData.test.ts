@@ -54,6 +54,7 @@ describe('cloneScene', () => {
       nodes: [patNode('p1', 0.2, 0.3), fnNode('f1')],
       edges: [edge('f1', 'p1')],
       labels: [{ id: 'l1', text: 'hello', x: 0.5, y: 0.5 }],
+      stamps: [],
     }
     const cloned = cloneScene(scene)
     cloned.nodes[0].x = 0.9
@@ -91,6 +92,7 @@ describe('restoreScene', () => {
       ],
       edges: [edge('p1', 'p2')],
       labels: [],
+      stamps: [],
     }
     const restored = restoreScene(src)
     // p2 should no longer have decorators
@@ -108,6 +110,7 @@ describe('restoreScene', () => {
       nodes: [legacyFnNode('f1', 'tempo', { bpm: 140 }), patNode('p1')],
       edges: [edge('f1', 'p1')],
       labels: [],
+      stamps: [],
     }
     const restored = restoreScene(src)
     const f1 = restored.nodes.find((n: SceneNode) => n.id === 'f1')!
@@ -241,6 +244,7 @@ describe('restoreScene (ADR 078 generative)', () => {
       nodes: [patNode('p1'), genNode('g1')],
       edges: [edge('p1', 'g1')],
       labels: [],
+      stamps: [],
     }
     const restored = restoreScene(src)
     expect(restored.nodes.find((n: SceneNode) => n.id === 'g1')).toBeDefined()

@@ -6,9 +6,10 @@
   // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, findAttachedFnNodes, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, findAttachedFnNodes, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
+  import { STAMP_LIBRARY } from '../stampLibrary.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { registerKeyLayer, unregisterKeyLayer, registerKeyUpLayer, unregisterKeyUpLayer } from '../keyRouter.ts'
   import { onMount } from 'svelte'
@@ -19,6 +20,8 @@
   import SceneBubbleMenu from './SceneBubbleMenu.svelte'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
   import SceneLabels from './SceneLabels.svelte'
+  import SceneStamps from './SceneStamps.svelte'
+  import SceneStampPicker from './SceneStampPicker.svelte'
   import SceneToolbar from './SceneToolbar.svelte'
   import SceneNodePopup from './SceneNodePopup.svelte'
 
@@ -47,6 +50,12 @@
 
   // ── Free label editing (delegated to SceneLabels) ──
   let sceneLabelsRef: ReturnType<typeof SceneLabels> | undefined = $state()
+
+  // ── Stamp picker + placement (ADR 119) ──
+  let stampPickerOpen = $state(false)
+  let stampPickerPos = $state({ x: 0, y: 0 })
+  let stampPickerFromToolbar = $state(false)
+  let placingStampId: string | null = $state(null)
 
   // ── Add-node picker (bubble menu) ──
   let pickerOpen = $state(false)
@@ -201,7 +210,7 @@
 
   function onMove(e: PointerEvent) {
     // Placement mode ghost tracking
-    if (placingType && viewEl) {
+    if ((placingType || placingStampId) && viewEl) {
       const rect = viewEl.getBoundingClientRect()
       placingCursor = { x: e.clientX - rect.left, y: e.clientY - rect.top }
       placingCursorActive = true
@@ -457,6 +466,7 @@
           if (!e.shiftKey) {
             ui.selectedSceneNodes = {}
             ui.selectedSceneLabels = {}
+            ui.selectedSceneStamps = {}
           }
           for (const node of song.scene.nodes) {
             const np = toPixel(node.x, node.y, WORLD_W, WORLD_H)
@@ -469,6 +479,13 @@
             const lp = toPixel(label.x, label.y, WORLD_W, WORLD_H)
             if (lp.x >= cx1 && lp.x <= cx2 && lp.y >= cy1 && lp.y <= cy2) {
               ui.selectedSceneLabels[label.id] = true
+            }
+          }
+          // Hit-test stamps within the selection rectangle (ADR 119)
+          for (const stamp of (song.scene.stamps ?? [])) {
+            const sp = toPixel(stamp.x, stamp.y, WORLD_W, WORLD_H)
+            if (sp.x >= cx1 && sp.x <= cx2 && sp.y >= cy1 && sp.y <= cy2) {
+              ui.selectedSceneStamps[stamp.id] = true
             }
           }
         }
@@ -501,6 +518,7 @@
 
   function onContextMenu(e: MouseEvent) {
     e.preventDefault()
+    if (placingStampId) { placingStampId = null; return }
     if (placingType) { placingType = null; return }
     openPickerAt(e.clientX, e.clientY)
   }
@@ -508,6 +526,20 @@
   function onBgDown(e: PointerEvent) {
     // Close bubble menu on any background interaction
     if (pickerOpen) { pickerOpen = false }
+
+    // Stamp placement mode: click to place stamp, then exit
+    if (placingStampId && e.button === 0 && !e.ctrlKey && !spaceHeld) {
+      e.preventDefault()
+      const norm = toNormXY(e.clientX, e.clientY)
+      if (norm) {
+        const id = sceneAddStamp(norm.x, norm.y, placingStampId)
+        ui.selectedSceneNodes = {}
+        ui.selectedSceneEdge = null
+        ui.selectedSceneStamps = { [id]: true }
+      }
+      placingStampId = null
+      return
+    }
 
     // Placement mode: click to place node at cursor position
     if (placingType && e.button === 0 && !e.ctrlKey && !spaceHeld) {
@@ -561,6 +593,7 @@
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabels = {}
+      ui.selectedSceneStamps = {}
       return
     }
     const rect = viewEl.getBoundingClientRect()
@@ -586,6 +619,7 @@
       ui.selectedSceneEdge = hitEdge
       ui.selectedSceneNodes = {}
       ui.selectedSceneLabels = {}
+      ui.selectedSceneStamps = {}
     } else {
       // Double-click background → open bubble menu at pointer
       const now = Date.now()
@@ -601,6 +635,7 @@
         }
         ui.selectedSceneEdge = null
         ui.selectedSceneLabels = {}
+        ui.selectedSceneStamps = {}
         selectRect = { x1: e.clientX, y1: e.clientY, x2: e.clientX, y2: e.clientY }
         viewEl?.setPointerCapture(e.pointerId)
 
@@ -621,12 +656,18 @@
   }
 
   function handleSceneKeys(e: KeyboardEvent): boolean | void {
-    // Delete/Backspace: allow from anywhere when scene nodes/edges/labels are selected
+    // Delete/Backspace: allow from anywhere when scene nodes/edges/labels/stamps are selected
     const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
       || ui.selectedSceneEdge || Object.keys(ui.selectedSceneLabels).length > 0
+      || Object.keys(ui.selectedSceneStamps).length > 0
     if (hasSceneSelection && (e.key === 'Delete' || e.key === 'Backspace')) {
       e.preventDefault()
-      if (Object.keys(ui.selectedSceneLabels).length > 0) {
+      if (Object.keys(ui.selectedSceneStamps).length > 0) {
+        for (const id of Object.keys(ui.selectedSceneStamps)) {
+          sceneDeleteStamp(id)
+        }
+        ui.selectedSceneStamps = {}
+      } else if (Object.keys(ui.selectedSceneLabels).length > 0) {
         for (const id of Object.keys(ui.selectedSceneLabels)) {
           sceneDeleteLabel(id)
         }
@@ -653,10 +694,13 @@
       return true
     }
     if (e.key === 'Escape') {
+      if (stampPickerOpen) { stampPickerOpen = false; return true }
+      if (placingStampId) { placingStampId = null; return true }
       if (placingType) { placingType = null; return true }
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabels = {}
+      ui.selectedSceneStamps = {}
       sceneLabelsRef?.clearEditing()
       pickerOpen = false
       return true
@@ -769,6 +813,10 @@
       const id = sceneAddLabel(nx, ny)
       ui.selectedSceneNodes = {}
       requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
+    } else if (type === 'stamp') {
+      stampPickerPos = { x: pickerPos.x, y: pickerPos.y }
+      stampPickerFromToolbar = false
+      stampPickerOpen = true
     } else {
       const id = sceneAddGenerativeNode(type as GenerativeEngine, nx, ny)
       ui.selectedSceneNodes = {}
@@ -835,7 +883,7 @@
   class="scene-view"
   class:drop-active={dropActive}
   class:space-pan={spaceHeld}
-  class:placing={placingType !== null}
+  class:placing={placingType !== null || placingStampId !== null}
   bind:this={viewEl}
   tabindex="-1"
   onpointermove={onMove}
@@ -1126,14 +1174,29 @@
     <SceneNodePopup />
 
     <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} />
+    <SceneStamps {zoom} {panX} {panY} {viewEl} />
   </div>
 
   <!-- UI controls (outside zoom/pan transform) -->
   <SceneToolbar {zoom} {viewEl}
     onpan={(x, y) => { panX = x; panY = y }}
     onreset={(x, y) => { zoom = 1; panX = x; panY = y }}
-    onadd={(type) => { placingType = placingType === type ? null : type; placingCursorActive = false }}
-    activeType={placingType}
+    onadd={(type) => {
+      if (type === 'stamp') {
+        if (stampPickerOpen) { stampPickerOpen = false; return }
+        if (placingStampId) { placingStampId = null; return }
+        const rect = viewEl?.getBoundingClientRect()
+        if (rect) {
+          // Position picker below toolbar center
+          stampPickerPos = { x: rect.width / 2, y: 52 }
+          stampPickerFromToolbar = true
+          stampPickerOpen = true
+        }
+      } else {
+        placingType = placingType === type ? null : type; placingCursorActive = false
+      }
+    }}
+    activeType={placingStampId ? 'stamp' as BubblePickType : placingType}
   />
 
   <!-- Radial bubble menu for function nodes (appears at pointer position) -->
@@ -1147,7 +1210,34 @@
     />
   {/if}
 
+  <!-- Stamp picker (ADR 119) -->
+  {#if stampPickerOpen}
+    <SceneStampPicker
+      pos={stampPickerPos}
+      below={stampPickerFromToolbar}
+      onpick={(stampId) => {
+        placingStampId = stampId
+        placingCursorActive = false
+        stampPickerOpen = false
+      }}
+      onclose={() => { stampPickerOpen = false }}
+    />
+  {/if}
+
   <!-- Ghost node preview during placement mode -->
+  {#if placingStampId && placingCursorActive}
+    {@const ghostDef = STAMP_LIBRARY[placingStampId]}
+    {#if ghostDef}
+      <div
+        class="placing-ghost stamp-ghost"
+        style="left: {placingCursor.x}px; top: {placingCursor.y}px; color: {ghostDef.color ?? 'rgba(30,32,40,0.35)'}"
+      >
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="var(--color-fg)" stroke-width="0.8" aria-hidden="true">
+          {@html ghostDef.svg}
+        </svg>
+      </div>
+    {/if}
+  {/if}
   {#if placingType && placingCursorActive}
     {@const isSweepGhost = placingType === 'fn-sweep'}
     {@const isFnGhost = placingType.startsWith('fn-') && !isSweepGhost}
@@ -1686,6 +1776,16 @@
     border: none;
     padding: 0;
     color: var(--color-fg);
+  }
+  .placing-ghost.stamp-ghost {
+    min-width: unset;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px dashed rgba(30, 32, 40, 0.25);
+    padding: 0;
+    opacity: 0.5;
   }
   .ghost-label {
     font-family: var(--font-data);

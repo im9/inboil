@@ -167,7 +167,7 @@ export function makeDemoSong(): Song {
     tracks,
     patterns,
     sections: [],
-    scene: { name: 'Main', nodes, edges, labels: [] },
+    scene: { name: 'Main', nodes, edges, labels: [], stamps: [] },
     effects: {
       reverb: { ...DEFAULT_EFFECTS.reverb },
       delay:  { ...DEFAULT_EFFECTS.delay },

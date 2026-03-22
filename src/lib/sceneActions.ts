@@ -212,6 +212,33 @@ export function sceneResizeLabel(labelId: string, delta: number): void {
   label.size = Math.max(0.5, Math.min(4, (label.size ?? 1) + delta))
 }
 
+// ── Stamps (ADR 119) ──
+
+export function sceneAddStamp(x: number, y: number, stampId: string): string {
+  pushUndo('Add stamp')
+  const id = crypto.randomUUID().slice(0, 8)
+  song.scene.stamps = [...(song.scene.stamps ?? []), { id, stampId, x, y }]
+  return id
+}
+
+export function sceneDeleteStamp(stampId: string): void {
+  pushUndo('Delete stamp')
+  song.scene.stamps = song.scene.stamps.filter(s => s.id !== stampId)
+}
+
+export function sceneMoveStamp(stampId: string, x: number, y: number): void {
+  const stamp = song.scene.stamps.find(s => s.id === stampId)
+  if (!stamp) return
+  stamp.x = x
+  stamp.y = y
+}
+
+export function sceneResizeStamp(stampId: string, delta: number): void {
+  const stamp = song.scene.stamps.find(s => s.id === stampId)
+  if (!stamp) return
+  stamp.scale = Math.max(0.5, Math.min(4, (stamp.scale ?? 1) + delta))
+}
+
 // ── Generative nodes (ADR 078) ──
 
 /** Default configs per generative engine */

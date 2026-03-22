@@ -17,6 +17,7 @@
     { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
     { type: 'sep', tip: '', tipJa: '' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
+    { type: 'stamp', tip: 'Stamp', tipJa: 'スタンプ' },
   ]
 
   const TOOL_ACCENT: Record<string, string> = {
@@ -115,6 +116,13 @@
           </svg>
         {:else if item.type === 'label'}
           <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
+        {:else if item.type === 'stamp'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <rect x="4" y="1" width="6" height="5" rx="1.5"/>
+            <rect x="5.5" y="5" width="3" height="3"/>
+            <rect x="2.5" y="8" width="9" height="2" rx="0.5"/>
+            <rect x="1.5" y="10.5" width="11" height="2" rx="0.5" opacity="0.5"/>
+          </svg>
         {/if}
       </button>
     {/if}

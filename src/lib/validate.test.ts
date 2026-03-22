@@ -28,7 +28,7 @@ function minimalSong() {
       }],
     }],
     sections: [],
-    scene: { name: 'Main', nodes: [], edges: [], labels: [] },
+    scene: { name: 'Main', nodes: [], edges: [], labels: [], stamps: [] },
     effects: {
       reverb: { size: 0.5, damp: 0.5 },
       delay: { time: 0.3, feedback: 0.4 },

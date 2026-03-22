@@ -36,7 +36,7 @@ function makeMinimalSong(overrides: Partial<Song> = {}): Song {
     tracks: [makeTrack(0), makeTrack(1)],
     patterns: [makePattern({ cells: [makeCell({ trackId: 0 }), makeCell({ trackId: 1, name: 'SNARE', voiceId: 'Snare' })] })],
     sections: [],
-    scene: { name: 'Main', nodes: [], edges: [], labels: [] },
+    scene: { name: 'Main', nodes: [], edges: [], labels: [], stamps: [] },
     effects: { ...DEFAULT_EFFECTS, comp: { ...DEFAULT_EFFECTS.comp } },
     masterGain: 0.8,
     swing: 0,

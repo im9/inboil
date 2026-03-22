@@ -474,7 +474,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
     prevPatId = patId
   }
 
-  return { name: 'Main', nodes, edges, labels: [] }
+  return { name: 'Main', nodes, edges, labels: [], stamps: [] }
 }
 
 /**
@@ -496,7 +496,7 @@ export function makeEmptySong(templateId?: string): Song {
     tracks,
     patterns,
     sections: [],
-    scene: { name: 'Main', nodes: [], edges: [], labels: [] },
+    scene: { name: 'Main', nodes: [], edges: [], labels: [], stamps: [] },
     effects: {
       reverb: { ...DEFAULT_EFFECTS.reverb },
       delay:  { ...DEFAULT_EFFECTS.delay },

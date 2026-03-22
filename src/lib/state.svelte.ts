@@ -186,6 +186,7 @@ export const ui = $state<{
   selectedSceneNodes: Record<string, true>
   selectedSceneEdge: string | null
   selectedSceneLabels: Record<string, boolean>
+  selectedSceneStamps: Record<string, boolean>
   sidebar: 'help' | 'system' | null
   systemTab: 'project' | 'settings'
   lockMode: boolean
@@ -209,6 +210,7 @@ export const ui = $state<{
   selectedSceneNodes: {} as Record<string, true>,
   selectedSceneEdge: null,
   selectedSceneLabels: {} as Record<string, boolean>,
+  selectedSceneStamps: {} as Record<string, boolean>,
   sidebar: null,
   systemTab: 'project' as const,
   lockMode: false,

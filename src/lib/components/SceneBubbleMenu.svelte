@@ -2,7 +2,7 @@
   import type { GenerativeEngine } from '../types.ts'
   import { ICON } from '../icons.ts'
 
-  export type BubblePickType = GenerativeEngine | 'label' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx' | 'fn-sweep'
+  export type BubblePickType = GenerativeEngine | 'label' | 'stamp' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx' | 'fn-sweep'
 
   const BUBBLE_ACCENT: Record<string, string> = {
     'fn-sweep': '#c47a2a',
@@ -12,15 +12,16 @@
   }
 
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
-    { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
-    { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
-    { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
     { type: 'fn-transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
     { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
     { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
     { type: 'fn-sweep', tip: 'Sweep', tipJa: 'スウィープ' },
+    { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
+    { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
+    { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
+    { type: 'stamp', tip: 'Stamp', tipJa: 'スタンプ' },
   ]
 
   const {
@@ -37,7 +38,7 @@
     onclose: () => void
   } = $props()
 
-  const RADIUS = 64
+  const RADIUS = 84
   const MARGIN = RADIUS + 20  // enough room for arc + half bubble size
 
   // Offset the arc origin so bubbles never clip the container edge
@@ -68,7 +69,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); onclose() }}></div>
 {#each BUBBLE_ITEMS as item, i}
-  {@const angle = arcCenter + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.65}
+  {@const angle = arcCenter + i * (2 * Math.PI / BUBBLE_ITEMS.length)}
   {@const bx = origin.x + Math.cos(angle) * RADIUS}
   {@const by = origin.y + Math.sin(angle) * RADIUS}
   {@const accent = BUBBLE_ACCENT[item.type as string]}
@@ -120,6 +121,13 @@
       <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">{@html ICON.sweep}</svg>
     {:else if item.type === 'label'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
+    {:else if item.type === 'stamp'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">
+        <rect x="4" y="1" width="6" height="5" rx="1.5"/>
+        <rect x="5.5" y="5" width="3" height="3"/>
+        <rect x="2.5" y="8" width="9" height="2" rx="0.5"/>
+        <rect x="1.5" y="10.5" width="11" height="2" rx="0.5" opacity="0.5"/>
+      </svg>
     {/if}
   </button>
 {/each}

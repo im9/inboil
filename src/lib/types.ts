@@ -243,12 +243,22 @@ export interface SceneLabel {
   size?: number            // font scale factor (default 1.0 = 10px)
 }
 
+/** Decorative stamp on the scene canvas (ADR 119) */
+export interface SceneStamp {
+  id: string
+  stampId: string         // key into STAMP_LIBRARY
+  x: number              // normalized 0–1
+  y: number
+  scale?: number         // size multiplier (default 1.0)
+}
+
 /** Scene = the arrangement graph (ADR 044) */
 export interface Scene {
   name: string
   nodes: SceneNode[]
   edges: SceneEdge[]
   labels: SceneLabel[]
+  stamps: SceneStamp[]
 }
 
 /** Song = pattern pool + arrangement sections + scene graph (ADR 044) */

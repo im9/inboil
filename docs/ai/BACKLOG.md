@@ -14,3 +14,4 @@ Someday/maybe items — no commitment, just interesting directions.
 - [ ] **Audio-rate FM mod source** — oscB as mod matrix source for audio-rate modulation (ref: ADR 113)
 - [ ] **More filter types** — Phaser, vocal resonator, analog-modeled ladder (ref: ADR 113)
 - [ ] **Slide/glide parameter** — Explicit per-step slide flag and glide time param, instead of relying solely on auto-legato
+- [ ] **Scene stamp sprite sheets** — Replace SVG pictogram stamps with CC0 animated sprite sheets for richer limb animation. Candidate: [rgsdev CC0 stick figure (itch.io)](https://rgsdev.itch.io/animated-stick-figure-character-2d-free-cc0). Use CSS `steps()` + `background-position` for frame-by-frame playback synced to `--beat` (ref: ADR 119)

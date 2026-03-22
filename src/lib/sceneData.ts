@@ -50,13 +50,14 @@ export function cloneScene(sc: Scene): Scene {
     nodes: sc.nodes.map(cloneSceneNode),
     edges: sc.edges.map(e => ({ ...e })),
     labels: (sc.labels ?? []).map(l => ({ ...l })),
+    stamps: (sc.stamps ?? []).map(s => ({ ...s })),
   }
 }
 
 /** Restore a scene from saved data, filling in defaults for missing fields.
  *  Auto-migrates decorators to function nodes and legacy fn node formats (ADR 093). */
 export function restoreScene(src: Scene | undefined): Scene {
-  if (!src) return { name: 'Main', nodes: [], edges: [], labels: [] }
+  if (!src) return { name: 'Main', nodes: [], edges: [], labels: [], stamps: [] }
   // Clone nodes preserving decorators (migration will strip them)
   let nodes = src.nodes.map(n => {
     const clone = cloneSceneNode(n)
@@ -77,6 +78,7 @@ export function restoreScene(src: Scene | undefined): Scene {
     nodes,
     edges,
     labels: (src.labels ?? []).map(l => ({ ...l })),
+    stamps: (src.stamps ?? []).map(s => ({ ...s })),
   }
 }
 

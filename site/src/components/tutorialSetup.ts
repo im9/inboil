@@ -171,4 +171,5 @@ export function initTutorialScene() {
     { id: 'e5', from: 'n4', to: 'n1', order: 0 },  // Break2 → Verse
   ]
   song.scene.labels = []
+  song.scene.stamps = []
 }
