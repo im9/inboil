@@ -30,7 +30,7 @@
     return (node?.type === 'pattern') ? node : null
   })
 
-  const FN_TYPES: FnNodeType[] = ['transpose', 'tempo', 'repeat', 'fx']
+  const FN_TYPES: FnNodeType[] = ['transpose', 'tempo', 'repeat', 'fx', 'sweep']  // sweep included for selectedFnNode detection
 
   // Selected function node (for fn node editing in scene view)
   const selectedFnNode = $derived.by(() => {
@@ -167,7 +167,7 @@
       <!-- Function node editor (ADR 110) -->
       {#if selectedFnNode}
         <span class="section-label">
-          {selectedFnNode.type === 'transpose' ? 'TRANSPOSE' : selectedFnNode.type === 'repeat' ? 'REPEAT' : selectedFnNode.type === 'tempo' ? 'TEMPO' : 'FX'}
+          {selectedFnNode.type === 'transpose' ? 'TRANSPOSE' : selectedFnNode.type === 'repeat' ? 'REPEAT' : selectedFnNode.type === 'tempo' ? 'TEMPO' : selectedFnNode.type === 'sweep' ? 'SWEEP' : 'FX'}
         </span>
         <div class="fn-editor">
           {#if selectedFnNode.fnParams?.transpose}
@@ -249,6 +249,15 @@
               <button class="fn-toggle-btn wide" class:active={fxp.granular}
                 onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
               >{fxp.granular ? 'ON' : 'OFF'}</button>
+            </div>
+          {:else if selectedFnNode.fnParams?.sweep}
+            {@const swp = selectedFnNode.fnParams.sweep}
+            <div class="fn-row">
+              <span class="fn-label">Curves</span>
+              <span class="fn-step-val">{swp.curves.length}</span>
+            </div>
+            <div class="fn-row">
+              <span class="fn-label" data-tip="Connect to a pattern node, then open pattern sheet to edit sweep curves" data-tip-ja="パターンノードに接続し、パターンシートでスウィープカーブを編集">Open pattern sheet to edit</span>
             </div>
           {/if}
         </div>
@@ -389,6 +398,11 @@
                     <button class="fn-toggle-btn wide" class:active={fxp.granular}
                       onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
                     >{fxp.granular ? 'ON' : 'OFF'}</button>
+                  </div>
+                {:else if fnNode.fnParams?.sweep}
+                  <div class="fn-row">
+                    <span class="fn-label">Curves</span>
+                    <span class="fn-step-val">{fnNode.fnParams.sweep.curves.length}</span>
                   </div>
                 {/if}
               </div>

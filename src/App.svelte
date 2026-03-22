@@ -16,10 +16,13 @@
   import Sidebar from './lib/components/Sidebar.svelte'
   import MobilePerfSheet from './lib/components/MobilePerfSheet.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
+  import SweepCanvas from './lib/components/SweepCanvas.svelte'
+  import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
   import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
+  import { applySweepStep } from './lib/scenePlayback.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
@@ -160,6 +163,21 @@
 
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
+    // Sweep automation — apply on every step (ADR 118)
+    if (playback.mode === 'scene' && playback.playing) {
+      const patIdx = playback.playingPattern ?? 0
+      const pat = song.patterns[patIdx]
+      // Use the longest track's step count as cycle length; find its playhead for position
+      const stepsArr = pat ? pat.cells.map(c => c.steps) : [16]
+      const maxSteps = Math.max(...stepsArr)
+      const longestTrackIdx = stepsArr.indexOf(maxSteps)
+      const currentStep = heads[longestTrackIdx] ?? 0
+      const changed = applySweepStep(currentStep, maxSteps)
+      if (changed) {
+        // Re-send pattern to worklet with updated track params (no reset to keep playhead)
+        engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patIdx)
+      }
+    }
     // Broadcast playhead to connected guests
     if (session.role === 'host') sendPlayhead()
     // Solo node — only loop when scene has reached the target node
@@ -272,6 +290,7 @@
   function closeAllSheets() {
     ui.patternSheet = false
     ui.phraseView = 'pattern'
+    ui.sweepTab = false
   }
 
   function toggleLoop() {
@@ -397,11 +416,23 @@
               {:else if ui.phraseView === 'master'}
                 <MasterView />
               {:else}
-                <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
-                {#if prefs.patternEditor === 'tracker'}
-                  <TrackerView />
+                {@const hasSweep = !!findSweepNodeForPattern(song.patterns[ui.currentPattern]?.id)}
+                {#if ui.sweepTab && hasSweep}
+                  <div class="sheet-tabs">
+                    <button class="sheet-tab" onpointerdown={() => ui.sweepTab = false}>STEP</button>
+                    <button class="sheet-tab active">SWEEP</button>
+                    <button class="sheet-tab-close" onpointerdown={closeAllSheets}
+                      aria-label="Close" data-tip="Close" data-tip-ja="閉じる"
+                    >✕</button>
+                  </div>
+                  <SweepCanvas />
                 {:else}
-                  <StepGrid />
+                  <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
+                  {#if prefs.patternEditor === 'tracker'}
+                    <TrackerView />
+                  {:else}
+                    <StepGrid />
+                  {/if}
                 {/if}
               {/if}
             </div>
@@ -494,6 +525,45 @@
   }
 
 
+  /* ── Sheet tabs (ADR 118) ── */
+  .sheet-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 8px;
+    height: 32px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(237, 232, 220, 0.08);
+  }
+  .sheet-tab {
+    all: unset;
+    padding: 4px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: rgba(237, 232, 220, 0.4);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .sheet-tab:hover { color: rgba(237, 232, 220, 0.7); }
+  .sheet-tab.active {
+    color: rgba(237, 232, 220, 0.9);
+    border-bottom-color: rgba(237, 232, 220, 0.6);
+  }
+  .sheet-tab-close {
+    margin-left: auto;
+    border: 1.5px solid var(--color-fg);
+    background: transparent;
+    color: var(--color-fg);
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
   /* ── Perf flash ── */
   .perf-flash {
     position: absolute;

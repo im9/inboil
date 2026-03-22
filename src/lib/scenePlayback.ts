@@ -5,7 +5,8 @@
 import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack } from './state.svelte.ts'
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
-import type { SceneNode, SceneEdge } from './types.ts'
+import { getParamDefs } from './paramDefs.ts'
+import type { SceneNode, SceneEdge, SweepData, VoiceId } from './types.ts'
 
 // ── Scene graph helpers ─────────────────────────────────────────────
 
@@ -62,6 +63,8 @@ function applyFunctionNode(node: SceneNode): void {
   }
   if (fp.repeat) {
     playback.sceneRepeatLeft = fp.repeat.count - 1
+    playback.sceneRepeatTotal = fp.repeat.count
+    playback.sceneRepeatIndex = 0
   }
   if (fp.fx) {
     fxPad.verb.on     = fp.fx.verb
@@ -79,7 +82,7 @@ function applyFunctionNode(node: SceneNode): void {
 
 /** True if node type is a pass-through function node */
 function isFnNode(node: SceneNode): boolean {
-  return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx'
+  return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx' || node.type === 'sweep'
 }
 
 /** Apply satellite fn nodes attached to a pattern node (ADR 110).
@@ -238,8 +241,12 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
 
   if (playback.sceneRepeatLeft > 0) {
     playback.sceneRepeatLeft--
+    playback.sceneRepeatIndex++
     return { advanced: false, patternIndex: -1 }
   }
+  // Reset repeat phase when moving to next node
+  playback.sceneRepeatIndex = 0
+  playback.sceneRepeatTotal = 1
 
   const current = findNode(playback.sceneNodeId!)
   if (!current) return startSceneNode(root)
@@ -253,5 +260,97 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
   }
 
   return walkToNode(outEdges[Math.floor(Math.random() * outEdges.length)])
+}
+
+// ── Sweep automation (ADR 118) ──────────────────────────────────────
+
+/** Find sweep node connected to a pattern node */
+function findConnectedSweep(patternNodeId: string): SweepData | null {
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = findNode(edge.from)
+    if (src?.type === 'sweep' && src.fnParams?.sweep) return src.fnParams.sweep
+  }
+  return null
+}
+
+/** Evaluate a sweep curve at a given progress (0–1) using linear interpolation */
+function evaluateCurve(points: { t: number; v: number }[], progress: number): number {
+  if (points.length === 0) return 0
+  if (progress <= points[0].t) return points[0].v
+  if (progress >= points[points.length - 1].t) return points[points.length - 1].v
+  for (let i = 0; i < points.length - 1; i++) {
+    if (progress >= points[i].t && progress <= points[i + 1].t) {
+      const seg = (progress - points[i].t) / (points[i + 1].t - points[i].t)
+      return points[i].v + (points[i + 1].v - points[i].v) * seg
+    }
+  }
+  return 0
+}
+
+/** Apply sweep automation for current step. Called from App.svelte onStep.
+ *  Uses automation snapshot as base values — offsets are applied relative to snapshot.
+ *  Returns true if any parameter was changed. */
+export function applySweepStep(step: number, totalSteps: number): boolean {
+  if (playback.mode !== 'scene' || !playback.sceneNodeId) return false
+  const snap = playback.automationSnapshot
+  if (!snap) return false
+
+  const sweepData = findConnectedSweep(playback.sceneNodeId)
+  if (!sweepData?.curves.length) return false
+
+  const progress = (playback.sceneRepeatIndex + step / totalSteps) / playback.sceneRepeatTotal
+  let changed = false
+
+  for (const curve of sweepData.curves) {
+    const offset = evaluateCurve(curve.points, progress)
+
+    if (curve.target.kind === 'track') {
+      const tgt = curve.target
+      const trackIdx = song.tracks.findIndex(t => t.id === tgt.trackId)
+      if (trackIdx < 0) continue
+      const track = song.tracks[trackIdx]
+      const param = curve.target.param
+      if (param === 'volume') {
+        const base = snap.values[`track:${trackIdx}:volume`] ?? track.volume
+        const newVal = clamp(base + offset, 0, 1)
+        if (Math.abs(track.volume - newVal) > 0.001) { track.volume = newVal; changed = true }
+      } else if (param === 'pan') {
+        const base = snap.values[`track:${trackIdx}:pan`] ?? track.pan
+        const newVal = clamp(base + offset, -1, 1)
+        if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
+      } else {
+        // Voice params (TONE, CUT, RESO, etc.) — apply offset scaled to param range
+        const patIdx = song.patterns.findIndex(p => p.id === song.scene.nodes.find(n => n.id === playback.sceneNodeId)?.patternId)
+        const pat = patIdx >= 0 ? song.patterns[patIdx] : null
+        const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
+        if (cell?.voiceId && cell.voiceParams) {
+          const defs = getParamDefs(cell.voiceId as VoiceId)
+          const def = defs.find(d => d.key === param)
+          if (def) {
+            const range = def.max - def.min
+            const baseVal = snap.values[`voice:${trackIdx}:${param}`] ?? cell.voiceParams[param] ?? def.default
+            const newVal = clamp(baseVal + offset * range, def.min, def.max)
+            if (Math.abs((cell.voiceParams[param] ?? def.default) - newVal) > range * 0.001) {
+              cell.voiceParams[param] = newVal
+              changed = true
+            }
+          }
+        }
+      }
+    } else if (curve.target.kind === 'fx') {
+      const param = curve.target.param
+      const fxSnap = snap.fxPad
+      if (param === 'reverbWet')          { fxPad.verb.x  = clamp((fxSnap.verb?.x as number ?? 0.5) + offset, 0, 1); changed = true }
+      else if (param === 'reverbDamp')    { fxPad.verb.y  = clamp((fxSnap.verb?.y as number ?? 0.5) + offset, 0, 1); changed = true }
+      else if (param === 'delayTime')     { fxPad.delay.x = clamp((fxSnap.delay?.x as number ?? 0.5) + offset, 0, 1); changed = true }
+      else if (param === 'delayFeedback') { fxPad.delay.y = clamp((fxSnap.delay?.y as number ?? 0.5) + offset, 0, 1); changed = true }
+    }
+  }
+  return changed
+}
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v))
 }
 

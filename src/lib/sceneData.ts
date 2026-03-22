@@ -13,6 +13,7 @@ function cloneFnParams(fp: FnParams): FnParams {
   if (fp.tempo) clone.tempo = { ...fp.tempo }
   if (fp.repeat) clone.repeat = { ...fp.repeat }
   if (fp.fx) clone.fx = { ...fp.fx, ...(fp.fx.flavourOverrides ? { flavourOverrides: { ...fp.fx.flavourOverrides } } : {}) }
+  if (fp.sweep) clone.sweep = { curves: fp.sweep.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })) }
   return clone
 }
 
@@ -81,7 +82,7 @@ export function restoreScene(src: Scene | undefined): Scene {
 
 // ── Migration (ADR 093) ──
 
-const FN_NODE_TYPES = new Set<string>(['transpose', 'tempo', 'repeat', 'fx'])
+const FN_NODE_TYPES = new Set<string>(['transpose', 'tempo', 'repeat', 'fx', 'sweep'])
 
 /** Convert decorator params to typed FnParams */
 function decoratorToFnParams(dec: SceneDecorator): FnParams | null {

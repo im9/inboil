@@ -28,6 +28,10 @@ export const ICON = {
   fx: `<path d="M7 0.5 L8 5.5 L13 7 L8 8.5 L7 13.5 L6 8.5 L1 7 L6 5.5 Z" fill="currentColor"/>`
     + `<path d="M11.5 1.5 L12 3 L13.5 3.5 L12 4 L11.5 5.5 L11 4 L9.5 3.5 L11 3 Z" fill="currentColor" opacity="0.5"/>`,
 
+  /** Rising wave — sweep automation (ADR 118) */
+  sweep: `<path d="M1 10 Q4 10 5 7 T9 4 T13 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+    + `<path d="M11 1 L13 2 L12 4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>`,
+
   automation: `<polyline points="1,12 4,10 7,4 10,6 13,2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`
     + `<circle cx="4" cy="10" r="1.2" fill="currentColor"/><circle cx="7" cy="4" r="1.2" fill="currentColor"/><circle cx="10" cy="6" r="1.2" fill="currentColor"/>`,
 

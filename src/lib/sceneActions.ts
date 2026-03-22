@@ -437,18 +437,39 @@ const FN_DEFAULTS: Record<FnNodeType, FnParams> = {
   tempo: { tempo: { bpm: 120 } },
   repeat: { repeat: { count: 2 } },
   fx: { fx: { verb: false, delay: false, glitch: false, granular: false } },
+  sweep: { sweep: { curves: [] } },
 }
 
-const FN_TYPE_ORDER: Record<string, number> = { transpose: 0, repeat: 1, tempo: 2, fx: 3 }
+const FN_TYPE_ORDER: Record<string, number> = { transpose: 0, repeat: 1, tempo: 2, fx: 3, sweep: 4 }
 
 /** Find fn nodes attached (wired) to a pattern node, sorted by type */
 export function findAttachedFnNodes(patternNodeId: string): SceneNode[] {
-  const fnTypes: string[] = ['transpose', 'tempo', 'repeat', 'fx']
+  const fnTypes: string[] = ['transpose', 'tempo', 'repeat', 'fx']  // sweep is independent (ADR 118)
   return song.scene.edges
     .filter(e => e.to === patternNodeId)
     .map(e => findNode(e.from))
     .filter((n): n is SceneNode => !!n && fnTypes.includes(n.type))
     .sort((a, b) => (FN_TYPE_ORDER[a.type] ?? 9) - (FN_TYPE_ORDER[b.type] ?? 9))
+}
+
+/** Find sweep node connected to a pattern node (ADR 118) */
+export function findConnectedSweepNode(patternNodeId: string): SceneNode | null {
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = findNode(edge.from)
+    if (src?.type === 'sweep') return src
+  }
+  return null
+}
+
+/** Find sweep node for a pattern by pattern ID (searches all scene nodes of that pattern) */
+export function findSweepNodeForPattern(patternId: string): SceneNode | null {
+  for (const node of song.scene.nodes) {
+    if (node.type !== 'pattern' || node.patternId !== patternId) continue
+    const sweep = findConnectedSweepNode(node.id)
+    if (sweep) return sweep
+  }
+  return null
 }
 
 /** Reposition fn satellites around a pattern node's top edge */

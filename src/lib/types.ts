@@ -178,15 +178,34 @@ export interface TonnetzParams {
   voicing: 'close' | 'spread' | 'drop2'
 }
 
-/** Function node types (ADR 093) */
-export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx'
+/** Function node types (ADR 093, sweep ADR 118) */
+export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
 
-/** Function node parameters — type-specific (ADR 093) */
+/** Sweep automation target (ADR 118) — continuous parameters only */
+export type SweepTarget =
+  | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
+  | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
+  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff' }
+
+/** A single painted sweep curve (ADR 118) */
+export interface SweepCurve {
+  target: SweepTarget
+  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: -1 to +1 (relative offset)
+  color: string
+}
+
+/** Sweep automation data stored on sweep function node (ADR 118) */
+export interface SweepData {
+  curves: SweepCurve[]
+}
+
+/** Function node parameters — type-specific (ADR 093, sweep ADR 118) */
 export interface FnParams {
   transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
   tempo?: { bpm: number }
   repeat?: { count: number }
   fx?: { verb: boolean; delay: boolean; glitch: boolean; granular: boolean; flavourOverrides?: Partial<import('./constants.ts').FxFlavours> }
+  sweep?: SweepData
 }
 
 /** Legacy function node types — kept for migration only */

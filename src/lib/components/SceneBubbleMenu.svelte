@@ -2,7 +2,14 @@
   import type { GenerativeEngine } from '../types.ts'
   import { ICON } from '../icons.ts'
 
-  export type BubblePickType = GenerativeEngine | 'label' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx'
+  export type BubblePickType = GenerativeEngine | 'label' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx' | 'fn-sweep'
+
+  const BUBBLE_ACCENT: Record<string, string> = {
+    'fn-sweep': '#c47a2a',
+    turing: '#8a9432',
+    quantizer: '#2a9485',
+    tonnetz: '#9456b0',
+  }
 
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
     { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
@@ -12,6 +19,7 @@
     { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
     { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
+    { type: 'fn-sweep', tip: 'Sweep', tipJa: 'スウィープ' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
   ]
 
@@ -29,7 +37,7 @@
     onclose: () => void
   } = $props()
 
-  const RADIUS = 48
+  const RADIUS = 64
   const MARGIN = RADIUS + 20  // enough room for arc + half bubble size
 
   // Offset the arc origin so bubbles never clip the container edge
@@ -60,15 +68,17 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="picker-backdrop" onpointerdown={e => { e.stopPropagation(); onclose() }}></div>
 {#each BUBBLE_ITEMS as item, i}
-  {@const angle = arcCenter + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.7}
+  {@const angle = arcCenter + (i - (BUBBLE_ITEMS.length - 1) / 2) * 0.65}
   {@const bx = origin.x + Math.cos(angle) * RADIUS}
   {@const by = origin.y + Math.sin(angle) * RADIUS}
+  {@const accent = BUBBLE_ACCENT[item.type as string]}
   <button
     class="bubble-item"
     style="
       left: {bx - 16}px;
       top: {by - 16}px;
       transition-delay: {i * 30}ms;
+      {accent ? `border-color: ${accent}; box-shadow: 0 0 0 1.5px ${accent}, 0 2px 8px rgba(30,32,40,0.15);` : ''}
     "
     data-tip={item.tip} data-tip-ja={item.tipJa}
     onpointerdown={e => { e.stopPropagation(); onpick(item.type) }}
@@ -106,6 +116,8 @@
       <svg viewBox="0 0 14 14" width="14" height="14" fill="none" aria-hidden="true">{@html ICON.tempo}</svg>
     {:else if item.type === 'fn-fx'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">{@html ICON.fx}</svg>
+    {:else if item.type === 'fn-sweep'}
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">{@html ICON.sweep}</svg>
     {:else if item.type === 'label'}
       <svg viewBox="0 0 14 14" width="14" height="14" fill="currentColor" aria-hidden="true">{@html ICON.label}</svg>
     {/if}

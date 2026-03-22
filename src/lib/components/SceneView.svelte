@@ -387,6 +387,17 @@
           if (pi >= 0) selectPattern(pi)
           ui.patternSheetOrigin = { x: e.clientX, y: e.clientY }
           ui.patternSheet = true
+        } else if (dblNode?.type === 'sweep') {
+          // Double-click on sweep node → open pattern sheet with SWEEP tab
+          const outEdge = song.scene.edges.find(edge => edge.from === dblNode.id)
+          const targetNode = outEdge ? song.scene.nodes.find(n => n.id === outEdge.to) : null
+          if (targetNode?.type === 'pattern' && targetNode.patternId) {
+            const pi = song.patterns.findIndex(p => p.id === targetNode.patternId)
+            if (pi >= 0) selectPattern(pi)
+            ui.patternSheetOrigin = { x: e.clientX, y: e.clientY }
+            ui.sweepTab = true
+            ui.patternSheet = true
+          }
         } else if (dblNode?.type === 'automation') {
           // Double-click on automation node → ensure dock is open for editing
           // dock is always visible (no minimize)
@@ -854,8 +865,9 @@
   <!-- Transform container for nodes (zoom/pan) -->
   <div class="scene-transform" style="width: {WORLD_W}px; height: {WORLD_H}px; transform: translate({panX}px, {panY}px) scale({zoom}); transform-origin: 0 0">
     {#each song.scene.nodes as node (node.id)}
-      {@const isFn = node.type !== 'pattern' && node.type !== 'generative'}
-      {@const isGen = node.type === 'generative'}
+      {@const isSweep = node.type === 'sweep'}
+      {@const isFn = node.type !== 'pattern' && node.type !== 'generative' && !isSweep}
+      {@const isGen = node.type === 'generative' || isSweep}
       {@const isRoot = node.root}
       {@const isSelected = ui.selectedSceneNodes[node.id]}
       {@const isDragging = dragging === node.id}
@@ -961,6 +973,34 @@
                   data-tip="Generate" data-tip-ja="生成"
                   onpointerdown={e => { e.stopPropagation(); sceneGenerateWrite(node.id) }}
                 >GEN</span>
+              </div>
+            </div>
+          {:else if isSweep}
+            {@const curves = node.fnParams?.sweep?.curves ?? []}
+            <div class="gen-faceplate sweep">
+              <div class="sweep-preview">
+                <svg viewBox="0 0 80 28" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                  <line x1="0" y1="14" x2="80" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/>
+                  {#each curves as curve}
+                    {#if curve.points.length >= 2}
+                      <polyline
+                        points={curve.points.map(p => `${p.t * 80},${14 - p.v * 13}`).join(' ')}
+                        stroke={curve.color}
+                        stroke-width="1.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        opacity="0.8"
+                      />
+                    {/if}
+                  {/each}
+                  {#if curves.length === 0}
+                    <text x="40" y="17" text-anchor="middle" fill="currentColor" font-size="8" opacity="0.3">no curves</text>
+                  {/if}
+                </svg>
+              </div>
+              <div class="gen-label-row">
+                <span class="gen-label">SWEEP</span>
+                <span class="gen-target">{curves.length} curve{curves.length !== 1 ? 's' : ''}</span>
               </div>
             </div>
           {:else}
@@ -1101,15 +1141,19 @@
 
   <!-- Ghost node preview during placement mode -->
   {#if placingType && placingCursorActive}
-    {@const isFnGhost = placingType.startsWith('fn-')}
-    {@const isGenGhost = !isFnGhost && placingType !== 'label'}
+    {@const isSweepGhost = placingType === 'fn-sweep'}
+    {@const isFnGhost = placingType.startsWith('fn-') && !isSweepGhost}
+    {@const isGenGhost = (!isFnGhost && placingType !== 'label') || isSweepGhost}
+    {@const ghostAccent = ({ 'fn-sweep': '#c47a2a', turing: '#8a9432', quantizer: '#2a9485', tonnetz: '#9456b0' } as Record<string, string>)[placingType] ?? ''}
     <div
       class="placing-ghost"
       class:gen={isGenGhost}
       class:fn-ghost={isFnGhost}
-      style="left: {placingCursor.x}px; top: {placingCursor.y}px"
+      style="left: {placingCursor.x}px; top: {placingCursor.y}px{ghostAccent ? `; background: ${ghostAccent}` : ''}"
     >
-      {#if isFnGhost}
+      {#if isSweepGhost}
+        <span class="ghost-label">Sweep</span>
+      {:else if isFnGhost}
         <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(placingType.slice(3) as import('../types.ts').FnNodeType)}</svg>
       {:else}
         <span class="ghost-label">

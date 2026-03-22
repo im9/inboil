@@ -163,6 +163,8 @@ export const playback = $state({
   sceneNodeId: null as string | null,
   sceneEdgeId: null as string | null,
   sceneRepeatLeft: 0,
+  sceneRepeatIndex: 0,     // current repeat (0-based) — ADR 118
+  sceneRepeatTotal: 1,     // total repeat count — ADR 118
   sceneTranspose: 0,
   sceneAbsoluteKey: null as number | null,
   soloNodeId: null as string | null,
@@ -196,6 +198,7 @@ export const ui = $state<{
   chordShape: ChordShape
   stepPage: number
   stepPageSize: number
+  sweepTab: boolean
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -218,6 +221,7 @@ export const ui = $state<{
   chordShape: 'triad' as ChordShape,
   stepPage: 0,
   stepPageSize: 16,
+  sweepTab: false,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
@@ -470,6 +474,8 @@ export function factoryReset(): void {
   playback.sceneNodeId = null
   playback.sceneEdgeId = null
   playback.sceneRepeatLeft = 0
+  playback.sceneRepeatIndex = 0
+  playback.sceneRepeatTotal = 1
   playback.sceneTranspose = 0
   playback.sceneAbsoluteKey = null
   if (playback.automationSnapshot) {

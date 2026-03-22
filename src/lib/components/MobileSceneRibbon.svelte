@@ -22,6 +22,8 @@
       playback.mode = 'scene'
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
+      playback.sceneRepeatIndex = 0
+      playback.sceneRepeatTotal = 1
       playback.sceneTranspose = 0
       playback.sceneAbsoluteKey = null
       onplay?.()

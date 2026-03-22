@@ -11,6 +11,7 @@
     { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
     { type: 'fn-fx', tip: 'FX', tipJa: 'エフェクト' },
     { type: 'sep', tip: '', tipJa: '' },
+    { type: 'fn-sweep', tip: 'Sweep', tipJa: 'スウィープ' },
     { type: 'turing', tip: 'Turing Machine', tipJa: 'チューリングマシン' },
     { type: 'quantizer', tip: 'Quantizer', tipJa: 'クォンタイザー' },
     { type: 'tonnetz', tip: 'Tonnetz', tipJa: 'トネッツ' },
@@ -19,9 +20,10 @@
   ]
 
   const TOOL_ACCENT: Record<string, string> = {
-    turing: '#787845',
-    quantizer: '#458078',
-    tonnetz: '#785a87',
+    'fn-sweep': '#c47a2a',
+    turing: '#8a9432',
+    quantizer: '#2a9485',
+    tonnetz: '#9456b0',
   }
 
   const { zoom, viewEl, onpan, onreset, onadd, activeType }: {
@@ -90,6 +92,8 @@
           <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.tempo}</svg>
         {:else if item.type === 'fn-fx'}
           <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.fx}</svg>
+        {:else if item.type === 'fn-sweep'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">{@html ICON.sweep}</svg>
         {:else if item.type === 'turing'}
           <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">
             <rect x="1" y="5" width="2" height="4" rx="0.5"/><rect x="4" y="5" width="2" height="4" rx="0.5" opacity="0.4"/>

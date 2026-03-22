@@ -144,6 +144,10 @@ export function fnNodeLabel(node: SceneNode): string {
     if (fp.fx.granular) tags.push('R')
     return tags.length > 0 ? `FX ${tags.join('')}` : 'FX'
   }
+  if (fp?.sweep) {
+    const n = fp.sweep.curves.length
+    return n > 0 ? `SWP ${n}` : 'SWP'
+  }
   return '?'
 }
 
@@ -154,6 +158,7 @@ export function fnNodeIcon(type: FnNodeType): string {
     case 'repeat': return ICON.repeat
     case 'tempo': return ICON.tempo
     case 'fx': return ICON.fx
+    case 'sweep': return ICON.sweep
   }
 }
 
@@ -174,6 +179,10 @@ export function fnNodeValue(node: SceneNode): string {
     if (fp.fx.glitch) tags.push('G')
     if (fp.fx.granular) tags.push('R')
     return tags.length > 0 ? tags.join('·') : '—'
+  }
+  if (fp?.sweep) {
+    const n = fp.sweep.curves.length
+    return n > 0 ? `${n}` : '—'
   }
   return '?'
 }
@@ -197,11 +206,12 @@ function generativeLabel(gen: NonNullable<SceneNode['generative']>): string {
 }
 
 
-/** Accent colors per generative engine (ADR 078) */
+/** Accent colors per generative engine (ADR 078) and sweep (ADR 118) */
 const GEN_COLORS: Record<string, string> = {
-  turing: '#787845',    // olive
-  quantizer: '#458078', // teal
-  tonnetz: '#785a87',   // purple
+  turing: '#8a9432',    // chartreuse
+  quantizer: '#2a9485', // emerald
+  tonnetz: '#9456b0',   // violet
+  sweep: '#c47a2a',     // amber
 }
 
 /** Get color hex for a pattern node, or engine accent for generative */
@@ -209,6 +219,7 @@ export function nodeColor(node: SceneNode, patterns: Pattern[]): string | null {
   if (node.type === 'generative' && node.generative) {
     return GEN_COLORS[node.generative.engine] ?? null
   }
+  if (node.type === 'sweep') return GEN_COLORS.sweep
   if (node.type !== 'pattern') return null
   const pat = patterns.find(p => p.id === node.patternId)
   return PATTERN_COLORS[pat?.color ?? 0]
@@ -217,6 +228,6 @@ export function nodeColor(node: SceneNode, patterns: Pattern[]): string | null {
 /** Get the NodeSizeKind for a scene node */
 export function nodeSizeKind(node: SceneNode): NodeSizeKind {
   if (node.type === 'pattern') return 'pattern'
-  if (node.type === 'generative') return 'generative'
+  if (node.type === 'generative' || node.type === 'sweep') return 'generative'
   return 'fn'
 }
