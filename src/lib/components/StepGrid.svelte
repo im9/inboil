@@ -6,7 +6,7 @@
   import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
+  import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, canAddTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import type { Trig } from '../types.ts'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
@@ -623,7 +623,7 @@
       {/if}
     </div>
   {/each}
-  {#if song.tracks.length < 16}
+  {#if canAddTrack()}
     <button
       class="btn-add-track"
       onpointerdown={() => addTrack()}

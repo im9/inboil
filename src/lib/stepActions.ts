@@ -378,6 +378,11 @@ function findOrphanTrackId(): number | null {
   return null
 }
 
+/** Whether a new track can be added (under limit or orphan slot available) */
+export function canAddTrack(): boolean {
+  return song.tracks.length < MAX_TRACKS || findOrphanTrackId() != null
+}
+
 export function addTrack(voiceId: VoiceId | null = null): number | null {
   // Try to reuse an orphan track slot before growing the array
   let idx: number
