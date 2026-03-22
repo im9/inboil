@@ -132,7 +132,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 087 | Looper / Tape Node | Proposed | OP-1 Field style tape looper as scene function node, 4-track overdub, BPM-synced |
 | 093 | Decorator Migration & Step Automation | Implemented | Per-step paramLocks (worklet interpolation), decorator→function node migration, curve automation removed, DockPanel simplified |
 | 094 | Interactive Docs & Playground | Proposed | Tutorial JSON snapshots, SceneCanvas sandbox, in-app onboarding (split from ADR 072) |
-| 118 | Repeat Sweep Automation | Proposed | Kidpix-inspired paint canvas for parameter sweeps across repeat cycles (cutoff, mute, etc.) |
+| 118 | Repeat Sweep Automation | Implemented | Sweep fn node, paint canvas (freehand/bézier), per-step playback, presets, halation clear |
 
 ## Data / Infrastructure
 

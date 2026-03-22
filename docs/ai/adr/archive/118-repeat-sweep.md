@@ -1,6 +1,6 @@
 # ADR 118: Repeat Sweep Automation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
