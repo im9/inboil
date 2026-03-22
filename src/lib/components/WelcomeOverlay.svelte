@@ -3,7 +3,7 @@
   import { fade } from 'svelte/transition'
 
   interface Props {
-    onLoadDemo: () => void
+    onLoadDemo: () => void | Promise<void>
     onStartEmpty: () => void
   }
   let { onLoadDemo, onStartEmpty }: Props = $props()

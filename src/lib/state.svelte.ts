@@ -5,7 +5,7 @@ import {
 } from './constants.ts'
 import type { FxFlavours } from './constants.ts'
 import {
-  makeDefaultSong, makeEmptySong, makeEmptyCell,
+  makeEmptySong, makeEmptyCell,
 } from './factory.ts'
 import { makeDemoSong } from './demo.ts'
 
@@ -998,8 +998,18 @@ export function exportProjectJSON(): void {
       samples[key] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
     }
   }
-  const payload = { v: 3 as const, ...snapshot, samples, exportedAt: Date.now() }
-  const json = JSON.stringify(payload, null, 2)
+  // Strip empty patterns to reduce file size (restored on import via restoreSongPure)
+  const scenePatIds = new Set(
+    snapshot.scene.nodes.filter((n: { patternId?: string }) => n.patternId).map((n: { patternId?: string }) => n.patternId)
+  )
+  const stripped = {
+    ...snapshot,
+    patterns: snapshot.patterns.filter((p: { id: string; cells: { trigs: { active: boolean }[] }[] }) =>
+      scenePatIds.has(p.id) || p.cells.some(c => c.trigs.some(t => t.active))
+    ),
+  }
+  const payload = { v: 3 as const, ...stripped, samples, exportedAt: Date.now() }
+  const json = JSON.stringify(payload)
   const blob = new Blob([json], { type: 'application/json' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
@@ -1064,31 +1074,69 @@ export async function importProjectJSON(json: string): Promise<void> {
 }
 
 /** Load factory demo patterns as a new unsaved project */
-export function projectLoadFactory(): void {
-  restoreSong(makeDefaultSong())
-  clearSamples()
-  project.id = null
-  project.dirty = true
-  ui.currentPattern = 0
-  ui.selectedTrack = 0
-  ui.patternSheet = false
-  ui.selectedSceneNodes = {}
-  ui.selectedSceneEdge = null
-  undoStack.length = 0
-  redoStack.length = 0
+export async function projectLoadFactory(): Promise<void> {
+  return projectLoadDemo()
 }
 
-/** Load demo project (welcome overlay) */
-export function projectLoadDemo(): void {
-  restoreSong(makeDemoSong())
-  clearSamples()
-  project.id = null
-  project.dirty = true
-  ui.currentPattern = 0
-  ui.selectedTrack = 0
-  ui.patternSheet = true   // show sequencer so new users see what to interact with
-  ui.selectedSceneNodes = {}
-  ui.selectedSceneEdge = null
-  undoStack.length = 0
-  redoStack.length = 0
+/** Load demo project (welcome overlay) — fetches demo-song.json from public/ */
+export async function projectLoadDemo(): Promise<void> {
+  try {
+    const res = await fetch(import.meta.env.BASE_URL + 'demo-song.json')
+    if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+    const data = await res.json()
+    const validated = validateSongData(data)
+    restoreSong(validated)
+    clearSamples()
+    project.id = null
+    project.dirty = true
+    ui.currentPattern = 0
+    ui.selectedTrack = 0
+    ui.patternSheet = true   // show sequencer so new users see what to interact with
+    ui.selectedSceneNodes = {}
+    ui.selectedSceneEdge = null
+    undoStack.length = 0
+    redoStack.length = 0
+    // Restore embedded samples
+    const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
+    if (samples) {
+      const { engine } = await import('./audio/engine.ts')
+      for (const [key, entry] of Object.entries(samples)) {
+        const isLegacy = !key.includes('_')
+        const trackId = isLegacy ? Number(key) : Number(key.split('_')[0])
+        const patternIndices = isLegacy
+          ? song.patterns.map((_, i) => i).filter(i => {
+              const cell = cellForTrack(song.patterns[i], trackId)
+              return cell && cell.voiceId === 'Sampler'
+            })
+          : [Number(key.split('_')[1])]
+        for (const pi of patternIndices) {
+          if (entry.packId) {
+            try {
+              const mod = await audioPool()
+              const zones = await mod.loadPackZones(entry.packId)
+              const waveform = await engine.loadPackToTrack(trackId, zones, pi)
+              if (waveform) setSamplePack(trackId, pi, entry.name, waveform, new ArrayBuffer(0), entry.packId)
+            } catch (e) { console.warn(`[demo] pack restore failed for ${entry.packId}:`, e) }
+          } else if (entry.buffer) {
+            const rawBuffer = base64ToBuffer(entry.buffer)
+            const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer, pi)
+            if (waveform) setSample(trackId, pi, entry.name, waveform, rawBuffer)
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[demo] Failed to load demo song, falling back to built-in:', e)
+    restoreSong(makeDemoSong())
+    clearSamples()
+    project.id = null
+    project.dirty = true
+    ui.currentPattern = 0
+    ui.selectedTrack = 0
+    ui.patternSheet = true
+    ui.selectedSceneNodes = {}
+    ui.selectedSceneEdge = null
+    undoStack.length = 0
+    redoStack.length = 0
+  }
 }

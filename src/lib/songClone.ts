@@ -7,7 +7,7 @@ import type { Trig, Cell, CellInsertFx, Pattern, Track, Song, Effects, VoiceId }
 import type { FxFlavours } from './constants.ts'
 import { DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
 import { cloneScene, restoreScene } from './sceneData.ts'
-import { makeEmptyCell } from './factory.ts'
+import { makeEmptyCell, makeEmptyPattern, PATTERN_POOL_SIZE } from './factory.ts'
 
 // ── Clone helpers (pure) ────────────────────────────────────────────────────
 
@@ -144,6 +144,10 @@ export function restoreSongPure(src: Song): RestoredState {
     }
     return { id: p.id, name: p.name, color: p.color ?? 0, cells }
   })
+  // Pad to PATTERN_POOL_SIZE if fewer patterns were saved (e.g. stripped export)
+  for (let i = patterns.length; i < PATTERN_POOL_SIZE; i++) {
+    patterns.push(makeEmptyPattern(i))
+  }
 
   // Legacy: sections are preserved for old save round-trip but not used at runtime
   const sections = src.sections ?? []
