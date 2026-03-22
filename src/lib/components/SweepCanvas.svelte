@@ -642,6 +642,18 @@
     redraw()
   }
 
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      e.preventDefault()
+      const dir = e.code === 'ArrowUp' ? -1 : 1
+      const len = paletteItems.length
+      if (len > 0) {
+        activeBrushIdx = ((activeBrushIdx + dir) % len + len) % len
+        redraw()
+      }
+    }
+  }
+
   function onPointerUp(_e: PointerEvent) {
     if (drawMode === 'bezier') {
       draggingPointIdx = null
@@ -777,8 +789,9 @@
     >✕</button>
   </div>
   <div class="sweep-layout">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- Palette — drill-down by track -->
-    <div class="sweep-palette">
+    <div class="sweep-palette" tabindex="0" onkeydown={onKeyDown}>
       {#if expandedTrackId === null}
         <!-- Track list -->
         {#each trackList as entry}
@@ -841,14 +854,17 @@
 
     <!-- Canvas -->
     <div class="sweep-canvas-wrap" bind:this={canvasWrapEl}>
+      <!-- svelte-ignore a11y_positive_tabindex -->
       <canvas
         bind:this={canvasEl}
         class="sweep-canvas"
         class:bezier-mode={drawMode === 'bezier'}
-        onpointerdown={onPointerDown}
+        tabindex="0"
+        onpointerdown={(e) => { canvasEl?.focus(); onPointerDown(e) }}
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
         onpointercancel={onPointerUp}
+        onkeydown={onKeyDown}
       ></canvas>
       <div class="sweep-axis-labels">
         <span>+1</span>
@@ -941,6 +957,7 @@
   }
 
   /* ── Palette ── */
+  .sweep-palette:focus { outline: none; }
   .sweep-palette {
     width: 140px;
     flex-shrink: 0;
@@ -1056,6 +1073,7 @@
     cursor: crosshair;
     touch-action: none;
   }
+  .sweep-canvas:focus { outline: none; }
   .sweep-canvas.bezier-mode {
     cursor: default;
   }
