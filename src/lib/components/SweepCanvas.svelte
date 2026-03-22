@@ -2,6 +2,7 @@
   import { song, ui, playback, pushUndo, fxPad } from '../state.svelte.ts'
   import { findSweepNodeForPattern, sceneUpdateFnParams } from '../sceneActions.ts'
   import { getParamDefs } from '../paramDefs.ts'
+  import { PATTERN_COLORS } from '../constants.ts'
   import type { SweepCurve, SweepTarget } from '../types.ts'
 
   // ── Sweep node detection ──
@@ -15,6 +16,8 @@
 
   // ── Palette: available targets from current pattern's tracks ──
   const pat = $derived(song.patterns[ui.currentPattern])
+  const patName = $derived(pat?.name || `Pattern ${ui.currentPattern + 1}`)
+  const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
   interface PaletteItem {
     label: string
@@ -83,6 +86,16 @@
   let canvasH = $state(200)
   let drawing = $state(false)
   let rawPoints: { t: number; v: number }[] = $state([])
+
+  const { onClose }: { onClose: () => void } = $props()
+
+  // ── Drawing mode ──
+  let drawMode = $state<'free' | 'bezier'>('free')
+
+  // ── Bézier state ──
+  let draggingPointIdx = $state<number | null>(null)
+  let lastClickTime = $state(0)
+  const POINT_HIT_RADIUS = 8  // px
 
   // ── Zoom state ──
   // null = full view, number = zoomed into specific repeat (0-based)
@@ -219,6 +232,12 @@
       }
     }
 
+    // Clip drawing area — prevent curves from bleeding into timeline header
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, drawY, w, drawH)
+    ctx.clip()
+
     // Center line (±0)
     ctx.strokeStyle = 'rgba(160, 140, 110, 0.3)'
     ctx.lineWidth = 1
@@ -243,11 +262,20 @@
       }
     }
 
-    // Draw all curves (dimmed for inactive, bright for active)
-    for (let ci = 0; ci < sweepData.curves.length; ci++) {
-      const curve = sweepData.curves[ci]
+    // Draw only curves for the selected track (or FX when at top level)
+    for (const curve of sweepData.curves) {
+      // Skip legacy mute curves (removed from SweepTarget in ADR 118)
+      if (curve.target.kind === 'mute' as string) continue
+      // Filter: only show curves belonging to the expanded track
+      if (expandedTrackId !== null) {
+        if (curve.target.kind === 'fx') continue
+        if ('trackId' in curve.target && curve.target.trackId !== expandedTrackId) continue
+      } else {
+        // Top-level: only show FX curves
+        if (curve.target.kind !== 'fx') continue
+      }
       const isActive = activeBrush && targetsEqual(curve.target, activeBrush.target)
-      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.25)
+      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3)
     }
 
     // Draw current freehand stroke
@@ -264,6 +292,55 @@
       }
       ctx.stroke()
       ctx.globalAlpha = 1.0
+    }
+
+    // Restore clip (curves done)
+    ctx.restore()
+
+    // Repaint timeline header to ensure no bleed-through
+    ctx.fillStyle = '#f5f0e6'
+    ctx.fillRect(0, 0, w, TIMELINE_H)
+    // Re-draw timeline header content
+    ctx.fillStyle = isZoomed ? 'rgba(160, 140, 110, 0.12)' : 'rgba(160, 140, 110, 0.08)'
+    ctx.fillRect(0, 0, w, TIMELINE_H)
+    ctx.strokeStyle = 'rgba(160, 140, 110, 0.15)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(0, TIMELINE_H)
+    ctx.lineTo(w, TIMELINE_H)
+    ctx.stroke()
+    // Re-draw ticks
+    for (let s = 0; s < totalSteps; s++) {
+      const t = s / totalSteps
+      if (t < viewStart - 0.01 || t > viewEnd + 0.01) continue
+      const x = tToX(t, w)
+      const isBeat = s % 4 === 0
+      const showTick = isZoomed ? true : isBeat
+      if (showTick) {
+        ctx.strokeStyle = 'rgba(160, 140, 110, 0.25)'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(x, TIMELINE_H - (isBeat ? 8 : 4))
+        ctx.lineTo(x, TIMELINE_H)
+        ctx.stroke()
+      }
+    }
+    // Re-draw labels
+    ctx.fillStyle = 'rgba(120, 100, 70, 0.5)'
+    ctx.font = '9px monospace'
+    ctx.textAlign = 'left'
+    if (isZoomed) {
+      ctx.fillText(`← R${zoomedRepeat! + 1}`, 4, 12)
+      for (let s = 0; s < spp; s += 4) {
+        const t = (zoomedRepeat! * spp + s) / totalSteps
+        const x = tToX(t, w)
+        if (x > 30) ctx.fillText(`${s + 1}`, x + 2, 12)
+      }
+    } else {
+      for (let r = 0; r < rc; r++) {
+        const x = tToX(r / rc, w) + 4
+        ctx.fillText(`${r + 1}`, x, 12)
+      }
     }
 
     // Playback cursor — uses longest track's playhead for accurate position
@@ -295,34 +372,101 @@
     const yForV = (v: number) => drawY + (0.5 - v / 2) * drawH
     const midY = drawY + drawH / 2
 
-    // Filled area under curve
     const isActive = alpha > 0.5
+    const pts = curve.points
+    const first = pts[0], last = pts[pts.length - 1]
+
+    // Extension lines for partial curves (dotted line showing held value)
+    if (isActive) {
+      ctx.strokeStyle = curve.color
+      ctx.lineWidth = 1
+      ctx.globalAlpha = alpha * 0.3
+      ctx.setLineDash([3, 3])
+      if (first.t > viewStart) {
+        ctx.beginPath()
+        ctx.moveTo(xFor(viewStart), yForV(first.v))
+        ctx.lineTo(xFor(first.t), yForV(first.v))
+        ctx.stroke()
+      }
+      if (last.t < viewEnd) {
+        ctx.beginPath()
+        ctx.moveTo(xFor(last.t), yForV(last.v))
+        ctx.lineTo(xFor(viewEnd), yForV(last.v))
+        ctx.stroke()
+      }
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1.0
+    }
+
+    // Build smooth path
+    const tracePath = (ctx: CanvasRenderingContext2D) => {
+      ctx.moveTo(xFor(first.t), yForV(first.v))
+      if (pts.length <= 2) {
+        ctx.lineTo(xFor(last.t), yForV(last.v))
+      } else {
+        // Catmull-Rom spline: sample at sub-pixel resolution for smooth curves
+        const steps = Math.max(pts.length * 8, 40)
+        for (let s = 1; s <= steps; s++) {
+          const progress = s / steps
+          const t = first.t + progress * (last.t - first.t)
+          // Find segment
+          let si = 0
+          for (let j = 0; j < pts.length - 1; j++) {
+            if (t >= pts[j].t && t <= pts[j + 1].t) { si = j; break }
+          }
+          const p0 = pts[Math.max(0, si - 1)]
+          const p1 = pts[si]
+          const p2 = pts[si + 1]
+          const p3 = pts[Math.min(pts.length - 1, si + 2)]
+          const seg = (p2.t - p1.t) > 0.0001 ? (t - p1.t) / (p2.t - p1.t) : 0
+          const seg2 = seg * seg, seg3 = seg2 * seg
+          const v = 0.5 * (
+            (2 * p1.v) +
+            (-p0.v + p2.v) * seg +
+            (2 * p0.v - 5 * p1.v + 4 * p2.v - p3.v) * seg2 +
+            (-p0.v + 3 * p1.v - 3 * p2.v + p3.v) * seg3
+          )
+          ctx.lineTo(xFor(t), yForV(v))
+        }
+      }
+    }
+
+    const pathFn = (action: 'stroke' | 'fill') => {
+      ctx.beginPath()
+      if (action === 'fill') {
+        ctx.moveTo(xFor(first.t), midY)
+        ctx.lineTo(xFor(first.t), yForV(first.v))
+      }
+      tracePath(ctx)
+      if (action === 'fill') {
+        ctx.lineTo(xFor(last.t), midY)
+        ctx.closePath()
+      }
+    }
+
+    // Filled area
     ctx.globalAlpha = alpha * 0.15
     ctx.fillStyle = curve.color
-    ctx.beginPath()
-    ctx.moveTo(xFor(curve.points[0].t), midY)
-    for (const p of curve.points) ctx.lineTo(xFor(p.t), yForV(p.v))
-    ctx.lineTo(xFor(curve.points[curve.points.length - 1].t), midY)
-    ctx.closePath()
+    pathFn('fill')
     ctx.fill()
+
     // Stroke
     ctx.strokeStyle = curve.color
     ctx.lineWidth = isActive ? 3 : 1.5
     ctx.globalAlpha = alpha
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
-    ctx.beginPath()
-    ctx.moveTo(xFor(curve.points[0].t), yForV(curve.points[0].v))
-    for (let i = 1; i < curve.points.length; i++) ctx.lineTo(xFor(curve.points[i].t), yForV(curve.points[i].v))
+    pathFn('stroke')
     ctx.stroke()
+
     // Dots on anchor points for active curve
     if (isActive) {
       ctx.fillStyle = curve.color
-      for (const p of curve.points) {
+      for (const p of pts) {
         const px = xFor(p.t)
         if (px < -5 || px > w + 5) continue
         ctx.beginPath()
-        ctx.arc(px, yForV(p.v), 3, 0, Math.PI * 2)
+        ctx.arc(px, yForV(p.v), drawMode === 'bezier' ? 5 : 3, 0, Math.PI * 2)
         ctx.fill()
       }
     }
@@ -386,6 +530,27 @@
     return (e.clientY - rect.top) < timelineH
   }
 
+  // ── Bézier helpers ──
+
+  /** Find the index of a point near the pointer, or -1 */
+  function hitTestPoint(e: PointerEvent): number {
+    if (!activeBrush || !canvasEl) return -1
+    const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
+    if (!curve) return -1
+    const rect = canvasEl.getBoundingClientRect()
+    const w = rect.width
+    const timelineH = TIMELINE_H * (rect.height / canvasH)
+    const drawH = rect.height - timelineH
+    for (let i = 0; i < curve.points.length; i++) {
+      const px = tToX(curve.points[i].t, w)
+      const py = (0.5 - curve.points[i].v / 2) * drawH + timelineH
+      const dx = e.clientX - rect.left - px
+      const dy = e.clientY - rect.top - py
+      if (Math.sqrt(dx * dx + dy * dy) < POINT_HIT_RADIUS) return i
+    }
+    return -1
+  }
+
   function onPointerDown(e: PointerEvent) {
     if (!canvasEl) return
 
@@ -407,17 +572,83 @@
 
     if (!activeBrush) return
     canvasEl.setPointerCapture(e.pointerId)
+
+    if (drawMode === 'bezier') {
+      const now = Date.now()
+      const hitIdx = hitTestPoint(e)
+
+      // Double-click → delete point
+      if (hitIdx >= 0 && now - lastClickTime < 300) {
+        lastClickTime = 0
+        const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
+        if (curve && curve.points.length > 2) {
+          pushUndo('Delete sweep point')
+          const pts = [...curve.points]
+          pts.splice(hitIdx, 1)
+          commitCurve(activeBrush.target, activeBrush.color, pts)
+          redraw()
+        }
+        return
+      }
+      lastClickTime = now
+
+      if (hitIdx >= 0) {
+        // Start dragging existing point
+        draggingPointIdx = hitIdx
+        drawing = true
+      } else {
+        // Add new point at click position
+        const norm = pointerToNorm(e)
+        const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
+        const pts = curve ? [...curve.points] : []
+        pts.push(norm)
+        pts.sort((a, b) => a.t - b.t)
+        pushUndo('Add sweep point')
+        commitCurve(activeBrush.target, activeBrush.color, pts)
+        // Start dragging the newly added point
+        draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
+        drawing = true
+        redraw()
+      }
+      return
+    }
+
+    // Freehand mode
     drawing = true
     rawPoints = [pointerToNorm(e)]
   }
 
   function onPointerMove(e: PointerEvent) {
     if (!drawing) return
+
+    if (drawMode === 'bezier' && draggingPointIdx !== null) {
+      // Drag bézier point
+      const norm = pointerToNorm(e)
+      const curve = sweepData.curves.find(c => activeBrush && targetsEqual(c.target, activeBrush.target))
+      if (curve && draggingPointIdx < curve.points.length) {
+        const pts = [...curve.points]
+        pts[draggingPointIdx] = norm
+        pts.sort((a, b) => a.t - b.t)
+        // Update dragging index after sort
+        draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
+        commitCurve(activeBrush!.target, activeBrush!.color, pts)
+        redraw()
+      }
+      return
+    }
+
+    // Freehand mode
     rawPoints.push(pointerToNorm(e))
     redraw()
   }
 
   function onPointerUp(_e: PointerEvent) {
+    if (drawMode === 'bezier') {
+      draggingPointIdx = null
+      drawing = false
+      return
+    }
+
     if (!drawing || !activeBrush || !sweepNode) { drawing = false; return }
     drawing = false
 
@@ -474,7 +705,8 @@
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
     if (!sweepNode) return
     pushUndo('Edit sweep curve')
-    const curves = [...sweepData.curves]
+    // Filter out legacy mute curves on any write
+    const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute')
     // Replace existing curve for same target, or add new
     const existingIdx = curves.findIndex(c => targetsEqual(c.target, target))
     const newCurve: SweepCurve = { target, points, color }
@@ -489,7 +721,7 @@
   function deleteCurve(target: SweepTarget) {
     if (!sweepNode) return
     pushUndo('Delete sweep curve')
-    const curves = sweepData.curves.filter(c => !targetsEqual(c.target, target))
+    const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute' && !targetsEqual(c.target, target))
     sceneUpdateFnParams(sweepNode.id, { sweep: { curves } })
     redraw()
   }
@@ -524,6 +756,26 @@
 </script>
 
 <div class="sweep-root">
+  <!-- Toolbar — matches PatternToolbar structure -->
+  <div class="sweep-toolbar">
+    <div class="sweep-pat-indicator">
+      <span class="sweep-pat-dot" style="background: {patColor}"></span>
+      <span class="sweep-pat-name">{patName}</span>
+    </div>
+    <div class="sweep-toolbar-spacer"></div>
+    <div class="sweep-mode-toggle">
+      <button class="sweep-mode-btn" class:active={drawMode === 'free'} onpointerdown={() => drawMode = 'free'}
+        data-tip="Freehand draw" data-tip-ja="フリーハンド描画"
+      >Draw</button>
+      <button class="sweep-mode-btn" class:active={drawMode === 'bezier'} onpointerdown={() => drawMode = 'bezier'}
+        data-tip="Click to add, drag to move, double-click to delete" data-tip-ja="クリックで追加、ドラッグで移動、ダブルクリックで削除"
+      >Point</button>
+    </div>
+    <div class="sweep-toolbar-spacer"></div>
+    <button class="sweep-close" onpointerdown={onClose}
+      aria-label="Close sweep editor" data-tip="Close" data-tip-ja="閉じる"
+    >✕</button>
+  </div>
   <div class="sweep-layout">
     <!-- Palette — drill-down by track -->
     <div class="sweep-palette">
@@ -592,6 +844,7 @@
       <canvas
         bind:this={canvasEl}
         class="sweep-canvas"
+        class:bezier-mode={drawMode === 'bezier'}
         onpointerdown={onPointerDown}
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
@@ -613,13 +866,78 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    padding: 8px;
+  }
+
+  /* ── Toolbar ── */
+  .sweep-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 10px;
+    background: var(--color-bg);
+    border-bottom: 1px solid rgba(30, 32, 40, 0.08);
+    flex-shrink: 0;
+  }
+  .sweep-pat-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .sweep-pat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .sweep-pat-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(80, 70, 50, 0.7);
+  }
+  .sweep-mode-toggle {
+    display: flex;
+    gap: 1px;
+    background: rgba(80, 70, 50, 0.06);
+    border: 1px solid rgba(80, 70, 50, 0.1);
+    border-radius: 4px;
+    padding: 1px;
+  }
+  .sweep-mode-btn {
+    all: unset;
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(80, 70, 50, 0.4);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .sweep-mode-btn:hover { color: rgba(80, 70, 50, 0.7); }
+  .sweep-mode-btn.active {
+    background: rgba(80, 70, 50, 0.12);
+    color: rgba(80, 70, 50, 0.9);
+    font-weight: 600;
+  }
+  .sweep-toolbar-spacer { flex: 1; }
+  .sweep-close {
+    border: 1.5px solid var(--color-fg);
+    background: transparent;
+    color: var(--color-fg);
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
   }
   .sweep-layout {
     display: flex;
     flex: 1;
     min-height: 0;
     gap: 8px;
+    padding: 8px;
   }
 
   /* ── Palette ── */
@@ -738,6 +1056,9 @@
     cursor: crosshair;
     touch-action: none;
   }
+  .sweep-canvas.bezier-mode {
+    cursor: default;
+  }
   .sweep-axis-labels {
     position: absolute;
     right: 6px;
@@ -753,4 +1074,5 @@
     font-size: 9px;
     color: rgba(120, 100, 70, 0.4);
   }
+
 </style>

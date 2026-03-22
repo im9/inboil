@@ -418,14 +418,7 @@
               {:else}
                 {@const hasSweep = !!findSweepNodeForPattern(song.patterns[ui.currentPattern]?.id)}
                 {#if ui.sweepTab && hasSweep}
-                  <div class="sheet-tabs">
-                    <button class="sheet-tab" onpointerdown={() => ui.sweepTab = false}>STEP</button>
-                    <button class="sheet-tab active">SWEEP</button>
-                    <button class="sheet-tab-close" onpointerdown={closeAllSheets}
-                      aria-label="Close" data-tip="Close" data-tip-ja="閉じる"
-                    >✕</button>
-                  </div>
-                  <SweepCanvas />
+                  <SweepCanvas onClose={closeAllSheets} />
                 {:else}
                   <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
                   {#if prefs.patternEditor === 'tracker'}
@@ -525,45 +518,6 @@
   }
 
 
-  /* ── Sheet tabs (ADR 118) ── */
-  .sheet-tabs {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 0 8px;
-    height: 32px;
-    flex-shrink: 0;
-    border-bottom: 1px solid rgba(237, 232, 220, 0.08);
-  }
-  .sheet-tab {
-    all: unset;
-    padding: 4px 14px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: rgba(237, 232, 220, 0.4);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-  }
-  .sheet-tab:hover { color: rgba(237, 232, 220, 0.7); }
-  .sheet-tab.active {
-    color: rgba(237, 232, 220, 0.9);
-    border-bottom-color: rgba(237, 232, 220, 0.6);
-  }
-  .sheet-tab-close {
-    margin-left: auto;
-    border: 1.5px solid var(--color-fg);
-    background: transparent;
-    color: var(--color-fg);
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-  }
   /* ── Perf flash ── */
   .perf-flash {
     position: absolute;
