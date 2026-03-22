@@ -647,13 +647,14 @@
     background: var(--dk-bg-hover);
   }
   .btn-action-node {
+    flex: 1;
     border: 1px solid var(--dk-border-mid);
     background: transparent;
     color: var(--dk-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: 8px 12px;
+    padding: 8px 0;
     cursor: pointer;
     transition: color 60ms, background 60ms;
     white-space: nowrap;

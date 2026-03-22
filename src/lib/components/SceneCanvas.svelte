@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, GEN_HALF_W, GEN_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -189,28 +189,6 @@
           drawBezier(ctx, sb, `rgba(196, 122, 42, ${glowAlpha.toFixed(2)})`, `rgba(196, 122, 42, ${glowAlpha.toFixed(2)})`, 2.5)
           ctx.restore()
 
-          // Sweep node progress bar
-          const sp = toPixel(sweepNode.x, sweepNode.y, WORLD_W, WORLD_H)
-          const pBarW = GEN_HALF_W * 2 - 8
-          const pBarH = 3
-          const pBarX = sp.x - GEN_HALF_W + 4
-          const pBarY = sp.y + GEN_HALF_H - 6
-          ctx.fillStyle = 'rgba(30, 32, 40, 0.08)'
-          ctx.beginPath(); ctx.roundRect(pBarX, pBarY, pBarW, pBarH, 1.5); ctx.fill()
-          ctx.fillStyle = 'rgba(196, 122, 42, 0.8)'
-          ctx.beginPath(); ctx.roundRect(pBarX, pBarY, pBarW * progress, pBarH, 1.5); ctx.fill()
-
-          // Pattern node glow ring
-          const pp = toPixel(activePatNode.x, activePatNode.y, WORLD_W, WORLD_H)
-          ctx.save()
-          ctx.shadowColor = `rgba(196, 122, 42, ${(0.2 + progress * 0.4).toFixed(2)})`
-          ctx.shadowBlur = 6 + progress * 10
-          ctx.strokeStyle = `rgba(196, 122, 42, ${(0.3 + progress * 0.4).toFixed(2)})`
-          ctx.lineWidth = 2
-          ctx.beginPath()
-          ctx.roundRect(pp.x - PAT_HALF_W, pp.y - PAT_HALF_H, PAT_HALF_W * 2, PAT_HALF_H * 2, 6)
-          ctx.stroke()
-          ctx.restore()
         }
       }
     }

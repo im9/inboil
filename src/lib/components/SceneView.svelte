@@ -982,6 +982,8 @@
           {@const curves = (node.fnParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
           {@const targetPatNode = song.scene.edges.find(e => e.from === node.id) ? song.scene.nodes.find(n => n.id === song.scene.edges.find(e => e.from === node.id)?.to) : null}
           {@const targetPatName = targetPatNode?.patternId ? (song.patterns.find(p => p.id === targetPatNode.patternId)?.name || 'Pattern') : 'unlinked'}
+          {@const sweepPlaying = playback.playing && song.scene.edges.some(e => e.from === node.id && e.to === playback.sceneNodeId)}
+          {@const sweepProg = sweepPlaying ? (() => { const spp = Math.max(...(song.patterns[playback.playingPattern ?? 0]?.cells.map(c => c.steps) ?? [16])); return (playback.sceneRepeatIndex + (Math.max(...playback.playheads) % spp) / spp) / (playback.sceneRepeatTotal || 1) })() : 0}
           <div class="gen-faceplate sweep">
             <div class="sweep-preview">
               <svg viewBox="0 0 104 36" preserveAspectRatio="none" fill="none" aria-hidden="true">
@@ -1000,6 +1002,10 @@
                 {/each}
                 {#if curves.length === 0}
                   <text x="52" y="21" text-anchor="middle" fill="currentColor" font-size="9" opacity="0.25">no curves</text>
+                {/if}
+                {#if sweepPlaying}
+                  <line x1={sweepProg * 104} y1="0" x2={sweepProg * 104} y2="36" stroke="rgba(196, 122, 42, 0.8)" stroke-width="1.5"/>
+                  <circle cx={sweepProg * 104} cy="2" r="2" fill="rgba(196, 122, 42, 0.9)"/>
                 {/if}
               </svg>
             </div>
