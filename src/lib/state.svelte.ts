@@ -499,6 +499,11 @@ export function factoryReset(): void {
   savePrefs()
 }
 
+// ── Transport callbacks (set by App.svelte, callable from components) ──
+let _playFromNode: ((nodeId: string) => void) | null = null
+export function setPlayFromNodeCallback(cb: (nodeId: string) => void) { _playFromNode = cb }
+export function playFromNode(nodeId: string) { _playFromNode?.(nodeId) }
+
 // ── Extracted modules (re-exported for backwards compatibility) ──────
 
 // Scene & section playback

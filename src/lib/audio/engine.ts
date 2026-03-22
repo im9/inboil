@@ -88,6 +88,13 @@ export class GrooveboxEngine {
         if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
         else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
       }
+      // Resume and warm up audio pipeline so first play() doesn't lose step 0
+      if (ctx.state === 'suspended') await ctx.resume()
+      // Play a silent buffer to prime the output hardware
+      const warmup = ctx.createBufferSource()
+      warmup.buffer = ctx.createBuffer(1, 1, ctx.sampleRate)
+      warmup.connect(ctx.destination)
+      warmup.start()
       // Commit to instance only after all steps succeed — avoids partial init state
       this.ctx = ctx
       this.node = node

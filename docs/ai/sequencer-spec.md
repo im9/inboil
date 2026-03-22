@@ -309,6 +309,9 @@ Sweep automation (ADR 118): When a sweep function node is connected to a pattern
 
 See [adr/004-queued-pattern-switch.md](./adr/004-queued-pattern-switch.md).
 
+### Play from node
+`advanceSceneNode(startFrom?)` accepts an optional node ID to begin graph traversal from an arbitrary pattern node instead of root. SceneView shows a ▶▶ button on selected pattern nodes that triggers `playFromNode(nodeId)` — stops current playback and restarts scene mode from that node. If the target node has no outgoing edges, falls back to loop mode. See ADR 048 §4.
+
 ## Parameter Lock (p-lock) — IMPLEMENTED
 
 Per-trig parameter overrides via `paramLocks` field on Trig. When a step has p-locks, the engine merges `cell.voiceParams` with `trig.paramLocks` (locks win). Editing is done via `lockMode` toggle in DockPanel (desktop) or MobileParamOverlay (mobile). See ADR 014.

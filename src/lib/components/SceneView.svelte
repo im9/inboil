@@ -4,7 +4,7 @@
   // Visual parts are already extracted (SceneCanvas, SceneBubbleMenu, SceneLabels,
   // SceneToolbar, SceneNodePopup). Remaining logic resists splitting without
   // creating excessive prop pass-through for no structural benefit.
-  import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo, playFromNode } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, findAttachedFnNodes, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
@@ -1138,7 +1138,7 @@
       </button>
     {/if}
 
-    <!-- Solo button: show on soloed node or selected pattern node -->
+    <!-- Solo & play-from-here buttons: show on soloed node or selected pattern node -->
     {#each song.scene.nodes as node (node.id)}
       {#if node.type === 'pattern'}
         {@const isSoloing = playback.soloNodeId === node.id}
@@ -1168,6 +1168,21 @@
             aria-label="Solo pattern"
           >
             <svg class="solo-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">{@html ICON.solo}</svg>
+          </button>
+          <button
+            class="play-from-btn"
+            style="
+              left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) + 64px);
+              top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+            "
+            onpointerdown={e => {
+              e.stopPropagation()
+              playFromNode(node.id)
+            }}
+            data-tip="Play from here" data-tip-ja="ここから再生"
+            aria-label="Play from here"
+          >
+            <svg viewBox="0 0 20 16" width="18" height="14" fill="currentColor" aria-hidden="true"><path d="M2 3v10l7-5z"/><path d="M11 3v10l7-5z"/></svg>
           </button>
         {/if}
       {/if}
@@ -1744,6 +1759,27 @@
   }
   .solo-icon {
     pointer-events: none;
+  }
+  .play-from-btn {
+    position: absolute;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 0;
+    border: 1.5px solid rgba(30, 32, 40, 0.35);
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(30, 32, 40, 0.5);
+    font-size: 10px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    z-index: 12;
+    padding: 0;
+  }
+  .play-from-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: var(--color-fg);
+    color: var(--color-fg);
   }
 
   /* ── Placement ghost ── */

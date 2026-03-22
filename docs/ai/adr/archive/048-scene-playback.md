@@ -111,6 +111,32 @@ root (existing behavior — `sceneNodeId` is cleared by `stop()`).
 
 - `onStep` callback: check `result.stop` → call `stop()`
 
+### 4. Play from arbitrary node
+
+Users can start scene playback from any pattern node, not just root. This is
+triggered via a ▶▶ button shown on selected pattern nodes in SceneView.
+
+**Implementation:**
+
+- `advanceSceneNode(startFrom?: string)` accepts an optional node ID
+- When `startFrom` is provided and `sceneNodeId` is null (initial call), traversal
+  begins at that node instead of root — `startSceneNode(targetNode)` is called directly
+- Subsequent cycle-boundary calls proceed normally (follow outgoing edges)
+- `playFromNode(nodeId)` in `state.svelte.ts` stops current playback and restarts
+  from the specified node via a callback registered by App.svelte
+
+**UI:**
+
+- SceneView shows a ▶▶ button (offset +64px from node center) next to the solo button
+  on selected pattern nodes
+- Click triggers `playFromNode(node.id)` which stops + plays from that node
+
+**Loop fallback:**
+
+When `play()` is called with `startFromNode` set, scene mode is forced regardless
+of `hasScenePlayback()`. If the target node has no outgoing edges, playback falls
+back to loop mode on that pattern.
+
 ## Migration
 
 No data migration needed. `SceneEdge.order` is kept as-is. `probability` node

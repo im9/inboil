@@ -230,13 +230,19 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
   }
 }
 
-/** Advance graph playback at beat boundary. Called from App.svelte onStep. */
-export function advanceSceneNode(): { advanced: boolean; patternIndex: number; stop?: boolean } {
+/** Advance graph playback at beat boundary. Called from App.svelte onStep.
+ *  Pass startFrom to begin traversal from a specific node instead of root. */
+export function advanceSceneNode(startFrom?: string): { advanced: boolean; patternIndex: number; stop?: boolean } {
   const root = sceneRootNode()
-  if (!root) return { advanced: false, patternIndex: 0 }
+  if (!root && !startFrom) return { advanced: false, patternIndex: 0 }
 
   if (!playback.sceneNodeId) {
-    return startSceneNode(root)
+    if (startFrom) {
+      const node = findNode(startFrom)
+      if (node) return startSceneNode(node)
+    }
+    if (root) return startSceneNode(root)
+    return { advanced: false, patternIndex: 0 }
   }
 
   if (playback.sceneRepeatLeft > 0) {
@@ -249,7 +255,10 @@ export function advanceSceneNode(): { advanced: boolean; patternIndex: number; s
   playback.sceneRepeatTotal = 1
 
   const current = findNode(playback.sceneNodeId!)
-  if (!current) return startSceneNode(root)
+  if (!current) {
+    if (root) return startSceneNode(root)
+    return { advanced: false, patternIndex: 0 }
+  }
 
   const outEdges = song.scene.edges
     .filter(e => e.from === current.id)

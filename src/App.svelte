@@ -21,7 +21,7 @@
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
-  import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool } from './lib/state.svelte.ts'
+  import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool, setPlayFromNodeCallback } from './lib/state.svelte.ts'
   import { applySweepStep } from './lib/scenePlayback.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
@@ -70,6 +70,17 @@
     return () => window.removeEventListener('resize', onResize)
   })
   const isMobile = $derived(windowWidth < 640)
+
+  // ── Audio engine pre-warm ────────────────────────────────────────
+  // Init AudioContext on first user interaction so it's ready by play time
+  let enginePrewarmed = false
+  function prewarmEngine() {
+    if (enginePrewarmed) return
+    enginePrewarmed = true
+    void engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
+    document.removeEventListener('pointerdown', prewarmEngine)
+  }
+  document.addEventListener('pointerdown', prewarmEngine, { once: true })
 
   // ── Audio engine ──────────────────────────────────────────────────
   // Sync song (incl. effects) → worklet on any state change
@@ -221,11 +232,11 @@
 
   // Solo switching is handled in onStep at cycle boundary
 
-  async function play() {
+  async function play(startFromNode?: string) {
     if (playback.playing) return
     await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
     const soloIdx2 = soloPatternIndex()
-    if (soloIdx2 != null) {
+    if (soloIdx2 != null && !startFromNode) {
       soloSent = playback.soloNodeId
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, soloIdx2)
       await engine.play()
@@ -233,17 +244,19 @@
       return
     }
     // ADR 045: auto-engage scene mode — desktop only (mobile has no scene view)
-    if (isMobile) {
+    if (startFromNode) {
+      playback.mode = 'scene'
+    } else if (isMobile) {
       playback.mode = 'loop'
     } else if (!hasSheet && hasScenePlayback()) {
       playback.mode = 'scene'
     }
-    if (playback.mode === 'scene' && hasScenePlayback()) {
+    if (playback.mode === 'scene' && (hasScenePlayback() || startFromNode)) {
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
       playback.sceneAbsoluteKey = null
-      const { patternIndex, stop: shouldStop } = advanceSceneNode()
+      const { patternIndex, stop: shouldStop } = advanceSceneNode(startFromNode)
       if (shouldStop) {
         // Scene graph can't advance (e.g. root has no outgoing edges) — fall back to loop
         playback.mode = 'loop'
@@ -296,6 +309,11 @@
 
   // Register transport callbacks for multi-device host
   setHostTransportCallbacks(play, stop)
+  // Register play-from-node callback for SceneView
+  setPlayFromNodeCallback((nodeId: string) => {
+    if (playback.playing) stop()
+    void play(nodeId)
+  })
 
   function closeAllSheets() {
     ui.patternSheet = false
