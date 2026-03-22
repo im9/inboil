@@ -10,7 +10,7 @@ export const ICON = {
     + `<path d="M10.5 2 L12.5 4.5 H11 V8.5 H12.5 L10.5 11 L8.5 8.5 H10 V4.5 H8.5 Z" fill="currentColor" opacity="0.7"/>`,
 
   /** Metronome — tempo (ADR 110). Body is the trapezoid (filled), needle is the line */
-  tempo: `<path d="M4.5 13 H9.5 L8.5 4 H5.5 Z" fill="currentColor" opacity="0.25"/>`
+  tempo: `<path d="M4.5 13 H9.5 L8.5 4 H5.5 Z" fill="rgba(245,240,230,0.95)"/>`
     + `<path d="M4.5 13 H9.5 L8.5 4 H5.5 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>`
     + `<line class="metronome-needle" x1="7" y1="12" x2="5" y2="2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>`
     + `<circle cx="7" cy="12" r="1" fill="currentColor"/>`,

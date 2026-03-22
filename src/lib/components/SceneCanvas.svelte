@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind, nodeColor } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -76,11 +76,24 @@
       const isSel = ui.selectedSceneEdge === edge.id
       const b = bezierEdge(from, to, nodeSizeKind(fromNode), nodeSizeKind(toNode))
 
-      drawBezier(ctx, b,
-        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
-        isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.6)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.22)`,
-        isSel ? 2.5 : 1.5,
-      )
+      // Accent-colored edge when source is generative/sweep feeding the active pattern
+      const isActiveLink = playback.playing && toNode.id === playback.sceneNodeId
+        && (fromNode.type === 'generative' || fromNode.type === 'sweep')
+      const accentColor = isActiveLink ? nodeColor(fromNode, song.patterns) : null
+
+      if (accentColor && !isSel) {
+        ctx.save()
+        ctx.shadowColor = accentColor
+        ctx.shadowBlur = 8
+        drawBezier(ctx, b, accentColor, accentColor, 2.5)
+        ctx.restore()
+      } else {
+        drawBezier(ctx, b,
+          isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
+          isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.6)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.22)`,
+          isSel ? 2.5 : 1.5,
+        )
+      }
     }
 
     // Edge order badges (only when source has >1 outgoing, skip fn nodes)
@@ -161,33 +174,6 @@
           ctx.beginPath()
           ctx.roundRect(bx, by, barW * progress, barH, 1)
           ctx.fill()
-
-        }
-      }
-    }
-
-    // ── Sweep playback effects (ADR 118 Phase 5) ──
-    if (playback.playing && playback.sceneNodeId) {
-      const activePatNode = nodes.find(n => n.id === playback.sceneNodeId && n.type === 'pattern')
-      if (activePatNode) {
-        const sweepEdge = edges.find(e => e.to === activePatNode.id && nodes.find(n => n.id === e.from)?.type === 'sweep')
-        const sweepNode = sweepEdge ? nodes.find(n => n.id === sweepEdge.from) : null
-        if (sweepNode?.fnParams?.sweep?.curves.length) {
-          const pat = song.patterns[playback.playingPattern ?? 0]
-          const spp = pat ? Math.max(...pat.cells.map(c => c.steps)) : 16
-          const maxHead = Math.max(...playback.playheads)
-          const progress = (playback.sceneRepeatIndex + (maxHead % spp) / spp) / (playback.sceneRepeatTotal || 1)
-
-          // Glowing edge from sweep → pattern
-          const sfrom = toPixel(sweepNode.x, sweepNode.y, WORLD_W, WORLD_H)
-          const sto = toPixel(activePatNode.x, activePatNode.y, WORLD_W, WORLD_H)
-          const sb = bezierEdge(sfrom, sto, nodeSizeKind(sweepNode), nodeSizeKind(activePatNode))
-          const glowAlpha = 0.3 + progress * 0.5
-          ctx.save()
-          ctx.shadowColor = 'rgba(196, 122, 42, 0.6)'
-          ctx.shadowBlur = 8 + progress * 12
-          drawBezier(ctx, sb, `rgba(196, 122, 42, ${glowAlpha.toFixed(2)})`, `rgba(196, 122, 42, ${glowAlpha.toFixed(2)})`, 2.5)
-          ctx.restore()
 
         }
       }

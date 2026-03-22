@@ -1370,7 +1370,6 @@
     position: absolute;
     left: calc((var(--fx-i, 0) - (var(--fx-n, 1) - 1) / 2) * 5px + 50% - 9px);
     top: calc(var(--fx-i, 0) * -1.5px + 2px);
-    filter: drop-shadow(0 0 1px currentColor);
   }
 
   /* ── Generative node faceplate (ADR 078) ── */
@@ -1546,6 +1545,7 @@
   }
   .scene-node.fn.playing[data-fn="fx"] .fn-fx-layer {
     /* Each layer glows in its own effect color */
+    filter: drop-shadow(0 0 3px currentColor);
     animation: fn-glow var(--beat, 0.25s) ease-out infinite alternate;
     animation-delay: calc(var(--fx-i, 0) * 60ms);
   }
