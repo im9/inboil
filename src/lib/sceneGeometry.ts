@@ -36,7 +36,7 @@ export function toNormScene(
 /** Node size category for edge computation */
 export type NodeSizeKind = 'pattern' | 'fn' | 'generative'
 
-function halfSize(kind: NodeSizeKind): { w: number; h: number } {
+export function halfSize(kind: NodeSizeKind): { w: number; h: number } {
   if (kind === 'generative') return { w: GEN_HALF_W, h: GEN_HALF_H }
   if (kind === 'fn') return { w: FN_HALF_W, h: FN_HALF_H }
   return { w: PAT_HALF_W, h: PAT_HALF_H }

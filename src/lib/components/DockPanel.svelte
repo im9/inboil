@@ -219,9 +219,9 @@
             <div class="fn-row">
               <span class="fn-label">BPM</span>
               <div class="fn-stepper">
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 5) } })}>−</button>
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
                 <span class="fn-step-val">{tmp.bpm}</span>
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 5) } })}>+</button>
+                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
               </div>
             </div>
           {:else if selectedFnNode.fnParams?.fx}
@@ -379,9 +379,9 @@
                   <div class="fn-row">
                     <span class="fn-label">BPM</span>
                     <div class="fn-stepper">
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 5) } })}>−</button>
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
                       <span class="fn-step-val">{tmp.bpm}</span>
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 5) } })}>+</button>
+                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
                     </div>
                   </div>
                 {:else if fnNode.fnParams?.fx}

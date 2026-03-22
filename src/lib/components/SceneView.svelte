@@ -13,7 +13,7 @@
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { registerKeyLayer, unregisterKeyLayer, registerKeyUpLayer, unregisterKeyUpLayer } from '../keyRouter.ts'
   import { onMount } from 'svelte'
-  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, fnNodeLabel, fnNodeValue, nodeColor, nodeSizeKind, fnNodeIcon } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, fnNodeLabel, fnNodeValue, nodeColor, nodeSizeKind, halfSize, fnNodeIcon } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -135,13 +135,15 @@
 
   function toNorm(e: PointerEvent) { return toNormXY(e.clientX, e.clientY) }
 
-  /** Find node under pointer (normalized coords, 28px radius in pixels) */
+  /** Find node under pointer (normalized coords, using actual node size + margin) */
   function hitTestNode(normX: number, normY: number): string | null {
     const px = PAD_INSET + normX * (WORLD_W - PAD_INSET * 2)
     const py = PAD_INSET + normY * (WORLD_H - PAD_INSET * 2)
+    const margin = 6
     for (const node of song.scene.nodes) {
       const np = toPixel(node.x, node.y, WORLD_W, WORLD_H)
-      if (Math.abs(px - np.x) < 32 / zoom && Math.abs(py - np.y) < 18 / zoom) {
+      const { w, h } = halfSize(nodeSizeKind(node))
+      if (Math.abs(px - np.x) < (w + margin) / zoom && Math.abs(py - np.y) < (h + margin) / zoom) {
         return node.id
       }
     }
