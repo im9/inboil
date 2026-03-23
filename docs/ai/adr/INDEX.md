@@ -134,7 +134,8 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 094 | Interactive Docs & Playground | Proposed | Tutorial JSON snapshots, SceneCanvas sandbox, in-app onboarding (split from ADR 072) |
 | 118 | Repeat Sweep Automation | Implemented | Sweep fn node, paint canvas (freehand/bézier), per-step playback, presets, halation clear |
 | 119 | Scene Stamps | Proposed | Kidpix-inspired decorative SVG stamps with beat-synced animations, free placement on scene canvas |
-| 120 | Reverb Flavour Engines | Proposed | Per-flavour front-end processing: Room (early reflections), Hall (pre-delay + modulated combs), Shimmer (normalized pitch-shift feedback). Shared Freeverb backend |
+| 120 | Reverb Flavour Engines | Implemented | Room (early reflections + Freeverb), Hall (pre-delay + modulated combs), Shimmer (Faust shimmer.dsp port). 8 comb + 4 allpass, 50ms crossfade on switch |
+| 121 | FX Hold Unification | Proposed | Unify reverb hold (BigSky) and granular freeze (Clouds) as independent HOLD toggles, remove freeze from granular flavours |
 
 ## Data / Infrastructure
 

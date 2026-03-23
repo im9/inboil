@@ -1,6 +1,6 @@
 # ADR 120: Reverb Flavour Engines
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
