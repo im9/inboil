@@ -183,9 +183,12 @@ export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
 
 /** Sweep automation target (ADR 118) — continuous parameters only */
 export type SweepTarget =
+  | { kind: 'all';   param: 'volume' | 'pan' }
   | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
   | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
-  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff' }
+  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff'
+                          | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'eq';    band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
 
 /** A single painted sweep curve (ADR 118) */
 export interface SweepCurve {

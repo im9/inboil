@@ -362,13 +362,60 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
           }
         }
       }
+    } else if (curve.target.kind === 'all') {
+      const param = curve.target.param
+      for (let i = 0; i < song.tracks.length; i++) {
+        const track = song.tracks[i]
+        if (param === 'volume') {
+          const base = snap.values[`track:${i}:volume`] ?? track.volume
+          const newVal = clamp(base + offset, 0, 1)
+          if (Math.abs(track.volume - newVal) > 0.001) { track.volume = newVal; changed = true }
+        } else if (param === 'pan') {
+          const base = snap.values[`track:${i}:pan`] ?? track.pan
+          const newVal = clamp(base + offset, -1, 1)
+          if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
+        }
+      }
+    } else if (curve.target.kind === 'send') {
+      const tgt = curve.target
+      const trackIdx = song.tracks.findIndex(t => t.id === tgt.trackId)
+      if (trackIdx < 0) continue
+      const patIdx = song.patterns.findIndex(p => p.id === song.scene.nodes.find(n => n.id === playback.sceneNodeId)?.patternId)
+      const pat = patIdx >= 0 ? song.patterns[patIdx] : null
+      const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
+      if (cell) {
+        const param = tgt.param
+        const base = snap.values[`send:${trackIdx}:${param}`] ?? cell[param]
+        const newVal = clamp(base + offset, 0, 1)
+        if (Math.abs(cell[param] - newVal) > 0.001) { cell[param] = newVal; changed = true }
+      }
     } else if (curve.target.kind === 'fx') {
       const param = curve.target.param
       const fxSnap = snap.fxPad
-      if (param === 'reverbWet')          { fxPad.verb.x  = clamp((fxSnap.verb?.x as number ?? 0.5) + offset, 0, 1); changed = true }
-      else if (param === 'reverbDamp')    { fxPad.verb.y  = clamp((fxSnap.verb?.y as number ?? 0.5) + offset, 0, 1); changed = true }
-      else if (param === 'delayTime')     { fxPad.delay.x = clamp((fxSnap.delay?.x as number ?? 0.5) + offset, 0, 1); changed = true }
-      else if (param === 'delayFeedback') { fxPad.delay.y = clamp((fxSnap.delay?.y as number ?? 0.5) + offset, 0, 1); changed = true }
+      const FX_MAP: Record<string, [string, string]> = {
+        reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
+        delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
+        filterCutoff: ['filter', 'x'],
+        glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
+        granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
+      }
+      const mapping = FX_MAP[param]
+      if (mapping) {
+        const [pad, key] = mapping
+        const base = fxSnap[pad]?.[key] as number ?? 0.5
+        ;(fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[key] = clamp(base + offset, 0, 1)
+        changed = true
+      }
+    } else if (curve.target.kind === 'eq') {
+      const { band, param } = curve.target
+      const eqSnap = snap.fxPad[band]
+      const eqPad = fxPad[band]
+      if (eqSnap && eqPad) {
+        const key = param === 'freq' ? 'x' : param === 'gain' ? 'y' : 'q'
+        const base = eqSnap[key] as number ?? (key === 'q' ? 1.5 : 0.5)
+        const newVal = clamp(base + offset, 0, key === 'q' ? 3 : 1)
+        if (Math.abs((eqPad[key] as number) - newVal) > 0.001) { (eqPad as Record<string, number | boolean>)[key] = newVal; changed = true }
+      }
     }
   }
   return changed

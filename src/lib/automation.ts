@@ -18,8 +18,14 @@ export function snapshotAutomationTargets(): AutomationSnapshot {
     values[`track:${i}:volume`] = song.tracks[i].volume
     values[`track:${i}:pan`] = song.tracks[i].pan
     values[`track:${i}:muted`] = song.tracks[i].muted ? 1 : 0
-    // Voice params for sweep restore
+    // Send params for sweep restore
     const cell = currentPat?.cells.find(c => c.trackId === song.tracks[i].id)
+    if (cell) {
+      values[`send:${i}:reverbSend`] = cell.reverbSend
+      values[`send:${i}:delaySend`] = cell.delaySend
+      values[`send:${i}:glitchSend`] = cell.glitchSend
+      values[`send:${i}:granularSend`] = cell.granularSend
+    }
     if (cell?.voiceParams) {
       for (const [key, val] of Object.entries(cell.voiceParams)) {
         if (typeof val === 'number') values[`voice:${i}:${key}`] = val
@@ -49,11 +55,19 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
     if (v[`track:${i}:pan`] != null) song.tracks[i].pan = v[`track:${i}:pan`]
     if (v[`track:${i}:muted`] != null) song.tracks[i].muted = v[`track:${i}:muted`] > 0.5
     const cell = restorePat?.cells.find(c => c.trackId === song.tracks[i].id)
-    if (cell?.voiceParams) {
-      for (const key of Object.keys(v)) {
-        const prefix = `voice:${i}:`
-        if (key.startsWith(prefix)) {
-          cell.voiceParams[key.slice(prefix.length)] = v[key]
+    if (cell) {
+      // Restore send levels
+      if (v[`send:${i}:reverbSend`] != null) cell.reverbSend = v[`send:${i}:reverbSend`]
+      if (v[`send:${i}:delaySend`] != null) cell.delaySend = v[`send:${i}:delaySend`]
+      if (v[`send:${i}:glitchSend`] != null) cell.glitchSend = v[`send:${i}:glitchSend`]
+      if (v[`send:${i}:granularSend`] != null) cell.granularSend = v[`send:${i}:granularSend`]
+      // Restore voice params
+      if (cell.voiceParams) {
+        for (const key of Object.keys(v)) {
+          const prefix = `voice:${i}:`
+          if (key.startsWith(prefix)) {
+            cell.voiceParams[key.slice(prefix.length)] = v[key]
+          }
         }
       }
     }
