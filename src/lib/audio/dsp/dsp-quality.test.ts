@@ -21,7 +21,7 @@ import { MoogVoice, WTSynth } from './melodic.ts'
 import { ResonantLP, BiquadHP, PeakingEQ, ShelfEQ, SVFilter } from './filters.ts'
 
 // ── Effects ──
-import { SimpleReverb, PingPongDelay, BusCompressor, PeakLimiter, SidechainDucker } from './effects.ts'
+import { SimpleReverb, PingPongDelay, TapeDelay, BusCompressor, PeakLimiter, SidechainDucker, OctaveShifter, TapeSaturator } from './effects.ts'
 
 const SR = 44100
 
@@ -368,6 +368,263 @@ describe('Effects: signal integrity', () => {
     for (let i = 0; i < SR * 0.2; i++) ducker.tick()
     const gainLater = ducker.tick()
     expect(gainLater).toBeGreaterThan(0.8) // mostly recovered
+  })
+})
+
+// ── Feedback safety & flavour differentiation ────────────────────────
+
+describe('OctaveShifter: pitch quality', () => {
+  it('shifts 440Hz input to ~880Hz (octave up)', () => {
+    const shifter = new OctaveShifter(SR)
+    const N = 8192
+    const out = new Float64Array(N)
+    // Feed 440Hz sine, collect shifted output (skip first window for settling)
+    for (let i = 0; i < SR * 0.1; i++) {
+      shifter.process(Math.sin(2 * Math.PI * 440 * i / SR) * 0.5)
+    }
+    for (let i = 0; i < N; i++) {
+      out[i] = shifter.process(Math.sin(2 * Math.PI * 440 * (i + SR * 0.1) / SR) * 0.5)
+    }
+    const mags = magnitudeSpectrum(out)
+    const centroid = spectralCentroid(mags, SR)
+    const binHz = SR / N  // frequency per bin
+    // Check energy near 880Hz is significant (octave-shifted component exists)
+    const bin880 = Math.round(880 / binHz)
+    const energy880 = mags[bin880] * mags[bin880]
+    const bin440 = Math.round(440 / binHz)
+    const energy440 = mags[bin440] * mags[bin440]
+    // Shifted 880Hz component must have substantial energy (>10% of 440Hz)
+    expect(energy880 / energy440).toBeGreaterThan(0.1)
+    // Spectral centroid should be well above 440Hz (shifted energy pulls it up)
+    expect(centroid).toBeGreaterThan(700)
+  })
+
+  it('output is bounded with sustained input', () => {
+    const shifter = new OctaveShifter(SR)
+    let maxOut = 0
+    for (let i = 0; i < SR * 2; i++) {
+      const input = Math.sin(2 * Math.PI * 440 * i / SR) * 0.5
+      const out = Math.abs(shifter.process(input))
+      if (out > maxOut) maxOut = out
+    }
+    expect(maxOut).toBeLessThan(2.0)
+    expect(maxOut).toBeGreaterThan(0.01)
+  })
+})
+
+describe('Shimmer feedback safety', () => {
+  it('shimmer produces audible difference vs plain reverb', () => {
+    // Run reverb WITHOUT shimmer
+    const reverbDry = new SimpleReverb(SR)
+    reverbDry.setSize(0.9); reverbDry.setDamp(0.15)
+    let dryEnergy = 0
+    for (let i = 0; i < SR * 2; i++) {
+      const input = i < SR * 0.1 ? Math.sin(2 * Math.PI * 440 * i / SR) * 0.5 : 0
+      const r = reverbDry.process(input)
+      if (i > SR) dryEnergy += r[0] * r[0] + r[1] * r[1]  // late tail energy
+    }
+
+    // Run reverb WITH shimmer (same reverb params)
+    const reverbWet = new SimpleReverb(SR)
+    const shifter = new OctaveShifter(SR)
+    reverbWet.setSize(0.9); reverbWet.setDamp(0.15)
+    const shimmerAmount = 0.6
+    let shimmerPrev = 0
+    let wetEnergy = 0
+    for (let i = 0; i < SR * 2; i++) {
+      const input = i < SR * 0.1 ? Math.sin(2 * Math.PI * 440 * i / SR) * 0.5 : 0
+      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
+      const r = reverbWet.process(input + shimShifted * shimmerAmount)
+      shimmerPrev = Math.tanh((r[0] + r[1]) * 2)
+      r[0] += shimShifted * shimmerAmount * 0.5
+      r[1] += shimShifted * shimmerAmount * 0.5
+      if (i > SR) wetEnergy += r[0] * r[0] + r[1] * r[1]
+    }
+
+    // Shimmer should add noticeable energy to the tail (at least 50% more)
+    expect(wetEnergy / dryEnergy).toBeGreaterThan(1.5)
+  })
+
+  it('shimmer feedback loop stays bounded after 5 seconds', () => {
+    const reverb = new SimpleReverb(SR)
+    const shifter = new OctaveShifter(SR)
+    reverb.setSize(0.95)
+    reverb.setDamp(0.15)
+    const shimmerAmount = 0.6  // matches engine max
+
+    let shimmerPrev = 0
+    let maxOutput = 0
+
+    for (let i = 0; i < SR * 5; i++) {
+      const dryInput = i < 100 ? Math.sin(2 * Math.PI * 440 * i / SR) * 0.8 : 0
+      // Mirrors worklet-processor.ts shimmer loop
+      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
+      const shimReverbIn = dryInput + shimShifted * shimmerAmount
+      const rev = reverb.process(shimReverbIn)
+      shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+      rev[0] += shimShifted * shimmerAmount * 0.5
+      rev[1] += shimShifted * shimmerAmount * 0.5
+      const peak = Math.max(Math.abs(rev[0]), Math.abs(rev[1]))
+      if (peak > maxOutput) maxOutput = peak
+    }
+
+    expect(maxOutput).toBeLessThan(3.0)
+    expect(maxOutput).toBeGreaterThan(0.001)
+  })
+
+  it('shimmer feedback decays to silence after input stops', () => {
+    const reverb = new SimpleReverb(SR)
+    const shifter = new OctaveShifter(SR)
+    reverb.setSize(0.85)
+    reverb.setDamp(0.15)
+    const shimmerAmount = 0.6
+
+    let shimmerPrev = 0
+
+    // Feed 0.5s of signal
+    for (let i = 0; i < SR * 0.5; i++) {
+      const input = Math.sin(2 * Math.PI * 330 * i / SR) * 0.5
+      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
+      const rev = reverb.process(input + shimShifted * shimmerAmount)
+      shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+    }
+
+    // Then silence for 10s — must decay
+    let finalPeak = 0
+    for (let i = 0; i < SR * 10; i++) {
+      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
+      const rev = reverb.process(shimShifted * shimmerAmount)
+      shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+      if (i > SR * 9) {
+        const peak = Math.max(Math.abs(rev[0]), Math.abs(rev[1]))
+        if (peak > finalPeak) finalPeak = peak
+      }
+    }
+
+    expect(finalPeak).toBeLessThan(0.01)
+  })
+})
+
+describe('Reverb flavour differentiation', () => {
+  function reverbTailEnergy(size: number, damp: number): number {
+    const verb = new SimpleReverb(SR)
+    verb.setSize(size)
+    verb.setDamp(damp)
+    // Impulse response
+    let energy = 0
+    for (let i = 0; i < SR * 2; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const r = verb.process(input)
+      // Measure energy in late tail (after 500ms)
+      if (i > SR * 0.5) energy += r[0] * r[0] + r[1] * r[1]
+    }
+    return energy
+  }
+
+  it('Hall has significantly longer tail than Room', () => {
+    // Room: size 0.3–0.75, damp 0.2–0.8 (using mid values)
+    const roomEnergy = reverbTailEnergy(0.5, 0.5)
+    // Hall: size 0.85–0.99, damp 0–0.15 (using mid values)
+    const hallEnergy = reverbTailEnergy(0.92, 0.07)
+
+    // Hall tail should be at least 5× more energetic than Room
+    expect(hallEnergy / roomEnergy).toBeGreaterThan(5)
+  })
+
+  it('Room with high damp is darker than Hall with low damp', () => {
+    // Compare high-frequency content via simple energy above ~2kHz
+    function highFreqRatio(size: number, damp: number): number {
+      const verb = new SimpleReverb(SR)
+      verb.setSize(size)
+      verb.setDamp(damp)
+      // White noise burst
+      let totalEnergy = 0, highEnergy = 0
+      const samples: number[] = []
+      for (let i = 0; i < SR; i++) {
+        const input = i < 1000 ? (Math.random() * 2 - 1) * 0.5 : 0
+        const r = verb.process(input)
+        const mono = (r[0] + r[1]) * 0.5
+        if (i > SR * 0.2) samples.push(mono)
+      }
+      // Simple spectral estimate: zero-crossing rate correlates with high-freq content
+      for (let i = 1; i < samples.length; i++) {
+        totalEnergy += samples[i] * samples[i]
+        if (samples[i] * samples[i - 1] < 0) highEnergy++
+      }
+      return totalEnergy > 0 ? highEnergy / samples.length : 0
+    }
+
+    const roomZCR = highFreqRatio(0.5, 0.7)  // Room, high damp
+    const hallZCR = highFreqRatio(0.92, 0.05) // Hall, low damp
+
+    // Hall should have more high-frequency content (higher ZCR)
+    expect(hallZCR).toBeGreaterThan(roomZCR)
+  })
+})
+
+describe('Delay time smoothing', () => {
+  it('PingPongDelay produces no clicks on time change', () => {
+    const delay = new PingPongDelay(1000, SR)
+    delay.setTime(200)
+
+    // Fill buffer with DC impulse then silence — isolates delay output
+    for (let i = 0; i < SR * 0.5; i++) {
+      delay.process(i < 100 ? 0.5 : 0, i < 100 ? 0.5 : 0, 0.6)
+    }
+
+    // Abruptly change time — should NOT cause click
+    delay.setTime(50)
+    let maxDelta = 0
+    let prev = 0
+    for (let i = 0; i < SR * 0.1; i++) {
+      const r = delay.process(0, 0, 0.6)  // silence input — only delay tail
+      const delta = Math.abs(r[0] - prev)
+      if (delta > maxDelta) maxDelta = delta
+      prev = r[0]
+    }
+
+    // Smooth slew: sample-to-sample delta should be small (no discontinuity)
+    // Without smoothing this would be >0.5 from buffer position jump
+    expect(maxDelta).toBeLessThan(0.2)
+  })
+
+  it('TapeDelay produces no clicks on time change', () => {
+    const delay = new TapeDelay(1000, SR)
+    delay.setTime(200)
+
+    for (let i = 0; i < SR * 0.5; i++) {
+      delay.process(i < 100 ? 0.5 : 0, i < 100 ? 0.5 : 0, 0.6)
+    }
+
+    delay.setTime(50)
+    let maxDelta = 0
+    let prev = 0
+    for (let i = 0; i < SR * 0.1; i++) {
+      const r = delay.process(0, 0, 0.6)
+      const delta = Math.abs(r[0] - prev)
+      if (delta > maxDelta) maxDelta = delta
+      prev = r[0]
+    }
+
+    expect(maxDelta).toBeLessThan(0.15)
+  })
+})
+
+describe('TapeSaturator', () => {
+  it('output stays bounded with hot input', () => {
+    const sat = new TapeSaturator(SR)
+    sat.setDrive(3.0)  // max drive
+    sat.setTone(0.5)
+    let maxOut = 0
+    for (let i = 0; i < SR; i++) {
+      const input = Math.sin(2 * Math.PI * 440 * i / SR) * 2.0  // hot signal
+      const r = sat.process(input, input)
+      const peak = Math.max(Math.abs(r[0]), Math.abs(r[1]))
+      if (peak > maxOut) maxOut = peak
+    }
+    // tanh soft clip — output should be bounded
+    expect(maxOut).toBeLessThan(2.0)
+    expect(maxOut).toBeGreaterThan(0.1)
   })
 })
 

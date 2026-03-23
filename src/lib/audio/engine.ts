@@ -418,13 +418,15 @@ function buildWorkletPattern(
       reverbDamp = 0.15
       shimmerAmount = fxPad.verb.y * 0.6
     } else if (ctx?.fxFlavours.verb === 'hall') {
-      // Hall: large diffuse — size 0.82–0.99, damp 0–0.3
-      reverbSize = 0.82 + fxPad.verb.x * 0.17
-      reverbDamp = (1.0 - fxPad.verb.y) * 0.3
+      // Hall: large diffuse space — long tail, low damping (bright, open)
+      // X = size (0.85–0.99), Y = brightness (damp 0–0.15)
+      reverbSize = 0.85 + fxPad.verb.x * 0.14
+      reverbDamp = (1.0 - fxPad.verb.y) * 0.15
     } else {
-      // Room (default): size 0.4–0.99, damp 0–1.0
-      reverbSize = 0.4 + fxPad.verb.x * 0.59
-      reverbDamp = 1.0 - fxPad.verb.y
+      // Room (default): small reflective space — shorter tail, more damping (intimate, warm)
+      // X = size (0.3–0.75), Y = brightness (damp 0.2–0.8)
+      reverbSize = 0.3 + fxPad.verb.x * 0.45
+      reverbDamp = 0.2 + (1.0 - fxPad.verb.y) * 0.6
     }
   } else {
     reverbSize = fx.reverb.size

@@ -50,8 +50,8 @@ export class SimpleReverb {
     this.apL    = aL.map(n => new AllpassFilter(n))
     this.apR    = aL.map(n => new AllpassFilter(n + sp))
   }
-  setSize(s: number) { const fb = 0.60 + s * 0.36; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
-  setDamp(d: number) { const v = d * 0.4;  [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
+  setSize(s: number) { const fb = 0.50 + s * 0.49; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
+  setDamp(d: number) { [...this.combsL, ...this.combsR].forEach(c => c.setDamp(d)) }
   // Reusable output to avoid per-sample tuple allocation
   private out = new Float64Array(2)
   process(x: number): Float64Array {
@@ -541,37 +541,60 @@ export class StutterBuffer {
 // ── Octave Shifter (ADR 075 Phase 2) ────────────────────────────────
 
 /**
- * Simple +12st (octave-up) pitch shifter for shimmer reverb.
- * Two overlapping Hann-windowed grains reading at 2× speed.
- * Constant-power crossfade (two offset Hann windows sum to 1.0).
+ * Pitch shifter (+12 semitones / octave up) for shimmer reverb.
+ *
+ * Uses a variable-delay approach: a sawtooth modulator continuously increases
+ * the delay, which compresses time → raises pitch. Two overlapping delay taps
+ * with Hann crossfade hide the discontinuity when the sawtooth resets.
+ *
+ * For octave up: delay increases by 1 sample/sample (sawtooth slope = 1).
+ * After winSize samples the delay has grown by winSize, then resets to 0.
+ * Reading with increasing delay = reading older and older samples = time
+ * compression by 2× = octave up.
  */
 export class OctaveShifter {
   private buf: Float32Array
   private len: number
   private wp = 0
-  private phase = 0
+  private phase = 0          // sawtooth 0→1
+  private phaseInc: number
+  private winSize: number
 
   constructor(sr: number) {
-    this.len = Math.round(sr * 0.04)  // 40ms grain window
+    this.winSize = Math.round(sr * 0.04)  // 40ms window
+    this.len = this.winSize * 4           // buffer > 2× window
     this.buf = new Float32Array(this.len)
+    this.phaseInc = 1.0 / this.winSize
   }
 
   process(x: number): number {
     this.buf[this.wp] = x
+
+    this.phase += this.phaseInc
+    if (this.phase >= 1.0) this.phase -= 1.0
+
+    const p2 = (this.phase + 0.5) % 1.0
+
+    // Delay decreases as phase increases (winSize → 0, then resets to winSize)
+    // Decreasing delay = reading progressively newer audio = pitch UP
+    const d1 = (1 - this.phase) * this.winSize
+    const d2 = (1 - p2) * this.winSize
+
+    // Hann crossfade
+    const env1 = 0.5 - 0.5 * Math.cos(6.283185 * this.phase)
+    const env2 = 0.5 - 0.5 * Math.cos(6.283185 * p2)
+
+    const out = this._read(this.wp - d1) * env1 + this._read(this.wp - d2) * env2
+
     if (++this.wp >= this.len) this.wp = 0
-
-    // Phase ramps 0→1 over len samples (one full grain cycle)
-    this.phase += 1 / this.len
-    if (this.phase >= 1) this.phase -= 1
-
-    let out = 0
-    for (let g = 0; g < 2; g++) {
-      const ph = (this.phase + g * 0.5) % 1.0
-      const rp = (this.wp + Math.round(ph * this.len)) % this.len
-      const env = 0.5 - 0.5 * Math.cos(6.283185 * ph)
-      out += this.buf[rp] * env
-    }
-
     return out
+  }
+
+  private _read(pos: number): number {
+    const len = this.len
+    const p = ((pos % len) + len) % len
+    const i0 = p | 0
+    const frac = p - i0
+    return this.buf[i0] + (this.buf[(i0 + 1) % len] - this.buf[i0]) * frac
   }
 }

@@ -995,14 +995,20 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
-      // Shimmer: pitch-shift reverb output and feed back into reverb input
+      // Shimmer: reverb out → boost → pitch shift → tanh clamp → feed back + blend
       let shimReverbIn = reverbIn
+      let shimShifted = 0
       if (this.shimmerAmount > 0) {
-        shimReverbIn += Math.tanh(this.octShifter.process(this.shimmerPrev)) * this.shimmerAmount
+        shimShifted = Math.tanh(this.octShifter.process(this.shimmerPrev))
+        shimReverbIn += shimShifted * this.shimmerAmount
       }
       const rev = this.reverb.process(shimReverbIn)
       if (this.shimmerAmount > 0) {
-        this.shimmerPrev = (rev[0] + rev[1]) * 0.5
+        // Boost reverb output to compensate 0.015 internal gain, clamp with tanh
+        this.shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+        // Blend shifted octave directly into output — makes shimmer audible
+        rev[0] += shimShifted * this.shimmerAmount * 0.5
+        rev[1] += shimShifted * this.shimmerAmount * 0.5
       }
       // Delay: tape or digital
       const del = this.delayTape
