@@ -251,6 +251,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private delayTape      = false
   // Reverb flavour engines (ADR 120)
   private reverbFlavour: 'room' | 'hall' | 'shimmer' = 'room'
+  private flavourActive = false  // true only when verb XY pad is ON
   private prevFlavour: 'room' | 'hall' | 'shimmer' | null = null  // for crossfade
   private xfadeRemaining = 0   // samples remaining in crossfade
   private xfadeLength    = 0   // total crossfade length (for envelope calc)
@@ -495,8 +496,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.delayTape     = p.perf.delayTape ?? false
           this.glitchStutter = p.perf.glitchStutter ?? false
           // ADR 120: reverb flavour engine params
-          const newFlavour = p.fx.reverbFlavour ?? 'room'
-          if (newFlavour !== this.reverbFlavour) {
+          this.flavourActive = p.fx.reverbFlavour != null
+          const newFlavour = p.fx.reverbFlavour ?? this.reverbFlavour
+          if (newFlavour !== this.reverbFlavour && this.flavourActive) {
             // Crossfade from old to new over 50ms to avoid clicks
             this.prevFlavour = this.reverbFlavour
             this.xfadeLength = Math.round(sampleRate * 0.05)
@@ -1044,9 +1046,12 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
-      // ADR 120: per-flavour reverb routing
+      // ADR 120: per-flavour reverb routing (only when verb XY pad is ON)
       let rev: Float64Array
-      if (this.xfadeRemaining > 0 && this.prevFlavour !== null) {
+      if (!this.flavourActive) {
+        // Verb pad OFF — plain reverb, no flavour routing
+        rev = this.reverb.process(reverbIn)
+      } else if (this.xfadeRemaining > 0 && this.prevFlavour !== null) {
         // Crossfade: process both engines into separate buffers, blend
         const oldRev = this._processReverbFlavour(this.prevFlavour, reverbIn, this._revOutOld)
         const newRev = this._processReverbFlavour(this.reverbFlavour, reverbIn, this._revOut)

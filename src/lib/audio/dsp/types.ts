@@ -28,7 +28,7 @@ export interface WorkletPattern {
     filter:  { on: boolean; x: number; y: number }
     eq:      { bands: Array<{ on: boolean; freq: number; gain: number; q: number; shelf?: boolean }> }
     shimmerAmount: number   // 0 = off, >0 = shimmer reverb pitch-shift feedback level
-    reverbFlavour: 'room' | 'hall' | 'shimmer'  // ADR 120: per-flavour engine routing
+    reverbFlavour?: 'room' | 'hall' | 'shimmer'  // ADR 120: per-flavour engine routing (undefined = verb pad OFF)
     earlyReflections?: { size: number; damp: number }  // ADR 120: Room front-end
     preDelay?: { ms: number }    // ADR 120: Hall pre-delay
     modDepth?: number            // ADR 120: Hall comb modulation depth (0–4 samples)

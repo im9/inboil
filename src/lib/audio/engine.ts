@@ -481,7 +481,7 @@ function buildWorkletPattern(
         ],
       },
       shimmerAmount,
-      reverbFlavour: verbFlavour,
+      reverbFlavour: fxPad?.verb.on ? verbFlavour : undefined,
       earlyReflections,
       preDelay: preDelayMs != null ? { ms: preDelayMs } : undefined,
       modDepth,
