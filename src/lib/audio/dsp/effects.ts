@@ -496,6 +496,11 @@ export class StutterBuffer {
   private sliceLen: number
   private xfade: number
   private needsLatch = true
+  // Re-latch crossfade: blend old slice into new over xfade period
+  private relatchRemaining = 0
+  private oldSliceStart = 0
+  private oldSliceLen = 0
+  private oldRp = 0
 
   constructor(private sr: number) {
     this.bufLen = Math.ceil(sr * 0.5)   // 500ms max capture
@@ -507,6 +512,13 @@ export class StutterBuffer {
   setSlice(x: number) {
     const newLen = Math.max(this.xfade * 4, Math.floor((10 + x * 190) * this.sr / 1000))
     if (newLen !== this.sliceLen) {
+      // Save old slice state for crossfade
+      if (!this.needsLatch) {
+        this.oldSliceStart = this.sliceStart
+        this.oldSliceLen = this.sliceLen
+        this.oldRp = this.rp
+        this.relatchRemaining = this.xfade
+      }
       this.sliceLen = newLen
       this.needsLatch = true
     }
@@ -533,7 +545,17 @@ export class StutterBuffer {
     else if (this.rp >= this.sliceLen - this.xfade) env = (this.sliceLen - 1 - this.rp) / this.xfade
     env = Math.max(0, Math.min(1, env))
 
-    const out = this.buf[idx] * env
+    let out = this.buf[idx] * env
+
+    // Crossfade from old slice during re-latch
+    if (this.relatchRemaining > 0) {
+      const oldIdx = (this.oldSliceStart + this.oldRp) % this.bufLen
+      const blend = this.relatchRemaining / this.xfade  // 1→0
+      out = this.buf[oldIdx] * blend + out * (1 - blend)
+      if (++this.oldRp >= this.oldSliceLen) this.oldRp = 0
+      this.relatchRemaining--
+    }
+
     if (++this.rp >= this.sliceLen) this.rp = 0
     return out
   }
