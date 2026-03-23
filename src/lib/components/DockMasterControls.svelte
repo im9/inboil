@@ -37,12 +37,13 @@
     return `${Math.round(perf.swing * 100)}%`
   }
 
-  type MasterPadKey = 'comp' | 'duck' | 'ret'
+  type MasterPadKey = 'comp' | 'duck' | 'ret' | 'sat'
 
   function masterPadXDisplay(key: MasterPadKey): string {
     const st = masterPad[key]
     if (key === 'comp') return `${Math.round((0.1 + st.x * 0.9) * 100)}%`
     if (key === 'duck') return `${Math.round(st.x * 100)}%`
+    if (key === 'sat')  return `${(0.1 + st.x * 2.9).toFixed(1)}`
     return `${Math.round(st.x * 200)}%`
   }
 
@@ -50,6 +51,7 @@
     const st = masterPad[key]
     if (key === 'comp') return `1:${Math.round(1 + st.y * 19)}`
     if (key === 'duck') return `${Math.round(20 + st.y * 480)}ms`
+    if (key === 'sat')  return `${Math.round(st.y * 100)}%`
     return `${Math.round(st.y * 200)}%`
   }
 
@@ -71,25 +73,37 @@
 
 <span class="section-label">MASTER</span>
 <div class="master-dock-groups">
-  <div class="master-dock-group">
-    <span class="group-label">OUTPUT</span>
-    <div class="master-dock-faders">
-      {#each MASTER_KNOBS.filter(mk => mk.key === 'gain' || mk.key === 'swg') as mk}
-        <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
-          <VFader
-            value={getMasterKnobValue(mk.key)}
-            label={mk.label}
-            height={64}
-            displayValue={masterKnobDisplay(mk.key)}
-            onchange={v => setMasterKnobValue(mk.key, v)}
-          />
-        </span>
-      {/each}
+  <!-- OUTPUT + SAT side by side -->
+  <div class="pad-row">
+    <div class="master-dock-group pad-half">
+      <span class="group-label">OUTPUT</span>
+      <div class="master-dock-faders">
+        {#each MASTER_KNOBS.filter(mk => mk.key === 'gain' || mk.key === 'swg') as mk}
+          <span data-tip={mk.tip} data-tip-ja={mk.tipJa}>
+            <VFader
+              value={getMasterKnobValue(mk.key)}
+              label={mk.label}
+              height={52}
+              displayValue={masterKnobDisplay(mk.key)}
+              onchange={v => setMasterKnobValue(mk.key, v)}
+            />
+          </span>
+        {/each}
+      </div>
+    </div>
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.sat.on}>
+      <div class="pad-header">
+        <button class="fx-dock-toggle" class:active={masterPad.sat.on} aria-pressed={masterPad.sat.on}
+          onpointerdown={() => toggleMasterPadOn('sat')}
+          data-tip="Tape saturator — drive / tone" data-tip-ja="テープサチュレーター — ドライブ / トーン"
+        >SAT</button>
+      </div>
+      <div class="fx-dock-knobs">
+        <Knob value={masterPad.sat.x} label="DRV" size={36} displayValue={masterPadXDisplay('sat')} onchange={v => setMasterPadX('sat', v)} />
+        <Knob value={masterPad.sat.y} label="TNE" size={36} displayValue={masterPadYDisplay('sat')} onchange={v => setMasterPadY('sat', v)} />
+      </div>
     </div>
   </div>
-</div>
-<span class="section-label">XY PAD</span>
-<div class="master-dock-groups">
   <!-- COMP (full width — has extra knobs) -->
   <div class="master-dock-group" class:disabled={!masterPad.comp.on}>
     <div class="pad-header">

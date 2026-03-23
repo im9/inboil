@@ -97,20 +97,33 @@ export class LiteReverb {
 
 export class PingPongDelay {
   private bL: Float32Array; private bR: Float32Array
-  private pL = 0; private pR = 0; private ds = 0
+  private pL = 0; private pR = 0
+  private ds = 0; private targetDs = 0
+  // Smoothing: ~10ms slew to avoid clicks on delay time changes
+  private slewCoeff: number
   constructor(maxMs: number, private sr: number) {
     const max = Math.ceil(maxMs * sr / 1000)
     this.bL = new Float32Array(max); this.bR = new Float32Array(max)
+    this.slewCoeff = Math.exp(-1 / (0.010 * sr))
   }
-  setTime(ms: number) { this.ds = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length) }
+  setTime(ms: number) { this.targetDs = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length - 2) }
+  private _readInterp(buf: Float32Array, pos: number): number {
+    const len = buf.length
+    const p = ((pos % len) + len) % len
+    const i0 = p | 0
+    const frac = p - i0
+    return buf[i0] + (buf[(i0 + 1) % len] - buf[i0]) * frac
+  }
   private out = new Float64Array(2)
   process(iL: number, iR: number, fb: number): Float64Array {
-    if (this.ds === 0) { this.out[0] = 0; this.out[1] = 0; return this.out }
-    const len = this.bL.length
-    const rL = (this.pL - this.ds + len) % len, rR = (this.pR - this.ds + len) % len
-    const oL = this.bL[rL], oR = this.bR[rR]
+    if (this.targetDs === 0 && this.ds < 1) { this.out[0] = 0; this.out[1] = 0; return this.out }
+    // Smooth delay time changes to avoid clicks
+    this.ds = this.targetDs + (this.ds - this.targetDs) * this.slewCoeff
+    const oL = this._readInterp(this.bL, this.pL - this.ds)
+    const oR = this._readInterp(this.bR, this.pR - this.ds)
     this.bL[this.pL] = iL + oR * fb;  this.bR[this.pR] = iR + oL * fb
-    if (++this.pL >= len) this.pL = 0;  if (++this.pR >= len) this.pR = 0
+    if (++this.pL >= this.bL.length) this.pL = 0
+    if (++this.pR >= this.bR.length) this.pR = 0
     this.out[0] = oL; this.out[1] = oR
     return this.out
   }
@@ -352,23 +365,34 @@ export class GranularProcessor {
  */
 export class TapeDelay {
   private bL: Float32Array; private bR: Float32Array
-  private pL = 0; private pR = 0; private ds = 0
+  private pL = 0; private pR = 0
+  private ds = 0; private targetDs = 0
+  // Two-pole feedback filters: LP at 800Hz + HP at 100Hz for tape head character
   private lpL = 0; private lpR = 0
+  private hpL = 0; private hpR = 0
   private lpCoeff: number
-  private lfoPhase = 0
-  private lfoInc: number
+  private hpCoeff: number
+  // Dual LFO for realistic wow (slow) + flutter (fast)
+  private wowPhase = 0; private flutterPhase = 0
+  private wowInc: number; private flutterInc: number
+  // Smoothing: ~10ms slew to avoid clicks on delay time changes
+  private slewCoeff: number
 
   constructor(maxMs: number, private sr: number) {
     const max = Math.ceil(maxMs * sr / 1000)
     this.bL = new Float32Array(max); this.bR = new Float32Array(max)
-    // One-pole LP at ~2kHz — 6dB/oct, gentle analog rolloff
-    this.lpCoeff = Math.exp(-2 * Math.PI * 2000 / sr)
-    // LFO ~1.2Hz wow/flutter
-    this.lfoInc = 1.2 / sr
+    // LP at ~800Hz — each repeat loses more top end (Space Echo character)
+    this.lpCoeff = Math.exp(-2 * Math.PI * 800 / sr)
+    // HP at ~100Hz — tape head can't reproduce deep bass, repeats thin out
+    this.hpCoeff = Math.exp(-2 * Math.PI * 100 / sr)
+    // Wow: slow drift ~0.6Hz, Flutter: fast wobble ~6Hz
+    this.wowInc = 0.6 / sr
+    this.flutterInc = 6.0 / sr
+    this.slewCoeff = Math.exp(-1 / (0.010 * sr))
   }
 
   setTime(ms: number) {
-    this.ds = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length - 8)
+    this.targetDs = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length - 12)
   }
 
   private _readInterp(buf: Float32Array, pos: number): number {
@@ -381,28 +405,76 @@ export class TapeDelay {
 
   private out = new Float64Array(2)
   process(iL: number, iR: number, fb: number): Float64Array {
-    if (this.ds <= 0) { this.out[0] = 0; this.out[1] = 0; return this.out }
-    const len = this.bL.length
+    if (this.targetDs <= 0 && this.ds < 1) { this.out[0] = 0; this.out[1] = 0; return this.out }
 
-    // Wow/flutter: sine LFO modulates read offset ±3 samples
-    this.lfoPhase += this.lfoInc
-    if (this.lfoPhase >= 1) this.lfoPhase -= 1
-    const lfo = Math.sin(6.283185 * this.lfoPhase) * 3
+    // Smooth delay time changes to avoid clicks
+    this.ds = this.targetDs + (this.ds - this.targetDs) * this.slewCoeff
 
-    const oL = this._readInterp(this.bL, this.pL - this.ds + lfo)
-    const oR = this._readInterp(this.bR, this.pR - this.ds - lfo)
+    // Wow (slow pitch drift) + flutter (fast wobble) — ±6 samples total
+    this.wowPhase += this.wowInc
+    if (this.wowPhase >= 1) this.wowPhase -= 1
+    this.flutterPhase += this.flutterInc
+    if (this.flutterPhase >= 1) this.flutterPhase -= 1
+    const mod = Math.sin(6.283185 * this.wowPhase) * 4
+              + Math.sin(6.283185 * this.flutterPhase) * 2
 
-    // LP filter on feedback (cross-feed for ping-pong)
+    const oL = this._readInterp(this.bL, this.pL - this.ds + mod)
+    const oR = this._readInterp(this.bR, this.pR - this.ds - mod)
+
+    // LP filter on feedback — each repeat loses more highs
     this.lpL = oR + (this.lpL - oR) * this.lpCoeff + DENORMAL_DC
     this.lpR = oL + (this.lpR - oL) * this.lpCoeff + DENORMAL_DC
+    // HP filter on feedback — each repeat loses more lows (tape head rolloff)
+    const fbL = this.lpL - this.hpL; this.hpL = this.lpL - fbL * this.hpCoeff
+    const fbR = this.lpR - this.hpR; this.hpR = this.lpR - fbR * this.hpCoeff
 
-    // Soft saturation (tape compression)
-    this.bL[this.pL] = iL + Math.tanh(this.lpL * 1.2) * fb
-    this.bR[this.pR] = iR + Math.tanh(this.lpR * 1.2) * fb
-    if (++this.pL >= len) this.pL = 0
-    if (++this.pR >= len) this.pR = 0
+    // Tape saturation — slightly driven for warm compression on each repeat
+    this.bL[this.pL] = iL + Math.tanh(fbL * 1.6) * fb
+    this.bR[this.pR] = iR + Math.tanh(fbR * 1.6) * fb
+    if (++this.pL >= this.bL.length) this.pL = 0
+    if (++this.pR >= this.bR.length) this.pR = 0
 
     this.out[0] = oL; this.out[1] = oR
+    return this.out
+  }
+}
+
+// ── Tape Saturator (master bus) ──────────────────────────────────────
+
+/**
+ * Stereo tape saturator for master bus.
+ * X (drive): controls saturation amount — soft clipping via tanh with variable gain.
+ * Y (tone): one-pole LP cutoff — rolls off highs to simulate tape head response.
+ * At low drive, acts as gentle warmth; at high drive, audible harmonic saturation.
+ */
+export class TapeSaturator {
+  private lpL = 0; private lpR = 0
+  private lpCoeff = 0
+  private drive = 1.0
+
+  constructor(private sr: number) {
+    this.setTone(0.5)
+  }
+
+  /** Set drive amount: 0.1 (clean) to 3.0 (heavy saturation) */
+  setDrive(d: number) { this.drive = d }
+
+  /** Set tone: 0–1 mapped to LP cutoff 1kHz–18kHz */
+  setTone(t: number) {
+    // Tone 0 = dark (1kHz), tone 1 = bright (18kHz, nearly transparent)
+    const freq = 1000 * Math.pow(18, t)
+    this.lpCoeff = Math.exp(-2 * Math.PI * freq / this.sr)
+  }
+
+  private out = new Float64Array(2)
+  process(l: number, r: number): Float64Array {
+    // Apply drive → tanh soft clip → compensate gain
+    const dL = Math.tanh(l * this.drive) / Math.max(0.3, Math.tanh(this.drive))
+    const dR = Math.tanh(r * this.drive) / Math.max(0.3, Math.tanh(this.drive))
+    // One-pole LP tone filter
+    this.lpL = dL + (this.lpL - dL) * this.lpCoeff + DENORMAL_DC
+    this.lpR = dR + (this.lpR - dR) * this.lpCoeff + DENORMAL_DC
+    this.out[0] = this.lpL; this.out[1] = this.lpR
     return this.out
   }
 }

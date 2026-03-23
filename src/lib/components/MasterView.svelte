@@ -3,12 +3,13 @@
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
 
-  type NodeKey = 'comp' | 'duck' | 'ret'
+  type NodeKey = 'comp' | 'duck' | 'ret' | 'sat'
 
   const nodes: { key: NodeKey; label: string; color: string; xLabel: string; yLabel: string; tip: string; tipJa: string }[] = [
     { key: 'comp', label: 'COMP', color: 'var(--color-olive)',  xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — X: threshold, Y: ratio', tipJa: 'コンプレッサー — X: スレッショルド, Y: レシオ' },
     { key: 'duck', label: 'DUCK', color: 'var(--color-blue)',   xLabel: 'DPT', yLabel: 'REL', tip: 'Sidechain ducker — X: depth, Y: release', tipJa: 'サイドチェインダッカー — X: 深さ, Y: リリース' },
     { key: 'ret',  label: 'RET',  color: 'var(--color-salmon)', xLabel: 'VRB', yLabel: 'DLY', tip: 'FX returns — X: reverb level, Y: delay level', tipJa: 'FXリターン — X: リバーブレベル, Y: ディレイレベル' },
+    { key: 'sat',  label: 'SAT',  color: 'var(--color-purple)', xLabel: 'DRV', yLabel: 'TNE', tip: 'Tape saturator — X: drive, Y: tone', tipJa: 'テープサチュレーター — X: ドライブ, Y: トーン' },
   ]
 
   // ── Node size based on parameter intensity + audio-reactive pulse ──
@@ -17,6 +18,7 @@
     if (!st.on) return 0
     if (key === 'comp') return st.x * st.y  // threshold × ratio
     if (key === 'duck') return st.x          // depth
+    if (key === 'sat')  return st.x          // drive
     return (st.x + st.y) / 2                // avg of reverb + delay sends
   }
 
@@ -76,6 +78,7 @@
     const st = masterPad[key]
     if (key === 'comp') return { xVal: `${Math.round((0.1 + st.x * 0.9) * 100)}%`, yVal: `1:${Math.round(1 + st.y * 19)}` }
     if (key === 'duck') return { xVal: `${Math.round(st.x * 100)}%`, yVal: `${Math.round(20 + st.y * 480)}ms` }
+    if (key === 'sat')  return { xVal: `${(0.1 + st.x * 2.9).toFixed(1)}`, yVal: `${Math.round(st.y * 100)}%` }
     return { xVal: `${Math.round(st.x * 200)}%`, yVal: `${Math.round(st.y * 200)}%` }
   }
 

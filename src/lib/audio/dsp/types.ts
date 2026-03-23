@@ -28,6 +28,7 @@ export interface WorkletPattern {
     filter:  { on: boolean; x: number; y: number }
     eq:      { bands: Array<{ on: boolean; freq: number; gain: number; q: number; shelf?: boolean }> }
     shimmerAmount: number   // 0 = off, >0 = shimmer reverb pitch-shift feedback level
+    sat: { drive: number; tone: number } | null  // tape saturator — null = off
   }
   perf: {
     rootNote: number

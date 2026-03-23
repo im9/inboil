@@ -391,6 +391,7 @@ export const masterPad = $state({
   comp: { ...DEFAULT_MASTER_PAD.comp },
   duck: { ...DEFAULT_MASTER_PAD.duck },
   ret:  { ...DEFAULT_MASTER_PAD.ret },
+  sat:  { ...DEFAULT_MASTER_PAD.sat },
 })
 
 export const masterLevels = $state({ peakL: 0, peakR: 0, gr: 1.0, cpu: 0 })

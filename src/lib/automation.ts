@@ -78,7 +78,7 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
   Object.assign(fxFlavours, snap.fxFlavours)
   // Restore master pad & comp
   if (snap.masterPad) {
-    const MASTER_PAD_KEYS = ['comp', 'duck', 'ret'] as const
+    const MASTER_PAD_KEYS = ['comp', 'duck', 'ret', 'sat'] as const
     for (const key of MASTER_PAD_KEYS) Object.assign(masterPad[key], snap.masterPad[key])
   }
   if (snap.comp) {

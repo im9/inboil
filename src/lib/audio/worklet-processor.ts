@@ -34,7 +34,7 @@ declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
-import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter } from './dsp/effects.ts'
+import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter, TapeSaturator } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
@@ -171,6 +171,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private peakEq = [new PeakingEQ(sampleRate), new PeakingEQ(sampleRate), new PeakingEQ(sampleRate)]
   private shelfEq = [new ShelfEQ(sampleRate, true), new ShelfEQ(sampleRate, false)]  // [0]=low-shelf, [1]=high-shelf
   private eqShelfMode = [false, false]  // [0]=low uses shelf, [1]=high uses shelf
+
+  private tapeSat = new TapeSaturator(sampleRate)
+  private satOn   = false
 
   // Param cache
   private delayFeedback  = 0.42
@@ -451,6 +454,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.comp.setAttackRelease(p.fx.comp.attack, p.fx.comp.release)
           this.verbReturn    = p.fx.verbReturn ?? 1.0
           this.dlyReturn     = p.fx.dlyReturn  ?? 1.0
+          if (p.fx.sat) {
+            this.satOn = true
+            this.tapeSat.setDrive(p.fx.sat.drive)
+            this.tapeSat.setTone(p.fx.sat.tone)
+          } else {
+            this.satOn = false
+          }
           this.pendingRootNote  = p.perf.rootNote
           this.pendingOctave    = p.perf.octave
           this.pendingBreaking  = p.perf.breaking
@@ -1063,7 +1073,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       const filt = this.djFilter.process(fL, fR)
       fL = filt[0]; fR = filt[1]
 
-      // (BRK gate applied pre-FX above)
+      // ── Tape Saturator ──────────────────────────────────────────
+      if (this.satOn) {
+        const sat = this.tapeSat.process(fL, fR)
+        fL = sat[0]; fR = sat[1]
+      }
 
       // Anti-click fade-in after pattern reset
       if (this.xfadeRemain > 0) {

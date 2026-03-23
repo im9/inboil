@@ -122,6 +122,7 @@ export const DEFAULT_MASTER_PAD = {
   comp: { on: true, x: 0.22, y: 0.26 },   // x=threshold(0.1–1.0), y=ratio(1–20)
   duck: { on: true, x: 0.85, y: 0.21 },   // x=depth(0–1), y=release(20–500ms)
   ret:  { on: true, x: 0.50, y: 0.50 },   // x=verbReturn(0–2), y=dlyReturn(0–2)
+  sat:  { on: false, x: 0.30, y: 0.70 },  // x=drive(0.1–3.0), y=tone(0–1, LP cutoff)
 }
 
 export const DEFAULT_FX_PAD = {

@@ -12,7 +12,7 @@ import { showFatalError } from '../fatalError.svelte.ts'
 /** External state passed by callers — engine never imports reactive state (ADR 086) */
 export interface EngineContext {
   fxFlavours: FxFlavours
-  masterPad: { comp: { on: boolean; x: number; y: number }; duck: { on: boolean; x: number; y: number }; ret: { on: boolean; x: number; y: number } }
+  masterPad: { comp: { on: boolean; x: number; y: number }; duck: { on: boolean; x: number; y: number }; ret: { on: boolean; x: number; y: number }; sat: { on: boolean; x: number; y: number } }
   soloTracks: Set<number>
 }
 
@@ -448,6 +448,7 @@ function buildWorkletPattern(
   const mc = mp?.comp ?? { on: false, x: 0, y: 0 }
   const md = mp?.duck ?? { on: false, x: 0, y: 0 }
   const mr = mp?.ret ?? { on: false, x: 0, y: 0 }
+  const ms = mp?.sat ?? { on: false, x: 0.3, y: 0.7 }
 
   return {
     bpm: s.bpm,
@@ -471,6 +472,7 @@ function buildWorkletPattern(
         ],
       },
       shimmerAmount,
+      sat: ms.on ? { drive: 0.1 + ms.x * 2.9, tone: ms.y } : null,
     },
     perf: {
       rootNote:   perf?.rootNote   ?? 0,
