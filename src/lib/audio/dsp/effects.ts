@@ -452,9 +452,18 @@ export class TapeSaturator {
   private lpL = 0; private lpR = 0
   private lpCoeff = 0
   private drive = 1.0
+  // Tape hiss: band-limited noise (LP at ~6kHz, realistic cassette character)
+  private hissLpL = 0; private hissLpR = 0
+  private hissLpCoeff: number
+  private hissSeed = 48271
+  // Head bump: low-frequency resonance (~80Hz shelf boost)
+  private bumpL = 0; private bumpR = 0
+  private bumpCoeff: number
 
   constructor(private sr: number) {
     this.setTone(0.5)
+    this.bumpCoeff = Math.exp(-2 * Math.PI * 80 / sr)
+    this.hissLpCoeff = Math.exp(-2 * Math.PI * 6000 / sr)  // LP at 6kHz — cassette hiss character
   }
 
   /** Set drive amount: 0.1 (clean) to 3.0 (heavy saturation) */
@@ -469,14 +478,46 @@ export class TapeSaturator {
 
   private out = new Float64Array(2)
   process(l: number, r: number): Float64Array {
-    // Apply drive → tanh soft clip → compensate gain
-    const dL = Math.tanh(l * this.drive) / Math.max(0.3, Math.tanh(this.drive))
-    const dR = Math.tanh(r * this.drive) / Math.max(0.3, Math.tanh(this.drive))
+    // Tape compression: asymmetric soft-knee saturation
+    // Positive half saturates harder than negative → even harmonics (warmth)
+    // At low drive (~0.3) nearly transparent; at high drive, gentle compression
+    const dL = this._tapeCompress(l * this.drive) / Math.max(0.3, this._tapeCompress(this.drive))
+    const dR = this._tapeCompress(r * this.drive) / Math.max(0.3, this._tapeCompress(this.drive))
+    // Head bump: subtle low-frequency boost (~80Hz)
+    this.bumpL = dL + (this.bumpL - dL) * this.bumpCoeff
+    this.bumpR = dR + (this.bumpR - dR) * this.bumpCoeff
+    const bumpAmount = Math.min(this.drive * 0.15, 0.3)  // scales with drive, max 0.3
+    const bL = dL + this.bumpL * bumpAmount
+    const bR = dR + this.bumpR * bumpAmount
     // One-pole LP tone filter
-    this.lpL = dL + (this.lpL - dL) * this.lpCoeff + DENORMAL_DC
-    this.lpR = dR + (this.lpR - dR) * this.lpCoeff + DENORMAL_DC
-    this.out[0] = this.lpL; this.out[1] = this.lpR
+    this.lpL = bL + (this.lpL - bL) * this.lpCoeff + DENORMAL_DC
+    this.lpR = bR + (this.lpR - bR) * this.lpCoeff + DENORMAL_DC
+    // Tape hiss: band-limited white noise, level scales with drive
+    // Subtle at low drive (~-60dB), audible character at high drive (~-40dB)
+    this.hissSeed = (this.hissSeed * 1664525 + 1013904223) >>> 0
+    const noiseL = ((this.hissSeed >>> 16) / 32768 - 1)
+    this.hissSeed = (this.hissSeed * 1664525 + 1013904223) >>> 0
+    const noiseR = ((this.hissSeed >>> 16) / 32768 - 1)
+    // LP filter the noise for realistic cassette hiss (not harsh white noise)
+    this.hissLpL = noiseL + (this.hissLpL - noiseL) * this.hissLpCoeff
+    this.hissLpR = noiseR + (this.hissLpR - noiseR) * this.hissLpCoeff
+    const hissLevel = 0.0003 + this.drive * 0.0008  // ~-70dB to ~-55dB
+    this.out[0] = this.lpL + this.hissLpL * hissLevel
+    this.out[1] = this.lpR + this.hissLpR * hissLevel
     return this.out
+  }
+
+  /** Asymmetric soft saturation — positive half clips earlier (even harmonics) */
+  private _tapeCompress(x: number): number {
+    // Soft-knee: blend linear and saturated based on level
+    // Asymmetry: positive peaks get more saturation (emulates tape bias)
+    if (x >= 0) {
+      // Positive: stronger saturation (tape compresses peaks)
+      return x / (1 + x * 0.4)
+    } else {
+      // Negative: gentler saturation (asymmetry → 2nd harmonic)
+      return x / (1 - x * 0.25)
+    }
   }
 }
 
