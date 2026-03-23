@@ -43,15 +43,16 @@ export class SimpleReverb {
   private apL: AllpassFilter[];  private apR: AllpassFilter[]
   constructor(sr: number) {
     const k = sr / 44100, sp = Math.round(23 * k)
-    const cL = [1116, 1188, 1277, 1356].map(n => Math.round(n * k))
-    const aL = [556, 441].map(n => Math.round(n * k))
+    // Full Freeverb: 8 parallel combs + 4 series allpass (classic Schroeder topology)
+    const cL = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617].map(n => Math.round(n * k))
+    const aL = [556, 441, 341, 225].map(n => Math.round(n * k))
     this.combsL = cL.map(n => new CombFilter(n,      0.84, 0.2))
     this.combsR = cL.map(n => new CombFilter(n + sp, 0.84, 0.2))
     this.apL    = aL.map(n => new AllpassFilter(n))
     this.apR    = aL.map(n => new AllpassFilter(n + sp))
   }
-  setSize(s: number) { const fb = 0.50 + s * 0.49; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
-  setDamp(d: number) { [...this.combsL, ...this.combsR].forEach(c => c.setDamp(d)) }
+  setSize(s: number) { const fb = 0.60 + s * 0.36; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
+  setDamp(d: number) { const v = d * 0.4;  [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
   // Reusable output to avoid per-sample tuple allocation
   private out = new Float64Array(2)
   process(x: number): Float64Array {
@@ -538,63 +539,494 @@ export class StutterBuffer {
   }
 }
 
+// ── Shimmer Reverb (ADR 120 — ported from Faust shimmer.dsp) ────────
+
+/**
+ * Valhalla-style shimmer reverb ported from thedrgreenthumb/faust shimmer.dsp.
+ *
+ * Topology: cross-coupled stereo allpass network with pitch shifter in feedback.
+ *   input L,R → cross-mix → 2 forward allpass chains (modulated) → HF damp
+ *   → cross-swap → 2 feedback paths: DC block → fixed delay → allpass chain
+ *   → fixed delay → pitch shift → back into cross-mix
+ *
+ * Key differences from Freeverb+OctaveShifter:
+ *   - Allpass-based (not comb), inherently smoother/less metallic
+ *   - Pitch shifter is integral to the feedback network, not bolted on
+ *   - DC blocker prevents buildup, feedback max 0.35
+ *   - Modulated fractional delays for chorus-like diffusion
+ */
+export class ShimmerReverb {
+  // Allpass with fractional delay modulation
+  private apBufs: Float32Array[] = []
+  private apPtrs: Int32Array
+  private apFilt: Float64Array   // allpass feedback state
+
+  // Fixed delay lines (4 in feedback paths)
+  private dlBufs: Float32Array[] = []
+  private dlPtrs: Int32Array
+
+  // HF damping (one-pole LP per channel)
+  private dampL = 0; private dampR = 0
+  private dampCoeff = 0.3
+
+  // DC blockers (80Hz HPF, per channel)
+  private dcPrevL = 0; private dcOutL = 0
+  private dcPrevR = 0; private dcOutR = 0
+  private dcCoeff: number
+
+  // Pitch shifters (one per channel, dual-tap crossfade)
+  private psBuf: Float32Array[] = []
+  private psWp = [0, 0]
+  private psPhase = [0, 0]
+  private psPhaseInc: number
+  private psWinSize: number
+
+  // LFO for allpass modulation
+  private lfoPhases: Float64Array
+  private lfoIncs: Float64Array
+
+  // Parameters
+  private feedback = 0.0
+  private shimmerAmount = 0.0  // dry/wet for pitch shift
+  private size = 1.0
+  private targetSize = 1.0
+
+  // Allpass delay lengths (from Faust, at 44100)
+  private static AP_FORWARD = [601, 613, 2043, 2087]    // 2 per channel
+  private static AP_FEEDBACK = [2337, 2377, 1087, 1113]  // 2 per channel
+  // Fixed delays in feedback (from Faust)
+  private static DL_FEEDBACK = [4325, 4763, 2969, 3111]
+  // LFO rates from Faust: 1.0, 1.5, 0.7, 1.3 Hz
+  private static LFO_RATES = [1.0, 1.5, 0.7, 1.3]
+
+  // Cross-feedback state (one sample delay)
+  private fbL = 0; private fbR = 0
+
+  constructor(private sr: number) {
+    const k = sr / 44100
+    // 8 allpass buffers (4 forward + 4 feedback)
+    const allAp = [...ShimmerReverb.AP_FORWARD, ...ShimmerReverb.AP_FEEDBACK]
+    this.apPtrs = new Int32Array(8)
+    this.apFilt = new Float64Array(8)
+    for (let i = 0; i < 8; i++) {
+      this.apBufs.push(new Float32Array(Math.round(allAp[i] * k * 3) + 1))  // *3 for size scaling
+    }
+    // 4 fixed delay buffers
+    this.dlPtrs = new Int32Array(4)
+    for (let i = 0; i < 4; i++) {
+      this.dlBufs.push(new Float32Array(Math.round(ShimmerReverb.DL_FEEDBACK[i] * k) + 1))
+    }
+    // DC blocker at 80Hz
+    this.dcCoeff = Math.exp(-2 * Math.PI * 80 / sr)
+    // Pitch shifter: 2048 samples window, 1024 crossfade (from Faust)
+    this.psWinSize = Math.round(2048 * k)
+    this.psPhaseInc = 1.0 / this.psWinSize
+    for (let i = 0; i < 2; i++) {
+      this.psBuf.push(new Float32Array(this.psWinSize * 4))
+    }
+    // LFO
+    this.lfoPhases = new Float64Array(4)
+    this.lfoIncs = new Float64Array(4)
+    for (let i = 0; i < 4; i++) {
+      this.lfoIncs[i] = ShimmerReverb.LFO_RATES[i] / sr
+      this.lfoPhases[i] = i * 0.25  // spread initial phases
+    }
+  }
+
+  setSize(s: number) { this.targetSize = 0.5 + s * 2.5 }  // maps 0–1 → 0.5–3.0 (Faust range 1–3)
+  setDamp(d: number) { this.dampCoeff = 0.005 + d * 0.99 }
+  setFeedback(fb: number) { this.feedback = Math.min(fb, 0.35) }
+  setShimmerAmount(a: number) { this.shimmerAmount = a }
+
+  reset() {
+    for (const b of this.apBufs) b.fill(0)
+    for (const b of this.dlBufs) b.fill(0)
+    for (const b of this.psBuf) b.fill(0)
+    this.apFilt.fill(0)
+    this.fbL = 0; this.fbR = 0
+    this.dampL = 0; this.dampR = 0
+    this.dcPrevL = 0; this.dcOutL = 0
+    this.dcPrevR = 0; this.dcOutR = 0
+    this.psPhase = [0, 0]; this.psWp = [0, 0]
+  }
+
+  // Allpass with fractional delay modulation (Faust APFB)
+  private _allpass(idx: number, x: number, dt: number, fb: number): number {
+    const buf = this.apBufs[idx]
+    const len = buf.length
+    const ptr = this.apPtrs[idx]
+    // Read from delay with fractional position
+    const rp = ((ptr - dt + len * 2) % len + len) % len
+    const i0 = rp | 0
+    const frac = rp - i0
+    const delayed = buf[i0] + (buf[(i0 + 1) % len] - buf[i0]) * frac
+    // Schroeder allpass: out = delayed - x, write = x + delayed*fb
+    const out = delayed - x
+    buf[ptr] = x + delayed * fb + DENORMAL_DC
+    this.apPtrs[idx] = (ptr + 1) % len
+    return out
+  }
+
+  // Fixed delay line
+  private _delay(idx: number, x: number): number {
+    const buf = this.dlBufs[idx]
+    const len = buf.length
+    const ptr = this.dlPtrs[idx]
+    const out = buf[ptr]
+    buf[ptr] = x
+    this.dlPtrs[idx] = (ptr + 1) % len
+    return out
+  }
+
+  // Pitch shift (+12 semitones) — dual-tap crossfade (from Faust transpose)
+  private _pitchShift(ch: number, x: number): number {
+    const buf = this.psBuf[ch]
+    const len = buf.length
+    const wp = this.psWp[ch]
+    buf[wp] = x
+
+    this.psPhase[ch] += this.psPhaseInc
+    if (this.psPhase[ch] >= 1.0) this.psPhase[ch] -= 1.0
+    const p = this.psPhase[ch]
+    const p2 = (p + 0.5) % 1.0
+
+    // Decreasing delay = pitch up
+    const d1 = (1 - p) * this.psWinSize
+    const d2 = (1 - p2) * this.psWinSize
+    const env1 = 0.5 - 0.5 * Math.cos(6.283185 * p)
+    const env2 = 0.5 - 0.5 * Math.cos(6.283185 * p2)
+
+    const rp1 = ((wp - d1 + len * 2) % len + len) % len
+    const rp2 = ((wp - d2 + len * 2) % len + len) % len
+    const i1 = rp1 | 0; const f1 = rp1 - i1
+    const i2 = rp2 | 0; const f2 = rp2 - i2
+    const s1 = buf[i1] + (buf[(i1 + 1) % len] - buf[i1]) * f1
+    const s2 = buf[i2] + (buf[(i2 + 1) % len] - buf[i2]) * f2
+
+    this.psWp[ch] = (wp + 1) % len
+    return s1 * env1 + s2 * env2
+  }
+
+  // DC blocker (80Hz HPF)
+  private _dcBlock(x: number, ch: number): number {
+    if (ch === 0) {
+      this.dcOutL = x - this.dcPrevL + this.dcCoeff * this.dcOutL
+      this.dcPrevL = x
+      return this.dcOutL
+    } else {
+      this.dcOutR = x - this.dcPrevR + this.dcCoeff * this.dcOutR
+      this.dcPrevR = x
+      return this.dcOutR
+    }
+  }
+
+  private out = new Float64Array(2)
+  process(inL: number, inR: number): Float64Array {
+    const k = this.sr / 44100
+    // Smooth parameter changes to avoid clicks from delay/feedback jumps
+    this.size += (this.targetSize - this.size) * 0.002
+    const s = this.size
+    const diff = 0.5  // fixed diffusion (Faust default 0.5)
+    const fb = this.feedback
+    // dampCoeff is already smooth (one-pole LP state tracks naturally)
+
+    // LFO modulation offsets (±49 samples max, from Faust)
+    const mods: number[] = []
+    for (let i = 0; i < 4; i++) {
+      mods.push(49 * k * (Math.sin(6.283185 * this.lfoPhases[i]) + 1) / 2)
+      this.lfoPhases[i] += this.lfoIncs[i]
+      if (this.lfoPhases[i] >= 1) this.lfoPhases[i] -= 1
+    }
+
+    // Cross-mix input with feedback (Faust: _*feedback+_*0.3)
+    const fwdL = this.fbR * fb + inL * 0.3  // cross: fbR→L
+    const fwdR = this.fbL * fb + inR * 0.3  // cross: fbL→R
+
+    // Forward path: 2 allpass chains + HF damping (one per channel)
+    // L channel: AP(601*s, 0.7*diff) → AP(613*s, 0.75*diff) → LP
+    let L = this._allpass(0, fwdL, Math.round(601 * k * s) + mods[0], 0.7 * diff)
+    L = this._allpass(1, L, Math.round(613 * k * s), 0.75 * diff)
+    this.dampL = L * (1 - this.dampCoeff) + this.dampL * this.dampCoeff
+    L = this.dampL
+
+    // R channel: AP(2043*s, 0.75*diff) → AP(2087*s, 0.75*diff) → LP
+    let R = this._allpass(2, fwdR, Math.round(2043 * k * s) + mods[1], 0.75 * diff)
+    R = this._allpass(3, R, Math.round(2087 * k * s), 0.75 * diff)
+    this.dampR = R * (1 - this.dampCoeff) + this.dampR * this.dampCoeff
+    R = this.dampR
+
+    // Feedback path: DC block → delay → allpass chain → delay → pitch shift
+    // L feedback (from R output, cross-coupled)
+    let fbPathL = this._dcBlock(R * fb, 0)
+    fbPathL = this._delay(0, fbPathL)  // 4325 samples
+    fbPathL = this._allpass(4, fbPathL, Math.round(2337 * k * s) + mods[2], 0.7 * diff)
+    fbPathL = this._allpass(5, fbPathL, Math.round(2377 * k * s), 0.4 * diff)
+    fbPathL = this._delay(2, fbPathL)  // 2969 samples
+    // Pitch shift with dry/wet blend
+    const psL = this._pitchShift(0, fbPathL)
+    fbPathL = fbPathL * (1 - this.shimmerAmount) + psL * this.shimmerAmount
+
+    // R feedback (from L output, cross-coupled)
+    let fbPathR = this._dcBlock(L * fb, 1)
+    fbPathR = this._delay(1, fbPathR)  // 4763 samples
+    fbPathR = this._allpass(6, fbPathR, Math.round(1087 * k * s) + mods[3], 0.7 * diff)
+    fbPathR = this._allpass(7, fbPathR, Math.round(1113 * k * s), 0.4 * diff)
+    fbPathR = this._delay(3, fbPathR)  // 3111 samples
+    const psR = this._pitchShift(1, fbPathR)
+    fbPathR = fbPathR * (1 - this.shimmerAmount) + psR * this.shimmerAmount
+
+    this.fbL = fbPathL
+    this.fbR = fbPathR
+
+    this.out[0] = L; this.out[1] = R
+    return this.out
+  }
+}
+
 // ── Octave Shifter (ADR 075 Phase 2) ────────────────────────────────
 
 /**
- * Pitch shifter (+12 semitones / octave up) for shimmer reverb.
- *
- * Uses a variable-delay approach: a sawtooth modulator continuously increases
- * the delay, which compresses time → raises pitch. Two overlapping delay taps
- * with Hann crossfade hide the discontinuity when the sawtooth resets.
- *
- * For octave up: delay increases by 1 sample/sample (sawtooth slope = 1).
- * After winSize samples the delay has grown by winSize, then resets to 0.
- * Reading with increasing delay = reading older and older samples = time
- * compression by 2× = octave up.
+ * Simple +12st (octave-up) pitch shifter for shimmer reverb.
+ * Two overlapping Hann-windowed grains reading at 2× speed.
+ * Constant-power crossfade (two offset Hann windows sum to 1.0).
  */
 export class OctaveShifter {
   private buf: Float32Array
   private len: number
   private wp = 0
-  private phase = 0          // sawtooth 0→1
-  private phaseInc: number
-  private winSize: number
+  private phase = 0
 
   constructor(sr: number) {
-    this.winSize = Math.round(sr * 0.04)  // 40ms window
-    this.len = this.winSize * 4           // buffer > 2× window
+    this.len = Math.round(sr * 0.04)  // 40ms grain window
     this.buf = new Float32Array(this.len)
-    this.phaseInc = 1.0 / this.winSize
+  }
+
+  /** Clear internal buffer and reset phase — call on flavour switch to avoid artifacts */
+  reset() {
+    this.buf.fill(0)
+    this.phase = 0
+    this.wp = 0
   }
 
   process(x: number): number {
     this.buf[this.wp] = x
-
-    this.phase += this.phaseInc
-    if (this.phase >= 1.0) this.phase -= 1.0
-
-    const p2 = (this.phase + 0.5) % 1.0
-
-    // Delay decreases as phase increases (winSize → 0, then resets to winSize)
-    // Decreasing delay = reading progressively newer audio = pitch UP
-    const d1 = (1 - this.phase) * this.winSize
-    const d2 = (1 - p2) * this.winSize
-
-    // Hann crossfade
-    const env1 = 0.5 - 0.5 * Math.cos(6.283185 * this.phase)
-    const env2 = 0.5 - 0.5 * Math.cos(6.283185 * p2)
-
-    const out = this._read(this.wp - d1) * env1 + this._read(this.wp - d2) * env2
-
     if (++this.wp >= this.len) this.wp = 0
+
+    // Phase ramps 0→1 over len samples (one full grain cycle)
+    this.phase += 1 / this.len
+    if (this.phase >= 1) this.phase -= 1
+
+    let out = 0
+    for (let g = 0; g < 2; g++) {
+      const ph = (this.phase + g * 0.5) % 1.0
+      const rp = (this.wp + Math.round(ph * this.len)) % this.len
+      const env = 0.5 - 0.5 * Math.cos(6.283185 * ph)
+      out += this.buf[rp] * env
+    }
+
     return out
   }
+}
 
-  private _read(pos: number): number {
-    const len = this.len
-    const p = ((pos % len) + len) % len
-    const i0 = p | 0
-    const frac = p - i0
-    return this.buf[i0] + (this.buf[(i0 + 1) % len] - this.buf[i0]) * frac
+// ── Early Reflections (ADR 120 — Room flavour) ──────────────────────
+
+/**
+ * 6-tap early reflections at prime-number delays.
+ * Each tap has gain rolloff (inverse-square), alternating L/R pan,
+ * and a one-pole LP filter (wall absorption).
+ * size (0–1) scales tap delays; damp (0–1) controls LP cutoff.
+ */
+export class EarlyReflections {
+  // Base tap delays in ms (primes to avoid resonance)
+  private static TAP_MS = [3, 7, 11, 17, 23, 31]
+  // Gain rolloff: gradual, first reflection not too dominant (avoids metallic ping)
+  private static TAP_GAIN = [0.70, 0.65, 0.55, 0.45, 0.35, 0.25]
+  // Pan: +1 = right, -1 = left (alternating)
+  private static TAP_PAN = [-1, 1, -1, 1, -1, 1]
+
+  private buf: Float32Array
+  private bufLen: number
+  private wp = 0
+  private tapDelays: Float64Array     // current smoothed delay per tap
+  private tapTargetDelays: Float64Array  // target delay per tap (set by setSize)
+  private tapBaseDelays: Float64Array // delay at size=1
+  private lpState: Float64Array       // one-pole LP filter state per tap
+  private lpCoeff = 0.3              // LP coefficient (higher = darker)
+  private slewCoeff: number          // smoothing coefficient for tap delay changes
+
+  constructor(sr: number) {
+    // Max delay: 35ms × 2 (size can double) + margin
+    this.bufLen = Math.ceil(sr * 0.08)
+    this.buf = new Float32Array(this.bufLen)
+    const n = EarlyReflections.TAP_MS.length
+    this.tapBaseDelays = new Float64Array(n)
+    this.tapDelays = new Float64Array(n)
+    this.tapTargetDelays = new Float64Array(n)
+    this.lpState = new Float64Array(n)
+    // ~5ms slew to avoid clicks on size changes
+    this.slewCoeff = Math.exp(-1 / (0.005 * sr))
+    for (let i = 0; i < n; i++) {
+      this.tapBaseDelays[i] = EarlyReflections.TAP_MS[i] * sr / 1000
+    }
+    this.setSize(0.5)
+    // Initialize current delays to target (no initial slew)
+    for (let i = 0; i < n; i++) this.tapDelays[i] = this.tapTargetDelays[i]
+    this.setDamp(0.5)
+  }
+
+  /** size 0–1: scales tap delays (small room → large room) */
+  setSize(s: number) {
+    // Scale: 0.3× at size=0, 1.5× at size=1
+    const scale = 0.3 + s * 1.2
+    for (let i = 0; i < this.tapBaseDelays.length; i++) {
+      this.tapTargetDelays[i] = this.tapBaseDelays[i] * scale
+    }
+  }
+
+  /** damp 0–1: LP cutoff on taps (0 = warm, 1 = very dark) */
+  setDamp(d: number) {
+    // Map to LP coefficient: 0 → 0.25 (warm, never harsh), 1 → 0.85 (dark)
+    // Minimum 0.25 ensures taps always have some softness (avoids metallic clicks)
+    this.lpCoeff = 0.25 + d * 0.6
+  }
+
+  private out = new Float64Array(2)
+  process(x: number): Float64Array {
+    this.buf[this.wp] = x
+    let L = 0, R = 0
+    for (let i = 0; i < EarlyReflections.TAP_MS.length; i++) {
+      // Smooth tap delay towards target to avoid clicks on size changes
+      this.tapDelays[i] = this.tapTargetDelays[i] + (this.tapDelays[i] - this.tapTargetDelays[i]) * this.slewCoeff
+      const readPos = this.wp - this.tapDelays[i]
+      const p = ((readPos % this.bufLen) + this.bufLen) % this.bufLen
+      const i0 = p | 0
+      const frac = p - i0
+      const raw = this.buf[i0] + (this.buf[(i0 + 1) % this.bufLen] - this.buf[i0]) * frac
+      // One-pole LP (wall absorption)
+      this.lpState[i] = raw + (this.lpState[i] - raw) * this.lpCoeff
+      const tap = this.lpState[i] * EarlyReflections.TAP_GAIN[i]
+      // Pan alternating L/R
+      if (EarlyReflections.TAP_PAN[i] < 0) { L += tap * 0.8; R += tap * 0.2 }
+      else { L += tap * 0.2; R += tap * 0.8 }
+    }
+    if (++this.wp >= this.bufLen) this.wp = 0
+    this.out[0] = L; this.out[1] = R
+    return this.out
+  }
+}
+
+// ── Pre-Delay (ADR 120 — Hall flavour) ──────────────────────────────
+
+/**
+ * Simple delay line for Hall pre-delay (0–80ms).
+ */
+export class PreDelay {
+  private buf: Float32Array
+  private bufLen: number
+  private wp = 0
+  private delaySamples = 0
+
+  constructor(private sr: number) {
+    this.bufLen = Math.ceil(sr * 0.1)  // 100ms max
+    this.buf = new Float32Array(this.bufLen)
+  }
+
+  setTime(ms: number) {
+    this.delaySamples = Math.min(Math.floor(ms * this.sr / 1000), this.bufLen - 1)
+  }
+
+  process(x: number): number {
+    this.buf[this.wp] = x
+    const rp = (this.wp - this.delaySamples + this.bufLen) % this.bufLen
+    if (++this.wp >= this.bufLen) this.wp = 0
+    return this.buf[rp]
+  }
+}
+
+// ── Modulated Reverb (ADR 120 — Hall flavour) ───────────────────────
+
+/**
+ * Freeverb variant with LFO-modulated comb filter read positions.
+ * Each comb has a slightly different LFO rate (0.8–1.6 Hz) and random phase
+ * offset — creates the lush, evolving tail characteristic of large halls.
+ * modDepth (0–4 samples) controls LFO excursion.
+ */
+class ModulatedCombFilter {
+  private buf: Float32Array; private ptr = 0; private filt = 0
+  private fb: number; private damp: number
+  private lfoPhase: number
+  private lfoInc: number
+  private modDepth = 0
+
+  constructor(length: number, fb: number, damp: number, sr: number, lfoHz: number, phaseOffset: number) {
+    this.buf = new Float32Array(length)
+    this.fb = fb; this.damp = damp
+    this.lfoPhase = phaseOffset
+    this.lfoInc = lfoHz / sr
+  }
+
+  setFeedback(fb: number) { this.fb = fb }
+  setDamp(d: number) { this.damp = d }
+  setModDepth(d: number) { this.modDepth = d }
+
+  process(x: number): number {
+    const len = this.buf.length
+    // LFO-modulated read position
+    const lfo = Math.sin(6.283185 * this.lfoPhase) * this.modDepth
+    this.lfoPhase += this.lfoInc
+    if (this.lfoPhase >= 1) this.lfoPhase -= 1
+
+    const readPos = ((this.ptr - len + lfo + len * 2) % len + len) % len
+    const i0 = readPos | 0
+    const frac = readPos - i0
+    const y = this.buf[i0] + (this.buf[(i0 + 1) % len] - this.buf[i0]) * frac
+
+    this.filt = y * (1 - this.damp) + this.filt * this.damp
+    this.buf[this.ptr] = x + this.filt * this.fb + DENORMAL_DC
+    if (++this.ptr >= len) this.ptr = 0
+    return y
+  }
+}
+
+export class ModulatedReverb {
+  private combsL: ModulatedCombFilter[]; private combsR: ModulatedCombFilter[]
+  private apL: AllpassFilter[];  private apR: AllpassFilter[]
+
+  constructor(sr: number) {
+    const k = sr / 44100, sp = Math.round(23 * k)
+    // Full 8 comb + 4 allpass, each comb with unique LFO rate and phase
+    const cL = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617].map(n => Math.round(n * k))
+    const aL = [556, 441, 341, 225].map(n => Math.round(n * k))
+    const lfoRates = [0.8, 1.0, 1.1, 1.3, 1.5, 1.6, 0.9, 1.2]
+    const phaseOffsets = [0, 0.13, 0.25, 0.38, 0.5, 0.63, 0.75, 0.88]
+    this.combsL = cL.map((n, i) => new ModulatedCombFilter(n,      0.84, 0.2, sr, lfoRates[i], phaseOffsets[i]))
+    this.combsR = cL.map((n, i) => new ModulatedCombFilter(n + sp, 0.84, 0.2, sr, lfoRates[i], (phaseOffsets[i] + 0.07) % 1))
+    this.apL = aL.map(n => new AllpassFilter(n))
+    this.apR = aL.map(n => new AllpassFilter(n + sp))
+  }
+
+  setSize(s: number) {
+    const fb = 0.50 + s * 0.49
+    for (const c of this.combsL) c.setFeedback(fb)
+    for (const c of this.combsR) c.setFeedback(fb)
+  }
+  setDamp(d: number) {
+    for (const c of this.combsL) c.setDamp(d)
+    for (const c of this.combsR) c.setDamp(d)
+  }
+  setModDepth(d: number) {
+    for (const c of this.combsL) c.setModDepth(d)
+    for (const c of this.combsR) c.setModDepth(d)
+  }
+
+  private out = new Float64Array(2)
+  process(x: number): Float64Array {
+    const g = 0.015; let L = 0, R = 0
+    for (const c of this.combsL) L += c.process(x * g)
+    for (const c of this.combsR) R += c.process(x * g)
+    for (const a of this.apL) L = a.process(L)
+    for (const a of this.apR) R = a.process(R)
+    this.out[0] = L; this.out[1] = R
+    return this.out
   }
 }

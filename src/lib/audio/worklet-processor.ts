@@ -34,7 +34,7 @@ declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
-import { SimpleReverb, LiteReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, OctaveShifter, TapeSaturator } from './dsp/effects.ts'
+import { SimpleReverb, LiteReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, TapeSaturator, EarlyReflections, PreDelay } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
@@ -249,10 +249,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   // Tape delay (ADR 075 Phase 2)
   private tapeDelay      = new TapeDelay(1000, sampleRate)
   private delayTape      = false
-  // Shimmer reverb (ADR 075 Phase 2)
-  private octShifter     = new OctaveShifter(sampleRate)
-  private shimmerAmount  = 0
-  private shimmerPrev    = 0       // one-sample feedback from reverb output
+  // Reverb flavour engines (ADR 120)
+  private reverbFlavour: 'room' | 'hall' | 'shimmer' = 'room'
+  private prevFlavour: 'room' | 'hall' | 'shimmer' | null = null  // for crossfade
+  private xfadeRemaining = 0   // samples remaining in crossfade
+  private xfadeLength    = 0   // total crossfade length (for envelope calc)
+  private earlyRef       = new EarlyReflections(sampleRate)
+  private hallReverb     = new ModulatedReverb(sampleRate)
+  private hallPreDelay   = new PreDelay(sampleRate)
+  // Shimmer reverb (ADR 120 — Faust shimmer.dsp port)
+  private shimmerReverb  = new ShimmerReverb(sampleRate)
   // Stutter glitch (ADR 075 Phase 2)
   private stutter        = new StutterBuffer(sampleRate)
   private glitchStutter  = false
@@ -443,6 +449,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
           this.reverb.setSize(p.fx.reverb.size)
           this.reverb.setDamp(p.fx.reverb.damp)
+          // Hall uses ModulatedReverb with same size/damp
+          this.hallReverb.setSize(p.fx.reverb.size)
+          this.hallReverb.setDamp(p.fx.reverb.damp)
+          // Shimmer: Faust-style allpass network
+          this.shimmerReverb.setSize(p.fx.reverb.size)
+          this.shimmerReverb.setDamp(p.fx.reverb.damp)
+          this.shimmerReverb.setFeedback(p.fx.shimmerAmount * 0.35)
+          this.shimmerReverb.setShimmerAmount(p.fx.shimmerAmount)
           this.delay.setTime(p.fx.delay.time)
           this.tapeDelay.setTime(p.fx.delay.time)
           this.delayFeedback = p.fx.delay.feedback
@@ -480,7 +494,21 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchRedux   = p.perf.glitchRedux ?? false
           this.delayTape     = p.perf.delayTape ?? false
           this.glitchStutter = p.perf.glitchStutter ?? false
-          this.shimmerAmount = p.fx.shimmerAmount ?? 0
+          // ADR 120: reverb flavour engine params
+          const newFlavour = p.fx.reverbFlavour ?? 'room'
+          if (newFlavour !== this.reverbFlavour) {
+            // Crossfade from old to new over 50ms to avoid clicks
+            this.prevFlavour = this.reverbFlavour
+            this.xfadeLength = Math.round(sampleRate * 0.05)
+            this.xfadeRemaining = this.xfadeLength
+            this.reverbFlavour = newFlavour
+          }
+          if (p.fx.earlyReflections) {
+            this.earlyRef.setSize(p.fx.earlyReflections.size)
+            this.earlyRef.setDamp(p.fx.earlyReflections.damp)
+          }
+          if (p.fx.preDelay) this.hallPreDelay.setTime(p.fx.preDelay.ms)
+          if (p.fx.modDepth != null) this.hallReverb.setModDepth(p.fx.modDepth)
           this.granular.setParams(p.perf.granularX, p.perf.granularY)
           this.granular.setParams2(p.perf.granularPitch, p.perf.granularScatter)
           this.granular.setActive(p.perf.granularOn)
@@ -606,6 +634,27 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       if (slot.delay) slot.delay.setTime(ms)
     }
     // glitch params applied inline in process()
+  }
+
+  /** Route input through the specified reverb flavour engine. */
+  private _revOut = new Float64Array(2)
+  private _revOutOld = new Float64Array(2)  // second buffer for crossfade
+  private _processReverbFlavour(flavour: 'room' | 'hall' | 'shimmer', input: number, buf?: Float64Array): Float64Array {
+    const out = buf ?? this._revOut
+    if (flavour === 'room') {
+      const er = this.earlyRef.process(input)
+      const rev = this.reverb.process(input * 0.3)
+      out[0] = rev[0] + er[0] * 1.6
+      out[1] = rev[1] + er[1] * 1.6
+    } else if (flavour === 'hall') {
+      const delayed = this.hallPreDelay.process(input)
+      const rev = this.hallReverb.process(delayed)
+      out[0] = rev[0]; out[1] = rev[1]
+    } else {
+      const rev = this.shimmerReverb.process(input, input)
+      out[0] = rev[0]; out[1] = rev[1]
+    }
+    return out
   }
 
   /** Process insert FX for a single sample. Returns [L, R] via this.insertOut. */
@@ -995,20 +1044,23 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
-      // Shimmer: reverb out → boost → pitch shift → tanh clamp → feed back + blend
-      let shimReverbIn = reverbIn
-      let shimShifted = 0
-      if (this.shimmerAmount > 0) {
-        shimShifted = Math.tanh(this.octShifter.process(this.shimmerPrev))
-        shimReverbIn += shimShifted * this.shimmerAmount
-      }
-      const rev = this.reverb.process(shimReverbIn)
-      if (this.shimmerAmount > 0) {
-        // Boost reverb output to compensate 0.015 internal gain, clamp with tanh
-        this.shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
-        // Blend shifted octave directly into output — makes shimmer audible
-        rev[0] += shimShifted * this.shimmerAmount * 0.5
-        rev[1] += shimShifted * this.shimmerAmount * 0.5
+      // ADR 120: per-flavour reverb routing
+      let rev: Float64Array
+      if (this.xfadeRemaining > 0 && this.prevFlavour !== null) {
+        // Crossfade: process both engines into separate buffers, blend
+        const oldRev = this._processReverbFlavour(this.prevFlavour, reverbIn, this._revOutOld)
+        const newRev = this._processReverbFlavour(this.reverbFlavour, reverbIn, this._revOut)
+        const t = this.xfadeRemaining / this.xfadeLength  // 1→0
+        // Equal-power crossfade
+        const oldGain = Math.cos((1 - t) * 1.5708)  // π/2
+        const newGain = Math.cos(t * 1.5708)
+        rev = this._revOut
+        rev[0] = oldRev[0] * oldGain + newRev[0] * newGain
+        rev[1] = oldRev[1] * oldGain + newRev[1] * newGain
+        this.xfadeRemaining--
+        if (this.xfadeRemaining <= 0) this.prevFlavour = null
+      } else {
+        rev = this._processReverbFlavour(this.reverbFlavour, reverbIn)
       }
       // Delay: tape or digital
       const del = this.delayTape

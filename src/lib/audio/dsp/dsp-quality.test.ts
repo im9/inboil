@@ -21,7 +21,7 @@ import { MoogVoice, WTSynth } from './melodic.ts'
 import { ResonantLP, BiquadHP, PeakingEQ, ShelfEQ, SVFilter } from './filters.ts'
 
 // ── Effects ──
-import { SimpleReverb, PingPongDelay, TapeDelay, BusCompressor, PeakLimiter, SidechainDucker, OctaveShifter, TapeSaturator } from './effects.ts'
+import { SimpleReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, BusCompressor, PeakLimiter, SidechainDucker, OctaveShifter, TapeSaturator, EarlyReflections, PreDelay } from './effects.ts'
 
 const SR = 44100
 
@@ -472,31 +472,23 @@ describe('Shimmer feedback safety', () => {
     expect(maxOutput).toBeGreaterThan(0.001)
   })
 
-  it('shimmer feedback decays to silence after input stops', () => {
-    const reverb = new SimpleReverb(SR)
-    const shifter = new OctaveShifter(SR)
-    reverb.setSize(0.85)
-    reverb.setDamp(0.15)
-    const shimmerAmount = 0.6
-
-    let shimmerPrev = 0
+  it('ShimmerReverb decays to silence after input stops', () => {
+    const shim = new ShimmerReverb(SR)
+    shim.setSize(0.85); shim.setDamp(0.15)
+    shim.setFeedback(0.3); shim.setShimmerAmount(0.8)
 
     // Feed 0.5s of signal
     for (let i = 0; i < SR * 0.5; i++) {
       const input = Math.sin(2 * Math.PI * 330 * i / SR) * 0.5
-      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
-      const rev = reverb.process(input + shimShifted * shimmerAmount)
-      shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+      shim.process(input, input)
     }
 
     // Then silence for 10s — must decay
     let finalPeak = 0
     for (let i = 0; i < SR * 10; i++) {
-      const shimShifted = Math.tanh(shifter.process(shimmerPrev))
-      const rev = reverb.process(shimShifted * shimmerAmount)
-      shimmerPrev = Math.tanh((rev[0] + rev[1]) * 1.2)
+      const r = shim.process(0, 0)
       if (i > SR * 9) {
-        const peak = Math.max(Math.abs(rev[0]), Math.abs(rev[1]))
+        const peak = Math.max(Math.abs(r[0]), Math.abs(r[1]))
         if (peak > finalPeak) finalPeak = peak
       }
     }
@@ -561,6 +553,190 @@ describe('Reverb flavour differentiation', () => {
     expect(hallZCR).toBeGreaterThan(roomZCR)
   })
 })
+
+describe('ADR 120: Reverb flavour engines', () => {
+  it('EarlyReflections produces discrete stereo taps from impulse', () => {
+    const er = new EarlyReflections(SR)
+    er.setSize(0.5)
+    er.setDamp(0.3)
+    // Impulse → expect distinct L/R energy within 0–40ms
+    let energyL = 0, energyR = 0
+    const window = Math.ceil(SR * 0.04)  // 40ms
+    for (let i = 0; i < window; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const out = er.process(input)
+      energyL += out[0] * out[0]
+      energyR += out[1] * out[1]
+    }
+    // Both channels should have energy (stereo panning)
+    expect(energyL).toBeGreaterThan(0.001)
+    expect(energyR).toBeGreaterThan(0.001)
+    // Stereo: energies should differ (alternating pan)
+    expect(Math.abs(energyL - energyR) / (energyL + energyR)).toBeGreaterThan(0.01)
+  })
+
+  it('EarlyReflections size parameter changes tap spacing', () => {
+    // Larger size → energy arrives later (more spread out)
+    function firstTapDelay(size: number): number {
+      const er = new EarlyReflections(SR)
+      er.setSize(size)
+      er.setDamp(0)
+      for (let i = 0; i < SR * 0.05; i++) {
+        const out = er.process(i === 0 ? 1.0 : 0)
+        if (Math.abs(out[0]) + Math.abs(out[1]) > 0.01) return i
+      }
+      return -1
+    }
+    const smallDelay = firstTapDelay(0.0)
+    const largeDelay = firstTapDelay(1.0)
+    // Large room's first tap should arrive later
+    expect(largeDelay).toBeGreaterThan(smallDelay)
+  })
+
+  it('Room (ER + Freeverb) has distinct spectral profile from bare Freeverb', () => {
+    // Room chain: EarlyReflections mixed with Freeverb (matches worklet routing)
+    const er = new EarlyReflections(SR)
+    er.setSize(0.5); er.setDamp(0.5)
+    const roomVerb = new SimpleReverb(SR)
+    roomVerb.setSize(0.45); roomVerb.setDamp(0.55)
+
+    // Bare Freeverb with same-ish params
+    const bareVerb = new SimpleReverb(SR)
+    bareVerb.setSize(0.45); bareVerb.setDamp(0.55)
+
+    let roomEnergy = 0, bareEnergy = 0, roomPeak = 0
+    const earlyWindow = Math.ceil(SR * 0.05)  // first 50ms
+    for (let i = 0; i < SR; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const erOut = er.process(input)
+      const roomRev = roomVerb.process(input * 0.3)
+      const roomL = erOut[0] * 1.6 + roomRev[0]
+      const roomR = erOut[1] * 1.6 + roomRev[1]
+      const bareRev = bareVerb.process(input)
+      if (i < earlyWindow) {
+        roomEnergy += roomL * roomL + roomR * roomR
+        bareEnergy += bareRev[0] * bareRev[0] + bareRev[1] * bareRev[1]
+      }
+      const p = Math.max(Math.abs(roomL), Math.abs(roomR))
+      if (p > roomPeak) roomPeak = p
+    }
+    // Room should have more early energy (from discrete reflections)
+    expect(roomEnergy).toBeGreaterThan(bareEnergy * 1.5)
+    // ER peak must be clearly audible (not buried in noise floor)
+    expect(roomPeak).toBeGreaterThan(0.05)
+  })
+
+  it('Room ER peak level is loud enough to be audible in mix', () => {
+    // Simulate realistic send level: mono signal at 0.3 into ER
+    const er = new EarlyReflections(SR)
+    er.setSize(0.5); er.setDamp(0.3)
+    let peak = 0
+    for (let i = 0; i < SR * 0.1; i++) {
+      const input = i < SR * 0.01 ? 0.3 : 0  // 10ms burst at typical send level
+      const out = er.process(input)
+      const p = Math.max(Math.abs(out[0]), Math.abs(out[1]))
+      if (p > peak) peak = p
+    }
+    // Peak should be at least 0.02 (well above -34dBFS, clearly audible)
+    expect(peak).toBeGreaterThan(0.02)
+  })
+
+  it('Hall ModulatedReverb tail has energy fluctuation (modulation)', () => {
+    const hall = new ModulatedReverb(SR)
+    hall.setSize(0.92); hall.setDamp(0.07); hall.setModDepth(3)
+
+    // Feed impulse, measure energy in successive 100ms windows in the tail
+    const windowSize = Math.ceil(SR * 0.1)
+    const energies: number[] = []
+    for (let i = 0; i < SR * 3; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const r = hall.process(input)
+      const windowIdx = Math.floor(i / windowSize)
+      if (windowIdx >= 5) {  // measure from 500ms onward
+        if (!energies[windowIdx]) energies[windowIdx] = 0
+        energies[windowIdx] += r[0] * r[0] + r[1] * r[1]
+      }
+    }
+    // Modulation should cause variance between adjacent windows
+    const validEnergies = energies.filter(e => e != null && e > 0)
+    const mean = validEnergies.reduce((a, b) => a + b, 0) / validEnergies.length
+    const variance = validEnergies.reduce((a, e) => a + (e - mean) ** 2, 0) / validEnergies.length
+    const cv = Math.sqrt(variance) / mean  // coefficient of variation
+    // Modulated reverb should have measurable variation (CV > 1%)
+    expect(cv).toBeGreaterThan(0.01)
+  })
+
+  it('PreDelay delays signal by correct amount', () => {
+    const pd = new PreDelay(SR)
+    pd.setTime(40)  // 40ms
+    const delaySamples = Math.floor(40 * SR / 1000)
+    // Feed impulse
+    const results: number[] = []
+    for (let i = 0; i < delaySamples + 10; i++) {
+      results.push(pd.process(i === 0 ? 1.0 : 0))
+    }
+    // Should be silent until delay time, then impulse appears
+    expect(results[delaySamples - 1]).toBe(0)
+    expect(results[delaySamples]).toBe(1.0)
+  })
+
+  it('ShimmerReverb (Faust port) produces audible output', () => {
+    const shim = new ShimmerReverb(SR)
+    shim.setSize(0.9); shim.setDamp(0.1)
+    shim.setFeedback(0.3); shim.setShimmerAmount(0.8)
+
+    let energy = 0
+    for (let i = 0; i < SR * 2; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const r = shim.process(input, input)
+      if (i > SR * 0.3) energy += r[0] * r[0] + r[1] * r[1]
+    }
+    expect(energy).toBeGreaterThan(0.0001)
+  })
+
+  it('ShimmerReverb feedback stays bounded after 5 seconds', () => {
+    const shim = new ShimmerReverb(SR)
+    shim.setSize(0.95); shim.setDamp(0.05)
+    shim.setFeedback(0.35); shim.setShimmerAmount(1.0)  // max everything
+
+    let peak = 0
+    for (let i = 0; i < SR * 5; i++) {
+      const input = i < SR * 0.1 ? (Math.random() * 2 - 1) * 0.5 : 0
+      const r = shim.process(input, input)
+      const p = Math.max(Math.abs(r[0]), Math.abs(r[1]))
+      if (p > peak) peak = p
+    }
+    // Must never exceed safe level even at max feedback+shimmer
+    expect(peak).toBeLessThan(2.0)
+  })
+
+  it('ShimmerReverb with shimmer on differs from shimmer off', () => {
+    // Compare shimmer amount 0 vs 0.8 — pitch shift should change tail character
+    const shimOff = new ShimmerReverb(SR)
+    shimOff.setSize(0.9); shimOff.setDamp(0.1)
+    shimOff.setFeedback(0.3); shimOff.setShimmerAmount(0)
+
+    const shimOn = new ShimmerReverb(SR)
+    shimOn.setSize(0.9); shimOn.setDamp(0.1)
+    shimOn.setFeedback(0.3); shimOn.setShimmerAmount(0.8)
+
+    let offEnergy = 0, onEnergy = 0
+    for (let i = 0; i < SR * 3; i++) {
+      const input = i === 0 ? 1.0 : 0
+      const rOff = shimOff.process(input, input)
+      const rOn = shimOn.process(input, input)
+      if (i > SR * 0.5) {
+        offEnergy += rOff[0] * rOff[0] + rOff[1] * rOff[1]
+        onEnergy += rOn[0] * rOn[0] + rOn[1] * rOn[1]
+      }
+    }
+    // Energy profiles should differ (pitch shift recirculates energy differently)
+    const ratio = onEnergy / (offEnergy + 1e-20)
+    expect(Math.abs(ratio - 1.0)).toBeGreaterThan(0.05)
+  })
+})
+
+// Reverb hold: to be implemented in a future session
 
 describe('Delay time smoothing', () => {
   it('PingPongDelay produces no clicks on time change', () => {

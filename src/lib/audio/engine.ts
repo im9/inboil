@@ -408,25 +408,32 @@ function buildWorkletPattern(
 ): WorkletPattern {
   const fx = s.effects
 
-  // ── Reverb flavour (ADR 075) ──
+  // ── Reverb flavour (ADR 075 / ADR 120) ──
+  const verbFlavour: 'room' | 'hall' | 'shimmer' = ctx?.fxFlavours.verb as 'room' | 'hall' | 'shimmer' ?? 'room'
   let reverbSize: number, reverbDamp: number, shimmerAmount = 0
+  let earlyReflections: { size: number; damp: number } | undefined
+  let preDelayMs: number | undefined
+  let modDepth: number | undefined
   if (fxPad?.verb.on) {
-    if (ctx?.fxFlavours.verb === 'shimmer') {
+    if (verbFlavour === 'shimmer') {
       // Shimmer: large reverb + octave-up pitch shift feedback
-      // X = size (0.7–0.99), Y = shimmer amount (0–0.6), damp low for bright reflections
-      reverbSize = 0.7 + fxPad.verb.x * 0.29
-      reverbDamp = 0.15
-      shimmerAmount = fxPad.verb.y * 0.6
-    } else if (ctx?.fxFlavours.verb === 'hall') {
-      // Hall: large diffuse space — long tail, low damping (bright, open)
-      // X = size (0.85–0.99), Y = brightness (damp 0–0.15)
+      // X = size (0.8–0.99), Y = shimmer amount (0–1.0 mapped to internal range)
+      reverbSize = 0.8 + fxPad.verb.x * 0.19
+      reverbDamp = 0.1
+      shimmerAmount = fxPad.verb.y
+    } else if (verbFlavour === 'hall') {
+      // Hall: pre-delay + modulated combs — long tail, low damping (bright, open)
+      // X = size (0.85–0.99) + pre-delay (10–80ms), Y = mod depth (0–8 samples) + brightness
       reverbSize = 0.85 + fxPad.verb.x * 0.14
-      reverbDamp = (1.0 - fxPad.verb.y) * 0.15
+      reverbDamp = (1.0 - fxPad.verb.y) * 0.12
+      preDelayMs = 10 + fxPad.verb.x * 70
+      modDepth = 1 + fxPad.verb.y * 7
     } else {
-      // Room (default): small reflective space — shorter tail, more damping (intimate, warm)
-      // X = size (0.3–0.75), Y = brightness (damp 0.2–0.8)
-      reverbSize = 0.3 + fxPad.verb.x * 0.45
-      reverbDamp = 0.2 + (1.0 - fxPad.verb.y) * 0.6
+      // Room (default): early reflections dominate, short diffuse tail
+      // X = room size (scales ER delays + Freeverb), Y = brightness (wall absorption)
+      reverbSize = 0.2 + fxPad.verb.x * 0.25
+      reverbDamp = 0.4 + (1.0 - fxPad.verb.y) * 0.5
+      earlyReflections = { size: fxPad.verb.x, damp: 1 - fxPad.verb.y }
     }
   } else {
     reverbSize = fx.reverb.size
@@ -474,6 +481,10 @@ function buildWorkletPattern(
         ],
       },
       shimmerAmount,
+      reverbFlavour: verbFlavour,
+      earlyReflections,
+      preDelay: preDelayMs != null ? { ms: preDelayMs } : undefined,
+      modDepth,
       sat: ms.on ? { drive: 0.1 + ms.x * 2.9, tone: ms.y } : null,
     },
     perf: {
