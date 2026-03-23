@@ -2,7 +2,7 @@
  * Scene graph playback engine — graph traversal, decorator application, generative chains.
  * Extracted from state.svelte.ts for modularity.
  */
-import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack } from './state.svelte.ts'
+import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack, masterPad, perf } from './state.svelte.ts'
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
@@ -362,19 +362,27 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
           }
         }
       }
-    } else if (curve.target.kind === 'all') {
+    } else if (curve.target.kind === 'master') {
       const param = curve.target.param
-      for (let i = 0; i < song.tracks.length; i++) {
-        const track = song.tracks[i]
-        if (param === 'volume') {
-          const base = snap.values[`track:${i}:volume`] ?? track.volume
-          const newVal = clamp(base + offset, 0, 1)
-          if (Math.abs(track.volume - newVal) > 0.001) { track.volume = newVal; changed = true }
-        } else if (param === 'pan') {
-          const base = snap.values[`track:${i}:pan`] ?? track.pan
-          const newVal = clamp(base + offset, -1, 1)
-          if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
-        }
+      const MASTER_MAP: Record<string, { get: () => number; set: (v: number) => void; snapKey?: string; pad?: string; xy?: string }> = {
+        masterVolume:  { get: () => perf.masterGain, set: v => { perf.masterGain = v }, snapKey: 'global:masterVolume' },
+        swing:         { get: () => perf.swing, set: v => { perf.swing = v }, snapKey: 'global:swing' },
+        compThreshold: { get: () => masterPad.comp.x, set: v => { masterPad.comp.x = v }, pad: 'comp', xy: 'x' },
+        compRatio:     { get: () => masterPad.comp.y, set: v => { masterPad.comp.y = v }, pad: 'comp', xy: 'y' },
+        duckDepth:     { get: () => masterPad.duck.x, set: v => { masterPad.duck.x = v }, pad: 'duck', xy: 'x' },
+        duckRelease:   { get: () => masterPad.duck.y, set: v => { masterPad.duck.y = v }, pad: 'duck', xy: 'y' },
+        retVerb:       { get: () => masterPad.ret.x, set: v => { masterPad.ret.x = v }, pad: 'ret', xy: 'x' },
+        retDelay:      { get: () => masterPad.ret.y, set: v => { masterPad.ret.y = v }, pad: 'ret', xy: 'y' },
+        satDrive:      { get: () => masterPad.sat.x, set: v => { masterPad.sat.x = v }, pad: 'sat', xy: 'x' },
+        satTone:       { get: () => masterPad.sat.y, set: v => { masterPad.sat.y = v }, pad: 'sat', xy: 'y' },
+      }
+      const m = MASTER_MAP[param]
+      if (m) {
+        const base = m.snapKey
+          ? (snap.values[m.snapKey] ?? m.get())
+          : (snap.masterPad as Record<string, Record<string, number | boolean>>)?.[m.pad!]?.[m.xy!] as number ?? m.get()
+        const newVal = clamp(base + offset, 0, 1)
+        if (Math.abs(m.get() - newVal) > 0.001) { m.set(newVal); changed = true }
       }
     } else if (curve.target.kind === 'send') {
       const tgt = curve.target
@@ -395,7 +403,7 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
       const FX_MAP: Record<string, [string, string]> = {
         reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
         delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
-        filterCutoff: ['filter', 'x'],
+        filterCutoff: ['filter', 'x'], filterResonance: ['filter', 'y'],
         glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
         granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
       }

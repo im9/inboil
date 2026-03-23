@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, playback, pushUndo, fxPad } from '../state.svelte.ts'
+  import { song, ui, playback, pushUndo, fxPad, masterPad, perf } from '../state.svelte.ts'
   import { findSweepNodeForPattern, sceneUpdateFnParams } from '../sceneActions.ts'
   import { getParamDefs } from '../paramDefs.ts'
   import { PATTERN_COLORS } from '../constants.ts'
@@ -36,7 +36,7 @@
   // ── Drill-down palette ──
   // null = top-level list, number = per-track params, 'all'/'eq'/'fx' = global sections
   let expandedTrackId = $state<number | null>(null)
-  let expandedSection = $state<'all' | 'eq' | 'fx' | null>(null)
+  let expandedSection = $state<'master' | 'eq' | 'fx' | null>(null)
 
   interface TrackEntry {
     trackId: number
@@ -55,32 +55,49 @@
 
   const paletteItems = $derived.by((): PaletteItem[] => {
     if (!pat) return []
-    // ALL section: volume/pan for all tracks
-    if (expandedSection === 'all') {
-      return [
-        { label: 'Volume', target: { kind: 'all', param: 'volume' }, color: PARAM_COLORS[0], isMix: true, category: 'mix' },
-        { label: 'Pan', target: { kind: 'all', param: 'pan' }, color: PARAM_COLORS[1], isMix: true, category: 'mix' },
+    // MASTER section: master bus parameters
+    if (expandedSection === 'master') {
+      const masterItems: { label: string; param: SweepTarget & { kind: 'master' } extends { param: infer P } ? P : never; category: 'mix' | 'synth' | 'send' }[] = [
+        { label: 'Volume', param: 'masterVolume', category: 'mix' },
+        { label: 'Swing', param: 'swing', category: 'mix' },
+        { label: 'Comp thr', param: 'compThreshold', category: 'synth' },
+        { label: 'Comp rat', param: 'compRatio', category: 'synth' },
+        { label: 'Duck dep', param: 'duckDepth', category: 'synth' },
+        { label: 'Duck rel', param: 'duckRelease', category: 'synth' },
+        { label: 'Ret verb', param: 'retVerb', category: 'send' },
+        { label: 'Ret dly', param: 'retDelay', category: 'send' },
+        { label: 'Sat drv', param: 'satDrive', category: 'send' },
+        { label: 'Sat tone', param: 'satTone', category: 'send' },
       ]
+      return masterItems.map((m, i) => ({
+        label: m.label,
+        target: { kind: 'master' as const, param: m.param },
+        color: PARAM_COLORS[i % PARAM_COLORS.length],
+        isMix: true,
+        category: m.category,
+      }))
     }
-    // FX section: global effect parameters
+    // FX section: global effect parameters, grouped by effect unit
     if (expandedSection === 'fx') {
-      const fxItems: { label: string; param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }[] = [
-        { label: 'Verb wet', param: 'reverbWet' },
-        { label: 'Verb damp', param: 'reverbDamp' },
-        { label: 'Dly time', param: 'delayTime' },
-        { label: 'Dly feed', param: 'delayFeedback' },
-        { label: 'Filter', param: 'filterCutoff' },
-        { label: 'Glitch X', param: 'glitchX' },
-        { label: 'Glitch Y', param: 'glitchY' },
-        { label: 'Gran size', param: 'granularSize' },
-        { label: 'Gran dens', param: 'granularDensity' },
+      type FxParam = SweepTarget & { kind: 'fx' } extends { param: infer P } ? P : never
+      const fxItems: { label: string; param: FxParam; group: string }[] = [
+        { label: 'Verb wet', param: 'reverbWet', group: 'verb' },
+        { label: 'Verb damp', param: 'reverbDamp', group: 'verb' },
+        { label: 'Dly time', param: 'delayTime', group: 'delay' },
+        { label: 'Dly feed', param: 'delayFeedback', group: 'delay' },
+        { label: 'Filter freq', param: 'filterCutoff', group: 'filter' },
+        { label: 'Filter reso', param: 'filterResonance', group: 'filter' },
+        { label: 'Glitch X', param: 'glitchX', group: 'glitch' },
+        { label: 'Glitch Y', param: 'glitchY', group: 'glitch' },
+        { label: 'Gran size', param: 'granularSize', group: 'granular' },
+        { label: 'Gran dens', param: 'granularDensity', group: 'granular' },
       ]
       return fxItems.map((f, i) => ({
         label: f.label,
         target: { kind: 'fx' as const, param: f.param },
         color: PARAM_COLORS[i % PARAM_COLORS.length],
         isMix: true,
-        category: i < 2 ? 'mix' as const : i < 5 ? 'synth' as const : 'send' as const,
+        category: f.group as 'mix' | 'synth' | 'send',
       }))
     }
     // EQ section: 3 bands × freq/gain/q
@@ -325,15 +342,15 @@
     // Draw curves: all at top level, filtered when track/section is expanded
     for (const curve of sweepData.curves) {
       if (curve.target.kind === 'mute' as string) continue
-      if (expandedSection === 'all') {
-        if (curve.target.kind !== 'all') continue
+      if (expandedSection === 'master') {
+        if (curve.target.kind !== 'master') continue
       } else if (expandedSection === 'fx') {
         if (curve.target.kind !== 'fx') continue
       } else if (expandedSection === 'eq') {
         if (curve.target.kind !== 'eq') continue
       } else if (expandedTrackId !== null) {
         // Track drill-down: only show this track's curves
-        if (curve.target.kind === 'fx' || curve.target.kind === 'all' || curve.target.kind === 'eq') continue
+        if (curve.target.kind === 'fx' || curve.target.kind === 'master' || curve.target.kind === 'eq') continue
         if ('trackId' in curve.target && curve.target.trackId !== expandedTrackId) continue
       }
       const isActive = activeBrush && targetsEqual(curve.target, activeBrush.target)
@@ -607,12 +624,21 @@
   /** Get the base value of a parameter as a 0–1 normalized value */
   function getBaseValueNormalized(target: SweepTarget): number | null {
     if (!pat) return null
-    if (target.kind === 'all') {
-      // Average across all tracks (approximate indicator)
-      if (song.tracks.length === 0) return null
-      if (target.param === 'volume') return song.tracks.reduce((s, t) => s + t.volume, 0) / song.tracks.length
-      if (target.param === 'pan') return song.tracks.reduce((s, t) => s + (t.pan + 1) / 2, 0) / song.tracks.length
-      return null
+    if (target.kind === 'master') {
+      const MASTER_BASE: Record<string, () => number> = {
+        masterVolume: () => perf.masterGain,
+        swing: () => perf.swing,
+        compThreshold: () => masterPad.comp.x,
+        compRatio: () => masterPad.comp.y,
+        duckDepth: () => masterPad.duck.x,
+        duckRelease: () => masterPad.duck.y,
+        retVerb: () => masterPad.ret.x,
+        retDelay: () => masterPad.ret.y,
+        satDrive: () => masterPad.sat.x,
+        satTone: () => masterPad.sat.y,
+      }
+      const fn = MASTER_BASE[target.param]
+      return fn ? fn() : null
     }
     if (target.kind === 'track') {
       const track = song.tracks.find(t => t.id === target.trackId)
@@ -637,7 +663,7 @@
       const FX_BASE: Record<string, [keyof typeof fxPad, string]> = {
         reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
         delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
-        filterCutoff: ['filter', 'x'],
+        filterCutoff: ['filter', 'x'], filterResonance: ['filter', 'y'],
         glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
         granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
       }
@@ -654,7 +680,7 @@
 
   function targetsEqual(a: SweepTarget, b: SweepTarget): boolean {
     if (a.kind !== b.kind) return false
-    if (a.kind === 'all' && b.kind === 'all') return a.param === b.param
+    if (a.kind === 'master' && b.kind === 'master') return a.param === b.param
     if (a.kind === 'fx' && b.kind === 'fx') return a.param === b.param
     if (a.kind === 'track' && b.kind === 'track') return a.trackId === b.trackId && a.param === b.param
     if (a.kind === 'send' && b.kind === 'send') return a.trackId === b.trackId && a.param === b.param
@@ -1022,19 +1048,19 @@
     <!-- Palette — drill-down by track -->
     <div class="sweep-palette" tabindex="0" onkeydown={onKeyDown}>
       {#if expandedTrackId === null && expandedSection === null}
-        <!-- ALL entry -->
-        {@const hasAllCurve = sweepData.curves.some(c => c.target.kind === 'all')}
+        <!-- MASTER entry -->
+        {@const hasMasterCurve = sweepData.curves.some(c => c.target.kind === 'master')}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="palette-track" class:has-curve={hasAllCurve}
-          onpointerdown={() => { expandedSection = 'all'; activeBrushIdx = 0 }}
+        <div class="palette-track" class:has-curve={hasMasterCurve}
+          onpointerdown={() => { expandedSection = 'master'; activeBrushIdx = 0 }}
         >
-          <span class="palette-track-name">ALL</span>
+          <span class="palette-track-name">MASTER</span>
           <span class="palette-track-arrow">›</span>
         </div>
         <div class="palette-cat-sep"></div>
         <!-- Track list -->
         {#each trackList as entry}
-          {@const hasAnyCurve = sweepData.curves.some(c => c.target.kind !== 'fx' && c.target.kind !== 'eq' && c.target.kind !== 'all' && 'trackId' in c.target && c.target.trackId === entry.trackId)}
+          {@const hasAnyCurve = sweepData.curves.some(c => c.target.kind !== 'fx' && c.target.kind !== 'eq' && c.target.kind !== 'master' && 'trackId' in c.target && c.target.trackId === entry.trackId)}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="palette-track" class:has-curve={hasAnyCurve}
             onpointerdown={() => { expandedTrackId = entry.trackId; activeBrushIdx = 0 }}
@@ -1066,7 +1092,7 @@
         <!-- Back button + param list for selected track/section -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="palette-back" onpointerdown={() => { expandedTrackId = null; expandedSection = null }}>
-          <span>← {expandedSection === 'all' ? 'ALL' : expandedSection === 'fx' ? 'FX' : expandedSection === 'eq' ? 'EQ' : trackList.find(t => t.trackId === expandedTrackId)?.trackName ?? 'Back'}</span>
+          <span>← {expandedSection === 'master' ? 'MASTER' : expandedSection === 'fx' ? 'FX' : expandedSection === 'eq' ? 'EQ' : trackList.find(t => t.trackId === expandedTrackId)?.trackName ?? 'Back'}</span>
         </div>
         {#each paletteItems as item, i}
           {@const hasCurve = sweepData.curves.some(c => targetsEqual(c.target, item.target))}

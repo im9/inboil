@@ -70,6 +70,14 @@ export function restoreScene(src: Scene | undefined): Scene {
   nodes = dm.nodes; edges = dm.edges
   // ADR 093: migrate legacy fn nodes (params → fnParams)
   migrateLegacyFnParams(nodes)
+  // Migrate legacy sweep 'all' kind → drop (vol/pan are per-track, not master)
+  for (const n of nodes) {
+    if (n.fnParams?.sweep) {
+      n.fnParams.sweep.curves = n.fnParams.sweep.curves.filter(
+        c => (c.target as { kind: string }).kind !== 'all'
+      )
+    }
+  }
   // Remove orphan automation/probability nodes
   const p = purgeOrphanFnNodes(nodes, edges)
   nodes = p.nodes; edges = p.edges
