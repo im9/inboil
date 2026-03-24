@@ -108,8 +108,8 @@
       title: L === 'ja' ? 'サンプラー & オーディオプール' : 'SAMPLER & AUDIO POOL',
       docsUrl: '/docs/sound/sampler/',
       body: L === 'ja'
-        ? 'LOAD ボタンまたはファイルをドラッグで読み込み\n開始/終了/ピッチ/減衰/逆再生を調整\nCHOP — サンプルを分割して再生\nBPM同期 — テンポに合わせて自動伸縮\nPOOL — 79種のファクトリーサンプル内蔵\nフォルダ階層・検索・試聴してワンタップで割り当て'
-        : 'LOAD button or drag file to import audio\nAdjust start/end/pitch/decay/reverse\nCHOP — slice sample into segments\nBPM sync — auto-stretch to match tempo\nPOOL — 79 factory samples built-in\nBrowse folders, search, audition and assign with one tap',
+        ? 'LOAD ボタンまたはファイルをドラッグで読み込み\n開始/終了/ピッチ/減衰/逆再生を調整\nCHOP — サンプルを分割して再生\nBPM同期 — テンポに合わせて自動伸縮\nPOOL — 90種のファクトリーサンプル内蔵\nフォルダ階層・検索・試聴してワンタップで割り当て'
+        : 'LOAD button or drag file to import audio\nAdjust start/end/pitch/decay/reverse\nCHOP — slice sample into segments\nBPM sync — auto-stretch to match tempo\nPOOL — 90 factory samples built-in\nBrowse folders, search, audition and assign with one tap',
     },
     // ── 3: MIXER & FX ──
     {
