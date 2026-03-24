@@ -1,6 +1,6 @@
 # ADR 124: Design Token Consolidation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
