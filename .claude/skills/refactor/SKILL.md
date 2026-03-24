@@ -25,6 +25,8 @@ Launch an Explore agent to scan `src/` for issues in these categories:
 5. **Bug risks**: unguarded async, missing cleanup, event listener leaks, race conditions
 6. **Inefficiency**: unnecessary re-computation, work in hot paths, unbounded allocations
 
+Skip lines marked with `// REFACTOR-OK: <reason>` — these have been reviewed and intentionally kept as-is.
+
 Output a numbered list of findings with file paths and line numbers, sorted by severity (high → low). Do NOT fix anything yet.
 
 ## Phase 2: User approval
