@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fxPad, perf, ui, fxFlavours, pushUndo } from '../state.svelte.ts'
+  // ui.granularMode2 is now in ui state — accessible from DockFxControls too
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB, FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
@@ -18,7 +19,7 @@
   let dragMoved = false
   let startPos = { x: 0, y: 0 }
   let dragRect: DOMRect | null = null
-  let granularMode2 = $state(false)
+  // ui.granularMode2 moved to ui.granularMode2
   let longPressTimer: ReturnType<typeof setTimeout> | null = null
   let bubbleMenu: { key: FxFlavourKey; pos: { x: number; y: number } } | null = $state(null)
   let bubbleContainerSize = $state({ w: 0, h: 0 })
@@ -32,15 +33,12 @@
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
     dragRect = padEl?.getBoundingClientRect() ?? null
-    // Long-press: hold toggle (if pad ON), granular mode2, or flavour menu
+    // Long-press: hold toggle (pad ON) or flavour bubble menu (pad OFF)
     longPressTimer = setTimeout(() => {
       longPressTimer = null
-      if (key === 'granular' && fxPad.granular.on) {
-        // GRN: enter mode2 for pitch/scatter (tap in mode2 toggles hold)
-        granularMode2 = true
-      } else if (fxPad[key].on) {
-        // Any other pad ON: toggle hold (ADR 121)
-        const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold' } as const
+      if (fxPad[key].on) {
+        // Pad ON: toggle hold (ADR 121 — unified across all 4 buses)
+        const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold' } as const
         const hk = holdKeys[key as keyof typeof holdKeys]
         if (hk) perf[hk] = !perf[hk]
         dragging = null
@@ -71,7 +69,7 @@
     if (dragMoved) {
       const pos = toNorm(e)
       if (pos) {
-        if (dragging === 'granular' && granularMode2) {
+        if (dragging === 'granular' && ui.granularMode2) {
           perf.granularPitch = pos.x
           perf.granularScatter = pos.y
         } else {
@@ -85,12 +83,16 @@
   function endDrag() {
     if (!dragging) return
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
-    if (dragging === 'granular' && granularMode2 && !dragMoved) {
-      perf.granularHold = !perf.granularHold
-    } else if (!dragMoved) {
-      fxPad[dragging].on = !fxPad[dragging].on
+    if (!dragMoved) {
+      const wasOn = fxPad[dragging].on
+      fxPad[dragging].on = !wasOn
+      // Auto-release hold when pad is turned off (ADR 121)
+      if (wasOn && nodeHeld(dragging)) {
+        const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold' } as const
+        const hk = holdKeys[dragging as keyof typeof holdKeys]
+        if (hk) perf[hk] = false
+      }
     }
-    granularMode2 = false
     dragging = null
     dragRect = null
   }
@@ -550,7 +552,7 @@
         class:on={state.on}
         class:dragging={dragging === node.key}
         class:frozen={node.key === 'granular' && perf.granularHold}
-        class:mode2={node.key === 'granular' && granularMode2}
+        class:mode2={node.key === 'granular' && ui.granularMode2}
         style="
           left: calc({PAD_INSET}px + {state.x} * (100% - {PAD_INSET * 2}px));
           bottom: calc({PAD_INSET}px + {state.y} * (100% - {PAD_INSET * 2}px));
@@ -560,7 +562,7 @@
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
-        <span class="node-label">{nodeHeld(node.key) ? 'HOLD' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
+        <span class="node-label">{nodeHeld(node.key) ? 'HOLD' : node.key === 'granular' && ui.granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
       </button>
     {/each}
 

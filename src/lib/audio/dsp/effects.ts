@@ -15,6 +15,7 @@ class CombFilter {
   }
   setFeedback(fb: number) { this.fb = fb }
   setDamp(d: number)      { this.damp = d }
+  clear() { this.buf.fill(0); this.filt = 0 }
   process(x: number): number {
     const y = this.buf[this.ptr]
     this.filt = y * (1 - this.damp) + this.filt * this.damp
@@ -27,6 +28,7 @@ class CombFilter {
 class AllpassFilter {
   private buf: Float32Array; private ptr = 0
   constructor(length: number, private fb = 0.5) { this.buf = new Float32Array(length) }
+  clear() { this.buf.fill(0) }
   process(x: number): number {
     const b = this.buf[this.ptr]
     const y = b - x
@@ -41,6 +43,7 @@ class AllpassFilter {
 export class SimpleReverb {
   private combsL: CombFilter[]; private combsR: CombFilter[]
   private apL: AllpassFilter[];  private apR: AllpassFilter[]
+  private _frozen = false; private _savedFb = 0.84; private _savedDamp = 0.2
   constructor(sr: number) {
     const k = sr / 44100, sp = Math.round(23 * k)
     // Full Freeverb: 8 parallel combs + 4 series allpass (classic Schroeder topology)
@@ -51,8 +54,20 @@ export class SimpleReverb {
     this.apL    = aL.map(n => new AllpassFilter(n))
     this.apR    = aL.map(n => new AllpassFilter(n + sp))
   }
-  setSize(s: number) { const fb = 0.60 + s * 0.36; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
-  setDamp(d: number) { const v = d * 0.4;  [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
+  setSize(s: number) { if (this._frozen) return; const fb = 0.60 + s * 0.36; this._savedFb = fb; [...this.combsL, ...this.combsR].forEach(c => c.setFeedback(fb)) }
+  setDamp(d: number) { if (this._frozen) return; const v = d * 0.4; this._savedDamp = v; [...this.combsL, ...this.combsR].forEach(c => c.setDamp(v)) }
+  /** Hold: feedback → 1.0, damp → 0 (sustain current tail indefinitely) */
+  setFreeze(on: boolean) {
+    if (on === this._frozen) return
+    this._frozen = on
+    if (on) {
+      [...this.combsL, ...this.combsR].forEach(c => { c.setFeedback(1.0); c.setDamp(0) })
+    } else {
+      // Clear all buffers on release to stop the frozen tail immediately
+      [...this.combsL, ...this.combsR].forEach(c => { c.clear(); c.setFeedback(this._savedFb); c.setDamp(this._savedDamp) })
+      ;[...this.apL, ...this.apR].forEach(a => a.clear())
+    }
+  }
   // Reusable output to avoid per-sample tuple allocation
   private out = new Float64Array(2)
   process(x: number): Float64Array {
@@ -697,9 +712,17 @@ export class ShimmerReverb {
   }
 
   setSize(s: number) { this.targetSize = 0.5 + s * 2.5 }  // maps 0–1 → 0.5–3.0 (Faust range 1–3)
-  setDamp(d: number) { this.dampCoeff = 0.005 + d * 0.99 }
-  setFeedback(fb: number) { this.feedback = Math.min(fb, 0.35) }
+  setDamp(d: number) { if (!this._frozen) { this._savedDamp = 0.005 + d * 0.99; this.dampCoeff = this._savedDamp } }
+  setFeedback(fb: number) { if (!this._frozen) { this._savedFb = Math.min(fb, 0.35); this.feedback = this._savedFb } }
   setShimmerAmount(a: number) { this.shimmerAmount = a }
+  private _frozen = false; private _savedFb = 0; private _savedDamp = 0.3
+  /** Hold: max feedback, gate input via flag, damp → minimum */
+  setFreeze(on: boolean) {
+    if (on === this._frozen) return
+    this._frozen = on
+    if (on) { this.feedback = 0.65; this.dampCoeff = 0.005 }
+    else { this.reset(); this.feedback = this._savedFb; this.dampCoeff = this._savedDamp }
+  }
 
   reset() {
     for (const b of this.apBufs) b.fill(0)
@@ -802,8 +825,10 @@ export class ShimmerReverb {
     }
 
     // Cross-mix input with feedback (Faust: _*feedback+_*0.3)
-    const fwdL = this.fbR * fb + inL * 0.3  // cross: fbR→L
-    const fwdR = this.fbL * fb + inR * 0.3  // cross: fbL→R
+    // During freeze: gate input to let the network recirculate without new audio
+    const inputGain = this._frozen ? 0 : 0.3
+    const fwdL = this.fbR * fb + inL * inputGain  // cross: fbR→L
+    const fwdR = this.fbL * fb + inR * inputGain  // cross: fbL→R
 
     // Forward path: 2 allpass chains + HF damping (one per channel)
     // L channel: AP(601*s, 0.7*diff) → AP(613*s, 0.75*diff) → LP
@@ -1031,6 +1056,7 @@ class ModulatedCombFilter {
   setFeedback(fb: number) { this.fb = fb }
   setDamp(d: number) { this.damp = d }
   setModDepth(d: number) { this.modDepth = d }
+  clear() { this.buf.fill(0); this.filt = 0 }
 
   process(x: number): number {
     const len = this.buf.length
@@ -1054,6 +1080,7 @@ class ModulatedCombFilter {
 export class ModulatedReverb {
   private combsL: ModulatedCombFilter[]; private combsR: ModulatedCombFilter[]
   private apL: AllpassFilter[];  private apR: AllpassFilter[]
+  private _frozen = false; private _savedFb = 0.84; private _savedDamp = 0.2
 
   constructor(sr: number) {
     const k = sr / 44100, sp = Math.round(23 * k)
@@ -1069,13 +1096,28 @@ export class ModulatedReverb {
   }
 
   setSize(s: number) {
+    if (this._frozen) return
     const fb = 0.50 + s * 0.49
+    this._savedFb = fb
     for (const c of this.combsL) c.setFeedback(fb)
     for (const c of this.combsR) c.setFeedback(fb)
   }
   setDamp(d: number) {
+    if (this._frozen) return
+    this._savedDamp = d
     for (const c of this.combsL) c.setDamp(d)
     for (const c of this.combsR) c.setDamp(d)
+  }
+  /** Hold: feedback → 1.0, damp → 0 (sustain current tail indefinitely) */
+  setFreeze(on: boolean) {
+    if (on === this._frozen) return
+    this._frozen = on
+    if (on) {
+      for (const c of [...this.combsL, ...this.combsR]) { c.setFeedback(1.0); c.setDamp(0) }
+    } else {
+      for (const c of [...this.combsL, ...this.combsR]) { c.clear(); c.setFeedback(this._savedFb); c.setDamp(this._savedDamp) }
+      for (const a of [...this.apL, ...this.apR]) a.clear()
+    }
   }
   setModDepth(d: number) {
     for (const c of this.combsL) c.setModDepth(d)

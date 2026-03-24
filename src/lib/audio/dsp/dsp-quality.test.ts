@@ -828,3 +828,108 @@ describe('Synth voices: spectral sanity', () => {
     expect(peakAbs(buf)).toBeGreaterThan(0) // produces output
   })
 })
+
+// ── Reverb freeze/hold tests (ADR 121) ──────────────────────────────
+
+/** Feed signal into reverb, return L channel output buffer */
+function renderReverb(reverb: { process: (x: number) => Float64Array }, input: Float64Array): Float64Array {
+  const out = new Float64Array(input.length)
+  for (let i = 0; i < input.length; i++) {
+    const r = reverb.process(input[i])
+    out[i] = r[0]
+  }
+  return out
+}
+
+/** Generate a short impulse (1 sample at amplitude 1, rest silence) */
+function impulse(length: number): Float64Array {
+  const buf = new Float64Array(length)
+  buf[0] = 1.0
+  return buf
+}
+
+describe('Reverb freeze (ADR 121)', () => {
+  it('SimpleReverb: freeze sustains output, release clears to zero', () => {
+    const rev = new SimpleReverb(SR)
+    rev.setSize(0.7); rev.setDamp(0.3)
+    // Feed signal
+    renderReverb(rev, impulse(4096))
+    // After impulse, tail should still be audible
+    const preFreezeOut = renderReverb(rev, new Float64Array(1024))
+    expect(peakAbs(preFreezeOut)).toBeGreaterThan(0)
+    // Freeze: tail should sustain
+    rev.setFreeze(true)
+    const frozenOut = renderReverb(rev, new Float64Array(2048))
+    expect(peakAbs(frozenOut)).toBeGreaterThan(0)
+    // Release: buffers cleared, output should be zero
+    rev.setFreeze(false)
+    const releasedOut = renderReverb(rev, new Float64Array(512))
+    expect(peakAbs(releasedOut)).toBeLessThan(1e-10)
+  })
+
+  it('SimpleReverb: setSize/setDamp ignored during freeze', () => {
+    const rev = new SimpleReverb(SR)
+    rev.setSize(0.7); rev.setDamp(0.3)
+    renderReverb(rev, impulse(2048))
+    rev.setFreeze(true)
+    // These should be no-ops during freeze
+    rev.setSize(0.1); rev.setDamp(0.9)
+    const frozenOut = renderReverb(rev, new Float64Array(1024))
+    expect(peakAbs(frozenOut)).toBeGreaterThan(0) // still sustaining
+    // Release should restore the pre-freeze values, not the attempted changes
+    rev.setFreeze(false)
+    const releasedOut = renderReverb(rev, new Float64Array(512))
+    expect(peakAbs(releasedOut)).toBeLessThan(1e-10)
+  })
+
+  it('ModulatedReverb: freeze sustains output, release clears to zero', () => {
+    const rev = new ModulatedReverb(SR)
+    rev.setSize(0.7); rev.setDamp(0.3)
+    renderReverb(rev, impulse(4096))
+    rev.setFreeze(true)
+    const frozenOut = renderReverb(rev, new Float64Array(2048))
+    expect(peakAbs(frozenOut)).toBeGreaterThan(0)
+    rev.setFreeze(false)
+    const releasedOut = renderReverb(rev, new Float64Array(512))
+    expect(peakAbs(releasedOut)).toBeLessThan(1e-10)
+  })
+
+  it('ShimmerReverb: frozen output sustains at useful level over time', () => {
+    const rev = new ShimmerReverb(SR)
+    rev.setSize(0.7); rev.setDamp(0.3)
+    rev.setFeedback(0.2); rev.setShimmerAmount(0.3)
+    // Feed a burst of signal
+    for (let i = 0; i < 4096; i++) rev.process(i < 512 ? Math.sin(i * 0.1) * 0.5 : 0, i < 512 ? Math.sin(i * 0.1) * 0.5 : 0)
+    rev.setFreeze(true)
+    // Measure level right after freeze
+    const earlyBuf = new Float64Array(2048)
+    for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); earlyBuf[i] = r[0] }
+    const earlyLevel = peakAbs(earlyBuf)
+    // Measure level 1 second later
+    for (let i = 0; i < SR; i++) rev.process(0, 0) // skip 1 second
+    const lateBuf = new Float64Array(2048)
+    for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); lateBuf[i] = r[0] }
+    const lateLevel = peakAbs(lateBuf)
+    // Frozen tail should retain at least 50% of its level after 1 second
+    expect(earlyLevel).toBeGreaterThan(0)
+    expect(lateLevel / earlyLevel).toBeGreaterThan(0.5)
+    rev.setFreeze(false)
+  })
+
+  it('ShimmerReverb: freeze sustains output, release clears to zero', () => {
+    const rev = new ShimmerReverb(SR)
+    rev.setSize(0.7); rev.setDamp(0.3)
+    rev.setFeedback(0.2); rev.setShimmerAmount(0.3)
+    // Feed signal — shimmer needs L+R input
+    const inp = impulse(4096)
+    for (let i = 0; i < inp.length; i++) rev.process(inp[i], inp[i])
+    rev.setFreeze(true)
+    const frozenBuf = new Float64Array(2048)
+    for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); frozenBuf[i] = r[0] }
+    expect(peakAbs(frozenBuf)).toBeGreaterThan(0)
+    rev.setFreeze(false)
+    const releasedBuf = new Float64Array(512)
+    for (let i = 0; i < 512; i++) { const r = rev.process(0, 0); releasedBuf[i] = r[0] }
+    expect(peakAbs(releasedBuf)).toBeLessThan(1e-10)
+  })
+})

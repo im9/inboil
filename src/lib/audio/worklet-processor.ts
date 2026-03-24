@@ -458,6 +458,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.shimmerReverb.setDamp(p.fx.reverb.damp)
           this.shimmerReverb.setFeedback(p.fx.shimmerAmount * 0.35)
           this.shimmerReverb.setShimmerAmount(p.fx.shimmerAmount)
+          // Reverb hold (ADR 121): freeze all reverb engines (BigSky-style, no input gating)
+          this.reverb.setFreeze(p.perf.reverbHold)
+          this.hallReverb.setFreeze(p.perf.reverbHold)
+          this.shimmerReverb.setFreeze(p.perf.reverbHold)
           this.delay.setTime(p.fx.delay.time)
           this.tapeDelay.setTime(p.fx.delay.time)
           this.delayFeedback = p.fx.delay.feedback
@@ -1046,6 +1050,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // FX run always (tails ring out after stop)
+      // ADR 121: reverb hold — setFreeze on reverb engines handles feedback=1.0/damp=0
+      // Input is NOT gated: BigSky-style, reverb accumulates while held
       // ADR 120: per-flavour reverb routing (only when verb XY pad is ON)
       let rev: Float64Array
       if (!this.flavourActive) {

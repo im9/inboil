@@ -286,6 +286,7 @@
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
     // Clear perf & FX
     perf.filling = false; perf.breaking = false; perf.reversing = false
+    perf.reverbHold = false; perf.delayHold = false; perf.glitchHold = false; perf.granularHold = false
     fxPad.verb.on = false
     fxPad.delay.on = false
     fxPad.glitch.on = false

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fxPad, fxFlavours, perf } from '../state.svelte.ts'
+  import { fxPad, fxFlavours, perf, ui } from '../state.svelte.ts'
   import { FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
@@ -66,7 +66,10 @@
   }
 
   function toggleFxOn(key: FxKey) {
-    fxPad[key].on = !fxPad[key].on
+    const wasOn = fxPad[key].on
+    fxPad[key].on = !wasOn
+    // Auto-release hold when pad is turned off (ADR 121)
+    if (wasOn) { const hk = HOLD_MAP[key]; if (hk) perf[hk] = false }
   }
 
   function fxFlavourKey(key: FxKey): FxFlavourKey | null {
@@ -151,6 +154,15 @@
           data-tip="Hold — sustain current buffer indefinitely" data-tip-ja="ホールド — 現在のバッファを無限に保持">
           <span class="fx-hold-label">HOLD</span>
           <span class="fx-hold-switch" class:on={isHeld(node.key)}><span class="fx-hold-thumb"></span></span>
+        </div>
+      {/if}
+      {#if node.key === 'granular'}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="fx-hold-row" onpointerdown={() => { ui.granularMode2 = !ui.granularMode2 }}
+          data-tip="Mode 2 — FxPad drag controls pitch/scatter instead of size/density" data-tip-ja="モード2 — FxPadのドラッグがピッチ/スキャッターを操作">
+          <span class="fx-hold-label">M2</span>
+          <span class="fx-hold-switch" class:on={ui.granularMode2}><span class="fx-hold-thumb"></span></span>
         </div>
       {/if}
     </div>

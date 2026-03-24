@@ -201,6 +201,7 @@ export const ui = $state<{
   stepPage: number
   stepPageSize: number
   sweepTab: boolean
+  granularMode2: boolean
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -225,6 +226,7 @@ export const ui = $state<{
   stepPage: 0,
   stepPageSize: 16,
   sweepTab: false,
+  granularMode2: false,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */

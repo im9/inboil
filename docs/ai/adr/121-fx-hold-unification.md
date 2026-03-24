@@ -129,10 +129,10 @@ Rename for consistency:
 - Add `perf.reverbHold` / `perf.delayHold` / `perf.glitchHold` state
 - Wire FxPad long-press → hold toggle for all pads (pad ON = toggle hold, pad OFF = flavour menu)
 
-### Phase 3: Reverb hold DSP
+### Phase 3: Reverb hold DSP — DONE
 - `setFreeze()` on SimpleReverb, ModulatedReverb, ShimmerReverb
-- Input gating + output boost in worklet
-- Ear-test gain staging carefully (one change at a time)
+- Input gating in worklet (reverbIn = 0 during hold)
+- Output boost deferred — ear-test first without boost
 
 ### Phase 4: Delay + Glitch hold DSP
 - PingPongDelay / TapeDelay: feedback → 1.0, gate input
