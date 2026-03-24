@@ -1,6 +1,6 @@
 # ADR 121: FX Hold Unification
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
