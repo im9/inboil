@@ -141,10 +141,10 @@ export function makeDemoSong(): Song {
 
   // Scene graph: Repeat → FX → Verse → Chorus → (Break | Break2) → Verse
   const nodes: SceneNode[] = [
-    { id: 'fn_rpt1', type: 'repeat', x: 0.38, y: 0.37, root: true, fnParams: { repeat: { count: 2 } } },
-    { id: 'fn_fx1', type: 'fx', x: 0.43, y: 0.37, root: false, fnParams: { fx: { verb: true, delay: false, glitch: true, granular: false } } },
+    { id: 'fn_rpt1', type: 'repeat', x: 0.38, y: 0.37, root: true, modifierParams: { repeat: { count: 2 } } },
+    { id: 'fn_fx1', type: 'fx', x: 0.43, y: 0.37, root: false, modifierParams: { fx: { verb: true, delay: false, glitch: true, granular: false } } },
     { id: 'n1', type: 'pattern', patternId: patterns[0].id, x: 0.48, y: 0.37, root: false },
-    { id: 'fn_rpt2', type: 'repeat', x: 0.42, y: 0.48, root: false, fnParams: { repeat: { count: 2 } } },
+    { id: 'fn_rpt2', type: 'repeat', x: 0.42, y: 0.48, root: false, modifierParams: { repeat: { count: 2 } } },
     { id: 'n2', type: 'pattern', patternId: patterns[1].id, x: 0.52, y: 0.48, root: false },
     { id: 'n3', type: 'pattern', patternId: patterns[2].id, x: 0.36, y: 0.63, root: false },
     { id: 'n4', type: 'pattern', patternId: patterns[3].id, x: 0.62, y: 0.66, root: false },

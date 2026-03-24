@@ -98,7 +98,7 @@ export interface Effects {
   comp:   { threshold: number; ratio: number; makeup: number; attack: number; release: number }
 }
 
-/** Function decorator attached to a pattern node (ADR 062) */
+/** @deprecated Use ModifierType nodes instead (ADR 093). Kept for save migration only. */
 export interface SceneDecorator {
   type: 'transpose' | 'tempo' | 'repeat' | 'fx' | 'automation'
   params: Record<string, number>
@@ -179,8 +179,8 @@ export interface TonnetzParams {
   voicing: 'close' | 'spread' | 'drop2'
 }
 
-/** Function node types (ADR 093, sweep ADR 118) */
-export type FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
+/** Modifier + sweep node types (ADR 093, sweep ADR 118, terminology ADR 125) */
+export type ModifierType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
 
 /** Sweep automation target (ADR 118) — continuous parameters only */
 export type SweepTarget =
@@ -208,8 +208,8 @@ export interface SweepData {
   curves: SweepCurve[]
 }
 
-/** Function node parameters — type-specific (ADR 093, sweep ADR 118) */
-export interface FnParams {
+/** Modifier/sweep node parameters — type-specific (ADR 093, sweep ADR 118, terminology ADR 125) */
+export interface ModifierParams {
   transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
   tempo?: { bpm: number }
   repeat?: { count: number }
@@ -217,21 +217,22 @@ export interface FnParams {
   sweep?: SweepData
 }
 
-/** Legacy function node types — kept for migration only */
-type LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
+/** Legacy modifier types — kept for migration only */
+type LegacyModifierType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation'
 
 /** Node on the scene canvas (ADR 044, updated ADR 093) */
 export interface SceneNode {
   id: string
-  type: 'pattern' | 'generative' | 'probability' | FnNodeType | LegacyFnType
+  type: 'pattern' | 'generative' | 'probability' | ModifierType | LegacyModifierType
   x: number               // canvas position (normalized 0–1)
   y: number
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
   params?: Record<string, number>       // legacy fn node params (migration only)
   automationParams?: AutomationParams   // legacy automation (migration only)
-  fnParams?: FnParams                   // function node params (ADR 093)
-  decorators?: SceneDecorator[]         // deprecated (ADR 093) — migrated to fn nodes
+  modifierParams?: ModifierParams        // modifier/sweep node params (ADR 093, ADR 125)
+  fnParams?: ModifierParams             // @deprecated alias — migrated to modifierParams on load
+  decorators?: SceneDecorator[]         // @deprecated (ADR 093) — migrated to modifier nodes
   generative?: GenerativeConfig         // for type === 'generative' (ADR 078)
 }
 

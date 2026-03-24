@@ -4,7 +4,7 @@
  */
 
 import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
-import type { SceneNode, SceneEdge, FnNodeType, FnParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
+import type { SceneNode, SceneEdge, ModifierType, ModifierParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
 import { cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
 import { randomPatternName } from './factory.ts'
@@ -459,7 +459,7 @@ export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
 
 // ── Function nodes (ADR 093) ──
 
-const FN_DEFAULTS: Record<FnNodeType, FnParams> = {
+const MODIFIER_DEFAULTS: Record<ModifierType, ModifierParams> = {
   transpose: { transpose: { semitones: 0, mode: 'rel' } },
   tempo: { tempo: { bpm: 120 } },
   repeat: { repeat: { count: 2 } },
@@ -470,7 +470,7 @@ const FN_DEFAULTS: Record<FnNodeType, FnParams> = {
 const FN_TYPE_ORDER: Record<string, number> = { transpose: 0, repeat: 1, tempo: 2, fx: 3, sweep: 4 }
 
 /** Find fn nodes attached (wired) to a pattern node, sorted by type */
-export function findAttachedFnNodes(patternNodeId: string): SceneNode[] {
+export function findAttachedModifiers(patternNodeId: string): SceneNode[] {
   const fnTypes: string[] = ['transpose', 'tempo', 'repeat', 'fx']  // sweep is independent (ADR 118)
   return song.scene.edges
     .filter(e => e.to === patternNodeId)
@@ -501,7 +501,7 @@ export function findSweepNodeForPattern(patternId: string): SceneNode | null {
 
 /** Reposition fn satellites around a pattern node's top edge */
 export function repositionSatellites(patternNodeId: string): void {
-  const satellites = findAttachedFnNodes(patternNodeId)
+  const satellites = findAttachedModifiers(patternNodeId)
   if (satellites.length === 0) return
   const patNode = findNode(patternNodeId)
   if (!patNode) return
@@ -515,7 +515,7 @@ export function repositionSatellites(patternNodeId: string): void {
 }
 
 /** Add a function node, optionally wired before a pattern node or placed at x/y */
-export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string, x?: number, y?: number): string {
+export function sceneAddModifier(type: ModifierType, patternNodeId?: string, x?: number, y?: number): string {
   pushUndo('Add function node')
   const patNode = patternNodeId ? findNode(patternNodeId) : null
   const id = `fn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
@@ -525,12 +525,12 @@ export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string, x?: num
     x: x ?? (patNode ? patNode.x : 0.5),
     y: y ?? (patNode ? patNode.y - 0.04 : 0.5),
     root: false,
-    fnParams: structuredClone(FN_DEFAULTS[type]),
+    modifierParams: structuredClone(MODIFIER_DEFAULTS[type]),
   }
   song.scene.nodes.push(node)
   if (patNode) {
     // Replace existing fn node of same type on this pattern (ADR 116)
-    const existing = findAttachedFnNodes(patNode.id).find(n => n.type === type)
+    const existing = findAttachedModifiers(patNode.id).find(n => n.type === type)
     if (existing) {
       const edgeIdx = song.scene.edges.findIndex(e => e.from === existing.id)
       if (edgeIdx >= 0) song.scene.edges.splice(edgeIdx, 1)
@@ -544,11 +544,11 @@ export function sceneAddFnNode(type: FnNodeType, patternNodeId?: string, x?: num
 }
 
 /** Update function node params */
-export function sceneUpdateFnParams(nodeId: string, fnParams: FnParams): void {
+export function sceneUpdateModifierParams(nodeId: string, modifierParams: ModifierParams): void {
   const node = findNode(nodeId)
   if (!node) return
   pushUndo('Update function node')
-  node.fnParams = { ...node.fnParams, ...fnParams }
+  node.modifierParams = { ...node.modifierParams, ...modifierParams }
 }
 
 // ── Layout ──

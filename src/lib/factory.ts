@@ -1,6 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
-import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, FnParams, VoiceId } from './types.ts'
+import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, ModifierParams, VoiceId } from './types.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
 
@@ -411,7 +411,7 @@ export const FACTORY_COUNT = FACTORY.length
  */
 export function makeDefaultScene(patterns: Pattern[]): Scene {
   // ADR 093: function nodes for repeat/FX, pattern nodes are pure
-  type Seq = { patIdx: number; x: number; y: number; fnBefore?: FnParams[] }
+  type Seq = { patIdx: number; x: number; y: number; fnBefore?: ModifierParams[] }
 
   const seq: Seq[] = [
     // 0 — HAZE ×3: shimmer reverb + tape delay (atmospheric intro)
@@ -450,7 +450,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
     for (const fp of s.fnBefore ?? []) {
       const fnId = `fn_${String(fnIdx++).padStart(2, '0')}`
       const fnType = fp.repeat ? 'repeat' : fp.tempo ? 'tempo' : fp.transpose ? 'transpose' : 'fx'
-      nodes.push({ id: fnId, type: fnType, x: s.x - 0.04 * (s.fnBefore!.length - fnIds.length), y: s.y, root: false, fnParams: fp })
+      nodes.push({ id: fnId, type: fnType, x: s.x - 0.04 * (s.fnBefore!.length - fnIds.length), y: s.y, root: false, modifierParams: fp })
       fnIds.push(fnId)
     }
     // Chain fn nodes together

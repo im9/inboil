@@ -1,7 +1,7 @@
 <script lang="ts">
   // NOTE: Large file by design — curve painting, bézier editing, target palette, and canvas rendering
   import { song, ui, playback, pushUndo, fxPad, masterPad, perf } from '../state.svelte.ts'
-  import { findSweepNodeForPattern, sceneUpdateFnParams } from '../sceneActions.ts'
+  import { findSweepNodeForPattern, sceneUpdateModifierParams } from '../sceneActions.ts'
   import { getParamDefs } from '../paramDefs.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import type { SweepCurve, SweepTarget } from '../types.ts'
@@ -13,7 +13,7 @@
     return findSweepNodeForPattern(pat.id)
   })
 
-  const sweepData = $derived(sweepNode?.fnParams?.sweep ?? { curves: [] })
+  const sweepData = $derived(sweepNode?.modifierParams?.sweep ?? { curves: [] })
 
   // ── Palette: available targets from current pattern's tracks ──
   const pat = $derived(song.patterns[ui.currentPattern])
@@ -191,7 +191,7 @@
       for (const edge of song.scene.edges) {
         if (edge.to !== node.id) continue
         const src = song.scene.nodes.find(n => n.id === edge.from)
-        if (src?.type === 'repeat' && src.fnParams?.repeat) return src.fnParams.repeat.count
+        if (src?.type === 'repeat' && src.modifierParams?.repeat) return src.modifierParams.repeat.count
       }
     }
     return 1
@@ -936,7 +936,7 @@
       } else {
         // Actually clear
         pushUndo('Clear all sweep curves')
-        sceneUpdateFnParams(sweepNode!.id, { sweep: { curves: [] } })
+        sceneUpdateModifierParams(sweepNode!.id, { sweep: { curves: [] } })
         halationProgress = null
         redraw()
       }
@@ -958,14 +958,14 @@
     } else {
       curves.push(newCurve)
     }
-    sceneUpdateFnParams(sweepNode.id, { sweep: { curves } })
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves } })
   }
 
   function deleteCurve(target: SweepTarget) {
     if (!sweepNode) return
     pushUndo('Delete sweep curve')
     const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute' && !targetsEqual(c.target, target))
-    sceneUpdateFnParams(sweepNode.id, { sweep: { curves } })
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves } })
     redraw()
   }
 

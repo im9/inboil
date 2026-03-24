@@ -122,7 +122,7 @@
   // Apply fn nodes (transpose, FX) connected to the current pattern in loop mode
   // so edits are heard without switching to scene playback.
   // Skips tempo (user controls BPM directly) and repeat (meaningless in loop).
-  function applyLoopFnNodes(): void {
+  function applyLoopModifiers(): void {
     const pat = song.patterns[ui.currentPattern]
     if (!pat) return
     const patNode = song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === pat.id)
@@ -139,9 +139,9 @@
       const inEdge = song.scene.edges.find(e => e.to === currentId)
       if (!inEdge) break
       const src = song.scene.nodes.find(n => n.id === inEdge.from)
-      if (!src?.fnParams || visited.has(src.id)) break
+      if (!src?.modifierParams || visited.has(src.id)) break
       visited.add(src.id)
-      const fp = src.fnParams
+      const fp = src.modifierParams
       if (fp.transpose) {
         if (fp.transpose.mode === 'abs') absKey = fp.transpose.key ?? 0
         else transpose += fp.transpose.semitones
@@ -167,7 +167,7 @@
   // Reactively apply fn nodes when playing in loop mode
   $effect(() => {
     if (playback.mode !== 'loop' || !playback.playing) return
-    applyLoopFnNodes()
+    applyLoopModifiers()
   })
 
   let soloSent: string | null = null // tracks which solo node was last sent to engine
@@ -207,7 +207,7 @@
         const next = playback.queuedPattern
         playback.playingPattern = next
         playback.queuedPattern = null
-        applyLoopFnNodes()
+        applyLoopModifiers()
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, next)
       }
       return
@@ -260,7 +260,7 @@
       if (shouldStop) {
         // Scene graph can't advance (e.g. root has no outgoing edges) — fall back to loop
         playback.mode = 'loop'
-        applyLoopFnNodes()
+        applyLoopModifiers()
         playback.playingPattern = ui.currentPattern
         playback.queuedPattern = null
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)
@@ -271,7 +271,7 @@
       perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else {
-      applyLoopFnNodes()
+      applyLoopModifiers()
       playback.playingPattern = ui.currentPattern
       playback.queuedPattern = null
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, ui.currentPattern)

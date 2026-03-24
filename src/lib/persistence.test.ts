@@ -292,9 +292,9 @@ describe('song round-trip: scene graph', () => {
       pNode.decorators = [{ type: 'transpose', params: { semitones: 5 } }]
       const r = restoreSongPure(raw)
       // Decorator should be migrated to a fn node
-      const fnNodes = r.song.scene.nodes.filter(n => n.type === 'transpose')
-      expect(fnNodes.length).toBeGreaterThanOrEqual(1)
-      const migrated = fnNodes.find(n => n.fnParams?.transpose?.semitones === 5)
+      const modNodes = r.song.scene.nodes.filter(n => n.type === 'transpose')
+      expect(modNodes.length).toBeGreaterThanOrEqual(1)
+      const migrated = modNodes.find(n => n.modifierParams?.transpose?.semitones === 5)
       expect(migrated).toBeDefined()
       // Pattern node should not have decorators
       const rNode = r.song.scene.nodes.find(n => n.id === pNode.id)

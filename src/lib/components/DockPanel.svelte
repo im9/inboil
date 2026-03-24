@@ -1,8 +1,8 @@
 <script lang="ts">
   import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
-  import type { SceneNode, FnNodeType } from '../types.ts'
+  import type { SceneNode, ModifierType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
-  import { sceneSetRoot, sceneDeleteNode, sceneUpdateFnParams } from '../sceneActions.ts'
+  import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams } from '../sceneActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import DockTrackEditor from './DockTrackEditor.svelte'
@@ -30,15 +30,15 @@
     return (node?.type === 'pattern') ? node : null
   })
 
-  const FN_TYPES: FnNodeType[] = ['transpose', 'tempo', 'repeat', 'fx', 'sweep']  // sweep included for selectedFnNode detection
+  const MOD_TYPES: ModifierType[] = ['transpose', 'tempo', 'repeat', 'fx', 'sweep']  // sweep included for selectedModNode detection
 
   // Selected function node (for fn node editing in scene view)
-  const selectedFnNode = $derived.by(() => {
+  const selectedModNode = $derived.by(() => {
     if (ui.patternSheet || isOverlaySheet) return null
     const selected = Object.keys(ui.selectedSceneNodes)
     if (selected.length !== 1) return null
     const node = song.scene.nodes.find(n => n.id === selected[0])
-    return (node && FN_TYPES.includes(node.type as FnNodeType)) ? node : null
+    return (node && MOD_TYPES.includes(node.type as ModifierType)) ? node : null
   })
 
   // Selected generative node (for generative node display in scene view)
@@ -73,14 +73,14 @@
       .filter((n): n is SceneNode => n?.type === 'generative' && !!n.generative)
   })
   // Fn nodes attached to current pattern (satellite edges, ADR 110)
-  const connectedFnNodes = $derived.by(() => {
+  const connectedModNodes = $derived.by(() => {
     if (!currentPatternSceneNode) return []
     const inEdges = song.scene.edges.filter(e => e.to === currentPatternSceneNode.id)
     return inEdges
       .map(e => song.scene.nodes.find(n => n.id === e.from))
-      .filter((n): n is SceneNode => !!n && FN_TYPES.includes(n.type as FnNodeType))
+      .filter((n): n is SceneNode => !!n && MOD_TYPES.includes(n.type as ModifierType))
   })
-  const sceneTabCount = $derived(connectedGenerativeNodes.length + connectedFnNodes.length)
+  const sceneTabCount = $derived(connectedGenerativeNodes.length + connectedModNodes.length)
 
   function openPatternSheet() {
     if (!scenePatternNode?.patternId) return
@@ -165,103 +165,103 @@
       {/if}
 
       <!-- Function node editor (ADR 110) -->
-      {#if selectedFnNode}
+      {#if selectedModNode}
         <span class="section-label">
-          {selectedFnNode.type === 'transpose' ? 'TRANSPOSE' : selectedFnNode.type === 'repeat' ? 'REPEAT' : selectedFnNode.type === 'tempo' ? 'TEMPO' : selectedFnNode.type === 'sweep' ? 'SWEEP' : 'FX'}
+          {selectedModNode.type === 'transpose' ? 'TRANSPOSE' : selectedModNode.type === 'repeat' ? 'REPEAT' : selectedModNode.type === 'tempo' ? 'TEMPO' : selectedModNode.type === 'sweep' ? 'SWEEP' : 'FX'}
         </span>
-        <div class="fn-editor">
-          {#if selectedFnNode.fnParams?.transpose}
-            {@const tp = selectedFnNode.fnParams.transpose}
-            <div class="fn-row">
-              <span class="fn-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
-              <div class="fn-toggle">
-                <button class="fn-toggle-btn" class:active={tp.mode === 'rel'}
-                  onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, mode: 'rel' } })}
+        <div class="mod-editor">
+          {#if selectedModNode.modifierParams?.transpose}
+            {@const tp = selectedModNode.modifierParams.transpose}
+            <div class="mod-row">
+              <span class="mod-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
+              <div class="mod-toggle">
+                <button class="mod-toggle-btn" class:active={tp.mode === 'rel'}
+                  onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { transpose: { ...tp, mode: 'rel' } })}
                 >REL</button>
-                <button class="fn-toggle-btn" class:active={tp.mode === 'abs'}
-                  onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, mode: 'abs' } })}
+                <button class="mod-toggle-btn" class:active={tp.mode === 'abs'}
+                  onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { transpose: { ...tp, mode: 'abs' } })}
                 >ABS</button>
               </div>
             </div>
             {#if tp.mode === 'rel'}
-              <div class="fn-row">
-                <span class="fn-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
-                <div class="fn-stepper">
-                  <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
-                  <span class="fn-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
-                  <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
+              <div class="mod-row">
+                <span class="mod-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
+                <div class="mod-stepper">
+                  <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
+                  <span class="mod-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
+                  <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
                 </div>
               </div>
             {:else}
-              <div class="fn-row">
-                <span class="fn-label">Key</span>
-                <div class="fn-key-row">
+              <div class="mod-row">
+                <span class="mod-label">Key</span>
+                <div class="mod-key-row">
                   {#each NOTE_NAMES as name, i}
-                    <button class="fn-key-btn" class:active={(tp.key ?? 0) === i}
-                      onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { transpose: { ...tp, key: i } })}
+                    <button class="mod-key-btn" class:active={(tp.key ?? 0) === i}
+                      onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { transpose: { ...tp, key: i } })}
                     >{name}</button>
                   {/each}
                 </div>
               </div>
             {/if}
-          {:else if selectedFnNode.fnParams?.repeat}
-            {@const rp = selectedFnNode.fnParams.repeat}
-            <div class="fn-row">
-              <span class="fn-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
-              <div class="fn-stepper">
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
-                <span class="fn-step-val">×{rp.count}</span>
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
+          {:else if selectedModNode.modifierParams?.repeat}
+            {@const rp = selectedModNode.modifierParams.repeat}
+            <div class="mod-row">
+              <span class="mod-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
+              <div class="mod-stepper">
+                <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
+                <span class="mod-step-val">×{rp.count}</span>
+                <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
               </div>
             </div>
-          {:else if selectedFnNode.fnParams?.tempo}
-            {@const tmp = selectedFnNode.fnParams.tempo}
-            <div class="fn-row">
-              <span class="fn-label">BPM</span>
-              <div class="fn-stepper">
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
-                <span class="fn-step-val">{tmp.bpm}</span>
-                <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
+          {:else if selectedModNode.modifierParams?.tempo}
+            {@const tmp = selectedModNode.modifierParams.tempo}
+            <div class="mod-row">
+              <span class="mod-label">BPM</span>
+              <div class="mod-stepper">
+                <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
+                <span class="mod-step-val">{tmp.bpm}</span>
+                <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
               </div>
             </div>
-          {:else if selectedFnNode.fnParams?.fx}
-            {@const fxp = selectedFnNode.fnParams.fx}
-            <div class="fn-row">
-              <span class="fn-label">Verb</span>
-              <button class="fn-toggle-btn wide" class:active={fxp.verb}
-                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
+          {:else if selectedModNode.modifierParams?.fx}
+            {@const fxp = selectedModNode.modifierParams.fx}
+            <div class="mod-row">
+              <span class="mod-label">Verb</span>
+              <button class="mod-toggle-btn wide" class:active={fxp.verb}
+                onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
               >{fxp.verb ? 'ON' : 'OFF'}</button>
             </div>
-            <div class="fn-row">
-              <span class="fn-label">Delay</span>
-              <button class="fn-toggle-btn wide" class:active={fxp.delay}
-                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
+            <div class="mod-row">
+              <span class="mod-label">Delay</span>
+              <button class="mod-toggle-btn wide" class:active={fxp.delay}
+                onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
               >{fxp.delay ? 'ON' : 'OFF'}</button>
             </div>
-            <div class="fn-row">
-              <span class="fn-label">Glitch</span>
-              <button class="fn-toggle-btn wide" class:active={fxp.glitch}
-                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
+            <div class="mod-row">
+              <span class="mod-label">Glitch</span>
+              <button class="mod-toggle-btn wide" class:active={fxp.glitch}
+                onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
               >{fxp.glitch ? 'ON' : 'OFF'}</button>
             </div>
-            <div class="fn-row">
-              <span class="fn-label">Granular</span>
-              <button class="fn-toggle-btn wide" class:active={fxp.granular}
-                onpointerdown={() => sceneUpdateFnParams(selectedFnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
+            <div class="mod-row">
+              <span class="mod-label">Granular</span>
+              <button class="mod-toggle-btn wide" class:active={fxp.granular}
+                onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
               >{fxp.granular ? 'ON' : 'OFF'}</button>
             </div>
-          {:else if selectedFnNode.fnParams?.sweep}
-            {@const swp = selectedFnNode.fnParams.sweep}
-            <div class="fn-row">
-              <span class="fn-label">Curves</span>
-              <span class="fn-step-val">{swp.curves.length}</span>
+          {:else if selectedModNode.modifierParams?.sweep}
+            {@const swp = selectedModNode.modifierParams.sweep}
+            <div class="mod-row">
+              <span class="mod-label">Curves</span>
+              <span class="mod-step-val">{swp.curves.length}</span>
             </div>
           {/if}
         </div>
         <div class="node-actions">
-          {#if selectedFnNode.fnParams?.sweep}
+          {#if selectedModNode.modifierParams?.sweep}
             <button class="btn-action-node" onpointerdown={() => {
-              const edge = song.scene.edges.find(e => e.from === selectedFnNode.id)
+              const edge = song.scene.edges.find(e => e.from === selectedModNode.id)
               const targetNode = edge ? song.scene.nodes.find(n => n.id === edge.to) : null
               if (targetNode?.type === 'pattern' && targetNode.patternId) {
                 const pi = song.patterns.findIndex(p => p.id === targetNode.patternId)
@@ -273,7 +273,7 @@
               data-tip="Edit sweep curves" data-tip-ja="スウィープカーブを編集"
             >Edit</button>
           {/if}
-          <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedFnNode.id); ui.selectedSceneNodes = {} }}
+          <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedModNode.id); ui.selectedSceneNodes = {} }}
             data-tip="Remove node" data-tip-ja="ノードを削除"
           >✕ Remove</button>
         </div>
@@ -323,103 +323,103 @@
               <DockGenerativeEditor node={genNode} />
             {/each}
           {/if}
-          {#if connectedFnNodes.length > 0}
-            {#each connectedFnNodes as fnNode}
+          {#if connectedModNodes.length > 0}
+            {#each connectedModNodes as modNode}
               <div class="section-divider" aria-hidden="true"></div>
               <span class="section-label">
-                {fnNode.type === 'transpose' ? 'TRANSPOSE' : fnNode.type === 'repeat' ? 'REPEAT' : fnNode.type === 'tempo' ? 'TEMPO' : 'FX'}
+                {modNode.type === 'transpose' ? 'TRANSPOSE' : modNode.type === 'repeat' ? 'REPEAT' : modNode.type === 'tempo' ? 'TEMPO' : 'FX'}
               </span>
-              <div class="fn-editor">
-                {#if fnNode.fnParams?.transpose}
-                  {@const tp = fnNode.fnParams.transpose}
-                  <div class="fn-row">
-                    <span class="fn-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
-                    <div class="fn-toggle">
-                      <button class="fn-toggle-btn" class:active={tp.mode === 'rel'}
-                        onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, mode: 'rel' } })}
+              <div class="mod-editor">
+                {#if modNode.modifierParams?.transpose}
+                  {@const tp = modNode.modifierParams.transpose}
+                  <div class="mod-row">
+                    <span class="mod-label">{lang.value === 'ja' ? 'モード' : 'Mode'}</span>
+                    <div class="mod-toggle">
+                      <button class="mod-toggle-btn" class:active={tp.mode === 'rel'}
+                        onpointerdown={() => sceneUpdateModifierParams(modNode.id, { transpose: { ...tp, mode: 'rel' } })}
                       >REL</button>
-                      <button class="fn-toggle-btn" class:active={tp.mode === 'abs'}
-                        onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, mode: 'abs' } })}
+                      <button class="mod-toggle-btn" class:active={tp.mode === 'abs'}
+                        onpointerdown={() => sceneUpdateModifierParams(modNode.id, { transpose: { ...tp, mode: 'abs' } })}
                       >ABS</button>
                     </div>
                   </div>
                   {#if tp.mode === 'rel'}
-                    <div class="fn-row">
-                      <span class="fn-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
-                      <div class="fn-stepper">
-                        <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
-                        <span class="fn-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
-                        <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
+                    <div class="mod-row">
+                      <span class="mod-label">{lang.value === 'ja' ? '半音' : 'Semitones'}</span>
+                      <div class="mod-stepper">
+                        <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { transpose: { ...tp, semitones: tp.semitones - 1 } })}>−</button>
+                        <span class="mod-step-val">{tp.semitones >= 0 ? '+' : ''}{tp.semitones}</span>
+                        <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { transpose: { ...tp, semitones: tp.semitones + 1 } })}>+</button>
                       </div>
                     </div>
                   {:else}
-                    <div class="fn-row">
-                      <span class="fn-label">Key</span>
-                      <div class="fn-key-row">
+                    <div class="mod-row">
+                      <span class="mod-label">Key</span>
+                      <div class="mod-key-row">
                         {#each NOTE_NAMES as name, i}
-                          <button class="fn-key-btn" class:active={(tp.key ?? 0) === i}
-                            onpointerdown={() => sceneUpdateFnParams(fnNode.id, { transpose: { ...tp, key: i } })}
+                          <button class="mod-key-btn" class:active={(tp.key ?? 0) === i}
+                            onpointerdown={() => sceneUpdateModifierParams(modNode.id, { transpose: { ...tp, key: i } })}
                           >{name}</button>
                         {/each}
                       </div>
                     </div>
                   {/if}
-                {:else if fnNode.fnParams?.repeat}
-                  {@const rp = fnNode.fnParams.repeat}
-                  <div class="fn-row">
-                    <span class="fn-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
-                    <div class="fn-stepper">
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
-                      <span class="fn-step-val">×{rp.count}</span>
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
+                {:else if modNode.modifierParams?.repeat}
+                  {@const rp = modNode.modifierParams.repeat}
+                  <div class="mod-row">
+                    <span class="mod-label">{lang.value === 'ja' ? '回数' : 'Count'}</span>
+                    <div class="mod-stepper">
+                      <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { repeat: { count: Math.max(1, rp.count - 1) } })}>−</button>
+                      <span class="mod-step-val">×{rp.count}</span>
+                      <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
                     </div>
                   </div>
-                {:else if fnNode.fnParams?.tempo}
-                  {@const tmp = fnNode.fnParams.tempo}
-                  <div class="fn-row">
-                    <span class="fn-label">BPM</span>
-                    <div class="fn-stepper">
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
-                      <span class="fn-step-val">{tmp.bpm}</span>
-                      <button class="fn-step-btn" onpointerdown={() => sceneUpdateFnParams(fnNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
+                {:else if modNode.modifierParams?.tempo}
+                  {@const tmp = modNode.modifierParams.tempo}
+                  <div class="mod-row">
+                    <span class="mod-label">BPM</span>
+                    <div class="mod-stepper">
+                      <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { tempo: { bpm: Math.max(20, tmp.bpm - 1) } })}>−</button>
+                      <span class="mod-step-val">{tmp.bpm}</span>
+                      <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { tempo: { bpm: Math.min(300, tmp.bpm + 1) } })}>+</button>
                     </div>
                   </div>
-                {:else if fnNode.fnParams?.fx}
-                  {@const fxp = fnNode.fnParams.fx}
-                  <div class="fn-row">
-                    <span class="fn-label">Verb</span>
-                    <button class="fn-toggle-btn wide" class:active={fxp.verb}
-                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
+                {:else if modNode.modifierParams?.fx}
+                  {@const fxp = modNode.modifierParams.fx}
+                  <div class="mod-row">
+                    <span class="mod-label">Verb</span>
+                    <button class="mod-toggle-btn wide" class:active={fxp.verb}
+                      onpointerdown={() => sceneUpdateModifierParams(modNode.id, { fx: { ...fxp, verb: !fxp.verb } })}
                     >{fxp.verb ? 'ON' : 'OFF'}</button>
                   </div>
-                  <div class="fn-row">
-                    <span class="fn-label">Delay</span>
-                    <button class="fn-toggle-btn wide" class:active={fxp.delay}
-                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
+                  <div class="mod-row">
+                    <span class="mod-label">Delay</span>
+                    <button class="mod-toggle-btn wide" class:active={fxp.delay}
+                      onpointerdown={() => sceneUpdateModifierParams(modNode.id, { fx: { ...fxp, delay: !fxp.delay } })}
                     >{fxp.delay ? 'ON' : 'OFF'}</button>
                   </div>
-                  <div class="fn-row">
-                    <span class="fn-label">Glitch</span>
-                    <button class="fn-toggle-btn wide" class:active={fxp.glitch}
-                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
+                  <div class="mod-row">
+                    <span class="mod-label">Glitch</span>
+                    <button class="mod-toggle-btn wide" class:active={fxp.glitch}
+                      onpointerdown={() => sceneUpdateModifierParams(modNode.id, { fx: { ...fxp, glitch: !fxp.glitch } })}
                     >{fxp.glitch ? 'ON' : 'OFF'}</button>
                   </div>
-                  <div class="fn-row">
-                    <span class="fn-label">Granular</span>
-                    <button class="fn-toggle-btn wide" class:active={fxp.granular}
-                      onpointerdown={() => sceneUpdateFnParams(fnNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
+                  <div class="mod-row">
+                    <span class="mod-label">Granular</span>
+                    <button class="mod-toggle-btn wide" class:active={fxp.granular}
+                      onpointerdown={() => sceneUpdateModifierParams(modNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
                     >{fxp.granular ? 'ON' : 'OFF'}</button>
                   </div>
-                {:else if fnNode.fnParams?.sweep}
-                  <div class="fn-row">
-                    <span class="fn-label">Curves</span>
-                    <span class="fn-step-val">{fnNode.fnParams.sweep.curves.length}</span>
+                {:else if modNode.modifierParams?.sweep}
+                  <div class="mod-row">
+                    <span class="mod-label">Curves</span>
+                    <span class="mod-step-val">{modNode.modifierParams.sweep.curves.length}</span>
                   </div>
                 {/if}
               </div>
             {/each}
           {/if}
-          {#if connectedGenerativeNodes.length === 0 && connectedFnNodes.length === 0}
+          {#if connectedGenerativeNodes.length === 0 && connectedModNodes.length === 0}
             <div class="empty-hint">{lang.value === 'ja' ? 'ノード未接続' : 'No nodes connected'}</div>
           {/if}
         {/if}
@@ -666,31 +666,31 @@
   }
 
   /* ── Fn node editor (ADR 110) ── */
-  .fn-editor {
+  .mod-editor {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin: 8px 0;
   }
-  .fn-row {
+  .mod-row {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  .fn-label {
+  .mod-label {
     font-size: var(--fs-lg);
     font-weight: 700;
     color: var(--dz-text-mid);
     min-width: 64px;
   }
-  .fn-toggle {
+  .mod-toggle {
     display: flex;
     gap: 0;
     border: 1px solid var(--dz-border);
     border-radius: 0;
     overflow: hidden;
   }
-  .fn-toggle-btn {
+  .mod-toggle-btn {
     font-family: var(--font-data);
     font-size: var(--fs-md);
     font-weight: 700;
@@ -702,21 +702,21 @@
     cursor: pointer;
     transition: background 60ms, color 60ms;
   }
-  .fn-toggle-btn:not(:last-child) {
+  .mod-toggle-btn:not(:last-child) {
     border-right: 1px solid var(--dz-border);
   }
-  .fn-toggle-btn:hover {
+  .mod-toggle-btn:hover {
     background: var(--dz-bg-hover);
   }
-  .fn-toggle-btn.active {
+  .mod-toggle-btn.active {
     background: var(--dz-bg-active);
     color: var(--dz-text-strong);
   }
-  .fn-toggle-btn.wide {
+  .mod-toggle-btn.wide {
     border: 1px solid var(--dz-border);
     min-width: 48px;
   }
-  .fn-stepper {
+  .mod-stepper {
     display: flex;
     align-items: center;
     gap: 0;
@@ -724,7 +724,7 @@
     border-radius: 0;
     overflow: hidden;
   }
-  .fn-step-btn {
+  .mod-step-btn {
     width: 28px;
     height: 28px;
     border: none;
@@ -738,14 +738,14 @@
     justify-content: center;
     transition: background 60ms;
   }
-  .fn-step-btn:hover {
+  .mod-step-btn:hover {
     background: var(--dz-bg-hover);
     color: var(--dz-text-strong);
   }
-  .fn-step-btn:active {
+  .mod-step-btn:active {
     background: var(--dz-bg-active);
   }
-  .fn-step-val {
+  .mod-step-val {
     font-family: var(--font-data);
     font-size: var(--fs-base);
     font-weight: 700;
@@ -756,12 +756,12 @@
     border-right: 1px solid var(--dz-border);
     padding: 4px 0;
   }
-  .fn-key-row {
+  .mod-key-row {
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
   }
-  .fn-key-btn {
+  .mod-key-btn {
     font-family: var(--font-data);
     font-size: var(--fs-sm);
     font-weight: 700;
@@ -772,10 +772,10 @@
     cursor: pointer;
     transition: background 60ms, color 60ms;
   }
-  .fn-key-btn:hover {
+  .mod-key-btn:hover {
     background: var(--dz-bg-hover);
   }
-  .fn-key-btn.active {
+  .mod-key-btn.active {
     background: var(--dz-bg-active);
     color: var(--dz-text-strong);
     border-color: var(--dz-border-strong);

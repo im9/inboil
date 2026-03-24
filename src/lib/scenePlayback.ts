@@ -47,8 +47,8 @@ export function soloPatternIndex(): number | null {
 // ── Function nodes & generative chains (ADR 093) ────────────────────
 
 /** Apply a function node's effect during scene traversal (pass-through) */
-function applyFunctionNode(node: SceneNode): void {
-  const fp = node.fnParams
+function applyModifierNode(node: SceneNode): void {
+  const fp = node.modifierParams
   if (!fp) return
   if (fp.transpose) {
     if (fp.transpose.mode === 'abs') {
@@ -81,18 +81,18 @@ function applyFunctionNode(node: SceneNode): void {
 }
 
 /** True if node type is a pass-through function node */
-function isFnNode(node: SceneNode): boolean {
+function isModifierNode(node: SceneNode): boolean {
   return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx' || node.type === 'sweep'
 }
 
 /** Apply satellite fn nodes attached to a pattern node (ADR 110).
  *  FX resets to OFF when no FX fn node is attached — scoped to pattern. */
-function applySatelliteFnNodes(patternNodeId: string): void {
+function applySatelliteModifiers(patternNodeId: string): void {
   const satellites: SceneNode[] = []
   for (const edge of song.scene.edges) {
     if (edge.to !== patternNodeId) continue
     const src = findNode(edge.from)
-    if (src && isFnNode(src)) satellites.push(src)
+    if (src && isModifierNode(src)) satellites.push(src)
   }
   // Reset scoped fn effects if no matching satellite on this pattern
   if (!satellites.some(n => n.type === 'fx')) {
@@ -105,7 +105,7 @@ function applySatelliteFnNodes(patternNodeId: string): void {
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
   }
-  for (const src of satellites) applyFunctionNode(src)
+  for (const src of satellites) applyModifierNode(src)
 }
 
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
@@ -175,7 +175,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     playback.automationSnapshot = null
   }
   if (node.type === 'pattern') {
-    applySatelliteFnNodes(node.id)  // ADR 110: apply attached fn satellites
+    applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
     applyLiveGenerative(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
@@ -184,7 +184,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     return { advanced: true, patternIndex: idx }
   }
   // Function nodes: apply effect and follow outgoing edge (pass-through — legacy)
-  if (isFnNode(node)) applyFunctionNode(node)
+  if (isModifierNode(node)) applyModifierNode(node)
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
     const pick = edges[Math.floor(Math.random() * edges.length)]
@@ -205,7 +205,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
-      applySatelliteFnNodes(node.id)  // ADR 110: apply attached fn satellites
+      applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
       if (playback.automationSnapshot) {
         restoreAutomationSnapshot(playback.automationSnapshot)
       }
@@ -220,7 +220,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     }
 
     // Function nodes: apply effect and continue traversal (pass-through)
-    if (isFnNode(node)) applyFunctionNode(node)
+    if (isModifierNode(node)) applyModifierNode(node)
 
     const outEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
     if (outEdges.length === 0) {
@@ -278,7 +278,7 @@ function findConnectedSweep(patternNodeId: string): SweepData | null {
   for (const edge of song.scene.edges) {
     if (edge.to !== patternNodeId) continue
     const src = findNode(edge.from)
-    if (src?.type === 'sweep' && src.fnParams?.sweep) return src.fnParams.sweep
+    if (src?.type === 'sweep' && src.modifierParams?.sweep) return src.modifierParams.sweep
   }
   return null
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cloneSceneNode, cloneScene, restoreScene, migrateDecoratorsToFnNodes, purgeOrphanFnNodes } from './sceneData.ts'
+import { cloneSceneNode, cloneScene, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers } from './sceneData.ts'
 import type { SceneNode, SceneEdge, Scene, GenerativeConfig } from './types.ts'
 
 // ── Helpers ──
@@ -8,11 +8,11 @@ function patNode(id: string, x = 0.5, y = 0.5, decorators?: SceneNode['decorator
   return { id, type: 'pattern', x, y, root: false, patternId: `pat-${id}`, decorators }
 }
 
-function fnNode(id: string, type: SceneNode['type'] = 'transpose', fnParams?: SceneNode['fnParams']): SceneNode {
-  return { id, type, x: 0.5, y: 0.5, root: false, fnParams: fnParams ?? { transpose: { semitones: 3, mode: 'rel' } } }
+function modNode(id: string, type: SceneNode['type'] = 'transpose', modifierParams?: SceneNode['modifierParams']): SceneNode {
+  return { id, type, x: 0.5, y: 0.5, root: false, modifierParams: modifierParams ?? { transpose: { semitones: 3, mode: 'rel' } } }
 }
 
-function legacyFnNode(id: string, type: SceneNode['type'] = 'transpose', params?: Record<string, number>): SceneNode {
+function legacyModNode(id: string, type: SceneNode['type'] = 'transpose', params?: Record<string, number>): SceneNode {
   return { id, type, x: 0.5, y: 0.5, root: false, params: params ?? { semitones: 3 } }
 }
 
@@ -23,11 +23,11 @@ function edge(from: string, to: string, order = 0): SceneEdge {
 // ── cloneSceneNode ──
 
 describe('cloneSceneNode', () => {
-  it('deep clones fnParams', () => {
-    const orig = fnNode('n1', 'transpose', { transpose: { semitones: 5, mode: 'rel' } })
+  it('deep clones modifierParams', () => {
+    const orig = modNode('n1', 'transpose', { transpose: { semitones: 5, mode: 'rel' } })
     const cloned = cloneSceneNode(orig)
-    cloned.fnParams!.transpose!.semitones = 99
-    expect(orig.fnParams!.transpose!.semitones).toBe(5)
+    cloned.modifierParams!.transpose!.semitones = 99
+    expect(orig.modifierParams!.transpose!.semitones).toBe(5)
   })
 
   it('strips decorators after clone (migration)', () => {
@@ -38,10 +38,10 @@ describe('cloneSceneNode', () => {
     expect(cloned.decorators).toBeUndefined()
   })
 
-  it('handles node without fnParams', () => {
+  it('handles node without modifierParams', () => {
     const orig: SceneNode = { id: 'n1', type: 'pattern', x: 0, y: 0, root: false }
     const cloned = cloneSceneNode(orig)
-    expect(cloned.fnParams).toBeUndefined()
+    expect(cloned.modifierParams).toBeUndefined()
   })
 })
 
@@ -51,7 +51,7 @@ describe('cloneScene', () => {
   it('produces an independent copy', () => {
     const scene: Scene = {
       name: 'Test',
-      nodes: [patNode('p1', 0.2, 0.3), fnNode('f1')],
+      nodes: [patNode('p1', 0.2, 0.3), modNode('f1')],
       edges: [edge('f1', 'p1')],
       labels: [{ id: 'l1', text: 'hello', x: 0.5, y: 0.5 }],
       stamps: [],
@@ -98,30 +98,30 @@ describe('restoreScene', () => {
     // p2 should no longer have decorators
     const p2 = restored.nodes.find((n: SceneNode) => n.id === 'p2')!
     expect(p2.decorators).toBeUndefined()
-    // Should have a fn node with transpose fnParams
-    const fnNodes = restored.nodes.filter((n: SceneNode) => n.type === 'transpose')
-    expect(fnNodes.length).toBe(1)
-    expect(fnNodes[0].fnParams?.transpose?.semitones).toBe(5)
+    // Should have a fn node with transpose modifierParams
+    const modNodes = restored.nodes.filter((n: SceneNode) => n.type === 'transpose')
+    expect(modNodes.length).toBe(1)
+    expect(modNodes[0].modifierParams?.transpose?.semitones).toBe(5)
   })
 
-  it('migrates legacy fn node params to fnParams during restore', () => {
+  it('migrates legacy params to modifierParams during restore', () => {
     const src: Scene = {
       name: 'Test',
-      nodes: [legacyFnNode('f1', 'tempo', { bpm: 140 }), patNode('p1')],
+      nodes: [legacyModNode('f1', 'tempo', { bpm: 140 }), patNode('p1')],
       edges: [edge('f1', 'p1')],
       labels: [],
       stamps: [],
     }
     const restored = restoreScene(src)
     const f1 = restored.nodes.find((n: SceneNode) => n.id === 'f1')!
-    expect(f1.fnParams?.tempo?.bpm).toBe(140)
+    expect(f1.modifierParams?.tempo?.bpm).toBe(140)
     expect(f1.params).toBeUndefined()
   })
 })
 
-// ── migrateDecoratorsToFnNodes ──
+// ── migrateDecoratorsToModifiers ──
 
-describe('migrateDecoratorsToFnNodes', () => {
+describe('migrateDecoratorsToModifiers', () => {
   it('converts decorators on a pattern node to fn node chain', () => {
     const nodes = [
       patNode('p1'),
@@ -131,11 +131,11 @@ describe('migrateDecoratorsToFnNodes', () => {
       ]),
     ]
     const edges = [edge('p1', 'p2')]
-    const result = migrateDecoratorsToFnNodes(nodes, edges)
+    const result = migrateDecoratorsToModifiers(nodes, edges)
     expect(result.converted).toBe(2)
     // Should have new fn nodes
-    const fnNodes = result.nodes.filter((n: SceneNode) => n.type !== 'pattern')
-    expect(fnNodes.length).toBe(2)
+    const modNodes = result.nodes.filter((n: SceneNode) => n.type !== 'pattern')
+    expect(modNodes.length).toBe(2)
     // Incoming edge should point to first fn node in chain, not p2
     const incomingToP2 = result.edges.filter((e: SceneEdge) => e.to === 'p2')
     expect(incomingToP2.length).toBe(1) // last fn node → p2
@@ -144,7 +144,7 @@ describe('migrateDecoratorsToFnNodes', () => {
   it('does nothing when no decorators exist', () => {
     const nodes = [patNode('p1'), patNode('p2')]
     const edges = [edge('p1', 'p2')]
-    const result = migrateDecoratorsToFnNodes(nodes, edges)
+    const result = migrateDecoratorsToModifiers(nodes, edges)
     expect(result.converted).toBe(0)
     expect(result.nodes).toHaveLength(2)
     expect(result.edges).toHaveLength(1)
@@ -158,27 +158,27 @@ describe('migrateDecoratorsToFnNodes', () => {
       ]),
     ]
     const edges: SceneEdge[] = []
-    const result = migrateDecoratorsToFnNodes(nodes, edges)
+    const result = migrateDecoratorsToModifiers(nodes, edges)
     expect(result.converted).toBe(1) // only transpose, not automation
   })
 })
 
-// ── purgeOrphanFnNodes ──
+// ── purgeOrphanModifiers ──
 
-describe('purgeOrphanFnNodes', () => {
+describe('purgeOrphanModifiers', () => {
   it('removes fn nodes with no outgoing edges (dead ends)', () => {
-    const nodes = [patNode('p1'), fnNode('f1')]
+    const nodes = [patNode('p1'), modNode('f1')]
     const edges = [edge('p1', 'f1')]
-    const result = purgeOrphanFnNodes(nodes, edges)
+    const result = purgeOrphanModifiers(nodes, edges)
     expect(result.removed).toBe(1)
     expect(result.nodes.find((n: SceneNode) => n.id === 'f1')).toBeUndefined()
     expect(result.edges.every((e: SceneEdge) => e.from !== 'f1' && e.to !== 'f1')).toBe(true)
   })
 
   it('preserves fn nodes with outgoing edges', () => {
-    const nodes = [fnNode('f1'), patNode('p1')]
+    const nodes = [modNode('f1'), patNode('p1')]
     const edges = [edge('f1', 'p1')]
-    const result = purgeOrphanFnNodes(nodes, edges)
+    const result = purgeOrphanModifiers(nodes, edges)
     expect(result.removed).toBe(0)
     expect(result.nodes).toHaveLength(2)
   })
@@ -187,7 +187,7 @@ describe('purgeOrphanFnNodes', () => {
     const autoNode: SceneNode = { id: 'a1', type: 'automation' as SceneNode['type'], x: 0.5, y: 0.5, root: false }
     const nodes = [patNode('p1'), autoNode]
     const edges = [edge('p1', 'a1')]
-    const result = purgeOrphanFnNodes(nodes, edges)
+    const result = purgeOrphanModifiers(nodes, edges)
     expect(result.removed).toBe(1)
   })
 
@@ -199,7 +199,7 @@ describe('purgeOrphanFnNodes', () => {
     const gNode: SceneNode = { id: 'g1', type: 'generative', x: 0.5, y: 0.5, root: false, generative: gen }
     const nodes = [patNode('p1'), gNode]
     const edges = [edge('p1', 'g1')]
-    const result = purgeOrphanFnNodes(nodes, edges)
+    const result = purgeOrphanModifiers(nodes, edges)
     expect(result.removed).toBe(0)
     expect(result.nodes).toHaveLength(2)
   })
@@ -207,7 +207,7 @@ describe('purgeOrphanFnNodes', () => {
   it('preserves pattern nodes', () => {
     const nodes = [patNode('p1'), patNode('p2')]
     const edges = [edge('p1', 'p2')]
-    const result = purgeOrphanFnNodes(nodes, edges)
+    const result = purgeOrphanModifiers(nodes, edges)
     expect(result.removed).toBe(0)
   })
 })

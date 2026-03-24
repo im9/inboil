@@ -6,14 +6,14 @@
   // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo, playFromNode } from '../state.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
-  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddFnNode, findAttachedFnNodes, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
+  import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddModifier, findAttachedModifiers, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { STAMP_LIBRARY } from '../stampLibrary.ts'
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { registerKeyLayer, unregisterKeyLayer, registerKeyUpLayer, unregisterKeyUpLayer } from '../keyRouter.ts'
   import { onMount } from 'svelte'
-  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, fnNodeLabel, fnNodeValue, nodeColor, nodeSizeKind, halfSize, fnNodeIcon } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, FN_HALF_W, GEN_HALF_W, WORLD_W, WORLD_H, toPixel, toNormScene, bezierEdge, bezierDist, nodeName, modifierLabel, modifierValue, nodeColor, nodeSizeKind, halfSize, modifierIcon } from '../sceneGeometry.ts'
   import type { GenerativeEngine } from '../state.svelte.ts'
   import { SCALE_MAP } from '../generative.ts'
   import SceneCanvas from './SceneCanvas.svelte'
@@ -158,8 +158,8 @@
     if (placingType?.startsWith('fn-')) {
       const target = song.scene.nodes.find(n => n.id === nodeId)
       if (target?.type === 'pattern') {
-        const fnType = placingType.slice(3) as import('../types.ts').FnNodeType
-        const id = sceneAddFnNode(fnType, nodeId)
+        const fnType = placingType.slice(3) as import('../types.ts').ModifierType
+        const id = sceneAddModifier(fnType, nodeId)
         ui.selectedSceneNodes = {}
         ui.selectedSceneNodes[id] = true
         ui.selectedSceneEdge = null
@@ -346,7 +346,7 @@
       if (snapTarget && snapTarget !== oldParentId) {
         // Reattach to new parent — replace same-type fn if exists
         pushUndo('Reattach function node')
-        const existing = findAttachedFnNodes(snapTarget).find(n => n.type === droppedNode.type && n.id !== nodeId)
+        const existing = findAttachedModifiers(snapTarget).find(n => n.type === droppedNode.type && n.id !== nodeId)
         if (existing) {
           const eidx = song.scene.edges.findIndex(e => e.from === existing.id)
           if (eidx >= 0) song.scene.edges.splice(eidx, 1)
@@ -553,8 +553,8 @@
           ui.selectedSceneNodes = {}
           requestAnimationFrame(() => { sceneLabelsRef?.startEditing(id) })
         } else if (placingType.startsWith('fn-')) {
-          const fnType = placingType.slice(3) as import('../types.ts').FnNodeType
-          const id = sceneAddFnNode(fnType, undefined, norm.x, norm.y)
+          const fnType = placingType.slice(3) as import('../types.ts').ModifierType
+          const id = sceneAddModifier(fnType, undefined, norm.x, norm.y)
           ui.selectedSceneNodes = {}
           ui.selectedSceneNodes[id] = true
         } else {
@@ -942,16 +942,16 @@
         class:snap-target={isSnapTarget}
         class:just-attached={isBouncing}
         data-fn={isFn ? node.type : undefined}
-        data-tip={isFn ? fnNodeLabel(node) : undefined}
+        data-tip={isFn ? modifierLabel(node) : undefined}
         style="
           left: {PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)}px;
           top: {PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)}px;
           {nc ? `--nc: ${nc};` : ''}
           {isPlaying ? `--beat: ${30 / song.bpm}s;` : ''}
-          {isFn && node.fnParams?.transpose ? `--fn-semi: ${node.fnParams.transpose.semitones};` : ''}
-          {isFn && node.fnParams?.repeat ? `--fn-count: ${node.fnParams.repeat.count};` : ''}
-          {isFn && node.fnParams?.tempo ? `--fn-bpm: ${node.fnParams.tempo.bpm};` : ''}
-          {isFn && node.fnParams?.fx ? `--fn-fx-n: ${[node.fnParams.fx.verb, node.fnParams.fx.delay, node.fnParams.fx.glitch, node.fnParams.fx.granular].filter(Boolean).length};` : ''}
+          {isFn && node.modifierParams?.transpose ? `--fn-semi: ${node.modifierParams.transpose.semitones};` : ''}
+          {isFn && node.modifierParams?.repeat ? `--fn-count: ${node.modifierParams.repeat.count};` : ''}
+          {isFn && node.modifierParams?.tempo ? `--fn-bpm: ${node.modifierParams.tempo.bpm};` : ''}
+          {isFn && node.modifierParams?.fx ? `--fn-fx-n: ${[node.modifierParams.fx.verb, node.modifierParams.fx.delay, node.modifierParams.fx.glitch, node.modifierParams.fx.granular].filter(Boolean).length};` : ''}
         "
         onpointerdown={e => startDrag(e, node.id)}
         onpointerup={e => endNodeDrag(e, node.id)}
@@ -1029,7 +1029,7 @@
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
         {:else if isSweep}
-          {@const curves = (node.fnParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
+          {@const curves = (node.modifierParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
           {@const targetPatNode = song.scene.edges.find(e => e.from === node.id) ? song.scene.nodes.find(n => n.id === song.scene.edges.find(e => e.from === node.id)?.to) : null}
           {@const targetPatName = targetPatNode?.patternId ? (song.patterns.find(p => p.id === targetPatNode.patternId)?.name || 'Pattern') : 'unlinked'}
           {@const sweepPlaying = playback.playing && song.scene.edges.some(e => e.from === node.id && e.to === playback.sceneNodeId)}
@@ -1064,25 +1064,25 @@
               <span class="gen-target">{curves.length}</span>
             </div>
           </div>
-        {:else if isFn && node.type === 'fx' && node.fnParams?.fx}
+        {:else if isFn && node.type === 'fx' && node.modifierParams?.fx}
           {@const fxColors = [
-            node.fnParams.fx.verb     ? 'var(--color-olive)'  : null,
-            node.fnParams.fx.delay    ? 'var(--color-blue)'   : null,
-            node.fnParams.fx.glitch   ? 'var(--color-salmon)' : null,
-            node.fnParams.fx.granular ? 'var(--color-purple)' : null,
+            node.modifierParams.fx.verb     ? 'var(--color-olive)'  : null,
+            node.modifierParams.fx.delay    ? 'var(--color-blue)'   : null,
+            node.modifierParams.fx.glitch   ? 'var(--color-salmon)' : null,
+            node.modifierParams.fx.granular ? 'var(--color-purple)' : null,
           ].filter(Boolean) as string[]}
           <div class="fn-fx-stack">
             {#each fxColors as c, i}
-              <svg class="fn-icon fn-fx-layer" style="color: {c}; --fx-i: {i}; --fx-n: {fxColors.length}" viewBox="0 0 14 14" width="18" height="18" fill="currentColor" aria-hidden="true">{@html fnNodeIcon('fx')}</svg>
+              <svg class="fn-icon fn-fx-layer" style="color: {c}; --fx-i: {i}; --fx-n: {fxColors.length}" viewBox="0 0 14 14" width="18" height="18" fill="currentColor" aria-hidden="true">{@html modifierIcon('fx')}</svg>
             {/each}
             {#if fxColors.length === 0}
-              <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon('fx')}</svg>
+              <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html modifierIcon('fx')}</svg>
             {/if}
           </div>
-          <span class="fn-label">{fnNodeValue(node)}</span>
+          <span class="fn-label">{modifierValue(node)}</span>
         {:else if isFn}
-          <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(node.type as import('../types.ts').FnNodeType)}</svg>
-          <span class="fn-label">{#if isPlaying && node.fnParams?.repeat}×{(playback.sceneRepeatLeft ?? 0) + 1}{:else}{fnNodeValue(node)}{/if}</span>
+          <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html modifierIcon(node.type as import('../types.ts').ModifierType)}</svg>
+          <span class="fn-label">{#if isPlaying && node.modifierParams?.repeat}×{(playback.sceneRepeatLeft ?? 0) + 1}{:else}{modifierValue(node)}{/if}</span>
         {:else}
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
@@ -1269,7 +1269,7 @@
       {#if isSweepGhost}
         <span class="ghost-label">Sweep</span>
       {:else if isFnGhost}
-        <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html fnNodeIcon(placingType.slice(3) as import('../types.ts').FnNodeType)}</svg>
+        <svg class="fn-icon" viewBox="0 0 14 14" width="20" height="20" fill="currentColor" aria-hidden="true">{@html modifierIcon(placingType.slice(3) as import('../types.ts').ModifierType)}</svg>
       {:else}
         <span class="ghost-label">
           {placingType === 'turing' ? 'Turing' : placingType === 'quantizer' ? 'Quantizer' : placingType === 'tonnetz' ? 'Tonnetz' : 'Label'}

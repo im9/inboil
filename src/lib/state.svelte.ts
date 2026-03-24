@@ -18,7 +18,7 @@ export type {
   VoiceId, BrushMode, ChordShape,
   Trig, CellInsertFx, CellSampleRef, Cell, ChainFx, Pattern, Section, Track, Effects,
   SceneDecorator, AutomationPoint, AutomationTarget, AutomationParams, AutomationSnapshot,
-  FnNodeType, FnParams,
+  ModifierType, ModifierParams,
   GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams,
   SceneNode, SceneEdge, SceneLabel, Scene, Song,
   MidiDevice, SampleMeta, Lang,

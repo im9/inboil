@@ -106,7 +106,7 @@ export function bezierAt(b: BezierEdge, t: number): Pt {
 
 // ── Node display helpers ──
 
-import type { SceneNode, Pattern, FnNodeType } from './types.ts'
+import type { SceneNode, Pattern, ModifierType } from './types.ts'
 import { PATTERN_COLORS } from './constants.ts'
 import { ICON } from './icons.ts'
 
@@ -123,12 +123,12 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
   }
   // Function node labels (ADR 093)
   if (node.type === 'probability') return '?%'
-  return fnNodeLabel(node)
+  return modifierLabel(node)
 }
 
 /** Get compact label for a function node (ADR 093) */
-export function fnNodeLabel(node: SceneNode): string {
-  const fp = node.fnParams
+export function modifierLabel(node: SceneNode): string {
+  const fp = node.modifierParams
   if (fp?.transpose) {
     if (fp.transpose.mode === 'abs') return `KEY ${NOTE_NAMES[fp.transpose.key ?? 0]}`
     const s = fp.transpose.semitones
@@ -152,7 +152,7 @@ export function fnNodeLabel(node: SceneNode): string {
 }
 
 /** SVG inner content for a function node icon (ADR 110) */
-export function fnNodeIcon(type: FnNodeType): string {
+export function modifierIcon(type: ModifierType): string {
   switch (type) {
     case 'transpose': return ICON.transpose
     case 'repeat': return ICON.repeat
@@ -163,8 +163,8 @@ export function fnNodeIcon(type: FnNodeType): string {
 }
 
 /** Short value label for a function node (used alongside icon, ADR 110) */
-export function fnNodeValue(node: SceneNode): string {
-  const fp = node.fnParams
+export function modifierValue(node: SceneNode): string {
+  const fp = node.modifierParams
   if (fp?.transpose) {
     if (fp.transpose.mode === 'abs') return NOTE_NAMES[fp.transpose.key ?? 0]
     const s = fp.transpose.semitones
