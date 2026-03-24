@@ -160,9 +160,12 @@ Update the scene section in SidebarHelp to use "Generator" and "Modifier" termin
 - Update ADR INDEX.md notes for affected ADRs
 
 ### Phase 4 — Interactive docs (Playground embeds)
-- Create Playground components for scene docs (e.g. mini SceneView showing node types, edge wiring, modifier attachment)
-- Embed in nodes.mdx, modifiers.mdx, generators.mdx, sweep.mdx
+- Create `PlaygroundSceneNode.svelte` — renders actual node visuals (pattern pill, modifier satellite, generator faceplate, sweep faceplate) as a lightweight Svelte component
+- Embed per-page: each doc page shows its node type rendered as it appears in the app
+- Also add to nodes.mdx tool palette section alongside the icon table
 - Depends on Phase 1 completion (use new API names)
+
+**Status**: Phases 1–3 complete. Phase 4 partially done (tool palette icon table in nodes.mdx). Inline SVG icons on individual pages attempted but removed — Starlight sanitizes markdown table styles, and h1-level icon placement requires Playground components. Next step: build `PlaygroundSceneNode` component.
 
 ## Considerations
 
