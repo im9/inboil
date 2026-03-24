@@ -25,6 +25,52 @@
   --color-salmon:  #E8A090;
   --color-purple:  #9B6BA0;
   --color-teal:    #4A9B9B;
+  --color-danger:  #f87171;
+  --danger-border: rgba(248,113,113,0.40);
+  --danger-bg-hover: rgba(248,113,113,0.15);
+
+  /* ── Light zone (base: 30,32,40 = --color-fg) ── */
+  --lz-divider:       rgba(30,32,40, 0.06);
+  --lz-bg-hover:      rgba(30,32,40, 0.06);
+  --lz-border-subtle: rgba(30,32,40, 0.08);
+  --lz-bg-active:     rgba(30,32,40, 0.08);
+  --lz-border:        rgba(30,32,40, 0.10);
+  --lz-border-mid:    rgba(30,32,40, 0.12);
+  --lz-bg-press:      rgba(30,32,40, 0.14);
+  --lz-border-strong: rgba(30,32,40, 0.15);
+  --lz-text-hint:     rgba(30,32,40, 0.35);
+  --lz-text-mid:      rgba(30,32,40, 0.50);
+  --lz-step-border:   rgba(30,32,40, 0.50);
+  --lz-text:          rgba(30,32,40, 0.55);
+  --lz-text-strong:   rgba(30,32,40, 0.70);
+
+  /* ── Dark zone (base: 237,232,220 = --color-bg) ── */
+  --dz-divider:          rgba(237,232,220, 0.06);
+  --dz-bg-hover:         rgba(237,232,220, 0.08);
+  --dz-border-subtle:    rgba(237,232,220, 0.10);
+  --dz-bg-active:        rgba(237,232,220, 0.12);
+  --dz-bg-press:         rgba(237,232,220, 0.15);
+  --dz-border:           rgba(237,232,220, 0.15);
+  --dz-border-mid:       rgba(237,232,220, 0.25);
+  --dz-border-strong:    rgba(237,232,220, 0.30);
+  --dz-text-dim:         rgba(237,232,220, 0.35);
+  --dz-btn-border:       rgba(237,232,220, 0.35);
+  --dz-text-mid:         rgba(237,232,220, 0.55);
+  --dz-transport-border: rgba(237,232,220, 0.45);
+  --dz-text:             rgba(237,232,220, 0.70);
+  --dz-text-strong:      rgba(237,232,220, 0.85);
+  --dz-text-bright:      rgba(237,232,220, 0.90);
+
+  /* ── Accent overlays ── */
+  --olive-bg-subtle:      rgba(120,120,69, 0.08);
+  --olive-bg:             rgba(120,120,69, 0.15);
+  --olive-border:         rgba(120,120,69, 0.30);
+  --olive-border-strong:  rgba(120,120,69, 0.40);
+  --blue-bg-subtle:   rgba(68,114,180, 0.08);
+  --blue-bg-playhead: rgba(68,114,180, 0.13);
+  --salmon-bg-scale: rgba(232,160,144, 0.06);
+  --salmon-bg-key:   rgba(232,160,144, 0.08);
+
   --fs-min:  8px;
   --fs-sm:   9px;
   --fs-md:  10px;
