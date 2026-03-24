@@ -133,8 +133,8 @@
       title: L === 'ja' ? 'マスター' : 'MASTER',
       docsUrl: '/docs/sound/fx/',
       body: L === 'ja'
-        ? 'XYパッド: コンプ / サイドチェイン / FXリターン\nフェーダー: 音量 / メイクアップ / スウィング\nVUメーターでL/Rピーク確認'
-        : 'XY pads: compressor / sidechain / FX return\nFaders: volume / makeup / swing\nVU meter for L/R peaks',
+        ? 'XYパッド: コンプ / サイドチェイン / FXリターン / テープサチュレーター\nフェーダー: 音量 / メイクアップ / スウィング\nVUメーターでL/Rピーク確認'
+        : 'XY pads: compressor / sidechain / FX return / tape saturator\nFaders: volume / makeup / swing\nVU meter for L/R peaks',
     },
     // ── 4: ARRANGEMENT ──
     {

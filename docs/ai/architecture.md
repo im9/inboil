@@ -113,7 +113,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (47 files)  ← Svelte 5 UI components
+│   │   ├── components/ (49 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -133,7 +133,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockNavigator.svelte  ← Scene BFS navigator (ADR 070)
 │   │   │   ├── DockFxControls.svelte ← FX knobs/toggles/flavours
 │   │   │   ├── DockEqControls.svelte ← EQ band controls (freq/gain/Q)
-│   │   │   ├── DockMasterControls.svelte ← Master gain/comp/duck/return
+│   │   │   ├── DockMasterControls.svelte ← Master gain/comp/duck/return/saturator
 │   │   │   ├── PatternToolbar.svelte ← Pattern sheet toolbar (RAND, KEY, VKBD)
 │   │   │   ├── PerfButtons.svelte  ← Shared FILL/REV/BRK button strip
 │   │   │   ├── FxPad.svelte        ← FX XY pad, audio visualizer, per-track sends
@@ -159,6 +159,8 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
 │   │   │   ├── SweepCanvas.svelte  ← Sweep automation paint canvas (ADR 118)
+│   │   │   ├── SceneStamps.svelte  ← Decorative SVG stamps on scene canvas (ADR 119)
+│   │   │   ├── SceneStampPicker.svelte ← Stamp selection palette (ADR 119)
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)
 │   │   │   └── SceneRibbon.svelte  ← Playback scrubber (unused, future mobile)
 │   │   ├── audio/
@@ -210,6 +212,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── validate.ts              ← Song data validation (validateSongData, validateRecoverySnapshot)
 │   │   ├── keyRouter.ts             ← Keyboard event routing (ADR 115)
 │   │   ├── fatalError.svelte.ts     ← Fatal error state for ErrorDialog
+│   │   ├── stampLibrary.ts         ← Scene stamp SVG definitions (ADR 119)
 │   │   ├── icons.ts                ← SVG icon definitions
 │   │   ├── padHelpers.ts           ← XY pad coordinate helpers
 │   │   └── qr.ts                   ← QR code generation (multi-device)

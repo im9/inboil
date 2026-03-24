@@ -42,6 +42,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
 | **Sweep** | Function node for painting parameter automation curves across repeat cycles (ADR 118). Kidpix-inspired freehand/bézier canvas. Applies relative offsets to volume, pan, voice params, and sends during scene playback. |
 | **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
+| **SceneStamp** | Decorative SVG pictogram on the scene canvas with beat-synced playback animations (ADR 119). Kidpix-inspired personality stamps (pictogram figures, expressive faces). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
 | **Trig** | An active step that fires the synth. A step with no trig is "empty". |
 | **Polymetric** | Cells running with different step counts, causing their loops to phase against each other. |
@@ -86,6 +87,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Send effect** | An effect that receives a mix of multiple tracks at configurable levels (reverb, delay). |
 | **Sidechain ducker** | Kick-triggered gain reduction applied to all other tracks. Creates "pumping" effect. |
 | **Bus compressor** | Peak-detecting compressor applied to the master bus. |
+| **Tape saturator** | Asymmetric soft-knee tape saturation on the master bus. Controlled via MasterView SAT XY pad (drive + tone). Adds tape compression and subtle hiss (ADR 122). |
 
 ## UI Terms
 

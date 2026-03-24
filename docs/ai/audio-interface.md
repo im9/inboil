@@ -63,6 +63,11 @@ interface WorkletPattern {
     filter:  { on: boolean; x: number; y: number }  // master filter sweep
     eq:      { bands: Array<{ on: boolean; freq: number; gain: number; q: number; shelf?: boolean }> }  // 3-band EQ
     shimmerAmount: number                            // shimmer reverb depth (0–1)
+    reverbFlavour?: 'room' | 'hall' | 'shimmer'      // ADR 120: per-flavour engine routing (undefined = verb pad OFF)
+    earlyReflections?: { size: number; damp: number } // ADR 120: Room front-end
+    preDelay?: { ms: number }                         // ADR 120: Hall pre-delay
+    modDepth?: number                                 // ADR 120: Hall comb modulation depth (0–4 samples)
+    sat: { drive: number; tone: number } | null       // tape saturator — null = off
   }
   perf: {
     rootNote: number        // 0–11 chromatic key (0=C)
@@ -179,7 +184,7 @@ class GrooveboxEngine {
 }
 ```
 
-`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad`, and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
+`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad` (comp/duck/ret/sat XY pads), and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
 
 ## State Serialization
 

@@ -44,9 +44,11 @@ The TypeScript AudioWorklet implementation is fully functional with:
 - Song model: pattern pool (100 slots, 4 pre-populated in default song), scene graph
 - Scene graph: node-based directed graph for arrangement (pattern nodes + function nodes via ADR 066/093)
 - Generative scene nodes: Turing Machine, Quantizer, Tonnetz neo-Riemannian transforms (ADR 078/089)
+- Scene stamps: kidpix-inspired decorative SVG pictograms with beat-synced animations (ADR 119)
 - Graphic score automation: inline DockPanel editor with EQ/Master/FX automation targets (ADR 026). Curve automation removed (ADR 093) — replaced by per-step paramLocks
 - FX flavours: 3 variants per send effect — reverb (room/hall/shimmer), delay (digital/dotted/tape), glitch (bitcrush/redux/stutter), granular (cloud/freeze/stretch) (ADR 075/076)
 - Per-track dual insert FX chain: 2-slot serial chain (verb/delay/glitch) with per-step P-Locks (ADR 077/114)
+- Tape saturator: master bus saturation with tape compression and hiss, controlled via MasterView SAT XY pad (ADR 122)
 - SceneView always main view; pattern/FX/EQ as overlay sheets (ADR 054)
 - MatrixView: pattern pool browser sidebar (desktop)
 - Queued pattern switching

@@ -121,6 +121,7 @@ Scene {
   nodes:  SceneNode[]
   edges:  SceneEdge[]
   labels: SceneLabel[]        // free-floating canvas text labels (ADR 052)
+  stamps: SceneStamp[]        // decorative SVG stamps (ADR 119)
 }
 
 SceneDecorator {
@@ -141,7 +142,8 @@ AutomationTarget =
                             | 'retVerb' | 'retDelay' }
   | { kind: 'track';  trackIndex: number; param: 'volume' | 'pan' }
   | { kind: 'fx';     param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
-                            | 'filterCutoff' | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+                            | 'filterCutoff' | 'filterResonance'
+                            | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
   | { kind: 'eq';     band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
   | { kind: 'send';   trackIndex: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
 
@@ -170,9 +172,17 @@ SceneNode {
 FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
 
 SweepTarget =
+  | { kind: 'master'; param: 'masterVolume' | 'swing'
+                           | 'compThreshold' | 'compRatio'
+                           | 'duckDepth' | 'duckRelease'
+                           | 'retVerb' | 'retDelay'
+                           | 'satDrive' | 'satTone' }
   | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
   | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
-  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback' | 'filterCutoff' }
+  | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
+                          | 'filterCutoff' | 'filterResonance'
+                          | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
+  | { kind: 'eq';    band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
 
 SweepCurve {
   target: SweepTarget
@@ -188,7 +198,7 @@ FnParams {
   transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
   tempo?:     { bpm: number }
   repeat?:    { count: number }
-  fx?:        { verb: boolean; delay: boolean; glitch: boolean; granular: boolean }
+  fx?:        { verb: boolean; delay: boolean; glitch: boolean; granular: boolean; flavourOverrides?: Partial<FxFlavours> }
   sweep?:     SweepData                // repeat sweep automation (ADR 118)
 }
 
@@ -197,6 +207,16 @@ SceneEdge {
   from:  string                // source node id
   to:    string                // target node id
   order: number                // playback order when multiple edges from same source
+}
+```
+
+```typescript
+SceneStamp {
+  id:      string
+  stampId: string           // key into STAMP_LIBRARY
+  x:       number           // normalized 0–1
+  y:       number
+  scale?:  number           // size multiplier (default 1.0)
 }
 ```
 

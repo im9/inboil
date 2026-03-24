@@ -229,7 +229,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability.
 | filters.ts | DJFilter | Combined LP/HP sweep filter. X = LP←0.5→HP, Y = resonance. Used for master filter. |
 | filters.ts | PeakingEQ | Parametric peaking EQ band. Used for 3-band master EQ. |
 | filters.ts | ADSR | 4-stage envelope generator (attack/decay/sustain/release). |
-| effects.ts | SimpleReverb | Freeverb-style: 4 comb filters + 2 allpass, stereo spread. |
+| effects.ts | SimpleReverb | Freeverb core (8 comb + 4 allpass). Base for Room/Hall/Shimmer flavour engines (ADR 120). |
 | effects.ts | PingPongDelay | Stereo ping-pong with cross-feedback. |
 | effects.ts | SidechainDucker | Kick-triggered gain duck with exponential recovery. |
 | effects.ts | BusCompressor | Peak-detecting compressor (0.8ms attack, 60ms release). |
@@ -239,6 +239,7 @@ Located in `src/lib/audio/dsp/`. Split into modules for maintainability.
 | effects.ts | LiteReverb | Lightweight 2-comb reverb for per-track insert FX (ADR 077). |
 | effects.ts | StutterBuffer | Loop capture buffer for stutter glitch flavour (ADR 075). |
 | effects.ts | OctaveShifter | Pitch-shift octave effect for redux glitch flavour (ADR 075). |
+| effects.ts | TapeSaturator | Asymmetric soft-knee tape saturation for master bus (ADR 122). |
 | filters.ts | ShelfEQ | High/low shelf EQ filter. Used for EQ band shelf mode. |
 | voices.ts | Voice (interface) | Common tick/trigger/setParams/isIdle interface. |
 | voices.ts | DrumMachine | Unified drum synth (ADR 010). All drum VoiceIds use this class with different presets. |
@@ -273,6 +274,8 @@ voices ──┬─────────────────────�
                                                     │
                                               Master gain
                                                     │
+                                              TapeSaturator (optional, ADR 122)
+                                                    │
                                               PeakLimiter (0.92 ceiling)
                                                     │
                                                  output
@@ -290,9 +293,15 @@ Each track feeds into the mix bus with:
 
 All four sends are accumulated as separate buses per sample frame, then processed through their respective effects and summed. Sidechain source tracks (any voice with `sidechainSource: true` in VOICE_LIST, e.g. Kick/Kick808 — ADR 064) are separated from the mix and added back **after** the sidechain ducker so they punch through untouched.
 
-### SimpleReverb
+### Reverb (3 flavour engines — ADR 120)
 
-Freeverb-style: 4 comb filters (tuned, L/R stereo spread) → 2 allpass filters.
+Three dedicated reverb engines, selectable per-song via FX flavours:
+
+- **Room** — Early reflections (tap delay network) → Freeverb core (8 comb + 4 allpass). Tight, natural room sound.
+- **Hall** — Pre-delay (up to 50ms) → modulated comb filters (8 comb + 4 allpass). Large, evolving space.
+- **Shimmer** — Octave pitch-shifted feedback network (Faust shimmer.dsp port). Ethereal, infinite textures.
+
+50ms crossfade on flavour switch to avoid clicks.
 
 Parameters (global):
 - `size` 0.0–1.0 (maps to feedback 0.60–0.96)
@@ -384,6 +393,10 @@ Available types:
 - **glitch**: Sample-and-hold downsample
 
 Per-step P-Locks supported via `trig.paramLocks` keys: `ins0mix`, `ins0x`, `ins0y`, `ins1mix`, `ins1x`, `ins1y` (ADR 114 Phase 3). Insert FX do not affect send levels.
+
+### TapeSaturator (ADR 122)
+
+Asymmetric soft-knee tape saturation on the master bus. Controlled via MasterView SAT XY pad (X=drive 0.1–3.0, Y=tone LP cutoff 0–1). Includes tape compression and subtle hiss. Null when pad is OFF.
 
 ### PeakLimiter
 
