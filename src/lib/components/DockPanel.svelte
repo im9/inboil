@@ -32,7 +32,7 @@
 
   const MOD_TYPES: ModifierType[] = ['transpose', 'tempo', 'repeat', 'fx', 'sweep']  // sweep included for selectedModNode detection
 
-  // Selected function node (for fn node editing in scene view)
+  // Selected modifier node (for modifier node editing in scene view)
   const selectedModNode = $derived.by(() => {
     if (ui.patternSheet || isOverlaySheet) return null
     const selected = Object.keys(ui.selectedSceneNodes)
@@ -72,7 +72,7 @@
       .map(e => song.scene.nodes.find(n => n.id === e.from))
       .filter((n): n is SceneNode => n?.type === 'generative' && !!n.generative)
   })
-  // Fn nodes attached to current pattern (satellite edges, ADR 110)
+  // Modifier nodes attached to current pattern (satellite edges, ADR 110)
   const connectedModNodes = $derived.by(() => {
     if (!currentPatternSceneNode) return []
     const inEdges = song.scene.edges.filter(e => e.to === currentPatternSceneNode.id)
@@ -164,7 +164,7 @@
         <div class="section-divider" aria-hidden="true"></div>
       {/if}
 
-      <!-- Function node editor (ADR 110) -->
+      <!-- Modifier node editor (ADR 110) -->
       {#if selectedModNode}
         <span class="section-label">
           {selectedModNode.type === 'transpose' ? 'TRANSPOSE' : selectedModNode.type === 'repeat' ? 'REPEAT' : selectedModNode.type === 'tempo' ? 'TEMPO' : selectedModNode.type === 'sweep' ? 'SWEEP' : 'FX'}
@@ -665,7 +665,7 @@
     background: var(--dz-bg-hover);
   }
 
-  /* ── Fn node editor (ADR 110) ── */
+  /* ── Modifier node editor (ADR 110) ── */
   .mod-editor {
     display: flex;
     flex-direction: column;

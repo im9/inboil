@@ -283,7 +283,7 @@ describe('song round-trip: scene graph', () => {
     expect(patNodes.length).toBeGreaterThan(0)
   })
 
-  it('migrates legacy decorators to fn nodes on restore', () => {
+  it('migrates legacy decorators to modifier nodes on restore', () => {
     // Simulate old saved data with decorators (pre-ADR 093)
     const song = makeDefaultSong()
     const raw = JSON.parse(JSON.stringify(song))
@@ -291,7 +291,7 @@ describe('song round-trip: scene graph', () => {
     if (pNode) {
       pNode.decorators = [{ type: 'transpose', params: { semitones: 5 } }]
       const r = restoreSongPure(raw)
-      // Decorator should be migrated to a fn node
+      // Decorator should be migrated to a modifier node
       const modNodes = r.song.scene.nodes.filter(n => n.type === 'transpose')
       expect(modNodes.length).toBeGreaterThanOrEqual(1)
       const migrated = modNodes.find(n => n.modifierParams?.transpose?.semitones === 5)

@@ -203,7 +203,7 @@ export interface SweepCurve {
   color: string
 }
 
-/** Sweep automation data stored on sweep function node (ADR 118) */
+/** Sweep automation data stored on sweep modifier node (ADR 118) */
 export interface SweepData {
   curves: SweepCurve[]
 }
@@ -228,7 +228,7 @@ export interface SceneNode {
   y: number
   root: boolean           // true = playback entry point (exactly one)
   patternId?: string      // for type === 'pattern'
-  params?: Record<string, number>       // legacy fn node params (migration only)
+  params?: Record<string, number>       // legacy modifier node params (migration only)
   automationParams?: AutomationParams   // legacy automation (migration only)
   modifierParams?: ModifierParams        // modifier/sweep node params (ADR 093, ADR 125)
   fnParams?: ModifierParams             // @deprecated alias — migrated to modifierParams on load

@@ -83,7 +83,7 @@ describe('restoreScene', () => {
     expect(restored.labels).toEqual([])
   })
 
-  it('migrates decorators to fn nodes during restore', () => {
+  it('migrates decorators to modifier nodes during restore', () => {
     const src: Scene = {
       name: 'Test',
       nodes: [
@@ -98,7 +98,7 @@ describe('restoreScene', () => {
     // p2 should no longer have decorators
     const p2 = restored.nodes.find((n: SceneNode) => n.id === 'p2')!
     expect(p2.decorators).toBeUndefined()
-    // Should have a fn node with transpose modifierParams
+    // Should have a modifier node with transpose modifierParams
     const modNodes = restored.nodes.filter((n: SceneNode) => n.type === 'transpose')
     expect(modNodes.length).toBe(1)
     expect(modNodes[0].modifierParams?.transpose?.semitones).toBe(5)
@@ -122,7 +122,7 @@ describe('restoreScene', () => {
 // ── migrateDecoratorsToModifiers ──
 
 describe('migrateDecoratorsToModifiers', () => {
-  it('converts decorators on a pattern node to fn node chain', () => {
+  it('converts decorators on a pattern node to modifier node chain', () => {
     const nodes = [
       patNode('p1'),
       patNode('p2', 0.5, 0.5, [
@@ -133,12 +133,12 @@ describe('migrateDecoratorsToModifiers', () => {
     const edges = [edge('p1', 'p2')]
     const result = migrateDecoratorsToModifiers(nodes, edges)
     expect(result.converted).toBe(2)
-    // Should have new fn nodes
+    // Should have new modifier nodes
     const modNodes = result.nodes.filter((n: SceneNode) => n.type !== 'pattern')
     expect(modNodes.length).toBe(2)
-    // Incoming edge should point to first fn node in chain, not p2
+    // Incoming edge should point to first modifier node in chain, not p2
     const incomingToP2 = result.edges.filter((e: SceneEdge) => e.to === 'p2')
-    expect(incomingToP2.length).toBe(1) // last fn node → p2
+    expect(incomingToP2.length).toBe(1) // last modifier node → p2
   })
 
   it('does nothing when no decorators exist', () => {
@@ -166,7 +166,7 @@ describe('migrateDecoratorsToModifiers', () => {
 // ── purgeOrphanModifiers ──
 
 describe('purgeOrphanModifiers', () => {
-  it('removes fn nodes with no outgoing edges (dead ends)', () => {
+  it('removes modifier nodes with no outgoing edges (dead ends)', () => {
     const nodes = [patNode('p1'), modNode('f1')]
     const edges = [edge('p1', 'f1')]
     const result = purgeOrphanModifiers(nodes, edges)
@@ -175,7 +175,7 @@ describe('purgeOrphanModifiers', () => {
     expect(result.edges.every((e: SceneEdge) => e.from !== 'f1' && e.to !== 'f1')).toBe(true)
   })
 
-  it('preserves fn nodes with outgoing edges', () => {
+  it('preserves modifier nodes with outgoing edges', () => {
     const nodes = [modNode('f1'), patNode('p1')]
     const edges = [edge('f1', 'p1')]
     const result = purgeOrphanModifiers(nodes, edges)

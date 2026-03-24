@@ -180,10 +180,10 @@
   let zoomedRepeat = $state<number | null>(null)
 
   // ── Pattern info ──
-  // Read repeat count from the connected repeat fn node (for editing), fallback to playback state
+  // Read repeat count from the connected repeat modifier node (for editing), fallback to playback state
   const repeatCount = $derived.by(() => {
     if (playback.sceneRepeatTotal > 1) return playback.sceneRepeatTotal
-    // Find repeat fn node attached to the same pattern node as the sweep
+    // Find repeat modifier node attached to the same pattern node as the sweep
     const patId = pat?.id
     if (!patId) return 1
     for (const node of song.scene.nodes) {

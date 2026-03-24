@@ -65,7 +65,7 @@ export function restoreScene(src: Scene | undefined): Scene {
     return clone
   })
   let edges = src.edges.map(e => ({ ...e }))
-  // ADR 093: migrate decorators on pattern nodes → standalone function nodes
+  // ADR 093: migrate decorators on pattern nodes → standalone modifier nodes
   const dm = migrateDecoratorsToModifiers(nodes, edges)
   nodes = dm.nodes; edges = dm.edges
   // ADR 125: migrate fnParams → modifierParams
@@ -75,7 +75,7 @@ export function restoreScene(src: Scene | undefined): Scene {
     }
     delete n.fnParams
   }
-  // ADR 093: migrate legacy fn nodes (params → modifierParams)
+  // ADR 093: migrate legacy modifier nodes (params → modifierParams)
   migrateLegacyModifierParams(nodes)
   // Migrate legacy sweep 'all' kind → drop (vol/pan are per-track, not master)
   for (const n of nodes) {
@@ -113,7 +113,7 @@ function decoratorToModifierParams(dec: SceneDecorator): ModifierParams | null {
   }
 }
 
-/** Convert legacy fn node params (Record<string, number>) to typed ModifierParams */
+/** Convert legacy modifier node params (Record<string, number>) to typed ModifierParams */
 function legacyParamsToModifierParams(type: string, params: Record<string, number>): ModifierParams | null {
   switch (type) {
     case 'transpose': return { transpose: { semitones: params.semitones ?? 0, mode: params.mode === 1 ? 'abs' : 'rel', key: params.key } }
@@ -126,8 +126,8 @@ function legacyParamsToModifierParams(type: string, params: Record<string, numbe
 
 let _fnIdCounter = 0
 
-/** Migrate decorators on pattern nodes to standalone function nodes (ADR 093).
- *  For each decorator, creates a fn node wired before the pattern node. */
+/** Migrate decorators on pattern nodes to standalone modifier nodes (ADR 093).
+ *  For each decorator, creates a modifier node wired before the pattern node. */
 export function migrateDecoratorsToModifiers(
   nodes: SceneNode[],
   edges: SceneEdge[],
@@ -139,7 +139,7 @@ export function migrateDecoratorsToModifiers(
   for (const node of nodes) {
     if (!node.decorators?.length) continue
 
-    // Build chain of fn nodes from decorators (order preserved)
+    // Build chain of modifier nodes from decorators (order preserved)
     const modChain: SceneNode[] = []
     for (const dec of node.decorators) {
       const fp = decoratorToModifierParams(dec)
@@ -157,16 +157,16 @@ export function migrateDecoratorsToModifiers(
     }
 
     if (modChain.length > 0) {
-      // Rewire incoming edges → first fn node in chain
+      // Rewire incoming edges → first modifier node in chain
       const headId = modChain[0].id
       for (const e of edges) {
         if (e.to === node.id) e.to = headId
       }
-      // Chain fn nodes together
+      // Chain modifier nodes together
       for (let i = 0; i < modChain.length - 1; i++) {
         newEdges.push({ id: `e_mig_${++_fnIdCounter}`, from: modChain[i].id, to: modChain[i + 1].id, order: 0 })
       }
-      // Last fn node → pattern node
+      // Last modifier node → pattern node
       newEdges.push({ id: `e_mig_${++_fnIdCounter}`, from: modChain[modChain.length - 1].id, to: node.id, order: 0 })
       newNodes.push(...modChain)
     }
@@ -182,7 +182,7 @@ export function migrateDecoratorsToModifiers(
   }
 }
 
-/** Migrate legacy fn nodes that use params → modifierParams format */
+/** Migrate legacy modifier nodes that use params → modifierParams format */
 function migrateLegacyModifierParams(nodes: SceneNode[]): void {
   for (const n of nodes) {
     if (n.modifierParams) continue  // already migrated
@@ -197,7 +197,7 @@ function migrateLegacyModifierParams(nodes: SceneNode[]): void {
   }
 }
 
-/** Remove orphaned automation/probability nodes and dead-end fn nodes */
+/** Remove orphaned automation/probability nodes and dead-end modifier nodes */
 export function purgeOrphanModifiers(
   nodes: SceneNode[],
   edges: SceneEdge[],
@@ -209,7 +209,7 @@ export function purgeOrphanModifiers(
       toRemove.add(n.id)
       continue
     }
-    // Remove fn nodes with no outgoing edges (dead ends)
+    // Remove modifier nodes with no outgoing edges (dead ends)
     if (MODIFIER_TYPES.has(n.type) && !edges.some(e => e.from === n.id)) {
       toRemove.add(n.id)
     }

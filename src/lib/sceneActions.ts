@@ -457,7 +457,7 @@ export function findUpstreamGenerativeNodes(patternIndex: number): string[] {
   return result
 }
 
-// ── Function nodes (ADR 093) ──
+// ── Modifiers (ADR 093, ADR 125) ──
 
 const MODIFIER_DEFAULTS: Record<ModifierType, ModifierParams> = {
   transpose: { transpose: { semitones: 0, mode: 'rel' } },
@@ -469,7 +469,7 @@ const MODIFIER_DEFAULTS: Record<ModifierType, ModifierParams> = {
 
 const FN_TYPE_ORDER: Record<string, number> = { transpose: 0, repeat: 1, tempo: 2, fx: 3, sweep: 4 }
 
-/** Find fn nodes attached (wired) to a pattern node, sorted by type */
+/** Find modifier nodes attached (wired) to a pattern node, sorted by type */
 export function findAttachedModifiers(patternNodeId: string): SceneNode[] {
   const fnTypes: string[] = ['transpose', 'tempo', 'repeat', 'fx']  // sweep is independent (ADR 118)
   return song.scene.edges
@@ -514,9 +514,9 @@ export function repositionSatellites(patternNodeId: string): void {
   }
 }
 
-/** Add a function node, optionally wired before a pattern node or placed at x/y */
+/** Add a modifier node, optionally wired before a pattern node or placed at x/y */
 export function sceneAddModifier(type: ModifierType, patternNodeId?: string, x?: number, y?: number): string {
-  pushUndo('Add function node')
+  pushUndo('Add modifier node')
   const patNode = patternNodeId ? findNode(patternNodeId) : null
   const id = `fn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
   const node: SceneNode = {
@@ -529,7 +529,7 @@ export function sceneAddModifier(type: ModifierType, patternNodeId?: string, x?:
   }
   song.scene.nodes.push(node)
   if (patNode) {
-    // Replace existing fn node of same type on this pattern (ADR 116)
+    // Replace existing modifier node of same type on this pattern (ADR 116)
     const existing = findAttachedModifiers(patNode.id).find(n => n.type === type)
     if (existing) {
       const edgeIdx = song.scene.edges.findIndex(e => e.from === existing.id)
@@ -543,11 +543,11 @@ export function sceneAddModifier(type: ModifierType, patternNodeId?: string, x?:
   return id
 }
 
-/** Update function node params */
+/** Update modifier node params */
 export function sceneUpdateModifierParams(nodeId: string, modifierParams: ModifierParams): void {
   const node = findNode(nodeId)
   if (!node) return
-  pushUndo('Update function node')
+  pushUndo('Update modifier node')
   node.modifierParams = { ...node.modifierParams, ...modifierParams }
 }
 

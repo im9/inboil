@@ -312,7 +312,7 @@
             if (n?.type === 'pattern') repositionSatellites(id)
           }
         }
-        // Snap detection for fn nodes dragged near pattern nodes (ADR 110)
+        // Snap detection for modifier nodes dragged near pattern nodes (ADR 110)
         const FN_TYPES = ['transpose', 'tempo', 'repeat', 'fx']
         if (draggedNode && FN_TYPES.includes(draggedNode.type)) {
           const SNAP_DIST = 0.06
@@ -335,7 +335,7 @@
   function endNodeDrag(e: PointerEvent, nodeId: string) {
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
 
-    // Fn node drop: attach/reattach to pattern node, or detach (ADR 110)
+    // Modifier node drop: attach/reattach to pattern node, or detach (ADR 110)
     const FN_TYPES_SET = ['transpose', 'tempo', 'repeat', 'fx']
     const droppedNode = song.scene.nodes.find(n => n.id === nodeId)
     if (dragMoved && droppedNode && FN_TYPES_SET.includes(droppedNode.type)) {
@@ -345,7 +345,7 @@
 
       if (snapTarget && snapTarget !== oldParentId) {
         // Reattach to new parent — replace same-type fn if exists
-        pushUndo('Reattach function node')
+        pushUndo('Reattach modifier node')
         const existing = findAttachedModifiers(snapTarget).find(n => n.type === droppedNode.type && n.id !== nodeId)
         if (existing) {
           const eidx = song.scene.edges.findIndex(e => e.from === existing.id)
@@ -367,7 +367,7 @@
         repositionSatellites(snapTarget)
       } else if (!snapTarget && currentEdge) {
         // Dragged away from parent — detach (keep as free-floating)
-        pushUndo('Detach function node')
+        pushUndo('Detach modifier node')
         song.scene.edges.splice(song.scene.edges.indexOf(currentEdge), 1)
         if (oldParentId) repositionSatellites(oldParentId)
       }
@@ -375,7 +375,7 @@
       dragging = null
       return
     }
-    // Legacy snap-attach for non-fn nodes
+    // Legacy snap-attach for non-modifier nodes
     if (dragMoved && snapTarget) {
       sceneAddEdge(nodeId, snapTarget)
       justAttached = snapTarget
@@ -1087,7 +1087,7 @@
           <span class="node-label">{nodeName(node, song.patterns)}</span>
         {/if}
       </button>
-      <!-- Output handle for edge creation (hidden for fn nodes — use satellite attach) -->
+      <!-- Output handle for edge creation (hidden for modifier nodes — use satellite attach) -->
       {#if !isFn}
         <div
           class="edge-handle"
@@ -1216,7 +1216,7 @@
     activeType={placingStampId ? 'stamp' as BubblePickType : placingType}
   />
 
-  <!-- Radial bubble menu for function nodes (appears at pointer position) -->
+  <!-- Radial bubble menu for modifier nodes (appears at pointer position) -->
   {#if pickerOpen}
     <SceneBubbleMenu
       pos={pickerPos}
@@ -1432,7 +1432,7 @@
     transform: translate(-50%, -50%) scale(1.04);
   }
 
-  /* ── Function nodes (naked icon + label, ADR 110) ── */
+  /* ── Modifier nodes (naked icon + label, ADR 110) ── */
   .scene-node.fn {
     width: 36px;
     height: auto;

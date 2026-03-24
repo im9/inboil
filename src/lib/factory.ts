@@ -410,7 +410,7 @@ export const FACTORY_COUNT = FACTORY.length
  * shimmer    normal      tape dly    EQ sweep     stutter      fade out
  */
 export function makeDefaultScene(patterns: Pattern[]): Scene {
-  // ADR 093: function nodes for repeat/FX, pattern nodes are pure
+  // ADR 093: modifier nodes for repeat/FX, pattern nodes are pure
   type Seq = { patIdx: number; x: number; y: number; fnBefore?: ModifierParams[] }
 
   const seq: Seq[] = [
@@ -445,7 +445,7 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
   for (let i = 0; i < seq.length; i++) {
     const s = seq[i]
     const patId = `sn_${String(i).padStart(2, '0')}`
-    // Create fn nodes before the pattern node
+    // Create modifier nodes before the pattern node
     const fnIds: string[] = []
     for (const fp of s.fnBefore ?? []) {
       const fnId = `fn_${String(fnIdx++).padStart(2, '0')}`
@@ -453,18 +453,18 @@ export function makeDefaultScene(patterns: Pattern[]): Scene {
       nodes.push({ id: fnId, type: fnType, x: s.x - 0.04 * (s.fnBefore!.length - fnIds.length), y: s.y, root: false, modifierParams: fp })
       fnIds.push(fnId)
     }
-    // Chain fn nodes together
+    // Chain modifier nodes together
     for (let j = 0; j < fnIds.length - 1; j++) {
       edges.push({ id: `fe_${fnIdx++}`, from: fnIds[j], to: fnIds[j + 1], order: 0 })
     }
-    // Last fn node → pattern node
+    // Last modifier node → pattern node
     if (fnIds.length > 0) {
       edges.push({ id: `fe_${fnIdx++}`, from: fnIds[fnIds.length - 1], to: patId, order: 0 })
     }
     // Pattern node
     const isFirst = i === 0
     nodes.push({ id: patId, type: 'pattern', x: s.x, y: s.y, root: isFirst && fnIds.length === 0, patternId: patterns[s.patIdx].id })
-    // If first node and has fn nodes, root is the first fn node
+    // If first node and has modifier nodes, root is the first modifier node
     if (isFirst && fnIds.length > 0) nodes.find(n => n.id === fnIds[0])!.root = true
     // Edge from previous pattern to this chain head
     if (prevPatId) {

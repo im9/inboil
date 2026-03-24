@@ -121,12 +121,12 @@ export function nodeName(node: SceneNode, patterns: Pattern[]): string {
   if (node.type === 'generative' && node.generative) {
     return generativeLabel(node.generative)
   }
-  // Function node labels (ADR 093)
+  // Modifier node labels (ADR 093)
   if (node.type === 'probability') return '?%'
   return modifierLabel(node)
 }
 
-/** Get compact label for a function node (ADR 093) */
+/** Get compact label for a modifier node (ADR 093) */
 export function modifierLabel(node: SceneNode): string {
   const fp = node.modifierParams
   if (fp?.transpose) {
@@ -151,7 +151,7 @@ export function modifierLabel(node: SceneNode): string {
   return '?'
 }
 
-/** SVG inner content for a function node icon (ADR 110) */
+/** SVG inner content for a modifier node icon (ADR 110) */
 export function modifierIcon(type: ModifierType): string {
   switch (type) {
     case 'transpose': return ICON.transpose
@@ -162,7 +162,7 @@ export function modifierIcon(type: ModifierType): string {
   }
 }
 
-/** Short value label for a function node (used alongside icon, ADR 110) */
+/** Short value label for a modifier node (used alongside icon, ADR 110) */
 export function modifierValue(node: SceneNode): string {
   const fp = node.modifierParams
   if (fp?.transpose) {

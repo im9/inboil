@@ -44,9 +44,9 @@ export function soloPatternIndex(): number | null {
   return idx >= 0 ? idx : null
 }
 
-// ── Function nodes & generative chains (ADR 093) ────────────────────
+// ── Modifiers // ── Modifier nodes & generative chains generative chains (ADR 093) ────────────────────
 
-/** Apply a function node's effect during scene traversal (pass-through) */
+/** Apply a modifier node's effect during scene traversal (pass-through) */
 function applyModifierNode(node: SceneNode): void {
   const fp = node.modifierParams
   if (!fp) return
@@ -80,13 +80,13 @@ function applyModifierNode(node: SceneNode): void {
   }
 }
 
-/** True if node type is a pass-through function node */
+/** True if node type is a pass-through modifier node */
 function isModifierNode(node: SceneNode): boolean {
   return node.type === 'transpose' || node.type === 'tempo' || node.type === 'repeat' || node.type === 'fx' || node.type === 'sweep'
 }
 
-/** Apply satellite fn nodes attached to a pattern node (ADR 110).
- *  FX resets to OFF when no FX fn node is attached — scoped to pattern. */
+/** Apply satellite modifier nodes attached to a pattern node (ADR 110).
+ *  FX resets to OFF when no FX modifier node is attached — scoped to pattern. */
 function applySatelliteModifiers(patternNodeId: string): void {
   const satellites: SceneNode[] = []
   for (const edge of song.scene.edges) {
@@ -183,7 +183,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
   }
-  // Function nodes: apply effect and follow outgoing edge (pass-through — legacy)
+  // Modifier nodes: apply effect and follow outgoing edge (pass-through — legacy)
   if (isModifierNode(node)) applyModifierNode(node)
   const edges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)
   if (edges.length > 0) {
@@ -219,7 +219,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       return { advanced: true, patternIndex: idx }
     }
 
-    // Function nodes: apply effect and continue traversal (pass-through)
+    // Modifier nodes: apply effect and continue traversal (pass-through)
     if (isModifierNode(node)) applyModifierNode(node)
 
     const outEdges = song.scene.edges.filter(e => e.from === node.id).sort((a, b) => a.order - b.order)

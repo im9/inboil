@@ -65,15 +65,15 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 045 | Decouple Playback from View | Implemented | Separate `playback.mode` from `ui.phraseView` |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Implemented | Random branching at forks + terminal stop |
-| 050 | Scene Function Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode |
+| 050 | Scene Modifier Nodes | Implemented | SVG icon nodes, root visual upgrade, `fx` node, transpose absolute mode. *Renamed: "Function Node" → "Modifier" (ADR 125)* |
 | 051 | Scene View Polish | Implemented | Play/stop on root, per-node solo (armed/active), progress bar, edge handles, solid accent edge |
 | 052 | Scene Free-Floating Labels | Implemented | Canvas text labels independent of nodes |
-| 053 | Scene Automation Node | Implemented | *Curve automation removed (ADR 093) — replaced by per-step paramLocks. Snapshot/restore preserved for fn nodes* |
+| 053 | Scene Automation Node | Implemented | *Curve automation removed (ADR 093) — replaced by per-step paramLocks. Snapshot/restore preserved for modifier nodes* |
 | 054 | Overlay Sheet Model | Implemented | Pattern/FX/EQ as overlay sheets over SceneView |
 | 055 | Dock Minimize & Sidebar Separation | Implemented | DockPanel edge-handle minimize, sidebar as fixed drawer |
 | 059 | Scene Multi-Select | Implemented | Rectangle select, group drag, alignment tools, partial auto-layout, multi-copy/paste |
-| 066 | Scene Node Decorators | Implemented | *Decorators migrated to standalone function nodes (ADR 093). Snap-attach removed, fn nodes wired via edges* |
-| 069 | Dock Panel Decorator Editor | Implemented | *Decorator editor removed (ADR 093). Function nodes edited via DockPanel when selected in scene* |
+| 066 | Scene Node Decorators | Implemented | *Decorators migrated to standalone modifier nodes (ADR 093, ADR 125). Snap-attach removed, modifiers wired via edges* |
+| 069 | Dock Panel Decorator Editor | Implemented | *Decorator editor removed (ADR 093). Modifier nodes edited via DockPanel when selected in scene* |
 | 070 | Scene Navigator | Implemented | Pattern list in DockPanel, tap-to-select, BPM-synced playback pulse, context-aware display for EQ/Master/FX sheets |
 | 078 | Generative Scene Nodes | Implemented | Generative nodes (Quantizer/Tonnetz/Turing Machine), write+live modes, Freeze, presets+seed, DockPanel editing |
 | 079 | Cell.trackId | Implemented | Explicit trackId on Cell decouples array position from track identity, enables per-pattern track counts |

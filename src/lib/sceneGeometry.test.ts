@@ -41,7 +41,7 @@ describe('bezierEdge', () => {
     expect(b.p1.x).toBeCloseTo(200 - PAT_HALF_W, 0)
   })
 
-  it('uses smaller offsets for function nodes', () => {
+  it('uses smaller offsets for modifier nodes', () => {
     const from = { x: 0, y: 0 }
     const to = { x: 200, y: 0 }
     const b = bezierEdge(from, to, 'fn', 'fn')

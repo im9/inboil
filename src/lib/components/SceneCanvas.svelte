@@ -68,7 +68,7 @@
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
       if (!fromNode || !toNode) continue
-      // Hide edges from fn nodes — they are satellite-attached (ADR 110)
+      // Hide edges from modifier nodes — they are satellite-attached (ADR 110)
       if (FN_TYPES.has(fromNode.type)) continue
 
       const from = toPixel(fromNode.x, fromNode.y, WORLD_W, WORLD_H)
@@ -96,7 +96,7 @@
       }
     }
 
-    // Edge order badges (only when source has >1 outgoing, skip fn nodes)
+    // Edge order badges (only when source has >1 outgoing, skip modifier nodes)
     const edgeCounts = new Map<string, number>()
     for (const e of edges) {
       const src = nodes.find(n => n.id === e.from)

@@ -1,5 +1,5 @@
 /**
- * Scene playback snapshot/restore — preserves globals mutated by function nodes.
+ * Scene playback snapshot/restore — preserves globals mutated by modifier nodes.
  * Curve automation removed (ADR 093 — replaced by per-step paramLocks).
  */
 import { song, bumpSongVersion, perf, fxPad, fxFlavours, masterPad, playback } from './state.svelte.ts'
@@ -72,7 +72,7 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
       }
     }
   }
-  // Restore FX pad & flavours mutated by function nodes
+  // Restore FX pad & flavours mutated by modifier nodes
   const FX_PAD_KEYS = ['verb', 'delay', 'glitch', 'granular', 'filter', 'eqLow', 'eqMid', 'eqHigh'] as const
   for (const key of FX_PAD_KEYS) Object.assign(fxPad[key], snap.fxPad[key])
   Object.assign(fxFlavours, snap.fxFlavours)

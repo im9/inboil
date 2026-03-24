@@ -3,7 +3,7 @@
 // Most icons use viewBox="0 0 14 14" unless noted.
 
 export const ICON = {
-  // ── Scene function node icons (viewBox 0 0 14 14) ──
+  // ── Scene modifier node icons (viewBox 0 0 14 14) ──
 
   /** Musical note with up/down arrow — transpose (ADR 110) */
   transpose: `<circle cx="4.5" cy="10.5" r="2.2" fill="currentColor"/><rect x="6.2" y="3" width="1.4" height="7.5" fill="currentColor"/>`

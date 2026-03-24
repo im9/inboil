@@ -118,8 +118,8 @@
     return () => cancelAnimationFrame(rafId)
   })
 
-  // ── Loop-mode function node application (ADR 093) ───────────────
-  // Apply fn nodes (transpose, FX) connected to the current pattern in loop mode
+  // ── Loop-mode modifier application (ADR 093) ───────────────
+  // Apply modifier nodes (transpose, FX) connected to the current pattern in loop mode
   // so edits are heard without switching to scene playback.
   // Skips tempo (user controls BPM directly) and repeat (meaningless in loop).
   function applyLoopModifiers(): void {
@@ -130,7 +130,7 @@
       perf.rootNote = song.rootNote
       return
     }
-    // Walk backward through incoming fn node edges
+    // Walk backward through incoming modifier node edges
     let transpose = 0
     let absKey: number | null = null
     const visited = new Set<string>()
@@ -164,7 +164,7 @@
     perf.rootNote = ((raw % 12) + 12) % 12
   }
 
-  // Reactively apply fn nodes when playing in loop mode
+  // Reactively apply modifier nodes when playing in loop mode
   $effect(() => {
     if (playback.mode !== 'loop' || !playback.playing) return
     applyLoopModifiers()
