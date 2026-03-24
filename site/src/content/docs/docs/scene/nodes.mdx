@@ -1,6 +1,6 @@
 ---
 title: Scene Nodes
-description: Pattern nodes, generative nodes, and labels in the scene graph.
+description: Pattern nodes, generators, sweep, probability, and stamps in the scene graph.
 sidebar:
   order: 1
 ---
@@ -28,19 +28,33 @@ The most common node type. References one of your patterns from the Matrix. When
 - **Position** — drag to reposition in the canvas
 - **Root marker** — the starting point for scene playback (one per scene)
 
-### Generative Node
+### Generator
 
-Creates musical material algorithmically in real-time. Add from the **tool palette** (circular buttons with colored accent rings) at the top of the scene, or **double-click** (long-press on mobile) empty space to open the bubble menu. Connecting a generative node to a pattern **auto-generates** results immediately.
+Creates musical material algorithmically in real-time. Add from the **tool palette** (circular buttons with colored accent rings) at the top of the scene, or **double-click** (long-press on mobile) empty space to open the bubble menu. Connecting a generator to a pattern **auto-generates** results immediately.
 
 | Engine | Behavior |
 |--------|----------|
-| **Turing Machine** | Shift register with probability — generates pseudo-random sequences that evolve over time |
-| **Quantizer** | Takes incoming note data and snaps to a scale — useful after a Turing Machine |
-| **Tonnetz** | Navigates the tone network (a mathematical map of harmonic relationships) to generate chord progressions |
+| **[Turing Machine](/docs/scene/generators/turing-machine/)** | Shift register with probability — generates pseudo-random sequences that evolve over time |
+| **[Quantizer](/docs/scene/generators/quantizer/)** | Takes incoming note data and snaps to a scale — useful after a Turing Machine |
+| **[Tonnetz](/docs/scene/generators/tonnetz/)** | Navigates the tone network (a mathematical map of harmonic relationships) to generate chord progressions |
 
-Generative nodes have their own parameters editable in the **Dock panel**. They don't reference a pattern — they create one on the fly.
+Generators have their own parameters editable in the **Dock panel**. They don't reference a pattern — they create one on the fly.
 
-For detailed parameter reference, chaining examples, and merge modes, see **[Function Nodes](/docs/scene/function/)**.
+See **[Generators](/docs/scene/generators/)** for merge modes, seed, presets, and chaining details.
+
+### Sweep
+
+Sweep nodes paint parameter automation curves across a pattern's playback. They use a faceplate display (like generators) and connect to patterns via edges. Double-tap to open the paint canvas.
+
+See **[Sweep](/docs/scene/sweep/)** for drawing modes, shape presets, and parameter details.
+
+### Probability
+
+Probability nodes are fork nodes that let you control edge selection weights instead of equal random probability. Place a probability node between patterns to create weighted branching — each outgoing edge can have its own weight.
+
+### Stamps
+
+Visual decorations placed on the canvas — geometric shapes chosen from a stamp library. Stamps have no effect on playback; they are purely for visual organization and aesthetics. Add from the toolbar stamp picker.
 
 ### Labels
 
@@ -78,14 +92,15 @@ Every scene has one **root node** (marked with a dot). This is where scene playb
 | **Click** edge | Select edge (Arrow Up/Down to reorder) |
 | **Drag** node handle (right side) | Start edge-draw (drag to target) |
 
-| **Double-click** empty space | Open bubble menu (add function node or label) |
+| **Double-click** empty space | Open bubble menu (add generator or label) |
 | **Delete** key | Remove selected node or edge |
 | **Scroll / pinch** | Zoom |
 | **Middle-drag / two-finger** | Pan canvas |
 
 ## Related
 
-- [Function Nodes](/docs/scene/function/) — Turing Machine, Quantizer, Tonnetz in detail
-- [Function Node Modifiers](/docs/scene/decorators/) — modify node playback
+- [Generators](/docs/scene/generators/) — Turing Machine, Quantizer, Tonnetz in detail
+- [Modifiers](/docs/scene/modifiers/) — per-node playback modifiers
+- [Sweep](/docs/scene/sweep/) — parameter automation curves
 - [Playback](/docs/scene/playback/) — how the engine traverses the graph
 - [Build a Scene](/docs/getting-started/arrangement/) — tutorial walkthrough

@@ -1,0 +1,65 @@
+---
+title: Generators
+description: Generative engines that create musical content algorithmically.
+sidebar:
+  order: 0
+---
+
+Generators create musical material algorithmically instead of playing a stored pattern. Add one from the **tool palette** (circular buttons with colored accent rings) at the top of the Scene canvas, or by **double-clicking** (long-pressing on mobile) empty space to open the bubble menu.
+
+Select a generator to edit its parameters in the **Dock panel**.
+
+## Engines
+
+| Engine | Behavior |
+|--------|----------|
+| **[Turing Machine](/docs/scene/generators/turing-machine/)** | Shift-register sequencer — generates pseudo-random sequences that evolve over time |
+| **[Quantizer](/docs/scene/generators/quantizer/)** | Snaps incoming notes to a scale — most useful chained after a Turing Machine |
+| **[Tonnetz](/docs/scene/generators/tonnetz/)** | Navigates harmonic relationships to generate chord progressions |
+
+## Auto-generate on Connect
+
+When you connect a generator to a pattern, generation runs **automatically** — you see results immediately without pressing any button. Parameter changes also trigger automatic regeneration (debounced 300ms).
+
+The **GEN** button on the node faceplate is for manual re-generation when you want a fresh result.
+
+## Merge Mode
+
+When a generator writes to a pattern, the **merge mode** controls how generated notes combine with existing content:
+
+| Mode | Behavior |
+|------|----------|
+| **Replace** | Generated notes fully replace the target track (default) |
+| **Fill** | Generated notes fill only empty (inactive) steps — existing content is preserved |
+
+## Target Track
+
+Each generator targets a specific track in the connected pattern. The target track name is shown on the node faceplate (e.g., `→ KICK`). When connecting, the first unused track is automatically selected.
+
+## Seed
+
+By default, generation uses a new random seed each time, producing different results. Set a **fixed seed** to get reproducible output — the same seed always produces the same sequence.
+
+- **Randomize** — pick a new random seed
+- **Clear** — remove the seed (return to non-deterministic mode)
+
+## Presets
+
+Each engine comes with factory presets. Select one from the preset dropdown in the Dock panel to load a starting point, then tweak from there.
+
+## Generate in the Step Sequencer
+
+When a generator is connected upstream of a pattern, a **sparkle button (✦)** appears in the Pattern Toolbar. This lets you generate directly from the step sequencer without switching to the Scene view.
+
+1. **Arm** — tap the sparkle button to arm generative mode (button highlights)
+2. **Generate on loop head** — while Loop playback is running, generation fires automatically at the start of each loop, writing fresh content to the pattern
+3. **Disarm** — tap again to stop generating
+
+This workflow is ideal for live experimentation: loop a pattern, arm the generator, and tweak parameters in the Dock while hearing results on every loop.
+
+## Related
+
+- [Scene Nodes](/docs/scene/nodes/) — node types overview
+- [Playback](/docs/scene/playback/) — how generators integrate with scene playback
+- [Modifiers](/docs/scene/modifiers/) — per-node playback modifiers
+- [Sweep](/docs/scene/sweep/) — parameter automation curves
