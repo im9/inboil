@@ -82,14 +82,11 @@ export default defineConfig({
           items: [
             { slug: 'docs/scene/nodes' },
             { slug: 'docs/scene/modifiers' },
+            { slug: 'docs/scene/sweep' },
             { slug: 'docs/scene/playback' },
             {
               label: 'Generators',
               autogenerate: { directory: 'docs/scene/generators' },
-            },
-            {
-              label: 'Sweep',
-              autogenerate: { directory: 'docs/scene/sweep' },
             },
           ],
         },
