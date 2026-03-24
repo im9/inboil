@@ -711,19 +711,30 @@ export class ShimmerReverb {
       this.lfoIncs[i] = ShimmerReverb.LFO_RATES[i] / sr
       this.lfoPhases[i] = i * 0.25  // spread initial phases
     }
+    // Hold: internal SimpleReverb for clean freeze
+    this._holdReverb = new SimpleReverb(sr)
+    this._holdReverb.setSize(0.85)
+    this._holdReverb.setDamp(0.15)
+    // Clouds-style smooth freeze: ~200ms one-pole ramp
+    this._freezeCoeff = Math.exp(-1 / (0.2 * sr))
   }
 
-  setSize(s: number) { this.targetSize = 0.5 + s * 2.5 }  // maps 0–1 → 0.5–3.0 (Faust range 1–3)
-  setDamp(d: number) { if (!this._frozen) { this._savedDamp = 0.005 + d * 0.99; this.dampCoeff = this._savedDamp } }
-  setFeedback(fb: number) { if (!this._frozen) { this._savedFb = Math.min(fb, 0.35); this.feedback = this._savedFb } }
+  setSize(s: number) { this.targetSize = 0.5 + s * 2.5; this._holdReverb.setSize(s) }
+  setDamp(d: number) { this.dampCoeff = 0.005 + d * 0.99; this._holdReverb.setDamp(d) }
+  setFeedback(fb: number) { this.feedback = Math.min(fb, 0.35) }
   setShimmerAmount(a: number) { this.shimmerAmount = a }
-  private _frozen = false; private _savedFb = 0; private _savedDamp = 0.3
-  /** Hold: max feedback, gate input via flag, damp → minimum */
+  private _frozen = false
+  // Hold: crossfade to internal SimpleReverb (which handles freeze cleanly)
+  private _holdReverb: SimpleReverb
+  private _freezeTarget = 0
+  private _freezeLp = 0
+  private _freezeCoeff: number = 0
+  /** Hold: crossfade to frozen SimpleReverb */
   setFreeze(on: boolean) {
     if (on === this._frozen) return
     this._frozen = on
-    if (on) { this.feedback = 0.65; this.dampCoeff = 0.005 }
-    else { this.reset(); this.feedback = this._savedFb; this.dampCoeff = this._savedDamp }
+    this._freezeTarget = on ? 1 : 0
+    this._holdReverb.setFreeze(on)
   }
 
   reset() {
@@ -826,11 +837,13 @@ export class ShimmerReverb {
       if (this.lfoPhases[i] >= 1) this.lfoPhases[i] -= 1
     }
 
-    // Cross-mix input with feedback (Faust: _*feedback+_*0.3)
-    // During freeze: gate input to let the network recirculate without new audio
-    const inputGain = this._frozen ? 0 : 0.3
-    const fwdL = this.fbR * fb + inL * inputGain  // cross: fbR→L
-    const fwdR = this.fbL * fb + inR * inputGain  // cross: fbL→R
+    // Clouds-style: smooth freeze ramp (0→1 over ~200ms)
+    this._freezeLp = this._freezeTarget + (this._freezeLp - this._freezeTarget) * this._freezeCoeff
+    const fz = this._freezeLp  // 0=normal, 1=fully frozen
+
+    // Shimmer reverb runs normally
+    const fwdL = this.fbR * fb + inL * 0.3  // cross: fbR→L
+    const fwdR = this.fbL * fb + inR * 0.3  // cross: fbL→R
 
     // Forward path: 2 allpass chains + HF damping (one per channel)
     // L channel: AP(601*s, 0.7*diff) → AP(613*s, 0.75*diff) → LP
@@ -868,7 +881,12 @@ export class ShimmerReverb {
     this.fbL = fbPathL
     this.fbR = fbPathR
 
-    this.out[0] = L; this.out[1] = R
+    // Feed shimmer OUTPUT to hold reverb (captures shimmer character)
+    const holdOut = this._holdReverb.process((L + R) * 0.25)
+
+    // Crossfade: shimmer output → frozen SimpleReverb output
+    this.out[0] = L * (1 - fz) + holdOut[0] * fz
+    this.out[1] = R * (1 - fz) + holdOut[1] * fz
     return this.out
   }
 }

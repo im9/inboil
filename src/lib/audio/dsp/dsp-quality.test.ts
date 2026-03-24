@@ -898,19 +898,21 @@ describe('Reverb freeze (ADR 121)', () => {
     const rev = new ShimmerReverb(SR)
     rev.setSize(0.7); rev.setDamp(0.3)
     rev.setFeedback(0.2); rev.setShimmerAmount(0.3)
-    // Feed a burst of signal
-    for (let i = 0; i < 4096; i++) rev.process(i < 512 ? Math.sin(i * 0.1) * 0.5 : 0, i < 512 ? Math.sin(i * 0.1) * 0.5 : 0)
+    // Feed sustained signal so ring buffer is full of reverb output
+    for (let i = 0; i < SR * 2; i++) rev.process(Math.sin(i * 0.05) * 0.3, Math.sin(i * 0.05) * 0.3)
     rev.setFreeze(true)
-    // Measure level right after freeze
+    // Let reverb engine settle after freeze
+    for (let i = 0; i < Math.round(SR * 0.1); i++) rev.process(0, 0)
+    // Measure level once loop is playing
     const earlyBuf = new Float64Array(2048)
     for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); earlyBuf[i] = r[0] }
     const earlyLevel = peakAbs(earlyBuf)
-    // Measure level 1 second later
-    for (let i = 0; i < SR; i++) rev.process(0, 0) // skip 1 second
+    // Measure level 2 seconds later — buffer loop should maintain level
+    for (let i = 0; i < SR * 2; i++) rev.process(0, 0)
     const lateBuf = new Float64Array(2048)
     for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); lateBuf[i] = r[0] }
     const lateLevel = peakAbs(lateBuf)
-    // Frozen tail should retain at least 50% of its level after 1 second
+    // Frozen tail should retain at least 50% of its level after 2 seconds
     expect(earlyLevel).toBeGreaterThan(0)
     expect(lateLevel / earlyLevel).toBeGreaterThan(0.5)
     rev.setFreeze(false)
@@ -920,17 +922,18 @@ describe('Reverb freeze (ADR 121)', () => {
     const rev = new ShimmerReverb(SR)
     rev.setSize(0.7); rev.setDamp(0.3)
     rev.setFeedback(0.2); rev.setShimmerAmount(0.3)
-    // Feed signal — shimmer needs L+R input
-    const inp = impulse(4096)
-    for (let i = 0; i < inp.length; i++) rev.process(inp[i], inp[i])
+    // Feed sustained signal so ring buffer has content
+    for (let i = 0; i < SR * 2; i++) rev.process(Math.sin(i * 0.05) * 0.3, Math.sin(i * 0.05) * 0.3)
     rev.setFreeze(true)
     const frozenBuf = new Float64Array(2048)
     for (let i = 0; i < 2048; i++) { const r = rev.process(0, 0); frozenBuf[i] = r[0] }
     expect(peakAbs(frozenBuf)).toBeGreaterThan(0)
     rev.setFreeze(false)
+    // Clouds-style ramp: wait for ~500ms fade + reverb tail decay
+    for (let i = 0; i < SR; i++) rev.process(0, 0)
     const releasedBuf = new Float64Array(512)
     for (let i = 0; i < 512; i++) { const r = rev.process(0, 0); releasedBuf[i] = r[0] }
-    expect(peakAbs(releasedBuf)).toBeLessThan(1e-10)
+    expect(peakAbs(releasedBuf)).toBeLessThan(0.01)
   })
 })
 
