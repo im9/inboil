@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import PlaygroundSceneNode from '../../../../../../components/PlaygroundSceneNode.svelte';
+
 スウィープノードを使うと、**時間の経過とともにパラメータを変化させるカーブを描く**ことができます。アシッド的なフィルタースウィープ、ボリュームフェード、複数リピートにわたるテクスチャの変化に最適です。
 
 ## 使い方
@@ -16,6 +18,8 @@ sidebar:
 5. キャンバスに**カーブを描く** — X軸は時間（全リピート分）、Y軸はパラメータのオフセット
 
 スウィープはパラメータのベース値に対する**相対オフセット**を適用します。中心線より上は値の増加、下は減少を意味します。
+
+<PlaygroundSceneNode show="sweep" client:visible />
 
 ## ペイントキャンバス
 

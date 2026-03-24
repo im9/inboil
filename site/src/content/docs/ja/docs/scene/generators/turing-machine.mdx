@@ -5,6 +5,10 @@ sidebar:
   order: 2
 ---
 
+import PlaygroundGenerator from '../../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="turing" client:visible />
+
 [Music Thing Modular の Turing Machine](https://musicthing.co.uk/) にインスパイアされたシフトレジスターシーケンサーです。ビットの連鎖がステップごとにシフトし、最後のビットが反転する確率をコントロールします。結果として、**徐々に変化する**シーケンスが生まれます — 固定ループから完全なランダムまで。
 
 ## パラメータ

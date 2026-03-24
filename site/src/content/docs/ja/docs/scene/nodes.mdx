@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import PlaygroundSceneView from '../../../../../components/PlaygroundSceneView.svelte';
+import PlaygroundSceneNode from '../../../../../components/PlaygroundSceneNode.svelte';
 
 ## 概要
 
@@ -32,6 +33,12 @@ import PlaygroundSceneView from '../../../../../components/PlaygroundSceneView.s
 <tr><td style="vertical-align:middle;text-align:center"><svg viewBox="0 0 14 14" width="18" height="18" style="display:block;margin:auto"><rect x="4" y="1" width="6" height="5" rx="1.5" fill="currentColor"/><rect x="5.5" y="5" width="3" height="3" fill="currentColor"/><rect x="2.5" y="8" width="9" height="2" rx="0.5" fill="currentColor"/><rect x="1.5" y="10.5" width="11" height="2" rx="0.5" fill="currentColor" opacity="0.5"/></svg></td><td>Stamp</td><td>Visual</td><td>装飾シェイプ</td></tr>
 </tbody>
 </table>
+
+### ノードの形状
+
+各ノードカテゴリはキャンバス上で固有の形状を持ちます：
+
+<PlaygroundSceneNode client:visible />
 
 ## ノードの種類
 

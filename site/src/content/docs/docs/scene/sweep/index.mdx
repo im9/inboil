@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import PlaygroundSceneNode from '../../../../../components/PlaygroundSceneNode.svelte';
+
 A sweep node lets you **draw parameter changes over time** — perfect for acid-style filter sweeps, volume fades, and evolving textures across multiple repeats of a pattern.
 
 ## How It Works
@@ -16,6 +18,8 @@ A sweep node lets you **draw parameter changes over time** — perfect for acid-
 5. **Draw a curve** on the canvas — the X axis is time (across all repeats), the Y axis is the parameter offset
 
 The sweep applies **relative offsets** to the parameter's base value. Drawing above the center line increases the value; below decreases it.
+
+<PlaygroundSceneNode show="sweep" client:visible />
 
 ## Paint Canvas
 

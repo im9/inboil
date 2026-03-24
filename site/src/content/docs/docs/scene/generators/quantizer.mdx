@@ -5,6 +5,10 @@ sidebar:
   order: 3
 ---
 
+import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="quantizer" client:visible />
+
 Takes a sequence of notes and **snaps each to the nearest scale degree**. Most commonly used after a Turing Machine to lock random output to a musical key.
 
 ## Parameters

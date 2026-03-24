@@ -5,6 +5,10 @@ sidebar:
   order: 2
 ---
 
+import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="turing" client:visible />
+
 A shift-register sequencer inspired by [Music Thing Modular's Turing Machine](https://musicthing.co.uk/). A chain of bits shifts on each step, with a probability of the last bit flipping. The result is a sequence that **evolves gradually** — from frozen loops to pure randomness.
 
 ## Parameters

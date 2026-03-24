@@ -5,6 +5,10 @@ sidebar:
   order: 4
 ---
 
+import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="tonnetz" client:visible />
+
 Generates **chord progressions** by navigating the [Tonnetz](https://en.wikipedia.org/wiki/Tonnetz) — a mathematical lattice of harmonic relationships used in neo-Riemannian music theory.
 
 Starting from an initial triad, it applies a sequence of transformations to walk through related chords. Each transformation moves to a nearby chord that shares two of three notes.

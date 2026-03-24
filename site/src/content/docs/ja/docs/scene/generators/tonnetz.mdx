@@ -5,6 +5,10 @@ sidebar:
   order: 4
 ---
 
+import PlaygroundGenerator from '../../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="tonnetz" client:visible />
+
 [Tonnetz](https://en.wikipedia.org/wiki/Tonnetz)（和声関係の数学的格子）をナビゲートして**コード進行を生成**します。ネオ・リーマン音楽理論に基づいています。
 
 初期トライアドから始めて、一連の変換を適用して関連するコードを辿ります。各変換は 3 音のうち 2 音を共有する近傍のコードへ移動します。

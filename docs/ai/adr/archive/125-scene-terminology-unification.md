@@ -1,6 +1,6 @@
 # ADR 125: Scene Terminology Unification
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -165,7 +165,7 @@ Update the scene section in SidebarHelp to use "Generator" and "Modifier" termin
 - Also add to nodes.mdx tool palette section alongside the icon table
 - Depends on Phase 1 completion (use new API names)
 
-**Status**: Phases 1–3 complete. Phase 4 partially done (tool palette icon table in nodes.mdx). Inline SVG icons on individual pages attempted but removed — Starlight sanitizes markdown table styles, and h1-level icon placement requires Playground components. Next step: build `PlaygroundSceneNode` component.
+**Status**: All phases complete. Phase 4 delivered PlaygroundSceneNode (static node visuals for nodes/modifiers/sweep pages) and PlaygroundGenerator (SceneView + DockPanel for each generator engine page, with Turing→Quantizer chain for quantizer).
 
 ## Considerations
 

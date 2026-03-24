@@ -5,6 +5,10 @@ sidebar:
   order: 3
 ---
 
+import PlaygroundGenerator from '../../../../../../components/PlaygroundGenerator.svelte';
+
+<PlaygroundGenerator engine="quantizer" client:visible />
+
 ノートのシーケンスを受け取り、**最も近いスケール度数にスナップ**します。Turing Machine の後に接続して、ランダムな出力を音楽的なキーに固定するのが最も一般的な使い方です。
 
 ## パラメータ
