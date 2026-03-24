@@ -221,7 +221,7 @@
     background: var(--c-bg);
     color: var(--c-fg);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-base);
     border-radius: 12px 12px 0 0;
   }
 
@@ -234,7 +234,7 @@
     border-radius: 3px;
     background: transparent;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -261,12 +261,12 @@
   }
 
   /* Play / Stop — larger text for primary action */
-  .btn-play { border-color: var(--c-olive); color: var(--c-fg); font-size: 12px; }
+  .btn-play { border-color: var(--c-olive); color: var(--c-fg); font-size: var(--fs-base); }
   .btn-play:hover { background: var(--c-olive); }
-  .btn-stop  { border-color: var(--c-salmon); color: var(--c-fg); font-size: 12px; }
+  .btn-stop  { border-color: var(--c-salmon); color: var(--c-fg); font-size: var(--fs-base); }
   .btn-stop:hover  { background: var(--c-salmon); color: var(--c-bg); }
 
-  .bpm-label { opacity: 0.5; font-size: 11px; }
+  .bpm-label { opacity: 0.5; font-size: var(--fs-lg); }
   .error { color: var(--c-salmon); }
 
   /* ── Separator ── */
@@ -286,7 +286,7 @@
     user-select: none;
   }
   .plock-label {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.08em;
     color: rgba(237,232,220,0.6);
@@ -317,7 +317,7 @@
 
   /* ── Lock info ── */
   .lock-info {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: rgba(237,232,220,0.4);
@@ -359,7 +359,7 @@
   .track-name {
     color: var(--c-olive);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;

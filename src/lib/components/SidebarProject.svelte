@@ -214,7 +214,7 @@
     border: 1.5px solid var(--dz-transport-border);
     background: var(--dz-bg-active);
     color: var(--dz-text-bright);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -253,14 +253,14 @@
     gap: 4px;
   }
   .proj-rename-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--dz-text-dim);
     text-transform: uppercase;
   }
   .proj-rename-value {
-    font-size: 13px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text);
@@ -281,7 +281,7 @@
   }
   .proj-name-input {
     flex: 1;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-bright);
@@ -300,7 +300,7 @@
     border: 1px solid var(--dz-bg-active);
   }
   .proj-confirm-text {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     color: var(--dz-text);
     display: block;
     margin-bottom: 8px;
@@ -313,7 +313,7 @@
     gap: 1px;
   }
   .proj-list-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--dz-transport-border);
@@ -344,7 +344,7 @@
     background: none;
     border: none;
     color: var(--dz-text);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.02em;
     text-align: left;
@@ -355,7 +355,7 @@
   .proj-item-name:hover { color: var(--dz-text-bright); }
   .proj-item-name.factory { color: var(--dz-transport-border); font-style: italic; }
   .proj-item-date {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--dz-text-dim);
     flex-shrink: 0;
   }
@@ -363,7 +363,7 @@
     background: none;
     border: none;
     color: var(--dz-border);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     cursor: pointer;
     padding: 2px 4px;
     flex-shrink: 0;
@@ -372,7 +372,7 @@
   .proj-item-del:hover { color: var(--dz-text-mid); }
   .proj-item-del.confirm {
     color: var(--color-salmon);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
   }
   .export-section {
@@ -387,7 +387,7 @@
   .btn-export {
     flex: 1;
     padding: 6px 8px;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 600;
     letter-spacing: 0.05em;
     border: 1px solid var(--dz-border);
@@ -402,14 +402,14 @@
   }
   .export-sub-label {
     display: block;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.08em;
     color: var(--dz-border-strong);
     text-transform: uppercase;
     margin: 6px 0 4px;
   }
   .import-error {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--color-salmon);
     padding: 4px 0 0;
   }

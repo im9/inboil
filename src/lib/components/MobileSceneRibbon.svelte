@@ -126,7 +126,7 @@
     flex-shrink: 0;
     border: 1px solid var(--lz-border-strong);
     background: transparent;
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--lz-text-mid);
     display: flex;
     align-items: center;
@@ -156,7 +156,7 @@
   .ribbon-strip::-webkit-scrollbar { display: none; }
 
   .ribbon-arrow {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--lz-border-strong);
     flex-shrink: 0;
   }
@@ -166,7 +166,7 @@
     border: 1px solid var(--lz-border-strong);
     background: transparent;
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--lz-text-mid);

@@ -89,23 +89,23 @@
     margin-bottom: 12px;
   }
   .error-icon {
-    font-size: 18px;
+    font-size: 18px; /* display: error title */
     color: var(--color-salmon, #E8A090);
   }
   .error-code {
-    font-size: 14px;
+    font-size: 14px; /* display: error subtitle */
     font-weight: 700;
     color: var(--color-salmon, #E8A090);
     letter-spacing: 0.05em;
   }
   .error-message {
-    font-size: 12px;
+    font-size: var(--fs-base);
     line-height: 1.5;
     color: var(--dz-text-strong);
     margin: 0 0 12px;
   }
   .error-detail {
-    font-size: 10px;
+    font-size: var(--fs-md);
     line-height: 1.4;
     color: var(--dz-transport-border);
     background: var(--lz-text-hint);
@@ -124,7 +124,7 @@
     justify-content: flex-end;
   }
   .btn-action {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     padding: 6px 14px;
     border-radius: 0;
@@ -137,7 +137,7 @@
     filter: brightness(1.1);
   }
   .btn-copy {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 0;
@@ -151,7 +151,7 @@
     color: var(--dz-text-strong);
   }
   .btn-dismiss {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 0;

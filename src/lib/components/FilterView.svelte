@@ -642,7 +642,7 @@
   }
 
   .node-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.08em;
     pointer-events: none;
@@ -653,7 +653,7 @@
     bottom: -13px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 7px;
+    font-size: var(--fs-min);
     font-weight: 600;
     color: var(--node-color);
     opacity: 0.6;

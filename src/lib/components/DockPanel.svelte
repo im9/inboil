@@ -431,11 +431,6 @@
 
 <style>
   .dock-panel {
-    --dk-fs-xs: 10px;
-    --dk-fs-sm: 11px;
-    --dk-fs-md: 12px;
-    --dk-fs-lg: 13px;
-
     position: relative;
     width: 340px;
     flex-shrink: 0;
@@ -484,7 +479,7 @@
   .dock-tab {
     flex: 1;
     font-family: var(--font-data, inherit);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 6px 0;
@@ -507,14 +502,14 @@
     color: var(--dz-text-strong);
   }
   .dock-tab-badge {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     vertical-align: super;
     margin-left: 1px;
     color: var(--color-olive);
   }
   .empty-hint {
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     color: var(--dz-text-dim);
     padding: 12px 0;
     font-style: italic;
@@ -531,7 +526,7 @@
     margin: 8px 0;
   }
   .section-label {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-text-dim);
@@ -552,7 +547,7 @@
     flex-shrink: 0;
   }
   .pat-input {
-    font-size: var(--dk-fs-lg);
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-strong);
@@ -609,7 +604,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 0;
@@ -624,7 +619,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 12px;
@@ -641,7 +636,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 0;
@@ -657,7 +652,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 12px;
@@ -683,7 +678,7 @@
     gap: 8px;
   }
   .fn-label {
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     color: var(--dz-text-mid);
     min-width: 64px;
@@ -697,7 +692,7 @@
   }
   .fn-toggle-btn {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 4px 10px;
@@ -735,7 +730,7 @@
     border: none;
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 14px;
+    font-size: 14px; /* display: section header icon */
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -752,7 +747,7 @@
   }
   .fn-step-val {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-md);
+    font-size: var(--fs-base);
     font-weight: 700;
     color: var(--dz-text-strong);
     min-width: 40px;
@@ -768,7 +763,7 @@
   }
   .fn-key-btn {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     padding: 4px 4px;
     border: 1px solid var(--dz-border);

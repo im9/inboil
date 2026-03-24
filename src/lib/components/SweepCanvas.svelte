@@ -1176,7 +1176,7 @@
     border-radius: 50%;
   }
   .sweep-pat-name {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     color: var(--color-muted);
   }
@@ -1190,7 +1190,7 @@
   .sweep-mode-btn {
     height: 24px;
     padding: 0 12px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-muted);
@@ -1217,7 +1217,7 @@
     height: 24px;
     padding: 0 8px;
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -1245,7 +1245,7 @@
   }
   .sweep-preset-option {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: rgba(30, 32, 40, 0.70);
@@ -1265,7 +1265,7 @@
     color: var(--color-fg);
   }
   .sweep-preset-icon {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     width: 20px;
     text-align: center;
     flex-shrink: 0;
@@ -1287,7 +1287,7 @@
     color: var(--color-fg);
     width: 24px;
     height: 24px;
-    font-size: 12px;
+    font-size: var(--fs-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1322,14 +1322,14 @@
     cursor: pointer;
     border-radius: 4px;
     color: var(--color-muted);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
   }
   .palette-track:hover { background: rgba(30, 32, 40, 0.06); }
   .palette-track.has-curve { color: var(--color-fg); }
   .palette-track-name { flex: 1; }
   .palette-track-arrow {
-    font-size: 12px;
+    font-size: var(--fs-base);
     opacity: 0.4;
   }
   .palette-back {
@@ -1338,7 +1338,7 @@
     padding: 6px 8px;
     cursor: pointer;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     color: var(--color-muted);
     border-bottom: 1px solid rgba(30, 32, 40, 0.1);
@@ -1353,7 +1353,7 @@
     border: none;
     background: transparent;
     color: var(--color-muted);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     cursor: pointer;
     border-radius: 4px;
     text-align: left;
@@ -1388,7 +1388,7 @@
   }
   .palette-del {
     all: unset;
-    font-size: 12px;
+    font-size: var(--fs-base);
     color: var(--color-muted);
     cursor: pointer;
     padding: 0 2px;
@@ -1437,7 +1437,7 @@
     pointer-events: none;
   }
   .sweep-axis-labels span {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--color-muted);
   }
 

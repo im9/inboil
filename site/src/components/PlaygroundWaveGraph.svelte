@@ -22,7 +22,7 @@
     width: fit-content;
   }
   .wave-hint {
-    font-size: 12px;
+    font-size: var(--fs-base);
     color: var(--color-muted);
   }
 </style>

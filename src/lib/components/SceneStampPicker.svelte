@@ -63,7 +63,7 @@
   }
   .stamp-picker-label {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: rgba(237, 232, 220, 0.45);
     letter-spacing: 0.08em;
     margin-bottom: 4px;

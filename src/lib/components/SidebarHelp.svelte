@@ -248,7 +248,7 @@
   .full-docs-link {
     display: block;
     padding: 8px 12px;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     color: var(--color-blue, #4472B4);
     text-decoration: none;
     border-bottom: 1px solid var(--dz-bg-hover);
@@ -266,7 +266,7 @@
     background: var(--dz-divider);
     border: 1px solid var(--dz-border);
     color: var(--dz-text-strong);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.04em;
     padding: 6px 28px 6px 8px;
     outline: none;
@@ -286,7 +286,7 @@
     background: none;
     border: none;
     color: var(--dz-transport-border);
-    font-size: 14px;
+    font-size: 14px; /* display: help section icon */
     padding: 0 4px;
     cursor: pointer;
   }
@@ -296,7 +296,7 @@
   }
   .section-title {
     color: var(--dz-text-strong);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     padding: 8px 0 4px;
@@ -305,7 +305,7 @@
     align-items: center;
   }
   .docs-link {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--color-blue, #4472B4);
     text-decoration: none;
     letter-spacing: 0;
@@ -317,13 +317,13 @@
     opacity: 1;
   }
   .section-body {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     line-height: 1.6;
     color: var(--dz-text-mid);
     white-space: pre-line;
   }
   .category-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     letter-spacing: 0.12em;
     color: var(--dz-border-strong);
     text-transform: uppercase;

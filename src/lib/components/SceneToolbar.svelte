@@ -274,7 +274,7 @@
     width: auto;
     padding: 0 8px;
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
   }

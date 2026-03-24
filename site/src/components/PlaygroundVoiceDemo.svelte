@@ -199,12 +199,12 @@
     color: #1E2028;
   }
   .track-num {
-    font-size: 10px;
+    font-size: var(--fs-md);
     opacity: 0.5;
   }
   .track-btn.active .track-num { opacity: 0.7; }
   .track-voice {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.04em;
     white-space: nowrap;
     overflow: hidden;
@@ -224,7 +224,7 @@
     background: transparent;
     color: rgba(237,232,220,0.4);
     font-family: inherit;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     cursor: pointer;
@@ -247,7 +247,7 @@
   }
   .group-label {
     width: 100%;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: rgba(237,232,220,0.4);
@@ -269,7 +269,7 @@
     background: transparent;
     color: #787845;
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.1em;
     cursor: pointer;
@@ -298,7 +298,7 @@
     background: rgba(237,232,220,0.08);
     color: rgba(237,232,220,0.5);
     font-family: inherit;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     cursor: pointer;
     user-select: none;

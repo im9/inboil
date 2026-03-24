@@ -76,7 +76,7 @@
     background: transparent;
     color: var(--color-blue);
     padding: 5px 10px;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -117,7 +117,7 @@
     border: 1.5px solid var(--color-blue);
     background: var(--lz-text-strong);
     color: var(--color-blue);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     display: flex;

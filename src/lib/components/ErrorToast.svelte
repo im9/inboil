@@ -43,7 +43,7 @@
     padding: 10px 14px;
     border-radius: var(--radius-md);
     font-family: var(--font-data, monospace);
-    font-size: 12px;
+    font-size: var(--fs-base);
     line-height: 1.4;
     pointer-events: auto;
     box-shadow: 0 4px 16px var(--lz-text-hint);
@@ -65,7 +65,7 @@
   }
   .toast-icon {
     flex-shrink: 0;
-    font-size: 14px;
+    font-size: 14px; /* display: toast icon */
   }
   .toast-msg {
     flex: 1;
@@ -75,7 +75,7 @@
     background: none;
     border: none;
     color: inherit;
-    font-size: 16px;
+    font-size: 16px; /* display: dismiss button */
     cursor: pointer;
     opacity: 0.6;
     padding: 0 2px;

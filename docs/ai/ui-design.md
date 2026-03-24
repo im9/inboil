@@ -81,7 +81,7 @@ Strict specifications for every interactive element in StepGrid. All new element
 |---|---|---|---|
 | Track name | 11px | 700 | 0.04em |
 | Solo / Mute / Steps | 9px | 700 | — |
-| Scale label | 7px | 700 | -0.02em |
+| Scale label | 8px | 700 | -0.02em |
 | Vel tab | 9px | 700 | 0.06em |
 | RST | 9px | 700 | 0.04em |
 | Page btn | 8px | 700 | — |
@@ -89,7 +89,7 @@ Strict specifications for every interactive element in StepGrid. All new element
 | Add track btn | 14px | 400 | — |
 | Remove label | 12px | 700 | 0.04em |
 | Remove btn | 10px | 700 | 0.06em |
-| **Minimum font-size** | **7px** | — | — |
+| **Minimum font-size** | **8px** | — | — |
 
 ### Colors by tier
 
@@ -273,7 +273,7 @@ Measured via `ResizeObserver` on a hidden `.seq-measure` div. The value is store
 | VKBD info | 9px | — | — |
 | MIDI indicator | 8px | — | — |
 | Key trigger (mobile) | 11px | 700 | — |
-| Fan key label (mobile) | 7px | 700 | — |
+| Fan key label (mobile) | 8px | 700 | — |
 
 ### Colors (light zone)
 
@@ -384,7 +384,7 @@ Measured via `ResizeObserver` on a hidden `.seq-measure` div. The value is store
 | Element | Size | Weight | Letter-spacing |
 |---|---|---|---|
 | Oct btn | 8px | 700 | — |
-| Key label | 7px (6px mobile) | 700 | — |
+| Key label | 8px (6px mobile) | 700 | — |
 | Chord select | 9px | 700 | — |
 
 ### Colors (light zone)
@@ -438,7 +438,7 @@ Measured via `ResizeObserver` on a hidden `.seq-measure` div. The value is store
 | Lang btn | 9px | 700 | 0.06em |
 | Close btn | 16px | — | — |
 | System tab | 9px | 700 | 0.10em |
-| Guide label | 7px | 700 | 0.10em |
+| Guide label | 8px | 700 | 0.10em |
 | Guide text | 10px | — | — |
 | Setting label | 10px | 700 | 0.10em |
 | Footer link | 10px | — | 0.04em |
@@ -531,7 +531,7 @@ Used for borders, text, backgrounds on cream/surface backgrounds.
 
 ### Dark zone (navy bg) — base `237,232,220` (≈ `--color-bg`)
 
-Used for borders, text, backgrounds on navy/fg backgrounds. DockPanel already defines `--dk-*` tokens; AppHeader and Sidebar should adopt the same system.
+Used for borders, text, backgrounds on navy/fg backgrounds. DockPanel, AppHeader, and Sidebar all use these global `--dz-*` tokens.
 
 | Token | Opacity | Use |
 |---|---|---|
@@ -540,13 +540,13 @@ Used for borders, text, backgrounds on navy/fg backgrounds. DockPanel already de
 | `--dz-border-subtle` | 0.10 | Sidebar head/footer borders |
 | `--dz-bg-active` | 0.12 | Separator lines |
 | `--dz-bg-press` | 0.15 | Button :active bg |
-| `--dz-border` | 0.15 | Default borders (= `--dk-border`) |
+| `--dz-border` | 0.15 | Default borders |
 | `--dz-border-mid` | 0.25 | Badge borders, strong borders |
 | `--dz-border-strong` | 0.30 | Input borders, BPM adj borders |
 | `--dz-text-dim` | 0.35 | CPU label, BPM label, muted text |
 | `--dz-text-mid` | 0.55 | Inactive buttons, secondary text |
 | `--dz-text` | 0.70 | Dropdown options, hover text |
-| `--dz-text-strong` | 0.85 | Primary text (= `--dk-text`) |
+| `--dz-text-strong` | 0.85 | Primary text |
 | `--dz-text-bright` | 0.90 | Active state text |
 | `--dz-btn-border` | 0.35 | Nav/view button borders (1.5px) |
 | `--dz-transport-border` | 0.45 | Transport/REC button borders (1px) |
@@ -571,7 +571,7 @@ Translucent versions of accent colors for backgrounds/borders:
 ### Rules
 
 - **Pick the closest step** — do not interpolate (e.g., use 0.08 not 0.07).
-- **Dark zone components** must use `--dk-*` or `--dz-*` tokens, never raw `rgba(237,…)`.
+- **Dark zone components** must use `--dz-*` tokens, never raw `rgba(237,…)`.
 - **Light zone components** must use `--lz-*` tokens, never raw `rgba(30,…)`.
 - **Accent overlays** use the named token (e.g., `--olive-bg-subtle`), never raw olive/blue rgba.
 - CPU meter colors are **semantic exceptions** (amber warning, red critical) — kept as-is.
@@ -619,6 +619,22 @@ line-height: 1.4;
 ```
 
 Labels are ALL CAPS with `letter-spacing: 0.08em`.
+
+### Font-size scale — two tiers
+
+**Data tier** (monospace, controls) — 5 steps, 1px increments:
+
+| Token | Size | Usage |
+|---|---|---|
+| `--fs-min` | 8px | badges, scale labels, key labels |
+| `--fs-sm` | 9px | button labels, tabs, group labels |
+| `--fs-md` | 10px | settings, guides, footer |
+| `--fs-lg` | 11px | track names, inputs, primary labels |
+| `--fs-base` | 12px | body default |
+
+**Display tier** (Bebas Neue, display numbers) — NOT tokenized. Rare, contextual values using raw px with a mandatory `/* display: purpose */` comment (e.g. `font-size: 18px; /* display: BPM value */`).
+
+**Minimum font-size**: 8px (`--fs-min`). No smaller values allowed.
 
 ## Zone Layout — DECIDED
 
@@ -860,41 +876,40 @@ FX/EQ/Master are rendered as overlay sheets (ADR 054). Help/System are in the Si
 
 #### DockPanel Styling Rules
 
-DockPanel and its sub-components (DockGenerativeEditor, DockPresetBrowser) share CSS custom properties defined on the `.dock` root element. **All new Dock sub-components must use these tokens — never hardcode font sizes, colors, or opacities.**
+DockPanel and its sub-components (DockGenerativeEditor, DockPresetBrowser) use global `--fs-*` and `--dz-*` tokens. **All new Dock sub-components must use these tokens — never hardcode font sizes, colors, or opacities.**
 
-**Font size tokens** (minimum 10px for readability):
+**Font size tokens** — use global `--fs-*` scale (minimum `--fs-md` / 10px for readability):
 ```
---dk-fs-xs: 10px   — category tags, secondary labels
---dk-fs-sm: 11px   — button text, param values
---dk-fs-md: 12px   — list items, input fields
---dk-fs-lg: 13px   — section headers
+--fs-md:   10px   — category tags, secondary labels
+--fs-lg:   11px   — button text, param values
+--fs-base: 12px   — list items, input fields, section headers
 ```
 
-**Color tokens** (cream-on-dark context):
+**Color tokens** — use global `--dz-*` tokens (cream-on-dark context):
 ```
---dk-text:      rgba(var(--dk-cream), 0.85)   — primary text
---dk-text-mid:  rgba(var(--dk-cream), 0.65)   — secondary text, inactive buttons
---dk-text-dim:  rgba(var(--dk-cream), 0.45)   — labels, hints
---dk-border:    rgba(var(--dk-cream), 0.15)    — default borders
---dk-border-mid: rgba(var(--dk-cream), 0.3)   — hover/active borders
---dk-bg-hover:  rgba(var(--dk-cream), 0.08)   — hover background
---dk-bg-active: rgba(var(--dk-cream), 0.12)   — active/selected background
+--dz-text-strong: 0.85   — primary text
+--dz-text-mid:    0.55   — secondary text, inactive buttons
+--dz-text-dim:    0.35   — labels, hints
+--dz-border:      0.15   — default borders
+--dz-border-strong: 0.30 — hover/active borders
+--dz-bg-hover:    0.08   — hover background
+--dz-bg-active:   0.12   — active/selected background
 ```
 
 **Button classes** — use one of these, never create one-off button styles:
 
 | Class | Use case | Style |
 |---|---|---|
-| `.btn-toggle` | Mode switches (WRITE/LIVE, REP/MER/LAY, NOT/GAT/VEL) | `--dk-border` border, `--dk-text-mid` text. `.active`: `--dk-bg-active` bg, bright text |
-| `.voice-current` | Expandable section toggle (preset browser, voice picker) | Full-width, `--dk-border` border, arrow indicator |
+| `.btn-toggle` | Mode switches (WRITE/LIVE, REP/MER/LAY, NOT/GAT/VEL) | `--dz-border` border, `--dz-text-mid` text. `.active`: `--dz-bg-active` bg, bright text |
+| `.voice-current` | Expandable section toggle (preset browser, voice picker) | Full-width, `--dz-border` border, arrow indicator |
 | `.btn-save-preset` | Accent action (SAVE) | `--color-olive` border+text, transparent bg |
 | `.btn-gen-run` | Primary action (Generate, Freeze) | Full-width, `--color-olive` border, olive-tinted bg |
 | `.cat-btn` | Category filter pills (ALL/LEAD/BASS...) | `flex:1`, olive fill when `.active` |
-| `.btn-icon` | Small icon buttons (seed ⟳/✕, tonnetz +/−) | 22×22px, `--dk-border`, `--dk-text-mid`. Prefer inline SVG (12×12, `stroke-width="1.5"`) over Unicode glyphs |
+| `.btn-icon` | Small icon buttons (seed ⟳/✕, tonnetz +/−) | 22×22px, `--dz-border`, `--dz-text-mid`. Prefer inline SVG (12×12, `stroke-width="1.5"`) over Unicode glyphs |
 
 **Rules:**
-- Never use `opacity` on buttons for dimming — use the `--dk-text-*` color tokens instead
-- Never use raw `rgba()` colors — use `var(--dk-*)` tokens or `var(--color-*)` palette
+- Never use `opacity` on buttons for dimming — use the `--dz-text-*` color tokens instead
+- Never use raw `rgba()` colors — use `var(--dz-*)` tokens or `var(--color-*)` palette
 - Minimum touch target: 22px height for buttons
 - All labels: `text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700`
 
@@ -1083,7 +1098,7 @@ Always instant, no transition:
 
 - **Minimum touch target**: 22px height for interactive elements (buttons, knobs, picker items).
 - **Minimum gap between interactive elements**: 4px (prevents mis-taps).
-- **Section dividers**: Use `border-top` or `border-bottom` with `--dk-border` (dock) or `rgba(30,32,40,0.08)` (light zones). No margin-only separation between unrelated groups.
+- **Section dividers**: Use `border-top` or `border-bottom` with `--dz-border` (dock) or `rgba(30,32,40,0.08)` (light zones). No margin-only separation between unrelated groups.
 - **Content padding**: 12px horizontal minimum in panels. 8px in compact rows (track heads, vel rows).
 
 ### Component-Local Design Tokens
@@ -1092,15 +1107,15 @@ Each UI region defines its own CSS custom properties scoped to the component roo
 
 **Pattern:**
 ```css
-/* Component root defines tokens */
-.dock {
-  --dk-fs-xs: 10px;
-  --dk-fs-sm: 11px;
+/* Global font-size tokens (defined in app.css) */
+:root {
+  --fs-md: 10px;
+  --fs-lg: 11px;
   /* ... */
 }
 /* Children reference tokens */
 .dock .section-label {
-  font-size: var(--dk-fs-xs);
+  font-size: var(--fs-md);
 }
 ```
 
@@ -1108,7 +1123,7 @@ Each UI region defines its own CSS custom properties scoped to the component roo
 
 | Region | Prefix | Font range | Notes |
 |---|---|---|---|
-| DockPanel | `--dk-` | 10–13px | Spacious — knob grids, voice pickers |
+| DockPanel | `--fs-*` | 10–13px | Spacious — knob grids, voice pickers |
 | StepGrid | (none yet) | 9–11px hardcoded | Compact — 16-step overview density |
 | AppHeader | (none yet) | 10–14px hardcoded | Mixed — display + functional |
 

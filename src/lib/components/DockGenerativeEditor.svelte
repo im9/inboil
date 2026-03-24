@@ -292,7 +292,7 @@
     margin-bottom: 6px;
   }
   .section-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-text-dim);
@@ -308,7 +308,7 @@
     border: 1px solid var(--dz-border-mid);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 3px 8px;
@@ -335,7 +335,7 @@
   }
   .gen-range-label {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     opacity: 0.6;
@@ -343,7 +343,7 @@
   }
   .gen-range-val {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
   }
   .gen-mode-row {
     display: flex;
@@ -351,7 +351,7 @@
     margin-bottom: 6px;
   }
   .gen-mode-btn {
-    font-size: var(--dk-fs-xs) !important;
+    font-size: var(--fs-md) !important;
     padding: 2px 6px !important;
   }
   .gen-scale-row {
@@ -363,7 +363,7 @@
   .gen-scale-select {
     flex: 1;
     font-family: var(--font-data);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     background: transparent;
     border: 1px solid var(--dz-border);
     color: inherit;
@@ -377,7 +377,7 @@
   }
   .gen-seed-val {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     min-width: 32px;
   }
   .btn-icon {
@@ -386,7 +386,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -404,7 +404,7 @@
   }
   .tonnetz-op-select {
     font-family: var(--font-data);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     background: transparent;
     border: 1px solid var(--dz-border);
     color: inherit;

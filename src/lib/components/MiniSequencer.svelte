@@ -46,7 +46,7 @@
   .mini-label {
     flex-shrink: 0;
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: rgba(237, 232, 220, 0.45);

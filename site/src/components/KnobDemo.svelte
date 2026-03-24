@@ -21,7 +21,7 @@
     width: fit-content;
   }
   .knob-hint {
-    font-size: 12px;
+    font-size: var(--fs-base);
     color: var(--color-muted);
   }
 </style>

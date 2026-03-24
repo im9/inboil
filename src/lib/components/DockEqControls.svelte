@@ -96,7 +96,7 @@
 
 <style>
   .section-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -118,7 +118,7 @@
   }
   .eq-dock-label {
     display: block;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--dz-text-mid);
@@ -133,7 +133,7 @@
     display: inline-block;
     margin-top: 4px;
     padding: 2px 8px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     border: 1px solid var(--dz-border);

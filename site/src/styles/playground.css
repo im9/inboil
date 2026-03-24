@@ -25,6 +25,11 @@
   --color-salmon:  #E8A090;
   --color-purple:  #9B6BA0;
   --color-teal:    #4A9B9B;
+  --fs-min:  8px;
+  --fs-sm:   9px;
+  --fs-md:  10px;
+  --fs-lg:  11px;
+  --fs-base: 12px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --font-display: "Bebas Neue", "Anton", sans-serif;

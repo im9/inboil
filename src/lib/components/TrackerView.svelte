@@ -595,7 +595,7 @@
     background: transparent;
     color: var(--dz-transport-border);
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -615,7 +615,7 @@
     color: var(--dz-border-strong);
     width: 18px;
     height: 18px;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     font-family: var(--font-data);
     display: flex;
@@ -634,7 +634,7 @@
   }
   .sidebar-mix-label {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--dz-border-mid);
@@ -670,7 +670,7 @@
 
   .col-h {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-border-mid);
@@ -717,7 +717,7 @@
   /* ── Cells ── */
   .cell {
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     text-align: center;
     letter-spacing: 0.02em;
     line-height: 24px;
@@ -726,7 +726,7 @@
   .cell-num {
     width: 28px;
     flex-shrink: 0;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--dz-border);
   }
   .tracker-row.beat .cell-num { color: var(--dz-border-strong); }
@@ -785,11 +785,11 @@
     }
     .track-btn { border-bottom: none; border-right: 1px solid var(--dz-divider); padding: 2px 4px; }
     .track-btn:last-child { border-right-color: transparent; }
-    .track-label { font-size: 9px; max-width: 64px; }
+    .track-label { font-size: var(--fs-sm); max-width: 64px; }
 
-    .col-h { font-size: 7px; }
-    .cell { font-size: 10px; }
-    .cell-num { font-size: 8px; }
+    .col-h { font-size: var(--fs-min); }
+    .cell { font-size: var(--fs-md); }
+    .cell-num { font-size: var(--fs-min); }
 
     .col-num, .cell-num   { width: 24px; }
     .col-note, .cell-note { width: 42px; }

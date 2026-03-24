@@ -353,7 +353,7 @@
   }
   .toolbar-spacer { flex: 1; }
   .btn-lock {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-transport-border);
@@ -368,14 +368,14 @@
     color: var(--color-bg);
   }
   .lock-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-olive);
     white-space: nowrap;
   }
   .btn-clr {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text-mid);
@@ -389,7 +389,7 @@
     color: var(--dz-text-strong);
   }
   .btn-solo {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-transport-border);
@@ -404,7 +404,7 @@
     color: var(--color-bg);
   }
   .btn-mute {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-transport-border);
@@ -438,7 +438,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-strong);
-    font-size: 12px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 10px;
@@ -448,7 +448,7 @@
     text-transform: uppercase;
   }
   .voice-arrow {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     opacity: 0.4;
   }
   .picker-cats {
@@ -461,7 +461,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-transport-border);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 7px 5px;
@@ -487,7 +487,7 @@
     border-bottom: 1px solid var(--dz-divider);
     background: transparent;
     color: var(--dz-text);
-    font-size: 12px;
+    font-size: var(--fs-base);
     padding: 8px;
     text-align: left;
   }
@@ -503,7 +503,7 @@
     color: var(--color-olive);
   }
   .picker-tag {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-dim);
@@ -534,7 +534,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 4px 10px;
@@ -545,7 +545,7 @@
     border-color: var(--dz-transport-border);
   }
   .sample-name {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-transport-border);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -570,7 +570,7 @@
     cursor: pointer;
   }
   .mode-label {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text-mid);
@@ -615,7 +615,7 @@
   /* ── Param group labels ── */
   .param-group-label {
     width: 100%;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -630,7 +630,7 @@
   }
   .param-group-label:active { color: var(--dz-text-mid); }
   .param-group-label.collapsed { margin-bottom: 0; }
-  .group-chevron { font-size: 8px; line-height: 1; }
+  .group-chevron { font-size: var(--fs-min); line-height: 1; }
 
   /* ── Section dividers ── */
   .section-divider {
@@ -640,7 +640,7 @@
     margin: 10px 0;
   }
   .section-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -655,7 +655,7 @@
   }
   .insert-select {
     flex: 1;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     padding: 6px 8px;
     border-radius: 0;
     border: 1px solid var(--dz-border);

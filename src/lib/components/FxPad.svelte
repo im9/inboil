@@ -639,7 +639,7 @@
   }
 
   .node-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     pointer-events: none;

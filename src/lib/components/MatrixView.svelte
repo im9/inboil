@@ -171,7 +171,7 @@
     flex: 1;
     min-width: 0;
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--lz-text);
@@ -191,7 +191,7 @@
     border: 1px solid var(--lz-border-strong);
     background: transparent;
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     display: flex;
     align-items: center;

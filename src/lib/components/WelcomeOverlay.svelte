@@ -93,14 +93,14 @@
 
   .welcome-title {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: 28px; /* display: welcome title */
     letter-spacing: 0.08em;
     margin-bottom: 4px;
     font-weight: normal;
   }
 
   .welcome-sub {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     opacity: 0.55;
     margin-bottom: 28px;
   }
@@ -120,7 +120,7 @@
     padding: 10px 0;
     border-radius: var(--radius-md);
     font-family: var(--font-data);
-    font-size: 12px;
+    font-size: var(--fs-base);
     letter-spacing: 0.04em;
     border: 1px solid rgba(237, 232, 220, 0.15);
     transition: background 80ms, border-color 80ms;
@@ -144,7 +144,7 @@
   }
 
   .welcome-link {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     color: var(--color-bg);
     opacity: 0.45;
     text-decoration: none;

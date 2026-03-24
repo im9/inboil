@@ -165,7 +165,7 @@
   }
 
   .sidebar-title {
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.14em;
     color: var(--dz-transport-border);
     text-transform: uppercase;
@@ -181,7 +181,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.06em;
     padding: 2px 6px;
   }
@@ -193,7 +193,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 16px;
+    font-size: 16px; /* display: sidebar icon */
     width: 24px;
     height: 24px;
     display: flex;
@@ -213,7 +213,7 @@
   .system-tab {
     flex: 1;
     padding: 8px 0;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -265,14 +265,14 @@
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
   :global(.guide-float) .guide-label {
-    font-size: 7px;
+    font-size: var(--fs-min);
     letter-spacing: 0.1em;
     color: var(--color-olive);
     text-transform: uppercase;
     flex-shrink: 0;
   }
   :global(.guide-float) .guide-text {
-    font-size: 10px;
+    font-size: var(--fs-md);
     line-height: 1.4;
     color: var(--dz-text);
     margin: 0;
@@ -287,7 +287,7 @@
 
   .donate-link-app {
     display: block;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-family: var(--font-mono);
     color: var(--olive);
     text-decoration: none;
@@ -302,7 +302,7 @@
   }
   .footer-link {
     display: block;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-family: var(--font-mono);
     color: var(--dz-transport-border);
     text-decoration: none;
@@ -316,7 +316,7 @@
   }
 
   .setting-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.1em;
     color: var(--dz-transport-border);
     text-transform: uppercase;
@@ -327,7 +327,7 @@
     border: 1px solid var(--color-salmon);
     background: transparent;
     color: var(--color-salmon);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.06em;
     padding: 6px 12px;
     width: 100%;
@@ -337,7 +337,7 @@
     color: var(--color-bg);
   }
   .reset-warn {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     line-height: 1.5;
     color: var(--color-salmon);
     margin: 0 0 8px;
@@ -350,7 +350,7 @@
     border: 1px solid var(--color-salmon);
     background: var(--color-salmon);
     color: var(--color-bg);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.06em;
     padding: 6px 12px;
     flex: 1;
@@ -359,7 +359,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.06em;
     padding: 6px 12px;
     flex: 1;

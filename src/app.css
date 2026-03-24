@@ -67,6 +67,13 @@
   --salmon-bg-scale: rgba(232,160,144, 0.06);
   --salmon-bg-key:   rgba(232,160,144, 0.08);
 
+  /* ── Font-size scale (data tier — monospace/controls) ── */
+  --fs-min:  8px;   /* badges, scale labels, key labels */
+  --fs-sm:   9px;   /* button labels, tabs, group labels */
+  --fs-md:  10px;   /* settings, guides, footer */
+  --fs-lg:  11px;   /* track names, inputs, primary labels */
+  --fs-base: 12px;  /* body default */
+
   --radius-sm: 4px;   /* track label */
   --radius-md: 6px;   /* overlay, toast, sheet, popup */
 

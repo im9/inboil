@@ -1451,7 +1451,7 @@
   }
   .scene-node.fn .fn-label {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.03em;
     opacity: 0.6;
@@ -1510,14 +1510,14 @@
   }
   .gen-label {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: rgba(30, 32, 40, 0.8);
   }
   .gen-target {
     font-family: var(--font-data);
-    font-size: 7px;
+    font-size: var(--fs-min);
     font-weight: 700;
     color: rgba(30, 32, 40, 0.4);
     white-space: nowrap;
@@ -1529,7 +1529,7 @@
   }
   .gen-run-btn {
     font-family: var(--font-data);
-    font-size: 7px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 5px;
@@ -1598,7 +1598,7 @@
   }
   .tonnetz-op {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     padding: 1px 3px;
     border-radius: 0;
@@ -1707,7 +1707,7 @@
 
   .node-label {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -1724,7 +1724,7 @@
     border: 1.5px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.85);
     color: var(--lz-text-mid);
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -1769,7 +1769,7 @@
     border: 1.5px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.85);
     color: var(--lz-text-mid);
-    font-size: 10px;
+    font-size: var(--fs-md);
     cursor: pointer;
     display: grid;
     place-items: center;
@@ -1827,7 +1827,7 @@
   }
   .ghost-label {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: rgba(237, 232, 220, 0.9);
@@ -1851,7 +1851,7 @@
     align-items: center;
     gap: 16px;
     font-family: var(--font-data);
-    font-size: 13px;
+    font-size: var(--fs-base);
     color: var(--color-olive);
   }
   .empty-step {
@@ -1861,12 +1861,12 @@
     gap: 6px;
   }
   .empty-icon {
-    font-size: 24px;
+    font-size: 24px; /* display: scene empty state number */
     line-height: 1;
     opacity: 0.5;
   }
   .empty-arrow {
-    font-size: 18px;
+    font-size: 18px; /* display: scene empty state label */
     opacity: 0.35;
     margin-top: -14px;
   }
@@ -1906,8 +1906,8 @@
       padding: 0 8px;
       gap: 4px;
     }
-    .scene-node.fn .node-label { font-size: 9px; }
-    .node-label { font-size: 11px; }
+    .scene-node.fn .node-label { font-size: var(--fs-sm); }
+    .node-label { font-size: var(--fs-lg); }
     .scene-play-btn { width: 34px; height: 34px; }
   }
 </style>

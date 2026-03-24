@@ -74,7 +74,7 @@
 
 <style>
   .section-label {
-    font-size: var(--dk-fs-xs, 10px);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -110,13 +110,13 @@
     flex-shrink: 0;
   }
   .nav-root {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--color-olive);
     flex-shrink: 0;
     margin: 0 -2px;
   }
   .nav-name {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-strong);
@@ -147,7 +147,7 @@
       height: 10px;
     }
     .nav-name {
-      font-size: 11px;
+      font-size: var(--fs-lg);
     }
   }
 </style>

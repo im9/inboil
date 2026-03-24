@@ -395,7 +395,7 @@
     border-radius: 50%;
     background: transparent;
     color: var(--lz-text-hint);
-    font-size: 12px;
+    font-size: var(--fs-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -403,7 +403,7 @@
   }
   .nav-btn:active { background: var(--lz-bg-active); color: var(--color-fg); }
   .add-btn {
-    font-size: 18px;
+    font-size: 18px; /* display: track display value */
     color: var(--color-olive);
     border: 1.5px solid var(--color-olive);
     width: 28px;
@@ -419,7 +419,7 @@
   }
   .track-name {
     font-family: var(--font-display);
-    font-size: 32px;
+    font-size: 32px; /* display: mobile BPM display */
     line-height: 1;
     color: var(--color-fg);
     letter-spacing: 0.02em;
@@ -454,7 +454,7 @@
     margin-right: 4px;
   }
   .voice-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -463,7 +463,7 @@
     white-space: nowrap;
   }
   .voice-chevron {
-    font-size: 8px;
+    font-size: var(--fs-min);
     opacity: 0.4;
     flex-shrink: 0;
     margin-left: 4px;
@@ -486,7 +486,7 @@
     background: transparent;
     color: var(--color-olive);
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 14px; /* display: mobile button */
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -497,7 +497,7 @@
     background: var(--color-olive);
     color: var(--color-bg);
     font-family: var(--font-display);
-    font-size: 14px;
+    font-size: 14px; /* display: mobile button */
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -516,7 +516,7 @@
     border: 1px solid var(--lz-text-hint);
     background: transparent;
     color: var(--lz-text-hint);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -526,7 +526,7 @@
     border: 1px solid var(--color-olive);
     background: var(--color-olive);
     color: var(--color-bg);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -536,7 +536,7 @@
     border: 1px solid var(--color-salmon);
     background: var(--color-salmon);
     color: var(--color-bg);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -549,7 +549,7 @@
     background: transparent;
     color: var(--color-olive);
     padding: 0 8px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.08em;
     flex-shrink: 0;
@@ -602,7 +602,7 @@
   .tab {
     flex: 1;
     padding: 6px 0;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--lz-text-hint);
@@ -640,7 +640,7 @@
     position: relative;
     z-index: 1;
     padding: 5px 0;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--lz-text-hint);
@@ -694,7 +694,7 @@
 
   .step-num {
     font-family: var(--font-display);
-    font-size: 20px;
+    font-size: 20px; /* display: mobile display value */
     line-height: 1;
     pointer-events: none;
   }
@@ -715,7 +715,7 @@
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 16px; /* display: mobile label */
     line-height: 1;
     color: var(--color-bg);
     z-index: 2;

@@ -135,7 +135,7 @@
 
 <style>
   .section-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -162,7 +162,7 @@
     margin-bottom: 4px;
   }
   .fx-dock-toggle {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 1px 6px;
@@ -183,7 +183,7 @@
     margin-left: auto;
   }
   .fx-flv-btn {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 4px;

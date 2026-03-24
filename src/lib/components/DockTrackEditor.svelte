@@ -321,18 +321,18 @@
 
 <style>
   .lock-step {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     color: var(--color-olive);
     letter-spacing: 0.06em;
   }
   .lock-hint {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     opacity: 0.45;
     font-weight: 400;
     letter-spacing: 0.04em;
   }
   .btn-clr {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text-mid);
@@ -355,7 +355,7 @@
     margin-bottom: 2px;
   }
   .mode-label {
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text-mid);
@@ -413,7 +413,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-dim);
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 7px 6px;
@@ -438,7 +438,7 @@
     border-bottom: 1px solid var(--dz-divider);
     background: transparent;
     color: var(--dz-text);
-    font-size: var(--dk-fs-md);
+    font-size: var(--fs-base);
     padding: 7px 8px;
     text-align: left;
     cursor: pointer;
@@ -459,7 +459,7 @@
     color: var(--color-olive);
   }
   .picker-cat-tag {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-dim);
@@ -481,7 +481,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-strong);
-    font-size: var(--dk-fs-lg);
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 8px 12px;
@@ -496,7 +496,7 @@
     text-transform: uppercase;
   }
   .voice-current-arrow {
-    font-size: 10px;
+    font-size: var(--fs-md);
     opacity: 0.4;
   }
   /* ── Sample loader ── */
@@ -535,7 +535,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 4px 10px;
@@ -552,7 +552,7 @@
     border-color: var(--color-olive, #9fa780);
   }
   .sample-name {
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     color: var(--dz-text-dim);
     overflow: hidden;
   }
@@ -575,14 +575,14 @@
     align-items: center;
   }
   .insert-slot-label {
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     color: var(--dz-text-dim);
     min-width: 1em;
     text-align: center;
   }
   .insert-select {
     flex: 1;
-    font-size: var(--dk-fs-sm);
+    font-size: var(--fs-lg);
     padding: 5px 6px;
     border-radius: 0;
     border: 1px solid var(--dz-border);
@@ -598,7 +598,7 @@
   }
   .param-group-label {
     width: 100%;
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-text-dim);
@@ -613,7 +613,7 @@
   }
   .param-group-label:hover { color: var(--dz-text-mid); }
   .param-group-label.collapsed { margin-bottom: 0; }
-  .group-chevron { font-size: 8px; line-height: 1; }
+  .group-chevron { font-size: var(--fs-min); line-height: 1; }
   .section-divider {
     width: 100%;
     height: 1px;
@@ -621,7 +621,7 @@
     margin: 10px 0;
   }
   .section-label {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-text-dim);
@@ -630,7 +630,7 @@
   .btn-danger {
     width: 100%;
     padding: 6px 0;
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-danger);

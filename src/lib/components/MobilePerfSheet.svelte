@@ -560,7 +560,7 @@
     background: var(--dz-divider);
     color: var(--dz-transport-border);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     transition: background 80ms, color 80ms;
@@ -614,7 +614,7 @@
 
   .zone-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 20px;
+    font-size: 20px; /* display: perf display value */
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--dz-border);
@@ -632,7 +632,7 @@
 
   .zone-sub {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-bg-active);
     letter-spacing: 0.04em;
     pointer-events: none;
@@ -698,7 +698,7 @@
   }
   .info-item {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-border-mid);
@@ -723,7 +723,7 @@
     justify-content: center;
     color: var(--dz-border);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     letter-spacing: 0.06em;
     min-height: 200px;
   }

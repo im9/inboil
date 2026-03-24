@@ -153,7 +153,7 @@
 
 <style>
   .section-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-transport-border);
@@ -172,7 +172,7 @@
   }
   .group-label {
     display: block;
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--dz-text-mid);
@@ -200,7 +200,7 @@
     margin-bottom: 6px;
   }
   .fx-dock-toggle {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 1px 6px;

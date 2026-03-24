@@ -345,7 +345,7 @@
   .compact .app-logo { width: 14px; height: 14px; margin-right: 4px; }
 
   .app-name {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.14em;
     color: var(--color-bg);
@@ -354,7 +354,7 @@
     z-index: 1;
   }
   .version-badge {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 0 4px;
@@ -367,7 +367,7 @@
     line-height: 14px;
   }
   .session-badge {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 1px 5px;
@@ -388,7 +388,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.08em;
     color: var(--dz-text-dim);
     font-variant-numeric: tabular-nums;
@@ -425,7 +425,7 @@
     background: var(--dz-divider);
     color: var(--dz-text-mid);
     padding: 4px 10px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -477,7 +477,7 @@
 
   .bpm-value {
     font-family: var(--font-data);
-    font-size: 18px;
+    font-size: 18px; /* display: BPM value */
     font-weight: 700;
     letter-spacing: 0.02em;
     line-height: 1;
@@ -486,7 +486,7 @@
     min-width: 3ch;
     text-align: center;
   }
-  .compact .bpm-value { font-size: 16px; }
+  .compact .bpm-value { font-size: 16px; /* display: compact BPM */ }
 
   .bpm-adj {
     border: 1px solid var(--dz-border-strong);
@@ -494,7 +494,7 @@
     color: var(--dz-text-mid);
     width: 24px;
     height: 24px;
-    font-size: 14px;
+    font-size: 14px; /* display: BPM adj button */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -504,7 +504,7 @@
 
   .bpm-input {
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 24px; /* display: BPM input */
     line-height: 1;
     color: var(--dz-text-bright);
     background: var(--dz-bg-hover);
@@ -515,10 +515,10 @@
     outline: none;
     text-align: center;
   }
-  .compact .bpm-input { font-size: 18px; }
+  .compact .bpm-input { font-size: 18px; /* display: compact BPM input */ }
 
   .bpm-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.1em;
     color: var(--dz-text-dim);
     text-transform: uppercase;
@@ -535,7 +535,7 @@
     background: transparent;
     color: var(--color-bg);
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     transition: background 60ms linear, color 60ms linear;
   }
   .btn-transport:active,
@@ -550,7 +550,7 @@
     background: transparent;
     color: var(--dz-text-mid);
     padding: 4px 10px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     transition: background 60ms linear, color 60ms linear, border-color 60ms linear;
@@ -600,7 +600,7 @@
     background: var(--dz-divider);
     color: var(--dz-text-mid);
     padding: 4px 10px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -645,9 +645,9 @@
     .bpm-block {
       padding: 6px 0 6px 8px;
     }
-    .bpm-value { font-size: 16px; }
-    .bpm-input { font-size: 16px; }
-    .bpm-adj { width: 28px; height: 28px; font-size: 14px; }
+    .bpm-value { font-size: 16px; /* display: mobile BPM */ }
+    .bpm-input { font-size: 16px; /* display: mobile BPM input */ }
+    .bpm-adj { width: 28px; height: 28px; font-size: 14px; /* display: mobile BPM adj */ }
     .bpm-label { display: none; }
 
     .sep { display: none; }
@@ -660,7 +660,7 @@
       width: 28px;
       height: 28px;
       padding: 0;
-      font-size: 10px;
+      font-size: var(--fs-md);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -682,7 +682,7 @@
       width: 40px;
       height: 28px;
       padding: 0;
-      font-size: 11px;
+      font-size: var(--fs-lg);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -710,7 +710,7 @@
     .btn-view {
       flex: 1;
       padding: 8px 0;
-      font-size: 9px;
+      font-size: var(--fs-sm);
       text-align: center;
       border: none;
       border-bottom: 3px solid transparent;
@@ -735,7 +735,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    font-size: 18px;
+    font-size: 18px; /* display: display header */
     letter-spacing: 0.1em;
     padding: 0;
     display: flex;
@@ -775,7 +775,7 @@
     border: none;
     background: transparent;
     color: var(--dz-text);
-    font-size: 12px;
+    font-size: var(--fs-base);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-align: left;
@@ -790,7 +790,7 @@
   .overflow-icon {
     width: 16px;
     text-align: center;
-    font-size: 11px;
+    font-size: var(--fs-lg);
     opacity: 0.6;
   }
   .overflow-item .dirty-dot {

@@ -766,7 +766,7 @@
     background: var(--lz-bg-active);
   }
   .track-name {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--color-fg);
@@ -821,13 +821,13 @@
     border: 1px solid var(--color-fg);
     background: transparent;
     color: var(--color-fg);
-    font-size: 9px;
+    font-size: var(--fs-sm);
   }
   .solo-on {
     border: 1px solid var(--color-olive);
     background: var(--color-olive);
     color: var(--color-bg);
-    font-size: 9px;
+    font-size: var(--fs-sm);
   }
 
   /* ── Mute button ── */
@@ -844,13 +844,13 @@
     border: 1px solid var(--color-fg);
     background: transparent;
     color: var(--color-fg);
-    font-size: 9px;
+    font-size: var(--fs-sm);
   }
   .mute-on {
     border: 1px solid var(--color-fg);
     background: var(--color-fg);
     color: var(--color-bg);
-    font-size: 9px;
+    font-size: var(--fs-sm);
   }
 
   /* ── Steps ── */
@@ -917,7 +917,7 @@
   /* ── Inline velocity lane ── */
   .vel-tab {
     width: 32px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-muted);
@@ -937,7 +937,7 @@
     background: var(--lz-bg-hover);
   }
   .head-action {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--color-fg);
@@ -960,7 +960,7 @@
     border: 1px solid var(--color-olive);
     border-radius: 0;
     background: transparent;
-    font-size: 7px;
+    font-size: var(--fs-min);
     font-weight: 700;
     padding: 0;
     color: var(--color-olive);
@@ -977,7 +977,7 @@
     flex-shrink: 0;
     border: none;
     background: transparent;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     padding: 0;
     position: relative;
@@ -989,7 +989,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
   }
   .steps-on {
@@ -999,7 +999,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
   }
   .vel-bars {
@@ -1080,7 +1080,7 @@
     border: 1px dashed var(--lz-border-strong);
     background: transparent;
     color: var(--color-muted);
-    font-size: 14px;
+    font-size: 14px; /* display: step display number */
     cursor: pointer;
     transition: color 80ms, border-color 80ms;
   }
@@ -1120,7 +1120,7 @@
   }
   .step-set-num {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     color: var(--lz-text-mid);
     pointer-events: none;
@@ -1155,13 +1155,13 @@
     box-shadow: 0 4px 16px var(--lz-text-hint);
   }
   .remove-label {
-    font-size: 12px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
   }
   .remove-btn {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 5px 12px;

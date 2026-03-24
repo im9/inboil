@@ -124,14 +124,14 @@
   }
   .knob-wrap.dragging { cursor: grabbing; }
   .val {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     color: var(--dz-text-strong);
     white-space: nowrap;
     line-height: 1;
   }
   .light .val { color: var(--lz-text-strong); }
   .lbl {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.06em;
     color: var(--dz-text-mid);
     text-transform: uppercase;

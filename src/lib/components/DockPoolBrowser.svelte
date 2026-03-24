@@ -355,7 +355,7 @@
   }
   .search-input {
     flex: 1;
-    font-size: 10px;
+    font-size: var(--fs-md);
     padding: 2px 6px;
     border: 1px solid var(--dz-border);
     border-radius: 0;
@@ -371,7 +371,7 @@
     border-color: var(--dz-text-dim);
   }
   .search-clear {
-    font-size: 12px;
+    font-size: var(--fs-base);
     color: var(--dz-text-dim);
     background: transparent;
     border: none;
@@ -393,7 +393,7 @@
     padding-bottom: 3px;
   }
   .crumb {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 600;
     color: var(--dz-transport-border);
     background: transparent;
@@ -403,7 +403,7 @@
   }
   .crumb:hover { color: var(--dz-text); }
   .crumb.active { color: var(--dz-text-strong); cursor: default; }
-  .crumb-sep { font-size: 8px; color: var(--dz-border-mid); }
+  .crumb-sep { font-size: var(--fs-min); color: var(--dz-border-mid); }
 
   .pool-folders {
     display: flex;
@@ -412,7 +412,7 @@
     row-gap: 2px;
   }
   .folder-btn {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 5px;
@@ -437,7 +437,7 @@
     padding: 0 2px 2px;
   }
   .pool-msg {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     color: var(--dz-text-dim);
     padding: 10px 6px;
     text-align: center;
@@ -460,7 +460,7 @@
   }
 
   .row-play {
-    font-size: 7px;
+    font-size: var(--fs-min);
     width: 14px;
     text-align: center;
     flex-shrink: 0;
@@ -475,7 +475,7 @@
   .pool-row.playing .row-play { opacity: 1; }
 
   .row-name {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -494,7 +494,7 @@
   }
 
   .row-folder {
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-border-mid);
     flex-shrink: 0;
     padding: 0 3px;
@@ -502,13 +502,13 @@
     border-radius: 0;
   }
   .row-dur {
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-border-strong);
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
   }
   .row-more {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-border);
     background: transparent;
     border: none;
@@ -529,11 +529,11 @@
     flex-wrap: wrap;
   }
   .action-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-text-dim);
   }
   .action-btn {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 600;
     padding: 1px 6px;
     border: 1px solid var(--dz-border);
@@ -556,7 +556,7 @@
   }
   .rename-input {
     flex: 1;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     padding: 1px 4px;
     border: 1px solid var(--dz-border-mid);
     border-radius: 0;
@@ -576,13 +576,13 @@
     pointer-events: none;
   }
   .pack-icon {
-    font-size: 10px;
+    font-size: var(--fs-md);
     flex-shrink: 0;
     width: 14px;
     text-align: center;
   }
   .pack-zones {
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-border-strong);
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;

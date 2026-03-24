@@ -95,12 +95,12 @@
     color: #1E2028;
   }
   .track-num {
-    font-size: 10px;
+    font-size: var(--fs-md);
     opacity: 0.5;
   }
   .track-btn.active .track-num { opacity: 0.7; }
   .track-voice {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.04em;
     white-space: nowrap;
     overflow: hidden;
@@ -108,7 +108,7 @@
     max-width: 48px;
   }
   .voice-label {
-    font-size: 13px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -123,7 +123,7 @@
   }
   .group-label {
     width: 100%;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.12em;
     color: rgba(237,232,220,0.4);

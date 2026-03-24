@@ -869,7 +869,7 @@
     border: none;
     background: var(--color-surface);
     color: var(--color-muted);
-    font-size: 8px;
+    font-size: var(--fs-min);
     line-height: 1;
     cursor: pointer;
     padding: 0;
@@ -910,7 +910,7 @@
     background: var(--salmon-bg-key);
   }
   .key-label {
-    font-size: 7px;
+    font-size: var(--fs-min);
     color: var(--color-muted);
   }
 
@@ -937,7 +937,7 @@
   .chord-select {
     grid-column: 1 / -1;
     width: 100%;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     border: 1px solid var(--color-olive);
     background: var(--color-surface);
     color: var(--color-text);
@@ -1119,7 +1119,7 @@
     }
     .oct-keys { width: 26px; }
     .keys { width: 26px; }
-    .key-label { font-size: 7px; }
+    .key-label { font-size: var(--fs-min); }
     .grid { overflow-x: auto; }
     .row {
       grid-template-columns: repeat(var(--steps), 18px);

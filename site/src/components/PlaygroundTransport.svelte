@@ -91,7 +91,7 @@
     background: var(--c-bg);
     color: var(--c-fg);
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-base);
     border-radius: 12px 12px 0 0;
   }
 
@@ -103,7 +103,7 @@
     border-radius: 3px;
     background: transparent;
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-base);
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -118,6 +118,6 @@
   .btn-stop { border-color: var(--c-salmon); color: var(--c-fg); }
   .btn-stop:hover { background: var(--c-salmon); color: var(--c-bg); }
 
-  .bpm-label { opacity: 0.5; font-size: 11px; }
+  .bpm-label { opacity: 0.5; font-size: var(--fs-lg); }
   .error { color: var(--c-salmon); }
 </style>

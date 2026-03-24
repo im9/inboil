@@ -257,14 +257,14 @@
     min-width: 0;
   }
   .setting-row-label {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-strong);
     text-transform: uppercase;
   }
   .setting-row-desc {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-transport-border);
     line-height: 1.3;
   }
@@ -272,7 +272,7 @@
     padding: 12px 16px;
   }
   .setting-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.1em;
     color: var(--dz-transport-border);
     text-transform: uppercase;
@@ -280,7 +280,7 @@
     margin-bottom: 8px;
   }
   .about-text {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-border-strong);
     margin: 0;
   }
@@ -288,7 +288,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: 10px;
+    font-size: var(--fs-md);
     letter-spacing: 0.06em;
     padding: 6px 0;
     min-width: 52px;
@@ -309,7 +309,7 @@
     background: transparent;
     border: 1px solid var(--dz-border-strong);
     color: var(--dz-text);
-    font-size: 10px;
+    font-size: var(--fs-md);
     padding: 4px 8px;
     border-radius: 0;
     outline: none;
@@ -321,7 +321,7 @@
     align-items: center;
     gap: 6px;
     padding: 2px 0;
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-text-mid);
   }
   .midi-device.offline { opacity: 0.4; }
@@ -345,7 +345,7 @@
     border: 1px solid var(--dz-border-strong);
     color: var(--dz-text-strong);
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     letter-spacing: 0.08em;
     padding: 5px 6px;
     width: 64px;
@@ -360,7 +360,7 @@
     text-transform: uppercase;
   }
   .jam-error {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--color-danger);
     padding: 0 12px 8px;
     margin: 0;
@@ -377,14 +377,14 @@
     gap: 8px;
   }
   .jam-status-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--color-olive);
   }
   .jam-room-code {
     font-family: var(--font-data);
-    font-size: 18px;
+    font-size: 18px; /* display: settings display value */
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--dz-text-bright);
@@ -400,7 +400,7 @@
     border-radius: 0;
   }
   .jam-connected {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-transport-border);
   }
   .jam-connected.on {
@@ -412,7 +412,7 @@
     gap: 4px;
   }
   .jam-peer {
-    font-size: 10px;
+    font-size: var(--fs-md);
     color: var(--dz-text-mid);
     padding-left: 8px;
   }

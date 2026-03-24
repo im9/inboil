@@ -35,7 +35,7 @@
     border: 1px solid var(--color-muted) !important;
     border-radius: var(--radius-sm);
     color: var(--color-muted);
-    font-size: 12px;
+    font-size: var(--fs-base);
   }
   .algo-buttons button.active {
     background: var(--color-blue) !important;
@@ -43,7 +43,7 @@
     color: var(--color-bg);
   }
   .algo-hint {
-    font-size: 12px;
+    font-size: var(--fs-base);
     color: var(--color-muted);
   }
 </style>

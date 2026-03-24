@@ -411,7 +411,7 @@
   }
   .pat-label {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--lz-text);
@@ -429,7 +429,7 @@
     color: var(--color-olive);
     padding: 4px 8px;
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.08em;
     cursor: pointer;
@@ -464,7 +464,7 @@
   }
   .tmpl-option {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--lz-text-strong);
@@ -522,7 +522,7 @@
     color: var(--color-fg);
     width: 24px;
     height: 24px;
-    font-size: 12px;
+    font-size: var(--fs-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -536,7 +536,7 @@
   }
 
   .group-label {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     letter-spacing: 0.08em;
     color: var(--lz-text-hint);
     text-transform: uppercase;
@@ -558,7 +558,7 @@
   .key {
     height: 28px;
     border: none;
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-family: var(--font-data);
     letter-spacing: 0.02em;
     display: flex;
@@ -605,7 +605,7 @@
     color: var(--color-olive);
     width: 20px;
     height: 20px;
-    font-size: 12px;
+    font-size: var(--fs-base);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -613,7 +613,7 @@
   }
   .oct-value {
     font-family: var(--font-display);
-    font-size: 22px;
+    font-size: 22px; /* display: OCT display value */
     line-height: 1;
     color: var(--lz-text);
     display: inline-block;
@@ -635,7 +635,7 @@
     color: var(--color-olive);
     padding: 4px 10px;
     height: 24px;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.08em;
     flex-shrink: 0;
@@ -673,7 +673,7 @@
   .gen-icon { display: block; }
   .gen-track-select {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--lz-text-strong);
@@ -697,7 +697,7 @@
     border: 1px solid var(--color-olive);
     background: transparent;
     color: var(--color-olive);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     padding: 0;
     cursor: pointer;
@@ -725,7 +725,7 @@
   .kbd-icon { display: block; }
 
   .vkbd-info {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.08em;
     color: var(--lz-text-mid);
@@ -733,7 +733,7 @@
   }
 
   .midi-indicator {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--lz-text-hint);
@@ -775,7 +775,7 @@
       background: var(--dz-text-mid);
       color: var(--lz-text-strong);
       font-family: var(--font-data);
-      font-size: 11px;
+      font-size: var(--fs-lg);
       font-weight: 700;
       letter-spacing: 0.02em;
       display: flex;
@@ -802,14 +802,14 @@
       border: 1.5px solid var(--color-olive);
       background: transparent;
       color: var(--color-olive);
-      font-size: 9px;
+      font-size: var(--fs-sm);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .oct-val-m {
       font-family: var(--font-data);
-      font-size: 11px;
+      font-size: var(--fs-lg);
       line-height: 1;
       color: var(--lz-text);
     }
@@ -886,7 +886,7 @@
     .key-fan-label {
       transform: rotate(calc(-1 * var(--rot)));
       font-family: var(--font-data);
-      font-size: 7px;
+      font-size: var(--fs-min);
       font-weight: 600;
       letter-spacing: 0.02em;
       line-height: 1;

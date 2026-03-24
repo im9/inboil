@@ -106,7 +106,7 @@
     background: var(--dz-divider);
     color: var(--dz-text-mid);
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -122,7 +122,7 @@
 
   .ribbon-node.fn {
     border-radius: var(--radius-md);
-    font-size: 7px;
+    font-size: var(--fs-min);
     padding: 2px 6px;
     color: var(--dz-transport-border);
   }
@@ -144,7 +144,7 @@
 
   .ribbon-arrow {
     color: var(--dz-border);
-    font-size: 10px;
+    font-size: var(--fs-md);
     flex-shrink: 0;
     user-select: none;
     pointer-events: none;

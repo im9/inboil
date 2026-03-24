@@ -70,7 +70,7 @@
   }
   .vfader-wrap.dragging { cursor: grabbing; }
   .lbl {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-text-dim);
@@ -106,7 +106,7 @@
     transition: bottom 30ms linear;
   }
   .val {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--dz-text);

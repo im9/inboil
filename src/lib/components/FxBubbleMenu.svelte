@@ -104,7 +104,7 @@
     transform: scale(0.95);
   }
   .bubble-label {
-    font-size: 8px;
+    font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.05em;
     pointer-events: none;
@@ -116,6 +116,6 @@
 
   @media (pointer: coarse) {
     .bubble-item { width: 44px; height: 44px; }
-    .bubble-label { font-size: 9px; }
+    .bubble-label { font-size: var(--fs-sm); }
   }
 </style>

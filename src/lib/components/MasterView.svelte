@@ -397,7 +397,7 @@
   /* ── Axis value labels (shown during drag) ── */
   .axis-label {
     position: absolute;
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
     font-variant-numeric: tabular-nums;
@@ -448,7 +448,7 @@
   }
 
   .node-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.08em;
     pointer-events: none;
@@ -475,7 +475,7 @@
     align-items: baseline;
   }
   .ro-tag {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 800;
     letter-spacing: 0.08em;
     color: var(--node-color);
@@ -483,13 +483,13 @@
     min-width: 36px;
   }
   .ro-label {
-    font-size: 10px;
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-transport-border);
   }
   .ro-val {
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--dz-text);
@@ -520,7 +520,7 @@
     position: absolute;
     top: 16px;
     right: calc(100% + 5px);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     color: var(--dz-text-dim);
     line-height: 1;
@@ -534,7 +534,7 @@
     gap: 4px;
   }
   .vu-ch {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
     color: var(--dz-border-mid);
     order: 1;

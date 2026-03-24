@@ -265,7 +265,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-strong);
-    font-size: 11px;
+    font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 6px 10px;
@@ -279,7 +279,7 @@
     text-transform: uppercase;
   }
   .voice-current-arrow {
-    font-size: 9px;
+    font-size: var(--fs-sm);
     opacity: 0.4;
   }
   .picker-cats {
@@ -293,7 +293,7 @@
     border: 1px solid var(--dz-border);
     background: transparent;
     color: var(--dz-text-dim);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 6px 5px;
@@ -312,7 +312,7 @@
     flex-wrap: wrap;
   }
   .picker-recent-label {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--dz-border-mid);
@@ -322,7 +322,7 @@
     border: 1px solid var(--dz-bg-active);
     background: var(--dz-divider);
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     padding: 2px 6px;
     cursor: pointer;
     white-space: nowrap;
@@ -355,7 +355,7 @@
     border-bottom: 1px solid var(--dz-divider);
     background: transparent;
     color: var(--dz-text);
-    font-size: var(--dk-fs-md);
+    font-size: var(--fs-base);
     padding: 5px 6px;
     text-align: left;
     cursor: pointer;
@@ -376,7 +376,7 @@
     color: var(--color-olive);
   }
   .picker-cat-tag {
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--dz-text-dim);
@@ -394,7 +394,7 @@
     border: 1px solid var(--dz-border-strong);
     background: transparent;
     color: var(--dz-text-mid);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 6px 10px;
@@ -414,7 +414,7 @@
     border: 1px solid var(--olive-border-strong);
     background: transparent;
     color: var(--color-olive);
-    font-size: var(--dk-fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 6px 10px;
@@ -435,7 +435,7 @@
   .preset-save-input {
     width: 100%;
     font-family: var(--font-data);
-    font-size: var(--dk-fs-md);
+    font-size: var(--fs-base);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--dz-text-bright);
@@ -446,7 +446,7 @@
     box-sizing: border-box;
   }
   .preset-del {
-    font-size: 8px;
+    font-size: var(--fs-min);
     color: var(--dz-border-strong);
     flex-shrink: 0;
     padding: 2px 4px;
@@ -463,7 +463,7 @@
     flex: 1;
     min-width: 0;
     font-family: var(--font-data);
-    font-size: var(--dk-fs-md);
+    font-size: var(--fs-base);
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--dz-text-bright);
