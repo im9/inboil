@@ -22,7 +22,8 @@ Two FX "hold" operations exist with inconsistent interaction models:
 
 1. **Granular freeze is not a flavour** — it doesn't change the sound character (like cloud vs stretch), it holds the buffer. Clouds treats it as an independent control.
 2. **Reverb hold is not a flavour** — it doesn't change the reverb algorithm, it sustains the current tail.
-3. **Both are the same class of operation**: "stop input, loop current buffer indefinitely." They should share a consistent UI pattern.
+3. **All four FX buses support the same class of operation**: "stop input, loop/sustain current buffer indefinitely." They should share a consistent UI pattern.
+4. **Flavour and hold are orthogonal** — flavours change the sound character (room vs hall, digital vs tape), hold is a performance operation that works with any flavour. Mixing them in the same slot creates confusion.
 
 ### Current code paths
 
@@ -39,14 +40,22 @@ Two FX "hold" operations exist with inconsistent interaction models:
 
 Remove `{ id: 'freeze', ... }` from `FX_FLAVOURS.granular`. Granular flavours become just `cloud` and `stretch` (sound character variants).
 
-### 2. Unified hold toggle per FX bus
+### 2. Unified hold toggle on all 4 FX buses
 
-Each FX bus that supports hold gets a HOLD toggle in DockPanel, using the same UI pattern (`.mode-row` + `.mode-switch`, matching P-LOCK):
+Every FX bus gets a HOLD toggle in DockPanel, using the same UI pattern (`.mode-row` + `.mode-switch`, matching P-LOCK):
 
 ```
 ┌─────────────────────────────────────┐
 │ VERB  [active]        ROOM HALL SHIM│
 │  ◯ SIZE   ◯ DAMP                    │
+│  HOLD ─────────────────────── (○)   │
+├─────────────────────────────────────┤
+│ DLY                   DIGI DOT TAPE │
+│  ◯ TIME   ◯ FB                      │
+│  HOLD ─────────────────────── (○)   │
+├─────────────────────────────────────┤
+│ GLT                   CRSH RDX STTR │
+│  ◯ RATE   ◯ DEPTH                   │
 │  HOLD ─────────────────────── (○)   │
 ├─────────────────────────────────────┤
 │ GRN                   CLOUD  STRCH  │
@@ -55,32 +64,46 @@ Each FX bus that supports hold gets a HOLD toggle in DockPanel, using the same U
 └─────────────────────────────────────┘
 ```
 
-- Only shown for FX types that support hold (VERB, GRN)
-- Toggle controls `perf.reverbHold` / `perf.granularHold` (rename from `granularFreeze`)
+- All 4 buses get HOLD — orthogonal to flavour selection
+- Toggle controls `perf.reverbHold` / `perf.delayHold` / `perf.glitchHold` / `perf.granularHold`
 - P-LOCK style slide toggle — consistent with existing DockPanel controls
 
 ### 3. FxPad long-press behavior change
 
-Currently GRN long-press enters mode2 (pitch/scatter), and mode2 tap toggles freeze. With freeze removed from flavours:
+Currently GRN long-press enters mode2 (pitch/scatter), and mode2 tap toggles freeze. With hold as a unified concept:
 
-- **GRN long-press (pad ON)**: still enters mode2 for pitch/scatter control
-- **GRN mode2 tap (no drag)**: toggles `perf.granularHold` (renamed)
-- **VERB long-press (pad ON)**: toggles `perf.reverbHold` (simpler than mode2 — just toggle on release)
+- **Any pad long-press (pad ON)**: toggles hold for that FX bus
+- **GRN long-press (pad ON)**: still enters mode2 for pitch/scatter; mode2 tap toggles `perf.granularHold`
 - FxPad node shows "HOLD" label when hold is active (instead of "FRZ")
 
-### 4. DSP changes for reverb hold
+### 4. DSP changes
 
+#### Reverb hold
 - `SimpleReverb.setFreeze(on)`: feedback → 1.0, damp → 0 (saves/restores previous values)
 - `ModulatedReverb.setFreeze(on)`: same
 - `ShimmerReverb.setFreeze(on)`: feedback → 0.35 (max safe), damp → minimum
 - Worklet: gate reverb input to 0 during hold, boost output to compensate internal gain (0.015)
 - Gain staging needs careful testing — ADR 120 session showed ×8 boost was attempted but caused issues
 
+#### Delay hold
+- `PingPongDelay` / `TapeDelay`: feedback → 1.0, gate input to 0
+- Existing buffer content loops indefinitely (dub-style infinite repeats)
+- On release: restore previous feedback, buffer naturally decays
+
+#### Glitch hold
+- Capture current S&H / downsample buffer state, loop it
+- Distinct from stutter flavour: stutter is a flavour that changes the glitch character, hold freezes whatever the current flavour is producing
+- On release: resume live processing
+
+#### Granular hold
+- Existing `GranularProcessor.setFreeze()` — stops write pointer, grains keep reading from frozen buffer
+- No change from current implementation, just renamed
+
 ### 5. State naming
 
 Rename for consistency:
 - `perf.granularFreeze` → `perf.granularHold`
-- Add `perf.reverbHold`
+- Add `perf.reverbHold`, `perf.delayHold`, `perf.glitchHold`
 - Internal DSP method stays `setFreeze()` (implementation detail)
 
 ## Considerations
@@ -89,6 +112,7 @@ Rename for consistency:
 - **Flavour slot removal**: Songs saved with `granular: 'freeze'` need fallback to `'cloud'`
 - **Reverb hold gain staging**: SimpleReverb's internal gain (0.015) makes comb buffer contents very quiet. Hold output needs boosting but the right factor needs ear-testing (×3–×8 range attempted in ADR 120, needs more work)
 - **Hold during playback only**: Hold captures whatever is in the buffer at that moment. If pressed during silence, nothing happens. This is expected behavior (same as Clouds).
+- **Glitch hold vs stutter**: Stutter is a flavour (changes the glitch character — buffer capture + repeat). Hold freezes the output of whatever the current flavour is. They can coexist: stutter + hold = frozen stutter loop.
 - **Mobile**: HOLD toggle should also appear in mobile FX controls (MobileParamOverlay)
 
 ## Implementation Phases
@@ -96,20 +120,26 @@ Rename for consistency:
 ### Phase 1: Granular hold rename + flavour removal
 - Remove `'freeze'` from `FX_FLAVOURS.granular`
 - Rename `granularFreeze` → `granularHold` across codebase
+- Add new 3rd granular flavour (candidate: reverse grains)
 - Migration: map `granular: 'freeze'` → `'cloud'` in saved data
 - FxPad: change "FRZ" label to "HOLD"
 
-### Phase 2: DockPanel HOLD toggles
-- Add `.mode-row` HOLD toggle to VERB and GRN bands in DockFxControls
-- Wire `perf.granularHold` / `perf.reverbHold`
+### Phase 2: DockPanel HOLD toggles + FxPad long-press
+- Add `.mode-row` HOLD toggle to all 4 FX bands in DockFxControls
+- Add `perf.reverbHold` / `perf.delayHold` / `perf.glitchHold` state
+- Wire FxPad long-press → hold toggle for all pads
 
 ### Phase 3: Reverb hold DSP
 - `setFreeze()` on SimpleReverb, ModulatedReverb, ShimmerReverb
 - Input gating + output boost in worklet
 - Ear-test gain staging carefully (one change at a time)
 
+### Phase 4: Delay + Glitch hold DSP
+- PingPongDelay / TapeDelay: feedback → 1.0, gate input
+- Glitch: freeze current output buffer
+- Ear-test each independently
+
 ## Future Extensions
 
-- **Delay hold**: Freeze delay buffer for infinite repeats (dub-style)
 - **Momentary hold**: Hold only while button is pressed (vs toggle)
 - **Hold + modulation**: Slowly modulate held buffer for evolving textures

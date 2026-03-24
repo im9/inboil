@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — curve painting, bézier editing, target palette, and canvas rendering
   import { song, ui, playback, pushUndo, fxPad, masterPad, perf } from '../state.svelte.ts'
   import { findSweepNodeForPattern, sceneUpdateFnParams } from '../sceneActions.ts'
   import { getParamDefs } from '../paramDefs.ts'

@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — KEY piano, OCT shift, VKBD, template picker, generative controls
   import { perf, playback, ui, vkbd, midiIn, song, fxPad, fxFlavours, masterPad, masterLevels, NOTE_NAMES, pushUndo, prefs } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { ICON } from '../icons.ts'

@@ -68,7 +68,7 @@ function open(): Promise<IDBDatabase> {
       // so the upgrade isn't blocked (the user will reload this tab anyway)
       db.onversionchange = () => { db.close(); dbPromise = null }
       // Request persistent storage so the browser won't evict our data
-      navigator.storage?.persist?.()
+      navigator.storage?.persist?.().catch(() => {})
       resolve(db)
     }
     req.onerror = () => { dbPromise = null; reject(req.error) }

@@ -1,3 +1,4 @@
+// NOTE: Large file by design — single reactive state module (undo, project, samples, prefs, multi-device)
 // State — Section/Cell model (ADR 042)
 import {
   DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,

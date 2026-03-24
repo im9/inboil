@@ -135,8 +135,9 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 118 | Repeat Sweep Automation | Implemented | Sweep fn node, paint canvas (freehand/bézier), per-step playback, presets, halation clear |
 | 119 | Scene Stamps | Implemented | Kidpix-inspired decorative SVG stamps with beat-synced animations, free placement on scene canvas |
 | 120 | Reverb Flavour Engines | Implemented | Room (early reflections + Freeverb), Hall (pre-delay + modulated combs), Shimmer (Faust shimmer.dsp port). 8 comb + 4 allpass, 50ms crossfade on switch |
-| 121 | FX Hold Unification | Proposed | Unify reverb hold (BigSky) and granular freeze (Clouds) as independent HOLD toggles, remove freeze from granular flavours |
+| 121 | FX Hold Unification | Proposed | Unified HOLD toggle on all 4 FX buses (verb/delay/glitch/granular), remove freeze from granular flavours |
 | 122 | FX & Master Audio Design | Proposed | Design principles for master/send/insert FX layers, insert distortion, TapeSaturator refinement toward DECO Classic |
+| 123 | Sweep Boolean Automation | Proposed | On/off points on sweep canvas for FX hold, FX on/off, track mute — same canvas as continuous curves |
 
 ## Data / Infrastructure
 
