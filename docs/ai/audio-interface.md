@@ -87,7 +87,7 @@ interface WorkletPattern {
     granularY: number       // FxPad: grain density (0–1, sparse→dense)
     granularPitch: number   // 0–1 (0.5 = no shift, ±12 semitones)
     granularScatter: number // 0–1 (position randomization)
-    granularFreeze: boolean // freeze ring buffer writing
+    granularHold: boolean   // hold (freeze) ring buffer writing
     perfX: number           // Kaoss Pad X position (0–1) (ADR 097)
     perfY: number           // Kaoss Pad Y position (0–1)
     perfTouching: boolean   // Kaoss Pad touch active

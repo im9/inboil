@@ -514,7 +514,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.granular.setParams(p.perf.granularX, p.perf.granularY)
           this.granular.setParams2(p.perf.granularPitch, p.perf.granularScatter)
           this.granular.setActive(p.perf.granularOn)
-          this.granular.setFreeze(p.perf.granularFreeze)
+          this.granular.setFreeze(p.perf.granularHold)
           this.djFilter.set(p.fx.filter.x, p.fx.filter.y, p.fx.filter.on)
           for (let i = 0; i < p.fx.eq.bands.length && i < 3; i++) {
             const b = p.fx.eq.bands[i]

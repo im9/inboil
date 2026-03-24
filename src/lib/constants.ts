@@ -67,7 +67,7 @@ export const COLORS_RGB = {
 export type ReverbFlavour   = 'room' | 'hall' | 'shimmer'
 export type DelayFlavour    = 'digital' | 'dotted' | 'tape'
 export type GlitchFlavour   = 'bitcrush' | 'redux' | 'stutter'
-export type GranularFlavour = 'cloud' | 'freeze' | 'stretch'
+export type GranularFlavour = 'cloud' | 'stretch' | 'reverse'
 
 export type FxFlavourKey = 'verb' | 'delay' | 'glitch' | 'granular'
 
@@ -89,8 +89,8 @@ export const FX_FLAVOURS = {
   ],
   granular: [
     { id: 'cloud'   as const, label: 'CLOUD', tip: 'Cloud — default grain shower', tipJa: 'クラウド — 通常のグレインシャワー' },
-    { id: 'freeze'  as const, label: 'FREEZE', tip: 'Freeze — auto-engage freeze', tipJa: 'フリーズ — 自動フリーズ' },
     { id: 'stretch' as const, label: 'STRCH',  tip: 'Stretch — time-stretch large grains', tipJa: 'ストレッチ — タイムストレッチ' },
+    { id: 'reverse' as const, label: 'REV',    tip: 'Reverse — reversed grain playback', tipJa: 'リバース — 逆再生グレイン' },
   ],
 } as const
 
@@ -146,7 +146,7 @@ export const DEFAULT_PERF = {
   swing: 0,
   granularPitch: 0.5,
   granularScatter: 0.67,
-  granularFreeze: false,
+  granularHold: false,
   // Kaoss Pad XY + tilt (mobile perf sheet)
   perfX: 0.5,
   perfY: 0.5,

@@ -164,11 +164,13 @@ export function restoreSongPure(src: Song): RestoredState {
 
   // FX flavours
   const fl = src.flavours
+  const rawGranular: string = fl?.granular ?? 'cloud'
   const fxFlavours: FxFlavours = {
     verb:     (fl?.verb     ?? 'room')     as FxFlavours['verb'],
     delay:    (fl?.delay    ?? 'digital')   as FxFlavours['delay'],
     glitch:   (fl?.glitch   ?? 'bitcrush')  as FxFlavours['glitch'],
-    granular: (fl?.granular ?? 'cloud')     as FxFlavours['granular'],
+    // Migration (ADR 121): 'freeze' flavour removed — map to 'cloud'
+    granular: (rawGranular === 'freeze' ? 'cloud' : rawGranular) as FxFlavours['granular'],
   }
 
   // FX pad state

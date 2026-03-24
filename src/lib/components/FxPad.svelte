@@ -10,7 +10,7 @@
     { key: 'verb'     as const, label: 'VERB', color: 'var(--color-olive)',  tip: 'Reverb — adds space and depth', tipJa: 'リバーブ — 空間と奥行きを付加' },
     { key: 'delay'    as const, label: 'DLY',  color: 'var(--color-blue)',   tip: 'Delay — rhythmic echo repeats', tipJa: 'ディレイ — リズミカルなエコー' },
     { key: 'glitch'   as const, label: 'GLT',  color: 'var(--color-salmon)', tip: 'Glitch — stutter and slice effects', tipJa: 'グリッチ — スタッター/スライスエフェクト' },
-    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — drag: size/density, hold+drag: pitch/scatter, hold: freeze', tipJa: 'グラニュラー — ドラッグ: サイズ/密度, 長押し+ドラッグ: ピッチ/スキャッタ, 長押し: フリーズ' },
+    { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — drag: size/density, hold+drag: pitch/scatter, hold: hold', tipJa: 'グラニュラー — ドラッグ: サイズ/密度, 長押し+ドラッグ: ピッチ/スキャッタ, 長押し: ホールド' },
   ]
 
   let padEl: HTMLDivElement
@@ -78,7 +78,7 @@
     if (!dragging) return
     if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
     if (dragging === 'granular' && granularMode2 && !dragMoved) {
-      perf.granularFreeze = !perf.granularFreeze
+      perf.granularHold = !perf.granularHold
     } else if (!dragMoved) {
       fxPad[dragging].on = !fxPad[dragging].on
     }
@@ -533,7 +533,7 @@
         class="fx-node"
         class:on={state.on}
         class:dragging={dragging === node.key}
-        class:frozen={node.key === 'granular' && perf.granularFreeze}
+        class:frozen={node.key === 'granular' && perf.granularHold}
         class:mode2={node.key === 'granular' && granularMode2}
         style="
           left: calc({PAD_INSET}px + {state.x} * (100% - {PAD_INSET * 2}px));
@@ -544,7 +544,7 @@
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
-        <span class="node-label">{node.key === 'granular' && perf.granularFreeze ? 'FRZ' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
+        <span class="node-label">{node.key === 'granular' && perf.granularHold ? 'HOLD' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
       </button>
     {/each}
 

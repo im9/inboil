@@ -34,7 +34,7 @@ type PerfState = {
   filling: boolean; reversing: boolean
   swing: number
   granularPitch?: number; granularScatter?: number
-  granularFreeze?: boolean
+  granularHold?: boolean
   perfX?: number; perfY?: number; perfTouching?: boolean
   tiltX?: number; tiltY?: number
   stuttering?: boolean; halfSpeed?: boolean; tapeStop?: boolean
@@ -368,24 +368,23 @@ function mapTrig(trig: { active: boolean; note: number; velocity: number; durati
 /** Compute granular params adjusted by flavour (ADR 075) */
 function granularFlavourParams(
   fxPad?: FxPadState, perf?: PerfState, flavours?: FxFlavours,
-): { granularX: number; granularY: number; granularPitch: number; granularScatter: number; granularFreeze: boolean } {
+): { granularX: number; granularY: number; granularPitch: number; granularScatter: number; granularHold: boolean } {
   const gx = fxPad?.granular.x ?? 0.5
   const gy = fxPad?.granular.y ?? 0.3
   const pitch   = perf?.granularPitch   ?? 0.5
   const scatter = perf?.granularScatter ?? 0.67
-  const freeze  = perf?.granularFreeze  ?? false
+  const hold    = perf?.granularHold    ?? false
 
   switch (flavours?.granular ?? 'cloud') {
-    case 'freeze':
-      // Auto-engage freeze when granular is ON
-      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter,
-               granularFreeze: fxPad?.granular.on ?? false }
     case 'stretch':
       // Large grains, low density, no scatter, no pitch shift
       return { granularX: 0.5 + gx * 0.5, granularY: 0.05 + gy * 0.25,
-               granularPitch: 0.5, granularScatter: 0.0, granularFreeze: freeze }
+               granularPitch: 0.5, granularScatter: 0.0, granularHold: hold }
+    case 'reverse':
+      // Reversed grain playback — same XY mapping as cloud
+      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter, granularHold: hold }
     default: // 'cloud'
-      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter, granularFreeze: freeze }
+      return { granularX: gx, granularY: gy, granularPitch: pitch, granularScatter: scatter, granularHold: hold }
   }
 }
 

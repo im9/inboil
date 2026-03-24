@@ -255,9 +255,9 @@ describe('song round-trip: fxFlavours', () => {
   it('preserves custom flavours', () => {
     const song = makeDefaultSong()
     const ext = defaultExt()
-    ext.fxFlavours = { verb: 'shimmer', delay: 'tape', glitch: 'stutter', granular: 'freeze' }
+    ext.fxFlavours = { verb: 'shimmer', delay: 'tape', glitch: 'stutter', granular: 'reverse' }
     const r = roundTrip(song, ext)
-    expect(r.fxFlavours).toEqual({ verb: 'shimmer', delay: 'tape', glitch: 'stutter', granular: 'freeze' })
+    expect(r.fxFlavours).toEqual({ verb: 'shimmer', delay: 'tape', glitch: 'stutter', granular: 'reverse' })
   })
 
   it('defaults flavours when missing', () => {
@@ -266,6 +266,17 @@ describe('song round-trip: fxFlavours', () => {
     const r = restoreSongPure(song)
     expect(r.fxFlavours.verb).toBe('room')
     expect(r.fxFlavours.delay).toBe('digital')
+  })
+
+  it('migrates legacy granular freeze flavour to cloud (ADR 121)', () => {
+    const song = makeDefaultSong()
+    // Simulate legacy save with 'freeze' flavour
+    ;(song as unknown as Record<string, unknown>).flavours = { verb: 'hall', delay: 'tape', glitch: 'stutter', granular: 'freeze' }
+    const r = restoreSongPure(song)
+    expect(r.fxFlavours.granular).toBe('cloud')
+    // Other flavours preserved
+    expect(r.fxFlavours.verb).toBe('hall')
+    expect(r.fxFlavours.delay).toBe('tape')
   })
 })
 

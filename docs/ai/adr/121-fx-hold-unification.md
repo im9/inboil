@@ -117,11 +117,11 @@ Rename for consistency:
 
 ## Implementation Phases
 
-### Phase 1: Granular hold rename + flavour removal
+### Phase 1: Granular hold rename + flavour removal — DONE
 - Remove `'freeze'` from `FX_FLAVOURS.granular`
 - Rename `granularFreeze` → `granularHold` across codebase
-- Add new 3rd granular flavour (candidate: reverse grains)
-- Migration: map `granular: 'freeze'` → `'cloud'` in saved data
+- Add new 3rd granular flavour: `'reverse'` (reversed grain playback)
+- Migration: map `granular: 'freeze'` → `'cloud'` in `restoreSongPure`
 - FxPad: change "FRZ" label to "HOLD"
 
 ### Phase 2: DockPanel HOLD toggles + FxPad long-press
