@@ -49,6 +49,9 @@ export interface WorkletPattern {
     granularPitch: number
     granularScatter: number
     granularHold: boolean
+    reverbHold: boolean
+    delayHold: boolean
+    glitchHold: boolean
     swing: number
     glitchRedux: boolean    // ADR 075: Redux flavour skips bit quantize
     delayTape: boolean      // ADR 075: Tape delay flavour (LP + wow/flutter)

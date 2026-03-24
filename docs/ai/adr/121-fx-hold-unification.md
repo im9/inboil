@@ -124,10 +124,10 @@ Rename for consistency:
 - Migration: map `granular: 'freeze'` → `'cloud'` in `restoreSongPure`
 - FxPad: change "FRZ" label to "HOLD"
 
-### Phase 2: DockPanel HOLD toggles + FxPad long-press
+### Phase 2: DockPanel HOLD toggles + FxPad long-press — DONE
 - Add `.mode-row` HOLD toggle to all 4 FX bands in DockFxControls
 - Add `perf.reverbHold` / `perf.delayHold` / `perf.glitchHold` state
-- Wire FxPad long-press → hold toggle for all pads
+- Wire FxPad long-press → hold toggle for all pads (pad ON = toggle hold, pad OFF = flavour menu)
 
 ### Phase 3: Reverb hold DSP
 - `setFreeze()` on SimpleReverb, ModulatedReverb, ShimmerReverb

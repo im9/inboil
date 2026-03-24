@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fxPad, fxFlavours } from '../state.svelte.ts'
+  import { fxPad, fxFlavours, perf } from '../state.svelte.ts'
   import { FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
@@ -84,6 +84,21 @@
   function currentFlavourId(fKey: FxFlavourKey): string {
     return fxFlavours[fKey]
   }
+
+  type HoldKey = 'reverbHold' | 'delayHold' | 'glitchHold' | 'granularHold'
+  const HOLD_MAP: Record<string, HoldKey> = {
+    verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
+  }
+
+  function toggleHold(key: FxKey) {
+    const hk = HOLD_MAP[key]
+    if (hk) perf[hk] = !perf[hk]
+  }
+
+  function isHeld(key: FxKey): boolean {
+    const hk = HOLD_MAP[key]
+    return hk ? perf[hk] : false
+  }
 </script>
 
 <span class="section-label">FX CONTROLS</span>
@@ -129,6 +144,15 @@
           onchange={v => setFxY(node.key, v)}
         />
       </div>
+      {#if HOLD_MAP[node.key]}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="fx-hold-row" onpointerdown={() => toggleHold(node.key)}
+          data-tip="Hold — sustain current buffer indefinitely" data-tip-ja="ホールド — 現在のバッファを無限に保持">
+          <span class="fx-hold-label">HOLD</span>
+          <span class="fx-hold-switch" class:on={isHeld(node.key)}><span class="fx-hold-thumb"></span></span>
+        </div>
+      {/if}
     </div>
   {/each}
 </div>
@@ -201,5 +225,45 @@
   .fx-dock-knobs {
     display: flex;
     gap: 4px;
+  }
+  .fx-hold-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 0;
+    cursor: pointer;
+  }
+  .fx-hold-label {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--dz-text-mid);
+  }
+  .fx-hold-switch {
+    margin-left: auto;
+    width: 28px;
+    height: 14px;
+    border-radius: var(--radius-md);
+    background: var(--dz-bg-press);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 100ms;
+  }
+  .fx-hold-switch.on {
+    background: var(--color-olive);
+  }
+  .fx-hold-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--dz-text);
+    transition: left 100ms;
+  }
+  .fx-hold-switch.on .fx-hold-thumb {
+    left: 16px;
+    background: var(--color-bg);
   }
 </style>

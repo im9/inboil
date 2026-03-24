@@ -32,13 +32,21 @@
     dragMoved = false
     startPos = { x: e.clientX, y: e.clientY }
     dragRect = padEl?.getBoundingClientRect() ?? null
-    // Long-press: granular mode2 (if ON) or flavour menu (all nodes)
+    // Long-press: hold toggle (if pad ON), granular mode2, or flavour menu
     longPressTimer = setTimeout(() => {
       longPressTimer = null
       if (key === 'granular' && fxPad.granular.on) {
+        // GRN: enter mode2 for pitch/scatter (tap in mode2 toggles hold)
         granularMode2 = true
+      } else if (fxPad[key].on) {
+        // Any other pad ON: toggle hold (ADR 121)
+        const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold' } as const
+        const hk = holdKeys[key as keyof typeof holdKeys]
+        if (hk) perf[hk] = !perf[hk]
+        dragging = null
+        dragRect = null
       } else {
-        // Open flavour bubble menu
+        // Pad OFF: open flavour bubble menu
         const rect = padEl?.getBoundingClientRect()
         if (rect) {
           bubbleContainerSize = { w: rect.width, h: rect.height }
@@ -85,6 +93,14 @@
     granularMode2 = false
     dragging = null
     dragRect = null
+  }
+
+  function nodeHeld(key: string): boolean {
+    if (key === 'verb') return perf.reverbHold
+    if (key === 'delay') return perf.delayHold
+    if (key === 'glitch') return perf.glitchHold
+    if (key === 'granular') return perf.granularHold
+    return false
   }
 
   function pickFlavour(id: string) {
@@ -544,7 +560,7 @@
         data-tip={node.tip}
         data-tip-ja={node.tipJa}
       >
-        <span class="node-label">{node.key === 'granular' && perf.granularHold ? 'HOLD' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
+        <span class="node-label">{nodeHeld(node.key) ? 'HOLD' : node.key === 'granular' && granularMode2 ? 'M2' : flavourLabel(node.key)}</span>
       </button>
     {/each}
 

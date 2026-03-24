@@ -147,6 +147,9 @@ export const DEFAULT_PERF = {
   granularPitch: 0.5,
   granularScatter: 0.67,
   granularHold: false,
+  reverbHold: false,
+  delayHold: false,
+  glitchHold: false,
   // Kaoss Pad XY + tilt (mobile perf sheet)
   perfX: 0.5,
   perfY: 0.5,

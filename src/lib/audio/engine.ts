@@ -35,6 +35,7 @@ type PerfState = {
   swing: number
   granularPitch?: number; granularScatter?: number
   granularHold?: boolean
+  reverbHold?: boolean; delayHold?: boolean; glitchHold?: boolean
   perfX?: number; perfY?: number; perfTouching?: boolean
   tiltX?: number; tiltY?: number
   stuttering?: boolean; halfSpeed?: boolean; tapeStop?: boolean
@@ -506,6 +507,9 @@ function buildWorkletPattern(
       perfTouching:    perf?.perfTouching ?? false,
       tiltX:           perf?.tiltX       ?? 0,
       tiltY:           perf?.tiltY       ?? 0,
+      reverbHold:      perf?.reverbHold  ?? false,
+      delayHold:       perf?.delayHold   ?? false,
+      glitchHold:      perf?.glitchHold  ?? false,
       stuttering:      perf?.stuttering  ?? false,
       halfSpeed:       perf?.halfSpeed   ?? false,
       tapeStop:        perf?.tapeStop    ?? false,
