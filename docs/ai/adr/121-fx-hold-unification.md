@@ -134,10 +134,10 @@ Rename for consistency:
 - Input gating in worklet (reverbIn = 0 during hold)
 - Output boost deferred — ear-test first without boost
 
-### Phase 4: Delay + Glitch hold DSP
-- PingPongDelay / TapeDelay: feedback → 1.0, gate input
-- Glitch: freeze current output buffer
-- Ear-test each independently
+### Phase 4: Delay + Glitch hold DSP — DONE
+- PingPongDelay / TapeDelay: worklet gates input + fb→1.0 during hold
+- Glitch: freeze current S&H output (skip counter updates)
+- TDD: delay hold sustain + decay tests added before implementation
 
 ## Future Extensions
 

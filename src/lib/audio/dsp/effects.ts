@@ -393,6 +393,7 @@ export class TapeDelay {
   private wowInc: number; private flutterInc: number
   // Smoothing: ~10ms slew to avoid clicks on delay time changes
   private slewCoeff: number
+  private _drive = 1.6
 
   constructor(maxMs: number, private sr: number) {
     const max = Math.ceil(maxMs * sr / 1000)
@@ -410,6 +411,7 @@ export class TapeDelay {
   setTime(ms: number) {
     this.targetDs = Math.min(Math.ceil(ms * this.sr / 1000), this.bL.length - 12)
   }
+  setDrive(d: number) { this._drive = d }
 
   private _readInterp(buf: Float32Array, pos: number): number {
     const len = buf.length
@@ -445,8 +447,8 @@ export class TapeDelay {
     const fbR = this.lpR - this.hpR; this.hpR = this.lpR - fbR * this.hpCoeff
 
     // Tape saturation — slightly driven for warm compression on each repeat
-    this.bL[this.pL] = iL + Math.tanh(fbL * 1.6) * fb
-    this.bR[this.pR] = iR + Math.tanh(fbR * 1.6) * fb
+    this.bL[this.pL] = iL + Math.tanh(fbL * this._drive) * fb
+    this.bR[this.pR] = iR + Math.tanh(fbR * this._drive) * fb
     if (++this.pL >= this.bL.length) this.pL = 0
     if (++this.pR >= this.bR.length) this.pR = 0
 

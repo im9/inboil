@@ -933,3 +933,57 @@ describe('Reverb freeze (ADR 121)', () => {
     expect(peakAbs(releasedBuf)).toBeLessThan(1e-10)
   })
 })
+
+// ── Delay hold tests (ADR 121 Phase 4) ──────────────────────────────
+
+describe('Delay hold (ADR 121)', () => {
+  it('PingPongDelay: fb=1.0 + gated input sustains output, then decays on release', () => {
+    const dly = new PingPongDelay(500, SR)
+    dly.setTime(100) // 100ms delay
+    // Feed signal with normal feedback
+    for (let i = 0; i < 8192; i++) {
+      const inp = i < 512 ? Math.sin(i * 0.1) * 0.5 : 0
+      dly.process(inp, inp, 0.5)
+    }
+    // Hold: fb=1.0, input=0 — should sustain
+    const holdBuf = new Float64Array(4096)
+    for (let i = 0; i < 4096; i++) {
+      const r = dly.process(0, 0, 1.0)
+      holdBuf[i] = r[0]
+    }
+    expect(peakAbs(holdBuf)).toBeGreaterThan(0)
+    // Measure late hold — still sustaining
+    const lateBuf = new Float64Array(4096)
+    for (let i = 0; i < 4096; i++) {
+      const r = dly.process(0, 0, 1.0)
+      lateBuf[i] = r[0]
+    }
+    expect(peakAbs(lateBuf) / peakAbs(holdBuf)).toBeGreaterThan(0.9)
+    // Release: fb=0.5, input=0 — should decay
+    for (let i = 0; i < SR; i++) dly.process(0, 0, 0.5)
+    const releaseBuf = new Float64Array(4096)
+    for (let i = 0; i < 4096; i++) {
+      const r = dly.process(0, 0, 0.5)
+      releaseBuf[i] = r[0]
+    }
+    expect(peakAbs(releaseBuf)).toBeLessThan(peakAbs(holdBuf) * 0.01)
+  })
+
+  it('TapeDelay: fb=1.0 + gated input sustains output', () => {
+    const dly = new TapeDelay(500, SR)
+    dly.setTime(100)
+    for (let i = 0; i < 8192; i++) {
+      const inp = i < 512 ? Math.sin(i * 0.1) * 0.5 : 0
+      dly.process(inp, inp, 0.5)
+    }
+    // Hold: fb=1.0, input=0
+    const holdBuf = new Float64Array(4096)
+    for (let i = 0; i < 4096; i++) {
+      const r = dly.process(0, 0, 1.0)
+      holdBuf[i] = r[0]
+    }
+    expect(peakAbs(holdBuf)).toBeGreaterThan(0)
+    // Note: TapeDelay has LP/HP filtering in feedback path, so it will
+    // gradually lose content even at fb=1.0. This is expected tape character.
+  })
+})

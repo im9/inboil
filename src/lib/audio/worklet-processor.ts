@@ -269,6 +269,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private glitchHoldR    = 0
   private glitchCounter  = 0
   private glitchSeed     = 55555
+  // Hold state (ADR 121)
+  private delayHoldActive = false
+  private glitchHoldActive = false
   // Insert FX slots (ADR 077/114) — 2 slots per track, serial chain
   private insertSlots: [InsertFxSlot | null, InsertFxSlot | null][] = []
   private insertOut      = new Float64Array(2)  // reusable output buffer
@@ -499,6 +502,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchRedux   = p.perf.glitchRedux ?? false
           this.delayTape     = p.perf.delayTape ?? false
           this.glitchStutter = p.perf.glitchStutter ?? false
+          this.delayHoldActive = p.perf.delayHold ?? false
+          this.glitchHoldActive = p.perf.glitchHold ?? false
           // ADR 120: reverb flavour engine params
           this.flavourActive = p.fx.reverbFlavour != null
           const newFlavour = p.fx.reverbFlavour ?? this.reverbFlavour
@@ -1073,15 +1078,22 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       } else {
         rev = this._processReverbFlavour(this.reverbFlavour, reverbIn)
       }
-      // Delay: tape or digital
+      // Delay: tape or digital — ADR 121: hold gates input + high fb
+      const dlyFb = this.delayHoldActive ? (this.delayTape ? 0.85 : 1.0) : this.delayFeedback
+      const dlyIn = this.delayHoldActive ? 0 : delayIn
+      if (this.delayTape) this.tapeDelay.setDrive(this.delayHoldActive ? 1.3 : 1.6)
       const del = this.delayTape
-        ? this.tapeDelay.process(delayIn, delayIn, this.delayFeedback)
-        : this.delay.process(delayIn, delayIn, this.delayFeedback)
+        ? this.tapeDelay.process(dlyIn, dlyIn, dlyFb)
+        : this.delay.process(dlyIn, dlyIn, dlyFb)
       const grn = this.granular.process(granularIn, granularIn)
 
       // Glitch send: stutter, downsample, or bitcrush on send bus
       let gltL = 0, gltR = 0
-      if (this.glitchStutter) {
+      if (this.glitchHoldActive) {
+        // ADR 121: glitch hold — freeze current S&H output
+        gltL = this.glitchHoldL
+        gltR = this.glitchHoldR
+      } else if (this.glitchStutter) {
         // Stutter: buffer-repeat loop
         const st = this.stutter.process(glitchIn)
         gltL = st; gltR = st
