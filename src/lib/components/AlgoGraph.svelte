@@ -99,6 +99,6 @@
     display: block;
     margin-bottom: 4px;
     border-radius: 0;
-    background: rgba(30, 32, 40, 0.15);
+    background: var(--lz-border-strong);
   }
 </style>

@@ -670,7 +670,7 @@
   /* ── Page bar (hardware-style 16-step paging) ── */
   /* ── Track group (wraps track-row + vel-row + piano-roll) ── */
   .track-group {
-    border-bottom: 1px solid rgba(30,32,40,0.08);
+    border-bottom: 1px solid var(--lz-border-subtle);
     border-left: 3px solid transparent;
   }
   .track-group.selected {
@@ -682,7 +682,7 @@
     opacity: 0.35;
     background-image: repeating-linear-gradient(
       45deg,
-      rgba(30,32,40,0.08) 0px, rgba(30,32,40,0.08) 1px,
+      var(--lz-bg-active) 0px, var(--lz-bg-active) 1px,
       transparent 1px, transparent 6px
     );
   }
@@ -695,7 +695,7 @@
   .track-controls {
     width: var(--head-w);
     flex-shrink: 0;
-    border-right: 1px solid rgba(30,32,40,0.10);
+    border-right: 1px solid var(--lz-border);
     padding-right: 8px;
   }
   .ctrl-main {
@@ -727,7 +727,7 @@
   .track-mix {
     width: 128px;
     flex-shrink: 0;
-    border-left: 1px solid rgba(30,32,40,0.10);
+    border-left: 1px solid var(--lz-border);
     padding-left: 4px;
     margin-left: 4px;
   }
@@ -760,10 +760,10 @@
     transition: background 100ms;
   }
   .track-label:hover {
-    background: rgba(30,32,40,0.06);
+    background: var(--lz-bg-hover);
   }
   .track-label.expanded {
-    background: rgba(30,32,40,0.08);
+    background: var(--lz-bg-active);
   }
   .track-name {
     font-size: 11px;
@@ -803,7 +803,7 @@
     width: 1px;
     height: 16px;
     flex-shrink: 0;
-    background: rgba(30,32,40,0.12);
+    background: var(--lz-border-mid);
     margin: 0 4px;
   }
 
@@ -881,7 +881,7 @@
 
   .step-off {
     background: var(--color-bg);
-    border: 1px solid rgba(30,32,40,0.5);
+    border: 1px solid var(--lz-step-border);
   }
   .step-on {
     background: var(--color-olive);
@@ -925,7 +925,7 @@
     text-align: center;
     cursor: pointer;
     user-select: none;
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     padding: 3px 0;
     background: transparent;
     transition: color 80ms, border-color 80ms, background 80ms;
@@ -934,7 +934,7 @@
   .vel-tab.active {
     color: var(--tab-color, var(--color-fg));
     border-color: var(--tab-color, var(--color-fg));
-    background: rgba(30,32,40,0.06);
+    background: var(--lz-bg-hover);
   }
   .head-action {
     font-size: 9px;
@@ -951,7 +951,7 @@
   }
   .head-action:hover {
     color: var(--color-fg);
-    border-color: rgba(30,32,40,0.15);
+    border-color: var(--lz-border-strong);
   }
   .btn-scale {
     width: 28px;
@@ -1019,7 +1019,7 @@
   }
   .vel-fill {
     width: 100%;
-    background: rgba(237,232,220,0.12);
+    background: var(--dz-bg-active);
     border-radius: 0;
     transition: height 180ms ease-out;
     min-height: 2px;
@@ -1077,7 +1077,7 @@
     width: 24px;
     height: 24px;
     margin: 4px 8px;
-    border: 1px dashed rgba(30,32,40,0.15);
+    border: 1px dashed var(--lz-border-strong);
     background: transparent;
     color: var(--color-muted);
     font-size: 14px;
@@ -1091,7 +1091,7 @@
 
   /* ── Step-set mode ── */
   .step-set-mode {
-    background: rgba(30, 32, 40, 0.06);
+    background: var(--lz-bg-hover);
     border-radius: 0;
   }
   .step-set-cell {
@@ -1099,7 +1099,7 @@
     align-items: center;
     justify-content: center;
     background: var(--color-bg);
-    border: 1px solid rgba(30, 32, 40, 0.15);
+    border: 1px solid var(--lz-border-strong);
     cursor: pointer;
     transition: background 60ms, border-color 60ms;
   }
@@ -1122,7 +1122,7 @@
     font-family: var(--font-data);
     font-size: 8px;
     font-weight: 700;
-    color: rgba(30, 32, 40, 0.5);
+    color: var(--lz-text-mid);
     pointer-events: none;
   }
   .step-set-cell.active .step-set-num {
@@ -1136,7 +1136,7 @@
   .remove-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(30,32,40,0.15);
+    background: var(--lz-border-strong);
     z-index: 20;
   }
   .remove-confirm {
@@ -1149,10 +1149,10 @@
     align-items: center;
     gap: 10px;
     background: var(--color-fg);
-    color: rgba(237,232,220,0.85);
+    color: var(--dz-text-strong);
     padding: 10px 16px;
     border-radius: var(--radius-md);
-    box-shadow: 0 4px 16px rgba(30,32,40,0.35);
+    box-shadow: 0 4px 16px var(--lz-text-hint);
   }
   .remove-label {
     font-size: 12px;
@@ -1165,15 +1165,15 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     padding: 5px 12px;
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     cursor: pointer;
     border-radius: 0;
   }
   .remove-btn:hover {
-    color: rgba(237,232,220,0.9);
-    border-color: rgba(237,232,220,0.45);
+    color: var(--dz-text-bright);
+    border-color: var(--dz-transport-border);
   }
   .remove-yes {
     color: var(--color-danger);

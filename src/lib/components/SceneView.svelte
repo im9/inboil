@@ -1320,14 +1320,14 @@
     cursor: crosshair;
   }
   .scene-view.drop-active {
-    outline: 2px dashed rgba(30,32,40,0.15);
+    outline: 2px dashed var(--lz-border-strong);
     outline-offset: -2px;
   }
 
   .select-rect {
     position: absolute;
     border: 1px dashed rgba(30, 32, 40, 0.35);
-    background: rgba(30, 32, 40, 0.06);
+    background: var(--lz-bg-hover);
     z-index: 8;
     pointer-events: none;
   }
@@ -1351,7 +1351,7 @@
     height: 32px;
     border-radius: 0;
     transform: translate(-50%, -50%);
-    border: 1px solid rgba(30, 32, 40, 0.1);
+    border: 1px solid var(--lz-border);
     background: var(--nc);
     color: white;
     display: flex;
@@ -1376,14 +1376,14 @@
     border-radius: 50%;
     border: 2px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.95);
-    color: rgba(30, 32, 40, 0.5);
+    color: var(--lz-text-mid);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 6;
     transition: background 80ms, border-color 80ms, color 80ms, box-shadow 80ms;
-    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15);
+    box-shadow: 0 1px 4px var(--lz-border-strong);
   }
   .scene-play-btn:hover {
     border-color: var(--color-fg);
@@ -1394,7 +1394,7 @@
     border-color: var(--color-fg);
     background: white;
     color: var(--color-fg);
-    box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15);
+    box-shadow: 0 1px 4px var(--lz-border-strong);
   }
   .scene-play-btn.playing {
     border-color: var(--color-fg);
@@ -1403,8 +1403,8 @@
     animation: scene-pulse 1.2s ease-in-out infinite;
   }
   @keyframes scene-pulse {
-    0%, 100% { box-shadow: 0 1px 4px rgba(30, 32, 40, 0.15); }
-    50% { box-shadow: 0 0 0 5px rgba(30, 32, 40, 0.1); }
+    0%, 100% { box-shadow: 0 1px 4px var(--lz-border-strong); }
+    50% { box-shadow: 0 0 0 5px var(--lz-border); }
   }
 
   /* ── Snap-attach highlight (ADR 062) ── */
@@ -1444,7 +1444,7 @@
     padding: 2px 0;
     flex-direction: column;
     gap: 1px;
-    filter: drop-shadow(0 1px 2px rgba(30, 32, 40, 0.15));
+    filter: drop-shadow(0 1px 2px var(--lz-border-strong));
   }
   .scene-node.fn .fn-icon {
     flex-shrink: 0;
@@ -1461,7 +1461,7 @@
     opacity: 0.9;
   }
   .scene-node.fn.selected {
-    background: rgba(30, 32, 40, 0.08);
+    background: var(--lz-bg-active);
     outline: 1.5px dashed var(--color-fg);
     outline-offset: 2px;
   }
@@ -1535,12 +1535,12 @@
     padding: 1px 5px;
     border: 1px solid rgba(30, 32, 40, 0.2);
     border-radius: 0;
-    background: rgba(30, 32, 40, 0.06);
-    color: rgba(30, 32, 40, 0.7);
+    background: var(--lz-bg-hover);
+    color: var(--lz-text-strong);
     cursor: pointer;
   }
   .gen-run-btn:hover {
-    background: rgba(30, 32, 40, 0.15);
+    background: var(--lz-border-strong);
     color: rgba(30, 32, 40, 0.9);
   }
   .gen-run-btn:active {
@@ -1575,10 +1575,10 @@
   .quant-key {
     flex: 1;
     border-radius: 0;
-    background: rgba(30, 32, 40, 0.08);
+    background: var(--lz-bg-active);
   }
   .quant-key.black {
-    background: rgba(30, 32, 40, 0.15);
+    background: var(--lz-border-strong);
     margin-top: 2px;
   }
   .quant-key.active {
@@ -1602,7 +1602,7 @@
     font-weight: 700;
     padding: 1px 3px;
     border-radius: 0;
-    background: rgba(30, 32, 40, 0.08);
+    background: var(--lz-bg-active);
     color: rgba(30, 32, 40, 0.6);
     transition: background 80ms, color 80ms;
   }
@@ -1692,7 +1692,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: rgba(30, 32, 40, 0.15);
+    background: var(--lz-border-strong);
     border: 1.5px solid rgba(30, 32, 40, 0.35);
     transform: translate(-50%, -50%);
     cursor: crosshair;
@@ -1723,7 +1723,7 @@
     border-radius: 0;
     border: 1.5px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.85);
-    color: rgba(30, 32, 40, 0.5);
+    color: var(--lz-text-mid);
     font-size: 10px;
     font-weight: 700;
     display: flex;
@@ -1739,16 +1739,16 @@
     color: var(--color-fg);
   }
   .solo-btn.armed {
-    background: rgba(30, 32, 40, 0.06);
+    background: var(--lz-bg-hover);
     border-color: rgba(30, 32, 40, 0.35);
-    color: rgba(30, 32, 40, 0.35);
+    color: var(--lz-text-hint);
     border-style: dashed;
   }
   .solo-btn.active {
     background: rgba(30, 32, 40, 0.12);
     border-color: var(--color-fg);
     color: var(--color-fg);
-    box-shadow: 0 0 6px rgba(30, 32, 40, 0.15);
+    box-shadow: 0 0 6px var(--lz-border-strong);
   }
   .solo-btn.active .solo-icon {
     animation: solo-spin 1.5s linear infinite;
@@ -1768,7 +1768,7 @@
     border-radius: 0;
     border: 1.5px solid rgba(30, 32, 40, 0.35);
     background: rgba(255, 255, 255, 0.85);
-    color: rgba(30, 32, 40, 0.5);
+    color: var(--lz-text-mid);
     font-size: 10px;
     cursor: pointer;
     display: grid;

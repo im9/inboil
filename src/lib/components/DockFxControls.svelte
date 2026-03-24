@@ -138,7 +138,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     padding-bottom: 2px;
   }
   .fx-dock-grid {
@@ -149,7 +149,7 @@
   }
   .fx-dock-band {
     padding: 6px 8px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
   }
   .fx-dock-band.disabled {
@@ -166,9 +166,9 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 1px 6px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     cursor: pointer;
     border-radius: 0;
   }
@@ -187,9 +187,9 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 4px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     cursor: pointer;
     border-radius: 0;
   }

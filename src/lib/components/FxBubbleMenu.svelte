@@ -79,9 +79,9 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 1.5px solid rgba(237, 232, 220, 0.15);
+    border: 1.5px solid var(--dz-border);
     background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.85);
+    color: var(--dz-text-strong);
     display: flex;
     align-items: center;
     justify-content: center;

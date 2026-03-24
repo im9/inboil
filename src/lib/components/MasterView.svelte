@@ -357,7 +357,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at center, rgba(237,232,220,0.06) 0%, transparent 60%);
+    background: radial-gradient(ellipse at center, var(--dz-divider) 0%, transparent 60%);
     animation: beat-pulse var(--beat-dur, 0.5s) ease-out infinite;
     pointer-events: none;
     z-index: 0;
@@ -464,7 +464,7 @@
     gap: 3px;
     z-index: 5;
     pointer-events: none;
-    background: rgba(30,32,40,0.5);
+    background: var(--lz-text-mid);
     padding: 4px 6px;
     border-radius: 0;
     backdrop-filter: blur(4px);
@@ -486,13 +486,13 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
   }
   .ro-val {
     font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     min-width: 36px;
   }
 
@@ -522,7 +522,7 @@
     right: calc(100% + 5px);
     font-size: 9px;
     font-weight: 700;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     line-height: 1;
     white-space: nowrap;
     transform: translateY(-50%);
@@ -536,7 +536,7 @@
   .vu-ch {
     font-size: 9px;
     font-weight: 700;
-    color: rgba(237,232,220,0.25);
+    color: var(--dz-border-mid);
     order: 1;
   }
   .vu-dot-track {

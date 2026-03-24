@@ -211,9 +211,9 @@
   }
   .btn-proj-primary {
     flex: 1;
-    border: 1.5px solid rgba(237,232,220,0.45);
-    background: rgba(237,232,220,0.12);
-    color: rgba(237,232,220,0.9);
+    border: 1.5px solid var(--dz-transport-border);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-bright);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -223,20 +223,20 @@
     transition: background 40ms linear, color 40ms linear;
   }
   .btn-proj-primary:hover {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.9);
+    background: var(--dz-bg-press);
+    color: var(--dz-text-bright);
   }
   .btn-proj-primary:active {
-    background: rgba(237,232,220,0.25);
+    background: var(--dz-border-mid);
   }
   .btn-proj-primary.outline {
     background: transparent;
-    border-color: rgba(237,232,220,0.3);
-    color: rgba(237,232,220,0.7);
+    border-color: var(--dz-border-strong);
+    color: var(--dz-text);
   }
   .btn-proj-primary.outline:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.9);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-bright);
   }
   .btn-proj-primary.danger {
     border-color: var(--color-salmon);
@@ -244,7 +244,7 @@
     color: var(--color-salmon);
   }
   .btn-proj-primary.danger:hover {
-    background: rgba(237,232,220,0.06);
+    background: var(--dz-divider);
   }
   .proj-rename {
     padding: 4px 16px 10px;
@@ -256,19 +256,19 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     text-transform: uppercase;
   }
   .proj-rename-value {
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     cursor: pointer;
     text-transform: uppercase;
   }
   .proj-rename-value:hover {
-    color: rgba(237,232,220,0.9);
+    color: var(--dz-text-bright);
   }
   .proj-rename-row {
     display: flex;
@@ -284,24 +284,24 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.9);
-    background: rgba(255,255,255,0.06);
-    border: 1.5px solid rgba(237,232,220,0.25);
+    color: var(--dz-text-bright);
+    background: var(--dz-divider);
+    border: 1.5px solid var(--dz-border-mid);
     padding: 8px 10px;
     outline: none;
   }
   .proj-name-input:focus {
-    border-color: rgba(237,232,220,0.45);
+    border-color: var(--dz-transport-border);
   }
   .proj-confirm {
     margin: 0 16px 8px;
     padding: 10px 12px;
-    background: rgba(237,232,220,0.06);
-    border: 1px solid rgba(237,232,220,0.12);
+    background: var(--dz-divider);
+    border: 1px solid var(--dz-bg-active);
   }
   .proj-confirm-text {
     font-size: 11px;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     display: block;
     margin-bottom: 8px;
   }
@@ -316,7 +316,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
     text-transform: uppercase;
     padding: 8px 0 4px;
   }
@@ -333,8 +333,8 @@
     border-radius: 0;
     transition: background 40ms linear;
   }
-  .proj-item:hover { background: rgba(237,232,220,0.06); }
-  .proj-item.current { background: rgba(237,232,220,0.08); }
+  .proj-item:hover { background: var(--dz-divider); }
+  .proj-item.current { background: var(--dz-bg-hover); }
   .proj-item-name {
     flex: 1;
     min-width: 0;
@@ -343,7 +343,7 @@
     white-space: nowrap;
     background: none;
     border: none;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -351,25 +351,25 @@
     cursor: pointer;
     padding: 0;
   }
-  .proj-item.current .proj-item-name { color: rgba(237,232,220,0.9); }
-  .proj-item-name:hover { color: rgba(237,232,220,0.9); }
-  .proj-item-name.factory { color: rgba(237,232,220,0.45); font-style: italic; }
+  .proj-item.current .proj-item-name { color: var(--dz-text-bright); }
+  .proj-item-name:hover { color: var(--dz-text-bright); }
+  .proj-item-name.factory { color: var(--dz-transport-border); font-style: italic; }
   .proj-item-date {
     font-size: 9px;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     flex-shrink: 0;
   }
   .proj-item-del {
     background: none;
     border: none;
-    color: rgba(237,232,220,0.15);
+    color: var(--dz-border);
     font-size: 11px;
     cursor: pointer;
     padding: 2px 4px;
     flex-shrink: 0;
     transition: color 40ms linear;
   }
-  .proj-item-del:hover { color: rgba(237,232,220,0.55); }
+  .proj-item-del:hover { color: var(--dz-text-mid); }
   .proj-item-del.confirm {
     color: var(--color-salmon);
     font-size: 10px;
@@ -377,7 +377,7 @@
   }
   .export-section {
     padding: 8px 16px;
-    border-top: 1px solid rgba(237,232,220,0.08);
+    border-top: 1px solid var(--dz-bg-hover);
   }
   .export-buttons {
     display: flex;
@@ -390,21 +390,21 @@
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.05em;
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
-    background: rgba(237,232,220,0.06);
-    color: rgba(237,232,220,0.7);
+    background: var(--dz-divider);
+    color: var(--dz-text);
     cursor: pointer;
     transition: background 0.1s;
   }
   .btn-export:active {
-    background: rgba(237,232,220,0.15);
+    background: var(--dz-bg-press);
   }
   .export-sub-label {
     display: block;
     font-size: 9px;
     letter-spacing: 0.08em;
-    color: rgba(237,232,220,0.3);
+    color: var(--dz-border-strong);
     text-transform: uppercase;
     margin: 6px 0 4px;
   }

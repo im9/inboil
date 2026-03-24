@@ -98,6 +98,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 095 | Mobile UI Redesign | Implemented | PO-style calculator main view, MobileMatrixView, header redesign, swipe nav, overlay animations |
 | 098 | Mobile Landscape Orientation | Proposed | Landscape-specific layout for mobile (split from ADR 095) |
 | 115 | Centralized Keyboard Routing | Implemented | Single dispatcher replaces distributed `<svelte:window onkeydown>`, priority-based layer routing |
+| 124 | Design Token Consolidation | Proposed | Centralize raw rgba into `--lz-*`/`--dz-*` CSS variables, unify DockPanel `--dk-*`, enforcement hook for colors + spacing |
 
 ## Instruments / Sound Design
 

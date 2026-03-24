@@ -94,17 +94,17 @@
     -webkit-overflow-scrolling: touch;
     cursor: pointer;
     background: var(--color-fg);
-    border-bottom: 1px solid rgba(237, 232, 220, 0.06);
+    border-bottom: 1px solid var(--dz-divider);
   }
   .scene-ribbon::-webkit-scrollbar { height: 0; display: none; }
 
   .ribbon-node {
     flex-shrink: 0;
     padding: 2px 8px;
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
-    background: rgba(237, 232, 220, 0.06);
-    color: rgba(237, 232, 220, 0.55);
+    background: var(--dz-divider);
+    color: var(--dz-text-mid);
     font-family: var(--font-data);
     font-size: 8px;
     font-weight: 700;
@@ -116,26 +116,26 @@
   }
 
   .ribbon-node:not(.fn) {
-    border-color: color-mix(in srgb, var(--nc, rgba(237,232,220,0.15)) 40%, transparent);
-    background: color-mix(in srgb, var(--nc, rgba(237,232,220,0.06)) 15%, transparent);
+    border-color: color-mix(in srgb, var(--nc, var(--dz-border)) 40%, transparent);
+    background: color-mix(in srgb, var(--nc, var(--dz-divider)) 15%, transparent);
   }
 
   .ribbon-node.fn {
     border-radius: var(--radius-md);
     font-size: 7px;
     padding: 2px 6px;
-    color: rgba(237, 232, 220, 0.45);
+    color: var(--dz-transport-border);
   }
 
   .ribbon-node.playing {
     background: color-mix(in srgb, var(--color-blue) 25%, transparent);
     border-color: var(--color-blue);
-    color: rgba(237, 232, 220, 0.85);
+    color: var(--dz-text-strong);
   }
 
   .ribbon-node.selected {
     border-color: var(--color-olive);
-    color: rgba(237, 232, 220, 0.7);
+    color: var(--dz-text);
   }
 
   .ribbon-node:active {
@@ -143,7 +143,7 @@
   }
 
   .ribbon-arrow {
-    color: rgba(237, 232, 220, 0.15);
+    color: var(--dz-border);
     font-size: 10px;
     flex-shrink: 0;
     user-select: none;

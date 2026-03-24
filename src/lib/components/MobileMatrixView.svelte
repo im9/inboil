@@ -71,7 +71,7 @@
     align-items: center;
     gap: 6px;
     padding: 4px 8px;
-    border-bottom: 1px solid rgba(30,32,40,0.08);
+    border-bottom: 1px solid var(--lz-border-subtle);
     flex-shrink: 0;
   }
 
@@ -90,7 +90,7 @@
     height: 20px;
     flex-shrink: 0;
     position: relative;
-    border: 1px solid rgba(30,32,40,0.35);
+    border: 1px solid var(--lz-text-hint);
     background: var(--color-bg);
     padding: 0;
     cursor: pointer;
@@ -136,7 +136,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.55);
+    color: var(--lz-text);
     white-space: nowrap;
     flex-shrink: 0;
     max-width: 60px;

@@ -99,7 +99,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     padding-bottom: 2px;
   }
   .eq-dock-grid {
@@ -110,7 +110,7 @@
   }
   .eq-dock-band {
     padding: 6px 8px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
   }
   .eq-dock-band.disabled {
@@ -121,7 +121,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220, 0.55);
+    color: var(--dz-text-mid);
     margin-bottom: 4px;
   }
   .eq-dock-knobs {
@@ -136,9 +136,9 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     cursor: pointer;
     border-radius: 0;
   }

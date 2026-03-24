@@ -392,7 +392,7 @@
     gap: 12px;
     padding: 8px 12px 10px;
     background: var(--color-bg);
-    border-bottom: 1px solid rgba(30,32,40,0.08);
+    border-bottom: 1px solid var(--lz-border-subtle);
     flex-shrink: 0;
   }
 
@@ -414,7 +414,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.55);
+    color: var(--lz-text);
     white-space: nowrap;
   }
 
@@ -450,9 +450,9 @@
     z-index: 200;
     min-width: 100px;
     background: var(--color-bg);
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     border-radius: 0;
-    box-shadow: 0 4px 12px rgba(30,32,40,0.12);
+    box-shadow: 0 4px 12px var(--lz-border-mid);
     display: flex;
     flex-direction: column;
     padding: 2px;
@@ -467,7 +467,7 @@
     font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.70);
+    color: var(--lz-text-strong);
     background: none;
     border: none;
     padding: 6px 10px;
@@ -478,11 +478,11 @@
     white-space: nowrap;
   }
   .tmpl-option:hover {
-    background: rgba(30,32,40,0.08);
+    background: var(--lz-bg-active);
     color: var(--color-fg);
   }
   .tmpl-option:active {
-    background: rgba(30,32,40,0.15);
+    background: var(--lz-border-strong);
   }
 
   /* ── Loop button ── */
@@ -502,11 +502,11 @@
   .btn-loop.active {
     color: var(--color-olive);
     border-color: var(--color-olive);
-    background: rgba(120,120,69,0.08);
+    background: var(--olive-bg-subtle);
   }
   .btn-loop.mismatch {
-    color: rgba(30,32,40,0.15);
-    border-color: rgba(30,32,40,0.10);
+    color: var(--lz-border-strong);
+    border-color: var(--lz-border);
   }
   .btn-loop.spinning :global(svg) {
     animation: loop-spin 1.2s linear infinite;
@@ -538,14 +538,14 @@
   .group-label {
     font-size: 9px;
     letter-spacing: 0.08em;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     text-transform: uppercase;
   }
 
   .sep {
     width: 1px;
     height: 24px;
-    background: rgba(30,32,40,0.10);
+    background: var(--lz-border);
     flex-shrink: 0;
   }
 
@@ -572,13 +572,13 @@
     width: 22px;
     background: rgba(255,255,255,0.7);
     color: var(--color-fg);
-    border: 1px solid rgba(30,32,40,0.10);
+    border: 1px solid var(--lz-border);
   }
 
   .key.black {
     width: 16px;
     background: var(--color-fg);
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
   }
 
   .key.active:not(.black) {
@@ -615,7 +615,7 @@
     font-family: var(--font-display);
     font-size: 22px;
     line-height: 1;
-    color: rgba(30,32,40,0.55);
+    color: var(--lz-text);
     display: inline-block;
     min-width: 2ch;
     text-align: right;
@@ -662,7 +662,7 @@
     color: var(--color-bg);
   }
   .btn-gen.armed {
-    background: rgba(120,120,69,0.15);
+    background: var(--olive-bg);
     border-color: var(--color-olive);
     animation: gen-pulse 800ms ease-in-out infinite;
   }
@@ -676,9 +676,9 @@
     font-size: 8px;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.7);
+    color: var(--lz-text-strong);
     background: transparent;
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     padding: 2px 4px;
     height: 24px;
     max-width: 72px;
@@ -728,7 +728,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: rgba(30,32,40,0.50);
+    color: var(--lz-text-mid);
     white-space: nowrap;
   }
 
@@ -736,7 +736,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     white-space: nowrap;
   }
   .midi-indicator.active {
@@ -771,9 +771,9 @@
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      border: 1.5px solid rgba(30,32,40,0.15);
-      background: rgba(255,255,255,0.5);
-      color: rgba(30,32,40,0.7);
+      border: 1.5px solid var(--lz-border-strong);
+      background: var(--dz-text-mid);
+      color: var(--lz-text-strong);
       font-family: var(--font-data);
       font-size: 11px;
       font-weight: 700;
@@ -785,8 +785,8 @@
       transition: background 100ms, border-color 100ms;
     }
     .key-menu-trigger:active {
-      background: rgba(30,32,40,0.08);
-      border-color: rgba(30,32,40,0.35);
+      background: var(--lz-bg-active);
+      border-color: var(--lz-text-hint);
     }
 
     .oct-mini {
@@ -811,7 +811,7 @@
       font-family: var(--font-data);
       font-size: 11px;
       line-height: 1;
-      color: rgba(30,32,40,0.55);
+      color: var(--lz-text);
     }
     .oct-val-m.pending {
       animation: oct-blink 400ms ease-in-out infinite;
@@ -836,7 +836,7 @@
     .key-arc-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(30,32,40,0.15);
+      background: var(--lz-border-strong);
       border: none;
       opacity: 0;
       pointer-events: none;
@@ -866,15 +866,15 @@
       z-index: 201;
     }
     .key-fan:not(.black) {
-      background: rgba(237,232,220,0.9);
+      background: var(--dz-text-bright);
       color: var(--color-fg);
-      box-shadow: inset 0 -1px 3px rgba(30,32,40,0.06), 0 1px 3px rgba(30,32,40,0.12);
+      box-shadow: inset 0 -1px 3px var(--lz-divider), 0 1px 3px var(--lz-border-mid);
     }
     .key-fan.black {
-      background: rgba(40,38,34,0.95);
-      color: rgba(237,232,220,0.55);
+      background: rgba(30,32,40,0.95);
+      color: var(--dz-text-mid);
       z-index: 202;
-      box-shadow: 0 1px 4px rgba(30,32,40,0.35);
+      box-shadow: 0 1px 4px var(--lz-text-hint);
     }
     .key-fan.active-note {
       background: var(--color-olive) !important;

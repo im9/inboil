@@ -46,20 +46,20 @@
     font-size: 12px;
     line-height: 1.4;
     pointer-events: auto;
-    box-shadow: 0 4px 16px rgba(30,32,40,0.35);
+    box-shadow: 0 4px 16px var(--lz-text-hint);
   }
   .toast-error {
-    background: rgba(248,113,113,0.15);
+    background: var(--danger-bg-hover);
     border: 1px solid var(--color-salmon, #E8A090);
     color: var(--color-salmon, #E8A090);
   }
   .toast-warn {
-    background: rgba(120,120,69,0.15);
+    background: var(--olive-bg);
     border: 1px solid var(--color-olive);
     color: var(--color-olive);
   }
   .toast-info {
-    background: rgba(68,114,180,0.13);
+    background: var(--blue-bg-playhead);
     border: 1px solid var(--color-blue, #4472B4);
     color: var(--color-blue, #4472B4);
   }

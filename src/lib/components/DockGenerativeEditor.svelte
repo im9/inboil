@@ -238,7 +238,7 @@
   {:else}
     <div class="gen-scale-row">
       <span class="gen-range-label">TARGET</span>
-      <span class="gen-range-val" style="color: var(--dk-text-dim)">no target</span>
+      <span class="gen-range-val" style="color: var(--dz-text-dim)">no target</span>
     </div>
   {/if}
   <!-- Seed control (ADR 078 Phase 4) -->
@@ -253,7 +253,7 @@
         onpointerdown={() => { sceneSetSeed(nodeId, undefined); autoGenerateFromNode(nodeId) }}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
     {:else}
-      <span class="gen-seed-val" style="color: var(--dk-text-dim)">off</span>
+      <span class="gen-seed-val" style="color: var(--dz-text-dim)">off</span>
       <button class="btn-icon" title="Set random seed" data-tip="Set random seed" data-tip-ja="ランダムシードを設定"
         onpointerdown={() => { sceneSetSeed(nodeId, Math.floor(Math.random() * 100000)); autoGenerateFromNode(nodeId) }}
       ><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 2v8M2 6h8"/></svg></button>
@@ -295,19 +295,19 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     padding-bottom: 2px;
   }
   .section-divider {
     width: 100%;
     height: 1px;
-    background: var(--dk-bg-active);
+    background: var(--dz-bg-active);
     margin: 8px 0;
   }
   .btn-toggle {
-    border: 1px solid rgba(var(--dk-cream), 0.25);
+    border: 1px solid var(--dz-border-mid);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -317,9 +317,9 @@
     height: 22px;
   }
   .btn-toggle.active {
-    background: var(--dk-bg-active);
-    color: rgba(var(--dk-cream), 0.9);
-    border-color: var(--dk-text-dim);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-bright);
+    border-color: var(--dz-text-dim);
   }
   .gen-param-grid {
     display: flex;
@@ -365,7 +365,7 @@
     font-family: var(--font-data);
     font-size: var(--dk-fs-sm);
     background: transparent;
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    border: 1px solid var(--dz-border);
     color: inherit;
     padding: 2px 4px;
   }
@@ -383,9 +383,9 @@
   .btn-icon {
     width: 22px;
     height: 22px;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     cursor: pointer;
     display: flex;
@@ -393,8 +393,8 @@
     justify-content: center;
   }
   .btn-icon:hover {
-    background: var(--dk-bg-hover);
-    color: var(--dk-text);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-strong);
   }
   .tonnetz-seq-editor {
     display: flex;
@@ -406,7 +406,7 @@
     font-family: var(--font-data);
     font-size: var(--dk-fs-xs);
     background: transparent;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     color: inherit;
     padding: 1px 2px;
     width: 36px;

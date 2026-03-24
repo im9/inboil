@@ -558,9 +558,9 @@ Translucent versions of accent colors for backgrounds/borders:
 | Token | Value | Use |
 |---|---|---|
 | `--olive-bg-subtle` | `rgba(120,120,69,0.08)` | Loop active bg |
-| `--olive-bg-mid` | `rgba(120,120,69,0.15)` | Step-set active cell |
-| `--olive-bg-hover` | `rgba(120,120,69,0.30)` | Step-set hover |
-| `--olive-border` | `rgba(120,120,69,0.40)` | Step-set active border |
+| `--olive-bg` | `rgba(120,120,69,0.15)` | Step-set active cell |
+| `--olive-border` | `rgba(120,120,69,0.30)` | Step-set hover, borders |
+| `--olive-border-strong` | `rgba(120,120,69,0.40)` | Step-set active border |
 | `--blue-bg-subtle` | `rgba(68,114,180,0.08)` | Select rect bg |
 | `--blue-bg-playhead` | `rgba(68,114,180,0.13)` | Piano-roll playhead column |
 | `--salmon-bg-scale` | `rgba(232,160,144,0.06)` | Disabled scale-mode rows |

@@ -156,7 +156,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     padding-bottom: 2px;
   }
   .master-dock-groups {
@@ -167,7 +167,7 @@
   }
   .master-dock-group {
     padding: 6px 8px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
   }
   .group-label {
@@ -175,7 +175,7 @@
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220, 0.55);
+    color: var(--dz-text-mid);
     margin-bottom: 6px;
   }
   .master-dock-faders {
@@ -204,9 +204,9 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 1px 6px;
-    border: 1px solid rgba(237,232,220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     cursor: pointer;
     border-radius: 0;
   }

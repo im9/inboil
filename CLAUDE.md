@@ -27,6 +27,9 @@ pnpm deploy    # build + Cloudflare Pages
 - Undo is snapshot-based: insert `pushUndo(label)` before mutations
 - Parameters are normalized (0.0–1.0); denormalized on the DSP side
 - Bilingual tooltips (`data-tip` / `data-tip-ja`)
+- Colors: use `--lz-*` tokens (light zone) or `--dz-*` tokens (dark zone), never raw `rgba(30,32,40,*)` or `rgba(237,232,220,*)`
+- Accent overlays: use `--olive-*`, `--blue-*`, `--salmon-*`, `--danger-*` tokens from app.css
+- Spacing: gap/padding/margin values from {2, 4, 8, 12, 16}px (6, 10 for documented asymmetric padding)
 - ADRs in `docs/ai/adr/` — review INDEX.md before implementation
 - Technical backlog in `docs/ai/BACKLOG.md` — for items that don't need an ADR
 - Docs, code, and commit messages in English (conversation in Japanese is OK)

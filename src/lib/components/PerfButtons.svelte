@@ -90,8 +90,8 @@
     color: var(--color-bg);
   }
   .btn-perf.stopped {
-    border-color: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.25);
+    border-color: var(--dz-border);
+    color: var(--dz-border-mid);
     cursor: default;
   }
   .btn-brk {
@@ -104,8 +104,8 @@
     color: var(--color-bg);
   }
   .btn-brk.stopped {
-    border-color: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.25);
+    border-color: var(--dz-border);
+    color: var(--dz-border-mid);
   }
 
   /* ── Bubble variant (MobilePerfSheet) ── */
@@ -115,7 +115,7 @@
     height: 36px;
     border-radius: var(--radius-md);
     border: 1.5px solid var(--color-blue);
-    background: rgba(30,32,40,0.7);
+    background: var(--lz-text-strong);
     color: var(--color-blue);
     font-size: 9px;
     font-weight: 700;

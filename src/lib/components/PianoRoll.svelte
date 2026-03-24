@@ -853,7 +853,7 @@
     display: flex;
     align-items: stretch;
     justify-content: flex-end;
-    border-right: 1px solid rgba(30,32,40,0.10);
+    border-right: 1px solid var(--lz-border);
   }
 
   /* ── Octave buttons + keys wrapper ── */
@@ -900,14 +900,14 @@
     justify-content: flex-end;
     padding-right: 3px;
     background: var(--color-bg);
-    border-bottom: 1px solid rgba(30,32,40,0.06);
+    border-bottom: 1px solid var(--lz-divider);
   }
   .key.black {
     background: var(--color-surface);
   }
   .key.disabled {
     opacity: 0.3;
-    background: rgba(232,160,144,0.08);
+    background: var(--salmon-bg-key);
   }
   .key-label {
     font-size: 7px;
@@ -996,13 +996,13 @@
     display: grid;
     grid-template-columns: repeat(var(--steps), 24px);
     gap: 2px;
-    border-bottom: 1px solid rgba(30,32,40,0.06);
+    border-bottom: 1px solid var(--lz-divider);
   }
   .row.black {
-    background: rgba(30,32,40,0.06);
+    background: var(--lz-bg-hover);
   }
   .row.disabled {
-    background: rgba(232,160,144,0.06);
+    background: var(--salmon-bg-scale);
   }
   .row.disabled .cell {
     opacity: 0.2;
@@ -1046,7 +1046,7 @@
   .select-rect {
     position: absolute;
     border: 1.5px dashed var(--color-blue);
-    background: rgba(68,114,180,0.08);
+    background: var(--blue-bg-subtle);
     pointer-events: none;
     z-index: 2;
   }
@@ -1057,7 +1057,7 @@
       repeating-linear-gradient(90deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 100% / 100% 1.5px no-repeat,
       repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 0 0 / 1.5px 100% no-repeat,
       repeating-linear-gradient(0deg, var(--color-blue) 0 3px, transparent 3px 6px) 100% 0 / 1.5px 100% no-repeat,
-      rgba(68,114,180,0.08);
+      var(--blue-bg-subtle);
     animation: march 0.3s linear infinite;
   }
   @keyframes march {
@@ -1070,7 +1070,7 @@
     bottom: 0;
     width: 5px;
     cursor: ew-resize;
-    background: rgba(30,32,40,0.15);
+    background: var(--lz-border-strong);
     border-radius: 0 1px 1px 0;
   }
   /* ── Playhead column overlay ── */
@@ -1085,7 +1085,7 @@
     /* 24px cell + 2px gap = 26px per step */
     left: calc(var(--ph-col) * 26px);
     width: 24px;
-    background: rgba(68,114,180,0.13);
+    background: var(--blue-bg-playhead);
     pointer-events: none;
     z-index: 1;
   }

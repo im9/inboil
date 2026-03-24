@@ -360,8 +360,8 @@
     padding: 0 4px;
     margin-left: 4px;
     border-radius: 0;
-    border: 1px solid rgba(237,232,220,0.25);
-    color: rgba(237,232,220,0.45);
+    border: 1px solid var(--dz-border-mid);
+    color: var(--dz-transport-border);
     position: relative;
     z-index: 1;
     line-height: 14px;
@@ -390,7 +390,7 @@
     gap: 4px;
     font-size: 9px;
     letter-spacing: 0.08em;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     font-variant-numeric: tabular-nums;
   }
   .cpu-label { flex-shrink: 0; }
@@ -403,7 +403,7 @@
     width: 4px;
     height: 8px;
     border-radius: 0;
-    background: rgba(237,232,220,0.12);
+    background: var(--dz-bg-active);
     transition: background 120ms linear;
   }
   .cpu-dot.lit { background: rgba(163,161,69,0.55); }
@@ -421,9 +421,9 @@
     margin-left: auto;
   }
   .btn-header-nav {
-    border: 1.5px solid rgba(237,232,220,0.35);
-    background: rgba(237,232,220,0.06);
-    color: rgba(237,232,220,0.55);
+    border: 1.5px solid var(--dz-btn-border);
+    background: var(--dz-divider);
+    color: var(--dz-text-mid);
     padding: 4px 10px;
     font-size: 9px;
     font-weight: 700;
@@ -433,14 +433,14 @@
     user-select: none;
   }
   .btn-header-nav:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.70);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text);
   }
   .btn-header-nav:active,
   .btn-header-nav.active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.90);
-    border-color: rgba(237,232,220,0.45);
+    background: var(--dz-bg-press);
+    color: var(--dz-text-bright);
+    border-color: var(--dz-transport-border);
   }
   .btn-nav-inner {
     position: relative;
@@ -464,7 +464,7 @@
     padding: 0 12px 0 8px;
     background: var(--color-fg);
     color: var(--color-bg);
-    border-top: 1px solid rgba(237,232,220,0.06);
+    border-top: 1px solid var(--dz-divider);
   }
   .compact .sub-header { height: 52px; gap: 10px; }
 
@@ -489,9 +489,9 @@
   .compact .bpm-value { font-size: 16px; }
 
   .bpm-adj {
-    border: 1px solid rgba(237,232,220,0.3);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     width: 24px;
     height: 24px;
     font-size: 14px;
@@ -500,15 +500,15 @@
     justify-content: center;
     flex-shrink: 0;
   }
-  .bpm-adj:active { background: rgba(237,232,220,0.15); }
+  .bpm-adj:active { background: var(--dz-bg-press); }
 
   .bpm-input {
     font-family: var(--font-display);
     font-size: 24px;
     line-height: 1;
-    color: rgba(237,232,220,0.9);
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(237,232,220,0.25);
+    color: var(--dz-text-bright);
+    background: var(--dz-bg-hover);
+    border: 1px solid var(--dz-border-mid);
     border-radius: 0;
     padding: 0 4px;
     width: 3.5ch;
@@ -520,7 +520,7 @@
   .bpm-label {
     font-size: 9px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     text-transform: uppercase;
   }
 
@@ -531,7 +531,7 @@
   }
 
   .btn-transport {
-    border: 1px solid rgba(237,232,220,0.45);
+    border: 1px solid var(--dz-transport-border);
     background: transparent;
     color: var(--color-bg);
     padding: 4px 10px;
@@ -546,9 +546,9 @@
 
   /* ── REC button (ADR 085) ── */
   .btn-rec {
-    border: 1px solid rgba(237,232,220,0.45);
+    border: 1px solid var(--dz-transport-border);
     background: transparent;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     padding: 4px 10px;
     font-size: 9px;
     font-weight: 700;
@@ -556,8 +556,8 @@
     transition: background 60ms linear, color 60ms linear, border-color 60ms linear;
   }
   .btn-rec:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.70);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text);
   }
   .btn-rec.armed {
     color: var(--color-salmon);
@@ -584,7 +584,7 @@
   .sep {
     width: 1px;
     height: 28px;
-    background: rgba(237,232,220,0.12);
+    background: var(--dz-bg-active);
     flex-shrink: 0;
   }
 
@@ -596,9 +596,9 @@
   }
 
   .btn-view {
-    border: 1.5px solid rgba(237,232,220,0.35);
-    background: rgba(237,232,220,0.06);
-    color: rgba(237,232,220,0.55);
+    border: 1.5px solid var(--dz-btn-border);
+    background: var(--dz-divider);
+    color: var(--dz-text-mid);
     padding: 4px 10px;
     font-size: 9px;
     font-weight: 700;
@@ -608,13 +608,13 @@
     user-select: none;
   }
   .btn-view:hover {
-    background: rgba(237,232,220,0.08);
-    color: rgba(237,232,220,0.70);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text);
   }
   .btn-view.active {
-    background: rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.90);
-    border-color: rgba(237,232,220,0.45);
+    background: var(--dz-bg-press);
+    color: var(--dz-text-bright);
+    border-color: var(--dz-transport-border);
   }
 
   /* ── Performance buttons ── */
@@ -676,7 +676,7 @@
       margin-left: auto;
     }
     .btn-transport {
-      border: 1px solid rgba(237,232,220,0.45);
+      border: 1px solid var(--dz-transport-border);
       background: transparent;
       color: var(--color-bg);
       width: 40px;
@@ -705,7 +705,7 @@
       width: 100%;
       display: flex;
       gap: 0;
-      border-top: 1px solid rgba(237,232,220,0.12);
+      border-top: 1px solid var(--dz-bg-active);
     }
     .btn-view {
       flex: 1;
@@ -714,13 +714,13 @@
       text-align: center;
       border: none;
       border-bottom: 3px solid transparent;
-      color: rgba(237,232,220,0.35);
+      color: var(--dz-text-dim);
     }
-    .btn-view:not(:last-child) { border-right: 1px solid rgba(237,232,220,0.08); }
+    .btn-view:not(:last-child) { border-right: 1px solid var(--dz-bg-hover); }
     .btn-view.active {
-      color: rgba(237,232,220,0.90);
+      color: var(--dz-text-bright);
       border-bottom-color: var(--color-olive);
-      background: rgba(237,232,220,0.06);
+      background: var(--dz-divider);
     }
   }
 
@@ -741,12 +741,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
   }
   .btn-overflow:active,
   .btn-overflow.active {
-    background: rgba(237,232,220,0.12);
-    color: rgba(237,232,220,0.85);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
   }
   .overflow-backdrop {
     position: fixed;
@@ -761,9 +761,9 @@
     min-width: 140px;
     margin-top: 4px;
     background: var(--color-fg);
-    border: 1px solid rgba(237,232,220,0.15);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
-    box-shadow: 0 4px 12px rgba(30,32,40,0.35);
+    box-shadow: 0 4px 12px var(--lz-text-hint);
     overflow: hidden;
   }
   .overflow-item {
@@ -774,18 +774,18 @@
     padding: 10px 12px;
     border: none;
     background: transparent;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-align: left;
   }
   .overflow-item:active {
-    background: rgba(237,232,220,0.1);
-    color: rgba(237,232,220,0.9);
+    background: var(--dz-border-subtle);
+    color: var(--dz-text-bright);
   }
   .overflow-item:not(:last-child) {
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    border-bottom: 1px solid var(--dz-bg-hover);
   }
   .overflow-icon {
     width: 16px;

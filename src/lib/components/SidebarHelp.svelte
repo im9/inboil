@@ -251,11 +251,11 @@
     font-size: 11px;
     color: var(--color-blue, #4472B4);
     text-decoration: none;
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    border-bottom: 1px solid var(--dz-bg-hover);
     transition: background 0.15s;
   }
   .full-docs-link:hover {
-    background: rgba(68,114,180,0.08);
+    background: var(--blue-bg-subtle);
   }
   .search-bar {
     position: relative;
@@ -263,9 +263,9 @@
   }
   .search-input {
     width: 100%;
-    background: rgba(237,232,220,0.06);
-    border: 1px solid rgba(237,232,220,0.15);
-    color: rgba(237,232,220,0.85);
+    background: var(--dz-divider);
+    border: 1px solid var(--dz-border);
+    color: var(--dz-text-strong);
     font-size: 10px;
     letter-spacing: 0.04em;
     padding: 6px 28px 6px 8px;
@@ -273,10 +273,10 @@
     box-sizing: border-box;
   }
   .search-input::placeholder {
-    color: rgba(237,232,220,0.25);
+    color: var(--dz-border-mid);
   }
   .search-input:focus {
-    border-color: rgba(237,232,220,0.3);
+    border-color: var(--dz-border-strong);
   }
   .search-clear {
     position: absolute;
@@ -285,17 +285,17 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
     font-size: 14px;
     padding: 0 4px;
     cursor: pointer;
   }
   .help-section {
-    border-bottom: 1px solid rgba(237,232,220,0.06);
+    border-bottom: 1px solid var(--dz-divider);
     padding: 0 12px 10px;
   }
   .section-title {
-    color: rgba(237,232,220,0.85);
+    color: var(--dz-text-strong);
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -319,13 +319,13 @@
   .section-body {
     font-size: 11px;
     line-height: 1.6;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     white-space: pre-line;
   }
   .category-label {
     font-size: 8px;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220,0.3);
+    color: var(--dz-border-strong);
     text-transform: uppercase;
     padding: 12px 12px 4px;
     margin-top: 4px;

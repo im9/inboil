@@ -143,7 +143,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 1.5px solid rgba(30, 32, 40, 0.15);
+    border: 1.5px solid var(--lz-border-strong);
     background: var(--color-fg);
     color: rgba(237, 232, 220, 0.85);
     display: flex;
@@ -151,7 +151,7 @@
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.15);
+    box-shadow: 0 2px 8px var(--lz-border-strong);
     animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .bubble-item:hover {

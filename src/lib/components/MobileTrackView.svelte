@@ -394,14 +394,14 @@
     border: none;
     border-radius: 50%;
     background: transparent;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
   }
-  .nav-btn:active { background: rgba(30,32,40,0.08); color: var(--color-fg); }
+  .nav-btn:active { background: var(--lz-bg-active); color: var(--color-fg); }
   .add-btn {
     font-size: 18px;
     color: var(--color-olive);
@@ -431,7 +431,7 @@
     align-items: center;
     gap: 4px;
     padding: 2px 12px 6px;
-    border-bottom: 1px solid rgba(30,32,40,0.1);
+    border-bottom: 1px solid var(--lz-border);
   }
   .voice-bar {
     flex: 1;
@@ -441,9 +441,9 @@
     min-width: 0;
     height: 28px;
     padding: 0 8px;
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     border-radius: 0;
-    background: rgba(30,32,40,0.06);
+    background: var(--lz-bg-hover);
     color: var(--color-fg);
   }
   .voice-icon {
@@ -469,8 +469,8 @@
     margin-left: 4px;
   }
   .voice-bar:active {
-    background: rgba(30,32,40,0.1);
-    border-color: rgba(30,32,40,0.35);
+    background: var(--lz-border);
+    border-color: var(--lz-text-hint);
   }
   .btn-steps {
     min-width: 32px;
@@ -513,9 +513,9 @@
     flex-shrink: 0;
   }
   .solo-off, .mute-off {
-    border: 1px solid rgba(30,32,40,0.35);
+    border: 1px solid var(--lz-text-hint);
     background: transparent;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     font-size: 11px;
     font-weight: 700;
     display: flex;
@@ -569,15 +569,15 @@
   }
   .calc-btn.sp-cell {
     background: var(--color-bg);
-    border: 1.5px solid rgba(30,32,40,0.15);
+    border: 1.5px solid var(--lz-border-strong);
   }
   .calc-btn.sp-cell .step-num {
-    color: rgba(30,32,40,0.5);
+    color: var(--lz-text-mid);
     opacity: 1;
   }
   .calc-btn.sp-cell.active {
-    background: rgba(120,120,69,0.15);
-    border-color: rgba(120,120,69,0.4);
+    background: var(--olive-bg);
+    border-color: var(--olive-border-strong);
   }
   .calc-btn.sp-cell.active .step-num {
     color: var(--color-olive);
@@ -605,7 +605,7 @@
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
@@ -620,7 +620,7 @@
     display: flex;
     position: relative;
     margin: 4px 12px 2px;
-    background: rgba(30,32,40,0.08);
+    background: var(--lz-bg-active);
     border-radius: 0;
     flex-shrink: 0;
   }
@@ -643,7 +643,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: rgba(30,32,40,0.35);
+    color: var(--lz-text-hint);
     background: transparent;
     border: none;
     transition: color 200ms;
@@ -681,13 +681,13 @@
 
   .calc-off {
     background: var(--color-bg);
-    border: 1.5px solid rgba(30,32,40,0.5);
+    border: 1.5px solid var(--lz-step-border);
   }
   .calc-on {
     background: linear-gradient(
       to top,
       var(--color-olive) calc(var(--vel, 1) * 100%),
-      rgba(108,119,68,0.25) calc(var(--vel, 1) * 100%)
+      var(--olive-border) calc(var(--vel, 1) * 100%)
     );
     border: 1.5px solid var(--color-olive);
   }
@@ -720,7 +720,7 @@
     color: var(--color-bg);
     z-index: 2;
     pointer-events: none;
-    text-shadow: 0 1px 2px rgba(30,32,40,0.35);
+    text-shadow: 0 1px 2px var(--lz-text-hint);
   }
   .vel-pct.chance {
     color: var(--color-sky, #5b9bd5);

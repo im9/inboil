@@ -77,7 +77,7 @@
     font-size: var(--dk-fs-xs, 10px);
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220, 0.45);
+    color: var(--dz-transport-border);
     padding-bottom: 4px;
   }
   .nav-section {
@@ -98,10 +98,10 @@
     transition: background 60ms;
   }
   .nav-item:hover {
-    background: rgba(237,232,220, 0.08);
+    background: var(--dz-bg-hover);
   }
   .nav-item.selected {
-    background: rgba(237,232,220, 0.12);
+    background: var(--dz-bg-active);
   }
   .nav-color {
     width: 10px;
@@ -119,7 +119,7 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220, 0.85);
+    color: var(--dz-text-strong);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -134,8 +134,8 @@
     box-shadow: 0 0 6px 2px currentColor;
   }
   @keyframes nav-pulse {
-    0%, 100% { background: rgba(237,232,220, 0.12); }
-    50% { background: rgba(237,232,220, 0.15); }
+    0%, 100% { background: var(--dz-bg-active); }
+    50% { background: var(--dz-bg-press); }
   }
   @media (max-width: 639px) {
     .nav-item {

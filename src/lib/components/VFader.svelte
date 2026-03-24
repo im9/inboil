@@ -73,7 +73,7 @@
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.35);
+    color: var(--dz-text-dim);
     text-transform: uppercase;
     white-space: nowrap;
     line-height: 1;
@@ -89,27 +89,27 @@
     bottom: 0;
     height: 100%;
     border-radius: 0;
-    background: rgba(237,232,220,0.12);
+    background: var(--dz-bg-active);
   }
   .track-fill {
     position: absolute;
     bottom: 0;
     border-radius: 0;
-    background: rgba(237,232,220,0.7);
+    background: var(--dz-text);
     transition: height 30ms linear;
   }
   .thumb {
     position: absolute;
     border-radius: 50%;
-    background: rgba(237,232,220,0.9);
-    box-shadow: 0 0 4px rgba(30,32,40,0.35);
+    background: var(--dz-text-bright);
+    box-shadow: 0 0 4px var(--lz-text-hint);
     transition: bottom 30ms linear;
   }
   .val {
     font-size: 9px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     white-space: nowrap;
     line-height: 1;
   }

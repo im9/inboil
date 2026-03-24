@@ -115,7 +115,7 @@
     align-items: center;
     gap: 6px;
     padding: 5px 8px;
-    border-top: 1px solid rgba(30,32,40,0.08);
+    border-top: 1px solid var(--lz-border-subtle);
     flex-shrink: 0;
     overflow: hidden;
   }
@@ -124,10 +124,10 @@
     width: 28px;
     height: 22px;
     flex-shrink: 0;
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     background: transparent;
     font-size: 10px;
-    color: rgba(30,32,40,0.5);
+    color: var(--lz-text-mid);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -136,7 +136,7 @@
     transition: background 60ms, border-color 60ms;
   }
   .ribbon-play:active {
-    background: rgba(30,32,40,0.08);
+    background: var(--lz-bg-active);
   }
   .ribbon-play.playing {
     background: var(--color-olive);
@@ -157,19 +157,19 @@
 
   .ribbon-arrow {
     font-size: 9px;
-    color: rgba(30,32,40,0.15);
+    color: var(--lz-border-strong);
     flex-shrink: 0;
   }
 
   .ribbon-node {
     padding: 3px 8px;
-    border: 1px solid rgba(30,32,40,0.15);
+    border: 1px solid var(--lz-border-strong);
     background: transparent;
     font-family: var(--font-data);
     font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(30,32,40,0.5);
+    color: var(--lz-text-mid);
     white-space: nowrap;
     flex-shrink: 0;
     cursor: pointer;

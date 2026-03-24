@@ -431,16 +431,6 @@
 
 <style>
   .dock-panel {
-    /* ── Dock design tokens ── */
-    --dk-cream: 237,232,220;
-    --dk-text: rgba(var(--dk-cream), 0.85);
-    --dk-text-mid: rgba(var(--dk-cream), 0.55);
-    --dk-text-dim: rgba(var(--dk-cream), 0.55);
-    --dk-border: rgba(var(--dk-cream), 0.15);
-    --dk-border-mid: rgba(var(--dk-cream), 0.3);
-    --dk-bg-hover: rgba(var(--dk-cream), 0.08);
-    --dk-bg-faint: rgba(var(--dk-cream), 0.06);
-    --dk-bg-active: rgba(var(--dk-cream), 0.12);
     --dk-fs-xs: 10px;
     --dk-fs-sm: 11px;
     --dk-fs-md: 12px;
@@ -453,7 +443,7 @@
     color: var(--color-bg);
     display: flex;
     flex-direction: column;
-    border-left: 1px solid rgba(var(--dk-cream), 0.08);
+    border-left: 1px solid var(--dz-bg-hover);
     overflow: hidden;
   }
 
@@ -473,7 +463,7 @@
     min-height: 80px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border-bottom: 1px solid var(--dk-border);
+    border-bottom: 1px solid var(--dz-border);
   }
   .dock-lower {
     flex: 1 1 50%;
@@ -487,7 +477,7 @@
     display: flex;
     gap: 0;
     margin-bottom: 8px;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
     overflow: hidden;
   }
@@ -500,21 +490,21 @@
     padding: 6px 0;
     border: none;
     background: transparent;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     cursor: pointer;
     transition: background 60ms, color 60ms;
     position: relative;
   }
   .dock-tab:not(:last-child) {
-    border-right: 1px solid var(--dk-border);
+    border-right: 1px solid var(--dz-border);
   }
   .dock-tab:hover {
-    background: var(--dk-bg-hover);
-    color: var(--dk-text-mid);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-mid);
   }
   .dock-tab.active {
-    background: var(--dk-bg-active);
-    color: var(--dk-text);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
   }
   .dock-tab-badge {
     font-size: 9px;
@@ -525,7 +515,7 @@
   }
   .empty-hint {
     font-size: var(--dk-fs-sm);
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     padding: 12px 0;
     font-style: italic;
   }
@@ -537,14 +527,14 @@
   .section-divider {
     width: 100%;
     height: 1px;
-    background: var(--dk-bg-active);
+    background: var(--dz-bg-active);
     margin: 8px 0;
   }
   .section-label {
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     padding-bottom: 4px;
   }
 
@@ -565,10 +555,10 @@
     font-size: var(--dk-fs-lg);
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: var(--dk-text);
-    background: var(--dk-bg-faint);
-    border: 1px solid var(--dk-border);
-    border-bottom: 1px solid var(--dk-border-mid);
+    color: var(--dz-text-strong);
+    background: var(--dz-divider);
+    border: 1px solid var(--dz-border);
+    border-bottom: 1px solid var(--dz-border-strong);
     outline: none;
     padding: 4px 8px;
     flex: 1;
@@ -577,12 +567,12 @@
     transition: border-color 60ms;
   }
   .pat-input::placeholder {
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     font-style: italic;
   }
   .pat-input:focus {
-    border-color: var(--dk-border-mid);
-    background: var(--dk-bg-hover);
+    border-color: var(--dz-border-strong);
+    background: var(--dz-bg-hover);
   }
   .color-row {
     display: flex;
@@ -604,7 +594,7 @@
   }
   .color-swatch.selected {
     opacity: 1;
-    border-color: var(--dk-text);
+    border-color: var(--dz-text-strong);
     transform: scale(1.2);
   }
 
@@ -616,9 +606,9 @@
   }
   .btn-open-sheet {
     flex: 1;
-    border: 1px solid var(--dk-border-mid);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -627,13 +617,13 @@
     transition: color 60ms, background 60ms;
   }
   .btn-open-sheet:hover {
-    color: var(--dk-text);
-    background: var(--dk-bg-hover);
+    color: var(--dz-text-strong);
+    background: var(--dz-bg-hover);
   }
   .btn-set-root {
-    border: 1px solid var(--dk-border-mid);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -643,14 +633,14 @@
     white-space: nowrap;
   }
   .btn-set-root:hover {
-    color: var(--dk-text);
-    background: var(--dk-bg-hover);
+    color: var(--dz-text-strong);
+    background: var(--dz-bg-hover);
   }
   .btn-action-node {
     flex: 1;
-    border: 1px solid var(--dk-border-mid);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -660,13 +650,13 @@
     white-space: nowrap;
   }
   .btn-action-node:hover {
-    color: var(--dk-text);
-    background: var(--dk-bg-hover);
+    color: var(--dz-text-strong);
+    background: var(--dz-bg-hover);
   }
   .btn-delete-node {
-    border: 1px solid var(--dk-border-mid);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -677,7 +667,7 @@
   }
   .btn-delete-node:hover {
     color: var(--color-danger);
-    background: var(--dk-bg-hover);
+    background: var(--dz-bg-hover);
   }
 
   /* ── Fn node editor (ADR 110) ── */
@@ -695,13 +685,13 @@
   .fn-label {
     font-size: var(--dk-fs-sm);
     font-weight: 700;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     min-width: 64px;
   }
   .fn-toggle {
     display: flex;
     gap: 0;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
     overflow: hidden;
   }
@@ -713,29 +703,29 @@
     padding: 4px 10px;
     border: none;
     background: transparent;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     cursor: pointer;
     transition: background 60ms, color 60ms;
   }
   .fn-toggle-btn:not(:last-child) {
-    border-right: 1px solid var(--dk-border);
+    border-right: 1px solid var(--dz-border);
   }
   .fn-toggle-btn:hover {
-    background: var(--dk-bg-hover);
+    background: var(--dz-bg-hover);
   }
   .fn-toggle-btn.active {
-    background: var(--dk-bg-active);
-    color: var(--dk-text);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
   }
   .fn-toggle-btn.wide {
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     min-width: 48px;
   }
   .fn-stepper {
     display: flex;
     align-items: center;
     gap: 0;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     border-radius: 0;
     overflow: hidden;
   }
@@ -744,7 +734,7 @@
     height: 28px;
     border: none;
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -754,21 +744,21 @@
     transition: background 60ms;
   }
   .fn-step-btn:hover {
-    background: var(--dk-bg-hover);
-    color: var(--dk-text);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-strong);
   }
   .fn-step-btn:active {
-    background: var(--dk-bg-active);
+    background: var(--dz-bg-active);
   }
   .fn-step-val {
     font-family: var(--font-data);
     font-size: var(--dk-fs-md);
     font-weight: 700;
-    color: var(--dk-text);
+    color: var(--dz-text-strong);
     min-width: 40px;
     text-align: center;
-    border-left: 1px solid var(--dk-border);
-    border-right: 1px solid var(--dk-border);
+    border-left: 1px solid var(--dz-border);
+    border-right: 1px solid var(--dz-border);
     padding: 4px 0;
   }
   .fn-key-row {
@@ -781,18 +771,18 @@
     font-size: 9px;
     font-weight: 700;
     padding: 4px 4px;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     cursor: pointer;
     transition: background 60ms, color 60ms;
   }
   .fn-key-btn:hover {
-    background: var(--dk-bg-hover);
+    background: var(--dz-bg-hover);
   }
   .fn-key-btn.active {
-    background: var(--dk-bg-active);
-    color: var(--dk-text);
-    border-color: var(--dk-border-mid);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
+    border-color: var(--dz-border-strong);
   }
 </style>

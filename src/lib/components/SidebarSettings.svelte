@@ -238,8 +238,8 @@
 <style>
   .settings-section {
     padding: 4px 16px;
-    border-top: 1px solid rgba(237,232,220,0.08);
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    border-top: 1px solid var(--dz-bg-hover);
+    border-bottom: 1px solid var(--dz-bg-hover);
   }
   .setting-row {
     display: flex;
@@ -247,7 +247,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(237,232,220,0.06);
+    border-bottom: 1px solid var(--dz-divider);
   }
   .setting-row:last-child { border-bottom: none; }
   .setting-row-text {
@@ -260,12 +260,12 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237,232,220,0.85);
+    color: var(--dz-text-strong);
     text-transform: uppercase;
   }
   .setting-row-desc {
     font-size: 10px;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
     line-height: 1.3;
   }
   .setting-group {
@@ -274,20 +274,20 @@
   .setting-label {
     font-size: 10px;
     letter-spacing: 0.1em;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
     text-transform: uppercase;
     display: block;
     margin-bottom: 8px;
   }
   .about-text {
     font-size: 10px;
-    color: rgba(237,232,220,0.3);
+    color: var(--dz-border-strong);
     margin: 0;
   }
   .btn-toggle {
-    border: 1px solid rgba(237,232,220,0.3);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     font-size: 10px;
     letter-spacing: 0.06em;
     padding: 6px 0;
@@ -307,8 +307,8 @@
   /* ── MIDI (ADR 081) ── */
   .midi-select {
     background: transparent;
-    border: 1px solid rgba(237,232,220,0.3);
-    color: rgba(237,232,220,0.7);
+    border: 1px solid var(--dz-border-strong);
+    color: var(--dz-text);
     font-size: 10px;
     padding: 4px 8px;
     border-radius: 0;
@@ -322,13 +322,13 @@
     gap: 6px;
     padding: 2px 0;
     font-size: 10px;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
   }
   .midi-device.offline { opacity: 0.4; }
   .midi-dot {
     width: 6px; height: 6px;
     border-radius: 50%;
-    background: rgba(237,232,220,0.25);
+    background: var(--dz-border-mid);
     flex-shrink: 0;
   }
   .midi-dot.on { background: var(--color-olive); }
@@ -342,8 +342,8 @@
   }
   .jam-input {
     background: transparent;
-    border: 1px solid rgba(237,232,220,0.3);
-    color: rgba(237,232,220,0.85);
+    border: 1px solid var(--dz-border-strong);
+    color: var(--dz-text-strong);
     font-family: var(--font-data);
     font-size: 11px;
     letter-spacing: 0.08em;
@@ -356,7 +356,7 @@
     text-transform: none;
   }
   .jam-input::placeholder {
-    color: rgba(237,232,220,0.25);
+    color: var(--dz-border-mid);
     text-transform: uppercase;
   }
   .jam-error {
@@ -387,7 +387,7 @@
     font-size: 18px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220,0.9);
+    color: var(--dz-text-bright);
   }
   .jam-qr {
     display: flex;
@@ -401,7 +401,7 @@
   }
   .jam-connected {
     font-size: 10px;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-transport-border);
   }
   .jam-connected.on {
     color: var(--color-olive);
@@ -413,7 +413,7 @@
   }
   .jam-peer {
     font-size: 10px;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     padding-left: 8px;
   }
 </style>

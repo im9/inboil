@@ -125,18 +125,18 @@
   .knob-wrap.dragging { cursor: grabbing; }
   .val {
     font-size: 11px;
-    color: rgba(237,232,220,0.85);
+    color: var(--dz-text-strong);
     white-space: nowrap;
     line-height: 1;
   }
-  .light .val { color: rgba(30,32,40,0.7); }
+  .light .val { color: var(--lz-text-strong); }
   .lbl {
     font-size: 9px;
     letter-spacing: 0.06em;
-    color: rgba(237,232,220,0.55);
+    color: var(--dz-text-mid);
     text-transform: uppercase;
     white-space: nowrap;
     line-height: 1;
   }
-  .light .lbl { color: rgba(30,32,40,0.35); }
+  .light .lbl { color: var(--lz-text-hint); }
 </style>

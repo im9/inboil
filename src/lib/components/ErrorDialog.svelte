@@ -66,7 +66,7 @@
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background: rgba(30, 32, 40, 0.7);
+    background: var(--lz-text-strong);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -79,7 +79,7 @@
     max-width: 440px;
     width: 100%;
     padding: 20px;
-    box-shadow: 0 8px 32px rgba(30, 32, 40, 0.55);
+    box-shadow: 0 8px 32px var(--lz-text);
     font-family: var(--font-data, monospace);
   }
   .error-header {
@@ -101,15 +101,15 @@
   .error-message {
     font-size: 12px;
     line-height: 1.5;
-    color: rgba(237, 232, 220, 0.85);
+    color: var(--dz-text-strong);
     margin: 0 0 12px;
   }
   .error-detail {
     font-size: 10px;
     line-height: 1.4;
-    color: rgba(237, 232, 220, 0.45);
-    background: rgba(30, 32, 40, 0.35);
-    border: 1px solid rgba(237, 232, 220, 0.08);
+    color: var(--dz-transport-border);
+    background: var(--lz-text-hint);
+    border: 1px solid var(--dz-bg-hover);
     border-radius: 0;
     padding: 8px;
     margin: 0 0 12px;
@@ -141,26 +141,26 @@
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 0;
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237, 232, 220, 0.55);
+    color: var(--dz-text-mid);
     cursor: pointer;
   }
   .btn-copy:hover {
-    background: rgba(237, 232, 220, 0.06);
-    color: rgba(237, 232, 220, 0.85);
+    background: var(--dz-divider);
+    color: var(--dz-text-strong);
   }
   .btn-dismiss {
     font-size: 11px;
     font-weight: 600;
     padding: 6px 10px;
     border-radius: 0;
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: rgba(237, 232, 220, 0.45);
+    color: var(--dz-transport-border);
     cursor: pointer;
   }
   .btn-dismiss:hover {
-    color: rgba(237, 232, 220, 0.7);
+    color: var(--dz-text);
   }
 </style>

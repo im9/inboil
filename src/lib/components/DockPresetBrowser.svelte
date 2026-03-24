@@ -262,9 +262,9 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: var(--dk-text);
+    color: var(--dz-text-strong);
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -273,7 +273,7 @@
     transition: border-color 80ms;
   }
   .voice-current:hover {
-    border-color: var(--dk-border-mid);
+    border-color: var(--dz-border-strong);
   }
   .voice-current-name {
     text-transform: uppercase;
@@ -290,9 +290,9 @@
   }
   .cat-btn {
     flex: 1;
-    border: 1px solid var(--dk-border);
+    border: 1px solid var(--dz-border);
     background: transparent;
-    color: var(--dk-text-dim);
+    color: var(--dz-text-dim);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -315,13 +315,13 @@
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(var(--dk-cream), 0.25);
+    color: var(--dz-border-mid);
     margin-right: 2px;
   }
   .picker-recent-btn {
-    border: 1px solid rgba(var(--dk-cream), 0.12);
-    background: rgba(var(--dk-cream), 0.06);
-    color: rgba(var(--dk-cream), 0.55);
+    border: 1px solid var(--dz-bg-active);
+    background: var(--dz-divider);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-xs);
     padding: 2px 6px;
     cursor: pointer;
@@ -331,12 +331,12 @@
     max-width: 90px;
   }
   .picker-recent-btn:hover {
-    background: var(--dk-bg-hover);
-    color: rgba(var(--dk-cream), 0.85);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-strong);
   }
   .picker-recent-btn.selected {
     background: var(--olive-bg);
-    color: rgba(var(--dk-cream), 0.9);
+    color: var(--dz-text-bright);
     border-color: var(--olive-border-strong);
   }
   .picker-list {
@@ -344,7 +344,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     margin-top: 4px;
-    border: 1px solid rgba(var(--dk-cream), 0.1);
+    border: 1px solid var(--dz-border-subtle);
   }
   .picker-item {
     display: flex;
@@ -352,17 +352,17 @@
     gap: 6px;
     width: 100%;
     border: none;
-    border-bottom: 1px solid var(--dk-bg-faint);
+    border-bottom: 1px solid var(--dz-divider);
     background: transparent;
-    color: rgba(var(--dk-cream), 0.7);
+    color: var(--dz-text);
     font-size: var(--dk-fs-md);
     padding: 5px 6px;
     text-align: left;
     cursor: pointer;
   }
   .picker-item:hover {
-    background: var(--dk-bg-hover);
-    color: rgba(var(--dk-cream), 0.9);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-bright);
   }
   .picker-item:active {
     background: var(--color-olive);
@@ -370,7 +370,7 @@
   }
   .picker-item.selected {
     background: var(--olive-bg);
-    color: rgba(var(--dk-cream), 0.9);
+    color: var(--dz-text-bright);
   }
   .picker-item.selected .picker-cat-tag {
     color: var(--color-olive);
@@ -379,7 +379,7 @@
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(var(--dk-cream), 0.35);
+    color: var(--dz-text-dim);
     min-width: 28px;
     flex-shrink: 0;
   }
@@ -391,9 +391,9 @@
     white-space: nowrap;
   }
   .btn-init-preset {
-    border: 1px solid var(--dk-border-mid);
+    border: 1px solid var(--dz-border-strong);
     background: transparent;
-    color: var(--dk-text-mid);
+    color: var(--dz-text-mid);
     font-size: var(--dk-fs-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -403,12 +403,12 @@
     transition: background 60ms, color 60ms;
   }
   .btn-init-preset:hover {
-    background: var(--dk-bg-hover);
-    color: var(--dk-text);
+    background: var(--dz-bg-hover);
+    color: var(--dz-text-strong);
   }
   .btn-init-preset:active {
-    background: var(--dk-bg-active);
-    color: var(--dk-text);
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
   }
   .btn-save-preset {
     border: 1px solid var(--olive-border-strong);
@@ -438,8 +438,8 @@
     font-size: var(--dk-fs-md);
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(var(--dk-cream), 0.9);
-    background: rgba(var(--dk-cream), 0.08);
+    color: var(--dz-text-bright);
+    background: var(--dz-bg-hover);
     border: 1px solid var(--color-olive);
     padding: 4px 6px;
     outline: none;
@@ -447,7 +447,7 @@
   }
   .preset-del {
     font-size: 8px;
-    color: rgba(var(--dk-cream), 0.3);
+    color: var(--dz-border-strong);
     flex-shrink: 0;
     padding: 2px 4px;
     cursor: pointer;
@@ -457,7 +457,7 @@
     color: var(--color-danger);
   }
   .picker-item.renaming {
-    background: var(--dk-bg-hover);
+    background: var(--dz-bg-hover);
   }
   .preset-rename-input {
     flex: 1;
@@ -466,8 +466,8 @@
     font-size: var(--dk-fs-md);
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: rgba(var(--dk-cream), 0.9);
-    background: rgba(var(--dk-cream), 0.08);
+    color: var(--dz-text-bright);
+    background: var(--dz-bg-hover);
     border: 1px solid var(--color-olive);
     padding: 2px 4px;
     outline: none;
