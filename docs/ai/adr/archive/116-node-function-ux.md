@@ -4,7 +4,7 @@
 
 ## Context
 
-Scene graph nodes currently have a Max/MSP-like appearance that feels intimidating for newcomers.
+Scene nodes currently have a Max/MSP-like appearance that feels intimidating for newcomers.
 
 **Function node problems:**
 - Text-only labels like `T+5`, `RPT2`, `×140` give no intuitive sense of what the node does

@@ -202,7 +202,7 @@ The split view approach was prototyped but felt like "jumping to another screen"
 Two independent cursors:
 
 - `ui.currentPattern` — user's selection for viewing/editing (controlled by MatrixView taps, never by scene playback)
-- `playback.playingPattern` — what the engine is actually playing (controlled by scene graph during scene mode)
+- `playback.playingPattern` — what the engine is actually playing (controlled by scene during scene mode)
 
 Playback mode is decided at **play() time**, not during playback:
 
@@ -213,7 +213,7 @@ Playback mode is decided at **play() time**, not during playback:
 | Sheet closed + no scene | Loop `ui.currentPattern` |
 
 During scene playback:
-- Scene graph advances `playback.playingPattern` — does NOT touch `ui.currentPattern`
+- Scene advances `playback.playingPattern` — does NOT touch `ui.currentPattern`
 - User can freely browse/select patterns in MatrixView without affecting playback
 - Opening a sheet does NOT interrupt scene playback mid-song
 - To switch to pattern loop: stop → open sheet → play
@@ -229,5 +229,5 @@ During scene playback:
 |-----|--------|
 | 046 (Simplify View Toggle) | PAT/SCENE toggle removed. FX/EQ remain as sheet toggles |
 | 045 (Decouple Playback from View) | Auto-engage conditioned on `!hasSheet` instead of view focus |
-| 044 (Scene Graph) | Scene data model unchanged. SceneView always mounted |
+| 044 (Scene) | Scene data model unchanged. SceneView always mounted |
 | 043 (Matrix View) | MatrixView always visible (desktop). Double-tap opens pattern sheet |

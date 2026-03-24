@@ -26,7 +26,7 @@ New here? Start with the tutorial:
 - [Sampler](/docs/sound/sampler/) — load, chop, and pitch audio samples
 - [Effects](/docs/sound/fx/) — FX Pad, EQ, and Master
 
-### Scene Graph
+### Scene
 - [Nodes](/docs/scene/nodes/) — pattern and generative node types
 - [Function Node Modifiers](/docs/scene/decorators/) — transpose, tempo, repeat, FX
 - [Playback](/docs/scene/playback/) — how the scene engine traverses the graph

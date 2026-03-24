@@ -18,9 +18,9 @@ Meanwhile, ADR 038 (Custom Functions) proposed FX snapshot macros triggered from
 
 ### Opportunity: Generative Nodes
 
-The scene graph's directed-graph topology is uniquely suited for something step sequencers cannot do: **generative music**. Modular synth modules like Ornament & Crime demonstrate how quantizers, Tonnetz transforms, and shift-register sequences create musically interesting results that go beyond manually programmed patterns.
+The scene's directed-graph topology is uniquely suited for something step sequencers cannot do: **generative music**. Modular synth modules like Ornament & Crime demonstrate how quantizers, Tonnetz transforms, and shift-register sequences create musically interesting results that go beyond manually programmed patterns.
 
-The scene graph already supports probabilistic branching (ADR 048). Extending it with dedicated generative nodes turns the canvas from a static arrangement view into a **visible composition engine** — where nodes generate, transform, and route musical data.
+The scene already supports probabilistic branching (ADR 048). Extending it with dedicated generative nodes turns the canvas from a static arrangement view into a **visible composition engine** — where nodes generate, transform, and route musical data.
 
 ### Design Principles
 
@@ -119,7 +119,7 @@ type TonnetzOp = 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
 
 **Use cases:**
 - Generative chord progressions with guaranteed smooth voice leading
-- Vector sequencer: scene graph position on Tonnetz space determines current chord
+- Vector sequencer: scene position on Tonnetz space determines current chord
 - Cinematic harmonic movement without music theory knowledge
 
 #### Turing Machine (Shift-Register Random)
@@ -151,7 +151,7 @@ interface TuringParams {
 
 ### 3. Signal Flow & Graph Connections
 
-Generative nodes participate in the scene graph as first-class nodes with edges:
+Generative nodes participate in the scene as first-class nodes with edges:
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────────┐

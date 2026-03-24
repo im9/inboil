@@ -4,7 +4,7 @@
 
 ## Context
 
-inboil's scene graph is functional but visually sterile. Nodes and edges convey structure, but the canvas lacks personality. The app's philosophy — "building for self first, fun and game-like" — calls for expressive elements that make the workspace feel like your own.
+inboil's scene is functional but visually sterile. Nodes and edges convey structure, but the canvas lacks personality. The app's philosophy — "building for self first, fun and game-like" — calls for expressive elements that make the workspace feel like your own.
 
 kidpix.app demonstrates that purely decorative elements (stamps, doodles) make a creative tool more engaging. Users stamp fun graphics that serve no functional purpose but transform a blank canvas into a personal creation.
 

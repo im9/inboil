@@ -14,7 +14,7 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 |----------|--------|
 | **Instruments** | 19 voices: 11 drum, 4 synth (Bass303, Moog, FM, WT), sampler (chop/stretch) |
 | **Sequencer** | Polymetric (1–64 steps/track), p-locks, chance, velocity, slide, piano roll, chord brush |
-| **Scene Graph** | Node-based arrangement with generative nodes (Turing/Quantizer/Tonnetz) + decorators — unique differentiator |
+| **Scene** | Node-based arrangement with generative nodes (Turing/Quantizer/Tonnetz) + decorators — unique differentiator |
 | **Effects** | Full chain: reverb/delay/glitch/granular (3 flavours each), 3-band EQ, compressor, sidechain ducker, per-track insert FX |
 | **Performance** | KEY/OCT/FILL/REV/BRK, FX pad XY, swing, arpeggiator |
 | **I/O** | MIDI hardware input (USB+BLE), WAV recording, MIDI export, JSON project export/import |
@@ -26,12 +26,12 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 
 | App | Comparison |
 |-----|-----------|
-| Roland Aira Compact | Similar sequencing depth, but inboil has scene graph + generative |
+| Roland Aira Compact | Similar sequencing depth, but inboil has scene + generative |
 | Ableton Note (Web) | Simpler sequencer, better onboarding — inboil wins on depth |
 | Strudel | Code-based (different audience), no visual sequencer |
-| Elektron Digitakt | Closest in sequencer philosophy (p-locks, chance), but inboil adds scene graph |
+| Elektron Digitakt | Closest in sequencer philosophy (p-locks, chance), but inboil adds scene |
 
-**Unique axis: scene graph + generative nodes. No direct competitor combines visual node arrangement with step-sequencing at this depth.**
+**Unique axis: scene + generative nodes. No direct competitor combines visual node arrangement with step-sequencing at this depth.**
 
 ## Decision: Pre-Launch Checklist
 
@@ -62,7 +62,7 @@ As of 2026-03-12, the core feature set is mature (67 ADRs implemented). However,
 
 #### 3. ~~Landing Page & Minimal Tutorial (ADR 072)~~ ✅ Done
 
-ADR 072 Implemented. LP with interactive demos (step sequencer, voice engine viewer, scene graph, FX pad), specs section, bilingual i18n. Starlight docs with getting-started tutorial. In-app Help → Docs links wired.
+ADR 072 Implemented. LP with interactive demos (step sequencer, voice engine viewer, scene, FX pad), specs section, bilingual i18n. Starlight docs with getting-started tutorial. In-app Help → Docs links wired.
 
 #### 4. ~~Explicit Storage Scope Notice~~ ✅ Done (2026-03-12)
 

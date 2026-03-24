@@ -11,7 +11,7 @@ Acid and minimal techno tracks often revolve around a single pattern. Musical de
 In the current inboil architecture, there are two ways to create parameter variation:
 
 1. **Per-step paramLocks (ADR 093)** — fine-grained, per-step control. Great for a single repetition (step-level detail) but tedious for long sweeps: manually setting cutoff on 256 steps across 16 repeats is impractical.
-2. **Create many patterns** — duplicate a pattern with slight variations. Works but defeats the purpose of repeat nodes and makes the scene graph unwieldy.
+2. **Create many patterns** — duplicate a pattern with slight variations. Works but defeats the purpose of repeat nodes and makes the scene unwieldy.
 
 Neither approach captures the workflow of "one pattern, evolving over many repeats."
 
@@ -32,7 +32,7 @@ The current repeat system (`sceneRepeatLeft` in `state.svelte.ts:165`) counts do
 
 ### Repeat Sweep: function node with paint canvas
 
-A new **sweep function node** in the scene graph. When connected to a pattern node, it enables a SWEEP tab in the pattern sheet and applies parameter curves spanning the **full repeat cycle**. The user paints curves on a kidpix-inspired canvas where brush = parameter, color = track, canvas = time across all repeats.
+A new **sweep function node** in the scene. When connected to a pattern node, it enables a SWEEP tab in the pattern sheet and applies parameter curves spanning the **full repeat cycle**. The user paints curves on a kidpix-inspired canvas where brush = parameter, color = track, canvas = time across all repeats.
 
 ```
 [Sweep] ──→ [Pattern A] ──→ [Repeat ×8]
@@ -249,7 +249,7 @@ Called on each step advance (same timing as paramLock application). For smooth r
 
 ## Considerations
 
-- **Why a function node, not pattern-level data?** The sweep node's presence in the scene graph makes sweep automation visible and explicit. It also enables the pattern sheet to conditionally show the SWEEP tab (only when a sweep node is connected). The sweep node is pass-through like other fn nodes — it doesn't add a new "view" or navigation layer. During brainstorming, an independent node with its own step counter was also considered but rejected: when patterns across nodes have different instruments, target parameters may not exist (requiring skip logic). The sweep node targets the specific pattern it's connected to.
+- **Why a function node, not pattern-level data?** The sweep node's presence in the scene makes sweep automation visible and explicit. It also enables the pattern sheet to conditionally show the SWEEP tab (only when a sweep node is connected). The sweep node is pass-through like other fn nodes — it doesn't add a new "view" or navigation layer. During brainstorming, an independent node with its own step counter was also considered but rejected: when patterns across nodes have different instruments, target parameters may not exist (requiring skip logic). The sweep node targets the specific pattern it's connected to.
 - **Canvas size on mobile**: The overlay sheet works on mobile (ADR 054), but drawing precision is lower on small screens. Mitigated by aggressive smoothing and the forgiving freehand approach — you don't need to be precise.
 - **Performance**: Curve evaluation per step is O(log n) with binary search over ~20 points — negligible. No per-sample evaluation needed; the worklet's existing ramp interpolation handles smoothness between steps.
 - **Relationship to ADR 103 (Orchestration Layer)**: ADR 103 envisions AI-interpreted mood shapes spanning multiple nodes. Repeat Sweep is complementary — it handles the simpler, manual case of "one pattern, evolving parameters." The paint canvas could eventually serve as input for ADR 103's figure drawing.

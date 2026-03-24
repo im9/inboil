@@ -6,16 +6,16 @@
 
 ### Current State
 
-ADR 044 (Done) introduced the Scene Graph for arrangement. Patterns are now reusable units referenced by scene nodes. The arrangement layer (ordering, branching, repeats) is fully handled by the Scene View.
+ADR 044 (Done) introduced the Scene for arrangement. Patterns are now reusable units referenced by scene nodes. The arrangement layer (ordering, branching, repeats) is fully handled by the Scene View.
 
 However, the current MatrixView (`src/lib/components/MatrixView.svelte`) still displays patterns as a **section × track grid** — rows are section indices (00, 01, 02...) with 8 track columns showing per-cell density. This is a leftover from the chain/timeline era (ADR 042).
 
 ### Problems
 
-1. **Timeline semantics are wrong**: Row indices imply sequential order (section 0 → 1 → 2), but arrangement is now handled by the Scene Graph. The matrix should not suggest a timeline.
+1. **Timeline semantics are wrong**: Row indices imply sequential order (section 0 → 1 → 2), but arrangement is now handled by the Scene. The matrix should not suggest a timeline.
 2. **Track columns couple to fixed track count**: Each row shows 8 cells (one per track). This breaks if track count becomes variable — adding/removing tracks would require redesigning the matrix layout.
 3. **No pattern-level preview playback**: Clicking a matrix cell selects a track within a pattern but doesn't let you audition the pattern in isolation.
-4. **Scene ↔ Editor sync missing**: When the Scene Graph advances to a new pattern during playback, the Grid/Tracker view doesn't follow — `ui.currentPattern` is not synced from scene traversal.
+4. **Scene ↔ Editor sync missing**: When the Scene advances to a new pattern during playback, the Grid/Tracker view doesn't follow — `ui.currentPattern` is not synced from scene traversal.
 
 ### Insight
 
@@ -109,7 +109,7 @@ ui.currentPattern = patternIndex
 - Pressing solo again on the same pattern deactivates (returns to normal playback)
 - Visual: solo'd pattern row gets a distinct highlight (blue border)
 
-This lets the user audition a single pattern while editing without disrupting the Scene graph structure.
+This lets the user audition a single pattern while editing without disrupting the Scene structure.
 
 **Matrix follows playback**: The matrix highlights whichever pattern is currently playing, whether from solo, scene traversal, or section playback. Auto-scroll to keep the playing pattern visible.
 
@@ -214,7 +214,7 @@ Mobile:
 
 ## Considerations
 
-- **Section model**: `song.sections[]` and `playback.currentSection` still exist for backward compatibility with the linear arrangement fallback (`hasArrangement()`). These can be deprecated once Scene Graph fully replaces linear playback. This ADR does not remove sections — it decouples the Matrix UI from them.
+- **Section model**: `song.sections[]` and `playback.currentSection` still exist for backward compatibility with the linear arrangement fallback (`hasArrangement()`). These can be deprecated once Scene fully replaces linear playback. This ADR does not remove sections — it decouples the Matrix UI from them.
 - **Variable track count (future)**: By removing track columns from the matrix, adding/removing tracks only affects the Grid/Tracker view. The matrix density bar aggregates across all tracks regardless of count.
 - **Performance**: Pattern list is simpler than section × track grid — fewer DOM elements (N patterns vs N × 8 cells). Density calculation per-pattern is cheap.
 - **Pattern vs Section selection**: `ui.currentPattern` is the primary editing target. `ui.currentSection` becomes an internal detail for the section-based playback fallback, not exposed in the matrix UI.

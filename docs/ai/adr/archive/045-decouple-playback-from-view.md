@@ -4,7 +4,7 @@
 | ------- | ------------------------ |
 | status  | implemented              |
 | date    | 2025-03-05               |
-| parent  | ADR 044 (Scene Graph)    |
+| parent  | ADR 044 (Scene)    |
 
 ## Context
 
@@ -40,7 +40,7 @@ export const playback = $state({
 | mode    | behaviour                                                           |
 | ------- | ------------------------------------------------------------------- |
 | `loop`  | Loop `ui.currentPattern` endlessly (current Grid/Tracker behaviour) |
-| `scene` | Scene graph drives advancement; `ui.currentPattern` syncs to the currently-playing pattern |
+| `scene` | Scene drives advancement; `ui.currentPattern` syncs to the currently-playing pattern |
 
 ### How mode is set
 
@@ -138,4 +138,4 @@ export const playback = $state({
 - Should the SCENE toggle persist across stop/play, or auto-engage when a root
   exists? Leaning toward auto-engage with manual override.
 - Linear section fallback (`advanceSection`) — keep as-is for now; address in a
-  future ADR that consolidates sections into the scene graph (option A).
+  future ADR that consolidates sections into the scene (option A).

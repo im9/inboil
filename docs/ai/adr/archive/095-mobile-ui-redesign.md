@@ -125,7 +125,7 @@ Compact scene playback status display.
 #### Phase 2: MobileSceneRibbon
 
 - Create `MobileSceneRibbon` component
-- Linearize scene graph into a playback path for display
+- Linearize scene into a playback path for display
 - Show currently playing node with highlight
 - Scene mode play/stop button
 

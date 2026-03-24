@@ -9,7 +9,7 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 
 | Term | Definition |
 |---|---|
-| Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene graph. |
+| Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene. |
 | Pattern | A reusable unit of music: id + name + N cells (one per track). One pattern plays at a time. |
 | Cell | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX sends. |
 | Track | Instrument configuration only: id, name, voiceId, muted, volume, pan. |
@@ -250,7 +250,7 @@ Function nodes (transpose/repeat/tempo/fx/sweep) attach as **satellites** to pat
 
 Connecting a generative node to a pattern triggers automatic generation. Parameter changes debounce-regenerate (300ms). Target track auto-selects the first unused track. Merge mode simplified to replace (default) and fill (empty steps only).
 
-See ADR 044 for scene graph design, ADR 053 for automation, ADR 078 for generative nodes, ADR 116 for function node UX, ADR 117 for generative UX simplification, ADR 118 for repeat sweep automation.
+See ADR 044 for scene design, ADR 053 for automation, ADR 078 for generative nodes, ADR 116 for function node UX, ADR 117 for generative UX simplification, ADR 118 for repeat sweep automation.
 
 ## Trig — DECIDED
 
@@ -317,8 +317,8 @@ No PAUSED state is implemented.
 ### Manual selection
 Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and sends the new pattern to the engine immediately.
 
-### Scene graph playback
-When the scene graph is active (has a root node) and `playback.mode === 'scene'`, the graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
+### Scene playback
+When the scene is active (has a root node) and `playback.mode === 'scene'`, the directed graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
 
 Repeat phase tracking (ADR 118): `playback.sceneRepeatIndex` (0-based current repeat) and `playback.sceneRepeatTotal` (total repeat count from repeat fn node) enable sweep automation to compute progress across the full repeat cycle.
 

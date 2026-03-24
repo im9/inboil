@@ -45,7 +45,7 @@ See [adr/](./adr/) for full rationale.
 - **Per-step velocity editing** (IMPLEMENTED) — Bar overlay + mobile 3-mode tabs. → [adr/006-velocity-editing.md](./adr/006-velocity-editing.md)
 - **Pattern persistence** (SUPERSEDED) — Replaced by ADR 020 (Data Persistence). → [adr/007-pattern-persistence.md](./adr/007-pattern-persistence.md)
 - **Granular enhancements** (IMPLEMENTED) — Pitch shift, reverse grains, scatter, freeze. → [adr/008-granular-enhancements.md](./adr/008-granular-enhancements.md)
-- **Pattern chain** (SUPERSEDED) — Replaced by scene graph (ADR 044). → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
+- **Pattern chain** (SUPERSEDED) — Replaced by scene (ADR 044). → [adr/013-pattern-chain.md](./adr/013-pattern-chain.md)
 - **Parameter locks** (IMPLEMENTED) — Per-step voice parameter overrides. → [adr/014-parameter-locks.md](./adr/014-parameter-locks.md)
 - **Note duration, slide, ADSR** (IMPLEMENTED) — Gate length, legato, amp envelope. → [adr/021-note-duration-slide-adsr.md](./adr/021-note-duration-slide-adsr.md)
 - **Lead arpeggiator** (IMPLEMENTED) — 5-mode arp with chord/octave range. → [adr/022-lead-arpeggiator.md](./adr/022-lead-arpeggiator.md)
@@ -60,7 +60,7 @@ See [adr/](./adr/) for full rationale.
 - **Solo** (IMPLEMENTED) — Per-track additive solo with indicator. → [adr/039-solo.md](./adr/039-solo.md)
 - **Section-based arrangement** (IMPLEMENTED) — Song → Section → Cell flat model. → [adr/042-section-based-arrangement.md](./adr/042-section-based-arrangement.md)
 - **Matrix view** (IMPLEMENTED) — Pattern pool browser sidebar. → [adr/043-matrix-view.md](./adr/043-matrix-view.md)
-- **Scene graph** (IMPLEMENTED) — Node-based directed graph for arrangement. → [adr/044-scene-graph.md](./adr/044-scene-graph.md)
+- **Scene** (IMPLEMENTED) — Node-based directed graph for arrangement. → [adr/044-scene-graph.md](./adr/044-scene-graph.md)
 - **Decouple playback from view** (IMPLEMENTED) — Separate `playback.mode` from `ui.phraseView`. → [adr/045-decouple-playback-from-view.md](./adr/045-decouple-playback-from-view.md)
 - **Overlay sheet model** (IMPLEMENTED) — Pattern/FX/EQ as overlay sheets over SceneView. → [adr/054-split-view.md](./adr/054-split-view.md)
 - **Dock minimize & sidebar separation** (IMPLEMENTED) — DockPanel minimize toggle, sidebar as fixed drawer. → [adr/055-dock-sidebar-separation.md](./adr/055-dock-sidebar-separation.md)
@@ -118,7 +118,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
 │   │   │   ├── PianoRoll.svelte    ← Note bar editor for melodic tracks (poly chord support)
-│   │   │   ├── SceneView.svelte    ← Node-based scene graph canvas
+│   │   │   ├── SceneView.svelte    ← Node-based scene canvas
 │   │   │   ├── SceneCanvas.svelte  ← Canvas layer for scene edges/arrowheads
 │   │   │   ├── SceneToolbar.svelte ← Scene view toolbar (add node, zoom, layout)
 │   │   │   ├── SceneLabels.svelte  ← Free-floating canvas text labels
@@ -192,10 +192,10 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── constants.ts            ← Default values (DEFAULT_PERF, FX flavours, etc.)
 │   │   ├── factory.ts              ← Factory patterns, track defaults, song builder
 │   │   ├── demo.ts                 ← Demo song data
-│   │   ├── sceneActions.ts         ← Scene graph CRUD, layout, clipboard
+│   │   ├── sceneActions.ts         ← Scene CRUD, layout, clipboard
 │   │   ├── sceneData.ts            ← Scene clone/restore, migration helpers
 │   │   ├── sceneGeometry.ts        ← Scene node geometry calculations
-│   │   ├── scenePlayback.ts        ← Scene graph traversal engine
+│   │   ├── scenePlayback.ts        ← Scene traversal engine
 │   │   ├── sectionActions.ts       ← Pattern/section operations, copy/paste
 │   │   ├── stepActions.ts          ← Step-level mutations (toggle, velocity, etc.)
 │   │   ├── songClone.ts            ← Pure data clone/restore for Song serialization

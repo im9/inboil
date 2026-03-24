@@ -4,12 +4,12 @@
 | ------- | ---------------------------------- |
 | status  | implemented                        |
 | date    | 2026-03-05                         |
-| parent  | ADR 043 (Matrix View), ADR 044 (Scene Graph) |
+| parent  | ADR 043 (Matrix View), ADR 044 (Scene) |
 
 ## Context
 
 Patterns currently lack visual identity beyond their name. When a project grows
-to 20+ patterns, the Matrix View grid and Scene graph become hard to navigate:
+to 20+ patterns, the Matrix View grid and Scene become hard to navigate:
 
 1. **No rename UI** — `patternRename()` exists in state but is never called.
    The header in MatrixView shows the name read-only. Users cannot rename

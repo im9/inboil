@@ -76,7 +76,7 @@ Place `CHANGELOG.md` at the project root using [Keep a Changelog](https://keepac
 ## [0.1.0] - 2026-03-xx
 
 ### Added
-- Scene graph with generative nodes (Turing Machine, Quantizer, Tonnetz)
+- Scene with generative nodes (Turing Machine, Quantizer, Tonnetz)
 - 19 voice engines (11 drum, 4 synth, sampler)
 - Polymetric sequencer with p-locks, chance, slide, piano roll
 - Multi-device collaboration via WebRTC

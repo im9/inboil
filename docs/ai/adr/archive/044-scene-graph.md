@@ -1,4 +1,4 @@
-# ADR 044: Scene Graph — Node-Based Arrangement Canvas
+# ADR 044: Scene — Node-Based Arrangement Canvas
 
 ## Status: Implemented
 
@@ -28,7 +28,7 @@ The Matrix View is a **paint palette** — a collection of colors (patterns), ea
 
 The Scene View is the **canvas** — where those colors are applied through drawing. Patterns and FX nodes are the paint; connecting them is the brushstroke. A simple scene is a few bold strokes (A→B→C). A complex scene is a layered composition with branching paths, probability forks, and FX washes — an abstract painting of sound over time.
 
-The creative flow mirrors painting: prepare your materials (patterns), then compose freely on the canvas (scene graph).
+The creative flow mirrors painting: prepare your materials (patterns), then compose freely on the canvas (scene).
 
 The Scene View replaces linear chain sequencing with a visual node graph, similar to the existing FX pad canvas interaction model. Patterns are dragged from the Matrix onto the Scene canvas as nodes. Connecting nodes defines playback order. Function nodes (FX, transpose, tempo, repeat, probability) modify the flow.
 
@@ -201,7 +201,7 @@ interface ScenePlayback {
 }
 ```
 
-The engine receives pattern data the same way — `patternToWorklet()` reads from `song.patterns[id].cells[i]` instead of `song.sections[index].cells[i]`. The scene graph controls which pattern is sent to the worklet and when to advance.
+The engine receives pattern data the same way — `patternToWorklet()` reads from `song.patterns[id].cells[i]` instead of `song.sections[index].cells[i]`. The scene controls which pattern is sent to the worklet and when to advance.
 
 ### Relationship to Matrix View (ADR 043)
 
@@ -357,7 +357,7 @@ interface Song {
 ### Phase 5: Probability Node & Polish
 
 1. Probability node (weighted random branch selection)
-2. Scene presets (replace `SONG_PRESETS` with scene graphs)
+2. Scene presets (replace `SONG_PRESETS` with scenes)
 3. Canvas zoom/pan
 4. Mobile scene view
 5. Copy/paste nodes and subgraphs
@@ -365,10 +365,10 @@ interface Song {
 ## Considerations
 
 - **Phase 0 as safety net**: Phase 0 is a pure refactor — no behavior changes, no new UI. It can be verified by confirming all existing functionality works identically. If Phase 0 succeeds, subsequent phases have a clean foundation. If the project pivots, Phase 0's indirection layer is still useful (pattern re-use becomes trivial).
-- **Migration from sections**: Current 64 sections become 64 patterns in the pool (Phase 0 creates the 1:1 mapping, Phase 1 enables N:1 re-use). The LOFI preset arrangement becomes a simple linear scene graph (A→B→C→...).
+- **Migration from sections**: Current 64 sections become 64 patterns in the pool (Phase 0 creates the 1:1 mapping, Phase 1 enables N:1 re-use). The LOFI preset arrangement becomes a simple linear scene (A→B→C→...).
 - **Performance**: Canvas rendering follows the FX pad model — requestAnimationFrame with band-driven animation. Node count is typically small (< 50 nodes).
 - **Undo**: Scene edits (add/remove nodes, edges) use the existing snapshot-based undo system. Phase 0 updates `cloneSong()`/`restoreSong()` to handle the new indirection.
-- **FX overrides**: Per-section FX state (`verb`, `delay`, `glitch`, `granular` on Section) is replaced by FX function nodes in the scene graph, applied as modifiers to downstream pattern nodes. During Phase 0, FX state remains on Section (moved to SceneNode in Phase 1+).
+- **FX overrides**: Per-section FX state (`verb`, `delay`, `glitch`, `granular` on Section) is replaced by FX function nodes in the scene, applied as modifiers to downstream pattern nodes. During Phase 0, FX state remains on Section (moved to SceneNode in Phase 1+).
 - **Variable step counts**: Each pattern's cells can have different step counts per track. The worklet handles polymetric playback. Graph traversal advances to the next node when track 0 completes its cycle (same as current behavior).
 - **Complexity budget**: The node graph adds conceptual complexity. The UI must make simple cases simple (drag 3 patterns, connect linearly) while enabling advanced flows (branching, probability) for power users.
 
@@ -378,15 +378,15 @@ interface Song {
 |-----|--------|
 | 027 (Node Chain) | Early proposal for node-based song builder. ADR 044 is the refined, production-ready evolution — same core concept (canvas + pattern nodes + connections + branching) with concrete data model, phased implementation, and FX pad canvas reuse. |
 | 037 (ChainView Redesign) | Proposed improvements to the linear chain view (expandable rows, pattern picker, drag-reorder, timeline). The chain view itself is replaced by SectionNav (arrangement slots) + Matrix View (pattern pool) + Scene Canvas (node graph). |
-| 042 (Section-Based Arrangement) | Section model replaced by Pattern + Scene. Inline cells → Pattern pool. Linear loopStart/loopEnd → Scene graph traversal. |
+| 042 (Section-Based Arrangement) | Section model replaced by Pattern + Scene. Inline cells → Pattern pool. Linear loopStart/loopEnd → Scene traversal. |
 | 043 (Matrix View) | Matrix View repurposed from arrangement grid to pattern pool browser. |
 
 ## Future Extensions
 
-- **Scene templates**: Save/load scene graphs as presets
+- **Scene templates**: Save/load scenes as presets
 - **Sub-scenes**: A scene node that references another scene (nested graphs)
 - **Audio-reactive branching**: Function node that branches based on audio input level
-- **Timeline view**: Optional linear timeline derived from scene graph for traditional arrangement editing
-- **Collaborative scenes**: Multiple users editing the same scene graph in real-time
+- **Timeline view**: Optional linear timeline derived from scene for traditional arrangement editing
+- **Collaborative scenes**: Multiple users editing the same scene in real-time
 - **MIDI mapping**: Map MIDI controls to scene node triggering (launch nodes live)
 - **Conditional nodes**: Branch based on play count, time, or user input

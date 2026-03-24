@@ -20,7 +20,7 @@ Each tutorial step provides a JSON snapshot (ADR 020 export format) that users c
 
 ### 2. Function Node Playground (from ADR 072 Phase 3)
 
-A live sandbox in docs where users can experiment with scene graph features:
+A live sandbox in docs where users can experiment with scene features:
 
 - SceneCanvas + DockDecoratorEditor embedded in docs pages
 - Lightweight `PlaygroundState` context (1-pattern, few-track sandbox with audio)

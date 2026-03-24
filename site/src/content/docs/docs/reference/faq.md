@@ -49,10 +49,10 @@ Yes — each track has an independent step count from **2 to 64**. Different ste
 ### What is P-LOCK?
 **P-LOCK** (per-step parameter lock) lets you change a sound parameter for just one step. Tap **P-LOCK** in the Dock, select a step, then turn knobs. That step gets its own sound settings while the rest of the pattern keeps the original.
 
-## Scene Graph
+## Scene
 
 ### What's the difference between Loop and Scene mode?
-**Loop** plays the current pattern on repeat. **Scene** traverses the scene graph starting from the root node, following edges to create longer arrangements with variation.
+**Loop** plays the current pattern on repeat. **Scene** traverses the scene starting from the root node, following edges to create longer arrangements with variation.
 
 ### Can the scene loop forever?
 Yes — if your edges form a cycle (A → B → C → A), playback loops through those nodes indefinitely. When a node has multiple outgoing edges, the next destination is chosen **randomly**, so the arrangement varies on each pass.

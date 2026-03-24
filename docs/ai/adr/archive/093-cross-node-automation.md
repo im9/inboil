@@ -17,7 +17,7 @@ Cross-node automation spans via `crossNode` flag + horizontal snap "Tetris" bloc
 
 ### Why rewrite
 
-The per-step automation approach (paramLocks) solves most use cases more intuitively. For global parameters that don't fit per-step (tempo ramps, master volume), function nodes in the scene graph provide explicit visual control. The cross-node span concept becomes unnecessary.
+The per-step automation approach (paramLocks) solves most use cases more intuitively. For global parameters that don't fit per-step (tempo ramps, master volume), function nodes in the scene provide explicit visual control. The cross-node span concept becomes unnecessary.
 
 ## Decision
 
@@ -35,7 +35,7 @@ Current decorator types become function node behaviors:
 | `fx` | FX node | Send/flavour override — stays in graph |
 | `automation` (curve) | **Removed** | Replaced by per-step paramLocks |
 
-Function nodes connect via edges like any other node. The scene graph visually shows parameter flow:
+Function nodes connect via edges like any other node. The scene visually shows parameter flow:
 
 ```
 [Transpose +5] → [Pattern A] → [Tempo 140] → [Pattern B]

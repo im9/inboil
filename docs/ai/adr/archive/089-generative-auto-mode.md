@@ -27,7 +27,7 @@ Add a **generate icon button** (e.g. dice or sparkle) to the step sequencer tool
 
 - **Tap** → runs the upstream generative chain for the current pattern and writes the result into the pattern (write mode)
 - Without tapping, pattern content is untouched — no surprises
-- Button is only visible/enabled when the current pattern has upstream generative nodes in the scene graph
+- Button is only visible/enabled when the current pattern has upstream generative nodes in the scene
 
 This makes the generate action discoverable and co-located with the data it affects.
 

@@ -51,7 +51,7 @@ Add Claude API as a creative partner for higher-level musical decisions.
 | Cache | KV or D1 | Cache similar prompts to reduce API calls |
 
 **POST `/api/compose/suggest`**
-- Input: current song state (patterns, scene graph structure, style tags)
+- Input: current song state (patterns, scene structure, style tags)
 - Natural language prompt: "make the B section more energetic" / "add tension before the drop"
 - Output: structured JSON — suggested parameter changes, new pattern, decorator values
 - LLM receives a compressed musical representation, returns structured edits
@@ -86,7 +86,7 @@ Live composition assistance during playback.
 **App integration (all phases):**
 - DockPanel "AI" tab or floating compose button
 - Suggestions appear as ghost trigs (dimmed) on StepGrid — tap to accept
-- Scene graph: "suggest next node" based on current arrangement
+- Scene: "suggest next node" based on current arrangement
 - Undo-aware: AI changes go through normal pushUndo() flow
 
 ## Learning Outcomes

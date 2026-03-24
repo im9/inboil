@@ -44,7 +44,7 @@ The tab bar appears only when the pattern sheet is open. When no sheet is open a
 
 "SCENE" was chosen over "DECO" because:
 - The tab contains both decorators and connected generative nodes — not just decorators
-- TRACKS vs SCENE is a clear conceptual split: per-track sound design vs scene graph-level pattern control
+- TRACKS vs SCENE is a clear conceptual split: per-track sound design vs scene-level pattern control
 - Scales to future additions (looper connections, etc.) without renaming
 
 ### Tab bar design
@@ -87,7 +87,7 @@ The tab bar appears only when the pattern sheet is open. When no sheet is open a
 
 - Decorators section: `[+ Add ▾]` dropdown (Transpose, Tempo, Repeat, FX, Automation), full-size Knob/toggle controls, `×` to remove
 - Generative section: shows all generative nodes connected via edges to this pattern's scene node
-- Empty state: "Place this pattern in the scene graph to add decorators."
+- Empty state: "Place this pattern in the scene to add decorators."
 - Scrollable if many items
 
 ### State changes
@@ -135,7 +135,7 @@ const connectedGenerativeNodes = $derived.by(() => {
 })
 ```
 
-If the pattern has no scene node (not placed in scene graph), the SCENE tab shows an empty state: "Place this pattern in the scene graph to add decorators."
+If the pattern has no scene node (not placed in the scene), the SCENE tab shows an empty state: "Place this pattern in the scene to add decorators."
 
 ## Considerations
 

@@ -59,7 +59,7 @@ Mobile UI requires a fresh design — the desktop layout does not translate to 4
 - How to fit 8+ tracks × 16+ steps on a phone screen
 - Gesture vocabulary: swipe, pinch, long-press vs tap
 - Navigation model: tab bar, swipe between views, or modal sheets
-- Scene graph interaction on small screens
+- Scene interaction on small screens
 - Portrait vs landscape orientation
 
 **Possible directions:**

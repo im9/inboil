@@ -4,11 +4,11 @@
 | ------- | ---------------------------------- |
 | status  | implemented                        |
 | date    | 2026-03-06                         |
-| parent  | ADR 044 (Scene Graph)              |
+| parent  | ADR 044 (Scene)              |
 
 ## Context
 
-As scene graphs grow complex, it becomes hard to understand what groups of nodes represent. Users want to annotate sections (e.g. "intro / verse / chorus") or leave design notes directly on the canvas.
+As scenes grow complex, it becomes hard to understand what groups of nodes represent. Users want to annotate sections (e.g. "intro / verse / chorus") or leave design notes directly on the canvas.
 
 ### Alternatives Considered
 
@@ -76,5 +76,5 @@ export interface Scene {
 
 | ADR | Impact |
 |-----|--------|
-| 044 (Scene Graph) | Adds `labels` array to `Scene`. No impact on graph traversal or playback |
+| 044 (Scene) | Adds `labels` array to `Scene`. No impact on graph traversal or playback |
 | 050 (Scene Function Nodes) | Adds label item to bubble menu |

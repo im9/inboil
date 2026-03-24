@@ -130,7 +130,7 @@ The hero section has three jobs in under 3 seconds:
 │  Sound Engines (2-col 2:3)        │  ← voice chips + engine viewer with SVG graphs
 │          ·bg1·                    │
 ├───────────────────────────────────┤
-│  Scene Graph (2-col 3:2 reversed) │  ← draggable nodes, bezier edges, arrowheads
+│  Scene (2-col 3:2 reversed) │  ← draggable nodes, bezier edges, arrowheads
 │          ·bg2·                    │
 ├───────────────────────────────────┤
 │  FX Pad (full-width, dark bg)     │  ← draggable effect nodes with constellation lines
@@ -159,7 +159,7 @@ The LP should feel like the app itself — playful, responsive, musical.
 | Step sequencer | Othello-flip cells, playhead animation, Web Audio preview |
 | Engine viewer | SVG graphs update in real-time per voice selection |
 | Arc knobs | Draggable, update graphs + live audio (filter, FM, wavetable) |
-| Scene graph nodes | Draggable (hidden discovery, no hint text) |
+| Scene nodes | Draggable (hidden discovery, no hint text) |
 | Feature titles | Hover bounce + accent-line pulse |
 | CTA "Open App" | Hover glow sweep |
 | FX Pad nodes | Draggable, constellation lines between active nodes |
@@ -171,7 +171,7 @@ The LP should feel like the app itself — playful, responsive, musical.
 
 - Primary: Interactive DOM step sequencer in hero (4-track × 16-step, Web Audio preview on click)
 - Sound Engines section: 19 voice chips with audio preview, engine viewer with live SVG graphs and draggable arc knobs
-- Scene Graph section: draggable nodes with dynamic bezier edges (ray-box intersection)
+- Scene section: draggable nodes with dynamic bezier edges (ray-box intersection)
 - FX Pad section: draggable effect nodes with constellation lines
 - No autoplay audio (browser policy + UX)
 
@@ -194,7 +194,7 @@ docs/
 │   ├── voices            Synth & drums
 │   ├── sampler           Sampler
 │   └── fx                Effects (FX Pad, EQ)
-├── scene/               Scene graph
+├── scene/               Scene
 │   ├── nodes             Node types
 │   ├── decorators        Decorators
 │   └── playback          Playback flow
@@ -281,7 +281,7 @@ Quick lookup during use         Sit down and learn
 - Sound Engines section: 2:3 grid, 19 voice chips with audio preview, voice ↔ engine viewer param sync
 - Engine viewer: dark panel with real-time SVG graphs (waveform, ADSR, FM routing) + draggable arc knobs
 - Audio params matched to app presets (paramDefs.ts / DRUM_PRESETS)
-- Scene Graph section: 3:2 reversed grid, draggable nodes with dynamic bezier edges, ray-box intersection
+- Scene section: 3:2 reversed grid, draggable nodes with dynamic bezier edges, ray-box intersection
 - Scene nodes match app style (height:32, no border-radius, root border, playing pulse, decorator pills)
 - FX Pad section: full-width dark bg, draggable effect nodes on canvas with constellation lines
 - FX node colors match app exactly (VERB=#787845, DLY=#4472B4, GLT=#E8A090, GRN=#9B6BA0)

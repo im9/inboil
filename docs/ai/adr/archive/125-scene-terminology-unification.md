@@ -4,7 +4,7 @@
 
 ## Context
 
-The scene graph terminology has grown organically through multiple ADRs (024, 038, 044, 050, 062, 066, 078, 093, 116) and is now inconsistent across code, docs, and UI. The same concept has different names depending on where you look:
+The scene terminology has grown organically through multiple ADRs (024, 038, 044, 050, 062, 066, 078, 093, 116) and is now inconsistent across code, docs, and UI. The same concept has different names depending on where you look:
 
 ### Current terminology chaos
 
@@ -24,7 +24,7 @@ Problems:
 
 ### Modular synth analogy
 
-The scene graph was designed with Eurorack modular synth philosophy. In that world:
+The scene was designed with Eurorack modular synth philosophy. In that world:
 - **Generator** = module that creates signal (oscillator, noise, sequencer)
 - **Modifier** = module that transforms signal (filter, VCA, quantizer, transposer)
 - **Sweep** doesn't map cleanly to either — it's closest to a modulation source (LFO/envelope) that shapes parameters over time

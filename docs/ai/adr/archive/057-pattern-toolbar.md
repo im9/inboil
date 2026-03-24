@@ -10,7 +10,7 @@ RAND, KEY (root note + octave), and VKBD (virtual keyboard) are currently placed
 - **KEY** — sets root note for transposition, but scene playback resets `perf.rootNote` on every pattern switch via `sendPatternByIndex()`, making the PerfBar KEY effectively useless during scene playback
 - **VKBD** — auditions notes on the selected track, only relevant when editing steps
 
-For live key/transpose changes during scene playback, the correct tool is the **transpose node** in the scene graph. Having KEY in PerfBar creates the false impression it persists across scene transitions.
+For live key/transpose changes during scene playback, the correct tool is the **transpose node** in the scene. Having KEY in PerfBar creates the false impression it persists across scene transitions.
 
 ### Current Location
 

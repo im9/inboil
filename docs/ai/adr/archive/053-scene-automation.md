@@ -11,7 +11,7 @@
 
 Automation is a standard DAW feature. It adds expressiveness to static pattern loops by dynamically changing parameters (volume, filter cutoff, effect amounts, etc.) over time.
 
-In the current inboil scene graph, function nodes (transpose, tempo, repeat, probability, fx) set parameters once *before* a pattern plays. There is no way to continuously vary parameters *during* pattern playback.
+In the current inboil scene, function nodes (transpose, tempo, repeat, probability, fx) set parameters once *before* a pattern plays. There is no way to continuously vary parameters *during* pattern playback.
 
 ### Use Cases
 
@@ -187,7 +187,7 @@ function evaluateAutomation(points: AutomationPoint[], t: number, interpolation:
 | `glitchSend` | 0–1 | `Cell.glitchSend` |
 | `granularSend` | 0–1 | `Cell.granularSend` |
 
-### 6. Scene Graph Traversal Integration
+### 6. Scene Traversal Integration
 
 During `walkToNode()` traversal:
 1. Collect automation nodes along the path before reaching the next pattern node
@@ -290,6 +290,6 @@ Default new automation node:
 
 | ADR | Impact |
 |-----|--------|
-| 044 (Scene Graph) | Add `'automation'` to `SceneNode.type` |
+| 044 (Scene) | Add `'automation'` to `SceneNode.type` |
 | 050 (Scene Function Nodes) | 7th function node. BubbleMenu + DockPanel extension |
 | 048 (Scene Playback) | Extend `walkToNode()`, add automation info to playback state |

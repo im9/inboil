@@ -39,7 +39,7 @@ As features grow in complexity, state management bugs can no longer be caught by
 ┌────────────────────────────────────────────┐
 │  Layer 3: E2E (Playwright)                 │  ← browser integration
 │  Project CRUD, reload persistence,         │
-│  scene graph, undo across reload           │
+│  scene, undo across reload           │
 ├────────────────────────────────────────────┤
 │  Layer 2: Integration (vitest)             │  ← state logic integration
 │  cloneSong→restoreSong round-trip,         │
@@ -243,7 +243,7 @@ test('FX pad values persist across reload', async ({ page }) => {
   // Verify XY pad position matches
 })
 
-test('scene graph nodes persist', async ({ page }) => {
+test('scene nodes persist', async ({ page }) => {
   await page.goto('/')
   // Switch to scene view
   // Add a node
@@ -326,7 +326,7 @@ Reuse existing `data-step` / `data-track` attributes where available. Minimize n
    - Additional dependencies: `@playwright/test` (devDependency)
 
 4. **Phase 4: Extended E2E**
-   - Scene graph persistence
+   - Scene persistence
    - Undo/Redo flows
    - Instrument change & parameter lock persistence
 

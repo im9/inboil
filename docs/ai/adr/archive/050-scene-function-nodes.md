@@ -4,7 +4,7 @@
 | ------- | ---------------------------------- |
 | status  | implemented                        |
 | date    | 2026-03-05                         |
-| parent  | ADR 044 (Scene Graph)              |
+| parent  | ADR 044 (Scene)              |
 
 ## Context
 
@@ -22,7 +22,7 @@ ADR 044 defined five scene node types: `pattern`, `transpose`, `tempo`, `repeat`
 
 ### Insight
 
-Max/MSP and similar visual patching environments succeed because each object is instantly recognizable by its icon/shape. The scene graph should follow the same principle: each function node type has a distinctive SVG icon that communicates its purpose at a glance.
+Max/MSP and similar visual patching environments succeed because each object is instantly recognizable by its icon/shape. The scene should follow the same principle: each function node type has a distinctive SVG icon that communicates its purpose at a glance.
 
 ## Decision
 
@@ -162,7 +162,7 @@ No data model migration needed — `SceneNode.root` is preserved. Changes:
 ## Considerations
 
 - **Icon legibility**: At small sizes (24px), icons must be simple silhouettes. Avoid detail-heavy designs. Test at 1x and 2x pixel density.
-- **Max/MSP analogy**: The scene graph is not a full patching environment. Function nodes are modifiers in a directed flow, not arbitrary signal processors. Keep the conceptual model simple: patterns play, functions modify.
+- **Max/MSP analogy**: The scene is not a full patching environment. Function nodes are modifiers in a directed flow, not arbitrary signal processors. Keep the conceptual model simple: patterns play, functions modify.
 - **FX node granularity**: A single `fx` node with 4 toggles is simpler than 4 separate FX nodes. If users need per-FX control at different points in the graph, they can place multiple `fx` nodes. The popup UI for 4 toggles needs care at small sizes — to be refined during implementation.
 - **Backward compatibility**: The `probability` node type is retained (ADR 048 makes all forks random, but the node type persists for visual clarity — "this is an intentional branch point"). Existing `transpose` nodes without `mode` param default to relative mode (`mode: 0`).
 
@@ -170,4 +170,4 @@ No data model migration needed — `SceneNode.root` is preserved. Changes:
 
 | ADR | Impact |
 |-----|--------|
-| 044 (Scene Graph) | Adds `fx` node type, extends `transpose` with absolute mode, improves root + function node visuals. Core graph model unchanged. |
+| 044 (Scene) | Adds `fx` node type, extends `transpose` with absolute mode, improves root + function node visuals. Core graph model unchanged. |

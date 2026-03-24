@@ -184,7 +184,7 @@ class GrooveboxEngine {
 }
 ```
 
-`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene graph playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad` (comp/duck/ret/sat XY pads), and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
+`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad` (comp/duck/ret/sat XY pads), and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
 
 ## State Serialization
 

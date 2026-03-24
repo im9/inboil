@@ -4,11 +4,11 @@
 | ------- | ---------------------------------- |
 | status  | implemented                        |
 | date    | 2026-03-05                         |
-| parent  | ADR 044 (Scene Graph)              |
+| parent  | ADR 044 (Scene)              |
 
 ## Context
 
-Scene graph playback (`advanceSceneNode`) has two hard-coded behaviors that
+Scene playback (`advanceSceneNode`) has two hard-coded behaviors that
 limit musical expression:
 
 1. **Deterministic branching** — When a pattern node has multiple outgoing edges,

@@ -6,7 +6,7 @@
 
 We want an OP-1 Field tape-mode style feature that captures pattern output in real-time for loop playback and overdubbing. The current recording feature (ADR 030 / WAV export) only captures master output as a one-shot bounce — there is no per-pattern or per-track recording, nor any loopback playback.
 
-Implementing this as a scene graph function node allows it to attach to pattern nodes and loop only their output, functioning as a live music generation tool during scene playback — similar to generative nodes (ADR 078).
+Implementing this as a scene function node allows it to attach to pattern nodes and loop only their output, functioning as a live music generation tool during scene playback — similar to generative nodes (ADR 078).
 
 This also effectively allows unlimited track layering: once audio is recorded to tape, the sequencer tracks are freed up for new instruments. The 16-track sequencer limit becomes a composing window rather than a hard ceiling.
 
@@ -20,7 +20,7 @@ This also effectively allows unlimited track layering: once audio is recorded to
 
 ### Node type
 
-Add a new scene graph node type `'looper'`. Implemented as a standalone node rather than a decorator, since it requires persistent audio buffer state.
+Add a new scene node type `'looper'`. Implemented as a standalone node rather than a decorator, since it requires persistent audio buffer state.
 
 ```
 SceneNode.type = 'pattern' | 'generative' | 'looper'
@@ -89,7 +89,7 @@ Pattern Node output
 - Read/write circular buffers within `process()`
 - On BPM change: recalculate loop length in real-time (no timestretch, position reset)
 
-### Scene graph behavior
+### Scene behavior
 
 Edge-based connections (not decorators), since the looper has persistent audio state and a reversed data flow — patterns send audio *to* the looper, rather than the looper modifying a pattern.
 

@@ -10,11 +10,11 @@
 
 ADR 050 improved scene node visuals (SVG icons, root marker, FX node, transpose absolute mode). The scene view is now functional but lacks feedback during playback and has discoverability issues:
 
-1. **Root node is still unclear**: The small play-triangle marker on the root node is easy to miss. Meanwhile, the Scene playback on/off toggle lives in PerfBar — spatially disconnected from the scene graph it controls.
+1. **Root node is still unclear**: The small play-triangle marker on the root node is easy to miss. Meanwhile, the Scene playback on/off toggle lives in PerfBar — spatially disconnected from the scene it controls.
 
 2. **Solo pattern icon is cryptic**: The solo button next to a selected node shows a plain `>` symbol. It's not obvious this means "loop this pattern". There's no visual feedback while soloing.
 
-3. **No edge animation during playback**: When the scene graph is playing and traversing edges, the active edge is highlighted with a static color change. There's no sense of motion or flow direction.
+3. **No edge animation during playback**: When the scene is playing and traversing edges, the active edge is highlighted with a static color change. There's no sense of motion or flow direction.
 
 4. **No pattern progress indication**: When a pattern is playing, users can't tell how far through it they are or when the next pattern will start. The only feedback is in the step sequencer view (playhead position), which is invisible from the scene view.
 
@@ -132,4 +132,4 @@ const progress = maxHead / patLen               // 0..1
 |-----|--------|
 | 050 (Scene Function Nodes) | Builds on Phase 1-3 visual improvements. Replaces root marker with integrated play button. |
 | 048 (Scene Playback) | Leverages `playback.sceneEdgeId` for edge animation, `playback.sceneNodeId` for active node gauge. |
-| 044 (Scene Graph) | No data model changes. All additions are visual/interaction layer. |
+| 044 (Scene) | No data model changes. All additions are visual/interaction layer. |

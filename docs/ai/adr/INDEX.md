@@ -37,7 +37,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 |---|-------|--------|-------|
 | 004 | Queued Pattern Switch | Implemented | |
 | 006 | Per-Step Velocity | Implemented | |
-| 013 | Pattern Chain | Superseded | Replaced by scene graph (044) |
+| 013 | Pattern Chain | Superseded | Replaced by scene (044) |
 | 014 | Parameter Locks | Implemented | P-Lock system |
 | 021 | Note Duration, Slide, ADSR | Implemented | |
 | 022 | Lead Arpeggiator | Implemented | |
@@ -58,10 +58,10 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 037 | ChainView Redesign | Superseded | Replaced by 042+044 |
 | 040 | Drill-Down Navigation | Superseded | Replaced by 041+044 |
 | 041 | Unified Navigation | Superseded | Replaced by 045+046 (decouple playback + simplify toggle) |
-| 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model. *Section/SectionNav deprecated — superseded by Scene graph (044)* |
+| 042 | Section-Based Arrangement | Implemented | Song → Section → Cell flat model. *Section/SectionNav deprecated — superseded by Scene (044)* |
 | 043 | Matrix View | Implemented | Pattern pool browser sidebar |
 | 049 | Pattern Identity | Implemented | Rename UI + color picker, reflected in Matrix & Scene |
-| 044 | Scene Graph | Implemented | Node-based directed graph for arrangement |
+| 044 | Scene | Implemented | Node-based directed graph for arrangement |
 | 045 | Decouple Playback from View | Implemented | Separate `playback.mode` from `ui.phraseView` |
 | 046 | Simplify View Toggle | Implemented | PAT/SCENE 2-button toggle, Grid/Tracker as system pref |
 | 048 | Scene Playback | Implemented | Random branching at forks + terminal stop |
@@ -163,7 +163,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 100 | WebRTC Chunk Buffer Hardening | Implemented | MAX_CHUNKS limit, 30s TTL, duplicate guard, channel cleanup, 5MB memory budget |
 | 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
 | 102 | Mobile Melodic Input & Track Management | Proposed | Mobile piano roll improvements + track add/remove |
-| 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene graph segments |
+| 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene segments |
 | 104 | Audio Pool | Implemented | OPFS-based pool with 111 factory samples (WebM/Opus, incl. Grand Piano pack), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |
 | 105 | CI/CD Pipeline | Implemented (Phase 1) | GitHub Actions: type check + unit test + build + auto-deploy on main push. Branch protection (force push block, status checks, deletion restrict). E2E deferred to Phase 2 |
 | 107 | Pattern Sharing API | Proposed | Beginner backend: REST CRUD, D1/SQLite, pattern/preset sharing, anonymous auth |

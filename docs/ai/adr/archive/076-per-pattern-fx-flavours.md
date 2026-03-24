@@ -80,7 +80,7 @@ Add flavour application to `applyDecorators()` in `state.svelte.ts`:
 }
 ```
 
-#### applySection (Linear) — *deprecated, Section superseded by Scene graph*
+#### applySection (Linear) — *deprecated, Section superseded by Scene*
 
 Add flavour application to `applySection()`:
 
