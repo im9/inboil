@@ -81,6 +81,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 090 | Worklet-Side Generative | Proposed | Move generative computation from main thread to AudioWorklet for timing accuracy |
 | 117 | Generative UX Simplification | Implemented | Auto-generate on connect, debounced param regen, target track on faceplate, merge mode replace/fill only |
 | 096 | Odd Step Counts & PO-Style Step Picker | Implemented | STEP_OPTIONS 2–16 + 24/32/48/64, long-press grid picker (bubble picker rejected) |
+| 125 | Scene Terminology Unification | Proposed | Retire "Function Node"/"Decorator" — 4 categories: Pattern, Generator, Modifier (satellite), Sweep (independent). Code rename FnNode→Modifier, docs restructure |
 
 ## UI / Layout
 
