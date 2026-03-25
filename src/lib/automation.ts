@@ -38,6 +38,7 @@ export function snapshotAutomationTargets(): AutomationSnapshot {
     fxFlavours: { ...fxFlavours },
     masterPad: JSON.parse(JSON.stringify(masterPad)),
     comp: { makeup: song.effects.comp.makeup, attack: song.effects.comp.attack, release: song.effects.comp.release },
+    perf: { reverbHold: perf.reverbHold, delayHold: perf.delayHold, glitchHold: perf.glitchHold, granularHold: perf.granularHold },
   }
 }
 
@@ -87,5 +88,12 @@ export function restoreAutomationSnapshot(snap: AutomationSnapshot): void {
     song.effects.comp.release = snap.comp.release
   }
   if (snap.values['global:swing'] != null) perf.swing = snap.values['global:swing']
+  // Restore hold states (ADR 123)
+  if (snap.perf) {
+    perf.reverbHold = snap.perf.reverbHold
+    perf.delayHold = snap.perf.delayHold
+    perf.glitchHold = snap.perf.glitchHold
+    perf.granularHold = snap.perf.granularHold
+  }
 }
 

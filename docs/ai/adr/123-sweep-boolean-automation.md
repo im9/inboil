@@ -1,6 +1,6 @@
 # ADR 123: Sweep Boolean Automation
 
-## Status: Proposed
+## Status: In Progress
 
 ## Context
 
@@ -104,10 +104,10 @@ Backwards compatible — `toggles` is optional, existing sweep nodes work unchan
 ## Implementation Phases
 
 ### Phase 1: Data model + playback
-- Add `SweepToggleCurve` / `SweepToggleTarget` types
-- Extend `SweepData` with optional `toggles`
-- Evaluate toggles in `applySweepStep()`
-- Snapshot/restore for boolean state
+- [x] Add `SweepToggleCurve` / `SweepToggleTarget` types
+- [x] Extend `SweepData` with optional `toggles`
+- [x] Evaluate toggles in `applySweepStep()`
+- [x] Snapshot/restore for boolean state (hold + mute + fxOn)
 
 ### Phase 2: SweepCanvas UI
 - Render boolean curves as horizontal bar segments

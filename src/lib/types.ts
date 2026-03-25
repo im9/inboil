@@ -138,6 +138,7 @@ export interface AutomationSnapshot {
   fxFlavours: import('./constants.ts').FxFlavours
   masterPad: Record<string, Record<string, number | boolean>>
   comp: { makeup: number; attack: number; release: number }
+  perf?: { reverbHold: boolean; delayHold: boolean; glitchHold: boolean; granularHold: boolean }  // ADR 123
 }
 
 /** Generative engine type (ADR 078) */
@@ -203,9 +204,23 @@ export interface SweepCurve {
   color: string
 }
 
+/** Boolean sweep toggle target (ADR 123) */
+export type SweepToggleTarget =
+  | { kind: 'hold';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'mute';  trackId: number }
+
+/** A single boolean toggle curve — points mark on/off transitions (ADR 123) */
+export interface SweepToggleCurve {
+  target: SweepToggleTarget
+  points: number[]    // sorted t values (0–1), each toggles state; starts OFF before first point
+  color: string
+}
+
 /** Sweep automation data stored on sweep modifier node (ADR 118) */
 export interface SweepData {
   curves: SweepCurve[]
+  toggles?: SweepToggleCurve[]  // boolean automation (ADR 123)
 }
 
 /** Modifier/sweep node parameters — type-specific (ADR 093, sweep ADR 118, terminology ADR 125) */

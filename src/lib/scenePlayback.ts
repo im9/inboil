@@ -321,7 +321,7 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   if (!snap) return false
 
   const sweepData = findConnectedSweep(playback.sceneNodeId)
-  if (!sweepData?.curves.length) return false
+  if (!sweepData?.curves.length && !sweepData?.toggles?.length) return false
 
   const progress = (playback.sceneRepeatIndex + step / totalSteps) / playback.sceneRepeatTotal
   let changed = false
@@ -429,6 +429,31 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
       }
     }
   }
+
+  // Boolean toggle evaluation (ADR 123)
+  if (sweepData.toggles) {
+    for (const toggle of sweepData.toggles) {
+      // Count how many points are ≤ current progress — odd count = ON, even = OFF
+      const count = toggle.points.filter(t => t <= progress).length
+      const on = count % 2 === 1
+
+      if (toggle.target.kind === 'hold') {
+        const HOLD_MAP: Record<string, keyof typeof perf> = {
+          verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
+        }
+        const key = HOLD_MAP[toggle.target.fx]
+        if (key && perf[key] !== on) { (perf as unknown as Record<string, boolean>)[key] = on; changed = true }
+      } else if (toggle.target.kind === 'fxOn') {
+        const pad = fxPad[toggle.target.fx as keyof typeof fxPad]
+        if (pad && pad.on !== on) { pad.on = on; changed = true }
+      } else if (toggle.target.kind === 'mute') {
+        const tgt = toggle.target
+        const track = song.tracks.find(t => t.id === tgt.trackId)
+        if (track && track.muted !== on) { track.muted = on; changed = true }
+      }
+    }
+  }
+
   return changed
 }
 
