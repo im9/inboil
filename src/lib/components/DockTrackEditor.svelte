@@ -251,7 +251,7 @@
         value={insFx?.type ?? ''}
         onchange={e => {
           const v = (e.target as HTMLSelectElement).value
-          setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
+          setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch' | 'dist')
         }}
         data-tip="Insert FX slot {slot + 1} type" data-tip-ja="インサートFX スロット{slot + 1} タイプ"
       >
@@ -259,6 +259,7 @@
         <option value="verb">REVERB</option>
         <option value="delay">DELAY</option>
         <option value="glitch">GLITCH</option>
+        <option value="dist">DIST</option>
       </select>
       {#if insFx?.type === 'verb'}
         <select
@@ -291,6 +292,16 @@
           <option value="bitcrush">Bitcrush</option>
           <option value="redux">Redux</option>
         </select>
+      {:else if insFx?.type === 'dist'}
+        <select
+          class="insert-select"
+          value={insFx.flavour}
+          onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}
+          data-tip="Distortion flavour" data-tip-ja="ディストーションフレーバー"
+        >
+          <option value="overdrive">Overdrive</option>
+          <option value="fuzz">Fuzz</option>
+        </select>
       {/if}
     </div>
     {#if insFx?.type}
@@ -298,13 +309,13 @@
         <span data-tip="Insert {slot + 1} dry/wet mix" data-tip-ja="インサート{slot + 1} ドライ/ウェット">
           <Knob value={insFx.mix} label="MIX" size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'mix', v)} />
         </span>
-        <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : 'S&H rate'}
-              data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : 'S&Hレート'}>
-          <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
+        <span data-tip={insFx.type === 'verb' ? 'Reverb size' : insFx.type === 'delay' ? 'Delay time' : insFx.type === 'dist' ? 'Drive amount' : 'S&H rate'}
+              data-tip-ja={insFx.type === 'verb' ? 'リバーブサイズ' : insFx.type === 'delay' ? 'ディレイタイム' : insFx.type === 'dist' ? 'ドライブ量' : 'S&Hレート'}>
+          <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : insFx.type === 'dist' ? 'DRIVE' : 'RATE'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
         </span>
-        <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : 'Bit depth'}
-              data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : 'ビット深度'}>
-          <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
+        <span data-tip={insFx.type === 'verb' ? 'Reverb damping' : insFx.type === 'delay' ? 'Feedback amount' : insFx.type === 'dist' ? 'Tone (dark–bright)' : 'Bit depth'}
+              data-tip-ja={insFx.type === 'verb' ? 'リバーブダンピング' : insFx.type === 'delay' ? 'フィードバック量' : insFx.type === 'dist' ? 'トーン（ダーク〜ブライト）' : 'ビット深度'}>
+          <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : insFx.type === 'dist' ? 'TONE' : 'BITS'} size={36} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
         </span>
       </div>
     {/if}

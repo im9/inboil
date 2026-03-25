@@ -22,7 +22,7 @@ export interface Trig {
 
 /** Per-track insert FX slot (ADR 077) */
 export interface CellInsertFx {
-  type: 'verb' | 'delay' | 'glitch' | null  // null = bypass
+  type: 'verb' | 'delay' | 'glitch' | 'dist' | null  // null = bypass
   flavour: string       // 'room', 'hall', 'dotted', 'tape', 'bitcrush', 'redux', etc.
   mix: number           // 0.0–1.0 dry/wet
   x: number             // 0.0–1.0 param1 (type-dependent)

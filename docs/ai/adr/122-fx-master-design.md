@@ -1,6 +1,6 @@
 # ADR 122: FX & Master Audio Design
 
-## Status: Proposed
+## Status: In Progress (Phase 1)
 
 ## Context
 
@@ -113,10 +113,21 @@ Overdrive flavour should have:
 ## Implementation Phases
 
 ### Phase 1: Insert distortion
-- `Distortion` class with overdrive/fuzz flavours
-- Add `'dist'` to `WorkletInsertFx.type`
-- Worklet routing for insert distortion
-- DockPanel UI for insert dist (XY knobs + flavour selector)
+
+Implementation Checklist:
+- [ ] Unit tests for Distortion class (TDD — tests before implementation)
+- [ ] `Distortion` class in `effects.ts` — overdrive (asymmetric soft clip + cabinet LP) and fuzz (hard clip + harmonic blend)
+  - X: drive (0–1 → 0.5–8.0 gain), Y: tone (0–1 → LP cutoff 800Hz–16kHz)
+  - Overdrive: pre-EQ mid boost → asymmetric tanh → post-EQ cabinet LP
+  - Fuzz: hard clip with ceiling → mix even/odd harmonics
+- [ ] Add `'dist'` to `CellInsertFx.type` union (`types.ts`)
+- [ ] Add `'dist'` to `WorkletInsertFx.type` union + `fuzz?: boolean` flag (`dsp/types.ts`)
+- [ ] Add `DistFlavour` type + `FX_FLAVOURS.dist` entries (`constants.ts`)
+- [ ] Add `'dist'` to `InsertFxSlot.type` union + `distortion?: Distortion` field (`worklet-processor.ts`)
+- [ ] Wire `_createInsertSlot` / `_updateInsertParams` / `_processInsert` for dist
+- [ ] Add default flavour `'overdrive'` in `setInsertFxType` (`stepActions.ts`)
+- [ ] DockTrackEditor: add DIST to type selector, overdrive/fuzz flavour buttons, DRIVE/TONE knob labels
+- [ ] `pnpm check` + `pnpm test` pass
 
 ### Phase 2: TapeSaturator refinement
 - Add mid-presence boost (~2kHz) for Classic tube character

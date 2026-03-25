@@ -34,7 +34,7 @@ declare const sampleRate: number
 
 // ── Imports ───────────────────────────────────────────────────────────────────
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
-import { SimpleReverb, LiteReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, TapeSaturator, EarlyReflections, PreDelay } from './dsp/effects.ts'
+import { SimpleReverb, LiteReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, TapeSaturator, EarlyReflections, PreDelay, Distortion } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
@@ -119,10 +119,11 @@ function generateArpNotes(base: number, mode: number, chord: number, oct: number
 // ── Insert FX slot (ADR 077) ──────────────────────────────────────────────────
 
 interface InsertFxSlot {
-  type: 'verb' | 'delay' | 'glitch'
+  type: 'verb' | 'delay' | 'glitch' | 'dist'
   reverb?: LiteReverb
   delay?: PingPongDelay
   tapeDelay?: TapeDelay
+  distortion?: Distortion
   // Glitch S&H state (per-slot, no shared instance needed)
   glitchHoldL: number
   glitchHoldR: number
@@ -137,6 +138,7 @@ interface InsertFxSlot {
   dotted: boolean
   tape: boolean
   redux: boolean
+  fuzz: boolean
 }
 
 // ── Processor ─────────────────────────────────────────────────────────────────
@@ -606,7 +608,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     const slot: InsertFxSlot = {
       type: ins.type!,
       mix: ins.mix, x: ins.x, y: ins.y,
-      hall: !!ins.hall, dotted: !!ins.dotted, tape: !!ins.tape, redux: !!ins.redux,
+      hall: !!ins.hall, dotted: !!ins.dotted, tape: !!ins.tape, redux: !!ins.redux, fuzz: !!ins.fuzz,
       glitchHoldL: 0, glitchHoldR: 0, glitchCounter: 0, glitchSeed: 55555,
     }
     if (ins.type === 'verb') {
@@ -625,6 +627,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         const ms = ins.dotted ? 60000 / this.bpm * 0.75 : 50 + ins.x * 450
         slot.delay.setTime(ms)
       }
+    } else if (ins.type === 'dist') {
+      slot.distortion = new Distortion(sampleRate)
+      slot.distortion.setFlavour(ins.fuzz ? 'fuzz' : 'overdrive')
+      slot.distortion.setDrive(ins.x)
+      slot.distortion.setTone(ins.y)
     }
     // glitch needs no pre-allocation
     return slot
@@ -633,7 +640,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private _updateInsertParams(slot: InsertFxSlot, ins: WorkletInsertFx): void {
     slot.mix = ins.mix; slot.x = ins.x; slot.y = ins.y
     slot.hall = !!ins.hall; slot.dotted = !!ins.dotted
-    slot.tape = !!ins.tape; slot.redux = !!ins.redux
+    slot.tape = !!ins.tape; slot.redux = !!ins.redux; slot.fuzz = !!ins.fuzz
     if (slot.type === 'verb' && slot.reverb) {
       const size = ins.hall ? 0.82 + ins.x * 0.17 : 0.4 + ins.x * 0.59
       const damp = ins.hall ? (1 - ins.y) * 0.3 : 1 - ins.y
@@ -643,6 +650,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       const ms = ins.dotted ? 60000 / this.bpm * 0.75 : 50 + ins.x * 450
       if (slot.tapeDelay) slot.tapeDelay.setTime(ms)
       if (slot.delay) slot.delay.setTime(ms)
+    } else if (slot.type === 'dist' && slot.distortion) {
+      slot.distortion.setFlavour(ins.fuzz ? 'fuzz' : 'overdrive')
+      slot.distortion.setDrive(ins.x)
+      slot.distortion.setTone(ins.y)
     }
     // glitch params applied inline in process()
   }
@@ -701,6 +712,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         wetL = Math.round(slot.glitchHoldL * levels) / levels
         wetR = Math.round(slot.glitchHoldR * levels) / levels
       }
+    } else if (slot.type === 'dist' && slot.distortion) {
+      const d = slot.distortion.process(inL, inR)
+      wetL = d[0]; wetR = d[1]
     }
     const dry = 1 - slot.mix
     this.insertOut[0] = inL * dry + wetL * slot.mix

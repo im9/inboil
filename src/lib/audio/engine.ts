@@ -441,6 +441,7 @@ function serializeInsertFx(fx: CellInsertFx | null): WorkletInsertFx | null {
     dotted: fx.flavour === 'dotted',
     tape:   fx.flavour === 'tape',
     redux:  fx.flavour === 'redux',
+    fuzz:   fx.flavour === 'fuzz',
   }
 }
 

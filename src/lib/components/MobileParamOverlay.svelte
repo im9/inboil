@@ -241,13 +241,14 @@
               value={insFx?.type ?? ''}
               onchange={e => {
                 const v = (e.target as HTMLSelectElement).value
-                setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch')
+                setInsertFxType(ui.selectedTrack, slot as 0 | 1, v === '' ? null : v as 'verb' | 'delay' | 'glitch' | 'dist')
               }}
             >
               <option value="">OFF</option>
               <option value="verb">REVERB</option>
               <option value="delay">DELAY</option>
               <option value="glitch">GLITCH</option>
+              <option value="dist">DIST</option>
             </select>
             {#if insFx?.type === 'verb'}
               <select class="insert-select" value={insFx.flavour}
@@ -268,13 +269,19 @@
                 <option value="bitcrush">Bitcrush</option>
                 <option value="redux">Redux</option>
               </select>
+            {:else if insFx?.type === 'dist'}
+              <select class="insert-select" value={insFx.flavour}
+                onchange={e => setInsertFxFlavour(ui.selectedTrack, slot as 0 | 1, (e.target as HTMLSelectElement).value)}>
+                <option value="overdrive">Overdrive</option>
+                <option value="fuzz">Fuzz</option>
+              </select>
             {/if}
           </div>
           {#if insFx?.type}
             <div class="knob-grid">
               <Knob value={insFx.mix} label="MIX" size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'mix', v)} />
-              <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : 'RATE'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
-              <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : 'BITS'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
+              <Knob value={insFx.x} label={insFx.type === 'verb' ? 'SIZE' : insFx.type === 'delay' ? 'TIME' : insFx.type === 'dist' ? 'DRIVE' : 'RATE'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'x', v)} />
+              <Knob value={insFx.y} label={insFx.type === 'verb' ? 'DAMP' : insFx.type === 'delay' ? 'FB' : insFx.type === 'dist' ? 'TONE' : 'BITS'} size={48} onchange={v => setInsertFxParam(ui.selectedTrack, slot as 0 | 1, 'y', v)} />
             </div>
           {/if}
         {/if}

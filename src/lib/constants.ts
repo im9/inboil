@@ -68,6 +68,7 @@ export type ReverbFlavour   = 'room' | 'hall' | 'shimmer'
 export type DelayFlavour    = 'digital' | 'dotted' | 'tape'
 export type GlitchFlavour   = 'bitcrush' | 'redux' | 'stutter'
 export type GranularFlavour = 'cloud' | 'stretch' | 'reverse'
+export type DistFlavour     = 'overdrive' | 'fuzz'
 
 export type FxFlavourKey = 'verb' | 'delay' | 'glitch' | 'granular'
 
@@ -91,6 +92,10 @@ export const FX_FLAVOURS = {
     { id: 'cloud'   as const, label: 'CLOUD', tip: 'Cloud — default grain shower', tipJa: 'クラウド — 通常のグレインシャワー' },
     { id: 'stretch' as const, label: 'STRCH',  tip: 'Stretch — time-stretch large grains', tipJa: 'ストレッチ — タイムストレッチ' },
     { id: 'reverse' as const, label: 'REV',    tip: 'Reverse — reversed grain playback', tipJa: 'リバース — 逆再生グレイン' },
+  ],
+  dist: [
+    { id: 'overdrive' as const, label: 'OD',   tip: 'Overdrive — tube-style warm saturation', tipJa: 'オーバードライブ — チューブ系ウォームサチュレーション' },
+    { id: 'fuzz'      as const, label: 'FUZZ', tip: 'Fuzz — hard-clipping distortion', tipJa: 'ファズ — ハードクリッピング歪み' },
   ],
 } as const
 

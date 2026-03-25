@@ -21,7 +21,7 @@ import { MoogVoice, WTSynth } from './melodic.ts'
 import { ResonantLP, BiquadHP, PeakingEQ, ShelfEQ, SVFilter } from './filters.ts'
 
 // ── Effects ──
-import { SimpleReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, BusCompressor, PeakLimiter, SidechainDucker, OctaveShifter, TapeSaturator, EarlyReflections, PreDelay } from './effects.ts'
+import { SimpleReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, BusCompressor, PeakLimiter, SidechainDucker, OctaveShifter, TapeSaturator, EarlyReflections, PreDelay, Distortion } from './effects.ts'
 
 const SR = 44100
 
@@ -801,6 +801,200 @@ describe('TapeSaturator', () => {
     // tanh soft clip — output should be bounded
     expect(maxOut).toBeLessThan(2.0)
     expect(maxOut).toBeGreaterThan(0.1)
+  })
+
+  it('mid-presence boost adds energy around 1.5–3kHz (ADR 122 Phase 2)', () => {
+    // Compare mid-band energy with vs without saturation
+    // Use a broadband signal (multi-sine) so the mid shelf has material to boost
+    const N = 8192
+    const freqs = [200, 500, 1000, 2000, 3000, 5000] // broadband test signal
+
+    // Saturated output
+    const sat = new TapeSaturator(SR)
+    sat.setDrive(2.5)
+    sat.setTone(1.0) // bright — don't LP-filter the mids away
+    const bufSat = new Float64Array(N)
+    for (let i = 0; i < N; i++) {
+      let input = 0
+      for (const f of freqs) input += Math.sin(2 * Math.PI * f * i / SR) * 0.15
+      const r = sat.process(input, input)
+      bufSat[i] = r[0]
+    }
+
+    // Dry passthrough (no processing)
+    const bufDry = new Float64Array(N)
+    for (let i = 0; i < N; i++) {
+      let input = 0
+      for (const f of freqs) input += Math.sin(2 * Math.PI * f * i / SR) * 0.15
+      bufDry[i] = input
+    }
+
+    const magsSat = magnitudeSpectrum(bufSat)
+    const magsDry = magnitudeSpectrum(bufDry)
+    const binHz = SR / N
+
+    // Compute ratio of mid energy (1.5–3kHz) to low energy (<500Hz)
+    // Mid-presence boost should increase this ratio vs dry
+    let midSat = 0, lowSat = 0, midDry = 0, lowDry = 0
+    for (let k = 1; k < N / 2; k++) {
+      const freq = k * binHz
+      const pSat = magsSat[k] * magsSat[k]
+      const pDry = magsDry[k] * magsDry[k]
+      if (freq >= 1500 && freq <= 3000) { midSat += pSat; midDry += pDry }
+      if (freq < 500) { lowSat += pSat; lowDry += pDry }
+    }
+    const ratioSat = midSat / Math.max(lowSat, 1e-20)
+    const ratioDry = midDry / Math.max(lowDry, 1e-20)
+    // Saturator should boost mid-to-low ratio compared to dry signal
+    expect(ratioSat).toBeGreaterThan(ratioDry * 1.05)
+  })
+
+  it('wider soft-knee: moderate drive compresses gently (ADR 122 Phase 2)', () => {
+    // At moderate drive, output should be close to input (gentle compression)
+    // Not hard-clipping — crest factor should stay close to sine (√2 ≈ 1.414)
+    const sat = new TapeSaturator(SR)
+    sat.setDrive(1.0) // moderate
+    sat.setTone(1.0)
+    const N = 8192
+    const buf = new Float64Array(N)
+    for (let i = 0; i < N; i++) {
+      const input = Math.sin(2 * Math.PI * 440 * i / SR) * 0.5
+      const r = sat.process(input, input)
+      buf[i] = r[0]
+    }
+    const peak = peakAbs(buf)
+    const r = rms(buf)
+    // Crest factor should be > 1.3 (still mostly sine-like, not squashed)
+    expect(peak / r).toBeGreaterThan(1.3)
+  })
+})
+
+// ── Distortion (ADR 122 Phase 1) ────────────────────────────────────
+
+/** Render stereo distortion for N samples of a sine wave */
+function renderDist(dist: Distortion, freq: number, amplitude: number, samples: number): { l: Float64Array; r: Float64Array } {
+  const l = new Float64Array(samples)
+  const r = new Float64Array(samples)
+  for (let i = 0; i < samples; i++) {
+    const s = Math.sin(2 * Math.PI * freq * i / SR) * amplitude
+    const out = dist.process(s, s)
+    l[i] = out[0]; r[i] = out[1]
+  }
+  return { l, r }
+}
+
+describe('Distortion (ADR 122)', () => {
+  describe('overdrive flavour', () => {
+    it('adds harmonics — high-frequency energy increases with drive', () => {
+      const dist = new Distortion(SR)
+      dist.setFlavour('overdrive')
+      dist.setTone(1.0) // bright — don't filter harmonics away
+
+      // Low drive (nearly clean)
+      dist.setDrive(0.0)
+      const low = renderDist(dist, 440, 0.3, 8192)
+      const lowHigh = energyAboveHz(magnitudeSpectrum(low.l), 1000, SR)
+
+      // High drive
+      const dist2 = new Distortion(SR)
+      dist2.setFlavour('overdrive')
+      dist2.setTone(1.0)
+      dist2.setDrive(0.8)
+      const high = renderDist(dist2, 440, 0.3, 8192)
+      const highHigh = energyAboveHz(magnitudeSpectrum(high.l), 1000, SR)
+
+      expect(highHigh).toBeGreaterThan(lowHigh * 2)
+    })
+
+    it('output stays bounded with hot input at max drive', () => {
+      const dist = new Distortion(SR)
+      dist.setFlavour('overdrive')
+      dist.setDrive(1.0)
+      dist.setTone(0.5)
+      const { l } = renderDist(dist, 440, 2.0, SR)
+      expect(peakAbs(l)).toBeLessThan(3.0)
+      expect(peakAbs(l)).toBeGreaterThan(0.1)
+    })
+
+    it('tone control darkens output — energy shifts below 2kHz', () => {
+      const distBright = new Distortion(SR)
+      distBright.setFlavour('overdrive')
+      distBright.setDrive(0.8)
+      distBright.setTone(1.0) // bright
+      const bright = renderDist(distBright, 440, 0.5, 8192)
+      const brightAbove = energyAboveHz(magnitudeSpectrum(bright.l), 2000, SR)
+
+      const distDark = new Distortion(SR)
+      distDark.setFlavour('overdrive')
+      distDark.setDrive(0.8)
+      distDark.setTone(0.0) // dark
+      const dark = renderDist(distDark, 440, 0.5, 8192)
+      const darkAbove = energyAboveHz(magnitudeSpectrum(dark.l), 2000, SR)
+
+      expect(brightAbove).toBeGreaterThan(darkAbove * 1.5)
+    })
+
+    it('produces audible output at normal levels', () => {
+      const dist = new Distortion(SR)
+      dist.setFlavour('overdrive')
+      dist.setDrive(0.5)
+      dist.setTone(0.5)
+      const { l } = renderDist(dist, 440, 0.5, 4096)
+      // Absolute level: must be clearly audible (> -40dBFS)
+      expect(rms(l)).toBeGreaterThan(0.01)
+    })
+  })
+
+  describe('fuzz flavour', () => {
+    it('hard clips — output has flat tops (high peak-to-RMS ratio compression)', () => {
+      const dist = new Distortion(SR)
+      dist.setFlavour('fuzz')
+      dist.setDrive(1.0)
+      dist.setTone(0.5)
+      const { l } = renderDist(dist, 440, 0.5, 8192)
+      const peak = peakAbs(l)
+      const r = rms(l)
+      // Hard clip makes waveform more square → crest factor approaches 1
+      // Sine crest factor is ~1.414, hard-clipped should be < 1.3
+      expect(peak / r).toBeLessThan(1.3)
+    })
+
+    it('more aggressive than overdrive at same drive', () => {
+      const od = new Distortion(SR)
+      od.setFlavour('overdrive')
+      od.setDrive(0.8)
+      od.setTone(1.0)
+      const odOut = renderDist(od, 440, 0.5, 8192)
+      const odHarmonics = energyAboveHz(magnitudeSpectrum(odOut.l), 1000, SR)
+
+      const fz = new Distortion(SR)
+      fz.setFlavour('fuzz')
+      fz.setDrive(0.8)
+      fz.setTone(1.0)
+      const fzOut = renderDist(fz, 440, 0.5, 8192)
+      const fzHarmonics = energyAboveHz(magnitudeSpectrum(fzOut.l), 1000, SR)
+
+      expect(fzHarmonics).toBeGreaterThan(odHarmonics)
+    })
+
+    it('output stays bounded with hot input', () => {
+      const dist = new Distortion(SR)
+      dist.setFlavour('fuzz')
+      dist.setDrive(1.0)
+      dist.setTone(0.5)
+      const { l } = renderDist(dist, 440, 2.0, SR)
+      expect(peakAbs(l)).toBeLessThan(3.0)
+      expect(peakAbs(l)).toBeGreaterThan(0.1)
+    })
+  })
+
+  it('no DC offset in output', () => {
+    const dist = new Distortion(SR)
+    dist.setFlavour('overdrive')
+    dist.setDrive(0.7)
+    dist.setTone(0.5)
+    const { l } = renderDist(dist, 440, 0.5, 8192)
+    expect(Math.abs(dcOffset(l))).toBeLessThan(0.05)
   })
 })
 

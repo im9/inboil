@@ -316,6 +316,7 @@ export function setInsertFxType(trackId: number, slot: 0 | 1, type: CellInsertFx
   if (type === 'verb') fx.flavour = 'room'
   else if (type === 'delay') fx.flavour = 'digital'
   else if (type === 'glitch') fx.flavour = 'bitcrush'
+  else if (type === 'dist') fx.flavour = 'overdrive'
 }
 
 export function setInsertFxFlavour(trackId: number, slot: 0 | 1, flavour: string) {

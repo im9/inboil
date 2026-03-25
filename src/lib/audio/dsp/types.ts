@@ -71,7 +71,7 @@ export interface WorkletPattern {
 
 /** Per-track insert FX slot (ADR 077) */
 export interface WorkletInsertFx {
-  type: 'verb' | 'delay' | 'glitch' | null
+  type: 'verb' | 'delay' | 'glitch' | 'dist' | null
   mix: number
   x: number
   y: number
@@ -80,6 +80,7 @@ export interface WorkletInsertFx {
   dotted?: boolean    // delay: dotted flavour
   tape?: boolean      // delay: tape flavour
   redux?: boolean     // glitch: redux flavour
+  fuzz?: boolean      // dist: fuzz flavour (default = overdrive)
 }
 
 export interface WorkletTrack {

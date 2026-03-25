@@ -476,11 +476,15 @@ export class TapeSaturator {
   // Head bump: low-frequency resonance (~80Hz shelf boost)
   private bumpL = 0; private bumpR = 0
   private bumpCoeff: number
+  // Mid-presence: ~2kHz shelf boost for tube/DECO Classic character (ADR 122 Phase 2)
+  private midHpL = 0; private midHpR = 0
+  private midHpCoeff: number
 
   constructor(private sr: number) {
     this.setTone(0.5)
     this.bumpCoeff = Math.exp(-2 * Math.PI * 80 / sr)
     this.hissLpCoeff = Math.exp(-2 * Math.PI * 6000 / sr)  // LP at 6kHz — cassette hiss character
+    this.midHpCoeff = Math.exp(-2 * Math.PI * 2000 / sr)   // HP residual at ~2kHz for mid presence
   }
 
   /** Set drive amount: 0.1 (clean) to 3.0 (heavy saturation) */
@@ -506,9 +510,16 @@ export class TapeSaturator {
     const bumpAmount = Math.min(this.drive * 0.15, 0.3)  // scales with drive, max 0.3
     const bL = dL + this.bumpL * bumpAmount
     const bR = dR + this.bumpR * bumpAmount
+    // Mid-presence: subtle ~2kHz shelf boost (tube/DECO Classic character)
+    // One-pole HP extracts mid+high residual; add a fraction back for presence
+    this.midHpL = bL + (this.midHpL - bL) * this.midHpCoeff
+    this.midHpR = bR + (this.midHpR - bR) * this.midHpCoeff
+    const midAmount = Math.min(this.drive * 0.12, 0.25)  // scales with drive, subtle
+    const mL = bL + (bL - this.midHpL) * midAmount
+    const mR = bR + (bR - this.midHpR) * midAmount
     // One-pole LP tone filter
-    this.lpL = bL + (this.lpL - bL) * this.lpCoeff + DENORMAL_DC
-    this.lpR = bR + (this.lpR - bR) * this.lpCoeff + DENORMAL_DC
+    this.lpL = mL + (this.lpL - mL) * this.lpCoeff + DENORMAL_DC
+    this.lpR = mR + (this.lpR - mR) * this.lpCoeff + DENORMAL_DC
     // Tape hiss: band-limited white noise, level scales with drive
     // Subtle at low drive (~-60dB), audible character at high drive (~-40dB)
     this.hissSeed = (this.hissSeed * 1664525 + 1013904223) >>> 0
@@ -534,6 +545,94 @@ export class TapeSaturator {
     } else {
       // Negative: gentler saturation (asymmetry → 2nd harmonic)
       return x / (1 - x * 0.25)
+    }
+  }
+}
+
+// ── Insert Distortion (ADR 122 Phase 1) ─────────────────────────────
+
+/**
+ * Per-track insert distortion with two flavours:
+ *   overdrive — tube-style asymmetric saturation + cabinet LP
+ *   fuzz — hard clip with harmonic saturation
+ *
+ * X (drive): 0–1 → gain 0.5–8.0
+ * Y (tone): 0–1 → post-EQ LP cutoff 800Hz–16kHz
+ */
+export class Distortion {
+  private flavour: 'overdrive' | 'fuzz' = 'overdrive'
+  private drive = 1.0   // internal gain (0.5–8.0)
+  private lpL = 0; private lpR = 0
+  private lpCoeff = 0
+  // Pre-EQ: mid boost for overdrive (~1.5kHz one-pole HP residual)
+  private preHpL = 0; private preHpR = 0
+  private preHpCoeff: number
+  // DC blocker (HP at ~10Hz) — removes DC from asymmetric clipping
+  private dcL = 0; private dcPrevL = 0
+  private dcR = 0; private dcPrevR = 0
+  private dcCoeff: number
+  private out = new Float64Array(2)
+
+  constructor(private sr: number) {
+    this.setTone(0.5)
+    this.preHpCoeff = Math.exp(-2 * Math.PI * 1500 / sr)
+    this.dcCoeff = 1 - (2 * Math.PI * 10 / sr)  // ~10Hz HP
+  }
+
+  setFlavour(f: 'overdrive' | 'fuzz') { this.flavour = f }
+
+  /** Set drive: 0–1 normalized → 0.3–8.0 internal gain (low end nearly clean) */
+  setDrive(d: number) { this.drive = 0.3 + d * 7.7 }
+
+  /** Set tone: 0–1 → LP cutoff 800Hz–16kHz */
+  setTone(t: number) {
+    const freq = 800 * Math.pow(20, t)
+    this.lpCoeff = Math.exp(-2 * Math.PI * freq / this.sr)
+  }
+
+  process(l: number, r: number): Float64Array {
+    let outL: number, outR: number
+    if (this.flavour === 'overdrive') {
+      // Pre-EQ: add mid presence before saturation
+      this.preHpL = l + (this.preHpL - l) * this.preHpCoeff
+      this.preHpR = r + (this.preHpR - r) * this.preHpCoeff
+      const preL = l + (l - this.preHpL) * 0.3  // subtle mid boost
+      const preR = r + (r - this.preHpR) * 0.3
+      // Asymmetric soft clip (tube character) with level normalization
+      const norm = Math.max(0.2, this._tubeClip(this.drive))
+      const dL = this._tubeClip(preL * this.drive) / norm
+      const dR = this._tubeClip(preR * this.drive) / norm
+      // Post-EQ: cabinet LP tone filter
+      this.lpL = dL + (this.lpL - dL) * this.lpCoeff + DENORMAL_DC
+      this.lpR = dR + (this.lpR - dR) * this.lpCoeff + DENORMAL_DC
+      outL = this.lpL; outR = this.lpR
+    } else {
+      // Fuzz: hard clip with ceiling
+      const ceiling = Math.max(0.1, 1.0 / this.drive)
+      const dL = Math.max(-ceiling, Math.min(ceiling, l * this.drive)) / ceiling
+      const dR = Math.max(-ceiling, Math.min(ceiling, r * this.drive)) / ceiling
+      // Post-EQ: tone filter
+      this.lpL = dL + (this.lpL - dL) * this.lpCoeff + DENORMAL_DC
+      this.lpR = dR + (this.lpR - dR) * this.lpCoeff + DENORMAL_DC
+      outL = this.lpL; outR = this.lpR
+    }
+    // DC blocker — removes offset from asymmetric clipping
+    const prevOutL = this.dcPrevL; this.dcPrevL = outL
+    const prevOutR = this.dcPrevR; this.dcPrevR = outR
+    this.dcL = outL - prevOutL + this.dcCoeff * this.dcL
+    this.dcR = outR - prevOutR + this.dcCoeff * this.dcR
+    this.out[0] = this.dcL; this.out[1] = this.dcR
+    return this.out
+  }
+
+  /** Tube-style asymmetric saturation: positive clips harder (even harmonics) */
+  private _tubeClip(x: number): number {
+    if (x >= 0) {
+      // Positive: aggressive saturation (tube compression on peaks)
+      return Math.tanh(x)
+    } else {
+      // Negative: slightly gentler (asymmetry → even harmonics / warmth)
+      return Math.tanh(x * 0.8)
     }
   }
 }
