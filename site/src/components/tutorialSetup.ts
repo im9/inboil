@@ -128,7 +128,6 @@ export function initTutorialPatterns() {
   if (initialized) return
   initialized = true
 
-  song.bpm = 85
   song.rootNote = 7  // G
 
   // EQ: boost low +4dB, mid +3dB
@@ -150,6 +149,8 @@ export function initTutorialPatterns() {
 /** Set up scene with nodes, edges, and decorators. */
 export function initTutorialScene() {
   initTutorialPatterns()
+
+  song.bpm = 85  // arrangement demo uses slower tempo
 
   // Layout: slightly irregular hand-placed feel
   // Flow: Verse → Chorus → (Break | Break2) → Verse (fork at Chorus)

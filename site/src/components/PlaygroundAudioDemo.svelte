@@ -207,6 +207,10 @@
     --c-blue:    #4472B4;
     --c-muted:   rgba(237,232,220,0.15);
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --fs-sm:   9px;
+    --fs-md:  10px;
+    --fs-lg:  11px;
+    --fs-base: 12px;
   }
   .audio-demo :global(.playground) {
     border-radius: 0;

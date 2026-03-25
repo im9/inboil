@@ -76,23 +76,23 @@
     justify-content: center;
     min-width: 48px;
     padding: 6px 8px 5px;
-    border: 1.5px solid rgba(237,232,220,0.18);
+    border: 1.5px solid var(--dz-border);
     border-radius: var(--radius-sm);
     background: transparent;
-    color: rgba(237,232,220,0.45);
+    color: var(--dz-text-mid);
     font-family: inherit;
     font-weight: 700;
     cursor: pointer;
     gap: 2px;
   }
   .track-btn:hover {
-    border-color: rgba(237,232,220,0.35);
-    color: rgba(237,232,220,0.65);
+    border-color: var(--dz-btn-border);
+    color: var(--dz-text);
   }
   .track-btn.active {
-    background: #787845;
-    border-color: #787845;
-    color: #1E2028;
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+    color: var(--color-fg);
   }
   .track-num {
     font-size: var(--fs-md);
@@ -112,7 +112,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: rgba(237,232,220,0.7);
+    color: var(--dz-text);
     margin-bottom: 10px;
   }
   .knob-grid {
@@ -126,9 +126,9 @@
     font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.12em;
-    color: rgba(237,232,220,0.4);
+    color: var(--dz-text-dim);
     margin-top: 8px;
     padding-bottom: 3px;
-    border-bottom: 1px solid rgba(237,232,220,0.08);
+    border-bottom: 1px solid var(--dz-bg-hover);
   }
 </style>
