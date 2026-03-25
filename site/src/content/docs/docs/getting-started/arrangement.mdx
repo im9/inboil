@@ -10,31 +10,29 @@ import PlaygroundMatrixView from '../../../../components/PlaygroundMatrixView.sv
 
 The **Scene** is INBOIL's song mode — what we call the **Graphical Sequencer**. Instead of a linear timeline, you connect patterns as nodes and the engine follows the connections during playback.
 
-Think of patterns as **paint colors** and the scene as your **canvas**. You mix each color in the Matrix, then place them on the canvas and connect them into a playback flow.
-
 > **Note:** The Scene view is available on desktop only.
 
-## 1. Mix Your Colors
+## 1. Create Your Patterns
 
-The **Matrix** is your palette. Each cell is a pattern — tap one to select it, double-tap to open the step editor and fill it with beats. Colored cells have data; empty cells are transparent.
+The **Matrix** is your pattern library. Each cell is a pattern — tap one to select it, double-tap to open the step editor and fill it with beats. Colored cells have data; empty cells are blank.
 
 Try tapping the colored cells on the left — the step grid on the right shows what's inside each pattern:
 
 <PlaygroundMatrixView client:visible />
 
-In the app, you'd create several patterns here first: a verse groove, a chorus variation, a sparse break. Each one is a distinct color you'll paint with later.
+In the app, you'd create several patterns here first: a verse groove, a chorus variation, a sparse break.
 
-## 2. Paint the Canvas
+## 2. Build the Scene
 
-Now place your colors on the canvas. In the app you **drag a pattern cell from the Matrix** and **drop it into the Scene** — a new node appears where you release. Then connect nodes by **dragging the handle** on the right side of a node to the target node.
+Now arrange your patterns into a song structure. In the app you **drag a pattern from the Matrix** and **drop it into the Scene** — a new node appears where you release. Then connect nodes by **dragging the handle** on the right side of a node to the target node.
 
-Below, four patterns are wired into a graph with a fork: Verse → Chorus → Break *or* Break2 → back to Verse. The engine randomly picks which break to play. Try dragging the nodes around, or drag a pattern from the Matrix on the left into the scene:
+Below, four patterns are connected with a fork: Verse → Chorus → Break *or* Break2 → back to Verse. The engine randomly picks which break to play. Try dragging the nodes around, or drag a pattern from the Matrix on the left into the scene:
 
 <PlaygroundSceneView client:visible />
 
-## 3. Let It Flow
+## 3. Press Play
 
-Press the play button on the root node above (marked with a dot) and the engine walks through your graph automatically. At each fork it picks the next node at random — so the arrangement is different every time.
+Press the play button on the root node above (marked with a dot) and the engine follows the connections automatically. At each fork it picks the next node at random — so the arrangement is different every time.
 
 | Mode | Behavior |
 |------|----------|
