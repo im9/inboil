@@ -1,6 +1,6 @@
 # ADR 122: FX & Master Audio Design
 
-## Status: In Progress (Phase 1)
+## Status: Implemented
 
 ## Context
 
@@ -114,25 +114,11 @@ Overdrive flavour should have:
 
 ### Phase 1: Insert distortion
 
-Implementation Checklist:
-- [ ] Unit tests for Distortion class (TDD — tests before implementation)
-- [ ] `Distortion` class in `effects.ts` — overdrive (asymmetric soft clip + cabinet LP) and fuzz (hard clip + harmonic blend)
-  - X: drive (0–1 → 0.5–8.0 gain), Y: tone (0–1 → LP cutoff 800Hz–16kHz)
-  - Overdrive: pre-EQ mid boost → asymmetric tanh → post-EQ cabinet LP
-  - Fuzz: hard clip with ceiling → mix even/odd harmonics
-- [ ] Add `'dist'` to `CellInsertFx.type` union (`types.ts`)
-- [ ] Add `'dist'` to `WorkletInsertFx.type` union + `fuzz?: boolean` flag (`dsp/types.ts`)
-- [ ] Add `DistFlavour` type + `FX_FLAVOURS.dist` entries (`constants.ts`)
-- [ ] Add `'dist'` to `InsertFxSlot.type` union + `distortion?: Distortion` field (`worklet-processor.ts`)
-- [ ] Wire `_createInsertSlot` / `_updateInsertParams` / `_processInsert` for dist
-- [ ] Add default flavour `'overdrive'` in `setInsertFxType` (`stepActions.ts`)
-- [ ] DockTrackEditor: add DIST to type selector, overdrive/fuzz flavour buttons, DRIVE/TONE knob labels
-- [ ] `pnpm check` + `pnpm test` pass
+Done. Distortion class with overdrive/fuzz, 0.7× output attenuation, insert reverb 30× wet makeup, all types/wiring/UI.
 
-### Phase 2: TapeSaturator refinement
-- Add mid-presence boost (~2kHz) for Classic tube character
-- Widen soft-knee curve
-- Ear-test with reference material (DECO Classic, Studer console saturation)
+### Phase 2: TapeSaturator refinement — DONE
+- ~2kHz mid-presence shelf boost (scales with drive, max 0.25)
+- Soft-knee widened (0.4→0.28 / 0.25→0.18) for gentler onset
 
 ### Phase 3: Glitch/dist boundary cleanup — SKIPPED
 - Reviewed: send (shared bus, destructive) and insert (per-track, mix control) are standard separate systems (cf. Elektron, Ableton). No unification needed.
@@ -184,14 +170,11 @@ FX on/off and HOLD visibility improvements in DockFxControls:
 - New layout: knobs row has no HOLD label; hold row is compact: `HOLD [switch]` right-aligned
 - This makes the association between label and toggle immediately clear
 
-**Dock layout: FX/EQ/Master always accessible**
-- Currently FX/EQ/Master controls only appear in dock during overlay sheet mode (split layout)
-- In normal scene view, dock shows PATTERN + TRACKS/SCENE tabs — no FX controls at all
-- DJ Filter lived in FX dock since ADR 075 but went unnoticed because of this
-- Add FX/EQ/MASTER as dock tab options alongside TRACKS/SCENE, so controls are accessible from any view
-- Compact each section to fit: per-FX color labels double as on/off toggles (Phase 4 items above), tighter knob spacing
-- If vertical space is too tight, fall back to collapsible accordion sections within the tab
-- Goal: no FX control should require a specific view mode to access
+**Dock layout: FX/EQ/Master always accessible — SKIPPED**
+- Tried: unified FX/EQ/MST tabs alongside TRK/SCN in single-scroll layout
+- Reverted: tab bar was pushed down by scene Navigator tree, position unstable as scene grew
+- The existing split layout (Navigator upper / overlay controls lower) already provides stable access
+- DJ Filter move to Master (done above) was the main gap — now all master bus controls are in Master section
 
 ## Future Extensions
 
