@@ -13,7 +13,10 @@ function cloneModifierParams(fp: ModifierParams): ModifierParams {
   if (fp.tempo) clone.tempo = { ...fp.tempo }
   if (fp.repeat) clone.repeat = { ...fp.repeat }
   if (fp.fx) clone.fx = { ...fp.fx, ...(fp.fx.flavourOverrides ? { flavourOverrides: { ...fp.fx.flavourOverrides } } : {}) }
-  if (fp.sweep) clone.sweep = { curves: fp.sweep.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })) }
+  if (fp.sweep) clone.sweep = {
+    curves: fp.sweep.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })),
+    ...(fp.sweep.toggles ? { toggles: fp.sweep.toggles.map(t => ({ ...t, target: { ...t.target }, points: t.points.map(p => ({ ...p })) })) } : {}),
+  }
   return clone
 }
 
@@ -83,6 +86,13 @@ export function restoreScene(src: Scene | undefined): Scene {
       n.modifierParams.sweep.curves = n.modifierParams.sweep.curves.filter(
         c => (c.target as { kind: string }).kind !== 'all'
       )
+      // Migrate filter curves from fx → master (ADR 122 Phase 4)
+      for (const c of n.modifierParams.sweep.curves) {
+        const t = c.target as { kind: string; param?: string }
+        if (t.kind === 'fx' && (t.param === 'filterCutoff' || t.param === 'filterResonance')) {
+          t.kind = 'master'
+        }
+      }
     }
   }
   // Remove orphan automation/probability nodes

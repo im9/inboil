@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { cloneSceneNode, cloneScene, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers } from './sceneData.ts'
-import type { SceneNode, SceneEdge, Scene, GenerativeConfig } from './types.ts'
+import type { SceneNode, SceneEdge, Scene, GenerativeConfig, SweepToggleCurve } from './types.ts'
 
 // ── Helpers ──
 
@@ -249,5 +249,95 @@ describe('restoreScene (ADR 078 generative)', () => {
     const restored = restoreScene(src)
     expect(restored.nodes.find((n: SceneNode) => n.id === 'g1')).toBeDefined()
     expect(restored.nodes.find((n: SceneNode) => n.id === 'g1')!.generative!.engine).toBe('turing')
+  })
+})
+
+// ── Sweep data: clone & migration (ADR 118, 122, 123) ──
+
+function sweepNode(id: string, curves: any[], toggles?: SweepToggleCurve[]): SceneNode {
+  return {
+    id, type: 'sweep', x: 0.5, y: 0.5, root: false,
+    modifierParams: { sweep: { curves, ...(toggles ? { toggles } : {}) } },
+  }
+}
+
+describe('cloneSceneNode (sweep)', () => {
+  it('deep clones sweep curves', () => {
+    const orig = sweepNode('s1', [
+      { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0 }, { t: 1, v: 1 }], color: '#f00' },
+    ])
+    const cloned = cloneSceneNode(orig)
+    cloned.modifierParams!.sweep!.curves[0].points[0].v = 0.99
+    expect(orig.modifierParams!.sweep!.curves[0].points[0].v).toBe(0)
+  })
+
+  it('deep clones sweep toggles (ADR 123)', () => {
+    const toggles: SweepToggleCurve[] = [
+      { target: { kind: 'fxOn', fx: 'verb' }, points: [{ t: 0, on: false }, { t: 0.5, on: true }], color: '#0f0' },
+    ]
+    const orig = sweepNode('s1', [], toggles)
+    const cloned = cloneSceneNode(orig)
+    cloned.modifierParams!.sweep!.toggles![0].points[0].on = true
+    expect(orig.modifierParams!.sweep!.toggles![0].points[0].on).toBe(false)
+  })
+
+  it('handles sweep without toggles', () => {
+    const orig = sweepNode('s1', [
+      { target: { kind: 'fx', param: 'delayTime' }, points: [{ t: 0, v: 0 }], color: '#00f' },
+    ])
+    const cloned = cloneSceneNode(orig)
+    expect(cloned.modifierParams!.sweep!.toggles).toBeUndefined()
+    expect(cloned.modifierParams!.sweep!.curves).toHaveLength(1)
+  })
+})
+
+describe('restoreScene (sweep migration)', () => {
+  it('migrates filter curves from fx kind to master kind (ADR 122)', () => {
+    const src: Scene = {
+      name: 'Test',
+      nodes: [
+        patNode('p1'),
+        sweepNode('s1', [
+          { target: { kind: 'fx', param: 'filterCutoff' }, points: [{ t: 0, v: 0 }], color: '#f00' },
+          { target: { kind: 'fx', param: 'filterResonance' }, points: [{ t: 0, v: 0 }], color: '#0f0' },
+          { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0 }], color: '#00f' },
+        ]),
+      ],
+      edges: [edge('s1', 'p1')],
+      labels: [],
+      stamps: [],
+    }
+    const restored = restoreScene(src)
+    const s = restored.nodes.find((n: SceneNode) => n.id === 's1')!
+    const curves = s.modifierParams!.sweep!.curves
+
+    // filter curves should be migrated to master kind
+    const filterCutoff = curves.find((c: any) => c.target.param === 'filterCutoff')!
+    const filterReso = curves.find((c: any) => c.target.param === 'filterResonance')!
+    expect(filterCutoff.target.kind).toBe('master')
+    expect(filterReso.target.kind).toBe('master')
+
+    // non-filter FX curves should remain unchanged
+    const reverbWet = curves.find((c: any) => c.target.param === 'reverbWet')!
+    expect(reverbWet.target.kind).toBe('fx')
+  })
+
+  it('preserves sweep toggles through restore (ADR 123)', () => {
+    const toggles: SweepToggleCurve[] = [
+      { target: { kind: 'hold', fx: 'verb' }, points: [{ t: 0, on: false }, { t: 0.5, on: true }], color: '#f00' },
+      { target: { kind: 'fxOn', fx: 'delay' }, points: [{ t: 0.3, on: true }], color: '#0f0' },
+    ]
+    const src: Scene = {
+      name: 'Test',
+      nodes: [patNode('p1'), sweepNode('s1', [], toggles)],
+      edges: [edge('s1', 'p1')],
+      labels: [],
+      stamps: [],
+    }
+    const restored = restoreScene(src)
+    const s = restored.nodes.find((n: SceneNode) => n.id === 's1')!
+    expect(s.modifierParams!.sweep!.toggles).toHaveLength(2)
+    expect(s.modifierParams!.sweep!.toggles![0].target).toEqual({ kind: 'hold', fx: 'verb' })
+    expect(s.modifierParams!.sweep!.toggles![1].points[0].on).toBe(true)
   })
 })

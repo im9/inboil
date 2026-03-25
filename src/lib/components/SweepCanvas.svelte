@@ -637,6 +637,8 @@
         retDelay: () => masterPad.ret.y,
         satDrive: () => masterPad.sat.x,
         satTone: () => masterPad.sat.y,
+        filterCutoff: () => fxPad.filter.x,
+        filterResonance: () => fxPad.filter.y,
       }
       const fn = MASTER_BASE[target.param]
       return fn ? fn() : null
@@ -664,7 +666,6 @@
       const FX_BASE: Record<string, [keyof typeof fxPad, string]> = {
         reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
         delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
-        filterCutoff: ['filter', 'x'], filterResonance: ['filter', 'y'],
         glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
         granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
       }
@@ -947,7 +948,6 @@
   // ── Commit curve to sweep data ──
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
     if (!sweepNode) return
-    pushUndo('Edit sweep curve')
     // Filter out legacy mute curves on any write
     const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute')
     // Replace existing curve for same target, or add new
@@ -958,14 +958,14 @@
     } else {
       curves.push(newCurve)
     }
-    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves } })
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves, toggles: sweepData.toggles } })
   }
 
   function deleteCurve(target: SweepTarget) {
     if (!sweepNode) return
     pushUndo('Delete sweep curve')
     const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute' && !targetsEqual(c.target, target))
-    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves } })
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves, toggles: sweepData.toggles } })
     redraw()
   }
 
