@@ -685,7 +685,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     if (slot.type === 'verb' && slot.reverb) {
       const mono = (inL + inR) * 0.5
       const rv = slot.reverb.process(mono)
-      wetL = rv[0]; wetR = rv[1]
+      // LiteReverb uses g=0.015 input gain for feedback stability;
+      // compensate so wet level matches dry (~30× makeup)
+      wetL = rv[0] * 30; wetR = rv[1] * 30
     } else if (slot.type === 'delay') {
       const fb = slot.y * 0.85
       if (slot.tape && slot.tapeDelay) {

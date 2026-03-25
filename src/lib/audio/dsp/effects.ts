@@ -537,14 +537,14 @@ export class TapeSaturator {
 
   /** Asymmetric soft saturation — positive half clips earlier (even harmonics) */
   private _tapeCompress(x: number): number {
-    // Soft-knee: blend linear and saturated based on level
-    // Asymmetry: positive peaks get more saturation (emulates tape bias)
+    // Wide soft-knee: stays linear longer, compresses only louder peaks (ADR 122 Phase 2)
+    // Lower coefficients (0.28/0.18) vs previous (0.4/0.25) = gentler onset, more transparent at low drive
     if (x >= 0) {
-      // Positive: stronger saturation (tape compresses peaks)
-      return x / (1 + x * 0.4)
+      // Positive: moderate saturation (tube/tape compression on peaks)
+      return x / (1 + x * 0.28)
     } else {
-      // Negative: gentler saturation (asymmetry → 2nd harmonic)
-      return x / (1 - x * 0.25)
+      // Negative: gentler saturation (asymmetry → even harmonics / warmth)
+      return x / (1 - x * 0.18)
     }
   }
 }
@@ -616,6 +616,8 @@ export class Distortion {
       this.lpR = dR + (this.lpR - dR) * this.lpCoeff + DENORMAL_DC
       outL = this.lpL; outR = this.lpR
     }
+    // Output attenuation — saturation raises RMS; compensate to match other insert FX levels
+    outL *= 0.7; outR *= 0.7
     // DC blocker — removes offset from asymmetric clipping
     const prevOutL = this.dcPrevL; this.dcPrevL = outL
     const prevOutR = this.dcPrevR; this.dcPrevR = outR
