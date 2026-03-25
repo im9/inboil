@@ -147,7 +147,7 @@ export function initTutorialPatterns() {
   }
 }
 
-/** Set up scene graph with nodes, edges, and decorators. */
+/** Set up scene with nodes, edges, and decorators. */
 export function initTutorialScene() {
   initTutorialPatterns()
 

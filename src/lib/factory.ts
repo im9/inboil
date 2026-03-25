@@ -403,7 +403,7 @@ function buildFactoryCell(
 export const FACTORY_COUNT = FACTORY.length
 
 /**
- * Build the VELVET song scene graph (~56s at 120 BPM).
+ * Build the VELVET song scene (~56s at 120 BPM).
  * Showcases: repeats, FX flavours, EQ automation, master fade-out.
  *
  * HAZE ×3 → VELVET ×2 → DRIFT ×3 → VELVET ×2 → BLOOM ×2 → VELVET ×2

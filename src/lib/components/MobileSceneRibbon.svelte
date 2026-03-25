@@ -37,7 +37,7 @@
     color: number
   }
 
-  // Linearize scene graph: BFS from root, pattern nodes only
+  // Linearize scene: BFS from root, pattern nodes only
   const ribbonNodes = $derived.by(() => {
     const nodes = song.scene.nodes
     const edges = song.scene.edges

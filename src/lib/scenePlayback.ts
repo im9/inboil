@@ -1,5 +1,5 @@
 /**
- * Scene graph playback engine — graph traversal, decorator application, generative chains.
+ * Scene playback engine — graph traversal, modifier application, generative chains.
  * Extracted from state.svelte.ts for modularity.
  */
 import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack, masterPad, perf } from './state.svelte.ts'
@@ -8,7 +8,7 @@ import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId } from './types.ts'
 
-// ── Scene graph helpers ─────────────────────────────────────────────
+// ── Scene helpers ───────────────────────────────────────────────────
 
 /** True when scene has a root node → use graph traversal instead of linear sections */
 export function hasScenePlayback(): boolean {

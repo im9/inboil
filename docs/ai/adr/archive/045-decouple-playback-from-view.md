@@ -9,7 +9,7 @@
 ## Context
 
 Currently `ui.phraseView` controls **both** which editor is visible and whether
-scene-graph advancement runs. The guard in `App.svelte` line 51:
+scene advancement runs. The guard in `App.svelte` line 51:
 
 ```ts
 if (ui.phraseView !== 'scene') return

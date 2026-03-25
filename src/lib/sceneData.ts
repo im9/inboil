@@ -1,5 +1,5 @@
 /**
- * Pure data transformation functions for scene graph (ADR 062, updated ADR 093).
+ * Pure data transformation functions for scene (ADR 062, updated ADR 093).
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 

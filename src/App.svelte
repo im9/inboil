@@ -213,7 +213,7 @@
       return
     }
     if (cycle) {
-      // Pattern cycle complete (all tracks finished) — scene graph takes priority
+      // Pattern cycle complete (all tracks finished) — scene takes priority
       if (hasScenePlayback()) {
         const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
         if (shouldStop) { stop(); return }
@@ -258,7 +258,7 @@
       playback.sceneAbsoluteKey = null
       const { patternIndex, stop: shouldStop } = advanceSceneNode(startFromNode)
       if (shouldStop) {
-        // Scene graph can't advance (e.g. root has no outgoing edges) — fall back to loop
+        // Scene can't advance (e.g. root has no outgoing edges) — fall back to loop
         playback.mode = 'loop'
         applyLoopModifiers()
         playback.playingPattern = ui.currentPattern

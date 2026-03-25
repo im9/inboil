@@ -1,5 +1,5 @@
 /**
- * Scene graph CRUD, layout, and clipboard operations.
+ * Scene CRUD, layout, and clipboard operations.
  * Extracted from state.svelte.ts for modularity.
  */
 

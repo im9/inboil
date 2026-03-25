@@ -35,7 +35,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Cell** | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX send levels. Per-pattern instrument assignment (ADR 062). |
 | **Track** | Mixer channel only: id, muted, volume, pan (ADR 080). Name and voiceId moved to Cell (ADR 062). |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
-| **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. |
+| **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. User-facing name (LP only): **Graphical Sequencer**. |
 | **SceneNode** | A node on the scene canvas: pattern, generator, or modifier type (transpose/tempo/repeat/fx/sweep). Legacy types (probability/automation) kept for migration only. |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **SceneDecorator** | *(legacy/migration-only)* Former function decorator on pattern nodes (ADR 066). Migrated to standalone modifier nodes with satellite attachment (ADR 093/116). Type retained for data migration only. |
@@ -106,7 +106,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Note Bar** | A trig with duration ≥ 1, visualized as a colored bar spanning multiple steps in the PianoRoll. Head = olive, continuation = semi-transparent. |
 | **Auto-Legato** | Melodic tracks (t≥6) automatically connect consecutive notes with legato (no retrigger). Rest = retrigger. No explicit slide flag needed. |
 | **TrackerView** | M8-style vertical single-track step editor. NOTE/VEL/DUR/SLD/CHN columns. Rendered in pattern overlay sheet. |
-| **SceneView** | Node-based scene canvas. Always the main view (ADR 054). Arrangement editor with pattern and modifier nodes. |
+| **SceneView** | Node-based scene canvas. Always the main view (ADR 054). Arrangement editor with pattern and modifier nodes. Branded as "Graphical Sequencer" on LP. |
 | **MatrixView** | Pattern pool browser sidebar (desktop). Grid of 24×24px cells showing pattern density and selection. |
 | **SectionNav** | *(removed)* Legacy linear section strip. Fully removed (ADR 095). Superseded by Scene (ADR 044) + MobileMatrixView. |
 | **FilterView** | EQ/filter XY pad rendered as overlay sheet (ADR 054). FILTER + 3-band EQ nodes. |

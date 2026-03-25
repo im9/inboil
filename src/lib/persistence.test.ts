@@ -280,7 +280,7 @@ describe('song round-trip: fxFlavours', () => {
   })
 })
 
-describe('song round-trip: scene graph', () => {
+describe('song round-trip: scene', () => {
   it('preserves scene nodes and edges through double round-trip', () => {
     // restoreScene may filter/migrate nodes, so verify idempotency:
     // a second round-trip should produce identical results to the first.

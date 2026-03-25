@@ -160,7 +160,7 @@ try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProj
 export const playback = $state({
   playing: false,
   playheads: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
-  // Scene graph playback (Phase 4)
+  // Scene playback (Phase 4)
   sceneNodeId: null as string | null,
   sceneEdgeId: null as string | null,
   sceneRepeatLeft: 0,

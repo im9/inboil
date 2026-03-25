@@ -183,9 +183,9 @@ test.describe('persistence', () => {
 
 // ── Phase 4: Extended E2E ──
 
-// ── Scene graph persistence ──
+// ── Scene persistence ──
 
-test.describe('scene graph', () => {
+test.describe('scene', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.evaluate(() => localStorage.clear())

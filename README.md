@@ -1,7 +1,7 @@
 # inboil
 
 Browser-based groove box / DAW inspired by Elektron hardware and Teenage Engineering OP-XY.
-Step sequencing, analog-modeled synthesis, scene graph arrangement — all running in a single AudioWorklet, zero npm runtime dependencies.
+Step sequencing, analog-modeled synthesis, graphical sequencer arrangement — all running in a single AudioWorklet, zero npm runtime dependencies.
 
 ## Features
 
@@ -10,7 +10,7 @@ Step sequencing, analog-modeled synthesis, scene graph arrangement — all runni
 - **Variable track count (up to 16)** — per-pattern, independent step counts (2–64), per-track step scale (1/8 to 1/32), polymetric
 - **Parameter locks (P-Lock)** — per-step parameter overrides, Elektron-style
 - **Piano roll & tracker view** — note/duration editing for melodic tracks
-- **Scene graph** — node-based arrangement with pattern nodes, generative nodes (Turing Machine, Quantizer, Tonnetz), decorators, and edge-based branching
+- **Graphical Sequencer** — node-based arrangement with pattern nodes, generative nodes (Turing Machine, Quantizer, Tonnetz), modifiers, and edge-based branching
 - **Scale-aware arpeggiator** — UP / DOWN / UP-DOWN / RANDOM with diatonic chord modes
 - **Effects** — reverb, delay, glitch, granular with XY performance pads; per-track insert FX; 3-band EQ; DJ filter
 - **Sidechain ducker & bus compressor** — master bus processing with peak limiter
@@ -71,7 +71,7 @@ src/
 │   ├── presets.ts              # Factory presets (WT 30, FM 20)
 │   ├── factory.ts              # Default song/pattern templates
 │   ├── constants.ts            # Default values (perf, FX flavours, etc.)
-│   ├── sceneActions.ts         # Scene graph CRUD, layout, clipboard
+│   ├── sceneActions.ts         # Scene CRUD, layout, clipboard
 │   ├── scenePlayback.ts        # Scene traversal engine
 │   ├── generative.ts           # Turing Machine, Quantizer, Tonnetz
 │   ├── automation.ts           # Automation curve evaluation

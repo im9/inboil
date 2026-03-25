@@ -67,7 +67,7 @@ export interface Pattern {
   cells: Cell[]           // one per track (up to 16)
 }
 
-/** @deprecated Linear arrangement slot (ADR 042). Superseded by Scene graph (ADR 044).
+/** @deprecated Linear arrangement slot (ADR 042). Superseded by Scene (ADR 044).
  *  Retained for backwards compatibility with saved data; no new features should target Section. */
 export interface Section {
   patternIndex: number    // index into Song.patterns
@@ -271,7 +271,7 @@ export interface Scene {
   stamps: SceneStamp[]
 }
 
-/** Song = pattern pool + arrangement sections + scene graph (ADR 044) */
+/** Song = pattern pool + arrangement sections + scene (ADR 044) */
 export interface Song {
   name: string
   bpm: number

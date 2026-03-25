@@ -1,6 +1,6 @@
 /**
  * Demo project builder for welcome overlay.
- * Builds a 4-pattern lo-fi project with scene graph — same data as the
+ * Builds a 4-pattern lo-fi project with scene — same data as the
  * docs tutorial (site/src/components/tutorialSetup.ts) but standalone.
  */
 import { makeTrig, TRACK_DEFAULTS, makeEmptyPattern, makeTrack, PATTERN_POOL_SIZE } from './factory.ts'
@@ -125,7 +125,7 @@ const DEMO_PATTERNS: [FDef, string, number][] = [
   [VERSE, 'Verse', 0], [CHORUS, 'Chorus', 1], [BREAK, 'Break', 2], [BREAK2, 'Break2', 3],
 ]
 
-/** Build a demo Song with 4 lo-fi patterns + forking scene graph */
+/** Build a demo Song with 4 lo-fi patterns + forking scene */
 export function makeDemoSong(): Song {
   const tracks = TRACK_DEFAULTS.map((d, i) => makeTrack(i, d.pan))
   const patterns = DEMO_PATTERNS.map(([f, name, color], i) => ({
@@ -139,7 +139,7 @@ export function makeDemoSong(): Song {
     patterns.push(makeEmptyPattern(i))
   }
 
-  // Scene graph: Repeat → FX → Verse → Chorus → (Break | Break2) → Verse
+  // Scene: Repeat → FX → Verse → Chorus → (Break | Break2) → Verse
   const nodes: SceneNode[] = [
     { id: 'fn_rpt1', type: 'repeat', x: 0.38, y: 0.37, root: true, modifierParams: { repeat: { count: 2 } } },
     { id: 'fn_fx1', type: 'fx', x: 0.43, y: 0.37, root: false, modifierParams: { fx: { verb: true, delay: false, glitch: true, granular: false } } },
