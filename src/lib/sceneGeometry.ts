@@ -63,22 +63,35 @@ export function bezierEdge(from: Pt, to: Pt, fromKind: NodeSizeKind = 'pattern',
 }
 
 /** Draw a quadratic bezier edge with arrowhead */
-export function drawBezier(ctx: CanvasRenderingContext2D, b: BezierEdge, strokeStyle: string, fillStyle: string, lineWidth: number) {
-  ctx.strokeStyle = strokeStyle
+export function drawBezier(ctx: CanvasRenderingContext2D, b: BezierEdge, color: string, lineWidth: number) {
+  const angle = Math.atan2(b.p1.y - b.cp.y, b.p1.x - b.cp.x)
+  const al = 8
+  const spread = 0.28
+  // Shorten stroke so butt cap is hidden inside the arrowhead
+  const pullback = lineWidth * 2
+  const endX = b.p1.x - pullback * Math.cos(angle)
+  const endY = b.p1.y - pullback * Math.sin(angle)
+
+  // Stroke (ends inside arrowhead body)
+  ctx.strokeStyle = color
   ctx.lineWidth = lineWidth
   ctx.beginPath()
   ctx.moveTo(b.p0.x, b.p0.y)
-  ctx.quadraticCurveTo(b.cp.x, b.cp.y, b.p1.x, b.p1.y)
+  ctx.quadraticCurveTo(b.cp.x, b.cp.y, endX, endY)
   ctx.stroke()
-  // Arrowhead: direction at t=1 of quadratic bezier is (p1 - cp)
-  const angle = Math.atan2(b.p1.y - b.cp.y, b.p1.x - b.cp.x)
-  const al = 7
-  ctx.fillStyle = fillStyle
+
+  // Arrowhead at original position
+  ctx.fillStyle = color
   ctx.beginPath()
   ctx.moveTo(b.p1.x, b.p1.y)
-  ctx.lineTo(b.p1.x - al * Math.cos(angle - 0.4), b.p1.y - al * Math.sin(angle - 0.4))
-  ctx.lineTo(b.p1.x - al * Math.cos(angle + 0.4), b.p1.y - al * Math.sin(angle + 0.4))
+  ctx.lineTo(b.p1.x - al * Math.cos(angle - spread), b.p1.y - al * Math.sin(angle - spread))
+  ctx.lineTo(b.p1.x - al * Math.cos(angle + spread), b.p1.y - al * Math.sin(angle + spread))
   ctx.closePath(); ctx.fill()
+}
+
+/** Pre-composite rgba against #EDE8DC background to get an opaque color (avoids alpha overlap artifacts) */
+export function flatColor(r: number, g: number, b: number, a: number): string {
+  return `rgb(${Math.round(237 + (r - 237) * a)},${Math.round(232 + (g - 232) * a)},${Math.round(220 + (b - 220) * a)})`
 }
 
 /** Min distance from point to a quadratic bezier (sample 12 points) */

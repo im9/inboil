@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, playback, ui } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
-  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind, nodeColor } from '../sceneGeometry.ts'
+  import { PAT_HALF_W, PAT_HALF_H, WORLD_W, WORLD_H, toPixel, bezierEdge, drawBezier, bezierAt, nodeSizeKind, nodeColor, flatColor } from '../sceneGeometry.ts'
 
   const {
     zoom, panX, panY,
@@ -76,23 +76,27 @@
       const isSel = ui.selectedSceneEdge === edge.id
       const b = bezierEdge(from, to, nodeSizeKind(fromNode), nodeSizeKind(toNode))
 
-      // Accent-colored edge when source is generative/sweep feeding the active pattern
-      const isActiveLink = playback.playing && toNode.id === playback.sceneNodeId
-        && (fromNode.type === 'generative' || fromNode.type === 'sweep')
-      const accentColor = isActiveLink ? nodeColor(fromNode, song.patterns) : null
+      // Generative/sweep edges always use accent color
+      const isGenOrSweep = fromNode.type === 'generative' || fromNode.type === 'sweep'
+      const accentColor = isGenOrSweep ? nodeColor(fromNode, song.patterns) : null
 
       if (accentColor && !isSel) {
-        ctx.save()
-        ctx.shadowColor = accentColor
-        ctx.shadowBlur = 8
-        drawBezier(ctx, b, accentColor, accentColor, 2.5)
-        ctx.restore()
+        const isActive = playback.playing && toNode.id === playback.sceneNodeId
+        drawBezier(ctx, b, accentColor, isActive ? 2 : 1.5)
+        // Flowing dot during playback
+        if (isActive) {
+          const now = performance.now()
+          const t = (now % 1200) / 1200  // 1.2s cycle
+          const pt = bezierAt(b, t)
+          ctx.fillStyle = accentColor
+          ctx.beginPath()
+          ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2)
+          ctx.fill()
+        }
       } else {
-        drawBezier(ctx, b,
-          isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.5)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.18)`,
-          isSel ? `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.6)` : `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.22)`,
-          isSel ? 2.5 : 1.5,
-        )
+        // Pre-composited opaque color — avoids alpha overlap artifacts at arrowhead
+        const edgeColor = isSel ? flatColor(fg.r, fg.g, fg.b, 0.5) : flatColor(fg.r, fg.g, fg.b, 0.18)
+        drawBezier(ctx, b, edgeColor, isSel ? 2.5 : 1.5)
       }
     }
 
@@ -135,12 +139,14 @@
         const toY = (edgeCursor.y - rect.top - panY) / zoom
         const tb = bezierEdge(from, { x: toX, y: toY }, nodeSizeKind(srcNode), 'pattern')
 
+        const tempColor = flatColor(fg.r, fg.g, fg.b, 0.35)
         ctx.setLineDash([4, 4])
-        drawBezier(ctx, tb,
-          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
-          `rgba(${fg.r}, ${fg.g}, ${fg.b}, 0.35)`,
-          1.5,
-        )
+        ctx.strokeStyle = tempColor
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(tb.p0.x, tb.p0.y)
+        ctx.quadraticCurveTo(tb.cp.x, tb.cp.y, tb.p1.x, tb.p1.y)
+        ctx.stroke()
         ctx.setLineDash([])
       }
     }
