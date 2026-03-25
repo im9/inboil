@@ -433,9 +433,12 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   // Boolean toggle evaluation (ADR 123)
   if (sweepData.toggles) {
     for (const toggle of sweepData.toggles) {
-      // Count how many points are ≤ current progress — odd count = ON, even = OFF
-      const count = toggle.points.filter(t => t <= progress).length
-      const on = count % 2 === 1
+      // Find the last point where t ≤ progress; use its `on` value (default OFF)
+      let on = false
+      for (const pt of toggle.points) {
+        if (pt.t <= progress) on = pt.on
+        else break
+      }
 
       if (toggle.target.kind === 'hold') {
         const HOLD_MAP: Record<string, keyof typeof perf> = {

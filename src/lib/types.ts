@@ -210,10 +210,10 @@ export type SweepToggleTarget =
   | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
   | { kind: 'mute';  trackId: number }
 
-/** A single boolean toggle curve — points mark on/off transitions (ADR 123) */
+/** A single boolean toggle curve — points with explicit ON/OFF state (ADR 123) */
 export interface SweepToggleCurve {
   target: SweepToggleTarget
-  points: number[]    // sorted t values (0–1), each toggles state; starts OFF before first point
+  points: { t: number; on: boolean }[]  // sorted by t; each point: "from here, be on/off"
   color: string
 }
 
