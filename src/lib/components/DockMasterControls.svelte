@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, effects, masterPad, pushUndo } from '../state.svelte.ts'
+  import { perf, effects, masterPad, fxPad, pushUndo } from '../state.svelte.ts'
   import Knob from './Knob.svelte'
   import VFader from './VFader.svelte'
 
@@ -69,6 +69,18 @@
     pushUndo('Master toggle')
     masterPad[key].on = !masterPad[key].on
   }
+
+  // DJ Filter (state in fxPad.filter for backwards compatibility)
+  function filterFreqDisplay(x: number): string {
+    const f = x <= 0.5 ? 80 * Math.pow(250, x / 0.5) : 20 * Math.pow(400, (x - 0.5) / 0.5)
+    return f >= 1000 ? `${(f / 1000).toFixed(1)}k` : `${Math.round(f)}`
+  }
+  function toggleFilterOn() {
+    pushUndo('Toggle filter')
+    fxPad.filter.on = !fxPad.filter.on
+  }
+  function setFilterX(v: number) { pushUndo('Filter'); fxPad.filter.x = v }
+  function setFilterY(v: number) { pushUndo('Filter'); fxPad.filter.y = v }
 </script>
 
 <span class="section-label">MASTER</span>
@@ -147,6 +159,19 @@
         <Knob value={masterPad.ret.x} label="VRB" size={36} displayValue={masterPadXDisplay('ret')} onchange={v => setMasterPadX('ret', v)} />
         <Knob value={masterPad.ret.y} label="DLY" size={36} displayValue={masterPadYDisplay('ret')} onchange={v => setMasterPadY('ret', v)} />
       </div>
+    </div>
+  </div>
+  <!-- DJ Filter (master bus) -->
+  <div class="master-dock-group" class:disabled={!fxPad.filter.on} style:--fx-color="var(--color-teal)">
+    <div class="pad-header">
+      <button class="fx-dock-toggle" class:active={fxPad.filter.on} aria-pressed={fxPad.filter.on}
+        onpointerdown={toggleFilterOn}
+        data-tip="DJ Filter — frequency sweep / resonance" data-tip-ja="DJフィルター — 周波数スウィープ / レゾナンス"
+      >FLTR</button>
+    </div>
+    <div class="fx-dock-knobs">
+      <Knob value={fxPad.filter.x} label="FREQ" size={36} displayValue={filterFreqDisplay(fxPad.filter.x)} onchange={setFilterX} />
+      <Knob value={fxPad.filter.y} label="RESO" size={36} displayValue={`${Math.round(fxPad.filter.y * 100)}%`} onchange={setFilterY} />
     </div>
   </div>
 </div>

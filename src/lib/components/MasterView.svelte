@@ -1,24 +1,31 @@
 <script lang="ts">
-  import { masterPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
+  import { masterPad, fxPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
 
-  type NodeKey = 'comp' | 'duck' | 'ret' | 'sat'
+  type NodeKey = 'comp' | 'duck' | 'ret' | 'sat' | 'filter'
 
   const nodes: { key: NodeKey; label: string; color: string; xLabel: string; yLabel: string; tip: string; tipJa: string }[] = [
-    { key: 'comp', label: 'COMP', color: 'var(--color-olive)',  xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — X: threshold, Y: ratio', tipJa: 'コンプレッサー — X: スレッショルド, Y: レシオ' },
-    { key: 'duck', label: 'DUCK', color: 'var(--color-blue)',   xLabel: 'DPT', yLabel: 'REL', tip: 'Sidechain ducker — X: depth, Y: release', tipJa: 'サイドチェインダッカー — X: 深さ, Y: リリース' },
-    { key: 'ret',  label: 'RET',  color: 'var(--color-salmon)', xLabel: 'VRB', yLabel: 'DLY', tip: 'FX returns — X: reverb level, Y: delay level', tipJa: 'FXリターン — X: リバーブレベル, Y: ディレイレベル' },
-    { key: 'sat',  label: 'SAT',  color: 'var(--color-purple)', xLabel: 'DRV', yLabel: 'TNE', tip: 'Tape saturator — X: drive, Y: tone', tipJa: 'テープサチュレーター — X: ドライブ, Y: トーン' },
+    { key: 'comp',   label: 'COMP', color: 'var(--color-olive)',  xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — X: threshold, Y: ratio', tipJa: 'コンプレッサー — X: スレッショルド, Y: レシオ' },
+    { key: 'duck',   label: 'DUCK', color: 'var(--color-blue)',   xLabel: 'DPT', yLabel: 'REL', tip: 'Sidechain ducker — X: depth, Y: release', tipJa: 'サイドチェインダッカー — X: 深さ, Y: リリース' },
+    { key: 'ret',    label: 'RET',  color: 'var(--color-salmon)', xLabel: 'VRB', yLabel: 'DLY', tip: 'FX returns — X: reverb level, Y: delay level', tipJa: 'FXリターン — X: リバーブレベル, Y: ディレイレベル' },
+    { key: 'sat',    label: 'SAT',  color: 'var(--color-purple)', xLabel: 'DRV', yLabel: 'TNE', tip: 'Tape saturator — X: drive, Y: tone', tipJa: 'テープサチュレーター — X: ドライブ, Y: トーン' },
+    { key: 'filter', label: 'FLTR', color: 'var(--color-teal)',   xLabel: 'FRQ', yLabel: 'RES', tip: 'DJ Filter — X: frequency sweep, Y: resonance', tipJa: 'DJフィルター — X: 周波数スウィープ, Y: レゾナンス' },
   ]
+
+  /** Access node state — filter uses fxPad, others use masterPad */
+  function nodeState(key: NodeKey): { on: boolean; x: number; y: number } {
+    return key === 'filter' ? fxPad.filter : masterPad[key as Exclude<NodeKey, 'filter'>]
+  }
 
   // ── Node size based on parameter intensity + audio-reactive pulse ──
   function nodeIntensity(key: NodeKey): number {
-    const st = masterPad[key]
+    const st = nodeState(key)
     if (!st.on) return 0
     if (key === 'comp') return st.x * st.y  // threshold × ratio
     if (key === 'duck') return st.x          // depth
     if (key === 'sat')  return st.x          // drive
+    if (key === 'filter') return Math.abs(st.x - 0.5) * 2  // distance from center = intensity
     return (st.x + st.y) / 2                // avg of reverb + delay sends
   }
 
@@ -27,7 +34,7 @@
     // Base scale: 1.0 at min, up to 1.35 at max intensity
     const base = 1 + intensity * 0.35
     // Audio-reactive pulse: subtle throb when playing and ON
-    if (playback.playing && masterPad[key].on) {
+    if (playback.playing && nodeState(key).on) {
       const peak = Math.max(masterLevels.peakL, masterLevels.peakR)
       return base + peak * 0.12
     }
@@ -60,25 +67,30 @@
     if (dragMoved) {
       const pos = toNorm(e)
       if (pos) {
-        masterPad[dragging].x = pos.x
-        masterPad[dragging].y = pos.y
+        const st = nodeState(dragging)
+        st.x = pos.x
+        st.y = pos.y
       }
     }
   }
 
   function endDrag() {
     if (!dragging) return
-    if (!dragMoved) masterPad[dragging].on = !masterPad[dragging].on
+    if (!dragMoved) { const st = nodeState(dragging); st.on = !st.on }
     dragging = null
     dragRect = null
   }
 
   // ── Denormalized display values per node ──
   function nodeValues(key: NodeKey): { xVal: string; yVal: string } {
-    const st = masterPad[key]
+    const st = nodeState(key)
     if (key === 'comp') return { xVal: `${Math.round((0.1 + st.x * 0.9) * 100)}%`, yVal: `1:${Math.round(1 + st.y * 19)}` }
     if (key === 'duck') return { xVal: `${Math.round(st.x * 100)}%`, yVal: `${Math.round(20 + st.y * 480)}ms` }
     if (key === 'sat')  return { xVal: `${(0.1 + st.x * 2.9).toFixed(1)}`, yVal: `${Math.round(st.y * 100)}%` }
+    if (key === 'filter') {
+      const f = st.x <= 0.5 ? 80 * Math.pow(250, st.x / 0.5) : 20 * Math.pow(400, (st.x - 0.5) / 0.5)
+      return { xVal: f >= 1000 ? `${(f / 1000).toFixed(1)}k` : `${Math.round(f)}`, yVal: `${Math.round(st.y * 100)}%` }
+    }
     return { xVal: `${Math.round(st.x * 200)}%`, yVal: `${Math.round(st.y * 200)}%` }
   }
 
@@ -204,7 +216,7 @@
     style="--beat-dur: {beatDuration}s; --glow-color: {padGlowColor()}; --glow-alpha: {padGlowIntensity()}; --glow-radius: {padGlowRadius()}%;"
   >
     {#each nodes as node}
-      {@const st = masterPad[node.key]}
+      {@const st = nodeState(node.key)}
       {@const vals = nodeValues(node.key)}
       {@const isDragging = dragging === node.key}
 

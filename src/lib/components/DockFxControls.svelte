@@ -9,7 +9,6 @@
     { key: 'delay'    as const, label: 'DLY',   flavourKey: 'delay'    as const, color: 'var(--color-blue)' },
     { key: 'glitch'   as const, label: 'GLT',   flavourKey: 'glitch'   as const, color: 'var(--color-salmon)' },
     { key: 'granular' as const, label: 'GRN',   flavourKey: 'granular' as const, color: 'var(--color-purple)' },
-    { key: 'filter'   as const, label: 'FLTR',  flavourKey: null,                color: 'var(--color-olive)' },
   ] as const
 
   type FxKey = typeof FX_NODES[number]['key']
@@ -18,16 +17,14 @@
     if (key === 'verb') return fxFlavours.verb === 'shimmer' ? 'SIZE' : 'SIZE'
     if (key === 'delay') return fxFlavours.delay === 'dotted' ? 'TIME' : 'TIME'
     if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? 'SLICE' : 'RATE'
-    if (key === 'granular') return 'SIZE'
-    return 'FREQ'
+    return 'SIZE'
   }
 
   function fxYLabel(key: FxKey): string {
     if (key === 'verb') return fxFlavours.verb === 'shimmer' ? 'SHIM' : 'DAMP'
     if (key === 'delay') return 'FB'
     if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? '—' : 'BITS'
-    if (key === 'granular') return 'DENS'
-    return 'RESO'
+    return 'DENS'
   }
 
   function fxXDisplay(key: FxKey, x: number): string {
@@ -38,10 +35,6 @@
       return `${Math.round(x * 100)}%`
     }
     if (key === 'granular') return `${Math.round(10 + x * 190)}ms`
-    if (key === 'filter') {
-      const f = x <= 0.5 ? 80 * Math.pow(250, x / 0.5) : 20 * Math.pow(400, (x - 0.5) / 0.5)
-      return f >= 1000 ? `${(f / 1000).toFixed(1)}k` : `${Math.round(f)}`
-    }
     return `${Math.round(x * 100)}%`
   }
 
@@ -53,7 +46,6 @@
     if (key === 'delay') return `${Math.round(y * 85)}%`
     if (key === 'glitch') return fxFlavours.glitch === 'stutter' ? '—' : `${Math.round((1 - y) * 100)}%`
     if (key === 'granular') return `${Math.round(y * 100)}%`
-    if (key === 'filter') return `${Math.round(y * 100)}%`
     return `${Math.round(y * 100)}%`
   }
 
