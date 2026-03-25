@@ -3,9 +3,9 @@
   import Knob from './Knob.svelte'
 
   const EQ_BANDS = [
-    { key: 'eqLow' as const, label: 'LOW', hasShelf: true },
-    { key: 'eqMid' as const, label: 'MID', hasShelf: false },
-    { key: 'eqHigh' as const, label: 'HIGH', hasShelf: true },
+    { key: 'eqLow' as const, label: 'LOW', hasShelf: true, color: 'var(--color-olive)' },
+    { key: 'eqMid' as const, label: 'MID', hasShelf: false, color: 'var(--color-blue)' },
+    { key: 'eqHigh' as const, label: 'HIGH', hasShelf: true, color: 'var(--color-salmon)' },
   ]
 
   function eqQNorm(q: number): number { return (q - 0.3) / (8.0 - 0.3) }
@@ -42,6 +42,10 @@
     if (bandKey === 'eqMid') return false
     return (fxPad[bandKey] as { shelf?: boolean }).shelf ?? false
   }
+  function toggleEqOn(bandKey: 'eqLow' | 'eqMid' | 'eqHigh') {
+    pushUndo('Toggle EQ band')
+    fxPad[bandKey].on = !fxPad[bandKey].on
+  }
 </script>
 
 <span class="section-label">EQ CONTROLS</span>
@@ -49,8 +53,14 @@
   {#each EQ_BANDS as band}
     {@const pad = fxPad[band.key]}
     {@const shelf = getEqShelf(band.key)}
-    <div class="eq-dock-band" class:disabled={!pad.on}>
-      <span class="eq-dock-label">{band.label}{shelf ? ' SH' : ''}</span>
+    <div class="eq-dock-band" class:disabled={!pad.on} style:--fx-color={band.color}>
+      <button
+        class="eq-dock-toggle"
+        class:active={pad.on}
+        aria-pressed={pad.on}
+        onpointerdown={() => toggleEqOn(band.key)}
+        data-tip="Toggle {band.label} EQ band" data-tip-ja="{band.label} EQバンド切替"
+      >{band.label}{shelf ? ' SH' : ''}</button>
       <div class="eq-dock-knobs">
         <span data-tip="Frequency" data-tip-ja="周波数">
           <Knob
@@ -116,13 +126,22 @@
   .eq-dock-band.disabled {
     opacity: 0.35;
   }
-  .eq-dock-label {
-    display: block;
+  .eq-dock-toggle {
     font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: var(--dz-text-mid);
+    padding: 1px 6px;
+    border: 1px solid var(--dz-border);
+    background: transparent;
+    color: var(--dz-transport-border);
+    cursor: pointer;
+    border-radius: 0;
     margin-bottom: 4px;
+  }
+  .eq-dock-toggle.active {
+    background: var(--fx-color);
+    border-color: var(--fx-color);
+    color: var(--color-bg);
   }
   .eq-dock-knobs {
     display: flex;
@@ -143,8 +162,8 @@
     border-radius: 0;
   }
   .btn-shelf.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
+    background: var(--fx-color);
+    border-color: var(--fx-color);
     color: var(--color-bg);
   }
 </style>
