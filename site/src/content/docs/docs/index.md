@@ -11,7 +11,7 @@ New here? Start with the tutorial:
 
 1. [Make Your First Beat](/docs/getting-started/first-beat/) — play, paint steps, turn knobs
 2. [Change Sounds](/docs/getting-started/adding-sounds/) — shape drums and synths
-3. [Build a Scene](/docs/getting-started/arrangement/) — arrange patterns into a graph
+3. [Build a Scene](/docs/getting-started/arrangement/) — connect patterns into a song structure
 
 ## Deep Dive
 
