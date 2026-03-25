@@ -764,6 +764,10 @@ export async function restoreSamples(projectId: string): Promise<void> {
     // Old-format IDB entries are left as-is — they'll be overwritten by new-format saves
     // and won't cause issues (loadSamples returns all, new entries take precedence)
   }
+  // Trigger pattern re-send so _autoLoadSamples picks up newly cached samples.
+  // Without this, samples restored after the initial pattern sync stay in cache
+  // but never reach the worklet (race between async restore and effect timing).
+  bumpSongVersion()
 }
 
 /** Clear all in-memory sample state */

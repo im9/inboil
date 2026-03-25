@@ -9,6 +9,28 @@ import { isSidechainSource } from './dsp/voices.ts'
 import { showToast } from '../toast.svelte.ts'
 import { showFatalError } from '../fatalError.svelte.ts'
 
+/** Decode audio to mono using OfflineAudioContext — works without user gesture */
+export async function decodeToMonoOffline(arrayBuf: ArrayBuffer): Promise<{ mono: Float32Array; sampleRate: number } | null> {
+  // OfflineAudioContext doesn't require user gesture (unlike AudioContext.resume())
+  const offCtx = new OfflineAudioContext(1, 1, 44100)
+  let audioBuf: AudioBuffer
+  try {
+    audioBuf = await offCtx.decodeAudioData(arrayBuf)
+  } catch {
+    return null
+  }
+  let mono: Float32Array
+  if (audioBuf.numberOfChannels === 1) {
+    mono = audioBuf.getChannelData(0)
+  } else {
+    const L = audioBuf.getChannelData(0)
+    const R = audioBuf.getChannelData(1)
+    mono = new Float32Array(L.length)
+    for (let i = 0; i < L.length; i++) mono[i] = (L[i] + R[i]) * 0.5
+  }
+  return { mono, sampleRate: audioBuf.sampleRate }
+}
+
 /** External state passed by callers — engine never imports reactive state (ADR 086) */
 export interface EngineContext {
   fxFlavours: FxFlavours
@@ -263,7 +285,8 @@ export class GrooveboxEngine {
 
   /** Load a factory pack's zones to a track+pattern (ADR 106, 110). Returns waveform of first zone for display. */
   async loadPackToTrack(trackId: number, zones: import('../../lib/audioPool.ts').PackZoneData[], patternIndex?: number): Promise<Float32Array | null> {
-    await this.init()
+    // No engine init needed — zones are already decoded Float32Arrays.
+    // Cache now, send to worklet later via _autoLoadSamples when engine is ready.
     if (!zones.length) return null
     const cellKey = patternIndex != null ? `${trackId}_${patternIndex}` : `${trackId}_0`
     // Build SampleZone array and cache for re-send
@@ -322,9 +345,9 @@ export class GrooveboxEngine {
 
   /** Decode a stored ArrayBuffer and cache for worklet. Returns waveform for display. (ADR 020 Section I, 110) */
   async loadSampleFromBuffer(trackId: number, rawBuffer: ArrayBuffer, patternIndex?: number): Promise<Float32Array | null> {
-    await this.init()
-    // Clone before decodeAudioData (which detaches the buffer)
-    const result = await this._decodeToMono(rawBuffer.slice(0))
+    // Use OfflineAudioContext — avoids creating a real AudioContext before user gesture,
+    // which would block on ctx.resume() and cause a race with play().
+    const result = await decodeToMonoOffline(rawBuffer.slice(0))
     if (!result) return null
     const waveform = new Float32Array(result.mono)
     const cellKey = patternIndex != null ? `${trackId}_${patternIndex}` : `${trackId}_0`
@@ -350,6 +373,24 @@ export class GrooveboxEngine {
   }
 
   private _post(cmd: WorkletCommand) { this.node?.port.postMessage(cmd) }
+
+  // ── Test helpers (not for production use) ──
+
+  /** Expose internal caches for test assertions */
+  _getUserSamples(): Map<string, { mono: Float32Array; sampleRate: number }> { return this.userSamples }
+  _getPackZones(): Map<string, import('./dsp/voices.ts').SampleZone[]> { return this.packZones }
+  _getLoadedSampleKey(): Map<number, string> { return this.loadedSampleKey }
+  _getTrackVoiceIds(): string[] { return this.trackVoiceIds }
+  /** Reset internal state for test isolation */
+  _resetForTest(): void {
+    this.ctx = null
+    this.node = null
+    this.analyser = null
+    this.userSamples.clear()
+    this.packZones.clear()
+    this.loadedSampleKey.clear()
+    this.trackVoiceIds = []
+  }
 }
 
 function mapTrig(trig: { active: boolean; note: number; velocity: number; duration?: number; slide?: boolean; chance?: number; notes?: number[]; paramLocks?: Record<string, number> }, transpose = 0) {
