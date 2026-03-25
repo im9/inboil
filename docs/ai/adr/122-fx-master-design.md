@@ -134,9 +134,9 @@ Implementation Checklist:
 - Widen soft-knee curve
 - Ear-test with reference material (DECO Classic, Studer console saturation)
 
-### Phase 3: Glitch/dist boundary cleanup
-- Consider whether bitcrush should be available as both send and insert
-- Unify or clearly separate the DSP code
+### Phase 3: Glitch/dist boundary cleanup — SKIPPED
+- Reviewed: send (shared bus, destructive) and insert (per-track, mix control) are standard separate systems (cf. Elektron, Ableton). No unification needed.
+- Bitcrush stays as insert glitch flavour only; dist keeps overdrive/fuzz. Roles are distinct.
 
 ### Phase 4: FX dock style refinement
 

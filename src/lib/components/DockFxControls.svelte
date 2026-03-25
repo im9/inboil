@@ -5,11 +5,11 @@
   import Knob from './Knob.svelte'
 
   const FX_NODES = [
-    { key: 'verb'     as const, label: 'VERB',  flavourKey: 'verb'     as const },
-    { key: 'delay'    as const, label: 'DLY',   flavourKey: 'delay'    as const },
-    { key: 'glitch'   as const, label: 'GLT',   flavourKey: 'glitch'   as const },
-    { key: 'granular' as const, label: 'GRN',   flavourKey: 'granular' as const },
-    { key: 'filter'   as const, label: 'FLTR',  flavourKey: null },
+    { key: 'verb'     as const, label: 'VERB',  flavourKey: 'verb'     as const, color: 'var(--color-olive)' },
+    { key: 'delay'    as const, label: 'DLY',   flavourKey: 'delay'    as const, color: 'var(--color-blue)' },
+    { key: 'glitch'   as const, label: 'GLT',   flavourKey: 'glitch'   as const, color: 'var(--color-salmon)' },
+    { key: 'granular' as const, label: 'GRN',   flavourKey: 'granular' as const, color: 'var(--color-purple)' },
+    { key: 'filter'   as const, label: 'FLTR',  flavourKey: null,                color: 'var(--color-olive)' },
   ] as const
 
   type FxKey = typeof FX_NODES[number]['key']
@@ -109,7 +109,7 @@
   {#each FX_NODES as node}
     {@const pad = fxPad[node.key]}
     {@const fKey = fxFlavourKey(node.key)}
-    <div class="fx-dock-band" class:disabled={!pad.on}>
+    <div class="fx-dock-band" class:disabled={!pad.on} style:--fx-color={node.color}>
       <div class="fx-dock-header">
         <button
           class="fx-dock-toggle"
@@ -209,8 +209,8 @@
     border-radius: 0;
   }
   .fx-dock-toggle.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
+    background: var(--fx-color);
+    border-color: var(--fx-color);
     color: var(--color-bg);
   }
   .fx-dock-flavours {
@@ -230,8 +230,8 @@
     border-radius: 0;
   }
   .fx-flv-btn.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
+    background: var(--fx-color);
+    border-color: var(--fx-color);
     color: var(--color-bg);
   }
   .fx-dock-knobs {
@@ -262,7 +262,7 @@
     transition: background 100ms;
   }
   .fx-hold-switch.on {
-    background: var(--color-olive);
+    background: var(--fx-color);
   }
   .fx-hold-thumb {
     position: absolute;

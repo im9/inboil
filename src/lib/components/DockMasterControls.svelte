@@ -91,7 +91,7 @@
         {/each}
       </div>
     </div>
-    <div class="master-dock-group pad-half" class:disabled={!masterPad.sat.on}>
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.sat.on} style:--fx-color="var(--color-purple)">
       <div class="pad-header">
         <button class="fx-dock-toggle" class:active={masterPad.sat.on} aria-pressed={masterPad.sat.on}
           onpointerdown={() => toggleMasterPadOn('sat')}
@@ -105,7 +105,7 @@
     </div>
   </div>
   <!-- COMP (full width — has extra knobs) -->
-  <div class="master-dock-group" class:disabled={!masterPad.comp.on}>
+  <div class="master-dock-group" class:disabled={!masterPad.comp.on} style:--fx-color="var(--color-olive)">
     <div class="pad-header">
       <button class="fx-dock-toggle" class:active={masterPad.comp.on} aria-pressed={masterPad.comp.on}
         onpointerdown={() => toggleMasterPadOn('comp')}
@@ -124,7 +124,7 @@
   </div>
   <!-- DUCK + RET side by side -->
   <div class="pad-row">
-    <div class="master-dock-group pad-half" class:disabled={!masterPad.duck.on}>
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.duck.on} style:--fx-color="var(--color-blue)">
       <div class="pad-header">
         <button class="fx-dock-toggle" class:active={masterPad.duck.on} aria-pressed={masterPad.duck.on}
           onpointerdown={() => toggleMasterPadOn('duck')}
@@ -136,7 +136,7 @@
         <Knob value={masterPad.duck.y} label="REL" size={36} displayValue={masterPadYDisplay('duck')} onchange={v => setMasterPadY('duck', v)} />
       </div>
     </div>
-    <div class="master-dock-group pad-half" class:disabled={!masterPad.ret.on}>
+    <div class="master-dock-group pad-half" class:disabled={!masterPad.ret.on} style:--fx-color="var(--color-salmon)">
       <div class="pad-header">
         <button class="fx-dock-toggle" class:active={masterPad.ret.on} aria-pressed={masterPad.ret.on}
           onpointerdown={() => toggleMasterPadOn('ret')}
@@ -211,8 +211,8 @@
     border-radius: 0;
   }
   .fx-dock-toggle.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
+    background: var(--fx-color, var(--color-olive));
+    border-color: var(--fx-color, var(--color-olive));
     color: var(--color-bg);
   }
   .fx-dock-knobs {
