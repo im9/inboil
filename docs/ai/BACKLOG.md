@@ -26,3 +26,7 @@ Someday/maybe items — no commitment, just interesting directions.
 - [ ] **More filter types** — Phaser, vocal resonator, analog-modeled ladder (ref: ADR 113)
 - [ ] **Slide/glide parameter** — Explicit per-step slide flag and glide time param, instead of relying solely on auto-legato
 - [ ] **Scene stamp sprite sheets** — Replace SVG pictogram stamps with CC0 animated sprite sheets for richer limb animation. Candidate: [rgsdev CC0 stick figure (itch.io)](https://rgsdev.itch.io/animated-stick-figure-character-2d-free-cc0). Use CSS `steps()` + `background-position` for frame-by-frame playback synced to `--beat` (ref: ADR 119)
+- [ ] **Amp sim** — Guitar/bass amp modeling as insert FX (preamp + cabinet IR) (ref: ADR 122)
+- [ ] **Chorus/phaser/flanger** — Classic modulation effects as insert types (ref: ADR 122)
+- [ ] **Per-track EQ** — Parametric EQ as insert FX (currently only master bus) (ref: ADR 122)
+- [ ] **Waveshaper** — Custom transfer curve editor for insert distortion (ref: ADR 122)

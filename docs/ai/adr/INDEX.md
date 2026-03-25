@@ -138,7 +138,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 119 | Scene Stamps | Implemented | Kidpix-inspired decorative SVG stamps with beat-synced animations, free placement on scene canvas |
 | 120 | Reverb Flavour Engines | Implemented | Room (early reflections + Freeverb), Hall (pre-delay + modulated combs), Shimmer (Faust shimmer.dsp port). 8 comb + 4 allpass, 50ms crossfade on switch |
 | 121 | FX Hold Unification | Implemented | Unified HOLD on all 4 FX buses, granular freeze→hold rename, reverse flavour, DockPanel toggles, FxPad long-press hold, shimmer hold via internal SimpleReverb crossfade |
-| 122 | FX & Master Audio Design | Proposed | Design principles for master/send/insert FX layers, insert distortion, TapeSaturator refinement toward DECO Classic |
+| 122 | FX & Master Audio Design | Implemented | Insert distortion (OD/fuzz), TapeSaturator mid-presence + soft-knee, per-FX dock colors, EQ band toggles, DJ Filter → Master |
 | 123 | Sweep Boolean Automation | Proposed | On/off points on sweep canvas for FX hold, FX on/off, track mute — same canvas as continuous curves |
 
 ## Data / Infrastructure
