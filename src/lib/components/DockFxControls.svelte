@@ -241,7 +241,8 @@
   .fx-hold-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: flex-end;
+    gap: 4px;
     padding: 4px 0 0;
     cursor: pointer;
   }
@@ -252,7 +253,6 @@
     color: var(--dz-text-mid);
   }
   .fx-hold-switch {
-    margin-left: auto;
     width: 28px;
     height: 14px;
     border-radius: var(--radius-md);
