@@ -127,6 +127,61 @@ Overdrive flavour should have:
 - Consider whether bitcrush should be available as both send and insert
 - Unify or clearly separate the DSP code
 
+### Phase 4: FX dock style refinement
+
+FX on/off and HOLD visibility improvements in DockFxControls:
+
+**Per-FX color on toggle labels**
+- Currently all `.fx-dock-toggle.active` use `--color-olive`
+- Apply per-FX color when active:
+  - VERB: `--color-olive`
+  - DLY: `--color-blue`
+  - GLT: `--color-salmon`
+  - GRN: `--color-purple`
+  - FLTR: `--color-teal`
+- Flavour buttons and HOLD toggle also use the parent FX's color when active
+- Matches the FxPad canvas color coding — consistent mental model across dock and pad
+
+**EQ band on/off toggle in dock**
+- DockEqControls has `pad.on` state and `.disabled` opacity, but no toggle button to control it
+- Add a clickable label button (same pattern as FX toggle) per EQ band: LOW / MID / HIGH
+- Currently the `.eq-dock-label` is a plain `<span>` — convert to a button that toggles `fxPad[bandKey].on`
+- Allows users to bypass individual EQ bands without opening the FxPad overlay
+
+**Move DJ Filter from FX to Master section**
+- DJ Filter is master bus processing (EQ → DJ Filter → Saturator → Limiter) but currently lives in DockFxControls as "FLTR"
+- Has no corresponding node on the FxPad XY canvas — the only FX dock entry without pad representation
+- Was added in ADR 075 Phase 2 alongside send FX dock controls, then carried over to DockFxControls during the component split refactor — never intentionally placed in FX
+- Move to DockMasterControls as a master pad section (same pattern as COMP/DUCK/RET/SAT)
+- Add DJ Filter node to MasterPad XY canvas with `--color-teal`
+- Master pad nodes become: COMP / DUCK / RET / SAT / FLTR (5 nodes)
+- Remove from DockFxControls and FX_SECTIONS config
+
+**Master dock toggle colors aligned with MasterPad**
+- DockMasterControls toggles (SAT, COMP, DUCK, RET) all use `--color-olive` when active
+- MasterView pad nodes have per-section colors:
+  - COMP: `--color-olive`
+  - DUCK: `--color-blue`
+  - RET: `--color-salmon`
+  - SAT: `--color-purple`
+- Apply matching per-section colors to dock toggle `.active` state
+- Consistent color coding between pad visualization and dock controls
+
+**HOLD label repositioning**
+- Move HOLD label from left side to immediately left of the toggle switch (same row, adjacent)
+- Current layout: `HOLD .......................... [switch]` (gap too wide)
+- New layout: knobs row has no HOLD label; hold row is compact: `HOLD [switch]` right-aligned
+- This makes the association between label and toggle immediately clear
+
+**Dock layout: FX/EQ/Master always accessible**
+- Currently FX/EQ/Master controls only appear in dock during overlay sheet mode (split layout)
+- In normal scene view, dock shows PATTERN + TRACKS/SCENE tabs — no FX controls at all
+- DJ Filter lived in FX dock since ADR 075 but went unnoticed because of this
+- Add FX/EQ/MASTER as dock tab options alongside TRACKS/SCENE, so controls are accessible from any view
+- Compact each section to fit: per-FX color labels double as on/off toggles (Phase 4 items above), tighter knob spacing
+- If vertical space is too tight, fall back to collapsible accordion sections within the tab
+- Goal: no FX control should require a specific view mode to access
+
 ## Future Extensions
 
 - **Amp sim**: Guitar/bass amp modeling as insert FX (preamp + cabinet IR)
