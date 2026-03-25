@@ -16,8 +16,8 @@
     <div class="sn-group">
       <span class="sn-category">Pattern</span>
       <div class="sn-row">
-        <div class="sn-pat" style="--nc: #787845">Kick</div>
-        <div class="sn-pat sn-root" style="--nc: #4472B4">Bass</div>
+        <div class="sn-pat sn-root" style="--nc: #787845">Verse</div>
+        <div class="sn-pat" style="--nc: #4472B4">Chorus</div>
       </div>
     </div>
   {/if}

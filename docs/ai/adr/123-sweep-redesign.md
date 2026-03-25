@@ -138,19 +138,67 @@ interface SweepData {
 
 Recording produces these same types from real-time input instead of drawn strokes.
 
-### 9. Structural Cleanup
+### 9. Sweep as Dock Tab — Not a Scene Node
+
+The sweep node is removed from the scene graph. Sweep becomes a **dock panel tab** alongside existing views:
+
+```
+DockPanel tabs:  [ tracks | scene | sweep ]
+```
+
+- **tracks**: voice params, send levels (existing)
+- **scene**: node list, decorator editing (ADR 069)
+- **sweep**: recorded curve list, editing controls
+
+**Rationale:**
+- Sweep's UI is main-view sized, not node-sized — it was always a misfit as a scene node
+- With REC-based recording (§10), requiring users to place and connect a sweep node before recording is unnecessary friction
+- Dock placement keeps sweep close to scene context (same panel) without being inside the graph
+
+**Trail overlay on SceneView:**
+- During recording and playback, neon trails render as an overlay on the scene canvas
+- The scene node structure remains visible underneath
+- This preserves the connection between "what is playing" (scene) and "what is being automated" (sweep)
+
+**Data model — simple now, extensible later:**
+- Scene holds a single `SweepData` (global automation for the whole scene)
+- Data references targets by `sweepId`, so future expansion to multiple sweep sets (e.g., shared across patterns) is possible without restructuring
+- Sweep node type removed from `SceneNode` union
+
+### 11. Structural Cleanup
 
 - Extract `evaluateCurve()` / `evaluateToggle()` to `sweepEval.ts` (pure, testable)
 - `buildSweepData(curves, toggles)` helper (prevents field-drop bugs)
 - Replace SweepCanvas.svelte with: `SweepTrails.svelte` (trail rendering + recording) + `SweepEdit.svelte` (point/trim editing)
+
+### 12. Rec Button Repurpose — Parameter Recording, Not Audio Capture
+
+The existing REC button changes role: instead of capturing audio output, it captures **parameter movements** as sweep automation data.
+
+**Audio export becomes a separate offline render operation:**
+- Uses `OfflineAudioContext` to render at CPU speed (not real-time)
+- Triggered from a menu/export action, not the REC button
+- Outputs WAV — same model as Ableton's "Export Audio/Video" (bounce/render)
+
+**REC button flow:**
+1. Play scene
+2. Press REC → recording starts, UI shows recording indicator
+3. Move pads/toggles → parameter changes captured as `SweepCurve` / `SweepToggleCurve`
+4. Press REC again or stop → recording ends, curves written to sweep data
+5. Untouched parameters keep existing curves (overdub merge per §7)
+
+This cleanly separates two concerns:
+- **REC** = creative performance capture (real-time, interactive)
+- **Export** = final output rendering (offline, non-interactive)
 
 ## Open Questions
 
 - Track volume/pan/voice params: recordable via step sequencer knobs, or FX/EQ/Master pads only?
 - Recording quantization: raw capture + RDP, or snap to step grid?
 - Shape presets (ramp up, triangle, etc.): keep as quick-apply templates, or drop?
-- Should the sweep node be merged into the pattern node? (Every pattern could have optional recorded automation, no separate node needed)
+- ~~Should the sweep node be merged into the pattern node?~~ → Resolved: sweep node removed, single global `SweepData` per scene (§9). Data uses `sweepId` refs for future multi-sweep expansion.
 - Trail rendering: Canvas 2D sufficient, or WebGL for complex glow? (Assessment: Canvas 2D is sufficient — FxPad already renders similar effects)
+- OfflineAudioContext: can the existing AudioWorklet processors run unchanged in offline mode, or do they need adaptation?
 
 ## Implementation Phases
 
