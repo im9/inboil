@@ -25,7 +25,7 @@
     target: SweepTarget
     color: string
     isMix?: boolean  // true for volume, pan, sends — outline dot; false for voice params — filled dot
-    category: 'mix' | 'synth' | 'send'
+    category: string
   }
 
   const PARAM_COLORS = [
@@ -58,7 +58,7 @@
     if (!pat) return []
     // MASTER section: master bus parameters
     if (expandedSection === 'master') {
-      const masterItems: { label: string; param: SweepTarget & { kind: 'master' } extends { param: infer P } ? P : never; category: 'mix' | 'synth' | 'send' }[] = [
+      const masterItems: { label: string; param: SweepTarget & { kind: 'master' } extends { param: infer P } ? P : never; category: string }[] = [
         { label: 'Volume', param: 'masterVolume', category: 'mix' },
         { label: 'Swing', param: 'swing', category: 'mix' },
         { label: 'Comp thr', param: 'compThreshold', category: 'synth' },
@@ -69,6 +69,8 @@
         { label: 'Ret dly', param: 'retDelay', category: 'send' },
         { label: 'Sat drv', param: 'satDrive', category: 'send' },
         { label: 'Sat tone', param: 'satTone', category: 'send' },
+        { label: 'Filter freq', param: 'filterCutoff', category: 'filter' },
+        { label: 'Filter reso', param: 'filterResonance', category: 'filter' },
       ]
       return masterItems.map((m, i) => ({
         label: m.label,
@@ -86,8 +88,6 @@
         { label: 'Verb damp', param: 'reverbDamp', group: 'verb' },
         { label: 'Dly time', param: 'delayTime', group: 'delay' },
         { label: 'Dly feed', param: 'delayFeedback', group: 'delay' },
-        { label: 'Filter freq', param: 'filterCutoff', group: 'filter' },
-        { label: 'Filter reso', param: 'filterResonance', group: 'filter' },
         { label: 'Glitch X', param: 'glitchX', group: 'glitch' },
         { label: 'Glitch Y', param: 'glitchY', group: 'glitch' },
         { label: 'Gran size', param: 'granularSize', group: 'granular' },

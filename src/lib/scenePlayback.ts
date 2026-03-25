@@ -364,7 +364,7 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
       }
     } else if (curve.target.kind === 'master') {
       const param = curve.target.param
-      const MASTER_MAP: Record<string, { get: () => number; set: (v: number) => void; snapKey?: string; pad?: string; xy?: string }> = {
+      const MASTER_MAP: Record<string, { get: () => number; set: (v: number) => void; snapKey?: string; pad?: string; fxPad?: string; xy?: string }> = {
         masterVolume:  { get: () => perf.masterGain, set: v => { perf.masterGain = v }, snapKey: 'global:masterVolume' },
         swing:         { get: () => perf.swing, set: v => { perf.swing = v }, snapKey: 'global:swing' },
         compThreshold: { get: () => masterPad.comp.x, set: v => { masterPad.comp.x = v }, pad: 'comp', xy: 'x' },
@@ -375,12 +375,16 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
         retDelay:      { get: () => masterPad.ret.y, set: v => { masterPad.ret.y = v }, pad: 'ret', xy: 'y' },
         satDrive:      { get: () => masterPad.sat.x, set: v => { masterPad.sat.x = v }, pad: 'sat', xy: 'x' },
         satTone:       { get: () => masterPad.sat.y, set: v => { masterPad.sat.y = v }, pad: 'sat', xy: 'y' },
+        filterCutoff:  { get: () => fxPad.filter.x, set: v => { fxPad.filter.x = v }, fxPad: 'filter', xy: 'x' },
+        filterResonance: { get: () => fxPad.filter.y, set: v => { fxPad.filter.y = v }, fxPad: 'filter', xy: 'y' },
       }
       const m = MASTER_MAP[param]
       if (m) {
         const base = m.snapKey
           ? (snap.values[m.snapKey] ?? m.get())
-          : (snap.masterPad as Record<string, Record<string, number | boolean>>)?.[m.pad!]?.[m.xy!] as number ?? m.get()
+          : 'fxPad' in m
+            ? (snap.fxPad as Record<string, Record<string, number | boolean>>)?.[m.fxPad!]?.[m.xy!] as number ?? m.get()
+            : (snap.masterPad as Record<string, Record<string, number | boolean>>)?.[m.pad!]?.[m.xy!] as number ?? m.get()
         const newVal = clamp(base + offset, 0, 1)
         if (Math.abs(m.get() - newVal) > 0.001) { m.set(newVal); changed = true }
       }
@@ -403,7 +407,6 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
       const FX_MAP: Record<string, [string, string]> = {
         reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
         delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
-        filterCutoff: ['filter', 'x'], filterResonance: ['filter', 'y'],
         glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
         granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
       }

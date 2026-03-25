@@ -188,11 +188,11 @@ export type SweepTarget =
                            | 'compThreshold' | 'compRatio'
                            | 'duckDepth' | 'duckRelease'
                            | 'retVerb' | 'retDelay'
-                           | 'satDrive' | 'satTone' }
+                           | 'satDrive' | 'satTone'
+                           | 'filterCutoff' | 'filterResonance' }
   | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
   | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
   | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
-                          | 'filterCutoff' | 'filterResonance'
                           | 'glitchX' | 'glitchY' | 'granularSize' | 'granularDensity' }
   | { kind: 'eq';    band: 'eqLow' | 'eqMid' | 'eqHigh'; param: 'freq' | 'gain' | 'q' }
 
