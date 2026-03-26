@@ -32,6 +32,46 @@
   const patName = $derived(pat?.name || `Pattern ${activePatIdx + 1}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
+  // ── Auto-zoom to recorded range after REC stops ──
+  let prevRecState = 'idle'
+  $effect(() => {
+    const rs = recState
+    if (prevRecState === 'recording' && rs === 'idle' && sweepData.curves.length > 0) {
+      // Find t extent of all curves
+      let minT = 1, maxT = 0
+      for (const c of sweepData.curves) {
+        for (const p of c.points) {
+          if (p.t < minT) minT = p.t
+          if (p.t > maxT) maxT = p.t
+        }
+      }
+      const span = maxT - minT
+      if (span > 0 && span < 0.8) {
+        // Zoom to recorded range with 10% padding
+        const pad = span * 0.1
+        zoomOverride = { start: Math.max(0, minT - pad), end: Math.min(1, maxT + pad) }
+      }
+    }
+    prevRecState = rs
+  })
+
+  // ── Pattern switch flash ──
+  let flashPatName = $state('')
+  let flashOpacity = $state(0)
+  let flashTimer: ReturnType<typeof setTimeout> | null = null
+  let prevActivePatIdx = -1
+
+  $effect(() => {
+    const idx = activePatIdx
+    if (prevActivePatIdx >= 0 && idx !== prevActivePatIdx && playback.playing) {
+      flashPatName = song.patterns[idx]?.name || `Pattern ${idx + 1}`
+      flashOpacity = 1
+      if (flashTimer) clearTimeout(flashTimer)
+      flashTimer = setTimeout(() => { flashOpacity = 0; flashTimer = null }, 800)
+    }
+    prevActivePatIdx = idx
+  })
+
   const { onClose, onstop }: { onClose: () => void; onstop?: () => void } = $props()
 
   // ── Selected curve/toggle ──
@@ -60,8 +100,50 @@
   const rangeLo = $derived(hasRange ? Math.min(rangeStart!, rangeEnd!) : 0)
   const rangeHi = $derived(hasRange ? Math.max(rangeStart!, rangeEnd!) : 0)
 
-  // ── Zoom state ──
-  let zoomedRepeat = $state<number | null>(null)
+  // ── Zoom state (page-based) ──
+  // page=0: full view. page=1: R1. page=1.5: between R1&R2. page=2: R2. etc.
+  let scrollPage = $state(0)
+  let scrollPageTarget = $state<number | null>(null) // animated target
+  let scrollAnimId = 0
+
+  function animateScrollPage() {
+    if (scrollPageTarget === null) return
+    const diff = scrollPageTarget - scrollPage
+    if (Math.abs(diff) < 0.01) {
+      scrollPage = scrollPageTarget
+      scrollPageTarget = null
+      redraw()
+      return
+    }
+    scrollPage += diff * 0.15 // ease toward target
+    redraw()
+    scrollAnimId = requestAnimationFrame(animateScrollPage)
+  }
+
+  function scrollPageTo(target: number) {
+    scrollPageTarget = target
+    zoomOverride = null
+    cancelAnimationFrame(scrollAnimId)
+    scrollAnimId = requestAnimationFrame(animateScrollPage)
+  }
+  // Direct zoom override (auto-zoom, pinch) — null = use scrollPage
+  let zoomOverride = $state<{ start: number; end: number } | null>(null)
+  const zoomStart = $derived.by(() => {
+    if (zoomOverride) return zoomOverride.start
+    const rc = repeatCount
+    if (scrollPage <= 0 || rc <= 1) return 0
+    const p = Math.min(scrollPage, rc)
+    if (p < 1) return 0 // interpolating: full view → R1 (start stays at 0 during zoom-in)
+    return (p - 1) / rc
+  })
+  const zoomEnd = $derived.by(() => {
+    if (zoomOverride) return zoomOverride.end
+    const rc = repeatCount
+    if (scrollPage <= 0 || rc <= 1) return 1
+    const p = Math.min(scrollPage, rc)
+    if (p < 1) return 1 - p * (1 - 1 / rc) // interpolate: 1 → 1/rc
+    return p / rc
+  })
 
   // ── Pattern metrics ──
   const repeatCount = $derived.by(() => {
@@ -80,10 +162,10 @@
   })
   const stepsPerPattern = $derived(pat ? Math.max(...pat.cells.map(c => c.steps)) : 16)
 
-  // Visible t-range based on zoom
-  const viewStart = $derived(zoomedRepeat !== null ? zoomedRepeat / repeatCount : 0)
-  const viewEnd = $derived(zoomedRepeat !== null ? (zoomedRepeat + 1) / repeatCount : 1)
-  const viewSpan = $derived(viewEnd - viewStart)
+  // Visible t-range
+  const viewStart = $derived(zoomStart)
+  const viewEnd = $derived(zoomEnd)
+  const viewSpan = $derived(zoomEnd - zoomStart)
 
   const TIMELINE_H = 22
 
@@ -93,6 +175,7 @@
   const DZ_GRID_BEAT = 'rgba(237,232,220, 0.12)'
   const DZ_DIVIDER = 'rgba(237,232,220, 0.06)'
   const DZ_TEXT = 'rgba(237,232,220, 0.55)'
+  const DZ_TEXT_DIM = 'rgba(237,232,220, 0.35)'
   const DZ_CENTER_LINE = 'rgba(237,232,220, 0.15)'
 
   // ── Canvas rendering ──
@@ -117,7 +200,7 @@
     const rc = repeatCount
     const spp = stepsPerPattern
     const totalSteps = spp * rc
-    const isZoomed = zoomedRepeat !== null
+    const isZoomed = viewSpan < 0.99
 
     // Dark-zone background
     ctx.fillStyle = DZ_BG
@@ -133,14 +216,20 @@
     ctx.lineTo(w, TIMELINE_H)
     ctx.stroke()
 
+    // Density: show individual step ticks when zoomed enough
+    const pxPerStep = w / (totalSteps * viewSpan)
+    const showAllSteps = pxPerStep > 4 // enough room for every step tick
+    const showBeats = pxPerStep > 1     // enough room for beat ticks
+
     // Step tick marks & repeat boundaries
-    for (let s = 0; s < totalSteps; s++) {
+    for (let s = 0; s <= totalSteps; s++) {
       const t = s / totalSteps
       if (t < viewStart - 0.01 || t > viewEnd + 0.01) continue
       const x = tToX(t, w)
       const isBeat = s % 4 === 0
-      const isRepeatBoundary = s % spp === 0 && s > 0
-      if (isRepeatBoundary && !isZoomed) {
+      const isRepeatBoundary = s % spp === 0
+      // Repeat boundary lines (full height)
+      if (isRepeatBoundary && s > 0) {
         ctx.strokeStyle = DZ_GRID_BEAT
         ctx.lineWidth = 1
         ctx.beginPath()
@@ -148,7 +237,8 @@
         ctx.lineTo(x, h)
         ctx.stroke()
       }
-      const showTick = isZoomed ? true : isBeat
+      // Tick marks in timeline header
+      const showTick = showAllSteps || (showBeats && isBeat)
       if (showTick) {
         ctx.strokeStyle = DZ_GRID
         ctx.lineWidth = 1
@@ -159,21 +249,28 @@
       }
     }
 
-    // Timeline labels
+    // Timeline labels — show all visible repeats with step numbers when zoomed
     ctx.fillStyle = DZ_TEXT
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
-    if (isZoomed) {
-      ctx.fillText(`← R${zoomedRepeat! + 1}`, 4, 12)
-      for (let s = 0; s < spp; s += 4) {
-        const t = (zoomedRepeat! * spp + s) / totalSteps
-        const x = tToX(t, w)
-        if (x > 30) ctx.fillText(`${s + 1}`, x + 2, 12)
+    const firstVisibleR = Math.max(0, Math.floor(viewStart * rc))
+    const lastVisibleR = Math.min(rc - 1, Math.floor(viewEnd * rc))
+    for (let r = firstVisibleR; r <= lastVisibleR; r++) {
+      const rx = tToX(r / rc, w) + 4
+      if (rx > -20 && rx < w + 20) {
+        ctx.fillText(`R${r + 1}`, rx, 12)
       }
-    } else {
-      for (let r = 0; r < rc; r++) {
-        const x = tToX(r / rc, w) + 4
-        ctx.fillText(`R${r + 1}`, x, 12)
+      // Step numbers within repeat (when zoomed enough)
+      if (showBeats) {
+        for (let s = 4; s < spp; s += 4) {
+          const t = (r * spp + s) / totalSteps
+          const sx = tToX(t, w)
+          if (sx > rx + 20 && sx < w - 10) {
+            ctx.fillStyle = DZ_TEXT_DIM
+            ctx.fillText(`${s + 1}`, sx + 2, 12)
+            ctx.fillStyle = DZ_TEXT
+          }
+        }
       }
     }
 
@@ -184,7 +281,7 @@
     // Grid dots
     ctx.fillStyle = DZ_GRID
     for (let s = 0; s < totalSteps; s++) {
-      const showDot = isZoomed ? true : s % 4 === 0
+      const showDot = showAllSteps || (showBeats && s % 4 === 0)
       if (!showDot) continue
       const t = s / totalSteps
       if (t < viewStart - 0.01 || t > viewEnd + 0.01) continue
@@ -295,12 +392,12 @@
     ctx.lineTo(w, TIMELINE_H)
     ctx.stroke()
     // Re-draw ticks
-    for (let s = 0; s < totalSteps; s++) {
+    for (let s = 0; s <= totalSteps; s++) {
       const t = s / totalSteps
       if (t < viewStart - 0.01 || t > viewEnd + 0.01) continue
       const x = tToX(t, w)
       const isBeat = s % 4 === 0
-      const showTick = isZoomed ? true : isBeat
+      const showTick = showAllSteps || (showBeats && isBeat)
       if (showTick) {
         ctx.strokeStyle = DZ_GRID
         ctx.lineWidth = 1
@@ -314,17 +411,19 @@
     ctx.fillStyle = DZ_TEXT
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
-    if (isZoomed) {
-      ctx.fillText(`← R${zoomedRepeat! + 1}`, 4, 12)
-      for (let s = 0; s < spp; s += 4) {
-        const t = (zoomedRepeat! * spp + s) / totalSteps
-        const x = tToX(t, w)
-        if (x > 30) ctx.fillText(`${s + 1}`, x + 2, 12)
-      }
-    } else {
-      for (let r = 0; r < rc; r++) {
-        const x = tToX(r / rc, w) + 4
-        ctx.fillText(`R${r + 1}`, x, 12)
+    for (let r = firstVisibleR; r <= lastVisibleR; r++) {
+      const rx = tToX(r / rc, w) + 4
+      if (rx > -20 && rx < w + 20) ctx.fillText(`R${r + 1}`, rx, 12)
+      if (showBeats) {
+        for (let s = 4; s < spp; s += 4) {
+          const t2 = (r * spp + s) / totalSteps
+          const sx = tToX(t2, w)
+          if (sx > rx + 20 && sx < w - 10) {
+            ctx.fillStyle = DZ_TEXT_DIM
+            ctx.fillText(`${s + 1}`, sx + 2, 12)
+            ctx.fillStyle = DZ_TEXT
+          }
+        }
       }
     }
 
@@ -715,14 +814,14 @@
     // Timeline click → zoom in/out
     if (isInTimeline(e)) {
       e.preventDefault()
-      if (zoomedRepeat !== null) {
-        zoomedRepeat = null
+      if (viewSpan < 0.99) {
+        scrollPageTo(0) // zoom out to full view
       } else {
         const rect = canvasEl.getBoundingClientRect()
         const screenT = (e.clientX - rect.left) / rect.width
         const rc = repeatCount
-        const clickedRepeat = Math.floor(screenT * rc)
-        zoomedRepeat = Math.max(0, Math.min(rc - 1, clickedRepeat))
+        const clickedRepeat = Math.max(0, Math.min(rc - 1, Math.floor(screenT * rc)))
+        scrollPageTo(clickedRepeat + 1) // zoom to clicked repeat
       }
       redraw()
       return
@@ -846,6 +945,33 @@
     pts.sort((a, b) => a.t - b.t)
     draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
     commitCurve(selectedCurve.target, selectedCurve.color, pts)
+    redraw()
+  }
+
+  function onWheel(e: WheelEvent) {
+    e.preventDefault()
+    if (!canvasEl) return
+
+    if (e.ctrlKey) {
+      // Pinch → free zoom centered on cursor (override page model)
+      const rect = canvasEl.getBoundingClientRect()
+      const cursorFrac = (e.clientX - rect.left) / rect.width
+      const cursorT = viewStart + cursorFrac * viewSpan
+      const span = viewSpan
+      const zoomDelta = -e.deltaY * 0.01
+      const factor = Math.pow(2, zoomDelta)
+      const newSpan = Math.max(0.01, Math.min(1, span / factor))
+      const newStart = cursorT - cursorFrac * newSpan
+      zoomOverride = {
+        start: Math.max(0, Math.min(1 - newSpan, newStart)),
+        end: Math.max(0, Math.min(1 - newSpan, newStart)) + newSpan,
+      }
+    } else {
+      // Scroll → page through repeats (0=full, 1=R1, 2=R2, ...)
+      zoomOverride = null // return to page model
+      const delta = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY)
+      scrollPage = Math.max(0, Math.min(repeatCount, scrollPage + delta * 0.008))
+    }
     redraw()
   }
 
@@ -1097,7 +1223,8 @@
     canvasW
     canvasH
     selectedCurveIdx
-    zoomedRepeat
+    scrollPage
+    zoomOverride
     if (!playback.playing) redraw()
   })
 </script>
@@ -1157,6 +1284,9 @@
     </button>
     {#if recState === 'recording'}
       <span class="sweep-rec-time">{sweepRec.elapsedDisplay}</span>
+      {#if sweepRec.captureCount > 0}
+        <span class="sweep-rec-count">{sweepRec.captureCount} param</span>
+      {/if}
     {/if}
     <span class="sweep-toolbar-sep"></span>
     <button class="sweep-tool-btn" onpointerdown={clearAllWithHalation}
@@ -1257,7 +1387,13 @@
         onpointerup={onPointerUp}
         onpointercancel={onPointerUp}
         onkeydown={onKeyDown}
+        onwheel={onWheel}
       ></canvas>
+      {#if flashOpacity > 0}
+        <div class="sweep-flash" style="opacity: {flashOpacity}">
+          {flashPatName}
+        </div>
+      {/if}
       <div class="sweep-axis-labels">
         <span>+1</span>
         <span>±0</span>
@@ -1382,6 +1518,13 @@
   @keyframes sweep-rec-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
+  }
+  .sweep-rec-count {
+    font-family: var(--font-data);
+    font-size: var(--fs-min);
+    font-weight: 600;
+    color: var(--dz-text-mid);
+    letter-spacing: 0.04em;
   }
   .sweep-rec-time {
     font-family: var(--font-data);
@@ -1561,6 +1704,19 @@
     touch-action: none;
   }
   .sweep-canvas:focus { outline: none; }
+  .sweep-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-data);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--dz-text-bright);
+    pointer-events: none;
+    transition: opacity 400ms ease-out;
+  }
   .sweep-axis-labels {
     position: absolute;
     right: 6px;

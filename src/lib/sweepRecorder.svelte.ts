@@ -48,6 +48,8 @@ export const sweepRec = $state({
   userControlled: new Set<string>(),
   /** Elapsed display string for UI */
   elapsedDisplay: '',
+  /** Number of parameters being captured (live) */
+  captureCount: 0,
 })
 
 /** Chain metrics — frozen at arm time so stop-time state changes don't affect conversion */
@@ -301,6 +303,7 @@ export function captureValue(target: SweepTarget, value: number, color?: string)
     curveCaptures.set(key, capture)
   }
   capture.points.push({ timeMs: performance.now(), value })
+  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size
 }
 
 /** Report that the user toggled a boolean parameter.
@@ -320,6 +323,7 @@ export function captureToggle(target: SweepToggleTarget, on: boolean, color?: st
     toggleCaptures.set(key, capture)
   }
   capture.points.push({ timeMs: performance.now(), on })
+  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size
 }
 
 
@@ -446,6 +450,7 @@ function resetState(): void {
   sweepRec.patternNodeId = null
   sweepRec.userControlled.clear()
   sweepRec.elapsedDisplay = ''
+  sweepRec.captureCount = 0
   curveCaptures.clear()
   toggleCaptures.clear()
   lastSceneNodeId = null
