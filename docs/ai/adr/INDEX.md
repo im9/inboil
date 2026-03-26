@@ -139,7 +139,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 120 | Reverb Flavour Engines | Implemented | Room (early reflections + Freeverb), Hall (pre-delay + modulated combs), Shimmer (Faust shimmer.dsp port). 8 comb + 4 allpass, 50ms crossfade on switch |
 | 121 | FX Hold Unification | Implemented | Unified HOLD on all 4 FX buses, granular freeze→hold rename, reverse flavour, DockPanel toggles, FxPad long-press hold, shimmer hold via internal SimpleReverb crossfade |
 | 122 | FX & Master Audio Design | Implemented | Insert distortion (OD/fuzz), TapeSaturator mid-presence + soft-knee, per-FX dock colors, EQ band toggles, DJ Filter → Master |
-| 123 | Sweep Redesign | Proposed | Recording-based performance automation — replace draw-mode with XY pad recording, dark-zone visuals, post-recording point editor |
+| 123 | Sweep Redesign | Implemented | Recording-based sweep: arm/capture/stop engine, dark-zone editor, point/trim/knob editing, playback trail glow, trail strip preview, global-scope sweep (master/fx/eq), overdub merge |
 
 ## Data / Infrastructure
 

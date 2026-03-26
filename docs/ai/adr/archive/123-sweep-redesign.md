@@ -1,6 +1,6 @@
 # ADR 123: Sweep Redesign — Recording-Based Performance Automation
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
