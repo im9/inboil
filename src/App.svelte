@@ -23,6 +23,7 @@
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
   import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool, setPlayFromNodeCallback } from './lib/state.svelte.ts'
   import { applySweepStep } from './lib/scenePlayback.ts'
+  import { sweepRec, stopRecording } from './lib/sweepRecorder.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
@@ -281,6 +282,7 @@
   }
 
   function stop() {
+    const wasRecording = sweepRec.state === 'recording'
     engine.stop()
     playback.playing = false
     for (let i = 0; i < playback.playheads.length; i++) playback.playheads[i] = 0
@@ -305,6 +307,10 @@
     playback.mode = 'loop'
     playback.playingPattern = null
     playback.queuedPattern = null
+    // Save sweep recording AFTER engine is fully stopped (ADR 123)
+    if (wasRecording) {
+      try { stopRecording() } catch (e) { console.error('[sweep] stopRecording failed:', e) }
+    }
     void projectAutoSave()
   }
 

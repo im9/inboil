@@ -1,9 +1,23 @@
 <script lang="ts">
   import { masterPad, fxPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
+  import { captureValue } from '../sweepRecorder.svelte.ts'
+  import type { SweepTarget } from '../types.ts'
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
 
   type NodeKey = 'comp' | 'duck' | 'ret' | 'sat' | 'filter'
+
+  // Master pad key → SweepTarget param mapping (ADR 123)
+  const MVIEW_X: Record<NodeKey, SweepTarget> = {
+    comp: { kind: 'master', param: 'compThreshold' }, duck: { kind: 'master', param: 'duckDepth' },
+    ret: { kind: 'master', param: 'retVerb' }, sat: { kind: 'master', param: 'satDrive' },
+    filter: { kind: 'master', param: 'filterCutoff' },
+  }
+  const MVIEW_Y: Record<NodeKey, SweepTarget> = {
+    comp: { kind: 'master', param: 'compRatio' }, duck: { kind: 'master', param: 'duckRelease' },
+    ret: { kind: 'master', param: 'retDelay' }, sat: { kind: 'master', param: 'satTone' },
+    filter: { kind: 'master', param: 'filterResonance' },
+  }
 
   const nodes: { key: NodeKey; label: string; color: string; xLabel: string; yLabel: string; tip: string; tipJa: string }[] = [
     { key: 'comp',   label: 'COMP', color: 'var(--color-olive)',  xLabel: 'THR', yLabel: 'RAT', tip: 'Compressor — X: threshold, Y: ratio', tipJa: 'コンプレッサー — X: スレッショルド, Y: レシオ' },
@@ -70,6 +84,8 @@
         const st = nodeState(dragging)
         st.x = pos.x
         st.y = pos.y
+        captureValue(MVIEW_X[dragging], pos.x)
+        captureValue(MVIEW_Y[dragging], pos.y)
       }
     }
   }

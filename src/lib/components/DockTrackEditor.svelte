@@ -5,6 +5,7 @@
    * Extracted from DockPanel.svelte for modularity.
    */
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
+  import { captureValue } from '../sweepRecorder.svelte.ts'
   import type { VoiceId } from '../types.ts'
   import { clearAllParamLocks, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -229,7 +230,7 @@
           locked={isParamLocked(p.key)}
           steps={paramSteps(p)}
           displayValue={displayLabel(p, knobValue(p))}
-          onchange={v => knobChange(p, v)}
+          onchange={v => { knobChange(p, v); captureValue({ kind: 'track', trackId: ui.selectedTrack, param: p.key as 'cutoff' }, v) }}
         />
       </span>
       {/if}

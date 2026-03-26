@@ -1,0 +1,389 @@
+/**
+ * Sweep recording engine (ADR 123 Phase 2).
+ * Captures real-time parameter movements during scene playback
+ * and converts them to SweepCurve/SweepToggleCurve data.
+ *
+ * Flow: arm → (user touches pad) → playback starts → recording → stop
+ */
+import { song, playback, pushUndo, playFromNode } from './state.svelte.ts'
+import { repositionSatellites } from './sceneActions.ts'
+import { buildSweepData, targetKey, setUserControlledChecker } from './sweepEval.ts'
+import type { SweepCurve, SweepTarget, SweepToggleCurve, SweepToggleTarget } from './types.ts'
+
+// ── Recording state ──
+
+interface CapturePoint {
+  timeMs: number   // performance.now() timestamp
+  value: number    // normalized 0–1
+}
+
+interface ToggleCapturePoint {
+  timeMs: number
+  on: boolean
+}
+
+interface CurveCapture {
+  target: SweepTarget
+  color: string
+  points: CapturePoint[]
+}
+
+interface ToggleCapture {
+  target: SweepToggleTarget
+  color: string
+  points: ToggleCapturePoint[]
+}
+
+// Re-export targetKey from sweepEval for external consumers
+export { targetKey } from './sweepEval.ts'
+
+export const sweepRec = $state({
+  /** 'idle' → 'armed' → 'recording' → 'idle' */
+  state: 'idle' as 'idle' | 'armed' | 'recording',
+  /** ID of the sweep node being recorded into (null = auto-generate) */
+  sweepNodeId: null as string | null,
+  /** Pattern node ID the sweep is associated with */
+  patternNodeId: null as string | null,
+  /** Set of target keys currently being touched by the user */
+  userControlled: new Set<string>(),
+  /** Elapsed display string for UI */
+  elapsedDisplay: '',
+})
+
+/** Chain metrics — frozen at arm time so stop-time state changes don't affect conversion */
+let chainStepsPerPat = 16
+let chainRepeatCount = 1
+
+// Register user-controlled checker so pure .ts files can query recording state
+// without importing this .svelte.ts module directly
+setUserControlledChecker((key: string) => {
+  return sweepRec.state === 'recording' && sweepRec.userControlled.has(key)
+})
+
+let curveCaptures = new Map<string, CurveCapture>()
+let toggleCaptures = new Map<string, ToggleCapture>()
+let elapsedTimer: ReturnType<typeof setInterval> | null = null
+let recordingStartMs = 0
+/** Progress offset (0–1) — where in the chain playback was when recording started */
+let recordingProgressOffset = 0
+
+// ── Color assignment for new curves ──
+const CURVE_COLORS = [
+  '#d94030', '#2878c0', '#c8a020', '#28a060',
+  '#a838a8', '#e06848', '#1898a0', '#889020',
+  '#c07828', '#5858d0', '#20a8a8', '#a0a030',
+]
+let colorIdx = 0
+function nextColor(): string {
+  return CURVE_COLORS[colorIdx++ % CURVE_COLORS.length]
+}
+
+// ── Chain duration calculation ──
+
+/** Freeze chain metrics (steps × repeats) at arm time so conversion is stable. */
+function freezeChainMetrics(patNodeId: string): void {
+  const patNode = song.scene.nodes.find(n => n.id === patNodeId)
+  const patId = patNode?.patternId
+  const pat = patId != null ? song.patterns.find(p => p.id === patId) : null
+  chainStepsPerPat = pat ? Math.max(...pat.cells.map(c => c.steps)) : 16
+
+  // Search modifier nodes attached to this pattern node
+  chainRepeatCount = 1
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patNodeId) continue
+    const src = song.scene.nodes.find(n => n.id === edge.from)
+    if (src?.type === 'repeat' && src.modifierParams?.repeat) {
+      chainRepeatCount = src.modifierParams.repeat.count
+      break
+    }
+  }
+}
+
+/** Get current playback progress (0–1) within the chain scope. */
+function currentPlaybackProgress(): number {
+  if (!playback.playing || playback.mode !== 'scene') return 0
+  const patIdx = playback.playingPattern ?? 0
+  const pat = song.patterns[patIdx]
+  if (!pat) return 0
+  const stepsArr = pat.cells.map(c => c.steps)
+  const maxSteps = Math.max(...stepsArr)
+  const longestIdx = stepsArr.indexOf(maxSteps)
+  const currentStep = playback.playheads[longestIdx] ?? 0
+  const repTotal = chainRepeatCount || 1
+  const repIdx = playback.sceneRepeatIndex
+  return Math.max(0, Math.min(1, (repIdx + currentStep / maxSteps) / repTotal))
+}
+
+/** Get chain duration in ms using frozen metrics + current BPM. */
+function chainDurationMs(): number {
+  const msPerStep = 60000 / song.bpm / 4 // 16th note
+  return chainStepsPerPat * chainRepeatCount * msPerStep
+}
+
+// ── Public API ──
+
+/** Find the pattern node a sweep node is wired to (sweep → pattern edge). */
+export function findPatternForSweep(sweepNodeId: string): string | null {
+  for (const edge of song.scene.edges) {
+    if (edge.from !== sweepNodeId) continue
+    const target = song.scene.nodes.find(n => n.id === edge.to)
+    if (target?.type === 'pattern' || target?.type === 'generative') return target.id
+  }
+  return null
+}
+
+/** Arm for recording — enters standby state. Playback + recording starts
+ *  automatically when the user touches any pad/knob. */
+export function armRecording(sweepNodeId: string | null, patternNodeId: string): void {
+  if (sweepRec.state !== 'idle') return
+  freezeChainMetrics(patternNodeId)
+  sweepRec.state = 'armed'
+  sweepRec.sweepNodeId = sweepNodeId
+  sweepRec.patternNodeId = patternNodeId
+  sweepRec.userControlled.clear()
+  sweepRec.elapsedDisplay = 'ARMED'
+  curveCaptures.clear()
+  toggleCaptures.clear()
+  colorIdx = 0
+}
+
+/** Disarm — cancel armed state without recording. */
+export function disarmRecording(): void {
+  if (sweepRec.state !== 'armed') return
+  resetState()
+}
+
+/** Transition from armed → recording. Called internally when user touches a param. */
+function beginRecording(): void {
+  if (sweepRec.state !== 'armed') return
+  const patNodeId = sweepRec.patternNodeId
+  if (!patNodeId) { resetState(); return }
+
+  // Start playback if not already playing
+  if (!playback.playing) {
+    playFromNode(patNodeId)
+    recordingProgressOffset = 0 // starting from beginning
+  } else {
+    // Compute current position within the chain from playback state
+    recordingProgressOffset = currentPlaybackProgress()
+  }
+
+  sweepRec.state = 'recording'
+  recordingStartMs = performance.now()
+  sweepRec.elapsedDisplay = '0:00'
+
+  elapsedTimer = setInterval(() => {
+    const elapsed = Math.floor((performance.now() - recordingStartMs) / 1000)
+    const m = Math.floor(elapsed / 60)
+    const s = elapsed % 60
+    sweepRec.elapsedDisplay = `${m}:${s.toString().padStart(2, '0')}`
+  }, 250)
+}
+
+/** Stop recording and write captured data to sweep node. */
+export function stopRecording(): void {
+  if (sweepRec.state === 'armed') { disarmRecording(); return }
+  if (sweepRec.state !== 'recording') return
+
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null }
+
+  const patNodeId = sweepRec.patternNodeId
+  if (!patNodeId) { resetState(); return }
+
+  // Convert captures to sweep data using BPM-based chain duration
+  const duration = chainDurationMs()
+  const newCurves = convertCurveCaptures(duration)
+  const newToggles = convertToggleCaptures(duration)
+
+  if (newCurves.length === 0 && newToggles.length === 0) { resetState(); return }
+
+  // Single undo snapshot before any mutations
+  pushUndo('sweep recording')
+
+  // Find or auto-generate sweep node
+  let nodeId = sweepRec.sweepNodeId
+  if (!nodeId) {
+    nodeId = sceneAddModifierNoUndo(patNodeId)
+    if (nodeId) sweepRec.sweepNodeId = nodeId
+  }
+
+  if (!nodeId) { resetState(); return }
+
+  // Get existing sweep data for overdub merge
+  const node = song.scene.nodes.find(n => n.id === nodeId)
+  const existing = node?.modifierParams?.sweep ?? { curves: [] }
+
+  // Merge: new curves overwrite same-target, untouched curves preserved
+  const mergedCurves = mergeOverdub(existing.curves, newCurves)
+  const mergedToggles = mergeOverdubToggles(existing.toggles ?? [], newToggles)
+
+  // Write directly (no extra pushUndo)
+  if (node) {
+    node.modifierParams = { ...node.modifierParams, sweep: buildSweepData(mergedCurves, mergedToggles) }
+  }
+  resetState()
+}
+
+/** Report that the user is touching a continuous parameter.
+ *  If armed, triggers playback + recording start. */
+export function captureValue(target: SweepTarget, value: number, color?: string): void {
+  if (sweepRec.state === 'idle') return
+  if (sweepRec.state === 'armed') beginRecording()
+  if (sweepRec.state !== 'recording') return
+
+  const key = targetKey(target)
+  sweepRec.userControlled.add(key)
+
+  let capture = curveCaptures.get(key)
+  if (!capture) {
+    capture = { target, color: color ?? nextColor(), points: [] }
+    curveCaptures.set(key, capture)
+  }
+  capture.points.push({ timeMs: performance.now(), value })
+}
+
+/** Report that the user toggled a boolean parameter.
+ *  If armed, triggers playback + recording start. */
+export function captureToggle(target: SweepToggleTarget, on: boolean, color?: string): void {
+  if (sweepRec.state === 'armed') beginRecording()
+  if (sweepRec.state !== 'recording') return
+
+  const key = targetKey(target)
+  sweepRec.userControlled.add(key)
+
+  let capture = toggleCaptures.get(key)
+  if (!capture) {
+    capture = { target, color: color ?? nextColor(), points: [] }
+    toggleCaptures.set(key, capture)
+  }
+  capture.points.push({ timeMs: performance.now(), on })
+}
+
+
+// ── Conversion: ms timestamps → normalized t using BPM-based chain duration ──
+
+function convertCurveCaptures(duration: number): SweepCurve[] {
+  const result: SweepCurve[] = []
+  for (const capture of curveCaptures.values()) {
+    if (capture.points.length < 2) continue
+    let points = capture.points.map(p => ({
+      t: Math.max(0, Math.min(1, recordingProgressOffset + (p.timeMs - recordingStartMs) / duration)),
+      v: p.value * 2 - 1, // 0–1 → -1 to +1 offset
+    }))
+    points = rdpSimplify(points, 0.02)
+    result.push({ target: capture.target, points, color: capture.color })
+  }
+  return result
+}
+
+function convertToggleCaptures(duration: number): SweepToggleCurve[] {
+  const result: SweepToggleCurve[] = []
+  for (const capture of toggleCaptures.values()) {
+    if (capture.points.length === 0) continue
+    const points = capture.points.map(p => ({
+      t: Math.max(0, Math.min(1, recordingProgressOffset + (p.timeMs - recordingStartMs) / duration)),
+      on: p.on,
+    }))
+    result.push({ target: capture.target, points, color: capture.color })
+  }
+  return result
+}
+
+// ── Overdub merge ──
+
+function mergeOverdub(existing: SweepCurve[], incoming: SweepCurve[]): SweepCurve[] {
+  const result = [...existing]
+  for (const curve of incoming) {
+    const key = targetKey(curve.target)
+    const idx = result.findIndex(c => targetKey(c.target) === key)
+    if (idx >= 0) {
+      result[idx] = curve
+    } else {
+      result.push(curve)
+    }
+  }
+  return result
+}
+
+function mergeOverdubToggles(existing: SweepToggleCurve[], incoming: SweepToggleCurve[]): SweepToggleCurve[] {
+  const result = [...existing]
+  for (const toggle of incoming) {
+    const key = targetKey(toggle.target)
+    const idx = result.findIndex(t => targetKey(t.target) === key)
+    if (idx >= 0) {
+      result[idx] = toggle
+    } else {
+      result.push(toggle)
+    }
+  }
+  return result
+}
+
+// ── RDP simplification ──
+
+function rdpSimplify(pts: { t: number; v: number }[], epsilon: number): { t: number; v: number }[] {
+  if (pts.length <= 2) return pts
+  let maxDist = 0, maxIdx = 0
+  const first = pts[0], last = pts[pts.length - 1]
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = pointLineDistance(pts[i], first, last)
+    if (d > maxDist) { maxDist = d; maxIdx = i }
+  }
+  if (maxDist > epsilon) {
+    const left = rdpSimplify(pts.slice(0, maxIdx + 1), epsilon)
+    const right = rdpSimplify(pts.slice(maxIdx), epsilon)
+    return [...left.slice(0, -1), ...right]
+  }
+  return [first, last]
+}
+
+function pointLineDistance(p: { t: number; v: number }, a: { t: number; v: number }, b: { t: number; v: number }): number {
+  const dx = b.t - a.t, dy = b.v - a.v
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len === 0) return Math.sqrt((p.t - a.t) ** 2 + (p.v - a.v) ** 2)
+  return Math.abs(dx * (a.v - p.v) - (a.t - p.t) * dy) / len
+}
+
+// ── Internal ──
+
+/** Create a sweep modifier node without its own pushUndo (caller handles undo). */
+function sceneAddModifierNoUndo(patternNodeId: string): string | null {
+  const patNode = song.scene.nodes.find(n => n.id === patternNodeId)
+  if (!patNode) return null
+  const id = `fn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+  const node = {
+    id,
+    type: 'sweep' as const,
+    x: patNode.x,
+    y: patNode.y - 0.04,
+    root: false,
+    modifierParams: { sweep: { curves: [] as SweepCurve[] } },
+  }
+  song.scene.nodes.push(node)
+  // Replace existing sweep on this pattern
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = song.scene.nodes.find(n => n.id === edge.from)
+    if (src?.type === 'sweep') {
+      const edgeIdx = song.scene.edges.findIndex(e => e.from === src.id)
+      if (edgeIdx >= 0) song.scene.edges.splice(edgeIdx, 1)
+      const nodeIdx = song.scene.nodes.findIndex(n => n.id === src.id)
+      if (nodeIdx >= 0) song.scene.nodes.splice(nodeIdx, 1)
+      break
+    }
+  }
+  song.scene.edges.push({ id: `e_${id}`, from: id, to: patternNodeId, order: 0 })
+  repositionSatellites(patternNodeId)
+  return id
+}
+
+function resetState(): void {
+  sweepRec.state = 'idle'
+  sweepRec.sweepNodeId = null
+  sweepRec.patternNodeId = null
+  sweepRec.userControlled.clear()
+  sweepRec.elapsedDisplay = ''
+  curveCaptures.clear()
+  toggleCaptures.clear()
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null }
+}

@@ -5,6 +5,7 @@
   // SceneToolbar, SceneNodePopup). Remaining logic resists splitting without
   // creating excessive prop pass-through for no structural benefit.
   import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo, playFromNode } from '../state.svelte.ts'
+  import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddModifier, findAttachedModifiers, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
@@ -1138,6 +1139,44 @@
       </button>
     {/if}
 
+    <!-- Sweep node ● record buttons (ADR 123) -->
+    {#each song.scene.nodes as node (node.id)}
+      {#if node.type === 'sweep'}
+        {@const recState = sweepRec.sweepNodeId === node.id ? sweepRec.state : 'idle'}
+        <button
+          class="scene-rec-btn"
+          class:armed={recState === 'armed'}
+          class:recording={recState === 'recording'}
+          style="
+            left: calc({PAD_INSET}px + {node.x} * (100% - {PAD_INSET * 2}px) - 76px);
+            top: calc({PAD_INSET}px + {node.y} * (100% - {PAD_INSET * 2}px));
+          "
+          onpointerdown={e => {
+            e.stopPropagation()
+            if (recState === 'recording') {
+              stopRecording()
+            } else if (recState === 'armed') {
+              disarmRecording()
+            } else {
+              const patNodeId = findPatternForSweep(node.id)
+              if (!patNodeId) return
+              armRecording(node.id, patNodeId)
+            }
+          }}
+          data-tip={recState === 'recording' ? `Recording ${sweepRec.elapsedDisplay}` : recState === 'armed' ? 'Armed — touch any param to start' : 'Sweep record'}
+          data-tip-ja={recState === 'recording' ? `録音中 ${sweepRec.elapsedDisplay}` : recState === 'armed' ? 'アーム中 — パラメータ操作で録音開始' : 'スイープ録音'}
+        >
+          <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true">
+            {#if recState === 'recording'}
+              <rect x="2" y="2" width="8" height="8" rx="1"/>
+            {:else}
+              <circle cx="6" cy="6" r="5"/>
+            {/if}
+          </svg>
+        </button>
+      {/if}
+    {/each}
+
     <!-- Solo & play-from-here buttons: show on soloed node or selected pattern node -->
     {#each song.scene.nodes as node (node.id)}
       {#if node.type === 'pattern'}
@@ -1405,6 +1444,44 @@
   @keyframes scene-pulse {
     0%, 100% { box-shadow: 0 1px 4px var(--lz-border-strong); }
     50% { box-shadow: 0 0 0 5px var(--lz-border); }
+  }
+
+  /* ── Sweep record button (ADR 123) ── */
+  .scene-rec-btn {
+    position: absolute;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--color-salmon);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-salmon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 6;
+    transition: background 80ms, border-color 80ms, color 80ms, box-shadow 80ms;
+    box-shadow: 0 1px 4px var(--lz-border-strong);
+  }
+  .scene-rec-btn:hover {
+    background: white;
+    border-color: var(--color-salmon);
+  }
+  .scene-rec-btn.armed {
+    background: rgba(232, 160, 144, 0.25);
+    border-color: var(--color-salmon);
+    animation: rec-pulse 1.5s ease-in-out infinite;
+  }
+  .scene-rec-btn.recording {
+    background: var(--color-salmon);
+    color: white;
+    border-color: var(--color-salmon);
+    animation: rec-pulse 1s ease-in-out infinite;
+  }
+  @keyframes rec-pulse {
+    0%, 100% { box-shadow: 0 1px 4px var(--lz-border-strong); }
+    50% { box-shadow: 0 0 0 5px rgba(232, 160, 144, 0.3); }
   }
 
   /* ── Snap-attach highlight (ADR 062) ── */

@@ -1,10 +1,14 @@
 <script lang="ts">
-  // NOTE: Large file by design — curve painting, bézier editing, target palette, and canvas rendering
+  // Sweep editor — dark-zone review/edit overlay (ADR 123 Phase 1)
+  // Recording-based input replaces draw palette. Point editing is always active.
   import { song, ui, playback, pushUndo, fxPad, masterPad, perf } from '../state.svelte.ts'
   import { findSweepNodeForPattern, sceneUpdateModifierParams } from '../sceneActions.ts'
+  import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
+
   import { getParamDefs } from '../paramDefs.ts'
+  import { evaluateCurve } from '../sweepEval.ts'
   import { PATTERN_COLORS } from '../constants.ts'
-  import type { SweepCurve, SweepTarget } from '../types.ts'
+  import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
 
   // ── Sweep node detection ──
   const sweepNode = $derived.by(() => {
@@ -13,177 +17,39 @@
     return findSweepNodeForPattern(pat.id)
   })
 
+  const recState = $derived(sweepRec.sweepNodeId === sweepNode?.id ? sweepRec.state : 'idle')
+
   const sweepData = $derived(sweepNode?.modifierParams?.sweep ?? { curves: [] })
 
-  // ── Palette: available targets from current pattern's tracks ──
+  // ── Pattern info ──
   const pat = $derived(song.patterns[ui.currentPattern])
   const patName = $derived(pat?.name || `Pattern ${ui.currentPattern + 1}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
-  interface PaletteItem {
-    label: string
-    target: SweepTarget
-    color: string
-    isMix?: boolean  // true for volume, pan, sends — outline dot; false for voice params — filled dot
-    category: string
-  }
+  const { onClose }: { onClose: () => void } = $props()
 
-  const PARAM_COLORS = [
-    '#d94030', '#2878c0', '#c8a020', '#28a060',
-    '#a838a8', '#e06848', '#1898a0', '#889020',
-    '#c07828', '#5858d0', '#20a8a8', '#a0a030',
-  ]
-
-  // ── Drill-down palette ──
-  // null = top-level list, number = per-track params, 'all'/'eq'/'fx' = global sections
-  let expandedTrackId = $state<number | null>(null)
-  let expandedSection = $state<'master' | 'eq' | 'fx' | null>(null)
-
-  interface TrackEntry {
-    trackId: number
-    trackName: string
-    voiceId: string
-  }
-
-  const trackList = $derived.by((): TrackEntry[] => {
-    if (!pat) return []
-    return pat.cells.map(cell => ({
-      trackId: cell.trackId,
-      trackName: cell.name || `Trk ${cell.trackId + 1}`,
-      voiceId: cell.voiceId ?? '',
-    }))
-  })
-
-  const paletteItems = $derived.by((): PaletteItem[] => {
-    if (!pat) return []
-    // MASTER section: master bus parameters
-    if (expandedSection === 'master') {
-      const masterItems: { label: string; param: SweepTarget & { kind: 'master' } extends { param: infer P } ? P : never; category: string }[] = [
-        { label: 'Volume', param: 'masterVolume', category: 'mix' },
-        { label: 'Swing', param: 'swing', category: 'mix' },
-        { label: 'Comp thr', param: 'compThreshold', category: 'synth' },
-        { label: 'Comp rat', param: 'compRatio', category: 'synth' },
-        { label: 'Duck dep', param: 'duckDepth', category: 'synth' },
-        { label: 'Duck rel', param: 'duckRelease', category: 'synth' },
-        { label: 'Ret verb', param: 'retVerb', category: 'send' },
-        { label: 'Ret dly', param: 'retDelay', category: 'send' },
-        { label: 'Sat drv', param: 'satDrive', category: 'send' },
-        { label: 'Sat tone', param: 'satTone', category: 'send' },
-        { label: 'Filter freq', param: 'filterCutoff', category: 'filter' },
-        { label: 'Filter reso', param: 'filterResonance', category: 'filter' },
-      ]
-      return masterItems.map((m, i) => ({
-        label: m.label,
-        target: { kind: 'master' as const, param: m.param },
-        color: PARAM_COLORS[i % PARAM_COLORS.length],
-        isMix: true,
-        category: m.category,
-      }))
-    }
-    // FX section: global effect parameters, grouped by effect unit
-    if (expandedSection === 'fx') {
-      type FxParam = SweepTarget & { kind: 'fx' } extends { param: infer P } ? P : never
-      const fxItems: { label: string; param: FxParam; group: string }[] = [
-        { label: 'Verb wet', param: 'reverbWet', group: 'verb' },
-        { label: 'Verb damp', param: 'reverbDamp', group: 'verb' },
-        { label: 'Dly time', param: 'delayTime', group: 'delay' },
-        { label: 'Dly feed', param: 'delayFeedback', group: 'delay' },
-        { label: 'Glitch X', param: 'glitchX', group: 'glitch' },
-        { label: 'Glitch Y', param: 'glitchY', group: 'glitch' },
-        { label: 'Gran size', param: 'granularSize', group: 'granular' },
-        { label: 'Gran dens', param: 'granularDensity', group: 'granular' },
-      ]
-      return fxItems.map((f, i) => ({
-        label: f.label,
-        target: { kind: 'fx' as const, param: f.param },
-        color: PARAM_COLORS[i % PARAM_COLORS.length],
-        isMix: true,
-        category: f.group as 'mix' | 'synth' | 'send',
-      }))
-    }
-    // EQ section: 3 bands × freq/gain/q
-    if (expandedSection === 'eq') {
-      const bands = [
-        { band: 'eqLow' as const, label: 'Low' },
-        { band: 'eqMid' as const, label: 'Mid' },
-        { band: 'eqHigh' as const, label: 'High' },
-      ]
-      const params = ['freq', 'gain', 'q'] as const
-      const items: PaletteItem[] = []
-      let colorIdx = 0
-      for (const b of bands) {
-        for (const p of params) {
-          items.push({
-            label: `${b.label} ${p}`,
-            target: { kind: 'eq', band: b.band, param: p },
-            color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length],
-            isMix: true,
-            category: b.band === 'eqLow' ? 'mix' : b.band === 'eqMid' ? 'synth' : 'send',
-          })
-        }
-      }
-      return items
-    }
-    // Per-track params
-    if (expandedTrackId === null) return []
-    const cell = pat.cells.find(c => c.trackId === expandedTrackId)
-    if (!cell) return []
-    const items: PaletteItem[] = []
-    let colorIdx = 0
-    // Mix params
-    items.push({ label: 'Volume', target: { kind: 'track', trackId: expandedTrackId, param: 'volume' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'mix' })
-    items.push({ label: 'Pan', target: { kind: 'track', trackId: expandedTrackId, param: 'pan' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'mix' })
-    // Voice-specific params from paramDefs
-    const voiceId = cell.voiceId
-    if (voiceId) {
-      const defs = getParamDefs(voiceId)
-      for (const def of defs) {
-        items.push({
-          label: def.label,
-          target: { kind: 'track', trackId: expandedTrackId, param: def.key as 'cutoff' },
-          color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length],
-          category: 'synth',
-        })
-      }
-    }
-    // Send levels
-    items.push({ label: 'Verb', target: { kind: 'send', trackId: expandedTrackId, param: 'reverbSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
-    items.push({ label: 'Delay', target: { kind: 'send', trackId: expandedTrackId, param: 'delaySend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
-    items.push({ label: 'Glitch', target: { kind: 'send', trackId: expandedTrackId, param: 'glitchSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
-    items.push({ label: 'Grain', target: { kind: 'send', trackId: expandedTrackId, param: 'granularSend' }, color: PARAM_COLORS[colorIdx++ % PARAM_COLORS.length], isMix: true, category: 'send' })
-    return items
-  })
-
-  // ── Active brush ──
-  let activeBrushIdx = $state(0)
-  const activeBrush = $derived(paletteItems[activeBrushIdx] ?? null)
+  // ── Selected curve/toggle ──
+  let selectedCurveIdx = $state<number | null>(null)
+  let selectedToggleIdx = $state<number | null>(null)
+  const selectedCurve = $derived(selectedCurveIdx !== null ? sweepData.curves[selectedCurveIdx] ?? null : null)
 
   // ── Canvas state ──
   let canvasEl: HTMLCanvasElement | undefined = $state()
   let canvasW = $state(600)
   let canvasH = $state(200)
-  let drawing = $state(false)
-  let rawPoints: { t: number; v: number }[] = $state([])
 
-  const { onClose }: { onClose: () => void } = $props()
-
-  // ── Drawing mode ──
-  let drawMode = $state<'free' | 'bezier'>('free')
-
-  // ── Bézier state ──
+  // ── Bézier point editing (always active) ──
   let draggingPointIdx = $state<number | null>(null)
   let lastClickTime = $state(0)
-  const POINT_HIT_RADIUS = 8  // px
+  let dragging = $state(false)
+  const POINT_HIT_RADIUS = 8
 
   // ── Zoom state ──
-  // null = full view, number = zoomed into specific repeat (0-based)
   let zoomedRepeat = $state<number | null>(null)
 
-  // ── Pattern info ──
-  // Read repeat count from the connected repeat modifier node (for editing), fallback to playback state
+  // ── Pattern metrics ──
   const repeatCount = $derived.by(() => {
     if (playback.sceneRepeatTotal > 1) return playback.sceneRepeatTotal
-    // Find repeat modifier node attached to the same pattern node as the sweep
     const patId = pat?.id
     if (!patId) return 1
     for (const node of song.scene.nodes) {
@@ -205,9 +71,17 @@
 
   const TIMELINE_H = 22
 
+  // ── Dark-zone canvas colors ──
+  const DZ_BG = '#1E2028'
+  const DZ_GRID = 'rgba(237,232,220, 0.08)'
+  const DZ_GRID_BEAT = 'rgba(237,232,220, 0.12)'
+  const DZ_DIVIDER = 'rgba(237,232,220, 0.06)'
+  const DZ_TEXT = 'rgba(237,232,220, 0.55)'
+  const DZ_CENTER_LINE = 'rgba(237,232,220, 0.15)'
+  const DZ_CURSOR = 'rgba(196, 122, 42, 0.8)'
+
   // ── Canvas rendering ──
 
-  /** Map data t (0–1) to screen x, accounting for zoom */
   function tToX(t: number, w: number): number {
     return ((t - viewStart) / viewSpan) * w
   }
@@ -230,14 +104,14 @@
     const totalSteps = spp * rc
     const isZoomed = zoomedRepeat !== null
 
-    // Background
-    ctx.fillStyle = '#f5f0e6'
+    // Dark-zone background
+    ctx.fillStyle = DZ_BG
     ctx.fillRect(0, 0, w, h)
 
     // ── Timeline header ──
-    ctx.fillStyle = isZoomed ? 'rgba(30, 32, 40, 0.08)' : 'rgba(30, 32, 40, 0.05)'
+    ctx.fillStyle = isZoomed ? 'rgba(237,232,220, 0.06)' : 'rgba(237,232,220, 0.03)'
     ctx.fillRect(0, 0, w, TIMELINE_H)
-    ctx.strokeStyle = 'rgba(30, 32, 40, 0.1)'
+    ctx.strokeStyle = DZ_DIVIDER
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(0, TIMELINE_H)
@@ -252,17 +126,16 @@
       const isBeat = s % 4 === 0
       const isRepeatBoundary = s % spp === 0 && s > 0
       if (isRepeatBoundary && !isZoomed) {
-        ctx.strokeStyle = 'rgba(30, 32, 40, 0.2)'
+        ctx.strokeStyle = DZ_GRID_BEAT
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, 0)
         ctx.lineTo(x, h)
         ctx.stroke()
       }
-      // Tick in timeline header
       const showTick = isZoomed ? true : isBeat
       if (showTick) {
-        ctx.strokeStyle = 'rgba(30, 32, 40, 0.15)'
+        ctx.strokeStyle = DZ_GRID
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, TIMELINE_H - (isBeat ? 8 : 4))
@@ -272,13 +145,11 @@
     }
 
     // Timeline labels
-    ctx.fillStyle = 'rgba(30, 32, 40, 0.5)'
+    ctx.fillStyle = DZ_TEXT
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
     if (isZoomed) {
-      // Show "← R3" back label + step numbers
       ctx.fillText(`← R${zoomedRepeat! + 1}`, 4, 12)
-      // Step numbers at beat boundaries
       for (let s = 0; s < spp; s += 4) {
         const t = (zoomedRepeat! * spp + s) / totalSteps
         const x = tToX(t, w)
@@ -295,8 +166,8 @@
     const drawH = h - TIMELINE_H
     const drawY = TIMELINE_H
 
-    // Grid dots in drawing area
-    ctx.fillStyle = 'rgba(30, 32, 40, 0.08)'
+    // Grid dots
+    ctx.fillStyle = DZ_GRID
     for (let s = 0; s < totalSteps; s++) {
       const showDot = isZoomed ? true : s % 4 === 0
       if (!showDot) continue
@@ -310,14 +181,14 @@
       }
     }
 
-    // Clip drawing area — prevent curves from bleeding into timeline header
+    // Clip drawing area
     ctx.save()
     ctx.beginPath()
     ctx.rect(0, drawY, w, drawH)
     ctx.clip()
 
     // Center line (±0)
-    ctx.strokeStyle = 'rgba(30, 32, 40, 0.2)'
+    ctx.strokeStyle = DZ_CENTER_LINE
     ctx.lineWidth = 1
     ctx.setLineDash([6, 4])
     ctx.beginPath()
@@ -326,12 +197,12 @@
     ctx.stroke()
     ctx.setLineDash([])
 
-    // Base value indicator for active brush (ADR 118)
-    if (activeBrush && pat) {
-      const baseNorm = getBaseValueNormalized(activeBrush.target)
+    // Base value indicator for selected curve
+    if (selectedCurve && pat) {
+      const baseNorm = getBaseValueNormalized(selectedCurve.target)
       if (baseNorm !== null) {
         const baseLabel = `base: ${(baseNorm * 100).toFixed(0)}%`
-        ctx.fillStyle = activeBrush.color
+        ctx.fillStyle = selectedCurve.color
         ctx.globalAlpha = 0.85
         ctx.font = 'bold 10px monospace'
         ctx.textAlign = 'left'
@@ -340,46 +211,14 @@
       }
     }
 
-    // Draw curves: all at top level, filtered when track/section is expanded
+    // Draw all curves
     for (const curve of sweepData.curves) {
-      if (curve.target.kind === 'mute' as string) continue
-      if (expandedSection === 'master') {
-        if (curve.target.kind !== 'master') continue
-      } else if (expandedSection === 'fx') {
-        if (curve.target.kind !== 'fx') continue
-      } else if (expandedSection === 'eq') {
-        if (curve.target.kind !== 'eq') continue
-      } else if (expandedTrackId !== null) {
-        // Track drill-down: only show this track's curves
-        if (curve.target.kind === 'fx' || curve.target.kind === 'master' || curve.target.kind === 'eq') continue
-        if ('trackId' in curve.target && curve.target.trackId !== expandedTrackId) continue
-      }
-      const isActive = activeBrush && targetsEqual(curve.target, activeBrush.target)
-      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.2)
+      if ((curve.target as { kind: string }).kind === 'mute') continue
+      const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
+      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3)
     }
 
-    // Draw current freehand stroke — thick brush feel
-    if (drawing && rawPoints.length > 1 && activeBrush) {
-      ctx.lineJoin = 'round'
-      ctx.lineCap = 'round'
-      // Outer thick stroke
-      ctx.strokeStyle = activeBrush.color
-      ctx.lineWidth = 8
-      ctx.globalAlpha = 0.3
-      ctx.beginPath()
-      ctx.moveTo(tToX(rawPoints[0].t, w), drawY + (0.5 - rawPoints[0].v / 2) * drawH)
-      for (let i = 1; i < rawPoints.length; i++) {
-        ctx.lineTo(tToX(rawPoints[i].t, w), drawY + (0.5 - rawPoints[i].v / 2) * drawH)
-      }
-      ctx.stroke()
-      // Inner bright stroke
-      ctx.lineWidth = 3
-      ctx.globalAlpha = 0.8
-      ctx.stroke()
-      ctx.globalAlpha = 1.0
-    }
-
-    // Halation clear effect
+    // Halation clear effect (adapted for dark zone)
     if (halationProgress !== null) {
       const cx = w / 2
       const cy = drawY + drawH / 2
@@ -387,35 +226,31 @@
       const r = halationProgress * maxR * 1.2
       const ringW = maxR * 0.15
 
-      // Expanding ring of amber
       for (let i = 3; i >= 0; i--) {
         const ri = r - i * ringW * 0.3
         if (ri <= 0) continue
         ctx.beginPath()
         ctx.arc(cx, cy, ri, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(196, 122, 42, ${0.08 * (4 - i)})`
+        ctx.fillStyle = `rgba(196, 122, 42, ${0.06 * (4 - i)})`
         ctx.fill()
       }
 
-      // White-out behind the ring (erase effect)
       if (r > ringW) {
         ctx.beginPath()
         ctx.arc(cx, cy, r - ringW, 0, Math.PI * 2)
-        ctx.fillStyle = '#f5f0e6'
+        ctx.fillStyle = DZ_BG
         ctx.fill()
       }
     }
 
-    // Restore clip (curves done)
     ctx.restore()
 
-    // Repaint timeline header to ensure no bleed-through
-    ctx.fillStyle = '#f5f0e6'
+    // Repaint timeline header
+    ctx.fillStyle = DZ_BG
     ctx.fillRect(0, 0, w, TIMELINE_H)
-    // Re-draw timeline header content
-    ctx.fillStyle = isZoomed ? 'rgba(30, 32, 40, 0.08)' : 'rgba(30, 32, 40, 0.05)'
+    ctx.fillStyle = isZoomed ? 'rgba(237,232,220, 0.06)' : 'rgba(237,232,220, 0.03)'
     ctx.fillRect(0, 0, w, TIMELINE_H)
-    ctx.strokeStyle = 'rgba(30, 32, 40, 0.1)'
+    ctx.strokeStyle = DZ_DIVIDER
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.moveTo(0, TIMELINE_H)
@@ -429,7 +264,7 @@
       const isBeat = s % 4 === 0
       const showTick = isZoomed ? true : isBeat
       if (showTick) {
-        ctx.strokeStyle = 'rgba(30, 32, 40, 0.15)'
+        ctx.strokeStyle = DZ_GRID
         ctx.lineWidth = 1
         ctx.beginPath()
         ctx.moveTo(x, TIMELINE_H - (isBeat ? 8 : 4))
@@ -438,7 +273,7 @@
       }
     }
     // Re-draw labels
-    ctx.fillStyle = 'rgba(30, 32, 40, 0.5)'
+    ctx.fillStyle = DZ_TEXT
     ctx.font = '9px monospace'
     ctx.textAlign = 'left'
     if (isZoomed) {
@@ -455,7 +290,7 @@
       }
     }
 
-    // Playback cursor — uses longest track's playhead for accurate position
+    // Playback cursor
     if (playback.playing && rc > 0) {
       const stepsArr = pat ? pat.cells.map(c => c.steps) : [16]
       const longestIdx = stepsArr.indexOf(Math.max(...stepsArr))
@@ -464,7 +299,7 @@
       const progress = (repIdx + currentStep / spp) / rc
       const cx = tToX(progress, w)
       if (cx >= 0 && cx <= w) {
-        ctx.strokeStyle = 'rgba(196, 122, 42, 0.7)'
+        ctx.strokeStyle = DZ_CURSOR
         ctx.lineWidth = 2
         ctx.beginPath()
         ctx.moveTo(cx, TIMELINE_H)
@@ -478,23 +313,16 @@
     }
   }
 
-  function isMixTarget(target: SweepTarget): boolean {
-    if (target.kind === 'send') return true
-    if (target.kind === 'track' && (target.param === 'volume' || target.param === 'pan')) return true
-    return false
-  }
-
   function drawCurve(ctx: CanvasRenderingContext2D, curve: SweepCurve, w: number, drawY: number, drawH: number, alpha: number) {
     if (curve.points.length < 2) return
     const xFor = (t: number) => tToX(t, w)
     const yForV = (v: number) => drawY + (0.5 - v / 2) * drawH
     const midY = drawY + drawH / 2
-
     const isActive = alpha > 0.5
     const pts = curve.points
     const first = pts[0], last = pts[pts.length - 1]
 
-    // Extension lines for partial curves (dotted line showing held value)
+    // Extension lines for partial curves
     if (isActive) {
       ctx.strokeStyle = curve.color
       ctx.lineWidth = 1
@@ -516,35 +344,17 @@
       ctx.globalAlpha = 1.0
     }
 
-    // Build smooth path
+    // Build smooth path using evaluateCurve from sweepEval
     const tracePath = (ctx: CanvasRenderingContext2D) => {
       ctx.moveTo(xFor(first.t), yForV(first.v))
       if (pts.length <= 2) {
         ctx.lineTo(xFor(last.t), yForV(last.v))
       } else {
-        // Catmull-Rom spline: sample at sub-pixel resolution for smooth curves
         const steps = Math.max(pts.length * 8, 40)
         for (let s = 1; s <= steps; s++) {
-          const progress = s / steps
-          const t = first.t + progress * (last.t - first.t)
-          // Find segment
-          let si = 0
-          for (let j = 0; j < pts.length - 1; j++) {
-            if (t >= pts[j].t && t <= pts[j + 1].t) { si = j; break }
-          }
-          const p0 = pts[Math.max(0, si - 1)]
-          const p1 = pts[si]
-          const p2 = pts[si + 1]
-          const p3 = pts[Math.min(pts.length - 1, si + 2)]
-          const seg = (p2.t - p1.t) > 0.0001 ? (t - p1.t) / (p2.t - p1.t) : 0
-          const seg2 = seg * seg, seg3 = seg2 * seg
-          const v = 0.5 * (
-            (2 * p1.v) +
-            (-p0.v + p2.v) * seg +
-            (2 * p0.v - 5 * p1.v + 4 * p2.v - p3.v) * seg2 +
-            (-p0.v + 3 * p1.v - 3 * p2.v + p3.v) * seg3
-          )
-          ctx.lineTo(xFor(t), yForV(v))
+          const progress = first.t + (s / steps) * (last.t - first.t)
+          const v = evaluateCurve(pts, progress)
+          ctx.lineTo(xFor(progress), yForV(v))
         }
       }
     }
@@ -562,83 +372,125 @@
       }
     }
 
-    const mix = isMixTarget(curve.target)
-
-    // Fill — solid for synth, hatched for mix
+    // Neon glow fill — subtle accent color
     ctx.save()
-    ctx.globalAlpha = alpha * 0.35
-    if (mix) {
-      // Diagonal stripe pattern
-      const pat = document.createElement('canvas')
-      pat.width = 6; pat.height = 6
-      const pc = pat.getContext('2d')!
-      pc.strokeStyle = curve.color
-      pc.lineWidth = 1.5
-      pc.beginPath()
-      pc.moveTo(0, 6); pc.lineTo(6, 0)
-      pc.stroke()
-      const pattern = ctx.createPattern(pat, 'repeat')
-      if (pattern) {
-        ctx.fillStyle = pattern
-        ctx.globalAlpha = alpha * 0.25
-      }
-    } else {
-      ctx.fillStyle = curve.color
-    }
+    ctx.globalAlpha = alpha * 0.15
+    ctx.fillStyle = curve.color
     pathFn('fill')
     ctx.fill()
     ctx.restore()
 
-    // Thick brush stroke
+    // Outer glow stroke
+    if (isActive) {
+      ctx.save()
+      ctx.strokeStyle = curve.color
+      ctx.lineWidth = 8
+      ctx.globalAlpha = alpha * 0.15
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      ctx.shadowColor = curve.color
+      ctx.shadowBlur = 12
+      pathFn('stroke')
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    // Main stroke
     ctx.strokeStyle = curve.color
-    ctx.lineWidth = isActive ? 6 : 3
-    ctx.globalAlpha = alpha * 0.7
+    ctx.lineWidth = isActive ? 3 : 1.5
+    ctx.globalAlpha = alpha * 0.9
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     pathFn('stroke')
     ctx.stroke()
 
-    // Bright center line for definition
+    // Bright core for active
     if (isActive) {
-      ctx.strokeStyle = curve.color
-      ctx.lineWidth = 2
-      ctx.globalAlpha = alpha
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 1
+      ctx.globalAlpha = alpha * 0.4
       pathFn('stroke')
       ctx.stroke()
     }
 
-    // Anchor dots in bézier mode
-    if (isActive && drawMode === 'bezier') {
-      ctx.fillStyle = curve.color
-      ctx.globalAlpha = alpha
+    // Anchor dots (always visible for active curve — point editing is always on)
+    if (isActive) {
       for (const p of pts) {
         const px = xFor(p.t)
         if (px < -5 || px > w + 5) continue
+        // Outer ring
+        ctx.fillStyle = curve.color
+        ctx.globalAlpha = alpha * 0.6
         ctx.beginPath()
-        ctx.arc(px, yForV(p.v), 5, 0, Math.PI * 2)
+        ctx.arc(px, yForV(p.v), 6, 0, Math.PI * 2)
+        ctx.fill()
+        // Inner bright dot
+        ctx.fillStyle = '#fff'
+        ctx.globalAlpha = alpha * 0.9
+        ctx.beginPath()
+        ctx.arc(px, yForV(p.v), 3, 0, Math.PI * 2)
         ctx.fill()
       }
     }
     ctx.globalAlpha = 1.0
   }
 
-  /** Get the base value of a parameter as a 0–1 normalized value */
+  // ── Target label helpers ──
+  function curveLabel(target: SweepTarget): string {
+    if (target.kind === 'master') {
+      const labels: Record<string, string> = {
+        masterVolume: 'Volume', swing: 'Swing', compThreshold: 'Comp thr', compRatio: 'Comp rat',
+        duckDepth: 'Duck dep', duckRelease: 'Duck rel', retVerb: 'Ret verb', retDelay: 'Ret dly',
+        satDrive: 'Sat drv', satTone: 'Sat tone', filterCutoff: 'Filter freq', filterResonance: 'Filter reso',
+      }
+      return labels[target.param] ?? target.param
+    }
+    if (target.kind === 'track') {
+      const cell = pat?.cells.find(c => c.trackId === target.trackId)
+      const name = cell?.name || `Trk ${target.trackId + 1}`
+      return `${name} ${target.param}`
+    }
+    if (target.kind === 'send') {
+      const cell = pat?.cells.find(c => c.trackId === target.trackId)
+      const name = cell?.name || `Trk ${target.trackId + 1}`
+      const sendLabels: Record<string, string> = { reverbSend: 'verb', delaySend: 'dly', glitchSend: 'glitch', granularSend: 'grain' }
+      return `${name} ${sendLabels[target.param] ?? target.param}`
+    }
+    if (target.kind === 'fx') {
+      const labels: Record<string, string> = {
+        reverbWet: 'Verb wet', reverbDamp: 'Verb damp', delayTime: 'Dly time', delayFeedback: 'Dly feed',
+        glitchX: 'Glitch X', glitchY: 'Glitch Y', granularSize: 'Gran size', granularDensity: 'Gran dens',
+      }
+      return labels[target.param] ?? target.param
+    }
+    if (target.kind === 'eq') {
+      const bandLabels: Record<string, string> = { eqLow: 'Low', eqMid: 'Mid', eqHigh: 'High' }
+      return `${bandLabels[target.band] ?? target.band} ${target.param}`
+    }
+    return 'Unknown'
+  }
+
+  function toggleLabel(target: SweepToggleTarget): string {
+    if (target.kind === 'hold') return `${target.fx} hold`
+    if (target.kind === 'fxOn') return `${target.fx} on`
+    if (target.kind === 'mute') {
+      const cell = pat?.cells.find(c => c.trackId === target.trackId)
+      return `${cell?.name || `Trk ${target.trackId + 1}`} mute`
+    }
+    return 'Unknown'
+  }
+
+  // ── Base value display ──
   function getBaseValueNormalized(target: SweepTarget): number | null {
     if (!pat) return null
     if (target.kind === 'master') {
       const MASTER_BASE: Record<string, () => number> = {
-        masterVolume: () => perf.masterGain,
-        swing: () => perf.swing,
-        compThreshold: () => masterPad.comp.x,
-        compRatio: () => masterPad.comp.y,
-        duckDepth: () => masterPad.duck.x,
-        duckRelease: () => masterPad.duck.y,
-        retVerb: () => masterPad.ret.x,
-        retDelay: () => masterPad.ret.y,
-        satDrive: () => masterPad.sat.x,
-        satTone: () => masterPad.sat.y,
-        filterCutoff: () => fxPad.filter.x,
-        filterResonance: () => fxPad.filter.y,
+        masterVolume: () => perf.masterGain, swing: () => perf.swing,
+        compThreshold: () => masterPad.comp.x, compRatio: () => masterPad.comp.y,
+        duckDepth: () => masterPad.duck.x, duckRelease: () => masterPad.duck.y,
+        retVerb: () => masterPad.ret.x, retDelay: () => masterPad.ret.y,
+        satDrive: () => masterPad.sat.x, satTone: () => masterPad.sat.y,
+        filterCutoff: () => fxPad.filter.x, filterResonance: () => fxPad.filter.y,
       }
       const fn = MASTER_BASE[target.param]
       return fn ? fn() : null
@@ -647,11 +499,10 @@
       const track = song.tracks.find(t => t.id === target.trackId)
       if (!track) return null
       if (target.param === 'volume') return track.volume
-      if (target.param === 'pan') return (track.pan + 1) / 2  // -1..1 → 0..1
-      // Voice param
+      if (target.param === 'pan') return (track.pan + 1) / 2
       const cell = pat.cells.find(c => c.trackId === target.trackId)
       if (!cell?.voiceId) return null
-      const defs = getParamDefs(cell.voiceId as import('../types.ts').VoiceId)
+      const defs = getParamDefs(cell.voiceId as VoiceId)
       const def = defs.find(d => d.key === target.param)
       if (!def) return null
       const val = cell.voiceParams?.[target.param] ?? def.default
@@ -675,7 +526,7 @@
     if (target.kind === 'eq') {
       const pad = fxPad[target.band]
       const key = target.param === 'freq' ? 'x' : target.param === 'gain' ? 'y' : 'q'
-      return key === 'q' ? (pad[key] as number) / 3 : pad[key] as number  // q: 0–3 → 0–1
+      return key === 'q' ? (pad[key] as number) / 3 : pad[key] as number
     }
     return null
   }
@@ -690,12 +541,11 @@
     return false
   }
 
-  // ── Pointer handlers ──
+  // ── Pointer handlers (point editing only) ──
   function pointerToNorm(e: PointerEvent): { t: number; v: number } {
     if (!canvasEl) return { t: 0, v: 0 }
     const rect = canvasEl.getBoundingClientRect()
     const timelineH = TIMELINE_H * (rect.height / canvasH)
-    // Map screen x to visible t-range
     const screenT = (e.clientX - rect.left) / rect.width
     const t = Math.max(0, Math.min(1, viewStart + screenT * viewSpan))
     const drawTop = rect.top + timelineH
@@ -705,7 +555,6 @@
     return { t, v }
   }
 
-  /** Check if pointer is in the timeline header area */
   function isInTimeline(e: PointerEvent): boolean {
     if (!canvasEl) return false
     const rect = canvasEl.getBoundingClientRect()
@@ -713,25 +562,43 @@
     return (e.clientY - rect.top) < timelineH
   }
 
-  // ── Bézier helpers ──
-
-  /** Find the index of a point near the pointer, or -1 */
   function hitTestPoint(e: PointerEvent): number {
-    if (!activeBrush || !canvasEl) return -1
-    const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
-    if (!curve) return -1
+    if (!selectedCurve || !canvasEl) return -1
     const rect = canvasEl.getBoundingClientRect()
     const w = rect.width
     const timelineH = TIMELINE_H * (rect.height / canvasH)
     const drawH = rect.height - timelineH
-    for (let i = 0; i < curve.points.length; i++) {
-      const px = tToX(curve.points[i].t, w)
-      const py = (0.5 - curve.points[i].v / 2) * drawH + timelineH
+    for (let i = 0; i < selectedCurve.points.length; i++) {
+      const px = tToX(selectedCurve.points[i].t, w)
+      const py = (0.5 - selectedCurve.points[i].v / 2) * drawH + timelineH
       const dx = e.clientX - rect.left - px
       const dy = e.clientY - rect.top - py
       if (Math.sqrt(dx * dx + dy * dy) < POINT_HIT_RADIUS) return i
     }
     return -1
+  }
+
+  /** Hit-test which curve is near the pointer (for click-to-select) */
+  function hitTestCurve(e: PointerEvent): number {
+    if (!canvasEl) return -1
+    const norm = pointerToNorm(e)
+    const HIT_DIST = 0.05 // normalized v distance threshold
+
+    let bestIdx = -1
+    let bestDist = HIT_DIST
+    for (let ci = 0; ci < sweepData.curves.length; ci++) {
+      const curve = sweepData.curves[ci]
+      if ((curve.target as { kind: string }).kind === 'mute') continue
+      if (curve.points.length < 2) continue
+      // Evaluate curve at pointer's t position
+      const v = evaluateCurve(curve.points, norm.t)
+      const dist = Math.abs(v - norm.v)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = ci
+      }
+    }
+    return bestIdx
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -753,22 +620,21 @@
       return
     }
 
-    if (!activeBrush) return
     canvasEl.setPointerCapture(e.pointerId)
 
-    if (drawMode === 'bezier') {
+    // If a curve is selected, try point editing first
+    if (selectedCurve) {
       const now = Date.now()
       const hitIdx = hitTestPoint(e)
 
       // Double-click → delete point
       if (hitIdx >= 0 && now - lastClickTime < 300) {
         lastClickTime = 0
-        const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
-        if (curve && curve.points.length > 2) {
+        if (selectedCurve.points.length > 2) {
           pushUndo('Delete sweep point')
-          const pts = [...curve.points]
+          const pts = [...selectedCurve.points]
           pts.splice(hitIdx, 1)
-          commitCurve(activeBrush.target, activeBrush.color, pts)
+          commitCurve(selectedCurve.target, selectedCurve.color, pts)
           redraw()
         }
         return
@@ -776,156 +642,63 @@
       lastClickTime = now
 
       if (hitIdx >= 0) {
-        // Start dragging existing point
         draggingPointIdx = hitIdx
-        drawing = true
-      } else {
-        // Add new point at click position
-        const norm = pointerToNorm(e)
-        const curve = sweepData.curves.find(c => targetsEqual(c.target, activeBrush.target))
-        const pts = curve ? [...curve.points] : []
+        dragging = true
+        return
+      }
+
+      // Click on the selected curve's line → add new point
+      const norm = pointerToNorm(e)
+      const v = evaluateCurve(selectedCurve.points, norm.t)
+      if (Math.abs(v - norm.v) < 0.08) {
+        const pts = [...selectedCurve.points]
         pts.push(norm)
         pts.sort((a, b) => a.t - b.t)
         pushUndo('Add sweep point')
-        commitCurve(activeBrush.target, activeBrush.color, pts)
-        // Start dragging the newly added point
+        commitCurve(selectedCurve.target, selectedCurve.color, pts)
         draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
-        drawing = true
+        dragging = true
         redraw()
+        return
       }
-      return
     }
 
-    // Freehand mode
-    drawing = true
-    rawPoints = [pointerToNorm(e)]
+    // Click on a different curve → select it
+    const curveIdx = hitTestCurve(e)
+    if (curveIdx >= 0) {
+      selectedCurveIdx = curveIdx
+      selectedToggleIdx = null
+      redraw()
+    } else {
+      // Click on empty space → deselect
+      selectedCurveIdx = null
+      selectedToggleIdx = null
+      redraw()
+    }
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (!drawing) return
-
-    if (drawMode === 'bezier' && draggingPointIdx !== null) {
-      // Drag bézier point
-      const norm = pointerToNorm(e)
-      const curve = sweepData.curves.find(c => activeBrush && targetsEqual(c.target, activeBrush.target))
-      if (curve && draggingPointIdx < curve.points.length) {
-        const pts = [...curve.points]
-        pts[draggingPointIdx] = norm
-        pts.sort((a, b) => a.t - b.t)
-        // Update dragging index after sort
-        draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
-        commitCurve(activeBrush!.target, activeBrush!.color, pts)
-        redraw()
-      }
-      return
-    }
-
-    // Freehand mode
-    rawPoints.push(pointerToNorm(e))
+    if (!dragging || draggingPointIdx === null || !selectedCurve) return
+    const norm = pointerToNorm(e)
+    const pts = [...selectedCurve.points]
+    pts[draggingPointIdx] = norm
+    pts.sort((a, b) => a.t - b.t)
+    draggingPointIdx = pts.findIndex(p => p.t === norm.t && p.v === norm.v)
+    commitCurve(selectedCurve.target, selectedCurve.color, pts)
     redraw()
-  }
-
-  function onKeyDown(e: KeyboardEvent) {
-    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
-      e.preventDefault()
-      const dir = e.code === 'ArrowUp' ? -1 : 1
-      const len = paletteItems.length
-      if (len > 0) {
-        activeBrushIdx = ((activeBrushIdx + dir) % len + len) % len
-        redraw()
-      }
-    }
   }
 
   function onPointerUp(_e: PointerEvent) {
-    if (drawMode === 'bezier') {
-      draggingPointIdx = null
-      drawing = false
-      return
-    }
-
-    if (!drawing || !activeBrush || !sweepNode) { drawing = false; return }
-    drawing = false
-
-    if (rawPoints.length < 2) {
-      rawPoints = []
-      return
-    }
-
-    let pts = smoothPoints(rawPoints)
-    pts = rdpSimplify(pts, 0.03)
-    commitCurve(activeBrush.target, activeBrush.color, pts)
-    rawPoints = []
-    redraw()
+    draggingPointIdx = null
+    dragging = false
   }
 
-  // ── Smoothing ──
-  function smoothPoints(pts: { t: number; v: number }[]): { t: number; v: number }[] {
-    const win = 6
-    return pts.map((p, i) => {
-      let sumV = 0, count = 0
-      for (let j = Math.max(0, i - win); j <= Math.min(pts.length - 1, i + win); j++) {
-        sumV += pts[j].v
-        count++
-      }
-      return { t: p.t, v: sumV / count }
-    })
-  }
-
-  // Ramer-Douglas-Peucker
-  function rdpSimplify(pts: { t: number; v: number }[], epsilon: number): { t: number; v: number }[] {
-    if (pts.length <= 2) return pts
-    let maxDist = 0, maxIdx = 0
-    const first = pts[0], last = pts[pts.length - 1]
-    for (let i = 1; i < pts.length - 1; i++) {
-      const d = pointLineDistance(pts[i], first, last)
-      if (d > maxDist) { maxDist = d; maxIdx = i }
-    }
-    if (maxDist > epsilon) {
-      const left = rdpSimplify(pts.slice(0, maxIdx + 1), epsilon)
-      const right = rdpSimplify(pts.slice(maxIdx), epsilon)
-      return [...left.slice(0, -1), ...right]
-    }
-    return [first, last]
-  }
-
-  function pointLineDistance(p: { t: number; v: number }, a: { t: number; v: number }, b: { t: number; v: number }): number {
-    const dx = b.t - a.t, dy = b.v - a.v
-    const len = Math.sqrt(dx * dx + dy * dy)
-    if (len === 0) return Math.sqrt((p.t - a.t) ** 2 + (p.v - a.v) ** 2)
-    return Math.abs(dx * (a.v - p.v) - (a.t - p.t) * dy) / len
-  }
-
-  // ── Presets ──
-  const SWEEP_PRESETS = [
-    { name: '╱', tip: 'Ramp Up', tipJa: 'ランプアップ',
-      points: [{ t: 0, v: 0 }, { t: 1, v: 1 }] },
-    { name: '╲', tip: 'Ramp Down', tipJa: 'ランプダウン',
-      points: [{ t: 0, v: 0 }, { t: 1, v: -1 }] },
-    { name: '╱╲', tip: 'Triangle', tipJa: 'トライアングル',
-      points: [{ t: 0, v: 0 }, { t: 0.5, v: 1 }, { t: 1, v: 0 }] },
-    { name: '╲╱', tip: 'V (Dip)', tipJa: 'V (ディップ)',
-      points: [{ t: 0, v: 0 }, { t: 0.5, v: -1 }, { t: 1, v: 0 }] },
-    { name: '⌒', tip: 'S-Curve Up', tipJa: 'S字上昇',
-      points: [{ t: 0, v: 0 }, { t: 0.2, v: 0.05 }, { t: 0.5, v: 0.4 }, { t: 0.8, v: 0.9 }, { t: 1, v: 1 }] },
-  ] as const
-
-  let presetOpen = $state(false)
-
-  function applyPreset(preset: typeof SWEEP_PRESETS[number]) {
-    if (!activeBrush || !sweepNode) return
-    pushUndo('Apply sweep preset')
-    commitCurve(activeBrush.target, activeBrush.color, [...preset.points])
-    presetOpen = false
-    redraw()
-  }
-
-  // ── Clear all with halation effect ──
+  // ── Halation clear effect ──
   let halationProgress = $state<number | null>(null)
   function clearAllWithHalation() {
     if (!sweepNode || halationProgress !== null) return
     const startTime = performance.now()
-    const duration = 600  // ms
+    const duration = 600
 
     function animate() {
       const elapsed = performance.now() - startTime
@@ -935,9 +708,10 @@
       if (halationProgress < 1) {
         requestAnimationFrame(animate)
       } else {
-        // Actually clear
         pushUndo('Clear all sweep curves')
         sceneUpdateModifierParams(sweepNode!.id, { sweep: { curves: [] } })
+        selectedCurveIdx = null
+        selectedToggleIdx = null
         halationProgress = null
         redraw()
       }
@@ -948,9 +722,7 @@
   // ── Commit curve to sweep data ──
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
     if (!sweepNode) return
-    // Filter out legacy mute curves on any write
     const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute')
-    // Replace existing curve for same target, or add new
     const existingIdx = curves.findIndex(c => targetsEqual(c.target, target))
     const newCurve: SweepCurve = { target, points, color }
     if (existingIdx >= 0) {
@@ -966,7 +738,77 @@
     pushUndo('Delete sweep curve')
     const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute' && !targetsEqual(c.target, target))
     sceneUpdateModifierParams(sweepNode.id, { sweep: { curves, toggles: sweepData.toggles } })
+    selectedCurveIdx = null
     redraw()
+  }
+
+  function deleteToggle(idx: number) {
+    if (!sweepNode || !sweepData.toggles) return
+    pushUndo('Delete sweep toggle')
+    const toggles = sweepData.toggles.filter((_, i) => i !== idx)
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles: toggles.length > 0 ? toggles : undefined } })
+    selectedToggleIdx = null
+  }
+
+  // ── Toggle editing helpers ──
+  let toggleDragState = $state<{
+    toggleIdx: number
+    boundaryIdx: number  // index of the point whose t is being dragged
+    side: 'left' | 'right'
+  } | null>(null)
+
+  function onToggleBoundaryDown(e: PointerEvent, toggleIdx: number, boundaryIdx: number, side: 'left' | 'right') {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleDragState = { toggleIdx, boundaryIdx, side }
+    window.addEventListener('pointermove', onToggleBoundaryMove)
+    window.addEventListener('pointerup', onToggleBoundaryUp)
+  }
+
+  function onToggleBoundaryMove(e: PointerEvent) {
+    if (!toggleDragState || !sweepNode || !sweepData.toggles) return
+    const toggle = sweepData.toggles[toggleDragState.toggleIdx]
+    if (!toggle) return
+
+    // Convert screen X to t
+    const listEl = document.querySelector('.sweep-toggle-bar') as HTMLElement | null
+    if (!listEl) return
+    const rect = listEl.getBoundingClientRect()
+    const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+
+    const pts = [...toggle.points]
+    const bi = toggleDragState.boundaryIdx
+    if (bi < 0 || bi >= pts.length) return
+    pts[bi] = { ...pts[bi], t }
+    pts.sort((a, b) => a.t - b.t)
+
+    const toggles = [...sweepData.toggles]
+    toggles[toggleDragState.toggleIdx] = { ...toggle, points: pts }
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles } })
+    // Update boundary index after sort
+    toggleDragState.boundaryIdx = pts.findIndex(p => p.t === t)
+  }
+
+  function onToggleBoundaryUp() {
+    toggleDragState = null
+    window.removeEventListener('pointermove', onToggleBoundaryMove)
+    window.removeEventListener('pointerup', onToggleBoundaryUp)
+  }
+
+  function splitToggleBlock(toggleIdx: number, t: number) {
+    if (!sweepNode || !sweepData.toggles) return
+    const toggle = sweepData.toggles[toggleIdx]
+    if (!toggle) return
+    pushUndo('Split sweep toggle')
+    const pts = [...toggle.points]
+    // Insert off-on pair to create a gap
+    const gap = 0.02
+    pts.push({ t: Math.max(0, t - gap / 2), on: false })
+    pts.push({ t: Math.min(1, t + gap / 2), on: true })
+    pts.sort((a, b) => a.t - b.t)
+    const toggles = [...sweepData.toggles]
+    toggles[toggleIdx] = { ...toggle, points: pts }
+    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles } })
   }
 
   // ── Resize observer ──
@@ -986,11 +828,10 @@
 
   // Redraw on data or size change
   $effect(() => {
-    // Touch reactive deps
     sweepData.curves.length
     canvasW
     canvasH
-    activeBrushIdx
+    selectedCurveIdx
     zoomedRepeat
     playback.sceneRepeatIndex
     playback.playheads[0]
@@ -999,43 +840,41 @@
 </script>
 
 <div class="sweep-root">
-  <!-- Toolbar — matches PatternToolbar structure -->
+  <!-- Toolbar -->
   <div class="sweep-toolbar">
     <div class="sweep-pat-indicator">
       <span class="sweep-pat-dot" style="background: {patColor}"></span>
       <span class="sweep-pat-name">{patName}</span>
     </div>
     <div class="sweep-toolbar-spacer"></div>
-    <div class="sweep-mode-toggle">
-      <button class="sweep-mode-btn" class:active={drawMode === 'free'} onpointerdown={() => drawMode = 'free'}
-        data-tip="Freehand draw" data-tip-ja="フリーハンド描画"
-      >Draw</button>
-      <button class="sweep-mode-btn" class:active={drawMode === 'bezier'} onpointerdown={() => drawMode = 'bezier'}
-        data-tip="Click to add, drag to move, double-click to delete" data-tip-ja="クリックで追加、ドラッグで移動、ダブルクリックで削除"
-      >Point</button>
-    </div>
+    <button class="sweep-rec-circle" class:armed={recState === 'armed'} class:recording={recState === 'recording'}
+      onpointerdown={() => {
+        if (recState === 'recording') {
+          stopRecording()
+        } else if (recState === 'armed') {
+          disarmRecording()
+        } else if (sweepNode) {
+          const patNodeId = findPatternForSweep(sweepNode.id)
+          if (!patNodeId) return
+          armRecording(sweepNode.id, patNodeId)
+        }
+      }}
+      data-tip={recState === 'recording' ? `Recording ${sweepRec.elapsedDisplay}` : recState === 'armed' ? 'Armed — touch any param' : 'Record sweep'}
+      data-tip-ja={recState === 'recording' ? `録音中 ${sweepRec.elapsedDisplay}` : recState === 'armed' ? 'アーム中 — 操作で開始' : 'スイープ録音'}
+    >
+      <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true">
+        {#if recState === 'recording'}
+          <rect x="2" y="2" width="8" height="8" rx="1"/>
+        {:else}
+          <circle cx="6" cy="6" r="5"/>
+        {/if}
+      </svg>
+    </button>
+    {#if recState === 'recording'}
+      <span class="sweep-rec-time">{sweepRec.elapsedDisplay}</span>
+    {/if}
     <span class="sweep-toolbar-sep"></span>
-    <div class="sweep-preset-wrap">
-      <button class="sweep-preset-btn" class:open={presetOpen}
-        onpointerdown={() => { presetOpen = !presetOpen }}
-        data-tip="Apply preset shape" data-tip-ja="プリセット形状を適用"
-      >Shape</button>
-      {#if presetOpen}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="sweep-preset-backdrop" onpointerdown={() => { presetOpen = false }}></div>
-        <div class="sweep-preset-dropdown">
-          {#each SWEEP_PRESETS as preset}
-            <button class="sweep-preset-option" onpointerdown={() => applyPreset(preset)}
-              data-tip={preset.tip} data-tip-ja={preset.tipJa}
-            >
-              <span class="sweep-preset-icon">{preset.name}</span>
-              <span class="sweep-preset-label">{preset.tip}</span>
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </div>
-    <button class="sweep-preset-btn" onpointerdown={clearAllWithHalation}
+    <button class="sweep-tool-btn" onpointerdown={clearAllWithHalation}
       data-tip="Clear all curves" data-tip-ja="全カーブを消去"
     >Clear</button>
     <div class="sweep-toolbar-spacer"></div>
@@ -1043,98 +882,95 @@
       aria-label="Close sweep editor" data-tip="Close" data-tip-ja="閉じる"
     >✕</button>
   </div>
+
   <div class="sweep-layout">
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <!-- Palette — drill-down by track -->
-    <div class="sweep-palette" tabindex="0" onkeydown={onKeyDown}>
-      {#if expandedTrackId === null && expandedSection === null}
-        <!-- MASTER entry -->
-        {@const hasMasterCurve = sweepData.curves.some(c => c.target.kind === 'master')}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="palette-track" class:has-curve={hasMasterCurve}
-          onpointerdown={() => { expandedSection = 'master'; activeBrushIdx = 0 }}
-        >
-          <span class="palette-track-name">MASTER</span>
-          <span class="palette-track-arrow">›</span>
-        </div>
-        <div class="palette-cat-sep"></div>
-        <!-- Track list -->
-        {#each trackList as entry}
-          {@const hasAnyCurve = sweepData.curves.some(c => c.target.kind !== 'fx' && c.target.kind !== 'eq' && c.target.kind !== 'master' && 'trackId' in c.target && c.target.trackId === entry.trackId)}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="palette-track" class:has-curve={hasAnyCurve}
-            onpointerdown={() => { expandedTrackId = entry.trackId; activeBrushIdx = 0 }}
-          >
-            <span class="palette-track-name">{entry.trackName}</span>
-            <span class="palette-track-arrow">›</span>
-          </div>
-        {/each}
-        <div class="palette-cat-sep"></div>
-        <!-- FX entry -->
-        {@const hasFxCurve = sweepData.curves.some(c => c.target.kind === 'fx')}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="palette-track" class:has-curve={hasFxCurve}
-          onpointerdown={() => { expandedSection = 'fx'; activeBrushIdx = 0 }}
-        >
-          <span class="palette-track-name">FX</span>
-          <span class="palette-track-arrow">›</span>
-        </div>
-        <!-- EQ entry -->
-        {@const hasEqCurve = sweepData.curves.some(c => c.target.kind === 'eq')}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="palette-track" class:has-curve={hasEqCurve}
-          onpointerdown={() => { expandedSection = 'eq'; activeBrushIdx = 0 }}
-        >
-          <span class="palette-track-name">EQ</span>
-          <span class="palette-track-arrow">›</span>
-        </div>
-      {:else}
-        <!-- Back button + param list for selected track/section -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="palette-back" onpointerdown={() => { expandedTrackId = null; expandedSection = null }}>
-          <span>← {expandedSection === 'master' ? 'MASTER' : expandedSection === 'fx' ? 'FX' : expandedSection === 'eq' ? 'EQ' : trackList.find(t => t.trackId === expandedTrackId)?.trackName ?? 'Back'}</span>
-        </div>
-        {#each paletteItems as item, i}
-          {@const hasCurve = sweepData.curves.some(c => targetsEqual(c.target, item.target))}
-          {@const prevCat = i > 0 ? paletteItems[i - 1].category : null}
-          {#if prevCat && prevCat !== item.category}
-            <div class="palette-cat-sep"></div>
-          {/if}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div
-            class="palette-item"
-            class:active={activeBrushIdx === i}
-            style="--accent: {item.color}"
-            onpointerdown={() => { activeBrushIdx = i }}
-          >
-            <span class="palette-dot" class:has-curve={hasCurve} class:mix={item.isMix}></span>
-            <span class="palette-label">{item.label}</span>
-            {#if hasCurve}
-              <button class="palette-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteCurve(item.target) }}
+    <!-- Curve/Toggle list panel -->
+    <div class="sweep-list">
+      {#if sweepData.curves.length > 0}
+        <div class="sweep-section-label">Curves</div>
+        {#each sweepData.curves as curve, i}
+          {#if (curve.target as { kind: string }).kind !== 'mute'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div
+              class="sweep-list-item"
+              class:active={selectedCurveIdx === i}
+              style="--accent: {curve.color}"
+              onpointerdown={() => { selectedCurveIdx = i; selectedToggleIdx = null }}
+            >
+              <span class="sweep-list-dot"></span>
+              <span class="sweep-list-label">{curveLabel(curve.target)}</span>
+              <button class="sweep-list-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteCurve(curve.target) }}
                 data-tip="Delete curve" data-tip-ja="カーブを削除"
               >✕</button>
-            {:else}
-              <span class="palette-del-placeholder"></span>
-            {/if}
+            </div>
+          {/if}
+        {/each}
+      {/if}
+      {#if sweepData.toggles && sweepData.toggles.length > 0}
+        <div class="sweep-section-label">Toggles</div>
+        {#each sweepData.toggles as toggle, i}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="sweep-list-item toggle-item"
+            class:active={selectedToggleIdx === i}
+            style="--accent: {toggle.color}"
+            onpointerdown={() => { selectedToggleIdx = i; selectedCurveIdx = null }}
+          >
+            <span class="sweep-list-label">{toggleLabel(toggle.target)}</span>
+            <button class="sweep-list-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteToggle(i) }}
+              data-tip="Delete toggle" data-tip-ja="トグルを削除"
+            >✕</button>
+          </div>
+          <!-- Toggle block visualization -->
+          <div class="sweep-toggle-row" class:active={selectedToggleIdx === i}>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sweep-toggle-bar"
+              style="--accent: {toggle.color}"
+              onpointerdown={(e: PointerEvent) => {
+                if (selectedToggleIdx === i) {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                  const t = (e.clientX - rect.left) / rect.width
+                  splitToggleBlock(i, t)
+                }
+              }}
+            >
+              {#each toggle.points as pt, pi}
+                {@const nextT = pi < toggle.points.length - 1 ? toggle.points[pi + 1].t : 1}
+                {#if pt.on}
+                  <div
+                    class="toggle-block on"
+                    style="left: {pt.t * 100}%; width: {(nextT - pt.t) * 100}%"
+                  ></div>
+                {/if}
+                <!-- Boundary handle -->
+                {#if selectedToggleIdx === i}
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="toggle-boundary"
+                    style="left: {pt.t * 100}%"
+                    onpointerdown={(e: PointerEvent) => onToggleBoundaryDown(e, i, pi, 'left')}
+                  ></div>
+                {/if}
+              {/each}
+            </div>
           </div>
         {/each}
+      {/if}
+      {#if sweepData.curves.length === 0 && (!sweepData.toggles || sweepData.toggles.length === 0)}
+        <div class="sweep-empty">No recorded curves</div>
       {/if}
     </div>
 
     <!-- Canvas -->
     <div class="sweep-canvas-wrap" bind:this={canvasWrapEl}>
-      <!-- svelte-ignore a11y_positive_tabindex -->
       <canvas
         bind:this={canvasEl}
         class="sweep-canvas"
-        class:bezier-mode={drawMode === 'bezier'}
         tabindex="0"
         onpointerdown={(e) => { canvasEl?.focus(); onPointerDown(e) }}
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
         onpointercancel={onPointerUp}
-        onkeydown={onKeyDown}
       ></canvas>
       <div class="sweep-axis-labels">
         <span>+1</span>
@@ -1152,6 +988,7 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    background: var(--color-fg);
   }
 
   /* ── Toolbar ── */
@@ -1160,8 +997,8 @@
     align-items: center;
     gap: 12px;
     padding: 8px 12px 10px;
-    background: var(--color-bg);
-    border-bottom: 1px solid rgba(30, 32, 40, 0.10);
+    background: var(--color-fg);
+    border-bottom: 1px solid var(--dz-divider);
     flex-shrink: 0;
   }
   .sweep-pat-indicator {
@@ -1178,42 +1015,12 @@
   .sweep-pat-name {
     font-size: var(--fs-lg);
     font-weight: 600;
-    color: var(--color-muted);
+    color: var(--dz-text-strong);
   }
-  .sweep-mode-toggle {
-    display: flex;
-    gap: 0;
-  }
-  .sweep-mode-btn + .sweep-mode-btn {
-    margin-left: -1px;
-  }
-  .sweep-mode-btn {
-    height: 24px;
-    padding: 0 12px;
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    color: var(--color-muted);
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid rgba(30, 32, 40, 0.15);
+  .sweep-tool-btn {
+    border: 1.5px solid var(--dz-btn-border);
     background: transparent;
-    transition: color 80ms, border-color 80ms, background 80ms;
-    line-height: 24px;
-  }
-  .sweep-mode-btn.active {
-    color: var(--color-fg);
-    border-color: var(--color-fg);
-    background: rgba(30, 32, 40, 0.06);
-  }
-  .sweep-preset-wrap {
-    position: relative;
-  }
-  .sweep-preset-btn {
-    border: 1.5px solid var(--color-olive);
-    background: transparent;
-    color: var(--color-olive);
+    color: var(--dz-text);
     height: 24px;
     padding: 0 8px;
     font-family: var(--font-data);
@@ -1222,69 +1029,59 @@
     letter-spacing: 0.08em;
     cursor: pointer;
   }
-  .sweep-preset-btn.open {
-    background: var(--color-olive);
-    color: var(--color-bg);
+  .sweep-tool-btn:hover {
+    border-color: var(--dz-text);
+    color: var(--dz-text-strong);
   }
-  .sweep-preset-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 9;
-  }
-  .sweep-preset-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    z-index: 10;
-    min-width: 120px;
-    background: var(--color-bg);
-    border: 1px solid rgba(30, 32, 40, 0.15);
-    display: flex;
-    flex-direction: column;
-    padding: 2px;
-  }
-  .sweep-preset-option {
-    font-family: var(--font-data);
-    font-size: var(--fs-sm);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: rgba(30, 32, 40, 0.70);
-    background: none;
-    border: none;
-    padding: 6px 8px;
-    text-align: left;
-    cursor: pointer;
+  .sweep-rec-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--color-salmon);
+    background: transparent;
+    color: var(--color-salmon);
     display: flex;
     align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-    transition: background 40ms, color 40ms;
-  }
-  .sweep-preset-option:hover {
-    background: rgba(30, 32, 40, 0.06);
-    color: var(--color-fg);
-  }
-  .sweep-preset-icon {
-    font-size: var(--fs-lg);
-    width: 20px;
-    text-align: center;
+    justify-content: center;
+    cursor: pointer;
     flex-shrink: 0;
+    transition: background 80ms, border-color 80ms, color 80ms;
   }
-  .sweep-preset-label {
-    font-weight: 600;
+  .sweep-rec-circle:hover {
+    background: rgba(232, 160, 144, 0.15);
+  }
+  .sweep-rec-circle.armed {
+    background: rgba(232, 160, 144, 0.2);
+    animation: sweep-rec-pulse 1.5s ease-in-out infinite;
+  }
+  .sweep-rec-circle.recording {
+    background: var(--color-salmon);
+    color: var(--color-fg);
+    animation: sweep-rec-pulse 1s ease-in-out infinite;
+  }
+  @keyframes sweep-rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  .sweep-rec-time {
+    font-family: var(--font-data);
+    font-size: var(--fs-min);
+    font-weight: 700;
+    color: var(--color-salmon);
+    letter-spacing: 0.04em;
   }
   .sweep-toolbar-sep {
     width: 1px;
     height: 16px;
-    background: rgba(30, 32, 40, 0.12);
+    background: var(--dz-border);
     margin: 0 4px;
     flex-shrink: 0;
   }
   .sweep-toolbar-spacer { flex: 1; }
   .sweep-close {
-    border: 1.5px solid var(--color-fg);
+    border: 1.5px solid var(--dz-btn-border);
     background: transparent;
-    color: var(--color-fg);
+    color: var(--dz-text);
     width: 24px;
     height: 24px;
     font-size: var(--fs-base);
@@ -1294,115 +1091,137 @@
     flex-shrink: 0;
     cursor: pointer;
   }
+  .sweep-close:hover {
+    border-color: var(--dz-text-strong);
+    color: var(--dz-text-strong);
+  }
+
   .sweep-layout {
     display: flex;
     flex: 1;
     min-height: 0;
-    gap: 8px;
-    padding: 8px;
+    gap: 0;
   }
 
-  /* ── Palette ── */
-  .sweep-palette:focus { outline: none; }
-  .sweep-palette {
+  /* ── Curve/Toggle list ── */
+  .sweep-list {
     width: 140px;
     flex-shrink: 0;
     overflow-y: auto;
     padding: 4px 0;
-    border-right: 1px solid rgba(30, 32, 40, 0.10);
+    border-right: 1px solid var(--dz-divider);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0;
   }
-  .palette-track {
+  .sweep-section-label {
+    font-size: var(--fs-min);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--dz-text-dim);
+    padding: 8px 8px 4px;
+    text-transform: uppercase;
+  }
+  .sweep-list-item {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 6px 8px;
+    padding: 4px 8px;
     cursor: pointer;
-    border-radius: 4px;
-    color: var(--color-muted);
-    font-size: var(--fs-lg);
-    font-weight: 600;
+    color: var(--dz-text-mid);
+    font-size: var(--fs-sm);
+    transition: background 40ms;
   }
-  .palette-track:hover { background: rgba(30, 32, 40, 0.06); }
-  .palette-track.has-curve { color: var(--color-fg); }
-  .palette-track-name { flex: 1; }
-  .palette-track-arrow {
-    font-size: var(--fs-base);
-    opacity: 0.4;
+  .sweep-list-item:hover {
+    background: var(--dz-bg-hover);
   }
-  .palette-back {
-    display: flex;
-    align-items: center;
-    padding: 6px 8px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: var(--fs-lg);
-    font-weight: 600;
-    color: var(--color-muted);
-    border-bottom: 1px solid rgba(30, 32, 40, 0.1);
-    margin-bottom: 4px;
+  .sweep-list-item.active {
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
   }
-  .palette-back:hover { background: rgba(30, 32, 40, 0.06); }
-  .palette-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px 4px 16px;
-    border: none;
-    background: transparent;
-    color: var(--color-muted);
-    font-size: var(--fs-lg);
-    cursor: pointer;
-    border-radius: 4px;
-    text-align: left;
-    position: relative;
-  }
-  .palette-item:hover {
-    background: rgba(30, 32, 40, 0.06);
-  }
-  .palette-item.active {
-    background: rgba(30, 32, 40, 0.08);
-    color: var(--color-fg);
-  }
-  .palette-dot {
-    width: 12px;
-    height: 12px;
+  .sweep-list-dot {
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    border: 2px solid var(--accent);
     background: var(--accent);
     flex-shrink: 0;
   }
-  .palette-dot.mix {
-    background: transparent;
-  }
-  .palette-dot.has-curve.mix {
-    background: var(--accent);
-  }
-  .palette-label {
+  .sweep-list-label {
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .palette-del {
+  .sweep-list-del {
     all: unset;
-    font-size: var(--fs-base);
-    color: var(--color-muted);
+    font-size: var(--fs-sm);
+    color: var(--dz-text-dim);
     cursor: pointer;
     padding: 0 2px;
     width: 12px;
     text-align: center;
+    opacity: 0;
+    transition: opacity 80ms;
   }
-  .palette-cat-sep {
-    height: 1px;
-    background: rgba(30, 32, 40, 0.10);
-    margin: 4px 8px;
+  .sweep-list-item:hover .sweep-list-del,
+  .sweep-list-item.active .sweep-list-del {
+    opacity: 1;
   }
-  .palette-del-placeholder {
-    width: 12px;
-    flex-shrink: 0;
+  .sweep-list-del:hover {
+    color: var(--color-danger);
+  }
+  .sweep-empty {
+    padding: 16px 8px;
+    color: var(--dz-text-dim);
+    font-size: var(--fs-sm);
+    text-align: center;
+  }
+
+  /* ── Toggle blocks ── */
+  .sweep-toggle-row {
+    padding: 2px 8px 4px;
+  }
+  .sweep-toggle-bar {
+    position: relative;
+    height: 12px;
+    background: var(--dz-bg-hover);
+    border-radius: 2px;
+    overflow: visible;
+  }
+  .sweep-toggle-row.active .sweep-toggle-bar {
+    cursor: crosshair;
+  }
+  .toggle-block {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 2px;
+  }
+  .toggle-block.on {
+    background: var(--accent);
+    opacity: 0.6;
+  }
+  .sweep-toggle-row.active .toggle-block.on {
+    opacity: 0.8;
+  }
+  .toggle-boundary {
+    position: absolute;
+    top: -2px;
+    width: 6px;
+    height: 16px;
+    margin-left: -3px;
+    background: var(--dz-text-strong);
+    border-radius: 2px;
+    cursor: ew-resize;
+    opacity: 0;
+    transition: opacity 80ms;
+    z-index: 1;
+  }
+  .sweep-toggle-row.active .toggle-boundary {
+    opacity: 0.6;
+  }
+  .toggle-boundary:hover {
+    opacity: 1 !important;
   }
 
   /* ── Canvas ── */
@@ -1412,19 +1231,16 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    border: 1px solid rgba(30, 32, 40, 0.10);
+    border-left: 1px solid var(--dz-divider);
   }
   .sweep-canvas {
     display: block;
     width: 100%;
     height: 100%;
-    cursor: crosshair;
+    cursor: default;
     touch-action: none;
   }
   .sweep-canvas:focus { outline: none; }
-  .sweep-canvas.bezier-mode {
-    cursor: default;
-  }
   .sweep-axis-labels {
     position: absolute;
     right: 6px;
@@ -1438,7 +1254,6 @@
   }
   .sweep-axis-labels span {
     font-size: var(--fs-sm);
-    color: var(--color-muted);
+    color: var(--dz-text-dim);
   }
-
 </style>

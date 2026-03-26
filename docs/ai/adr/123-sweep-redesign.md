@@ -312,15 +312,48 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 ## Implementation Phases
 
 ### Phase 1: Foundation
-- Extract `sweepEval.ts` (evaluateCurve + evaluateToggle — pure, testable)
-- Dark-zone visual redesign of SweepCanvas (remove draw palette/brush, apply --dz-* tokens)
-- Toggle section in sweep editor (colored blocks alongside existing curve display)
+
+#### Implementation Checklist
+- [x] Extract `sweepEval.ts` — move `evaluateCurve()` + `evaluateToggle()` to `src/lib/sweepEval.ts` as exported pure functions
+- [x] Add `buildSweepData(curves, toggles)` helper to `sweepEval.ts`
+- [x] Update `scenePlayback.ts` to import from `sweepEval.ts` (remove inline copies)
+- [x] Update `SweepCanvas.svelte` to import from `sweepEval.ts` (remove inline copy)
+- [x] Update `sweepPlayback.test.ts` to import from `sweepEval.ts` (remove reimplementations)
+- [x] Dark-zone background: replace cream/light-zone palette with `--dz-bg`, `--dz-divider`, `--dz-text-*` tokens
+- [x] Remove draw palette panel (target picker drill-down, mode buttons: free/bezier/shape)
+- [x] Remove freehand drawing mode and shape presets
+- [x] Keep point-editing (bezier mode) as the default and only editing mode — always active, no mode toggle
+- [x] Canvas rendering: dark background, neon-accent curve strokes, `--dz-*` grid/borders
+- [x] Toggle section: render `SweepToggleCurve[]` as colored blocks (ON = accent, OFF = dark gap) below curve section
+- [x] Toggle block editing: boundary drag, split, delete, merge
+- [x] `pnpm check` passes
+- [x] `pnpm test` passes
 
 ### Phase 2: Recording
-- Sweep node ● button: start/stop recording for target chain
-- Recording engine: capture pad/toggle state changes, write to target sweep modifier
-- Auto-generation of sweep nodes when chain has none
-- Overdub merge logic
+
+#### Implementation Checklist
+- [x] Recording engine module `sweepRecorder.svelte.ts` — arm/start/stop, capture parameter changes with ms timestamps, BPM-based `t` normalization on stop
+- [x] Sweep node ● record button in SceneView (on sweep node, left of node)
+- [x] Sweep node ● record button in sweep editor toolbar (circular, matching node style)
+- [x] Arm-based flow: ● arms recording, any parameter touch starts playback + recording
+- [x] Capture FX pad movements (verb/delay/glitch/granular x/y) as `SweepCurve` — FxPad + DockFxControls
+- [x] Capture EQ node movements (freq/gain/q per band) as `SweepCurve` — DockEqControls
+- [x] Capture Master pad movements (comp/duck/ret/sat x/y) as `SweepCurve` — DockMasterControls + MasterView
+- [x] Capture Filter pad movements (cutoff/resonance) as `SweepCurve` — DockMasterControls + MasterView
+- [x] Capture track volume/pan knob movements as `SweepCurve` — StepGrid + TrackerView
+- [x] Capture voice param knob movements as `SweepCurve` — DockTrackEditor
+- [x] Capture send level knob movements as `SweepCurve` — StepGrid + TrackerView
+- [x] Capture FX on/off toggles as `SweepToggleCurve` — FxPad + DockFxControls
+- [x] Capture FX hold toggles as `SweepToggleCurve` — FxPad
+- [x] Capture track mute toggles as `SweepToggleCurve` — StepGrid + TrackerView
+- [x] Auto-generate sweep node when chain has none (§3)
+- [ ] Chain routing: switch write target when active chain changes during scene traversal
+- [x] Overdub merge: touched parameters overwrite, untouched keep existing curves (§8)
+- [x] User vs sweep detection: `isUserControlled` callback, `applySweepStep` skips user-controlled targets during REC
+- [x] `pushUndo('sweep recording')` on REC stop before writing curves
+- [x] Recording indicator (● + elapsed time) visible during REC
+- [x] `pnpm check` passes
+- [x] `pnpm test` passes
 
 ### Phase 3: Playback Glow + Editing
 - Playback cursor + `shadowBlur` glow on active curves

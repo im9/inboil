@@ -1,5 +1,6 @@
 <script lang="ts">
   import { song, playback, ui, activeCell, trackDisplayName, pushUndo } from '../state.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import {
     isDrum, toggleTrig, setTrigNote, setTrigVelocity, setTrigDuration,
@@ -309,7 +310,7 @@
         class:soloed={ui.soloTracks.has(c.trackId)}
       >
         <button class="track-label" onpointerdown={() => { ui.selectedTrack = c.trackId; cursorRow = Math.min(cursorRow, c.steps - 1) }}>{trackDisplayName(c, ui.currentPattern)}</button>
-        <button class="track-act" onpointerdown={() => toggleMute(c.trackId)}
+        <button class="track-act" onpointerdown={() => { toggleMute(c.trackId); captureToggle({ kind: 'mute', trackId: c.trackId }, song.tracks.find(t => t.id === c.trackId)?.muted ?? false) }}
           data-tip="Mute" data-tip-ja="ミュート"
         >{t.muted ? 'M' : 'm'}</button>
         <button class="track-act" class:active={ui.soloTracks.has(c.trackId)} onpointerdown={() => toggleSolo(c.trackId)}
@@ -324,30 +325,30 @@
         <div class="sidebar-mix-row">
           <span data-tip="Track volume" data-tip-ja="トラック音量">
             <Knob value={track.volume} label="VOL" size={20} compact
-              onchange={v => { pushUndo('Set volume'); song.tracks[trackId].volume = v }} />
+              onchange={v => { pushUndo('Set volume'); song.tracks[trackId].volume = v; captureValue({ kind: 'track', trackId, param: 'volume' }, v) }} />
           </span>
           <span data-tip="Stereo panning" data-tip-ja="ステレオパン">
             <Knob value={(track.pan + 1) / 2} label="PAN" size={20} compact defaultValue={0.5}
-              onchange={v => { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1 }} />
+              onchange={v => { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1; captureValue({ kind: 'track', trackId, param: 'pan' }, v) }} />
           </span>
         </div>
         <div class="sidebar-mix-label">SEND</div>
         <div class="sidebar-mix-row">
           <span data-tip="Reverb send" data-tip-ja="リバーブセンド">
             <Knob value={ph.reverbSend} label="VERB" size={20} compact
-              onchange={v => setTrackSend(trackId, 'reverbSend', v)} />
+              onchange={v => { setTrackSend(trackId, 'reverbSend', v); captureValue({ kind: 'send', trackId, param: 'reverbSend' }, v) }} />
           </span>
           <span data-tip="Delay send" data-tip-ja="ディレイセンド">
             <Knob value={ph.delaySend} label="DLY" size={20} compact
-              onchange={v => setTrackSend(trackId, 'delaySend', v)} />
+              onchange={v => { setTrackSend(trackId, 'delaySend', v); captureValue({ kind: 'send', trackId, param: 'delaySend' }, v) }} />
           </span>
           <span data-tip="Glitch send" data-tip-ja="グリッチセンド">
             <Knob value={ph.glitchSend} label="GLT" size={20} compact
-              onchange={v => setTrackSend(trackId, 'glitchSend', v)} />
+              onchange={v => { setTrackSend(trackId, 'glitchSend', v); captureValue({ kind: 'send', trackId, param: 'glitchSend' }, v) }} />
           </span>
           <span data-tip="Granular send" data-tip-ja="グラニュラーセンド">
             <Knob value={ph.granularSend} label="GRN" size={20} compact
-              onchange={v => setTrackSend(trackId, 'granularSend', v)} />
+              onchange={v => { setTrackSend(trackId, 'granularSend', v); captureValue({ kind: 'send', trackId, param: 'granularSend' }, v) }} />
           </span>
         </div>
       </div>

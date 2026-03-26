@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fxPad, fxFlavours, perf, ui } from '../state.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { FX_FLAVOURS } from '../constants.ts'
   import type { FxFlavourKey } from '../constants.ts'
   import Knob from './Knob.svelte'
@@ -49,17 +50,27 @@
     return `${Math.round(y * 100)}%`
   }
 
+  const FX_X_PARAM: Record<FxKey, 'reverbWet' | 'delayTime' | 'glitchX' | 'granularSize'> = {
+    verb: 'reverbWet', delay: 'delayTime', glitch: 'glitchX', granular: 'granularSize',
+  }
+  const FX_Y_PARAM: Record<FxKey, 'reverbDamp' | 'delayFeedback' | 'glitchY' | 'granularDensity'> = {
+    verb: 'reverbDamp', delay: 'delayFeedback', glitch: 'glitchY', granular: 'granularDensity',
+  }
+
   function setFxX(key: FxKey, v: number) {
     fxPad[key].x = v
+    captureValue({ kind: 'fx', param: FX_X_PARAM[key] }, v)
   }
 
   function setFxY(key: FxKey, v: number) {
     fxPad[key].y = v
+    captureValue({ kind: 'fx', param: FX_Y_PARAM[key] }, v)
   }
 
   function toggleFxOn(key: FxKey) {
     const wasOn = fxPad[key].on
     fxPad[key].on = !wasOn
+    captureToggle({ kind: 'fxOn', fx: key }, !wasOn)
     // Auto-release hold when pad is turned off (ADR 121)
     if (wasOn) { const hk = HOLD_MAP[key]; if (hk) perf[hk] = false }
   }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { perf, effects, masterPad, fxPad, pushUndo } from '../state.svelte.ts'
+  import { captureValue } from '../sweepRecorder.svelte.ts'
   import Knob from './Knob.svelte'
   import VFader from './VFader.svelte'
 
@@ -22,11 +23,11 @@
 
   function setMasterKnobValue(key: MasterKnobKey, v: number) {
     pushUndo('Master knob')
-    if (key === 'gain') perf.masterGain = v
+    if (key === 'gain') { perf.masterGain = v; captureValue({ kind: 'master', param: 'masterVolume' }, v) }
     else if (key === 'mkp') effects.comp.makeup = 1 + v * 3
     else if (key === 'atk') effects.comp.attack = 0.1 + v * 29.9
     else if (key === 'rel') effects.comp.release = 10 + v * 290
-    else perf.swing = v
+    else { perf.swing = v; captureValue({ kind: 'master', param: 'swing' }, v) }
   }
 
   function masterKnobDisplay(key: MasterKnobKey): string {
@@ -55,14 +56,23 @@
     return `${Math.round(st.y * 200)}%`
   }
 
+  const MPAD_X: Record<MasterPadKey, 'compThreshold' | 'duckDepth' | 'retVerb' | 'satDrive'> = {
+    comp: 'compThreshold', duck: 'duckDepth', ret: 'retVerb', sat: 'satDrive',
+  }
+  const MPAD_Y: Record<MasterPadKey, 'compRatio' | 'duckRelease' | 'retDelay' | 'satTone'> = {
+    comp: 'compRatio', duck: 'duckRelease', ret: 'retDelay', sat: 'satTone',
+  }
+
   function setMasterPadX(key: MasterPadKey, v: number) {
     pushUndo('Master')
     masterPad[key].x = v
+    captureValue({ kind: 'master', param: MPAD_X[key] }, v)
   }
 
   function setMasterPadY(key: MasterPadKey, v: number) {
     pushUndo('Master')
     masterPad[key].y = v
+    captureValue({ kind: 'master', param: MPAD_Y[key] }, v)
   }
 
   function toggleMasterPadOn(key: MasterPadKey) {
@@ -79,8 +89,8 @@
     pushUndo('Toggle filter')
     fxPad.filter.on = !fxPad.filter.on
   }
-  function setFilterX(v: number) { pushUndo('Filter'); fxPad.filter.x = v }
-  function setFilterY(v: number) { pushUndo('Filter'); fxPad.filter.y = v }
+  function setFilterX(v: number) { pushUndo('Filter'); fxPad.filter.x = v; captureValue({ kind: 'master', param: 'filterCutoff' }, v) }
+  function setFilterY(v: number) { pushUndo('Filter'); fxPad.filter.y = v; captureValue({ kind: 'master', param: 'filterResonance' }, v) }
 </script>
 
 <span class="section-label">MASTER</span>

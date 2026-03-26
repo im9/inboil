@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fxPad, pushUndo } from '../state.svelte.ts'
+  import { captureValue } from '../sweepRecorder.svelte.ts'
   import Knob from './Knob.svelte'
 
   const EQ_BANDS = [
@@ -25,14 +26,17 @@
     pushUndo('EQ')
     const q = Math.round(eqQDenorm(v) * 10) / 10
     fxPad[bandKey].q = q
+    captureValue({ kind: 'eq', band: bandKey, param: 'q' }, v)
   }
   function setEqX(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
     pushUndo('EQ')
     fxPad[bandKey].x = v
+    captureValue({ kind: 'eq', band: bandKey, param: 'freq' }, v)
   }
   function setEqY(bandKey: 'eqLow' | 'eqMid' | 'eqHigh', v: number) {
     pushUndo('EQ')
     fxPad[bandKey].y = v
+    captureValue({ kind: 'eq', band: bandKey, param: 'gain' }, v)
   }
   function toggleEqShelf(bandKey: 'eqLow' | 'eqHigh') {
     pushUndo('Toggle EQ shelf')

@@ -7,6 +7,7 @@ import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automati
 import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId } from './types.ts'
+import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
 
@@ -283,35 +284,6 @@ function findConnectedSweep(patternNodeId: string): SweepData | null {
   return null
 }
 
-/** Evaluate a sweep curve at a given progress (0–1) using Catmull-Rom interpolation */
-function evaluateCurve(points: { t: number; v: number }[], progress: number): number {
-  if (points.length === 0) return 0
-  if (progress <= points[0].t) return points[0].v
-  if (progress >= points[points.length - 1].t) return points[points.length - 1].v
-  for (let i = 0; i < points.length - 1; i++) {
-    if (progress >= points[i].t && progress <= points[i + 1].t) {
-      const seg = (progress - points[i].t) / (points[i + 1].t - points[i].t)
-      if (points.length <= 2) {
-        // Linear for 2 points
-        return points[i].v + (points[i + 1].v - points[i].v) * seg
-      }
-      // Catmull-Rom spline for smooth interpolation
-      const p0 = points[Math.max(0, i - 1)]
-      const p1 = points[i]
-      const p2 = points[i + 1]
-      const p3 = points[Math.min(points.length - 1, i + 2)]
-      const t2 = seg * seg, t3 = t2 * seg
-      return 0.5 * (
-        (2 * p1.v) +
-        (-p0.v + p2.v) * seg +
-        (2 * p0.v - 5 * p1.v + 4 * p2.v - p3.v) * t2 +
-        (-p0.v + 3 * p1.v - 3 * p2.v + p3.v) * t3
-      )
-    }
-  }
-  return 0
-}
-
 /** Apply sweep automation for current step. Called from App.svelte onStep.
  *  Uses automation snapshot as base values — offsets are applied relative to snapshot.
  *  Returns true if any parameter was changed. */
@@ -327,6 +299,9 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   let changed = false
 
   for (const curve of sweepData.curves) {
+    // Skip targets currently being controlled by user during recording (ADR 123 §8)
+    if (isUserControlled(targetKey(curve.target))) continue
+
     const offset = evaluateCurve(curve.points, progress)
 
     if (curve.target.kind === 'track') {
@@ -433,12 +408,8 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   // Boolean toggle evaluation (ADR 123)
   if (sweepData.toggles) {
     for (const toggle of sweepData.toggles) {
-      // Find the last point where t ≤ progress; use its `on` value (default OFF)
-      let on = false
-      for (const pt of toggle.points) {
-        if (pt.t <= progress) on = pt.on
-        else break
-      }
+      if (isUserControlled(targetKey(toggle.target))) continue
+      const on = evaluateToggle(toggle.points, progress)
 
       if (toggle.target.kind === 'hold') {
         const HOLD_MAP: Record<string, keyof typeof perf> = {

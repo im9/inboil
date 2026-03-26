@@ -5,6 +5,7 @@
   // stepActions.ts; further splitting adds complexity without benefit.
   import { onDestroy, onMount, tick, untrack } from 'svelte'
   import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, canAddTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
   import type { Trig } from '../types.ts'
@@ -417,7 +418,7 @@
             </button>
             <button
               class="btn-mute flip-host"
-              onpointerdown={() => toggleMute(trackId)}
+              onpointerdown={() => { toggleMute(trackId); captureToggle({ kind: 'mute', trackId }, song.tracks.find(t => t.id === trackId)?.muted ?? false) }}
               data-tip="Mute/unmute track" data-tip-ja="トラックをミュート"
             >
               <span class="flip-card" class:flipped={track?.muted}>
@@ -575,6 +576,7 @@
                   onchange={v => {
                     if (selected) trackPlkChange('vol', v, bv => { pushUndo('Set volume'); song.tracks[trackId].volume = bv })
                     else { pushUndo('Set volume'); song.tracks[trackId].volume = v }
+                    captureValue({ kind: 'track', trackId, param: 'volume' }, v)
                   }}
                 />
               </span>
@@ -586,6 +588,7 @@
                   onchange={v => {
                     if (selected) trackPlkChange('pan', v * 2 - 1, bv => { pushUndo('Set pan'); song.tracks[trackId].pan = bv })
                     else { pushUndo('Set pan'); song.tracks[trackId].pan = v * 2 - 1 }
+                    captureValue({ kind: 'track', trackId, param: 'pan' }, v)
                   }}
                 />
               </span>
@@ -595,22 +598,22 @@
                 <span data-tip="Reverb send" data-tip-ja="リバーブセンド">
                   <Knob value={trackPlkValue('reverbSend', ph.reverbSend)} label="VERB" size={24} light compact
                     locked={isTrackPlkLocked('reverbSend')}
-                    onchange={v => trackPlkChange('reverbSend', v, bv => setTrackSend(trackId, 'reverbSend', bv))} />
+                    onchange={v => { trackPlkChange('reverbSend', v, bv => setTrackSend(trackId, 'reverbSend', bv)); captureValue({ kind: 'send', trackId, param: 'reverbSend' }, v) }} />
                 </span>
                 <span data-tip="Delay send" data-tip-ja="ディレイセンド">
                   <Knob value={trackPlkValue('delaySend', ph.delaySend)} label="DLY" size={24} light compact
                     locked={isTrackPlkLocked('delaySend')}
-                    onchange={v => trackPlkChange('delaySend', v, bv => setTrackSend(trackId, 'delaySend', bv))} />
+                    onchange={v => { trackPlkChange('delaySend', v, bv => setTrackSend(trackId, 'delaySend', bv)); captureValue({ kind: 'send', trackId, param: 'delaySend' }, v) }} />
                 </span>
                 <span data-tip="Glitch send" data-tip-ja="グリッチセンド">
                   <Knob value={trackPlkValue('glitchSend', ph.glitchSend)} label="GLT" size={24} light compact
                     locked={isTrackPlkLocked('glitchSend')}
-                    onchange={v => trackPlkChange('glitchSend', v, bv => setTrackSend(trackId, 'glitchSend', bv))} />
+                    onchange={v => { trackPlkChange('glitchSend', v, bv => setTrackSend(trackId, 'glitchSend', bv)); captureValue({ kind: 'send', trackId, param: 'glitchSend' }, v) }} />
                 </span>
                 <span data-tip="Granular send" data-tip-ja="グラニュラーセンド">
                   <Knob value={trackPlkValue('granularSend', ph.granularSend)} label="GRN" size={24} light compact
                     locked={isTrackPlkLocked('granularSend')}
-                    onchange={v => trackPlkChange('granularSend', v, bv => setTrackSend(trackId, 'granularSend', bv))} />
+                    onchange={v => { trackPlkChange('granularSend', v, bv => setTrackSend(trackId, 'granularSend', bv)); captureValue({ kind: 'send', trackId, param: 'granularSend' }, v) }} />
                 </span>
               </div>
             {/if}

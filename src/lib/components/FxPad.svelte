@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fxPad, perf, ui, fxFlavours, pushUndo } from '../state.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   // ui.granularMode2 is now in ui state — accessible from DockFxControls too
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB, FX_FLAVOURS } from '../constants.ts'
@@ -40,7 +41,11 @@
         // Pad ON: toggle hold (ADR 121 — unified across all 4 buses)
         const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold' } as const
         const hk = holdKeys[key as keyof typeof holdKeys]
-        if (hk) perf[hk] = !perf[hk]
+        if (hk) {
+          perf[hk] = !perf[hk]
+          // Sweep recording: capture hold toggle (ADR 123)
+          captureToggle({ kind: 'hold', fx: key as 'verb' | 'delay' | 'glitch' | 'granular' }, perf[hk] as boolean)
+        }
         dragging = null
         dragRect = null
       } else {
@@ -75,6 +80,11 @@
         } else {
           fxPad[dragging].x = pos.x
           fxPad[dragging].y = pos.y
+          // Sweep recording capture (ADR 123)
+          const xParam = FX_SWEEP_X[dragging]
+          const yParam = FX_SWEEP_Y[dragging]
+          if (xParam) captureValue({ kind: 'fx', param: xParam }, pos.x)
+          if (yParam) captureValue({ kind: 'fx', param: yParam }, pos.y)
         }
       }
     }
@@ -86,6 +96,8 @@
     if (!dragMoved) {
       const wasOn = fxPad[dragging].on
       fxPad[dragging].on = !wasOn
+      // Sweep recording: capture FX on/off toggle (ADR 123)
+      captureToggle({ kind: 'fxOn', fx: dragging as 'verb' | 'delay' | 'glitch' | 'granular' }, !wasOn)
       // Auto-release hold when pad is turned off (ADR 121)
       if (wasOn && nodeHeld(dragging)) {
         const holdKeys = { verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold' } as const
@@ -95,6 +107,14 @@
     }
     dragging = null
     dragRect = null
+  }
+
+  // FX pad key → SweepTarget param mapping (ADR 123)
+  const FX_SWEEP_X: Record<string, 'reverbWet' | 'delayTime' | 'glitchX' | 'granularSize'> = {
+    verb: 'reverbWet', delay: 'delayTime', glitch: 'glitchX', granular: 'granularSize',
+  }
+  const FX_SWEEP_Y: Record<string, 'reverbDamp' | 'delayFeedback' | 'glitchY' | 'granularDensity'> = {
+    verb: 'reverbDamp', delay: 'delayFeedback', glitch: 'glitchY', granular: 'granularDensity',
   }
 
   function nodeHeld(key: string): boolean {
