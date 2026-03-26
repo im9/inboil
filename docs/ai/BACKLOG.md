@@ -14,6 +14,13 @@ Known architectural limits that are fine at current scale but need attention whe
 - [ ] **Mobile rendering** — StepGrid re-renders all 128 cells on playhead advance. No virtual scrolling for long patterns. Add memo keys or virtual scroll if patterns expand to 64+ steps
 - [ ] **P-Lock storage density** — `paramLocks` is unbounded `Record<string, number>` per step. At 64 steps × 24 tracks × 20 params, a single pattern could reach 500KB. Monitor in dogfooding
 
+## Security
+
+Known vulnerabilities to fix before public release.
+
+- [ ] **Room code brute-force** — 6-char code (30-bit entropy, ~1B combinations) with no signaling server rate limit. Multi-device is intended for same-network use (e.g. phone + laptop on same Wi-Fi). Consider restricting signaling to local network discovery (mDNS / WebRTC local candidates only) to eliminate remote attack surface entirely. If public signaling is kept: (1) IP-based rate limit (5 failed / 10s → block), (2) extend code to 8 chars (40-bit), (3) implement room TTL
+- [ ] **Room code TTL not implemented** — ADR 019 says rooms expire after 1h inactivity, but Durable Object has no explicit expiration logic. Stale rooms remain connectable indefinitely
+
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.
