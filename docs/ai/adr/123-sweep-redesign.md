@@ -117,22 +117,25 @@ Each recording pass **merges** into existing data: re-recording a parameter over
 
 ### 5. SWP Sheet Visual Design
 
-The sheet is a **management screen** with playback-reactive polish — not a visualization destination.
+The sheet is a **management screen** with neon-tinged polish — matching FX/EQ/MST sheet aesthetics. Not a pure visualization, but not a boring list either.
 
-**Background**: `--dz-bg`, minimal grid using `--dz-divider` (consistent with FX pad dark zone)
+**Visual language** — consistent with FX pad, EQ overlay, and Master sheet:
+- Dark-zone palette (`--dz-bg`, `--dz-divider`, `--dz-text`)
+- Neon glow on interactive elements (same `shadowBlur` technique as FxPad constellation lines)
+- Color-coded by parameter group using existing accent tokens (`--color-olive`, `--color-blue`, etc.)
 
 **Curve list** (static / stopped):
-- Each recorded parameter: label + color-coded mini-curve (Canvas 2D)
+- Each recorded parameter: label + color-coded mini-curve (Canvas 2D) with soft glow on stroke
 - Grouped by chain/pattern
-- Selected curve: full opacity, highlighted border
-- Unselected curves: dim, 30% opacity
-- Colors per parameter group (verb = `--color-olive`, delay = `--color-blue`, etc.)
+- Selected curve: full opacity, accent-colored glow border
+- Unselected curves: dim, 30% opacity, no glow
+- Hovering a curve brightens its glow — same feedback pattern as FxPad effect nodes
 
 **Playback glow** (playing):
 - Amber vertical cursor sweeps left to right
-- Curve at cursor position pulses with `shadowBlur` (8–12px)
-- Toggle curves: on-segments illuminate, off-segments stay dark
-- Subtle — enhances awareness of "what's moving now" without being a light show
+- Curve at cursor position pulses with intensified `shadowBlur` (8–12px)
+- Toggle curves: on-segments illuminate with accent glow, off-segments stay dark
+- The overall effect: a dark screen with colored light traces gently pulsing — alive, not static
 
 **Recording preview strip** (future, during REC):
 - Thin horizontal band floating above performance pads
