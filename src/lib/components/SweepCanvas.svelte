@@ -1523,10 +1523,10 @@
     transition: background 80ms, border-color 80ms, color 80ms;
   }
   .sweep-rec-circle:hover {
-    background: rgba(232, 160, 144, 0.15);
+    background: var(--salmon-bg-key);
   }
   .sweep-rec-circle.armed {
-    background: rgba(232, 160, 144, 0.25);
+    background: var(--salmon-bg-key);
     animation: sweep-rec-armed-glow 1.5s ease-in-out infinite;
   }
   .sweep-rec-circle.recording {
@@ -1772,7 +1772,7 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: rgba(30, 32, 40, 0.85);
+    background: var(--color-fg);
     border: 1px solid var(--dz-border);
     border-radius: 4px;
   }
