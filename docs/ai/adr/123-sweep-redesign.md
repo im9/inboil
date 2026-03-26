@@ -124,18 +124,27 @@ The sheet is a **management screen** with neon-tinged polish — matching FX/EQ/
 - Neon glow on interactive elements (same `shadowBlur` technique as FxPad constellation lines)
 - Color-coded by parameter group using existing accent tokens (`--color-olive`, `--color-blue`, etc.)
 
-**Curve list** (static / stopped):
-- Each recorded parameter: label + color-coded mini-curve (Canvas 2D) with soft glow on stroke
+**Two visual modes** — edit-friendly when stopped, expressive when playing:
+
+**Edit mode** (stopped / editing):
+- Each recorded parameter: label + color-coded mini-curve with **subtle** single-pass glow
 - Grouped by chain/pattern
-- Selected curve: full opacity, accent-colored glow border
+- Selected curve: full opacity, accent-colored border — control points clearly visible
 - Unselected curves: dim, 30% opacity, no glow
 - Hovering a curve brightens its glow — same feedback pattern as FxPad effect nodes
+- Priority: **readability and precision** — glow stays gentle so point handles and trim edges are easy to grab
 
-**Playback glow** (playing):
-- Amber vertical cursor sweeps left to right
-- Curve at cursor position pulses with intensified `shadowBlur` (8–12px)
-- Toggle curves: on-segments illuminate with accent glow, off-segments stay dark
-- The overall effect: a dark screen with colored light traces gently pulsing — alive, not static
+**Playback mode** (playing) — neon curves come alive:
+- **Multi-pass rendering**: each curve drawn in 3 layers — wide outer glow (shadowBlur=20, low alpha), mid glow (shadowBlur=10), bright white core line — fiber-optic bundle aesthetic
+- **Additive blending**: `globalCompositeOperation = 'lighter'` — overlapping curves blend brighter at intersections
+- **Cursor flash**: amber cursor sweeps left to right; curves flare to full brightness at crossing, then decay — sparkler trail
+- **Value-driven intensity**: stroke width and glow scale with parameter value — filter wide open = thick, blazing; closed = thin, dim
+- **Active pulse**: curves with changing values breathe with luminance oscillation; static segments stay quiet
+- **Toggle illumination**: ON segments glow as solid accent-colored bands; OFF segments go dark
+- **Particles** (optional): small light specks drift along curves near the cursor — adds depth without obscuring data
+- Priority: **spectacle** — this is the reward for performing. Editing is disabled during playback anyway
+
+All effects use Canvas 2D `shadowBlur` + `globalAlpha` + `lineWidth` + `globalCompositeOperation` — same techniques as FxPad, scaled up. No WebGL needed.
 
 **Recording preview strip** (future, during REC):
 - Thin horizontal band floating above performance pads
