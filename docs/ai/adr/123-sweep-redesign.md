@@ -88,6 +88,7 @@ After REC:
 **Chain routing during recording:**
 - Recording engine tracks which pattern chain is currently playing
 - When the active chain changes (scene traversal moves to next pattern), the write target switches to the new chain's sweep modifier
+- Continuous gestures spanning a chain boundary are split seamlessly: the outgoing chain's curve ends at its final value, the incoming chain's curve starts from that same value — no audible discontinuity
 - `t` values are normalized to each chain's scope (pattern length × repeat count) — same as existing sweep data
 
 **SWP sheet shows all chains:**
@@ -240,6 +241,10 @@ interface SweepData {
 
 - OfflineAudioContext: can the existing AudioWorklet processors run unchanged in offline mode, or do they need adaptation?
 - SWP sheet grouping: how to present multi-chain sweep data clearly? (tab per chain, flat list with headers, etc.)
+
+## Out of Scope
+
+**Global-scoped sweep parameters** — Master, FX, EQ, and Filter are global parameters but sweep is chain-scoped. Recording these during a specific chain means they only apply when that chain plays — which may surprise users who expect "master comp change" to persist across all chains. This is an existing limitation of chain-scoped sweep (not introduced by ADR 123). A future ADR should address whether to introduce a separate global sweep scope for these parameters, allowing automation that applies regardless of which chain is active.
 
 ## Implementation Phases
 
