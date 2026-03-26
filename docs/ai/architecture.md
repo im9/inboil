@@ -113,7 +113,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (49 files)  ← Svelte 5 UI components
+│   │   ├── components/ (50 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -158,7 +158,8 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── VFader.svelte      ← Vertical fader control
 │   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
-│   │   │   ├── SweepCanvas.svelte  ← Sweep automation paint canvas (ADR 118)
+│   │   │   ├── SweepCanvas.svelte  ← Sweep recording editor, dark-zone overlay (ADR 123)
+│   │   │   ├── SweepTrailStrip.svelte ← Recording preview sparkline strip (ADR 123)
 │   │   │   ├── SceneStamps.svelte  ← Decorative SVG stamps on scene canvas (ADR 119)
 │   │   │   ├── SceneStampPicker.svelte ← Stamp selection palette (ADR 119)
 │   │   │   ├── MiniSequencer.svelte ← Compact sequencer (unused, future mobile)

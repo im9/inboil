@@ -1,88 +1,101 @@
 ---
 title: Sweep Automation
-description: Paint parameter automation curves across repeat cycles for evolving textures and filter sweeps.
+description: Record live parameter movements as automation curves — perform filter sweeps, volume fades, and evolving textures in real time.
 sidebar:
   order: 1
 ---
 
 import PlaygroundSceneNode from '../../../../../components/PlaygroundSceneNode.svelte';
 
-A sweep node lets you **draw parameter changes over time** — perfect for acid-style filter sweeps, volume fades, and evolving textures across multiple repeats of a pattern.
+A sweep node lets you **record parameter changes in real time** — perform live pad movements during scene playback, and the captured gestures become automation curves.
 
 ## How It Works
 
-1. **Add a Sweep node** from the tool palette or bubble menu
-2. **Connect it** to a pattern node with an edge
-3. **Double-tap the Sweep node** to open the paint canvas
-4. **Select a parameter** from the palette (e.g., KICK → Volume, or BASS → CUT)
-5. **Draw a curve** on the canvas — the X axis is time (across all repeats), the Y axis is the parameter offset
+1. **Arm recording** — tap the ● button on a sweep node in the scene view, or in the sweep editor toolbar
+2. **Touch any parameter** — drag an FX pad, Master pad, EQ node, or track knob. Playback starts automatically and recording begins
+3. **Perform** — move pads and toggle effects as you normally would. Every movement is captured
+4. **Stop** — tap ● again or stop playback. Curves are written to the sweep node
 
-The sweep applies **relative offsets** to the parameter's base value. Drawing above the center line increases the value; below decreases it.
+Sweep nodes are **auto-generated** when you record — no need to create one manually first.
 
 <PlaygroundSceneNode show="sweep" client:visible />
 
-## Paint Canvas
+## What Gets Recorded
 
-The canvas shows a timeline spanning all repeats of the connected pattern. Click a repeat number (R1, R2, ...) in the timeline header to zoom into that repeat for finer control.
+| User Action | Recorded As |
+|---|---|
+| Drag FX pad (verb, delay, glitch, granular X/Y) | Continuous curve |
+| Drag Master pad (comp, duck, ret, sat X/Y) | Continuous curve |
+| Drag Filter pad (cutoff, resonance) | Continuous curve |
+| Drag EQ nodes (freq, gain, Q) | Continuous curve |
+| Drag track volume/pan knobs | Continuous curve |
+| Drag voice parameter knobs | Continuous curve |
+| Drag send level knobs | Continuous curve |
+| Toggle FX on/off | Toggle curve |
+| Toggle FX hold | Toggle curve |
+| Toggle track mute | Toggle curve |
 
-### Drawing Modes
+## Sweep Editor
 
-| Mode | Behavior |
-|------|----------|
-| **Draw** | Freehand painting — drag to draw curves with automatic smoothing |
-| **Point** | Click to place anchor points, drag to reposition, double-click to delete |
+Open the sweep editor by selecting a sweep node → Dock panel → edit. The dark-zone editor shows:
 
-### Shape Presets
+- **Curves section** — labeled mini-curves for each recorded parameter
+- **Toggles section** — colored blocks (ON = accent color, OFF = dark gap)
+- **Canvas** — timeline with playback cursor, zoom via scroll/pinch
 
-Use the **Shape** button to apply preset curve shapes instantly:
+### Editing
 
-| Shape | Effect |
-|-------|--------|
-| ╱ Ramp Up | Gradual increase from 0 to +1 |
-| ╲ Ramp Down | Gradual decrease from 0 to −1 |
-| ╱╲ Triangle | Rise to peak then return (swell) |
-| ╲╱ V (Dip) | Dip down then return |
-| ⌒ S-Curve | Slow start, accelerating rise |
+| Action | Effect |
+|--------|--------|
+| Click a curve in the list | Select it for editing |
+| Drag control points | Reposition on the curve |
+| Double-click a point | Delete it |
+| Click on the curve line | Add a new point |
+| Shift+drag on canvas | Select a range of points |
+| Delete/Backspace with range | Remove points in range |
+| Drag range edges | Adjust trim boundaries |
+| Select a point → use T/V knobs | Precision time/value control |
+
+### Playback Preview
+
+During scene playback, an amber cursor sweeps across the canvas. A gradient trail follows the cursor with curve crossing dots.
 
 ### Clear
 
-The **Clear** button removes all curves.
+The **Clear** button fades out and removes all curves (including global sweep data).
 
-## Parameters
+## Global vs Chain Scope
 
-The palette shows all available parameters for each track, organized into categories:
+Parameters are automatically routed to the correct scope:
 
-| Category | Examples |
-|----------|----------|
-| **Mix** (○ outline dots) | Volume, Pan |
-| **Synth** (● filled dots) | All voice-specific params (TONE, CUT, RESO, DECAY, etc.) |
-| **Send** (○ outline dots) | Verb, Delay, Glitch, Grain send levels |
+| Scope | Targets | Meaning |
+|-------|---------|---------|
+| **Global** | Master, FX, EQ, Filter, FX on/off, Hold | Plays across entire scene duration |
+| **Chain** | Track volume/pan, voice params, sends, mute | Plays only during the connected pattern's chain |
 
-Synth parameters vary per voice type — a drum track shows different params than a bass synth.
+## Overdub
 
-## Playback
+Re-recording merges with existing data:
+- **Touched parameters** are overwritten with the new recording
+- **Untouched parameters** keep their existing curves
 
-Sweep automation applies during **scene playback** only (not pattern loop mode). The sweep evaluates its curves on every step and updates parameters in real-time.
+## Recording Preview
 
-- A **playhead** line moves across the canvas during playback
-- The **sweep node** in the scene view shows a playhead moving across its curve preview
-- Connected edges glow with the sweep's accent color during playback
-
-After playback stops, all parameters are **restored to their original values** via the automation snapshot system.
+During recording, a thin sparkline strip appears above the performance pads, showing real-time traces of the parameters being captured.
 
 ## Scene View
 
-The sweep node appears as a generator-sized node with:
-- A **curve preview** showing all drawn curves
+The sweep node appears as a generator-sized card with:
+- A **curve preview** showing all recorded curves
 - The **target pattern name** (e.g., → FROST)
 - The number of active curves
 
 ## Tips
 
 - **Use with Repeat nodes** — a Repeat ×6 node gives you 6 repeats to sweep across. Without a repeat node, the sweep spans a single pattern play-through.
-- **Volume as mute** — draw Volume to −1 to effectively mute a track for part of the sweep
-- **Layer multiple curves** — draw different parameters on the same sweep node for complex evolving textures
-- **Zoom for precision** — click a repeat number to zoom in, then use Point mode for exact control
+- **Layer multiple parameters** — move several pads in one recording pass to create complex evolving textures
+- **Overdub in passes** — record filter first, then reverb sends in a second pass. Each pass only overwrites what you touch.
+- **Undo** — Ctrl+Z restores sweep data to the pre-recording state
 
 ## Related
 

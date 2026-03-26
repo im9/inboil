@@ -40,7 +40,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **SceneDecorator** | *(legacy/migration-only)* Former function decorator on pattern nodes (ADR 066). Migrated to standalone modifier nodes with satellite attachment (ADR 093/116). Type retained for data migration only. |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
-| **Sweep** | Function node for painting parameter automation curves across repeat cycles (ADR 118). Kidpix-inspired freehand/bézier canvas. Applies relative offsets to volume, pan, voice params, and sends during scene playback. |
+| **Sweep** | Recording-based performance automation (ADR 123). Users arm recording, perform parameter movements on pads/knobs, and captured data becomes automation curves. Chain-scoped sweep (track/send/mute) stored per-node; global sweep (master/fx/eq) stored on `scene.globalSweep`. Dark-zone editor for review and point editing. |
 | **SceneLabel** | Free-floating text label on the scene canvas (ADR 052). |
 | **SceneStamp** | Decorative SVG pictogram on the scene canvas with beat-synced playback animations (ADR 119). Kidpix-inspired personality stamps (pictogram figures, expressive faces). |
 | **Step** | One time slot in a cell's grid. 0-indexed internally, 1-indexed in UI. |
@@ -55,10 +55,10 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Undo** | Snapshot-based undo/redo stack (max 50). `pushUndo()` before mutations, debounced 500ms. |
 | **Generator** | Scene node running algorithmic composition: Turing Machine, Quantizer, or Tonnetz (ADR 078). |
 | **FX Flavours** | 3 variants per send effect (e.g. reverb: room/hall/shimmer). Per-song default, per-pattern via decorators (ADR 075/076). |
-| **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114). |
+| **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch/dist). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114/122). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 | **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
-| **Modifier** | Scene node applying a transform to a pattern: transpose, repeat, tempo, FX, or sweep. Satellite types (transpose/repeat/tempo/fx) attach to pattern nodes (ADR 116). Sweep is an independent generator-sized node (ADR 118). |
+| **Modifier** | Scene node applying a transform to a pattern: transpose, repeat, tempo, FX, or sweep. Satellite types (transpose/repeat/tempo/fx) attach to pattern nodes (ADR 116). Sweep is an independent generator-sized node (ADR 123). |
 | **Satellite Attach** | Modifier nodes attach to pattern nodes by clicking the pattern in placement mode. Drag to detach/reattach. No manual edge wiring needed (ADR 116). |
 | **Tool Palette** | Circular button bar in SceneView for adding nodes. Modifier tools (neutral), Generator tools (accent-colored rings), Label. Visually distinct from flat square UI controls (ADR 116). |
 | **Auto-generate** | Generator nodes auto-generate on edge connect and debounce-regenerate on parameter changes (ADR 117). |

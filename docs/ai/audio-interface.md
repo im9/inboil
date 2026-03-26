@@ -76,18 +76,21 @@ interface WorkletPattern {
     masterGain: number      // 0.0–1.0
     filling: boolean        // drum fill mode
     reversing: boolean      // reverse playback
-    swing: number           // 0.0–1.0 (mapped to 0.50–0.67 in worklet)
     glitchX: number         // FxPad: glitch downsample rate (0–1)
     glitchY: number         // FxPad: glitch bit crush depth (0–1)
-    glitchRedux: boolean    // FxPad: redux flavour active
-    glitchStutter: boolean  // FxPad: stutter flavour active
-    delayTape: boolean      // tape delay flavour active
     granularOn: boolean     // FxPad: granular grain spawning active
     granularX: number       // FxPad: grain size (0–1, maps to 10–200ms)
     granularY: number       // FxPad: grain density (0–1, sparse→dense)
     granularPitch: number   // 0–1 (0.5 = no shift, ±12 semitones)
     granularScatter: number // 0–1 (position randomization)
     granularHold: boolean   // hold (freeze) ring buffer writing
+    reverbHold: boolean     // hold reverb tail
+    delayHold: boolean      // hold delay feedback
+    glitchHold: boolean     // hold glitch buffer
+    swing: number           // 0.0–1.0 (mapped to 0.50–0.67 in worklet)
+    glitchRedux: boolean    // FxPad: redux flavour active
+    delayTape: boolean      // tape delay flavour active
+    glitchStutter: boolean  // FxPad: stutter flavour active
     perfX: number           // Kaoss Pad X position (0–1) (ADR 097)
     perfY: number           // Kaoss Pad Y position (0–1)
     perfTouching: boolean   // Kaoss Pad touch active
@@ -117,7 +120,7 @@ interface WorkletTrack {
 }
 
 interface WorkletInsertFx {
-  type: 'verb' | 'delay' | 'glitch' | null
+  type: 'verb' | 'delay' | 'glitch' | 'dist' | null
   mix: number
   x: number
   y: number
@@ -125,6 +128,7 @@ interface WorkletInsertFx {
   dotted?: boolean            // delay: dotted flavour
   tape?: boolean              // delay: tape flavour
   redux?: boolean             // glitch: redux flavour
+  fuzz?: boolean              // dist: fuzz flavour (ADR 122)
 }
 
 interface WorkletTrig {

@@ -117,11 +117,12 @@ Section {
 
 ```typescript
 Scene {
-  name:   string
-  nodes:  SceneNode[]
-  edges:  SceneEdge[]
-  labels: SceneLabel[]        // free-floating canvas text labels (ADR 052)
-  stamps: SceneStamp[]        // decorative SVG stamps (ADR 119)
+  name:         string
+  nodes:        SceneNode[]
+  edges:        SceneEdge[]
+  labels:       SceneLabel[]        // free-floating canvas text labels (ADR 052)
+  stamps:       SceneStamp[]        // decorative SVG stamps (ADR 119)
+  globalSweep?: SweepData           // scene-wide sweep automation (ADR 123 Phase 5)
 }
 
 SceneDecorator {
@@ -176,7 +177,8 @@ SweepTarget =
                            | 'compThreshold' | 'compRatio'
                            | 'duckDepth' | 'duckRelease'
                            | 'retVerb' | 'retDelay'
-                           | 'satDrive' | 'satTone' }
+                           | 'satDrive' | 'satTone'
+                           | 'filterCutoff' | 'filterResonance' }
   | { kind: 'track'; trackId: number; param: 'volume' | 'pan' | 'cutoff' | 'resonance' | 'decay' | 'tone' }
   | { kind: 'send';  trackId: number; param: 'reverbSend' | 'delaySend' | 'glitchSend' | 'granularSend' }
   | { kind: 'fx';    param: 'reverbWet' | 'reverbDamp' | 'delayTime' | 'delayFeedback'
@@ -190,8 +192,21 @@ SweepCurve {
   color:  string
 }
 
+SweepToggleTarget =
+  | { kind: 'hold';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'mute';  trackId: number }
+
+SweepToggleCurve {
+  target: SweepToggleTarget
+  points: { t: number; on: boolean }[]  // sorted by t
+  color:  string
+}
+
 SweepData {
   curves: SweepCurve[]
+  toggles?: SweepToggleCurve[]          // boolean automation (ADR 123)
+  durationMs?: number                   // total recording duration, used for global sweep (ADR 123 Phase 5)
 }
 
 FnParams {
@@ -322,7 +337,7 @@ When the scene is active (has a root node) and `playback.mode === 'scene'`, the 
 
 Repeat phase tracking (ADR 118): `playback.sceneRepeatIndex` (0-based current repeat) and `playback.sceneRepeatTotal` (total repeat count from repeat fn node) enable sweep automation to compute progress across the full repeat cycle.
 
-Sweep automation (ADR 118): When a sweep function node is connected to a pattern, `applySweepStep()` in `scenePlayback.ts` evaluates painted curves on each step advance. `ui.sweepTab` toggles the SWEEP tab in the pattern sheet. `findConnectedSweepNode()` and `findSweepNodeForPattern()` in `sceneActions.ts` locate connected sweep nodes. Automation snapshot (`automation.ts`) captures voice params and mute state for restore on stop.
+Sweep automation (ADR 123): Recording-based performance automation. Users arm recording via ● button, perform parameter movements on FX/Master/EQ pads, and captured data becomes `SweepCurve`/`SweepToggleCurve` data. `applySweepStep()` in `scenePlayback.ts` evaluates curves on each step advance — global sweep (master/fx/eq targets, elapsed-time progress) first, then chain sweep (track/send targets, chain-local progress). `sweepRecorder.svelte.ts` manages arm/capture/stop flow with overdub merge. `sweepEval.ts` provides pure evaluation functions (Catmull-Rom interpolation, RDP simplification). `ui.sweepTab` toggles the sweep editor in the pattern sheet. Automation snapshot (`automation.ts`) captures state for restore on stop.
 
 ### Solo pattern
 `playback.soloNodeId` targets a scene node for solo repeat. When the scene reaches that node, the engine loops its pattern exclusively. If the node is not yet playing, solo enters an "armed" state until the scene reaches it. Solo switches happen at cycle boundaries.

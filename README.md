@@ -6,13 +6,13 @@ Step sequencing, analog-modeled synthesis, graphical sequencer arrangement — a
 ## Features
 
 - **20 voice types** — 12 drum synths (incl. FM Drum with 6 machine algorithms), 2 sample drums (crash/ride), TB-303 bass, analog lead, analog bass, 4-op FM (12-voice poly), wavetable (16-voice poly), polyphonic sampler
-- **Audio Pool** — 113 factory samples (kicks, snares, hats, loops, etc.) stored in OPFS; inline browser with folder drill-down, search, audition; user samples auto-imported
+- **Audio Pool** — 111 factory samples (90 browsable across 11 categories + 21 Grand Piano pack zones) stored in OPFS; inline browser with folder drill-down, search, audition; user samples auto-imported
 - **Variable track count (up to 16)** — per-pattern, independent step counts (2–64), per-track step scale (1/8 to 1/32), polymetric
 - **Parameter locks (P-Lock)** — per-step parameter overrides, Elektron-style
 - **Piano roll & tracker view** — note/duration editing for melodic tracks
-- **Graphical Sequencer** — node-based arrangement with pattern nodes, generative nodes (Turing Machine, Quantizer, Tonnetz), modifiers, and edge-based branching
+- **Graphical Sequencer** — node-based arrangement with pattern nodes, generative nodes (Turing Machine, Quantizer, Tonnetz), modifiers, sweep recording automation, and edge-based branching
 - **Scale-aware arpeggiator** — UP / DOWN / UP-DOWN / RANDOM with diatonic chord modes
-- **Effects** — reverb, delay, glitch, granular with XY performance pads; per-track insert FX; 3-band EQ; DJ filter
+- **Effects** — reverb, delay, glitch, granular with XY performance pads; per-track insert FX (reverb/delay/glitch/dist); 3-band EQ; DJ filter
 - **Sidechain ducker & bus compressor** — master bus processing with peak limiter
 - **100+ factory presets** — 30 WT, 20 FM, 22 FM Drum, drum & synth presets
 - **100 pattern slots** — 4 factory + 96 user, IndexedDB persistence
@@ -74,7 +74,9 @@ src/
 │   ├── sceneActions.ts         # Scene CRUD, layout, clipboard
 │   ├── scenePlayback.ts        # Scene traversal engine
 │   ├── generative.ts           # Turing Machine, Quantizer, Tonnetz
-│   ├── automation.ts           # Automation curve evaluation
+│   ├── automation.ts           # Automation snapshot capture/restore
+│   ├── sweepEval.ts            # Sweep curve evaluation (pure functions)
+│   ├── sweepRecorder.svelte.ts # Sweep recording engine (arm/capture/stop)
 │   ├── audioPool.ts            # OPFS audio pool (factory + user samples)
 │   ├── storage.ts              # IndexedDB + localStorage persistence
 │   ├── midi.ts                 # Web MIDI API integration
@@ -82,7 +84,7 @@ src/
 │   ├── wavExport.ts            # WAV recording capture
 │   └── songClone.ts            # Pure data clone/restore for serialization
 public/
-├── samples/                    # Factory sample WebM files (79) + manifest
+├── samples/                    # Factory sample WebM files (111) + manifest
 site/                           # Astro docs & landing page
 docs/ai/                        # Design specs & ADRs
 ```

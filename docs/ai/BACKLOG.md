@@ -9,7 +9,7 @@ Known architectural limits that are fine at current scale but need attention whe
 
 - [ ] **Undo stack memory** — 50 full song snapshots (~200–400KB each, up to ~20MB). Consider delta snapshots if patterns exceed 100+ or tracks exceed 16
 - [ ] **WorkletPattern full serialization** — Every reactive change sends the entire pattern+FX state to the AudioWorklet (~20–40KB). Add change detection or delta messaging if tracks go beyond 16 or steps beyond 64
-- [ ] **state.svelte.ts cohesion** — Single 1100+ line reactive state module with 50+ `pushUndo()` call sites across 8 files. Extract action creators or domain-specific mutation modules if mutation surface keeps growing
+- [ ] **state.svelte.ts cohesion** — Single 1100+ line reactive state module with 50+ `pushUndo()` call sites across 21 files. Extract action creators or domain-specific mutation modules if mutation surface keeps growing
 - [ ] **Scene O(n) traversal** — Node/edge lookups use `.filter()`/`.find()` per operation. Introduce `Map<id, Node/Edge>` index if scenes regularly exceed 50 nodes
 - [ ] **Mobile rendering** — StepGrid re-renders all 128 cells on playhead advance. No virtual scrolling for long patterns. Add memo keys or virtual scroll if patterns expand to 64+ steps
 - [ ] **P-Lock storage density** — `paramLocks` is unbounded `Record<string, number>` per step. At 64 steps × 24 tracks × 20 params, a single pattern could reach 500KB. Monitor in dogfooding
