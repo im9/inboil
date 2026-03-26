@@ -2,7 +2,7 @@
   import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
   import type { SceneNode, ModifierType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
-  import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams } from '../sceneActions.ts'
+  import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams, findConnectedSweepNode } from '../sceneActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import DockTrackEditor from './DockTrackEditor.svelte'
@@ -51,6 +51,17 @@
   })
 
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+  /** Check if a repeat modifier's connected pattern has recorded sweep data */
+  function repeatNodeHasSweep(repeatNodeId: string): boolean {
+    const edge = song.scene.edges.find(e => e.from === repeatNodeId)
+    if (!edge) return false
+    const patNode = song.scene.nodes.find(n => n.id === edge.to)
+    if (!patNode || patNode.type !== 'pattern') return false
+    const sweep = findConnectedSweepNode(patNode.id)
+    const curves = sweep?.modifierParams?.sweep?.curves
+    return Array.isArray(curves) && curves.length > 0
+  }
 
   // Find scene node for current pattern (for SCENE tab generative nodes)
   const currentPatternSceneNode = $derived.by(() => {
@@ -214,6 +225,12 @@
                 <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
               </div>
             </div>
+            {#if repeatNodeHasSweep(selectedModNode.id)}
+              <div class="mod-sweep-warn"
+                data-tip="Sweep curves were recorded with a different repeat count — re-record to match"
+                data-tip-ja="スイープカーブは別のリピート回数で録音されています — 再録音してください"
+              >{lang.value === 'ja' ? '⚠ スイープ再録音が必要な場合があります' : '⚠ Sweep may need re-recording'}</div>
+            {/if}
           {:else if selectedModNode.modifierParams?.tempo}
             {@const tmp = selectedModNode.modifierParams.tempo}
             <div class="mod-row">
@@ -374,6 +391,12 @@
                       <button class="mod-step-btn" onpointerdown={() => sceneUpdateModifierParams(modNode.id, { repeat: { count: rp.count + 1 } })}>+</button>
                     </div>
                   </div>
+                  {#if repeatNodeHasSweep(modNode.id)}
+                    <div class="mod-sweep-warn"
+                      data-tip="Sweep curves were recorded with a different repeat count — re-record to match"
+                      data-tip-ja="スイープカーブは別のリピート回数で録音されています — 再録音してください"
+                    >{lang.value === 'ja' ? '⚠ スイープ再録音が必要な場合があります' : '⚠ Sweep may need re-recording'}</div>
+                  {/if}
                 {:else if modNode.modifierParams?.tempo}
                   {@const tmp = modNode.modifierParams.tempo}
                   <div class="mod-row">
@@ -755,6 +778,13 @@
     border-left: 1px solid var(--dz-border);
     border-right: 1px solid var(--dz-border);
     padding: 4px 0;
+  }
+  .mod-sweep-warn {
+    font-family: var(--font-data);
+    font-size: var(--fs-min);
+    color: var(--color-salmon);
+    padding: 2px 0;
+    opacity: 0.85;
   }
   .mod-key-row {
     display: flex;

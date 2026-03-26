@@ -372,3 +372,31 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 ### Phase 4: Recording Preview (nice-to-have)
 - Floating trail strip above pads during REC
 - Real-time trace of parameter movements
+
+### Phase 5: Global-Scope Sweep Parameters
+
+Master, FX, EQ, and Filter are global parameters, but sweep data is chain-scoped. When a user records a filter sweep during Chain A, that automation only plays when Chain A is active — switching to Chain B "drops" the filter. This is confusing, especially for parameters that users perceive as global.
+
+#### Design
+
+Introduce a **global sweep layer** that runs independently of chain playback:
+
+- New `SweepData` storage on a dedicated global sweep node (or scene-level property)
+- Global sweep `t` normalized to **total scene duration** (sum of all chain lengths in traversal order), not a single chain
+- During recording: master/fx/eq/filter targets route to global sweep; track-scoped targets (volume, pan, voice params, sends, mute) route to chain sweep as before
+- During playback: `applySweepStep` evaluates global sweep first (scene-wide progress), then chain sweep (chain-local progress). Chain sweep offsets stack on top of global sweep offsets
+- Overdub: global and chain sweeps are independent — re-recording a global param overwrites its global curve, not the chain curve
+
+#### Why not just extend chain sweep
+
+- Chain `t: 0-1` is normalized per-chain. A "scene-wide filter ramp" would need to be sliced across every chain, duplicated, and kept in sync — fragile and confusing to edit
+- Global sweep with scene-wide `t` is the natural representation for parameters that don't belong to any single chain
+
+#### Implementation Checklist
+- [ ] Design global sweep data model and storage location
+- [ ] Add target routing logic to recording engine (global vs chain)
+- [ ] Implement scene-wide `t` calculation for global sweep playback
+- [ ] Update `applySweepStep` to evaluate global + chain layers
+- [ ] Add global sweep editing UI in sweep editor
+- [ ] `pnpm check` passes
+- [ ] `pnpm test` passes

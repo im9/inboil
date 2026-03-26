@@ -6,7 +6,7 @@
   import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
 
   import { getParamDefs } from '../paramDefs.ts'
-  import { evaluateCurve } from '../sweepEval.ts'
+  import { evaluateCurve, targetsEqual } from '../sweepEval.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import Knob from './Knob.svelte'
   import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
@@ -736,16 +736,6 @@
       return key === 'q' ? (pad[key] as number) / 3 : pad[key] as number
     }
     return null
-  }
-
-  function targetsEqual(a: SweepTarget, b: SweepTarget): boolean {
-    if (a.kind !== b.kind) return false
-    if (a.kind === 'master' && b.kind === 'master') return a.param === b.param
-    if (a.kind === 'fx' && b.kind === 'fx') return a.param === b.param
-    if (a.kind === 'track' && b.kind === 'track') return a.trackId === b.trackId && a.param === b.param
-    if (a.kind === 'send' && b.kind === 'send') return a.trackId === b.trackId && a.param === b.param
-    if (a.kind === 'eq' && b.kind === 'eq') return a.band === b.band && a.param === b.param
-    return false
   }
 
   // ── Pointer handlers (point editing only) ──

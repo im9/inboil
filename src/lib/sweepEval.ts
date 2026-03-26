@@ -70,3 +70,72 @@ export function buildSweepData(
   if (toggles && toggles.length > 0) data.toggles = toggles
   return data
 }
+
+// ── Overdub merge (pure) ──
+
+/** Merge incoming curves into existing, replacing curves with matching targets */
+export function mergeOverdub(existing: SweepCurve[], incoming: SweepCurve[]): SweepCurve[] {
+  const result = [...existing]
+  for (const curve of incoming) {
+    const key = targetKey(curve.target)
+    const idx = result.findIndex(c => targetKey(c.target) === key)
+    if (idx >= 0) {
+      result[idx] = curve
+    } else {
+      result.push(curve)
+    }
+  }
+  return result
+}
+
+/** Merge incoming toggles into existing, replacing toggles with matching targets */
+export function mergeOverdubToggles(existing: SweepToggleCurve[], incoming: SweepToggleCurve[]): SweepToggleCurve[] {
+  const result = [...existing]
+  for (const toggle of incoming) {
+    const key = targetKey(toggle.target)
+    const idx = result.findIndex(t => targetKey(t.target) === key)
+    if (idx >= 0) {
+      result[idx] = toggle
+    } else {
+      result.push(toggle)
+    }
+  }
+  return result
+}
+
+// ── RDP simplification (pure) ──
+
+/** Ramer-Douglas-Peucker curve simplification — reduces point count while preserving shape */
+export function rdpSimplify(pts: { t: number; v: number }[], epsilon: number): { t: number; v: number }[] {
+  if (pts.length <= 2) return pts
+  let maxDist = 0, maxIdx = 0
+  const first = pts[0], last = pts[pts.length - 1]
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = pointLineDistance(pts[i], first, last)
+    if (d > maxDist) { maxDist = d; maxIdx = i }
+  }
+  if (maxDist > epsilon) {
+    const left = rdpSimplify(pts.slice(0, maxIdx + 1), epsilon)
+    const right = rdpSimplify(pts.slice(maxIdx), epsilon)
+    return [...left.slice(0, -1), ...right]
+  }
+  return [first, last]
+}
+
+function pointLineDistance(p: { t: number; v: number }, a: { t: number; v: number }, b: { t: number; v: number }): number {
+  const dx = b.t - a.t, dy = b.v - a.v
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len === 0) return Math.sqrt((p.t - a.t) ** 2 + (p.v - a.v) ** 2)
+  return Math.abs(dx * (a.v - p.v) - (a.t - p.t) * dy) / len
+}
+
+/** Check if two SweepTargets refer to the same parameter */
+export function targetsEqual(a: SweepTarget, b: SweepTarget): boolean {
+  if (a.kind !== b.kind) return false
+  if (a.kind === 'master' && b.kind === 'master') return a.param === b.param
+  if (a.kind === 'fx' && b.kind === 'fx') return a.param === b.param
+  if (a.kind === 'track' && b.kind === 'track') return a.trackId === b.trackId && a.param === b.param
+  if (a.kind === 'send' && b.kind === 'send') return a.trackId === b.trackId && a.param === b.param
+  if (a.kind === 'eq' && b.kind === 'eq') return a.band === b.band && a.param === b.param
+  return false
+}

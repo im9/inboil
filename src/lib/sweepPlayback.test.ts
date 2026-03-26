@@ -3,7 +3,8 @@
  * and boolean toggle evaluation (ADR 118, ADR 123).
  */
 import { describe, it, expect } from 'vitest'
-import { evaluateCurve, evaluateToggle, buildSweepData } from './sweepEval'
+import { evaluateCurve, evaluateToggle, buildSweepData, rdpSimplify, mergeOverdub, mergeOverdubToggles, targetsEqual } from './sweepEval'
+import type { SweepCurve, SweepToggleCurve } from './types'
 
 // ── Tests: evaluateCurve ──
 
@@ -145,5 +146,182 @@ describe('buildSweepData', () => {
   it('omits toggles when empty array', () => {
     const data = buildSweepData([], [])
     expect(data.toggles).toBeUndefined()
+  })
+})
+
+// ── Tests: rdpSimplify (ADR 123) ──
+
+describe('rdpSimplify', () => {
+  it('returns input unchanged for 0-2 points', () => {
+    expect(rdpSimplify([], 0.1)).toEqual([])
+    const one = [{ t: 0.5, v: 0.5 }]
+    expect(rdpSimplify(one, 0.1)).toEqual(one)
+    const two = [{ t: 0, v: 0 }, { t: 1, v: 1 }]
+    expect(rdpSimplify(two, 0.1)).toEqual(two)
+  })
+
+  it('removes collinear points', () => {
+    // Three points on a straight line: middle should be removed
+    const pts = [{ t: 0, v: 0 }, { t: 0.5, v: 0.5 }, { t: 1, v: 1 }]
+    const result = rdpSimplify(pts, 0.01)
+    expect(result).toEqual([{ t: 0, v: 0 }, { t: 1, v: 1 }])
+  })
+
+  it('preserves significant deviations', () => {
+    // Sharp peak: middle point deviates significantly
+    const pts = [{ t: 0, v: 0 }, { t: 0.5, v: 1 }, { t: 1, v: 0 }]
+    const result = rdpSimplify(pts, 0.01)
+    expect(result).toHaveLength(3)
+    expect(result[1]).toEqual({ t: 0.5, v: 1 })
+  })
+
+  it('reduces dense linear segments', () => {
+    // 100 points on a straight line
+    const pts = Array.from({ length: 100 }, (_, i) => ({ t: i / 99, v: i / 99 }))
+    const result = rdpSimplify(pts, 0.02)
+    expect(result).toHaveLength(2) // only endpoints
+    expect(result[0]).toEqual(pts[0])
+    expect(result[1]).toEqual(pts[99])
+  })
+
+  it('preserves endpoints of complex curves', () => {
+    const pts = [
+      { t: 0, v: 0 },
+      { t: 0.25, v: 0.8 },
+      { t: 0.5, v: 0.2 },
+      { t: 0.75, v: 0.9 },
+      { t: 1, v: 0 },
+    ]
+    const result = rdpSimplify(pts, 0.02)
+    expect(result[0]).toEqual(pts[0])
+    expect(result[result.length - 1]).toEqual(pts[pts.length - 1])
+    // Should keep most points since they deviate significantly
+    expect(result.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+// ── Tests: mergeOverdub (ADR 123) ──
+
+describe('mergeOverdub', () => {
+  const mkCurve = (param: string, v: number): SweepCurve => ({
+    target: { kind: 'master', param: param as 'masterVolume' },
+    points: [{ t: 0, v }, { t: 1, v }],
+    color: '#fff',
+  })
+
+  it('appends new curves to empty existing', () => {
+    const incoming = [mkCurve('masterVolume', 0.5)]
+    const result = mergeOverdub([], incoming)
+    expect(result).toHaveLength(1)
+    expect(result[0].points[0].v).toBe(0.5)
+  })
+
+  it('replaces curves with matching targets', () => {
+    const existing = [mkCurve('masterVolume', 0.3)]
+    const incoming = [mkCurve('masterVolume', 0.8)]
+    const result = mergeOverdub(existing, incoming)
+    expect(result).toHaveLength(1)
+    expect(result[0].points[0].v).toBe(0.8)
+  })
+
+  it('preserves untouched curves', () => {
+    const existing = [mkCurve('masterVolume', 0.3), mkCurve('swing', 0.5)]
+    const incoming = [mkCurve('masterVolume', 0.8)]
+    const result = mergeOverdub(existing, incoming)
+    expect(result).toHaveLength(2)
+    expect(result[0].points[0].v).toBe(0.8) // replaced
+    expect(result[1].points[0].v).toBe(0.5) // preserved
+  })
+
+  it('does not mutate existing array', () => {
+    const existing = [mkCurve('masterVolume', 0.3)]
+    const incoming = [mkCurve('masterVolume', 0.8)]
+    mergeOverdub(existing, incoming)
+    expect(existing[0].points[0].v).toBe(0.3) // unchanged
+  })
+})
+
+// ── Tests: mergeOverdubToggles (ADR 123) ──
+
+describe('mergeOverdubToggles', () => {
+  const mkToggle = (fx: string, on: boolean): SweepToggleCurve => ({
+    target: { kind: 'hold', fx: fx as 'verb' },
+    points: [{ t: 0, on }],
+    color: '#f00',
+  })
+
+  it('replaces toggles with matching targets', () => {
+    const existing = [mkToggle('verb', true)]
+    const incoming = [mkToggle('verb', false)]
+    const result = mergeOverdubToggles(existing, incoming)
+    expect(result).toHaveLength(1)
+    expect(result[0].points[0].on).toBe(false)
+  })
+
+  it('preserves untouched toggles', () => {
+    const existing = [mkToggle('verb', true), mkToggle('delay', false)]
+    const incoming = [mkToggle('verb', false)]
+    const result = mergeOverdubToggles(existing, incoming)
+    expect(result).toHaveLength(2)
+    expect(result[0].points[0].on).toBe(false) // replaced
+    expect(result[1].points[0].on).toBe(false) // preserved
+  })
+
+  it('appends new toggles', () => {
+    const result = mergeOverdubToggles([], [mkToggle('glitch', true)])
+    expect(result).toHaveLength(1)
+  })
+})
+
+// ── Tests: targetsEqual (ADR 123) ──
+
+describe('targetsEqual', () => {
+  it('matches identical master targets', () => {
+    expect(targetsEqual(
+      { kind: 'master', param: 'masterVolume' },
+      { kind: 'master', param: 'masterVolume' },
+    )).toBe(true)
+  })
+
+  it('rejects different master params', () => {
+    expect(targetsEqual(
+      { kind: 'master', param: 'masterVolume' },
+      { kind: 'master', param: 'swing' },
+    )).toBe(false)
+  })
+
+  it('rejects different kinds', () => {
+    expect(targetsEqual(
+      { kind: 'master', param: 'masterVolume' } as any,
+      { kind: 'fx', param: 'reverbWet' } as any,
+    )).toBe(false)
+  })
+
+  it('matches track targets with same trackId and param', () => {
+    expect(targetsEqual(
+      { kind: 'track', trackId: 2, param: 'volume' },
+      { kind: 'track', trackId: 2, param: 'volume' },
+    )).toBe(true)
+  })
+
+  it('rejects track targets with different trackId', () => {
+    expect(targetsEqual(
+      { kind: 'track', trackId: 2, param: 'volume' },
+      { kind: 'track', trackId: 3, param: 'volume' },
+    )).toBe(false)
+  })
+
+  it('matches eq targets with same band and param', () => {
+    expect(targetsEqual(
+      { kind: 'eq', band: 'eqLow', param: 'freq' },
+      { kind: 'eq', band: 'eqLow', param: 'freq' },
+    )).toBe(true)
+  })
+
+  it('rejects eq targets with different band', () => {
+    expect(targetsEqual(
+      { kind: 'eq', band: 'eqLow', param: 'freq' },
+      { kind: 'eq', band: 'eqMid', param: 'freq' },
+    )).toBe(false)
   })
 })
