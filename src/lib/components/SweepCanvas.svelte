@@ -46,6 +46,15 @@
   let dragging = $state(false)
   const POINT_HIT_RADIUS = 8
 
+  // ── Range selection (trim/splice) ──
+  let rangeStart = $state<number | null>(null) // t value
+  let rangeEnd = $state<number | null>(null)   // t value
+  let rangeDragging = $state(false)
+  let rangeDragEdge = $state<'start' | 'end' | null>(null) // for edge drag
+  const hasRange = $derived(rangeStart !== null && rangeEnd !== null && Math.abs(rangeEnd - rangeStart) > 0.002)
+  const rangeLo = $derived(hasRange ? Math.min(rangeStart!, rangeEnd!) : 0)
+  const rangeHi = $derived(hasRange ? Math.max(rangeStart!, rangeEnd!) : 0)
+
   // ── Zoom state ──
   let zoomedRepeat = $state<number | null>(null)
 
@@ -215,6 +224,25 @@
     // Playback progress: use interpolated value for smooth 60fps animation
     const isPlaying = playback.playing && rc > 0
     const playProgress = isPlaying ? interpolatedProgress : -1
+
+    // Range selection highlight
+    if (hasRange) {
+      const x0 = tToX(rangeLo, w)
+      const x1 = tToX(rangeHi, w)
+      ctx.fillStyle = 'rgba(237,232,220, 0.06)'
+      ctx.fillRect(x0, drawY, x1 - x0, drawH)
+      // Edge lines
+      ctx.strokeStyle = 'rgba(237,232,220, 0.3)'
+      ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(x0, drawY); ctx.lineTo(x0, drawY + drawH); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(x1, drawY); ctx.lineTo(x1, drawY + drawH); ctx.stroke()
+      // Edge drag handles
+      const handleH = 16
+      const handleY = drawY + drawH / 2 - handleH / 2
+      ctx.fillStyle = 'rgba(237,232,220, 0.4)'
+      ctx.fillRect(x0 - 2, handleY, 4, handleH)
+      ctx.fillRect(x1 - 2, handleY, 4, handleH)
+    }
 
     // Draw all curves
     for (const curve of sweepData.curves) {
@@ -692,6 +720,43 @@
 
     canvasEl.setPointerCapture(e.pointerId)
 
+    // Edge drag on existing range
+    if (hasRange && selectedCurve) {
+      const norm = pointerToNorm(e)
+      const edgeThreshold = viewSpan * 0.015
+      if (Math.abs(norm.t - rangeLo) < edgeThreshold) {
+        rangeDragEdge = 'start'
+        rangeDragging = true
+        return
+      }
+      if (Math.abs(norm.t - rangeHi) < edgeThreshold) {
+        rangeDragEdge = 'end'
+        rangeDragging = true
+        return
+      }
+    }
+
+    // Shift+drag → range selection
+    if (e.shiftKey && selectedCurve) {
+      const norm = pointerToNorm(e)
+      rangeStart = norm.t
+      rangeEnd = norm.t
+      rangeDragging = true
+      rangeDragEdge = null
+      selectedPointIdx = null
+      return
+    }
+
+    // Click outside range → clear range
+    if (hasRange && !e.shiftKey) {
+      const norm = pointerToNorm(e)
+      if (norm.t < rangeLo || norm.t > rangeHi) {
+        rangeStart = null
+        rangeEnd = null
+        redraw()
+      }
+    }
+
     // If a curve is selected, try point editing first
     if (selectedCurve) {
       const now = Date.now()
@@ -751,6 +816,19 @@
   }
 
   function onPointerMove(e: PointerEvent) {
+    // Range selection / edge drag
+    if (rangeDragging) {
+      const norm = pointerToNorm(e)
+      if (rangeDragEdge === 'start') {
+        rangeStart = Math.min(norm.t, rangeHi)
+      } else if (rangeDragEdge === 'end') {
+        rangeEnd = Math.max(norm.t, rangeLo)
+      } else {
+        rangeEnd = norm.t
+      }
+      redraw()
+      return
+    }
     if (!dragging || draggingPointIdx === null || !selectedCurve) return
     const norm = pointerToNorm(e)
     const pts = [...selectedCurve.points]
@@ -761,7 +839,38 @@
     redraw()
   }
 
+  function onKeyDown(e: KeyboardEvent) {
+    // Delete/Backspace with range selection → delete points in range
+    if ((e.key === 'Delete' || e.key === 'Backspace') && hasRange && selectedCurve) {
+      e.preventDefault()
+      pushUndo('Delete range')
+      const pts = selectedCurve.points.filter(p => p.t < rangeLo || p.t > rangeHi)
+      if (pts.length >= 2) {
+        commitCurve(selectedCurve.target, selectedCurve.color, pts)
+      } else {
+        // Not enough points left — delete entire curve
+        deleteCurve(selectedCurve.target)
+      }
+      rangeStart = null
+      rangeEnd = null
+      selectedPointIdx = null
+      redraw()
+      return
+    }
+    // Escape → clear range
+    if (e.key === 'Escape' && hasRange) {
+      rangeStart = null
+      rangeEnd = null
+      redraw()
+    }
+  }
+
   function onPointerUp(_e: PointerEvent) {
+    if (rangeDragging) {
+      rangeDragging = false
+      rangeDragEdge = null
+      return
+    }
     draggingPointIdx = null
     dragging = false
   }
@@ -1137,6 +1246,7 @@
         onpointermove={onPointerMove}
         onpointerup={onPointerUp}
         onpointercancel={onPointerUp}
+        onkeydown={onKeyDown}
       ></canvas>
       <div class="sweep-axis-labels">
         <span>+1</span>

@@ -363,11 +363,11 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 - [x] Dim base curve (alpha 0.2) always visible as context
 - [x] Curve selection: click on curve in canvas or list to select (Phase 1)
 - [x] Point adjustment: drag points, double-click to delete, click on curve to add (Phase 1)
-- [ ] Trim/splice: range selection on a curve → delete, drag edges to adjust start/end
+- [x] Trim/splice: Shift+drag range selection → Delete to remove points, edge handles to adjust
 - [x] Knob precision: select a point → knobs for exact t (time) and v (value) control
 - [x] Scene play/stop button in sweep editor toolbar
-- [ ] `pnpm check` passes
-- [ ] `pnpm test` passes
+- [x] `pnpm check` passes
+- [x] `pnpm test` passes
 
 ### Phase 4: Recording Preview (nice-to-have)
 - Floating trail strip above pads during REC
