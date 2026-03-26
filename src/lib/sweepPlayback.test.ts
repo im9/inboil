@@ -3,7 +3,7 @@
  * and boolean toggle evaluation (ADR 118, ADR 123).
  */
 import { describe, it, expect } from 'vitest'
-import { evaluateCurve, evaluateToggle, buildSweepData, rdpSimplify, mergeOverdub, mergeOverdubToggles, targetsEqual } from './sweepEval'
+import { evaluateCurve, evaluateToggle, buildSweepData, rdpSimplify, mergeOverdub, mergeOverdubToggles, targetsEqual, isGlobalTarget } from './sweepEval'
 import type { SweepCurve, SweepToggleCurve } from './types'
 
 // ── Tests: evaluateCurve ──
@@ -323,5 +323,44 @@ describe('targetsEqual', () => {
       { kind: 'eq', band: 'eqLow', param: 'freq' },
       { kind: 'eq', band: 'eqMid', param: 'freq' },
     )).toBe(false)
+  })
+})
+
+// ── Tests: isGlobalTarget (ADR 123 Phase 5) ──
+
+describe('isGlobalTarget', () => {
+  it('master targets are global', () => {
+    expect(isGlobalTarget({ kind: 'master', param: 'masterVolume' })).toBe(true)
+    expect(isGlobalTarget({ kind: 'master', param: 'filterCutoff' })).toBe(true)
+  })
+
+  it('fx targets are global', () => {
+    expect(isGlobalTarget({ kind: 'fx', param: 'reverbWet' })).toBe(true)
+    expect(isGlobalTarget({ kind: 'fx', param: 'delayFeedback' })).toBe(true)
+  })
+
+  it('eq targets are global', () => {
+    expect(isGlobalTarget({ kind: 'eq', band: 'eqLow', param: 'freq' })).toBe(true)
+  })
+
+  it('fxOn toggles are global', () => {
+    expect(isGlobalTarget({ kind: 'fxOn', fx: 'verb' })).toBe(true)
+  })
+
+  it('hold toggles are global', () => {
+    expect(isGlobalTarget({ kind: 'hold', fx: 'delay' })).toBe(true)
+  })
+
+  it('track targets are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'track', trackId: 0, param: 'volume' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'track', trackId: 1, param: 'pan' })).toBe(false)
+  })
+
+  it('send targets are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'send', trackId: 0, param: 'reverbSend' })).toBe(false)
+  })
+
+  it('mute toggles are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'mute', trackId: 0 })).toBe(false)
   })
 })

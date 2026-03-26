@@ -1018,6 +1018,7 @@
       } else {
         pushUndo('Clear all sweep curves')
         sceneUpdateModifierParams(sweepNode!.id, { sweep: { curves: [] } })
+        if (song.scene.globalSweep) song.scene.globalSweep = undefined
         selectedCurveIdx = null
         selectedToggleIdx = null
         halationProgress = null
@@ -1056,6 +1057,31 @@
     const toggles = sweepData.toggles.filter((_, i) => i !== idx)
     sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles: toggles.length > 0 ? toggles : undefined } })
     selectedToggleIdx = null
+  }
+
+  // ── Global sweep management (ADR 123 Phase 5) ──
+  function deleteGlobalCurve(idx: number) {
+    if (!song.scene.globalSweep) return
+    pushUndo('Delete global sweep curve')
+    const curves = song.scene.globalSweep.curves.filter((_, i) => i !== idx)
+    const toggles = song.scene.globalSweep.toggles
+    if (curves.length === 0 && (!toggles || toggles.length === 0)) {
+      song.scene.globalSweep = undefined
+    } else {
+      song.scene.globalSweep = { ...song.scene.globalSweep, curves }
+    }
+  }
+
+  function deleteGlobalToggle(idx: number) {
+    if (!song.scene.globalSweep?.toggles) return
+    pushUndo('Delete global sweep toggle')
+    const toggles = song.scene.globalSweep.toggles.filter((_, i) => i !== idx)
+    const curves = song.scene.globalSweep.curves
+    if (curves.length === 0 && toggles.length === 0) {
+      song.scene.globalSweep = undefined
+    } else {
+      song.scene.globalSweep = { ...song.scene.globalSweep, toggles: toggles.length > 0 ? toggles : undefined }
+    }
   }
 
   // ── Toggle editing helpers ──
@@ -1361,7 +1387,27 @@
           </div>
         {/each}
       {/if}
-      {#if sweepData.curves.length === 0 && (!sweepData.toggles || sweepData.toggles.length === 0)}
+      {#if song.scene.globalSweep && ((song.scene.globalSweep.curves?.length ?? 0) > 0 || (song.scene.globalSweep.toggles?.length ?? 0) > 0)}
+        <div class="sweep-section-label global-label">Global</div>
+        {#each song.scene.globalSweep.curves ?? [] as curve, i}
+          <div class="sweep-list-item global-item" style="--accent: {curve.color}">
+            <span class="sweep-list-dot"></span>
+            <span class="sweep-list-label">{curveLabel(curve.target)}</span>
+            <button class="sweep-list-del" onpointerdown={() => deleteGlobalCurve(i)}
+              data-tip="Delete global curve" data-tip-ja="グローバルカーブを削除"
+            >✕</button>
+          </div>
+        {/each}
+        {#each song.scene.globalSweep.toggles ?? [] as toggle, i}
+          <div class="sweep-list-item global-item" style="--accent: {toggle.color}">
+            <span class="sweep-list-label">{toggleLabel(toggle.target)}</span>
+            <button class="sweep-list-del" onpointerdown={() => deleteGlobalToggle(i)}
+              data-tip="Delete global toggle" data-tip-ja="グローバルトグルを削除"
+            >✕</button>
+          </div>
+        {/each}
+      {/if}
+      {#if sweepData.curves.length === 0 && (!sweepData.toggles || sweepData.toggles.length === 0) && !song.scene.globalSweep?.curves?.length}
         <div class="sweep-empty">No recorded curves</div>
       {/if}
     </div>
@@ -1497,17 +1543,22 @@
     background: rgba(232, 160, 144, 0.15);
   }
   .sweep-rec-circle.armed {
-    background: rgba(232, 160, 144, 0.2);
-    animation: sweep-rec-pulse 1.5s ease-in-out infinite;
+    background: rgba(232, 160, 144, 0.25);
+    animation: sweep-rec-armed-glow 1.5s ease-in-out infinite;
   }
   .sweep-rec-circle.recording {
     background: var(--color-salmon);
     color: var(--color-fg);
-    animation: sweep-rec-pulse 1s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(232, 160, 144, 0.6);
+    animation: sweep-rec-recording-glow 1s ease-in-out infinite;
   }
-  @keyframes sweep-rec-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+  @keyframes sweep-rec-armed-glow {
+    0%, 100% { box-shadow: 0 0 4px rgba(232, 160, 144, 0.3); }
+    50%      { box-shadow: 0 0 12px rgba(232, 160, 144, 0.7), 0 0 24px rgba(232, 160, 144, 0.3); }
+  }
+  @keyframes sweep-rec-recording-glow {
+    0%, 100% { box-shadow: 0 0 6px rgba(232, 160, 144, 0.5); }
+    50%      { box-shadow: 0 0 14px rgba(232, 160, 144, 0.8), 0 0 28px rgba(232, 160, 144, 0.3); }
   }
   .sweep-rec-count {
     font-family: var(--font-data);
@@ -1574,6 +1625,14 @@
     color: var(--dz-text-dim);
     padding: 8px 8px 4px;
     text-transform: uppercase;
+  }
+  .sweep-section-label.global-label {
+    color: var(--dz-text-mid);
+    border-top: 1px solid var(--dz-divider);
+    margin-top: 4px;
+  }
+  .sweep-list-item.global-item {
+    opacity: 0.75;
   }
   .sweep-list-item {
     display: flex;

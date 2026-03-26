@@ -221,6 +221,8 @@ export interface SweepToggleCurve {
 export interface SweepData {
   curves: SweepCurve[]
   toggles?: SweepToggleCurve[]  // boolean automation (ADR 123)
+  /** Total recording duration in ms — used for global sweep playback timing (ADR 123 Phase 5) */
+  durationMs?: number
 }
 
 /** Modifier/sweep node parameters — type-specific (ADR 093, sweep ADR 118, terminology ADR 125) */
@@ -284,6 +286,8 @@ export interface Scene {
   edges: SceneEdge[]
   labels: SceneLabel[]
   stamps: SceneStamp[]
+  /** Global sweep automation — applies across entire scene duration (ADR 123 Phase 5) */
+  globalSweep?: SweepData
 }
 
 /** Song = pattern pool + arrangement sections + scene (ADR 044) */

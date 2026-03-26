@@ -6,7 +6,7 @@ import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack, m
 import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
-import type { SceneNode, SceneEdge, SweepData, VoiceId } from './types.ts'
+import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
 import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
@@ -272,6 +272,15 @@ export function advanceSceneNode(startFrom?: string): { advanced: boolean; patte
   return walkToNode(outEdges[Math.floor(Math.random() * outEdges.length)])
 }
 
+// ── Global sweep timing (ADR 123 Phase 5) ───────────────────────────
+
+let scenePlayStartMs = 0
+
+/** Call when scene playback starts to mark the global sweep clock origin. */
+export function markScenePlayStart(): void {
+  scenePlayStartMs = performance.now()
+}
+
 // ── Sweep automation (ADR 118) ──────────────────────────────────────
 
 /** Find sweep node connected to a pattern node */
@@ -286,16 +295,35 @@ function findConnectedSweep(patternNodeId: string): SweepData | null {
 
 /** Apply sweep automation for current step. Called from App.svelte onStep.
  *  Uses automation snapshot as base values — offsets are applied relative to snapshot.
+ *  Evaluates global sweep first (ADR 123 Phase 5), then chain sweep.
  *  Returns true if any parameter was changed. */
 export function applySweepStep(step: number, totalSteps: number): boolean {
   if (playback.mode !== 'scene' || !playback.sceneNodeId) return false
   const snap = playback.automationSnapshot
   if (!snap) return false
 
+  let changed = false
+
+  // Global sweep evaluation (ADR 123 Phase 5)
+  const globalSweep = song.scene.globalSweep
+  if (globalSweep && (globalSweep.curves.length > 0 || (globalSweep.toggles?.length ?? 0) > 0) && globalSweep.durationMs) {
+    const elapsedMs = performance.now() - scenePlayStartMs
+    const globalProgress = Math.max(0, Math.min(1, elapsedMs / globalSweep.durationMs))
+    changed = applySweepData(globalSweep, globalProgress, snap) || changed
+  }
+
+  // Chain sweep evaluation
   const sweepData = findConnectedSweep(playback.sceneNodeId)
-  if (!sweepData?.curves.length && !sweepData?.toggles?.length) return false
+  if (!sweepData?.curves.length && !sweepData?.toggles?.length) return changed
 
   const progress = (playback.sceneRepeatIndex + step / totalSteps) / playback.sceneRepeatTotal
+  changed = applySweepData(sweepData, progress, snap) || changed
+
+  return changed
+}
+
+/** Apply a single SweepData set at the given progress value. */
+function applySweepData(sweepData: SweepData, progress: number, snap: AutomationSnapshot): boolean {
   let changed = false
 
   for (const curve of sweepData.curves) {

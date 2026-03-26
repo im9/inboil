@@ -71,6 +71,18 @@ export function buildSweepData(
   return data
 }
 
+// ── Global vs chain scope routing (ADR 123 Phase 5) ──
+
+/** Returns true if a target should route to global sweep (master/fx/eq/fxOn/hold).
+ *  Track-scoped targets (track/send/mute) route to chain sweep. */
+export function isGlobalTarget(target: SweepTarget | SweepToggleTarget): boolean {
+  if ('param' in target) {
+    return target.kind === 'master' || target.kind === 'fx' || target.kind === 'eq'
+  }
+  // Toggle targets: fxOn and hold are global, mute is chain-scoped
+  return target.kind === 'fxOn' || target.kind === 'hold'
+}
+
 // ── Overdub merge (pure) ──
 
 /** Merge incoming curves into existing, replacing curves with matching targets */

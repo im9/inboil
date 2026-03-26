@@ -17,7 +17,9 @@
   import MobilePerfSheet from './lib/components/MobilePerfSheet.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import SweepCanvas from './lib/components/SweepCanvas.svelte'
+  import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
+  import { markScenePlayStart } from './lib/scenePlayback.ts'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
@@ -253,6 +255,7 @@
       playback.mode = 'scene'
     }
     if (playback.mode === 'scene' && (hasScenePlayback() || startFromNode)) {
+      markScenePlayStart()
       playback.sceneNodeId = null
       playback.sceneRepeatLeft = 0
       playback.sceneTranspose = 0
@@ -415,6 +418,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
+          <SweepTrailStrip />
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
           {#if ui.phraseView === 'fx'}
@@ -444,6 +448,7 @@
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+              <SweepTrailStrip />
               {#if ui.phraseView === 'fx'}
                 <FxPad />
               {:else if ui.phraseView === 'eq'}

@@ -369,9 +369,50 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 - [x] `pnpm check` passes
 - [x] `pnpm test` passes
 
-### Phase 4: Recording Preview (nice-to-have)
-- Floating trail strip above pads during REC
-- Real-time trace of parameter movements
+### Phase 4: Recording Preview Strip
+
+Thin floating strip that shows real-time traces of parameter movements during REC — visual feedback that "something is being captured." Nice-to-have; recording works without it. If it doesn't feel right, revert.
+
+#### Design
+
+A `SweepTrailStrip` component rendered inside the pattern sheet area during `sweepRec.state === 'recording'`. Shows the last ~2 seconds of captured parameter values as fading sparkline traces, one per active parameter.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  verb wet ~~╲╱~~  filter freq ──╱──                 │  ← trail strip (32px tall)
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│              [ FX pad / Master pad ]                │  ← normal performance view
+│                                                     │
+```
+
+**Visual language:**
+- Dark-zone background (`--color-fg`), matching sweep editor
+- Each parameter trace: colored sparkline (curve color), fading from left (old) to right (current)
+- Parameter label in `--dz-text-dim` at left edge of each trace
+- Max 4 traces visible (most recently touched); older traces fade out
+- No interaction — purely visual feedback, no pointer events
+
+**Data flow:**
+- `sweepRecorder` exposes a reactive `recentTraces` array: `{ key: string, label: string, color: string, values: number[] }[]`
+- Values are a rolling window of the last ~120 samples (2 seconds at 60fps)
+- `captureValue()` pushes to the rolling buffer; `captureToggle()` pushes 0/1
+- `SweepTrailStrip` renders with `requestAnimationFrame` on a small canvas or inline SVG polylines
+- Component auto-hides when `sweepRec.state !== 'recording'`
+
+**Placement:**
+- Inside `.pattern-sheet` container, above the main content (FxPad/MasterView/StepGrid)
+- `position: relative` in normal flow (not absolute), so it pushes content down by 32px
+- Appears with a subtle slide-down animation (80ms) when recording starts
+
+#### Implementation Checklist
+- [x] Add `recentTraces` reactive array to `sweepRecorder.svelte.ts` — rolling window per active parameter, pushed from `captureValue`/`captureToggle`
+- [x] Create `SweepTrailStrip.svelte` — dark-zone strip, renders sparkline traces via SVG polylines
+- [x] Mount in App.svelte inside pattern sheet area, conditional on `sweepRec.state === 'recording'`
+- [x] Slide-down/up animation on mount/unmount (80ms)
+- [x] Cap at 4 visible traces, fade older ones
+- [x] `pnpm check` passes
+- [x] `pnpm test` passes
 
 ### Phase 5: Global-Scope Sweep Parameters
 
@@ -381,11 +422,39 @@ Master, FX, EQ, and Filter are global parameters, but sweep data is chain-scoped
 
 Introduce a **global sweep layer** that runs independently of chain playback:
 
-- New `SweepData` storage on a dedicated global sweep node (or scene-level property)
-- Global sweep `t` normalized to **total scene duration** (sum of all chain lengths in traversal order), not a single chain
+- New `globalSweep?: SweepData` field on `Scene` interface — scene-level, not per-node
+- Global sweep `t` normalized to **total scene duration** (sum of all chain durations in traversal order)
 - During recording: master/fx/eq/filter targets route to global sweep; track-scoped targets (volume, pan, voice params, sends, mute) route to chain sweep as before
 - During playback: `applySweepStep` evaluates global sweep first (scene-wide progress), then chain sweep (chain-local progress). Chain sweep offsets stack on top of global sweep offsets
 - Overdub: global and chain sweeps are independent — re-recording a global param overwrites its global curve, not the chain curve
+
+**Target routing rules:**
+
+| Target kind | Scope | Rationale |
+|---|---|---|
+| `master` (volume, swing, comp, duck, ret, sat) | global | Affects entire mix |
+| `fx` (verb, delay, glitch, granular params) | global | Shared FX bus |
+| `eq` (low/mid/high freq/gain/q) | global | Master bus EQ |
+| `fxOn` / `hold` toggles | global | FX on/off is global state |
+| `track` (volume, pan, voice params) | chain | Per-pattern track config |
+| `send` (reverb/delay/glitch/granular send) | chain | Per-pattern send levels |
+| `mute` toggles | chain | Per-pattern mute state |
+
+**Scene-wide `t` calculation:**
+
+```
+Scene graph:  Root → [Pat A ×2] → [Pat B ×1] → [Pat C ×3]
+Chain durations: A=32 steps, B=16 steps, C=48 steps  (total=96 steps)
+Global t:     A occupies 0.000–0.333, B occupies 0.333–0.500, C occupies 0.500–1.000
+```
+
+Pre-calculate chain order + cumulative durations at scene play start. During playback: `globalT = (stepsCompletedSoFar + currentChainProgress * currentChainSteps) / totalSceneSteps`.
+
+**Data model changes:**
+- `Scene.globalSweep?: SweepData` — new optional field
+- `validateSongData()` accepts optional `globalSweep` (backward compatible)
+- Old saves without `globalSweep` work unchanged (field simply absent)
+- No migration needed — absence means "no global sweep"
 
 #### Why not just extend chain sweep
 
@@ -393,10 +462,13 @@ Introduce a **global sweep layer** that runs independently of chain playback:
 - Global sweep with scene-wide `t` is the natural representation for parameters that don't belong to any single chain
 
 #### Implementation Checklist
-- [ ] Design global sweep data model and storage location
-- [ ] Add target routing logic to recording engine (global vs chain)
-- [ ] Implement scene-wide `t` calculation for global sweep playback
-- [ ] Update `applySweepStep` to evaluate global + chain layers
-- [ ] Add global sweep editing UI in sweep editor
-- [ ] `pnpm check` passes
-- [ ] `pnpm test` passes
+- [x] Add `globalSweep?: SweepData` to `Scene` interface in `types.ts`
+- [x] Add `durationMs?: number` to `SweepData` for global sweep timing
+- [x] Add `isGlobalTarget(target)` helper to `sweepEval.ts` — returns true for master/fx/eq/fxOn/hold targets
+- [x] Update recording engine: route global targets to `song.scene.globalSweep`, chain targets to per-node sweep
+- [x] `markScenePlayStart()` tracks scene clock origin for global sweep progress
+- [x] Update `applySweepStep()` to evaluate global sweep first (elapsed-time progress), then chain sweep (offsets stack)
+- [x] Add global sweep section to sweep editor UI (list display, delete per curve/toggle, clear all)
+- [x] Tests for `isGlobalTarget` (8 tests)
+- [x] `pnpm check` passes
+- [x] `pnpm test` passes

@@ -7,7 +7,7 @@
  */
 import { song, playback, pushUndo, playFromNode } from './state.svelte.ts'
 import { repositionSatellites } from './sceneActions.ts'
-import { buildSweepData, targetKey, setUserControlledChecker, mergeOverdub, mergeOverdubToggles, rdpSimplify } from './sweepEval.ts'
+import { buildSweepData, targetKey, setUserControlledChecker, mergeOverdub, mergeOverdubToggles, rdpSimplify, isGlobalTarget } from './sweepEval.ts'
 import type { SweepCurve, SweepTarget, SweepToggleCurve, SweepToggleTarget } from './types.ts'
 
 // ── Recording state ──
@@ -50,7 +50,12 @@ export const sweepRec = $state({
   elapsedDisplay: '',
   /** Number of parameters being captured (live) */
   captureCount: 0,
+  /** Rolling traces for trail strip preview (Phase 4). Max 4 most-recent params. */
+  recentTraces: [] as { key: string; label: string; color: string; values: number[] }[],
 })
+
+const TRACE_MAX_SAMPLES = 120 // ~2 seconds at 60fps
+const TRACE_MAX_VISIBLE = 4
 
 /** Chain metrics — frozen at arm time so stop-time state changes don't affect conversion */
 let chainStepsPerPat = 16
@@ -64,6 +69,9 @@ setUserControlledChecker((key: string) => {
 
 let curveCaptures = new Map<string, CurveCapture>()
 let toggleCaptures = new Map<string, ToggleCapture>()
+// Global-scope captures (master/fx/eq/fxOn/hold) — ADR 123 Phase 5
+let globalCurveCaptures = new Map<string, CurveCapture>()
+let globalToggleCaptures = new Map<string, ToggleCapture>()
 let elapsedTimer: ReturnType<typeof setInterval> | null = null
 let recordingStartMs = 0
 /** Progress offset (0–1) — where in the chain playback was when recording started */
@@ -82,6 +90,50 @@ const CURVE_COLORS = [
 let colorIdx = 0
 function nextColor(): string {
   return CURVE_COLORS[colorIdx++ % CURVE_COLORS.length]
+}
+
+// ── Short target label (context-free, for trail strip) ──
+
+const SHORT_LABELS: Record<string, string> = {
+  masterVolume: 'Vol', swing: 'Swing', compThreshold: 'Comp', compRatio: 'Comp R',
+  duckDepth: 'Duck', duckRelease: 'Duck R', retVerb: 'Ret V', retDelay: 'Ret D',
+  satDrive: 'Sat', satTone: 'Sat T', filterCutoff: 'Filter', filterResonance: 'Reso',
+  reverbWet: 'Verb', reverbDamp: 'Damp', delayTime: 'Dly T', delayFeedback: 'Dly F',
+  glitchX: 'Glt X', glitchY: 'Glt Y', granularSize: 'Grn S', granularDensity: 'Grn D',
+}
+
+function shortLabel(target: SweepTarget | SweepToggleTarget): string {
+  if ('param' in target) {
+    if (target.kind === 'track') return `T${(target.trackId ?? 0) + 1} ${target.param}`
+    if (target.kind === 'send') return `T${(target.trackId ?? 0) + 1} snd`
+    if (target.kind === 'eq') return `${target.band.replace('eq', '')} ${target.param}`
+    return SHORT_LABELS[target.param] ?? target.param
+  }
+  if (target.kind === 'mute') return `T${(target.trackId ?? 0) + 1} mute`
+  if (target.kind === 'hold') return `${target.fx} hold`
+  return `${target.fx} on`
+}
+
+/** Push a value to the trail strip rolling buffer */
+function pushTrace(key: string, label: string, color: string, value: number): void {
+  let trace = sweepRec.recentTraces.find(t => t.key === key)
+  if (!trace) {
+    trace = { key, label, color, values: [] }
+    sweepRec.recentTraces.push(trace)
+  }
+  trace.values.push(value)
+  if (trace.values.length > TRACE_MAX_SAMPLES) {
+    trace.values.splice(0, trace.values.length - TRACE_MAX_SAMPLES)
+  }
+  // Move this trace to end (most recent) and cap visible count
+  const idx = sweepRec.recentTraces.indexOf(trace)
+  if (idx >= 0 && idx < sweepRec.recentTraces.length - 1) {
+    sweepRec.recentTraces.splice(idx, 1)
+    sweepRec.recentTraces.push(trace)
+  }
+  if (sweepRec.recentTraces.length > TRACE_MAX_VISIBLE) {
+    sweepRec.recentTraces.splice(0, sweepRec.recentTraces.length - TRACE_MAX_VISIBLE)
+  }
 }
 
 // ── Chain duration calculation ──
@@ -150,6 +202,8 @@ export function armRecording(sweepNodeId: string | null, patternNodeId: string):
   sweepRec.elapsedDisplay = 'ARMED'
   curveCaptures.clear()
   toggleCaptures.clear()
+  globalCurveCaptures.clear()
+  globalToggleCaptures.clear()
   colorIdx = 0
 }
 
@@ -198,7 +252,7 @@ export function stopRecording(): void {
   const patNodeId = sweepRec.patternNodeId
   if (!patNodeId) { resetState(); return }
 
-  // Convert remaining captures for the current chain
+  // Convert remaining chain-scoped captures
   const duration = chainDurationMs()
   const newCurves = convertCurveCaptures(duration)
   const newToggles = convertToggleCaptures(duration)
@@ -213,12 +267,21 @@ export function stopRecording(): void {
     })
   }
 
-  if (flushedChains.length === 0) { resetState(); return }
+  // Convert global-scoped captures (ADR 123 Phase 5)
+  // Global captures use total recording elapsed time as duration
+  const totalRecMs = performance.now() - recordingStartMs
+  const globalCurves = convertGlobalCurveCaptures(totalRecMs)
+  const globalToggles = convertGlobalToggleCaptures(totalRecMs)
+
+  const hasChainData = flushedChains.length > 0
+  const hasGlobalData = globalCurves.length > 0 || globalToggles.length > 0
+
+  if (!hasChainData && !hasGlobalData) { resetState(); return }
 
   // Single undo snapshot before any mutations
   pushUndo('sweep recording')
 
-  // Write each chain's captures to its sweep node
+  // Write chain-scoped captures to their respective sweep nodes
   for (const chain of flushedChains) {
     let nodeId = chain.sweepNodeId
     if (!nodeId) {
@@ -236,6 +299,17 @@ export function stopRecording(): void {
       node.modifierParams = { ...node.modifierParams, sweep: buildSweepData(mergedCurves, mergedToggles) }
     }
   }
+
+  // Write global-scoped captures to scene.globalSweep (ADR 123 Phase 5)
+  if (hasGlobalData) {
+    const existing = song.scene.globalSweep ?? { curves: [] }
+    const mergedCurves = mergeOverdub(existing.curves, globalCurves)
+    const mergedToggles = mergeOverdubToggles(existing.toggles ?? [], globalToggles)
+    const data = buildSweepData(mergedCurves, mergedToggles)
+    data.durationMs = totalRecMs
+    song.scene.globalSweep = data
+  }
+
   resetState()
 }
 
@@ -297,13 +371,15 @@ export function captureValue(target: SweepTarget, value: number, color?: string)
   const key = targetKey(target)
   sweepRec.userControlled.add(key)
 
-  let capture = curveCaptures.get(key)
+  const captures = isGlobalTarget(target) ? globalCurveCaptures : curveCaptures
+  let capture = captures.get(key)
   if (!capture) {
     capture = { target, color: color ?? nextColor(), points: [] }
-    curveCaptures.set(key, capture)
+    captures.set(key, capture)
   }
   capture.points.push({ timeMs: performance.now(), value })
-  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size
+  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size + globalCurveCaptures.size + globalToggleCaptures.size
+  pushTrace(key, shortLabel(target), capture.color, value)
 }
 
 /** Report that the user toggled a boolean parameter.
@@ -317,13 +393,15 @@ export function captureToggle(target: SweepToggleTarget, on: boolean, color?: st
   const key = targetKey(target)
   sweepRec.userControlled.add(key)
 
-  let capture = toggleCaptures.get(key)
+  const captures = isGlobalTarget(target) ? globalToggleCaptures : toggleCaptures
+  let capture = captures.get(key)
   if (!capture) {
     capture = { target, color: color ?? nextColor(), points: [] }
-    toggleCaptures.set(key, capture)
+    captures.set(key, capture)
   }
   capture.points.push({ timeMs: performance.now(), on })
-  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size
+  sweepRec.captureCount = curveCaptures.size + toggleCaptures.size + globalCurveCaptures.size + globalToggleCaptures.size
+  pushTrace(key, shortLabel(target), capture.color, on ? 1 : 0)
 }
 
 
@@ -349,6 +427,38 @@ function convertToggleCaptures(duration: number): SweepToggleCurve[] {
     if (capture.points.length === 0) continue
     const points = capture.points.map(p => ({
       t: Math.max(0, Math.min(1, recordingProgressOffset + (p.timeMs - recordingStartMs) / duration)),
+      on: p.on,
+    }))
+    result.push({ target: capture.target, points, color: capture.color })
+  }
+  return result
+}
+
+// ── Global capture conversion (ADR 123 Phase 5) ──
+// Global captures normalize t to the total recording elapsed time (not chain duration)
+
+function convertGlobalCurveCaptures(totalMs: number): SweepCurve[] {
+  const result: SweepCurve[] = []
+  if (totalMs <= 0) return result
+  for (const capture of globalCurveCaptures.values()) {
+    if (capture.points.length < 2) continue
+    let points = capture.points.map(p => ({
+      t: Math.max(0, Math.min(1, (p.timeMs - recordingStartMs) / totalMs)),
+      v: p.value * 2 - 1,
+    }))
+    points = rdpSimplify(points, 0.02)
+    result.push({ target: capture.target, points, color: capture.color })
+  }
+  return result
+}
+
+function convertGlobalToggleCaptures(totalMs: number): SweepToggleCurve[] {
+  const result: SweepToggleCurve[] = []
+  if (totalMs <= 0) return result
+  for (const capture of globalToggleCaptures.values()) {
+    if (capture.points.length === 0) continue
+    const points = capture.points.map(p => ({
+      t: Math.max(0, Math.min(1, (p.timeMs - recordingStartMs) / totalMs)),
       on: p.on,
     }))
     result.push({ target: capture.target, points, color: capture.color })
@@ -396,8 +506,11 @@ function resetState(): void {
   sweepRec.userControlled.clear()
   sweepRec.elapsedDisplay = ''
   sweepRec.captureCount = 0
+  sweepRec.recentTraces.length = 0
   curveCaptures.clear()
   toggleCaptures.clear()
+  globalCurveCaptures.clear()
+  globalToggleCaptures.clear()
   lastSceneNodeId = null
   flushedChains = []
   if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null }
