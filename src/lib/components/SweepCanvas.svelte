@@ -1014,7 +1014,7 @@
   // ── Commit curve to sweep data ──
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
     if (!sweepNode) return
-    const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute')
+    const curves = [...sweepData.curves]
     const existingIdx = curves.findIndex(c => targetsEqual(c.target, target))
     const newCurve: SweepCurve = { target, points, color }
     if (existingIdx >= 0) {
@@ -1028,7 +1028,7 @@
   function deleteCurve(target: SweepTarget) {
     if (!sweepNode) return
     pushUndo('Delete sweep curve')
-    const curves = sweepData.curves.filter(c => (c.target as { kind: string }).kind !== 'mute' && !targetsEqual(c.target, target))
+    const curves = sweepData.curves.filter(c => !targetsEqual(c.target, target))
     sceneUpdateModifierParams(sweepNode.id, { sweep: { curves, toggles: sweepData.toggles } })
     selectedCurveIdx = null
     redraw()
@@ -1077,6 +1077,7 @@
   function onToggleBoundaryDown(e: PointerEvent, toggleIdx: number, boundaryIdx: number, side: 'left' | 'right') {
     e.preventDefault()
     e.stopPropagation()
+    if (toggleDragState) return // guard against double-initiation
     toggleDragState = { toggleIdx, boundaryIdx, side }
     window.addEventListener('pointermove', onToggleBoundaryMove)
     window.addEventListener('pointerup', onToggleBoundaryUp)

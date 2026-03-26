@@ -322,9 +322,42 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   return changed
 }
 
+// ── Sweep parameter maps (hoisted for hot-path performance) ──
+
+const MASTER_MAP: Record<string, { get: () => number; set: (v: number) => void; snapKey?: string; pad?: string; fxPad?: string; xy?: string }> = {
+  masterVolume:    { get: () => perf.masterGain, set: v => { perf.masterGain = v }, snapKey: 'global:masterVolume' },
+  swing:           { get: () => perf.swing, set: v => { perf.swing = v }, snapKey: 'global:swing' },
+  compThreshold:   { get: () => masterPad.comp.x, set: v => { masterPad.comp.x = v }, pad: 'comp', xy: 'x' },
+  compRatio:       { get: () => masterPad.comp.y, set: v => { masterPad.comp.y = v }, pad: 'comp', xy: 'y' },
+  duckDepth:       { get: () => masterPad.duck.x, set: v => { masterPad.duck.x = v }, pad: 'duck', xy: 'x' },
+  duckRelease:     { get: () => masterPad.duck.y, set: v => { masterPad.duck.y = v }, pad: 'duck', xy: 'y' },
+  retVerb:         { get: () => masterPad.ret.x, set: v => { masterPad.ret.x = v }, pad: 'ret', xy: 'x' },
+  retDelay:        { get: () => masterPad.ret.y, set: v => { masterPad.ret.y = v }, pad: 'ret', xy: 'y' },
+  satDrive:        { get: () => masterPad.sat.x, set: v => { masterPad.sat.x = v }, pad: 'sat', xy: 'x' },
+  satTone:         { get: () => masterPad.sat.y, set: v => { masterPad.sat.y = v }, pad: 'sat', xy: 'y' },
+  filterCutoff:    { get: () => fxPad.filter.x, set: v => { fxPad.filter.x = v }, fxPad: 'filter', xy: 'x' },
+  filterResonance: { get: () => fxPad.filter.y, set: v => { fxPad.filter.y = v }, fxPad: 'filter', xy: 'y' },
+}
+
+const FX_MAP: Record<string, [string, string]> = {
+  reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
+  delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
+  glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
+  granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
+}
+
+const HOLD_MAP: Record<string, keyof typeof perf> = {
+  verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
+}
+
 /** Apply a single SweepData set at the given progress value. */
 function applySweepData(sweepData: SweepData, progress: number, snap: AutomationSnapshot): boolean {
   let changed = false
+
+  // Cache pattern lookup once per call (fixes #2: nested find in hot path)
+  const patNode = playback.sceneNodeId ? song.scene.nodes.find(n => n.id === playback.sceneNodeId) : null
+  const patIdx = patNode?.patternId ? song.patterns.findIndex(p => p.id === patNode.patternId) : -1
+  const pat = patIdx >= 0 ? song.patterns[patIdx] : null
 
   for (const curve of sweepData.curves) {
     // Skip targets currently being controlled by user during recording (ADR 123 §8)
@@ -348,8 +381,6 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
         if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
       } else {
         // Voice params (TONE, CUT, RESO, etc.) — apply offset scaled to param range
-        const patIdx = song.patterns.findIndex(p => p.id === song.scene.nodes.find(n => n.id === playback.sceneNodeId)?.patternId)
-        const pat = patIdx >= 0 ? song.patterns[patIdx] : null
         const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
         if (cell?.voiceId && cell.voiceParams) {
           const defs = getParamDefs(cell.voiceId as VoiceId)
@@ -367,20 +398,6 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       }
     } else if (curve.target.kind === 'master') {
       const param = curve.target.param
-      const MASTER_MAP: Record<string, { get: () => number; set: (v: number) => void; snapKey?: string; pad?: string; fxPad?: string; xy?: string }> = {
-        masterVolume:  { get: () => perf.masterGain, set: v => { perf.masterGain = v }, snapKey: 'global:masterVolume' },
-        swing:         { get: () => perf.swing, set: v => { perf.swing = v }, snapKey: 'global:swing' },
-        compThreshold: { get: () => masterPad.comp.x, set: v => { masterPad.comp.x = v }, pad: 'comp', xy: 'x' },
-        compRatio:     { get: () => masterPad.comp.y, set: v => { masterPad.comp.y = v }, pad: 'comp', xy: 'y' },
-        duckDepth:     { get: () => masterPad.duck.x, set: v => { masterPad.duck.x = v }, pad: 'duck', xy: 'x' },
-        duckRelease:   { get: () => masterPad.duck.y, set: v => { masterPad.duck.y = v }, pad: 'duck', xy: 'y' },
-        retVerb:       { get: () => masterPad.ret.x, set: v => { masterPad.ret.x = v }, pad: 'ret', xy: 'x' },
-        retDelay:      { get: () => masterPad.ret.y, set: v => { masterPad.ret.y = v }, pad: 'ret', xy: 'y' },
-        satDrive:      { get: () => masterPad.sat.x, set: v => { masterPad.sat.x = v }, pad: 'sat', xy: 'x' },
-        satTone:       { get: () => masterPad.sat.y, set: v => { masterPad.sat.y = v }, pad: 'sat', xy: 'y' },
-        filterCutoff:  { get: () => fxPad.filter.x, set: v => { fxPad.filter.x = v }, fxPad: 'filter', xy: 'x' },
-        filterResonance: { get: () => fxPad.filter.y, set: v => { fxPad.filter.y = v }, fxPad: 'filter', xy: 'y' },
-      }
       const m = MASTER_MAP[param]
       if (m) {
         const base = m.snapKey
@@ -395,8 +412,6 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       const tgt = curve.target
       const trackIdx = song.tracks.findIndex(t => t.id === tgt.trackId)
       if (trackIdx < 0) continue
-      const patIdx = song.patterns.findIndex(p => p.id === song.scene.nodes.find(n => n.id === playback.sceneNodeId)?.patternId)
-      const pat = patIdx >= 0 ? song.patterns[patIdx] : null
       const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
       if (cell) {
         const param = tgt.param
@@ -407,12 +422,6 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
     } else if (curve.target.kind === 'fx') {
       const param = curve.target.param
       const fxSnap = snap.fxPad
-      const FX_MAP: Record<string, [string, string]> = {
-        reverbWet: ['verb', 'x'], reverbDamp: ['verb', 'y'],
-        delayTime: ['delay', 'x'], delayFeedback: ['delay', 'y'],
-        glitchX: ['glitch', 'x'], glitchY: ['glitch', 'y'],
-        granularSize: ['granular', 'x'], granularDensity: ['granular', 'y'],
-      }
       const mapping = FX_MAP[param]
       if (mapping) {
         const [pad, key] = mapping
@@ -440,9 +449,6 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       const on = evaluateToggle(toggle.points, progress)
 
       if (toggle.target.kind === 'hold') {
-        const HOLD_MAP: Record<string, keyof typeof perf> = {
-          verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
-        }
         const key = HOLD_MAP[toggle.target.fx]
         if (key && perf[key] !== on) { (perf as unknown as Record<string, boolean>)[key] = on; changed = true }
       } else if (toggle.target.kind === 'fxOn') {

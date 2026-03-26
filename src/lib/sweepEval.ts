@@ -88,12 +88,14 @@ export function isGlobalTarget(target: SweepTarget | SweepToggleTarget): boolean
 /** Merge incoming curves into existing, replacing curves with matching targets */
 export function mergeOverdub(existing: SweepCurve[], incoming: SweepCurve[]): SweepCurve[] {
   const result = [...existing]
+  const keyIndex = new Map(result.map((c, i) => [targetKey(c.target), i]))
   for (const curve of incoming) {
     const key = targetKey(curve.target)
-    const idx = result.findIndex(c => targetKey(c.target) === key)
-    if (idx >= 0) {
+    const idx = keyIndex.get(key)
+    if (idx !== undefined) {
       result[idx] = curve
     } else {
+      keyIndex.set(key, result.length)
       result.push(curve)
     }
   }
@@ -103,12 +105,14 @@ export function mergeOverdub(existing: SweepCurve[], incoming: SweepCurve[]): Sw
 /** Merge incoming toggles into existing, replacing toggles with matching targets */
 export function mergeOverdubToggles(existing: SweepToggleCurve[], incoming: SweepToggleCurve[]): SweepToggleCurve[] {
   const result = [...existing]
+  const keyIndex = new Map(result.map((t, i) => [targetKey(t.target), i]))
   for (const toggle of incoming) {
     const key = targetKey(toggle.target)
-    const idx = result.findIndex(t => targetKey(t.target) === key)
-    if (idx >= 0) {
+    const idx = keyIndex.get(key)
+    if (idx !== undefined) {
       result[idx] = toggle
     } else {
+      keyIndex.set(key, result.length)
       result.push(toggle)
     }
   }
