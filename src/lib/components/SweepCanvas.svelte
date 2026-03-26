@@ -346,35 +346,18 @@
       ctx.fillRect(x1 - 2, handleY, 4, handleH)
     }
 
-    // Draw all curves
-    for (const curve of sweepData.curves) {
-      if ((curve.target as { kind: string }).kind === 'mute') continue
-      const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
-      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
-    }
-
-    // Halation clear effect (adapted for dark zone)
-    if (halationProgress !== null) {
-      const cx = w / 2
-      const cy = drawY + drawH / 2
-      const maxR = Math.sqrt(w * w + drawH * drawH)
-      const r = halationProgress * maxR * 1.2
-      const ringW = maxR * 0.15
-
-      for (let i = 3; i >= 0; i--) {
-        const ri = r - i * ringW * 0.3
-        if (ri <= 0) continue
-        ctx.beginPath()
-        ctx.arc(cx, cy, ri, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(196, 122, 42, ${0.06 * (4 - i)})`
-        ctx.fill()
+    // Draw all curves (with flash-fade during clear)
+    if (clearProgress === null) {
+      for (const curve of sweepData.curves) {
+        if ((curve.target as { kind: string }).kind === 'mute') continue
+        const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
+        drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
       }
-
-      if (r > ringW) {
-        ctx.beginPath()
-        ctx.arc(cx, cy, r - ringW, 0, Math.PI * 2)
-        ctx.fillStyle = DZ_BG
-        ctx.fill()
+    } else {
+      const fade = 1 - clearProgress
+      for (const curve of sweepData.curves) {
+        if ((curve.target as { kind: string }).kind === 'mute') continue
+        drawCurve(ctx, curve, w, drawY, drawH, fade)
       }
     }
 
@@ -1001,27 +984,27 @@
     dragging = false
   }
 
-  // ── Halation clear effect ──
-  let halationProgress = $state<number | null>(null)
-  function clearAllWithHalation() {
-    if (!sweepNode || halationProgress !== null) return
+  // ── Flash-fade clear effect ──
+  let clearProgress = $state<number | null>(null)
+
+  function clearAllWithDisintegration() {
+    if (!sweepNode || clearProgress !== null) return
+    if (sweepData.curves.length === 0 && (!sweepData.toggles || sweepData.toggles.length === 0)) return
     const startTime = performance.now()
-    const duration = 600
+    const duration = 350
 
     function animate() {
       const elapsed = performance.now() - startTime
-      halationProgress = Math.min(1, elapsed / duration)
+      clearProgress = Math.min(1, elapsed / duration)
       redraw()
-
-      if (halationProgress < 1) {
+      if (clearProgress < 1) {
         requestAnimationFrame(animate)
       } else {
         pushUndo('Clear all sweep curves')
         sceneUpdateModifierParams(sweepNode!.id, { sweep: { curves: [] } })
         if (song.scene.globalSweep) song.scene.globalSweep = undefined
-        selectedCurveIdx = null
-        selectedToggleIdx = null
-        halationProgress = null
+        selectedCurveIdx = null; selectedToggleIdx = null
+        clearProgress = null
         redraw()
       }
     }
@@ -1305,7 +1288,7 @@
       {/if}
     {/if}
     <span class="sweep-toolbar-sep"></span>
-    <button class="sweep-tool-btn" onpointerdown={clearAllWithHalation}
+    <button class="sweep-tool-btn" onpointerdown={clearAllWithDisintegration}
       data-tip="Clear all curves" data-tip-ja="全カーブを消去"
     >Clear</button>
     <div class="sweep-toolbar-spacer"></div>
