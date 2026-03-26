@@ -20,43 +20,31 @@ Replace the draw-based input with **recording-based input**. Users play the scen
 
 ### 1. Core Principle
 
-The user never draws on a timeline. Input is spatial (pads, toggles), output is temporal (curves). The fun is in the **recording moment** — performing live, hearing results immediately. The SWP sheet is a practical tool for reviewing and editing after.
+The user never draws on a timeline. Input is spatial (pads, toggles), output is temporal (curves). The fun is in the **recording moment** — performing live, hearing results immediately. The sweep editor is for reviewing and fine-tuning after.
 
 - **Input**: move pads, toggle effects — the same gestures used in live performance
 - **Result**: `SweepCurve` / `SweepToggleCurve` data, produced automatically
-- **Review**: SWP sheet — dark-zone curve list for management and editing
+- **Review**: sweep editor (existing overlay, redesigned dark-zone) for management and editing
 
 ### 2. Two Modes — Record vs. Review
 
 Recording and review are **separate screens** with distinct roles.
 
 **Record mode** — normal performance view:
-- Scene plays, user operates FX/EQ/Master/Filter pads as usual
-- REC button active → parameter movements captured in the background
+- Triggered by ● button on sweep node (§7) → scene playback starts + recording begins
+- User operates FX/EQ/Master/Filter pads as usual
 - Pads are fully visible and interactive — no overlay obscures them
-- Minimal recording indicator (REC ● + elapsed time) in header
-- Recording engine auto-routes captured data to the correct chain's sweep modifier (§3)
+- Recording indicator (● + elapsed time) on the sweep node or header
+- Recording engine writes captured data to the target chain's sweep modifier
 
-**Review/edit mode** — SWP overlay sheet:
-- Opened via PerfBar `SWP` button (same model as FX/EQ/Master)
-- Dark-zone background (`--dz-bg`) — same palette as FX pad
+**Review/edit mode** — sweep editor overlay:
+- Accessed via existing entry point: select sweep node in scene view → DockPanel → edit button → overlay opens
+- Redesigned with dark-zone background (`--dz-bg`) — same palette as FX pad
 - Curve list: each recorded parameter shown as a labeled mini-curve
 - Tap a curve to select → editing tools appear
 - Play to preview: playback cursor sweeps across, active curves glow with `shadowBlur`
 
-```
-Record:                          Review:
-┌──────────────────────┐        ┌──────────────────────┐
-│  REC ●  00:12        │        │  SWP sheet            │
-│                      │        │                      │
-│  [ FX pad ] [ EQ ]  │        │  verb wet  ──╲╱──    │
-│  [Master ] [Filter]  │        │  delay fb  ━━━━▏glow │
-│                      │        │  flt cut   ──╱╲──    │
-│  (normal perf view)  │        │  [trim] [delete]     │
-└──────────────────────┘        └──────────────────────┘
-```
-
-**Playback glow**: during scene playback in the SWP sheet, an amber cursor sweeps left to right. Curves light up as the cursor passes — a subtle visual reward, not the main feature.
+**Playback glow**: during scene playback in the sweep editor, an amber cursor sweeps left to right. Curves light up as the cursor passes — a subtle visual reward, not the main feature.
 
 **Recording preview** (future): floating trail strip above pads during REC, showing real-time trace of movements. Nice-to-have, not essential for core functionality.
 
@@ -91,10 +79,9 @@ After REC:
 - Continuous gestures spanning a chain boundary are split seamlessly: the outgoing chain's curve ends at its final value, the incoming chain's curve starts from that same value — no audible discontinuity
 - `t` values are normalized to each chain's scope (pattern length × repeat count) — same as existing sweep data
 
-**SWP sheet shows all chains:**
-- PerfBar `SWP` button opens sheet listing sweep data across all chains
-- Grouped by chain/pattern for clarity
-- Same editing tools apply regardless of which chain owns the data
+**Editing access:**
+- Sweep editor opens per-chain (via sweep node selection in scene view → DockPanel → edit)
+- Each chain's sweep data edited independently — consistent with other modifier nodes
 
 ### 4. What Gets Recorded
 
@@ -115,9 +102,9 @@ After REC:
 
 Each recording pass **merges** into existing data: re-recording a parameter overwrites that parameter's curve in the active chain's sweep; untouched parameters keep their curves.
 
-### 5. SWP Sheet Visual Design
+### 5. Sweep Editor Visual Redesign
 
-The sheet is a **management screen** with neon-tinged polish — matching FX/EQ/MST sheet aesthetics. Not a pure visualization, but not a boring list either.
+The existing SweepCanvas is redesigned from light-zone graph paper to **dark-zone neon** — matching FX/EQ/Master aesthetics. Same overlay mechanism, new look.
 
 **Visual language** — consistent with FX pad, EQ overlay, and Master sheet:
 - Dark-zone palette (`--dz-bg`, `--dz-divider`, `--dz-text`)
@@ -128,7 +115,6 @@ The sheet is a **management screen** with neon-tinged polish — matching FX/EQ/
 
 **Edit mode** (stopped / editing):
 - Each recorded parameter: label + color-coded mini-curve with **subtle** single-pass glow
-- Grouped by chain/pattern
 - Selected curve: full opacity, accent-colored border — control points clearly visible
 - Unselected curves: dim, 30% opacity, no glow
 - Hovering a curve brightens its glow — same feedback pattern as FxPad effect nodes
@@ -153,10 +139,10 @@ All effects use Canvas 2D `shadowBlur` + `globalAlpha` + `lineWidth` + `globalCo
 
 ### 6. Post-Recording Editing
 
-SWP sheet displays curves and toggles in **separate sections** — they have different visual representations and editing operations.
+Sweep editor displays curves and toggles in **separate sections** — they have different visual representations and editing operations.
 
 ```
-SWP sheet:
+Sweep editor:
   ─── Curves ───
   verb wet   ──╲╱──
   filter cut ──╱╲──
@@ -202,29 +188,46 @@ No point handles or bezier curves — toggles are purely about timing of state c
 - Curves and toggles have fundamentally different shapes (continuous line vs. discrete blocks)
 - Mixing them in one view forced awkward compromises in the draw-based editor (bezier points for on/off)
 - Separate sections mean each gets the right editing tools without clutter
-- Both sections live in the same SWP sheet — one scroll, not separate screens
+- Both sections live in the same sweep editor — one scroll, not separate screens
 
 No freehand drawing. Recording is the only way to create data. Editing only modifies what was recorded.
 
-### 7. Rec Button Repurpose — Parameter Recording, Not Audio Capture
+### 7. Sweep Record Button
 
-The existing REC button changes role: instead of capturing audio output, it captures **parameter movements** as sweep automation data.
+The ● record button appears in **two places** — both trigger the same recording for the target chain:
 
-**Audio export becomes a separate offline render operation:**
-- Uses `OfflineAudioContext` to render at CPU speed (not real-time)
-- Triggered from Sidebar → SYSTEM → PROJECT → FILE section, below existing EXPORT MIDI button
-- Outputs WAV — same model as Ableton's "Export Audio/Video" (bounce/render)
+**Scene view** — on the sweep node, same position as root node's ▶:
+```
+Root node:          Sweep node:
+┌──────────┐        ┌──────────┐
+│ ▶  FROST │        │ ●  FROST │
+│          │        │ ═══╲╱══  │
+└──────────┘        └──────────┘
+```
 
-**REC button flow:**
-1. Play scene (or press REC while stopped → auto-starts playback)
-2. Press REC → recording starts, header shows REC ● + elapsed time
-3. Move pads/toggles → parameter changes captured and routed to active chain's sweep modifier
-4. Press REC again or stop → recording ends, curves written to sweep data
-5. Untouched parameters keep existing curves (overdub merge per §8)
+**Sweep editor** — in the toolbar, replacing Draw/Shape buttons:
+```
+Current:   [Draw] [Point] [Shape] [Clear] ✕
+ADR 123:   [● Rec]  [Clear]              ✕
+```
 
-This cleanly separates two concerns:
-- **REC** = creative performance capture (real-time, interactive)
-- **Export** = final output rendering (offline, non-interactive)
+Draw and Shape are removed — recording replaces freehand drawing. Point editing becomes the default (always active): tap a curve to show control points, drag to adjust. No mode toggle needed.
+
+**Recording flow:**
+1. Tap ● (on node or in editor) → scene playback starts + recording begins for that chain
+2. Move pads/toggles → parameter changes captured into this node's `SweepData`
+3. Tap ● again or stop playback → recording ends, curves written
+4. Untouched parameters keep existing curves (overdub merge per §8)
+
+**Why on the node, not the header REC button:**
+- Header REC stays as audio export (WAV capture) — no change, no risk
+- Node ● makes the recording target explicit — user sees which chain they're recording into
+- Same visual language as root ▶ — "press to activate this node"
+- No dependency on OfflineAudioContext (verified non-functional in all browsers — see Known Limitation)
+
+**Auto-generation interaction:**
+- When a sweep node is auto-generated (§3), the ● button appears immediately
+- User can tap it right away to start recording
 
 ### 8. Overdub Conflict Resolution
 
@@ -263,8 +266,7 @@ interface SweepData {
 
 - Extract `evaluateCurve()` / `evaluateToggle()` to `sweepEval.ts` (pure, testable)
 - `buildSweepData(curves, toggles)` helper (prevents field-drop bugs)
-- Replace SweepCanvas.svelte with: `SweepTrails.svelte` (curve rendering) + `SweepEdit.svelte` (point/trim editing)
-- SweepSheet.svelte wraps both as overlay sheet component
+- Redesign SweepCanvas.svelte: remove draw palette/brush modes, add dark-zone styling, split curve rendering and editing into cleaner internal structure
 
 ## Resolved Questions
 
@@ -272,8 +274,9 @@ interface SweepData {
 - ~~Recording quantization?~~ → **High-resolution capture + normalized on stop.** Record at ms-level, convert to `t: 0-1` using chain length. Preserves sub-step detail.
 - ~~Shape presets?~~ → **Dropped.** Shape presets are a drawing-tool concept. With rec-based input, "ramp up" = slowly drag the pad up while recording.
 - ~~Trail rendering: Canvas 2D or WebGL?~~ → **Canvas 2D sufficient.** FxPad already renders similar glow effects.
-- ~~Sweep node abolished?~~ → **No.** Modifier approach preserved — chain-scoped `t: 0-1` handles scene editing, repeat, and branching correctly. Only the input method changes from drawing to recording. Sweep nodes are auto-generated during REC when needed.
+- ~~Sweep node abolished?~~ → **No.** Modifier approach preserved — chain-scoped `t: 0-1` handles scene editing, repeat, and branching correctly. Only the input method changes from drawing to recording. Sweep nodes are auto-generated during REC when needed. No PerfBar SWP button — editing accessed through existing scene node → DockPanel → overlay flow.
 - ~~Absolute step time?~~ → **No.** Absolute time breaks when scene structure changes. Normalized `t: 0-1` within chain scope is the correct abstraction.
+- ~~REC button repurpose?~~ → **No.** OfflineAudioContext + AudioWorklet does not work in any browser (verified 2025) — cannot move audio export to offline render. Header REC stays as audio capture. Sweep recording triggered by ● button on sweep node instead.
 
 ### Undo
 
@@ -285,27 +288,39 @@ interface SweepData {
 
 ## Open Questions
 
-- OfflineAudioContext: can the existing AudioWorklet processors run unchanged in offline mode, or do they need adaptation?
-- SWP sheet grouping: how to present multi-chain sweep data clearly? (tab per chain, flat list with headers, etc.)
+_None remaining for ADR 123 scope — sweep recording via node ● does not depend on unresolved technical questions._
+
+## Known Limitation: OfflineAudioContext + AudioWorklet
+
+As of 2025, **OfflineAudioContext does not work with AudioWorklet** in any browser (Chrome, Firefox, Safari). `addModule()` succeeds but `new AudioWorkletNode()` fails — the processor is not recognized in offline context.
+
+**Impact on this ADR:** None — ADR 123 no longer depends on OfflineAudioContext. Header REC stays as real-time audio capture. Sweep recording uses the node ● button.
+
+**Impact on future offline WAV export:** If inboil wants faster-than-realtime WAV export in the future, this blocker must be resolved. Options:
+- Wait for browser vendors to fix AudioWorklet + OfflineAudioContext
+- Dual audio graph: rebuild DSP with built-in AudioNodes for offline context (major effort)
+- Server-side rendering
+- WebAssembly DSP port
+
+This is **not in scope for ADR 123** but documented here as a verified technical constraint.
 
 ## Out of Scope
 
 **Global-scoped sweep parameters** — Master, FX, EQ, and Filter are global parameters but sweep is chain-scoped. Recording these during a specific chain means they only apply when that chain plays — which may surprise users who expect "master comp change" to persist across all chains. This is an existing limitation of chain-scoped sweep (not introduced by ADR 123). A future ADR should address whether to introduce a separate global sweep scope for these parameters, allowing automation that applies regardless of which chain is active.
 
+
 ## Implementation Phases
 
 ### Phase 1: Foundation
-- Add `SWP` button to PerfBar
-- SweepSheet overlay: dark-zone curve list (label + mini-curve per parameter, grouped by chain)
-- Extract `sweepEval.ts`
-- Dark-zone visual redesign of sweep editing
+- Extract `sweepEval.ts` (evaluateCurve + evaluateToggle — pure, testable)
+- Dark-zone visual redesign of SweepCanvas (remove draw palette/brush, apply --dz-* tokens)
+- Toggle section in sweep editor (colored blocks alongside existing curve display)
 
 ### Phase 2: Recording
-- Repurpose REC button for parameter capture
-- Recording engine: capture pad/toggle state changes, route to active chain's sweep modifier
+- Sweep node ● button: start/stop recording for target chain
+- Recording engine: capture pad/toggle state changes, write to target sweep modifier
 - Auto-generation of sweep nodes when chain has none
 - Overdub merge logic
-- Audio export moved to offline render (menu action)
 
 ### Phase 3: Playback Glow + Editing
 - Playback cursor + `shadowBlur` glow on active curves
