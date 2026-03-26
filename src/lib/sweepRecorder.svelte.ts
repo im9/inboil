@@ -66,6 +66,10 @@ let elapsedTimer: ReturnType<typeof setInterval> | null = null
 let recordingStartMs = 0
 /** Progress offset (0–1) — where in the chain playback was when recording started */
 let recordingProgressOffset = 0
+/** Track scene node ID for chain transition detection */
+let lastSceneNodeId: string | null = null
+/** Accumulated flush results across chain transitions */
+let flushedChains: { sweepNodeId: string | null; patternNodeId: string; curves: SweepCurve[]; toggles: SweepToggleCurve[] }[] = []
 
 // ── Color assignment for new curves ──
 const CURVE_COLORS = [
@@ -171,6 +175,8 @@ function beginRecording(): void {
   sweepRec.state = 'recording'
   recordingStartMs = performance.now()
   sweepRec.elapsedDisplay = '0:00'
+  lastSceneNodeId = playback.sceneNodeId ?? patNodeId
+  flushedChains = []
 
   elapsedTimer = setInterval(() => {
     const elapsed = Math.floor((performance.now() - recordingStartMs) / 1000)
@@ -190,38 +196,92 @@ export function stopRecording(): void {
   const patNodeId = sweepRec.patternNodeId
   if (!patNodeId) { resetState(); return }
 
-  // Convert captures to sweep data using BPM-based chain duration
+  // Convert remaining captures for the current chain
   const duration = chainDurationMs()
   const newCurves = convertCurveCaptures(duration)
   const newToggles = convertToggleCaptures(duration)
 
-  if (newCurves.length === 0 && newToggles.length === 0) { resetState(); return }
+  // Collect all chains: flushed (from transitions) + current
+  if (newCurves.length > 0 || newToggles.length > 0) {
+    flushedChains.push({
+      sweepNodeId: sweepRec.sweepNodeId,
+      patternNodeId: patNodeId,
+      curves: newCurves,
+      toggles: newToggles,
+    })
+  }
+
+  if (flushedChains.length === 0) { resetState(); return }
 
   // Single undo snapshot before any mutations
   pushUndo('sweep recording')
 
-  // Find or auto-generate sweep node
-  let nodeId = sweepRec.sweepNodeId
-  if (!nodeId) {
-    nodeId = sceneAddModifierNoUndo(patNodeId)
-    if (nodeId) sweepRec.sweepNodeId = nodeId
-  }
+  // Write each chain's captures to its sweep node
+  for (const chain of flushedChains) {
+    let nodeId = chain.sweepNodeId
+    if (!nodeId) {
+      nodeId = sceneAddModifierNoUndo(chain.patternNodeId)
+    }
+    if (!nodeId) continue
 
-  if (!nodeId) { resetState(); return }
+    const node = song.scene.nodes.find(n => n.id === nodeId)
+    const existing = node?.modifierParams?.sweep ?? { curves: [] }
 
-  // Get existing sweep data for overdub merge
-  const node = song.scene.nodes.find(n => n.id === nodeId)
-  const existing = node?.modifierParams?.sweep ?? { curves: [] }
+    const mergedCurves = mergeOverdub(existing.curves, chain.curves)
+    const mergedToggles = mergeOverdubToggles(existing.toggles ?? [], chain.toggles)
 
-  // Merge: new curves overwrite same-target, untouched curves preserved
-  const mergedCurves = mergeOverdub(existing.curves, newCurves)
-  const mergedToggles = mergeOverdubToggles(existing.toggles ?? [], newToggles)
-
-  // Write directly (no extra pushUndo)
-  if (node) {
-    node.modifierParams = { ...node.modifierParams, sweep: buildSweepData(mergedCurves, mergedToggles) }
+    if (node) {
+      node.modifierParams = { ...node.modifierParams, sweep: buildSweepData(mergedCurves, mergedToggles) }
+    }
   }
   resetState()
+}
+
+// ── Chain transition detection (ADR 123 §3) ──
+
+/** Check if scene playback has moved to a different pattern node.
+ *  If so, flush current captures and switch recording target. */
+function checkChainTransition(): void {
+  if (sweepRec.state !== 'recording') return
+  const currentNodeId = playback.sceneNodeId
+  if (!currentNodeId || currentNodeId === lastSceneNodeId) return
+
+  // Scene node changed — flush captures for the old chain
+  if (lastSceneNodeId && (curveCaptures.size > 0 || toggleCaptures.size > 0)) {
+    const duration = chainDurationMs()
+    const curves = convertCurveCaptures(duration)
+    const toggles = convertToggleCaptures(duration)
+    if (curves.length > 0 || toggles.length > 0) {
+      flushedChains.push({
+        sweepNodeId: sweepRec.sweepNodeId,
+        patternNodeId: sweepRec.patternNodeId!,
+        curves,
+        toggles,
+      })
+    }
+    curveCaptures.clear()
+    toggleCaptures.clear()
+    sweepRec.userControlled.clear()
+  }
+
+  // Switch to new chain
+  lastSceneNodeId = currentNodeId
+  // Find sweep node for the new pattern node (if one exists)
+  const newPatNode = song.scene.nodes.find(n => n.id === currentNodeId)
+  if (newPatNode && (newPatNode.type === 'pattern' || newPatNode.type === 'generative')) {
+    sweepRec.patternNodeId = currentNodeId
+    // Find existing sweep node for this pattern
+    let newSweepId: string | null = null
+    for (const edge of song.scene.edges) {
+      if (edge.to !== currentNodeId) continue
+      const src = song.scene.nodes.find(n => n.id === edge.from)
+      if (src?.type === 'sweep') { newSweepId = src.id; break }
+    }
+    sweepRec.sweepNodeId = newSweepId
+    freezeChainMetrics(currentNodeId)
+    recordingStartMs = performance.now()
+    recordingProgressOffset = 0 // new chain starts from beginning
+  }
 }
 
 /** Report that the user is touching a continuous parameter.
@@ -230,6 +290,7 @@ export function captureValue(target: SweepTarget, value: number, color?: string)
   if (sweepRec.state === 'idle') return
   if (sweepRec.state === 'armed') beginRecording()
   if (sweepRec.state !== 'recording') return
+  checkChainTransition()
 
   const key = targetKey(target)
   sweepRec.userControlled.add(key)
@@ -245,8 +306,10 @@ export function captureValue(target: SweepTarget, value: number, color?: string)
 /** Report that the user toggled a boolean parameter.
  *  If armed, triggers playback + recording start. */
 export function captureToggle(target: SweepToggleTarget, on: boolean, color?: string): void {
+  if (sweepRec.state === 'idle') return
   if (sweepRec.state === 'armed') beginRecording()
   if (sweepRec.state !== 'recording') return
+  checkChainTransition()
 
   const key = targetKey(target)
   sweepRec.userControlled.add(key)
@@ -385,5 +448,7 @@ function resetState(): void {
   sweepRec.elapsedDisplay = ''
   curveCaptures.clear()
   toggleCaptures.clear()
+  lastSceneNodeId = null
+  flushedChains = []
   if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null }
 }

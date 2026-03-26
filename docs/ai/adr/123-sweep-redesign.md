@@ -347,7 +347,7 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 - [x] Capture FX hold toggles as `SweepToggleCurve` — FxPad
 - [x] Capture track mute toggles as `SweepToggleCurve` — StepGrid + TrackerView
 - [x] Auto-generate sweep node when chain has none (§3)
-- [ ] Chain routing: switch write target when active chain changes during scene traversal
+- [x] Chain routing: detect sceneNodeId change in captureValue/captureToggle, flush to old chain, switch target
 - [x] Overdub merge: touched parameters overwrite, untouched keep existing curves (§8)
 - [x] User vs sweep detection: `isUserControlled` callback, `applySweepStep` skips user-controlled targets during REC
 - [x] `pushUndo('sweep recording')` on REC stop before writing curves

@@ -11,9 +11,14 @@
   import Knob from './Knob.svelte'
   import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
 
-  // ── Sweep node detection ──
+  // ── Sweep node detection (follows playback during scene play) ──
+  const activePatIdx = $derived(
+    playback.playing && playback.mode === 'scene' && playback.playingPattern != null
+      ? playback.playingPattern
+      : ui.currentPattern
+  )
   const sweepNode = $derived.by(() => {
-    const pat = song.patterns[ui.currentPattern]
+    const pat = song.patterns[activePatIdx]
     if (!pat) return null
     return findSweepNodeForPattern(pat.id)
   })
@@ -23,8 +28,8 @@
   const sweepData = $derived(sweepNode?.modifierParams?.sweep ?? { curves: [] })
 
   // ── Pattern info ──
-  const pat = $derived(song.patterns[ui.currentPattern])
-  const patName = $derived(pat?.name || `Pattern ${ui.currentPattern + 1}`)
+  const pat = $derived(song.patterns[activePatIdx])
+  const patName = $derived(pat?.name || `Pattern ${activePatIdx + 1}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
   const { onClose, onstop }: { onClose: () => void; onstop?: () => void } = $props()
@@ -425,10 +430,13 @@
       const trailStart = Math.max(0, cursorX - trailPx)
       const fadeAhead = Math.min(w, cursorX + trailPx * 0.15) // very short fade-out ahead
       const gradEnd = Math.max(fadeAhead + 1, cursorX + 2)
+      const span = gradEnd - trailStart
+      const stopMid = span > 0 ? Math.max(0, Math.min(0.85, (cursorX - trailStart) / span)) : 0
+      const stopCut = span > 0 ? Math.max(stopMid, Math.min(0.99, (cursorX - trailStart + 1) / span)) : 0
       const grad = ctx.createLinearGradient(trailStart, 0, gradEnd, 0)
       grad.addColorStop(0, 'rgba(0,0,0,0)')
-      grad.addColorStop(Math.min(0.85, (cursorX - trailStart) / (gradEnd - trailStart)), curve.color)
-      grad.addColorStop(Math.min(0.99, (cursorX - trailStart + 1) / (gradEnd - trailStart)), curve.color)
+      grad.addColorStop(stopMid, curve.color)
+      grad.addColorStop(stopCut, curve.color)
       grad.addColorStop(1, 'rgba(0,0,0,0)')
 
       // Outer glow pass
@@ -445,10 +453,12 @@
       ctx.stroke()
 
       // White core gradient
+      const coreStopMid = span > 0 ? Math.max(0, Math.min(0.9, (cursorX - trailStart) / span)) : 0
+      const coreStopCut = span > 0 ? Math.max(coreStopMid, Math.min(0.99, (cursorX - trailStart + 1) / span)) : 0
       const coreGrad = ctx.createLinearGradient(trailStart, 0, gradEnd, 0)
       coreGrad.addColorStop(0, 'rgba(0,0,0,0)')
-      coreGrad.addColorStop(Math.min(0.9, (cursorX - trailStart) / (gradEnd - trailStart)), '#fff')
-      coreGrad.addColorStop(Math.min(0.99, (cursorX - trailStart + 1) / (gradEnd - trailStart)), '#fff')
+      coreGrad.addColorStop(coreStopMid, '#fff')
+      coreGrad.addColorStop(coreStopCut, '#fff')
       coreGrad.addColorStop(1, 'rgba(0,0,0,0)')
 
       ctx.strokeStyle = coreGrad
