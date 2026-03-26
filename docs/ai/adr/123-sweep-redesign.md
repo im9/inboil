@@ -153,7 +153,23 @@ All effects use Canvas 2D `shadowBlur` + `globalAlpha` + `lineWidth` + `globalCo
 
 ### 6. Post-Recording Editing
 
-Three levels of editing, from coarse to fine:
+SWP sheet displays curves and toggles in **separate sections** — they have different visual representations and editing operations.
+
+```
+SWP sheet:
+  ─── Curves ───
+  verb wet   ──╲╱──
+  filter cut ──╱╲──
+
+  ─── Toggles ───
+  verb on    ████░░████
+  delay on   ░░████░░░░
+  hold       ░░░░████░░
+```
+
+#### Curve editing (continuous parameters)
+
+Three levels, from coarse to fine:
 
 **Trim/splice** (QuickTime-style):
 - Range selection on a curve → delete, copy, move
@@ -170,7 +186,25 @@ Three levels of editing, from coarse to fine:
 - For cases where dragging isn't precise enough
 - Reuses existing knob components
 
-No freehand drawing. Recording is the only way to create curves. Editing only modifies what was recorded.
+#### Toggle editing (on/off parameters)
+
+Toggles display as **colored blocks** (ON = accent color, OFF = dark gap). Editing operations:
+
+- **Boundary drag**: drag the edge of an on/off block to shift its timing
+- **Split**: tap inside a block to split it into two (inserts an off-gap)
+- **Delete**: remove a block (turns that region OFF)
+- **Merge**: drag two adjacent ON blocks together to close the gap
+
+No point handles or bezier curves — toggles are purely about timing of state changes. Rec captures the exact moments the user tapped FX on/off, hold, or mute; editing just fine-tunes those moments.
+
+#### Why separate sections
+
+- Curves and toggles have fundamentally different shapes (continuous line vs. discrete blocks)
+- Mixing them in one view forced awkward compromises in the draw-based editor (bezier points for on/off)
+- Separate sections mean each gets the right editing tools without clutter
+- Both sections live in the same SWP sheet — one scroll, not separate screens
+
+No freehand drawing. Recording is the only way to create data. Editing only modifies what was recorded.
 
 ### 7. Rec Button Repurpose — Parameter Recording, Not Audio Capture
 
