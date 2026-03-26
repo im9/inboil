@@ -212,7 +212,7 @@ The existing REC button changes role: instead of capturing audio output, it capt
 
 **Audio export becomes a separate offline render operation:**
 - Uses `OfflineAudioContext` to render at CPU speed (not real-time)
-- Triggered from a menu/export action, not the REC button
+- Triggered from Sidebar → SYSTEM → PROJECT → FILE section, below existing EXPORT MIDI button
 - Outputs WAV — same model as Ableton's "Export Audio/Video" (bounce/render)
 
 **REC button flow:**
