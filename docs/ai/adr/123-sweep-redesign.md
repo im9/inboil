@@ -11,15 +11,16 @@ Problems with the current approach:
 - **No audio feedback while editing** — must play scene to hear the result
 - **Light-mode graph paper look** — visually disconnected from dark-zone performance views
 - **Drawing curves is precise but not musical** — "configuring" instead of "performing"
-- **Contradicts the app's design philosophy** — Scene uses node graphs to escape linear timelines, but sweep forces users back into a left-to-right timeline editor
+
+The underlying data model (sweep as chain-scoped modifier, `t: 0-1` normalized to pattern+repeat) is sound — it handles scene editing, repeat, and branching correctly. The problem is purely the **input method**.
 
 ## Decision
 
-Replace the draw-based sweep editor with a **recording-based performance tool**. Users play the scene and move pads/toggles in real time; movements are captured as sweep curves. Sweep becomes a **PerfBar overlay sheet** for reviewing and editing recorded performances.
+Replace the draw-based input with **recording-based input**. Users play the scene and move pads/toggles in real time; movements are captured as sweep curves. The sweep modifier node and data model are preserved — only the input layer changes.
 
 ### 1. Core Principle
 
-The user never draws on a timeline. Input is spatial (pads, toggles), output is temporal (curves). The fun is in the **recording moment** — performing live, hearing results immediately. The sheet is a practical tool for after.
+The user never draws on a timeline. Input is spatial (pads, toggles), output is temporal (curves). The fun is in the **recording moment** — performing live, hearing results immediately. The SWP sheet is a practical tool for reviewing and editing after.
 
 - **Input**: move pads, toggle effects — the same gestures used in live performance
 - **Result**: `SweepCurve` / `SweepToggleCurve` data, produced automatically
@@ -34,6 +35,7 @@ Recording and review are **separate screens** with distinct roles.
 - REC button active → parameter movements captured in the background
 - Pads are fully visible and interactive — no overlay obscures them
 - Minimal recording indicator (REC ● + elapsed time) in header
+- Recording engine auto-routes captured data to the correct chain's sweep modifier (§3)
 
 **Review/edit mode** — SWP overlay sheet:
 - Opened via PerfBar `SWP` button (same model as FX/EQ/Master)
@@ -58,35 +60,44 @@ Record:                          Review:
 
 **Recording preview** (future): floating trail strip above pads during REC, showing real-time trace of movements. Nice-to-have, not essential for core functionality.
 
-### 3. Sweep as PerfBar Button — Not a Scene Node
+### 3. Sweep Modifier Preserved — Auto-Generated on REC
 
-The sweep node is removed from the scene graph. Sweep becomes a **PerfBar toggle button**, following the same pattern as FX/EQ/Master:
+The sweep modifier node is **kept in the scene graph**. Chain-scoped `t: 0-1` data model is preserved — it correctly handles scene editing, repeat nodes, and graph branching.
+
+**Auto-generation during recording:**
+- When REC captures parameter movements during a chain's playback, the recording engine checks if that chain already has a sweep modifier
+- If not → a sweep node is **automatically created** as a satellite of the pattern node (same as manual creation)
+- If yes → data is written to the existing sweep node (overdub per §7)
 
 ```
-PerfBar:  [ FX ] [ EQ ] [ MST ] [ SWP ]
+Before REC:
+  [Pat A] → [Pat B] → [Pat C]
+
+User touches filter during Pat B playback:
+
+After REC:
+  [Pat A] → [Pat B] → [sweep] → [Pat C]
+                         ↑ auto-generated
 ```
 
-- `SWP` tap → opens SweepSheet overlay (full main-view area)
-- Escape / backdrop tap → closes sheet
-- Same overlay sheet mechanics as FX/EQ (ADR 054)
+**Why auto-generate:**
+- Zero friction — user just presses REC and performs, no node placement needed
+- First-time users don't need to understand modifier concepts
+- Advanced users can still manually create/move/delete sweep nodes in scene view
 
-**Rationale:**
-- Consistent with existing FX/EQ/Master overlay model — no new interaction pattern
-- Recording requires pads visible (not buried under a sheet), so sweep's primary input happens outside the sheet
-- Sweep node was a misfit in the scene graph: its UI is main-view sized, and requiring node placement before recording adds unnecessary friction
-- PerfBar placement gives one-tap access without navigating the scene graph
+**Chain routing during recording:**
+- Recording engine tracks which pattern chain is currently playing
+- When the active chain changes (scene traversal moves to next pattern), the write target switches to the new chain's sweep modifier
+- `t` values are normalized to each chain's scope (pattern length × repeat count) — same as existing sweep data
 
-**Sweep modifier node — abolished:**
-- `sweep` removed from `ModifierType` union and `SceneNode` types
-- Existing sweep modifier nodes migrated: `SweepData` lifted to scene-level field, nodes deleted from graph
-- `transpose`, `tempo`, `repeat`, `fx` stay — these modify pattern chain traversal and belong in the graph
-- Sweep is fundamentally different: recording captures the scene's entire time axis, not a per-chain segment. Pattern-specific automation is achieved naturally by recording at the right moment.
-
-**Data model — simple now, extensible later:**
-- Scene holds a single `SweepData` (global automation for the whole scene)
-- Data references targets by `sweepId`, so future expansion to multiple sweep sets (e.g., shared across scenes) is possible without restructuring
+**SWP sheet shows all chains:**
+- PerfBar `SWP` button opens sheet listing sweep data across all chains
+- Grouped by chain/pattern for clarity
+- Same editing tools apply regardless of which chain owns the data
 
 ### 4. What Gets Recorded
+
+**Everything by default** — exclusion-based. Only song-level settings (BPM, etc.) are exempt.
 
 | User action | Recorded as |
 |---|---|
@@ -94,11 +105,14 @@ PerfBar:  [ FX ] [ EQ ] [ MST ] [ SWP ]
 | Drag EQ node (freq/gain/q) | `SweepCurve` (kind: `eq`) |
 | Drag Master pad (comp, duck, ret, sat) | `SweepCurve` (kind: `master`) |
 | Drag Filter pad | `SweepCurve` (kind: `master`, filterCutoff/filterResonance) |
+| Drag track volume/pan knobs | `SweepCurve` (kind: `track`) |
+| Drag voice param knobs (cutoff, decay, etc.) | `SweepCurve` (kind: `track`) |
+| Drag send level knobs | `SweepCurve` (kind: `send`) |
 | Toggle FX on/off | `SweepToggleCurve` (kind: `fxOn`) |
 | Toggle FX hold | `SweepToggleCurve` (kind: `hold`) |
 | Toggle track mute | `SweepToggleCurve` (kind: `mute`) |
 
-Each recording pass **merges** into existing data: re-recording a parameter overwrites its curve; untouched parameters keep their curves.
+Each recording pass **merges** into existing data: re-recording a parameter overwrites that parameter's curve in the active chain's sweep; untouched parameters keep their curves.
 
 ### 5. SWP Sheet Visual Design
 
@@ -108,6 +122,7 @@ The sheet is a **management screen** with playback-reactive polish — not a vis
 
 **Curve list** (static / stopped):
 - Each recorded parameter: label + color-coded mini-curve (Canvas 2D)
+- Grouped by chain/pattern
 - Selected curve: full opacity, highlighted border
 - Unselected curves: dim, 30% opacity
 - Colors per parameter group (verb = `--color-olive`, delay = `--color-blue`, etc.)
@@ -128,12 +143,12 @@ The sheet is a **management screen** with playback-reactive polish — not a vis
 Three levels of editing, from coarse to fine:
 
 **Trim/splice** (QuickTime-style):
-- Range selection on a trail → delete, copy, move
-- Drag edges of a segment to adjust timing
-- Coarse structural editing
+- Range selection on a curve → delete, copy, move
+- Drag edges to adjust start/end positions
+- `t: 0-1` normalized — trim adjusts the range within the chain's scope
 
 **Point adjustment**:
-- Tap a trail → control points appear
+- Tap a curve → control points appear
 - Drag points to adjust position
 - Double-tap to delete a point
 
@@ -156,7 +171,7 @@ The existing REC button changes role: instead of capturing audio output, it capt
 **REC button flow:**
 1. Play scene (or press REC while stopped → auto-starts playback)
 2. Press REC → recording starts, header shows REC ● + elapsed time
-3. Move pads/toggles → parameter changes captured as `SweepCurve` / `SweepToggleCurve`
+3. Move pads/toggles → parameter changes captured and routed to active chain's sweep modifier
 4. Press REC again or stop → recording ends, curves written to sweep data
 5. Untouched parameters keep existing curves (overdub merge per §8)
 
@@ -169,12 +184,17 @@ This cleanly separates two concerns:
 During re-recording with existing curves:
 - `applySweepStep` continues playing **untouched** parameters
 - When the user **touches** a parameter, its existing curve is disabled for that recording pass
-- Detection: first state change on a target → mark as "user-controlled" → skip in `applySweepStep`
-- On stop: user input replaces the old curve for that target; untouched curves preserved
+- On stop: user input replaces the old curve for that target in the active chain's sweep; untouched curves preserved
 
-### 9. Data Model
+**User vs. sweep detection:**
+- Recording engine listens to `pointerdown` / `pointermove` on pad elements (direct user input)
+- `applySweepStep` writes to state via a separate code path
+- Detection is based on **input source** (pointer event), not state change observation — avoids confusion with sweep-driven changes
+- Once a target is marked "user-controlled," `applySweepStep` skips it for the rest of the recording pass
 
-No changes to `SweepData` — the existing format works:
+### 9. Data Model — No Changes
+
+The existing data model is preserved:
 
 ```typescript
 interface SweepData {
@@ -183,41 +203,62 @@ interface SweepData {
 }
 ```
 
-Recording produces these same types from real-time input instead of drawn strokes.
+- `t: 0-1` normalized to chain scope (pattern length × repeat count) — unchanged
+- `SweepData` stored in `SceneNode.modifierParams.sweep` — unchanged
+- Recording engine converts real-time timestamps to normalized `t` using the active chain's total length
+
+**High-resolution capture:**
+- Record at ms-level timestamps during performance
+- Convert to normalized `t` on REC stop, using the chain's known length
+- Preserves fast pad movements without losing sub-step detail
 
 ### 10. Structural Cleanup
 
 - Extract `evaluateCurve()` / `evaluateToggle()` to `sweepEval.ts` (pure, testable)
 - `buildSweepData(curves, toggles)` helper (prevents field-drop bugs)
-- Replace SweepCanvas.svelte with: `SweepTrails.svelte` (trail rendering) + `SweepEdit.svelte` (point/trim editing)
+- Replace SweepCanvas.svelte with: `SweepTrails.svelte` (curve rendering) + `SweepEdit.svelte` (point/trim editing)
 - SweepSheet.svelte wraps both as overlay sheet component
+
+## Resolved Questions
+
+- ~~Track volume/pan/voice params: recordable?~~ → **Record everything by default.** Exclusion-based: only song-level settings (BPM, etc.) are exempt.
+- ~~Recording quantization?~~ → **High-resolution capture + normalized on stop.** Record at ms-level, convert to `t: 0-1` using chain length. Preserves sub-step detail.
+- ~~Shape presets?~~ → **Dropped.** Shape presets are a drawing-tool concept. With rec-based input, "ramp up" = slowly drag the pad up while recording.
+- ~~Trail rendering: Canvas 2D or WebGL?~~ → **Canvas 2D sufficient.** FxPad already renders similar glow effects.
+- ~~Sweep node abolished?~~ → **No.** Modifier approach preserved — chain-scoped `t: 0-1` handles scene editing, repeat, and branching correctly. Only the input method changes from drawing to recording. Sweep nodes are auto-generated during REC when needed.
+- ~~Absolute step time?~~ → **No.** Absolute time breaks when scene structure changes. Normalized `t: 0-1` within chain scope is the correct abstraction.
+
+### Undo
+
+- `pushUndo('sweep recording')` called once when REC stops (before curves are written)
+- Ctrl+Z restores sweep data to pre-recording state — same snapshot mechanism as all other undo
+- No intermediate undo during recording — the recording is atomic (confirmed on stop)
+- No explicit cancel — unwanted recordings are removed via undo or overwritten via overdub
+- No performance concern: `SweepData` is part of song data, already included in undo snapshots
 
 ## Open Questions
 
-- Track volume/pan/voice params: recordable via step sequencer knobs, or FX/EQ/Master pads only?
-- Recording quantization: raw capture + RDP, or snap to step grid?
-- Shape presets (ramp up, triangle, etc.): keep as quick-apply templates, or drop?
-- Trail rendering: Canvas 2D sufficient, or WebGL for complex glow? (Assessment: Canvas 2D is sufficient — FxPad already renders similar effects)
 - OfflineAudioContext: can the existing AudioWorklet processors run unchanged in offline mode, or do they need adaptation?
+- SWP sheet grouping: how to present multi-chain sweep data clearly? (tab per chain, flat list with headers, etc.)
 
 ## Implementation Phases
 
 ### Phase 1: Foundation
-- Remove `sweep` from `ModifierType` / `SceneNode` types
-- Migration: existing sweep modifier nodes → lift `SweepData` to scene-level field, delete nodes from graph
 - Add `SWP` button to PerfBar
-- SweepSheet overlay: dark-zone curve list (label + mini-curve per parameter)
+- SweepSheet overlay: dark-zone curve list (label + mini-curve per parameter, grouped by chain)
 - Extract `sweepEval.ts`
+- Dark-zone visual redesign of sweep editing
 
 ### Phase 2: Recording
 - Repurpose REC button for parameter capture
-- Recording engine: capture pad/toggle state changes as curves
+- Recording engine: capture pad/toggle state changes, route to active chain's sweep modifier
+- Auto-generation of sweep nodes when chain has none
 - Overdub merge logic
 - Audio export moved to offline render (menu action)
 
 ### Phase 3: Playback Glow + Editing
 - Playback cursor + `shadowBlur` glow on active curves
-- Trail selection + point adjustment
+- Curve selection + point adjustment
 - Trim/splice range editing
 - Knob precision controls
 
