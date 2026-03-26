@@ -356,10 +356,18 @@ This is **not in scope for ADR 123** but documented here as a verified technical
 - [x] `pnpm test` passes
 
 ### Phase 3: Playback Glow + Editing
-- Playback cursor + `shadowBlur` glow on active curves
-- Curve selection + point adjustment
-- Trim/splice range editing
-- Knob precision controls
+
+#### Implementation Checklist
+- [x] Playback mode: gradient trail glow with 60fps rAF interpolation
+- [x] Playback cursor: amber sweep line with glow + curve crossing dot
+- [x] Dim base curve (alpha 0.2) always visible as context
+- [x] Curve selection: click on curve in canvas or list to select (Phase 1)
+- [x] Point adjustment: drag points, double-click to delete, click on curve to add (Phase 1)
+- [ ] Trim/splice: range selection on a curve → delete, drag edges to adjust start/end
+- [x] Knob precision: select a point → knobs for exact t (time) and v (value) control
+- [x] Scene play/stop button in sweep editor toolbar
+- [ ] `pnpm check` passes
+- [ ] `pnpm test` passes
 
 ### Phase 4: Recording Preview (nice-to-have)
 - Floating trail strip above pads during REC

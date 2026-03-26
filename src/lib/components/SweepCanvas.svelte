@@ -1,13 +1,14 @@
 <script lang="ts">
   // Sweep editor — dark-zone review/edit overlay (ADR 123 Phase 1)
   // Recording-based input replaces draw palette. Point editing is always active.
-  import { song, ui, playback, pushUndo, fxPad, masterPad, perf } from '../state.svelte.ts'
+  import { song, ui, playback, pushUndo, fxPad, masterPad, perf, playFromNode } from '../state.svelte.ts'
   import { findSweepNodeForPattern, sceneUpdateModifierParams } from '../sceneActions.ts'
   import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
 
   import { getParamDefs } from '../paramDefs.ts'
   import { evaluateCurve } from '../sweepEval.ts'
   import { PATTERN_COLORS } from '../constants.ts'
+  import Knob from './Knob.svelte'
   import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
 
   // ── Sweep node detection ──
@@ -26,7 +27,7 @@
   const patName = $derived(pat?.name || `Pattern ${ui.currentPattern + 1}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
-  const { onClose }: { onClose: () => void } = $props()
+  const { onClose, onstop }: { onClose: () => void; onstop?: () => void } = $props()
 
   // ── Selected curve/toggle ──
   let selectedCurveIdx = $state<number | null>(null)
@@ -38,8 +39,9 @@
   let canvasW = $state(600)
   let canvasH = $state(200)
 
-  // ── Bézier point editing (always active) ──
+  // ── Point editing (always active) ──
   let draggingPointIdx = $state<number | null>(null)
+  let selectedPointIdx = $state<number | null>(null) // for knob precision
   let lastClickTime = $state(0)
   let dragging = $state(false)
   const POINT_HIT_RADIUS = 8
@@ -78,7 +80,6 @@
   const DZ_DIVIDER = 'rgba(237,232,220, 0.06)'
   const DZ_TEXT = 'rgba(237,232,220, 0.55)'
   const DZ_CENTER_LINE = 'rgba(237,232,220, 0.15)'
-  const DZ_CURSOR = 'rgba(196, 122, 42, 0.8)'
 
   // ── Canvas rendering ──
 
@@ -211,11 +212,15 @@
       }
     }
 
+    // Playback progress: use interpolated value for smooth 60fps animation
+    const isPlaying = playback.playing && rc > 0
+    const playProgress = isPlaying ? interpolatedProgress : -1
+
     // Draw all curves
     for (const curve of sweepData.curves) {
       if ((curve.target as { kind: string }).kind === 'mute') continue
       const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
-      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3)
+      drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
     }
 
     // Halation clear effect (adapted for dark zone)
@@ -290,21 +295,21 @@
       }
     }
 
-    // Playback cursor
-    if (playback.playing && rc > 0) {
-      const stepsArr = pat ? pat.cells.map(c => c.steps) : [16]
-      const longestIdx = stepsArr.indexOf(Math.max(...stepsArr))
-      const currentStep = playback.playheads[longestIdx] ?? 0
-      const repIdx = playback.sceneRepeatTotal > 1 ? playback.sceneRepeatIndex : 0
-      const progress = (repIdx + currentStep / spp) / rc
-      const cx = tToX(progress, w)
+    // Playback cursor with glow
+    if (isPlaying && playProgress >= 0) {
+      const cx = tToX(playProgress, w)
       if (cx >= 0 && cx <= w) {
-        ctx.strokeStyle = DZ_CURSOR
+        ctx.save()
+        ctx.strokeStyle = '#c47a2a'
         ctx.lineWidth = 2
+        ctx.shadowColor = '#c47a2a'
+        ctx.shadowBlur = 8
+        ctx.globalAlpha = 0.8
         ctx.beginPath()
         ctx.moveTo(cx, TIMELINE_H)
         ctx.lineTo(cx, h)
         ctx.stroke()
+        ctx.restore()
         ctx.fillStyle = '#c47a2a'
         ctx.beginPath()
         ctx.arc(cx, TIMELINE_H / 2, 4, 0, Math.PI * 2)
@@ -313,17 +318,18 @@
     }
   }
 
-  function drawCurve(ctx: CanvasRenderingContext2D, curve: SweepCurve, w: number, drawY: number, drawH: number, alpha: number) {
+  function drawCurve(ctx: CanvasRenderingContext2D, curve: SweepCurve, w: number, drawY: number, drawH: number, alpha: number, playProgress = -1) {
     if (curve.points.length < 2) return
     const xFor = (t: number) => tToX(t, w)
     const yForV = (v: number) => drawY + (0.5 - v / 2) * drawH
     const midY = drawY + drawH / 2
     const isActive = alpha > 0.5
+    const isPlaying = playProgress >= 0
     const pts = curve.points
     const first = pts[0], last = pts[pts.length - 1]
 
-    // Extension lines for partial curves
-    if (isActive) {
+    // Extension lines for partial curves (edit mode only)
+    if (isActive && !isPlaying) {
       ctx.strokeStyle = curve.color
       ctx.lineWidth = 1
       ctx.globalAlpha = alpha * 0.3
@@ -372,64 +378,128 @@
       }
     }
 
-    // Neon glow fill — subtle accent color
-    ctx.save()
-    ctx.globalAlpha = alpha * 0.15
-    ctx.fillStyle = curve.color
-    pathFn('fill')
-    ctx.fill()
-    ctx.restore()
+    if (isPlaying) {
+      // ── Playback mode: gradient trail — cursor leaves a fading wake ──
+      const cursorX = xFor(playProgress)
+      const trailPx = w * 0.15 // trail length in pixels
 
-    // Outer glow stroke
-    if (isActive) {
-      ctx.save()
-      ctx.strokeStyle = curve.color
-      ctx.lineWidth = 8
-      ctx.globalAlpha = alpha * 0.15
       ctx.lineJoin = 'round'
       ctx.lineCap = 'round'
-      ctx.shadowColor = curve.color
-      ctx.shadowBlur = 12
+
+      // Dim base: full curve always visible as context
+      ctx.strokeStyle = curve.color
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.2
       pathFn('stroke')
       ctx.stroke()
-      ctx.restore()
-    }
 
-    // Main stroke
-    ctx.strokeStyle = curve.color
-    ctx.lineWidth = isActive ? 3 : 1.5
-    ctx.globalAlpha = alpha * 0.9
-    ctx.lineJoin = 'round'
-    ctx.lineCap = 'round'
-    pathFn('stroke')
-    ctx.stroke()
+      // Trail gradient: fade in behind cursor, sharp cutoff ahead
+      const trailStart = Math.max(0, cursorX - trailPx)
+      const fadeAhead = Math.min(w, cursorX + trailPx * 0.15) // very short fade-out ahead
+      const gradEnd = Math.max(fadeAhead + 1, cursorX + 2)
+      const grad = ctx.createLinearGradient(trailStart, 0, gradEnd, 0)
+      grad.addColorStop(0, 'rgba(0,0,0,0)')
+      grad.addColorStop(Math.min(0.85, (cursorX - trailStart) / (gradEnd - trailStart)), curve.color)
+      grad.addColorStop(Math.min(0.99, (cursorX - trailStart + 1) / (gradEnd - trailStart)), curve.color)
+      grad.addColorStop(1, 'rgba(0,0,0,0)')
 
-    // Bright core for active
-    if (isActive) {
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 1
-      ctx.globalAlpha = alpha * 0.4
+      // Outer glow pass
+      ctx.strokeStyle = grad
+      ctx.lineWidth = 6
+      ctx.globalAlpha = 0.12
       pathFn('stroke')
       ctx.stroke()
-    }
 
-    // Anchor dots (always visible for active curve — point editing is always on)
-    if (isActive) {
-      for (const p of pts) {
-        const px = xFor(p.t)
-        if (px < -5 || px > w + 5) continue
-        // Outer ring
+      // Mid pass
+      ctx.lineWidth = 3
+      ctx.globalAlpha = 0.3
+      pathFn('stroke')
+      ctx.stroke()
+
+      // White core gradient
+      const coreGrad = ctx.createLinearGradient(trailStart, 0, gradEnd, 0)
+      coreGrad.addColorStop(0, 'rgba(0,0,0,0)')
+      coreGrad.addColorStop(Math.min(0.9, (cursorX - trailStart) / (gradEnd - trailStart)), '#fff')
+      coreGrad.addColorStop(Math.min(0.99, (cursorX - trailStart + 1) / (gradEnd - trailStart)), '#fff')
+      coreGrad.addColorStop(1, 'rgba(0,0,0,0)')
+
+      ctx.strokeStyle = coreGrad
+      ctx.lineWidth = 1.5
+      ctx.globalAlpha = 0.7
+      pathFn('stroke')
+      ctx.stroke()
+
+      // Cursor crossing dot
+      if (playProgress >= first.t && playProgress <= last.t) {
+        const curveVal = evaluateCurve(pts, playProgress)
+        const cy = yForV(curveVal)
         ctx.fillStyle = curve.color
-        ctx.globalAlpha = alpha * 0.6
-        ctx.beginPath()
-        ctx.arc(px, yForV(p.v), 6, 0, Math.PI * 2)
-        ctx.fill()
-        // Inner bright dot
+        ctx.globalAlpha = 0.2
+        ctx.beginPath(); ctx.arc(cursorX, cy, 6, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = '#fff'
-        ctx.globalAlpha = alpha * 0.9
-        ctx.beginPath()
-        ctx.arc(px, yForV(p.v), 3, 0, Math.PI * 2)
-        ctx.fill()
+        ctx.globalAlpha = 0.9
+        ctx.beginPath(); ctx.arc(cursorX, cy, 2.5, 0, Math.PI * 2); ctx.fill()
+      }
+    } else {
+      // ── Edit mode: subtle glow, point handles ──
+
+      // Neon glow fill
+      ctx.save()
+      ctx.globalAlpha = alpha * 0.15
+      ctx.fillStyle = curve.color
+      pathFn('fill')
+      ctx.fill()
+      ctx.restore()
+
+      // Outer glow stroke
+      if (isActive) {
+        ctx.save()
+        ctx.strokeStyle = curve.color
+        ctx.lineWidth = 8
+        ctx.globalAlpha = alpha * 0.15
+        ctx.lineJoin = 'round'
+        ctx.lineCap = 'round'
+        ctx.shadowColor = curve.color
+        ctx.shadowBlur = 12
+        pathFn('stroke')
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      // Main stroke
+      ctx.strokeStyle = curve.color
+      ctx.lineWidth = isActive ? 3 : 1.5
+      ctx.globalAlpha = alpha * 0.9
+      ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
+      pathFn('stroke')
+      ctx.stroke()
+
+      // Bright core for active
+      if (isActive) {
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 1
+        ctx.globalAlpha = alpha * 0.4
+        pathFn('stroke')
+        ctx.stroke()
+      }
+
+      // Anchor dots (point editing)
+      if (isActive) {
+        for (const p of pts) {
+          const px = xFor(p.t)
+          if (px < -5 || px > w + 5) continue
+          ctx.fillStyle = curve.color
+          ctx.globalAlpha = alpha * 0.6
+          ctx.beginPath()
+          ctx.arc(px, yForV(p.v), 6, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.fillStyle = '#fff'
+          ctx.globalAlpha = alpha * 0.9
+          ctx.beginPath()
+          ctx.arc(px, yForV(p.v), 3, 0, Math.PI * 2)
+          ctx.fill()
+        }
       }
     }
     ctx.globalAlpha = 1.0
@@ -643,9 +713,12 @@
 
       if (hitIdx >= 0) {
         draggingPointIdx = hitIdx
+        selectedPointIdx = hitIdx
         dragging = true
         return
       }
+      // Click elsewhere → deselect point
+      selectedPointIdx = null
 
       // Click on the selected curve's line → add new point
       const norm = pointerToNorm(e)
@@ -811,6 +884,35 @@
     sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles } })
   }
 
+  // ── Knob precision editing ──
+  const selectedPoint = $derived(
+    selectedCurve && selectedPointIdx !== null && selectedPointIdx < selectedCurve.points.length
+      ? selectedCurve.points[selectedPointIdx]
+      : null
+  )
+
+  function setPointT(v: number) {
+    if (!selectedCurve || selectedPointIdx === null) return
+    pushUndo('Move sweep point')
+    const pts = [...selectedCurve.points]
+    pts[selectedPointIdx] = { t: v, v: pts[selectedPointIdx].v }
+    pts.sort((a, b) => a.t - b.t)
+    const newIdx = pts.findIndex(p => p.t === v)
+    commitCurve(selectedCurve.target, selectedCurve.color, pts)
+    selectedPointIdx = newIdx >= 0 ? newIdx : null
+    redraw()
+  }
+
+  function setPointV(v: number) {
+    if (!selectedCurve || selectedPointIdx === null) return
+    pushUndo('Move sweep point')
+    const mapped = v * 2 - 1 // 0–1 knob → -1 to +1 curve value
+    const pts = [...selectedCurve.points]
+    pts[selectedPointIdx] = { t: pts[selectedPointIdx].t, v: mapped }
+    commitCurve(selectedCurve.target, selectedCurve.color, pts)
+    redraw()
+  }
+
   // ── Resize observer ──
   let canvasWrapEl: HTMLDivElement | undefined = $state()
 
@@ -826,16 +928,58 @@
     return () => obs.disconnect()
   })
 
-  // Redraw on data or size change
+  // ── Smooth playback animation ──
+  // During playback, use rAF for 60fps cursor interpolation instead of step-driven updates
+  let rafId = 0
+  let lastStepTime = 0
+  let lastStepProgress = 0
+  let interpolatedProgress = $state(-1)
+
+  function animatePlayback() {
+    if (!playback.playing) { interpolatedProgress = -1; return }
+    const rc = repeatCount
+    const spp = stepsPerPattern
+    const stepsArr = pat ? pat.cells.map(c => c.steps) : [16]
+    const longestIdx = stepsArr.indexOf(Math.max(...stepsArr))
+    const currentStep = playback.playheads[longestIdx] ?? 0
+    const repIdx = playback.sceneRepeatTotal > 1 ? playback.sceneRepeatIndex : 0
+    const stepProgress = (repIdx + currentStep / spp) / rc
+
+    // Detect step change → reset interpolation baseline
+    if (stepProgress !== lastStepProgress) {
+      lastStepTime = performance.now()
+      lastStepProgress = stepProgress
+    }
+
+    // Interpolate between steps using BPM timing
+    const msPerStep = 60000 / song.bpm / 4
+    const elapsed = performance.now() - lastStepTime
+    const stepFrac = Math.min(1, elapsed / msPerStep) // 0→1 within current step
+    interpolatedProgress = stepProgress + stepFrac / (spp * rc)
+
+    redraw()
+    rafId = requestAnimationFrame(animatePlayback)
+  }
+
+  $effect(() => {
+    if (playback.playing) {
+      lastStepTime = performance.now()
+      lastStepProgress = 0
+      rafId = requestAnimationFrame(animatePlayback)
+      return () => { cancelAnimationFrame(rafId); interpolatedProgress = -1 }
+    } else {
+      interpolatedProgress = -1
+    }
+  })
+
+  // Redraw on data or size change (non-playback)
   $effect(() => {
     sweepData.curves.length
     canvasW
     canvasH
     selectedCurveIdx
     zoomedRepeat
-    playback.sceneRepeatIndex
-    playback.playheads[0]
-    redraw()
+    if (!playback.playing) redraw()
   })
 </script>
 
@@ -847,6 +991,28 @@
       <span class="sweep-pat-name">{patName}</span>
     </div>
     <div class="sweep-toolbar-spacer"></div>
+    <!-- Scene play/stop -->
+    <button class="sweep-play-circle" class:playing={playback.playing && playback.mode === 'scene'}
+      onpointerdown={() => {
+        if (playback.playing && playback.mode === 'scene') {
+          onstop?.()
+        } else if (sweepNode) {
+          const patNodeId = findPatternForSweep(sweepNode.id)
+          if (patNodeId) playFromNode(patNodeId)
+        }
+      }}
+      data-tip={playback.playing && playback.mode === 'scene' ? 'Stop scene' : 'Play scene from this pattern'}
+      data-tip-ja={playback.playing && playback.mode === 'scene' ? 'シーン停止' : 'このパターンからシーン再生'}
+    >
+      <svg viewBox="0 0 12 14" width="10" height="12" fill="currentColor" aria-hidden="true">
+        {#if playback.playing && playback.mode === 'scene'}
+          <rect x="1" y="1" width="3.5" height="12" rx="0.8"/>
+          <rect x="7.5" y="1" width="3.5" height="12" rx="0.8"/>
+        {:else}
+          <polygon points="1,1 11,7 1,13"/>
+        {/if}
+      </svg>
+    </button>
     <button class="sweep-rec-circle" class:armed={recState === 'armed'} class:recording={recState === 'recording'}
       onpointerdown={() => {
         if (recState === 'recording') {
@@ -977,6 +1143,18 @@
         <span>±0</span>
         <span>−1</span>
       </div>
+      {#if selectedPoint}
+        <div class="sweep-knob-panel">
+          <Knob value={selectedPoint.t} label="T" size={28}
+            onchange={setPointT}
+          />
+          <span class="sweep-knob-val">{(selectedPoint.t * 100).toFixed(1)}%</span>
+          <Knob value={(selectedPoint.v + 1) / 2} label="V" size={28} defaultValue={0.5}
+            onchange={setPointV}
+          />
+          <span class="sweep-knob-val">{selectedPoint.v >= 0 ? '+' : ''}{(selectedPoint.v * 100).toFixed(0)}%</span>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -1031,6 +1209,28 @@
   }
   .sweep-tool-btn:hover {
     border-color: var(--dz-text);
+    color: var(--dz-text-strong);
+  }
+  .sweep-play-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--dz-btn-border);
+    background: transparent;
+    color: var(--dz-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 80ms, border-color 80ms, color 80ms;
+  }
+  .sweep-play-circle:hover {
+    border-color: var(--dz-text-strong);
+    color: var(--dz-text-strong);
+  }
+  .sweep-play-circle.playing {
+    border-color: var(--dz-text-strong);
     color: var(--dz-text-strong);
   }
   .sweep-rec-circle {
@@ -1255,5 +1455,23 @@
   .sweep-axis-labels span {
     font-size: var(--fs-sm);
     color: var(--dz-text-dim);
+  }
+  .sweep-knob-panel {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(30, 32, 40, 0.85);
+    border: 1px solid var(--dz-border);
+    border-radius: 4px;
+  }
+  .sweep-knob-val {
+    font-family: var(--font-data);
+    font-size: var(--fs-min);
+    color: var(--dz-text);
+    min-width: 36px;
   }
 </style>

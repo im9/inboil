@@ -453,7 +453,7 @@
               {:else}
                 {@const hasSweep = !!findSweepNodeForPattern(song.patterns[ui.currentPattern]?.id)}
                 {#if ui.sweepTab && hasSweep}
-                  <SweepCanvas onClose={closeAllSheets} />
+                  <SweepCanvas onClose={closeAllSheets} onstop={stop} />
                 {:else}
                   <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
                   {#if prefs.patternEditor === 'tracker'}
