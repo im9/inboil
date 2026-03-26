@@ -6,7 +6,7 @@
   import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
 
   import { getParamDefs } from '../paramDefs.ts'
-  import { evaluateCurve, targetsEqual } from '../sweepEval.ts'
+  import { evaluateCurve, targetsEqual, isMuteCurve } from '../sweepEval.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import Knob from './Knob.svelte'
   import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
@@ -349,14 +349,14 @@
     // Draw all curves (with flash-fade during clear)
     if (clearProgress === null) {
       for (const curve of sweepData.curves) {
-        if ((curve.target as { kind: string }).kind === 'mute') continue
+        if (isMuteCurve(curve)) continue
         const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
         drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
       }
     } else {
       const fade = 1 - clearProgress
       for (const curve of sweepData.curves) {
-        if ((curve.target as { kind: string }).kind === 'mute') continue
+        if (isMuteCurve(curve)) continue
         drawCurve(ctx, curve, w, drawY, drawH, fade)
       }
     }
@@ -768,7 +768,7 @@
     let bestDist = HIT_DIST
     for (let ci = 0; ci < sweepData.curves.length; ci++) {
       const curve = sweepData.curves[ci]
-      if ((curve.target as { kind: string }).kind === 'mute') continue
+      if (isMuteCurve(curve)) continue
       if (curve.points.length < 2) continue
       // Evaluate curve at pointer's t position
       const v = evaluateCurve(curve.points, norm.t)
@@ -986,29 +986,31 @@
 
   // ── Flash-fade clear effect ──
   let clearProgress = $state<number | null>(null)
+  let clearRafId = 0
 
   function clearAllWithDisintegration() {
     if (!sweepNode || clearProgress !== null) return
     if (sweepData.curves.length === 0 && (!sweepData.toggles || sweepData.toggles.length === 0)) return
     const startTime = performance.now()
     const duration = 350
+    const nodeId = sweepNode.id
 
     function animate() {
       const elapsed = performance.now() - startTime
       clearProgress = Math.min(1, elapsed / duration)
       redraw()
       if (clearProgress < 1) {
-        requestAnimationFrame(animate)
+        clearRafId = requestAnimationFrame(animate)
       } else {
         pushUndo('Clear all sweep curves')
-        sceneUpdateModifierParams(sweepNode!.id, { sweep: { curves: [] } })
+        sceneUpdateModifierParams(nodeId, { sweep: { curves: [] } })
         if (song.scene.globalSweep) song.scene.globalSweep = undefined
         selectedCurveIdx = null; selectedToggleIdx = null
-        clearProgress = null
+        clearProgress = null; clearRafId = 0
         redraw()
       }
     }
-    requestAnimationFrame(animate)
+    clearRafId = requestAnimationFrame(animate)
   }
 
   // ── Commit curve to sweep data ──
@@ -1217,6 +1219,12 @@
     }
   })
 
+  // Cancel clear animation if sweep node changes mid-fade
+  $effect(() => {
+    sweepNode // track dependency
+    if (clearRafId) { cancelAnimationFrame(clearRafId); clearRafId = 0; clearProgress = null }
+  })
+
   // Redraw on data or size change (non-playback)
   $effect(() => {
     sweepData.curves.length
@@ -1304,7 +1312,7 @@
       {#if sweepData.curves.length > 0}
         <div class="sweep-section-label">Curves</div>
         {#each sweepData.curves as curve, i}
-          {#if (curve.target as { kind: string }).kind !== 'mute'}
+          {#if !isMuteCurve(curve)}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
               class="sweep-list-item"

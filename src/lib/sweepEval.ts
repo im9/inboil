@@ -71,6 +71,11 @@ export function buildSweepData(
   return data
 }
 
+/** Check if a curve target is a legacy mute entry (should be in toggles, not curves) */
+export function isMuteCurve(curve: SweepCurve): boolean {
+  return (curve.target as { kind: string }).kind === 'mute'
+}
+
 // ── Global vs chain scope routing (ADR 123 Phase 5) ──
 
 /** Returns true if a target should route to global sweep (master/fx/eq/fxOn/hold).
