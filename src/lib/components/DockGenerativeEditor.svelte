@@ -136,12 +136,12 @@
     {@const tnp = gen.params as TonnetzParams}
     <div class="gen-param-grid">
       <Knob
-        value={tnp.stepsPerChord / 16}
+        value={tnp.stepsPerChord / 64}
         label="STEPS"
         displayValue={String(tnp.stepsPerChord)}
         size={36}
-        steps={16}
-        onchange={v => sceneUpdateGenerativeParams(nodeId, { stepsPerChord: Math.max(1, Math.round(v * 16)) })}
+        steps={64}
+        onchange={v => sceneUpdateGenerativeParams(nodeId, { stepsPerChord: Math.max(1, Math.round(v * 64)) })}
       />
     </div>
     <div class="gen-scale-row">
