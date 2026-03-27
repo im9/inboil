@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      svelte:
+        patterns: ["svelte", "svelte-check", "@sveltejs/*"]
+      vite:
+        patterns: ["vite", "vitest"]
+    open-pull-requests-limit: 5
