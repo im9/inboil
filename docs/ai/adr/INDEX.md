@@ -82,6 +82,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 117 | Generative UX Simplification | Implemented | Auto-generate on connect, debounced param regen, target track on faceplate, merge mode replace/fill only |
 | 096 | Odd Step Counts & PO-Style Step Picker | Implemented | STEP_OPTIONS 2–16 + 24/32/48/64, long-press grid picker (bubble picker rejected) |
 | 125 | Scene Terminology Unification | Implemented | Retired "Function Node"/"Decorator" — 4 categories: Pattern, Generator, Modifier, Sweep. Code rename FnNode→Modifier, docs restructure, interactive Playground embeds per engine page |
+| 126 | Tonnetz Chord Slots | Proposed | Per-slot explicit chords + transforms with variable duration, enabling house/pop progressions alongside generative Tonnetz |
 
 ## UI / Layout
 
