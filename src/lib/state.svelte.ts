@@ -21,7 +21,7 @@ export type {
   Trig, CellInsertFx, CellSampleRef, Cell, ChainFx, Pattern, Section, Track, Effects,
   SceneDecorator, AutomationPoint, AutomationTarget, AutomationParams, AutomationSnapshot,
   ModifierType, ModifierParams,
-  GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams,
+  GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams, TonnetzSlot, TonnetzRhythm,
   SceneNode, SceneEdge, SceneLabel, Scene, Song,
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'

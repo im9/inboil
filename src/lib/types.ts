@@ -172,13 +172,32 @@ export interface QuantizerParams {
   octaveRange: [number, number]
 }
 
-/** Tonnetz / neo-Riemannian chord transform (ADR 078, Phase 3) */
+/** Rhythm pattern within a Tonnetz chord slot (ADR 126) */
+export type TonnetzRhythm =
+  | boolean[]                                  // explicit pattern
+  | 'legato'                                   // one trig held for full duration (default)
+  | 'offbeat'                                  // . x . x . x . x
+  | 'onbeat'                                   // x . . . x . . .
+  | 'syncopated'                               // x . x . . x . x
+  | { preset: 'euclidean'; hits: number }      // Bjorklund distribution
+
+/** A single slot in a Tonnetz chord sequence (ADR 126) */
+export type TonnetzSlot =
+  | { op: string; steps?: number; rhythm?: TonnetzRhythm }
+  | { chord: [number, number, number]; steps?: number; rhythm?: TonnetzRhythm }
+
+/** Tonnetz / neo-Riemannian chord transform (ADR 078 Phase 3, slots ADR 126) */
 export interface TonnetzParams {
   engine: 'tonnetz'
   startChord: [number, number, number]
-  sequence: string[]       // 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
-  stepsPerChord: number
   voicing: 'close' | 'spread' | 'drop2'
+
+  // Legacy fields (backward compat — used when slots is absent)
+  sequence?: string[]       // 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
+  stepsPerChord?: number
+
+  // Per-slot sequence with mixed transforms and explicit chords (ADR 126)
+  slots?: TonnetzSlot[]
 }
 
 /** Modifier + sweep node types (ADR 093, sweep ADR 118, terminology ADR 125) */

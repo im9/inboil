@@ -3,7 +3,8 @@
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 
-import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType } from './types.ts'
+import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType, TonnetzParams } from './types.ts'
+import { legacyToSlots } from './generative.ts'
 
 // ── Clone helpers ──
 
@@ -35,11 +36,15 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
       ...n.generative,
       params: { ...n.generative.params },
     }
-    // Deep-clone array/tuple fields in params
+    // Deep-clone array/tuple fields in params (slots contain objects, need deeper clone)
     const p = n.generative.params as unknown as Record<string, unknown>
     const cp = clone.generative.params as unknown as Record<string, unknown>
     for (const k of Object.keys(p)) {
-      if (Array.isArray(p[k])) cp[k] = [...(p[k] as unknown[])]
+      if (Array.isArray(p[k])) {
+        cp[k] = (p[k] as unknown[]).map(v =>
+          typeof v === 'object' && v !== null ? { ...v } : v
+        )
+      }
     }
   }
   // Strip legacy decorator field after migration
@@ -92,6 +97,15 @@ export function restoreScene(src: Scene | undefined): Scene {
         if (t.kind === 'fx' && (t.param === 'filterCutoff' || t.param === 'filterResonance')) {
           t.kind = 'master'
         }
+      }
+    }
+  }
+  // ADR 126: migrate legacy Tonnetz params (sequence + stepsPerChord) → slots
+  for (const n of nodes) {
+    if (n.generative?.params) {
+      const tp = n.generative.params as TonnetzParams
+      if (tp.engine === 'tonnetz' && !tp.slots && tp.sequence) {
+        tp.slots = legacyToSlots(tp)
       }
     }
   }

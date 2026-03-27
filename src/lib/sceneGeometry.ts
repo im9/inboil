@@ -213,7 +213,8 @@ function generativeLabel(gen: NonNullable<SceneNode['generative']>): string {
     }
     case 'tonnetz': {
       const p = gen.params as import('./state.svelte.ts').TonnetzParams
-      return `T ${p.sequence.slice(0, 3).join('·')}`
+      const seq = p.sequence ?? p.slots?.map(s => 'op' in s ? s.op : '♪').slice(0, 3) ?? []
+      return `T ${seq.slice(0, 3).join('·')}`
     }
   }
 }

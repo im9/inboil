@@ -1007,11 +1007,12 @@
           {:else if node.generative.engine === 'tonnetz'}
             {@const tnp = node.generative.params as import('../state.svelte.ts').TonnetzParams}
             {@const gps = genNodePlayState(node)}
-            {@const currentOpIdx = gps ? Math.floor(gps.step / Math.max(1, tnp.stepsPerChord)) % tnp.sequence.length : -1}
+            {@const tnSlots = tnp.slots ?? (tnp.sequence ?? []).map(op => ({ op }))}
+            {@const currentOpIdx = gps && tnSlots.length > 0 ? Math.floor(gps.step / Math.max(1, tnp.stepsPerChord ?? 4)) % tnSlots.length : -1}
             <div class="gen-faceplate tonnetz">
               <div class="tonnetz-ops">
-                {#each tnp.sequence.slice(0, 5) as op, i}
-                  <span class="tonnetz-op" class:current={currentOpIdx === i}>{op}</span>
+                {#each tnSlots.slice(0, 5) as slot, i}
+                  <span class="tonnetz-op" class:current={currentOpIdx === i}>{'op' in slot ? slot.op : '♪'}</span>
                 {/each}
               </div>
               <div class="gen-label-row">

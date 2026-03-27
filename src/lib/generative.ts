@@ -3,7 +3,7 @@
  * Pure functions — no state imports. Caller handles undo + pattern writes.
  */
 
-import type { Trig, TuringParams, QuantizerParams, TonnetzParams } from './types.ts'
+import type { Trig, TuringParams, QuantizerParams, TonnetzParams, TonnetzSlot, TonnetzRhythm } from './types.ts'
 
 // ── Turing Machine (shift-register random) ──
 
@@ -224,44 +224,115 @@ function applyVoicing(chord: Triad, voicing: TonnetzParams['voicing']): number[]
   }
 }
 
+/** Convert legacy sequence + stepsPerChord to slot array (ADR 126) */
+export function legacyToSlots(params: TonnetzParams): TonnetzSlot[] {
+  const spc = params.stepsPerChord ?? 4
+  return [
+    { chord: [...params.startChord] as [number, number, number], steps: spc },
+    ...(params.sequence ?? []).map(op => ({ op, steps: spc } as TonnetzSlot)),
+  ]
+}
+
+/** Bjorklund algorithm for euclidean rhythm distribution */
+function bjorklund(hits: number, steps: number): boolean[] {
+  if (hits >= steps) return Array(steps).fill(true)
+  if (hits <= 0) return Array(steps).fill(false)
+  // Build pattern via Bjorklund's method
+  let pattern: number[][] = []
+  for (let i = 0; i < steps; i++) pattern.push(i < hits ? [1] : [0])
+  let k = hits
+  let m = steps - hits
+  while (m > 1) {
+    const take = Math.min(k, m)
+    for (let i = 0; i < take; i++) {
+      pattern[i] = pattern[i].concat(pattern[pattern.length - 1])
+      pattern.pop()
+    }
+    m = m > k ? m - k : k - take
+    k = take
+    if (pattern.length <= k) break
+  }
+  return pattern.flat().map(v => v === 1)
+}
+
+/** Resolve a rhythm spec to a boolean array of the given length (ADR 126) */
+export function resolveRhythm(rhythm: TonnetzRhythm, steps: number): boolean[] {
+  if (Array.isArray(rhythm)) {
+    // Pad with false or trim to length
+    if (rhythm.length >= steps) return rhythm.slice(0, steps)
+    return [...rhythm, ...Array(steps - rhythm.length).fill(false)]
+  }
+  if (rhythm === 'legato') {
+    const r = Array(steps).fill(false)
+    r[0] = true
+    return r
+  }
+  if (rhythm === 'offbeat') {
+    return Array.from({ length: steps }, (_, i) => i % 2 === 1)
+  }
+  if (rhythm === 'onbeat') {
+    return Array.from({ length: steps }, (_, i) => i % 4 === 0)
+  }
+  if (rhythm === 'syncopated') {
+    // x . x . . x . x  (repeating 8-step pattern)
+    const pat = [true, false, true, false, false, true, false, true]
+    return Array.from({ length: steps }, (_, i) => pat[i % pat.length])
+  }
+  // Euclidean
+  return bjorklund(rhythm.hits, steps)
+}
+
 /**
- * Generate a chord sequence by walking the Tonnetz lattice.
- * Each step in `sequence` transforms the current chord; each chord is held for `stepsPerChord` steps.
+ * Generate a chord sequence by walking the Tonnetz lattice (ADR 078, slots ADR 126).
+ * Supports per-slot duration and rhythm patterns.
  */
 export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   const trigs: Trig[] = []
+  const slots = params.slots ?? legacyToSlots(params)
   let chord: Triad = [...params.startChord] as Triad
-  const seq = params.sequence
-  let seqIdx = 0
-  const spc = params.stepsPerChord
+  let step = 0
+  let slotIdx = 0
 
-  for (let step = 0; step < steps; step++) {
-    const isNewChord = step % spc === 0
+  while (step < steps) {
+    const slot = slots[slotIdx % slots.length]
 
-    // Apply next transform at each new chord boundary (skip first chord)
-    if (isNewChord && step > 0) {
-      const op = seq[seqIdx % seq.length]
-      chord = applyTonnetzOp(chord, op)
-      seqIdx++
+    // Determine chord for this slot
+    if ('chord' in slot) {
+      chord = [...slot.chord] as Triad
+    } else if (slotIdx > 0) {
+      chord = applyTonnetzOp(chord, slot.op)
     }
 
-    if (isNewChord) {
-      // Legato: one trig per chord, duration spans until next chord or end
-      const remaining = steps - step
-      const dur = Math.min(spc, remaining)
-      const voiced = applyVoicing(chord, params.voicing)
-      trigs.push({
-        active: true,
-        note: voiced[0],
-        notes: voiced,
-        velocity: 0.9,
-        duration: dur,
-        slide: false,
-      })
-    } else {
-      // Inactive steps within a chord — no retrigger
-      trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
+    // Determine duration
+    const dur = Math.min(slot.steps ?? params.stepsPerChord ?? 4, steps - step)
+
+    // Resolve rhythm
+    const rhythm = resolveRhythm(slot.rhythm ?? 'legato', dur)
+    const voiced = applyVoicing(chord, params.voicing)
+
+    for (let i = 0; i < dur; i++) {
+      if (rhythm[i]) {
+        // Find duration until next active step or slot end
+        let trigDur = 1
+        for (let j = i + 1; j < dur; j++) {
+          if (rhythm[j]) break
+          trigDur++
+        }
+        trigs.push({
+          active: true,
+          note: voiced[0],
+          notes: voiced,
+          velocity: 0.9,
+          duration: trigDur,
+          slide: false,
+        })
+      } else {
+        trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
+      }
     }
+
+    step += dur
+    slotIdx++
   }
 
   return trigs

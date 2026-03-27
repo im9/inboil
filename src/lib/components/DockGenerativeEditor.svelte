@@ -136,9 +136,9 @@
     {@const tnp = gen.params as TonnetzParams}
     <div class="gen-param-grid">
       <Knob
-        value={tnp.stepsPerChord / 64}
+        value={(tnp.stepsPerChord ?? 4) / 64}
         label="STEPS"
-        displayValue={String(tnp.stepsPerChord)}
+        displayValue={String(tnp.stepsPerChord ?? 4)}
         size={36}
         steps={64}
         onchange={v => sceneUpdateGenerativeParams(nodeId, { stepsPerChord: Math.max(1, Math.round(v * 64)) })}
@@ -186,10 +186,10 @@
     <div class="gen-scale-row">
       <span class="gen-range-label">OPS</span>
       <div class="tonnetz-seq-editor">
-        {#each tnp.sequence as op, i}
+        {#each tnp.sequence ?? [] as op, i}
           <select class="tonnetz-op-select"
             onchange={e => {
-              const newSeq = [...tnp.sequence]
+              const newSeq = [...(tnp.sequence ?? [])]
               newSeq[i] = (e.target as HTMLSelectElement).value
               sceneUpdateGenerativeParams(nodeId, { sequence: newSeq } as any)
             }}
@@ -200,11 +200,11 @@
           </select>
         {/each}
         <button class="btn-icon" onpointerdown={() => {
-          sceneUpdateGenerativeParams(nodeId, { sequence: [...tnp.sequence, 'P'] } as any)
+          sceneUpdateGenerativeParams(nodeId, { sequence: [...(tnp.sequence ?? []), 'P'] } as any)
         }}>+</button>
-        {#if tnp.sequence.length > 1}
+        {#if (tnp.sequence ?? []).length > 1}
           <button class="btn-icon" onpointerdown={() => {
-            sceneUpdateGenerativeParams(nodeId, { sequence: tnp.sequence.slice(0, -1) } as any)
+            sceneUpdateGenerativeParams(nodeId, { sequence: (tnp.sequence ?? []).slice(0, -1) } as any)
           }}>−</button>
         {/if}
       </div>
