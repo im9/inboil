@@ -27,18 +27,20 @@ Check these doc files against implementation:
 8. `docs/ai/sound-design.md` — voice params, paramDefs ranges/defaults
 9. `docs/ai/ui-design.md` — component descriptions, layout, mobile views
 10. `docs/ai/glossary.md` — term accuracy, missing terms
-11. `docs/ai/adr/INDEX.md` — ADR statuses (Implemented vs actual state)
-12. All ADR files marked as "Implemented" in INDEX.md — check against code
+11. `docs/ai/DATA_MODEL.md` — Song/Pattern/Cell/Track/Trig interfaces, relationships
+12. `docs/ai/MESSAGE_FLOW.md` — WorkletCommand flow, message protocol, signaling
+13. `docs/ai/adr/INDEX.md` — ADR statuses (Implemented vs actual state)
+14. All ADR files marked as "Implemented" in INDEX.md — check against code
 
 ### Site docs (`site/src/content/docs/`)
 
-13. All `.mdx` files under `site/src/content/docs/docs/` (EN) and `site/src/content/docs/ja/docs/` (JA) — tutorials, feature guides, getting-started pages
-14. Feature descriptions must match current implementation (e.g. number of FX slots, available parameters, signal flow)
-15. EN and JA versions must stay in sync with each other
+15. All `.mdx` files under `site/src/content/docs/docs/` (EN) and `site/src/content/docs/ja/docs/` (JA) — tutorials, feature guides, getting-started pages
+16. Feature descriptions must match current implementation (e.g. number of FX slots, available parameters, signal flow)
+17. EN and JA versions must stay in sync with each other
 
 ### App help (`src/lib/components/SidebarHelp.svelte`)
 
-16. Help card text — feature descriptions, parameter lists, workflow descriptions
+18. Help card text — feature descriptions, parameter lists, workflow descriptions
 
 ## Process
 

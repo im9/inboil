@@ -10,6 +10,7 @@ UI (main thread) ↔ AudioWorklet (audio thread) communication.
 |---|---|---|
 | `play` | — | User presses play |
 | `stop` | — | User presses stop |
+| `setBpm` | `bpm` | BPM changed during playback |
 | `setPattern` | `pattern`, `reset?` | Pattern sync (edit/switch) |
 | `triggerNote` | `trackId`, `note`, `velocity` | Keyboard/UI audition |
 | `releaseNote` | `trackId` | Key up |

@@ -61,3 +61,12 @@ pnpm deploy    # build + Cloudflare Pages
 - Auto-save: debounced 500ms with concurrency guard — do not bypass
 - Engine init: local variables committed to `this.*` only after all steps succeed
 - `src/lib/constants.ts` has zero imports — safe to use from AudioWorklet scope
+
+## Doc Sync
+
+When changing these source files, review and update the corresponding doc:
+
+| Source file | Doc to update |
+|---|---|
+| `src/lib/types.ts`, `src/lib/state.svelte.ts`, `src/lib/constants.ts` | `docs/ai/DATA_MODEL.md` |
+| `src/lib/audio/dsp/types.ts`, `src/lib/audio/worklet-processor.ts` | `docs/ai/MESSAGE_FLOW.md` |
