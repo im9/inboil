@@ -3,11 +3,10 @@
  * Extracted from state.svelte.ts for cohesion.
  */
 import type { StoredProject } from './storage.ts'
-import { song, project, ui, cloneSong, restoreSong, clearUndoStacks, savePrefs, setScheduleAutoSave } from './state.svelte.ts'
+import { song, project, ui, cloneSong, restoreSong, clearUndoStacks, savePrefs, scheduleAutoSave } from './state.svelte.ts'
 import { clearSamples, restoreSamples, persistPendingSamples } from './sampleActions.ts'
 import { makeEmptySong } from './factory.ts'
 import { showToast } from './toast.svelte.ts'
-import { showFatalError } from './fatalError.svelte.ts'
 import { validateRecoverySnapshot } from './validate.ts'
 
 const storage = () => import('./storage.ts')
@@ -94,33 +93,6 @@ export async function projectDelete(id: string): Promise<void> {
   await s.deleteSamples(id)
   if (project.id === id) projectNew()
 }
-
-/** Auto-save: debounced 500ms after last mutation, with concurrency guard */
-let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
-let autoSaving = false
-
-export function scheduleAutoSave() {
-  if (autoSaveTimer) clearTimeout(autoSaveTimer)
-  autoSaveTimer = setTimeout(() => {
-    autoSaveTimer = null
-    if (!project.dirty || autoSaving) return
-    autoSaving = true // REFACTOR-OK: 500ms debounce + dirty guard prevents overlapping saves; .finally() resets flag
-    const doSave = project.id
-      ? projectSave()
-      : projectSaveAs(song.name || 'Untitled')
-    doSave.then(() => {
-      project.dirty = false
-    }).catch(e => {
-      console.error('[autoSave] ERROR:', e)
-      showFatalError('DAT-002', e instanceof Error ? e.message : String(e))
-    }).finally(() => {
-      autoSaving = false
-    })
-  }, 500)
-}
-
-// Register callback so pushUndo() can trigger auto-save without circular import
-setScheduleAutoSave(scheduleAutoSave)
 
 /** Immediate auto-save (for beforeunload) */
 export async function projectAutoSave(): Promise<void> {

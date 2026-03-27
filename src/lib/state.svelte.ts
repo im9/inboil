@@ -1,11 +1,7 @@
 // Reactive state — Section/Cell model (ADR 042)
 // Action modules: sampleActions, poolActions, projectActions, importExport
 
-/** Callback registered by projectActions.ts to avoid circular import.
- *  `var` (not `let`) — projectActions.ts sets this at module init during circular import;
- *  `let` would hit TDZ because state.svelte.ts hasn't finished evaluating yet. */
-var _scheduleAutoSave: (() => void) | null = null
-export function setScheduleAutoSave(cb: () => void) { _scheduleAutoSave = cb }
+import { showFatalError } from './fatalError.svelte.ts'
 
 import {
   DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
@@ -87,12 +83,36 @@ export function clearUndoStacks(): void {
   redoStack.length = 0
 }
 
+/** Auto-save: debounced 500ms after last mutation, with concurrency guard.
+ *  Defined here (not in projectActions.ts) to avoid circular import issues with pushUndo. */
+let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+let _autoSaving = false
+export function scheduleAutoSave() {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer)
+  _autoSaveTimer = setTimeout(async () => {
+    _autoSaveTimer = null
+    if (!project.dirty || _autoSaving) return
+    _autoSaving = true
+    try {
+      const { projectSave, projectSaveAs } = await import('./projectActions.ts')
+      if (project.id) await projectSave()
+      else await projectSaveAs(song.name || 'Untitled')
+      project.dirty = false
+    } catch (e) {
+      console.error('[autoSave] ERROR:', e)
+      showFatalError('DAT-002', e instanceof Error ? e.message : String(e))
+    } finally {
+      _autoSaving = false
+    }
+  }, 500)
+}
+
 export function pushUndo(label: string): void {
   const now = Date.now()
   // Always mark dirty + schedule save, even if undo snapshot is debounced
   project.dirty = true
   songVer.v++
-  _scheduleAutoSave?.()
+  scheduleAutoSave()
   if (label === lastPushLabel && now - lastPushTime < 500) {
     return
   }
@@ -575,7 +595,6 @@ export {
   listProjects, projectSaveAs, projectSave, projectLoad, projectNew,
   projectDelete, projectAutoSave, projectRestore, projectRename,
   writeRecoverySnapshot, clearRecoverySnapshot, checkRecovery,
-  scheduleAutoSave,
 } from './projectActions.ts'
 
 // Import/export
