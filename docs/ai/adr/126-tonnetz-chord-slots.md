@@ -251,10 +251,43 @@ The [EDIT] button opens the Tonnetz sheet.
 - [x] Sheet trigger: Tonnetz node double-tap in SceneView + DockPanel [EDIT] button
 - [x] Anchor management: right-click triangle to add, × to remove, badge display with step positions
 
-### Phase 3: Docs
+### Phase 3: Polish & UX (priority order)
+
+#### P0: Lattice geometry correctness
+- [ ] Verify `noteAt()` produces correct Tonnetz adjacency — P/L/R transforms must connect geometrically adjacent triangles
+- [ ] Test: for every triangle, applying P/L/R should land on a neighboring triangle in the SVG grid
+- [ ] Fix any misalignment between mathematical transforms and visual adjacency
+
+#### P1: Real-time playback feedback
+- [ ] Animate current chord highlight moving across lattice during playback (blue dot/triangle follows the walk in real-time)
+- [ ] Walk trail grows incrementally as playback advances (not pre-computed full path)
+- [ ] Chord name trail scrolls smoothly, current chord prominent
+
+#### P2: Onboarding via presets
+- [ ] Selecting a preset should immediately show its walk on the lattice (visual "aha" moment)
+- [ ] Consider auto-play on preset select so user hears + sees the result instantly
+- [ ] Tooltip or brief label showing what each transform does ("P = flip major/minor")
+
+#### P3: stepsPerTransform UX
+- [ ] Allow adjusting RATE while playing — hear the change in real-time
+- [ ] Consider a slider or drag gesture instead of number input for more tactile control
+- [ ] Visual feedback: lattice walk speed changes visibly when RATE changes
+
+#### P4: Anchor UX
+- [ ] Replace right-click (not discoverable, no mobile support) with explicit mode toggle or long-press
+- [ ] Show anchor positions on the lattice as distinct markers (e.g. pinned dots with step number)
+- [ ] Allow dragging anchor step position or editing inline
+- [ ] Validate anchor step doesn't exceed track length
+
+### Phase 4: Docs
 - [ ] Update tonnetz.mdx (EN + JA)
 
-## Considerations
+## Known Issues
+
+- **Lattice geometry may not match real Tonnetz** — `noteAt()` uses fifths (horizontal) and major thirds (vertical) but the triangle construction may not correctly represent P/L/R adjacency. Drag-to-sequence relies on this being correct; misalignment means some drags silently fail to detect transforms.
+- **stepsPerTransform feels binary** — 1 is too fast (every step changes chord), 4+ is slow. The sweet spot depends on tempo and genre. No visual guidance for what value to use.
+- **Anchors are not discoverable** — right-click only, no mobile support, auto-placed step positions are often wrong. Users need to know step numbers which requires mental math.
+- **No audio preview on lattice interaction** — tapping a triangle changes startChord but gives no immediate auditory feedback. The regeneration + playback loop is indirect.
 
 - **Why remove slots?** The slot model (hold chord for N steps) conflicts with O&C-style per-step transforms. Anchors achieve the same "explicit chord at a point" goal without imposing duration-based thinking. The sequence is purely about transforms; anchors are purely about position resets.
 
