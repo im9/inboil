@@ -306,15 +306,15 @@ describe('Rate limiting', () => {
   })
 })
 
-// ── Room code entropy ────────────────────────────────────────────────────────
+// ── Room code entropy (ADR 019 §Security — 8-char, 40-bit) ──────────────────
 
 describe('Room code entropy', () => {
-  it('generates 6-character codes (30-bit entropy)', () => {
+  it('generates 8-character codes (40-bit entropy)', () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    const arr = crypto.getRandomValues(new Uint8Array(6))
+    const arr = crypto.getRandomValues(new Uint8Array(8))
     let code = ''
-    for (let i = 0; i < 6; i++) code += chars[arr[i] % chars.length]
-    expect(code).toHaveLength(6)
-    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/)
+    for (let i = 0; i < 8; i++) code += chars[arr[i] % chars.length]
+    expect(code).toHaveLength(8)
+    expect(code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/)
   })
 })

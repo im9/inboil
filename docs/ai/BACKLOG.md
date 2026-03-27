@@ -16,10 +16,11 @@ Known architectural limits that are fine at current scale but need attention whe
 
 ## Security
 
-Known vulnerabilities to fix before public release.
+Hardening tasks for signaling server (see ADR 019 §Security Hardening for design rationale).
 
-- [ ] **Room code brute-force** — 6-char code (30-bit entropy, ~1B combinations) with no signaling server rate limit. Multi-device is intended for same-network use (e.g. phone + laptop on same Wi-Fi). Consider restricting signaling to local network discovery (mDNS / WebRTC local candidates only) to eliminate remote attack surface entirely. If public signaling is kept: (1) IP-based rate limit (5 failed / 10s → block), (2) extend code to 8 chars (40-bit), (3) implement room TTL
-- [ ] **Room code TTL not implemented** — ADR 019 says rooms expire after 1h inactivity, but Durable Object has no explicit expiration logic. Stale rooms remain connectable indefinitely
+- [ ] **Room TTL** — Durable Object alarm() to self-destruct after 1h inactivity
+- [ ] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
+- [ ] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
 
 ## Ideas
 

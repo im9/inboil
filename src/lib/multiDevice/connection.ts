@@ -27,8 +27,8 @@ const MAX_RECONNECT_ATTEMPTS = 5
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no I/O/0/1 to avoid confusion
   let code = ''
-  const arr = crypto.getRandomValues(new Uint8Array(6))
-  for (let i = 0; i < 6; i++) code += chars[arr[i] % chars.length]
+  const arr = crypto.getRandomValues(new Uint8Array(8)) // 8 chars = ~40-bit entropy (ADR 019 §Security)
+  for (let i = 0; i < 8; i++) code += chars[arr[i] % chars.length]
   return code
 }
 

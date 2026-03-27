@@ -216,3 +216,23 @@ Client A ──ws──► Worker ──ws──► Client B
 - **Negative**: NAT traversal can fail in restrictive networks (TURN fallback adds complexity)
 - **Negative**: Concurrent edits from multiple guests need ordering (host applies in arrival order)
 - **Dependency**: ADR 095 (Mobile UI Redesign) — guest UI is the mobile UI
+
+## Security Hardening (2026-03)
+
+### Decision: Public signaling with server-side rate limiting
+
+Two approaches were evaluated to address the room code brute-force risk (6-char code = ~30-bit entropy, no rate limit):
+
+**Option A — Local network only (mDNS / local candidates):**
+Eliminate the public signaling server entirely by restricting discovery to the local network. Rejected because mDNS is not accessible from browser Web APIs — it requires native platform access (Electron/Tauri). As a pure web app, inboil cannot implement local device discovery without abandoning the zero-install browser model.
+
+**Option B — Harden public signaling (adopted):**
+Keep the existing Cloudflare Workers signaling server and add:
+
+1. **Room code TTL** — Durable Object self-destructs after 1 hour of inactivity via `alarm()` API. Stale rooms are no longer connectable. (Spec'd in ADR 019 §G but was not implemented)
+2. **IP-based rate limiting** — 5 failed join attempts per IP within 10 seconds triggers a temporary block. Prevents brute-force enumeration of room codes
+3. **Code length extension** — 6 → 8 characters (30-bit → 40-bit entropy, ~1 trillion combinations). Combined with rate limiting, brute-force becomes computationally infeasible
+
+### Rationale
+
+The threat model is modest: rooms are 1:1 (host + guest), contain no secret data (just control messages), and are intended for same-network use (self-jam, local jam sessions). Option B provides defense-in-depth proportional to the risk without architectural disruption. Option A would require a fundamentally different technology stack for a marginal security gain in this context.
