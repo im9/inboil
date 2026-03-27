@@ -107,32 +107,39 @@
     <div class="sn-group">
       <span class="sn-category">Sweep</span>
       <div class="sn-row">
-        <div class="sn-gen" style="--nc: #c47a2a">
-          <div class="sn-gen-fp">
-            <div class="sn-sweep-preview">
-              <svg viewBox="0 0 104 36" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                <line x1="0" y1="18" x2="104" y2="18" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
-                <polyline
-                  points="0,26 13,24 26,18 39,10 52,8 65,12 78,18 91,22 104,18"
-                  stroke="#8a9432"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  opacity="0.7"
-                />
-                <polyline
-                  points="0,18 20,14 40,20 60,10 80,16 104,6"
-                  stroke="#4472B4"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  opacity="0.7"
-                />
+        <div class="sn-sweep-wrap">
+          <div class="sn-gen" style="--nc: #c47a2a">
+            <button class="sn-rec-btn" aria-label="Record">
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor" aria-hidden="true">
+                <circle cx="6" cy="6" r="5"/>
               </svg>
-            </div>
-            <div class="sn-gen-label-row">
-              <span class="sn-gen-label">→ Bass</span>
-              <span class="sn-gen-target">2</span>
+            </button>
+            <div class="sn-gen-fp">
+              <div class="sn-sweep-preview">
+                <svg viewBox="0 0 104 36" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                  <line x1="0" y1="18" x2="104" y2="18" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>
+                  <polyline
+                    points="0,26 13,24 26,18 39,10 52,8 65,12 78,18 91,22 104,18"
+                    stroke="#8a9432"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    opacity="0.7"
+                  />
+                  <polyline
+                    points="0,18 20,14 40,20 60,10 80,16 104,6"
+                    stroke="#4472B4"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    opacity="0.7"
+                  />
+                </svg>
+              </div>
+              <div class="sn-gen-label-row">
+                <span class="sn-gen-label">→ P01</span>
+                <span class="sn-gen-target">2</span>
+              </div>
             </div>
           </div>
         </div>
@@ -342,6 +349,26 @@
   }
 
   /* ── Sweep preview ── */
+  .sn-sweep-wrap .sn-gen {
+    position: relative;
+  }
+  .sn-rec-btn {
+    position: absolute;
+    left: -11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #e8a090;
+    background: rgba(255, 255, 255, 0.95);
+    color: #e8a090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
   .sn-sweep-preview {
     flex: 1;
     min-height: 0;
