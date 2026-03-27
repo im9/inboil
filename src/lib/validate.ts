@@ -79,6 +79,7 @@ function validatePattern(path: string, p: unknown): Pattern {
   const raw = p as Record<string, unknown>
   assertType(`${path}.id`, raw.id, 'string')
   assertType(`${path}.name`, raw.name, 'string')
+  assertOptionalType(`${path}.rootNote`, raw.rootNote, 'number')
   if (!Array.isArray(raw.cells)) throw new ValidationError(`${path}.cells`, 'expected array')
   raw.cells.forEach((c, i) => validateCell(`${path}.cells[${i}]`, c))
   return p as Pattern

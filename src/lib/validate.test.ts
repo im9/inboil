@@ -115,6 +115,25 @@ describe('validateSongData', () => {
     expect(() => validateSongData(song)).toThrow(/patterns.*must not be empty/)
   })
 
+  // ── Pattern rootNote validation ──
+
+  it('accepts pattern with rootNote', () => {
+    const song = minimalSong()
+    ;(song.patterns[0] as Record<string, unknown>).rootNote = 9
+    expect(() => validateSongData(song)).not.toThrow()
+  })
+
+  it('accepts pattern without rootNote (undefined)', () => {
+    const song = minimalSong()
+    expect(() => validateSongData(song)).not.toThrow()
+  })
+
+  it('rejects pattern with non-number rootNote', () => {
+    const song = minimalSong()
+    ;(song.patterns[0] as Record<string, unknown>).rootNote = 'A'
+    expect(() => validateSongData(song)).toThrow(/rootNote/)
+  })
+
   // ── Track validation ──
 
   it('rejects track with missing id', () => {

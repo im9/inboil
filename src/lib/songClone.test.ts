@@ -117,6 +117,18 @@ describe('clonePattern', () => {
     copy.cells[0].name = 'MODIFIED'
     expect(orig.cells[0].name).toBe('KICK')
   })
+
+  it('preserves per-pattern rootNote', () => {
+    const orig = makePattern({ rootNote: 7, cells: [makeCell()] })
+    const copy = clonePattern(orig)
+    expect(copy.rootNote).toBe(7)
+  })
+
+  it('preserves undefined rootNote (inherits song default)', () => {
+    const orig = makePattern({ cells: [makeCell()] })
+    const copy = clonePattern(orig)
+    expect(copy.rootNote).toBeUndefined()
+  })
 })
 
 // ── cloneTrack ────────────────────────────────────────────────────────────────
@@ -325,6 +337,19 @@ describe('restoreSongPure', () => {
     const song = makeMinimalSong({ name: '' })
     const result = restoreSongPure(song)
     expect(result.song.name).toBe('Untitled')
+  })
+
+  it('preserves per-pattern rootNote through restore', () => {
+    const song = makeMinimalSong()
+    song.patterns[0].rootNote = 9  // A minor
+    const result = restoreSongPure(song)
+    expect(result.song.patterns[0].rootNote).toBe(9)
+  })
+
+  it('keeps rootNote undefined when not set', () => {
+    const song = makeMinimalSong()
+    const result = restoreSongPure(song)
+    expect(result.song.patterns[0].rootNote).toBeUndefined()
   })
 })
 

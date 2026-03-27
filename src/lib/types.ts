@@ -65,6 +65,7 @@ export interface Pattern {
   name: string            // max 8 chars
   color: number           // index into PATTERN_COLORS (0–7)
   cells: Cell[]           // one per track (up to 16)
+  rootNote?: number       // 0–11, per-pattern key override (undefined → song.rootNote)
 }
 
 /** @deprecated Linear arrangement slot (ADR 042). Superseded by Scene (ADR 044).

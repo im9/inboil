@@ -270,8 +270,12 @@ export function selectPattern(patternIndex: number): void {
   if (patternIndex < 0 || patternIndex >= song.patterns.length) return
   ui.currentPattern = patternIndex
   ui.dockTab = 'tracks'  // reset tab on pattern change (ADR 092)
-  // If selected track has no cell in this pattern, pick first available
+  // Apply per-pattern key (scene playback overrides via its own transpose logic)
   const pat = song.patterns[patternIndex]
+  if (!playback.playing || playback.mode === 'loop') {
+    perf.rootNote = pat.rootNote ?? song.rootNote
+  }
+  // If selected track has no cell in this pattern, pick first available
   if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
     ui.selectedTrack = pat.cells.length > 0 ? pat.cells[0].trackId : -1
   }

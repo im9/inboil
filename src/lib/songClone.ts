@@ -43,7 +43,7 @@ export function cloneCell(c: Cell): Cell {
 }
 
 export function clonePattern(p: Pattern): Pattern {
-  return { id: p.id, name: p.name, color: p.color, cells: p.cells.map(cloneCell) }
+  return { id: p.id, name: p.name, color: p.color, cells: p.cells.map(cloneCell), rootNote: p.rootNote }
 }
 
 export function cloneTrack(t: Track): Track {
@@ -142,7 +142,7 @@ export function restoreSongPure(src: Song): RestoredState {
         }
       }
     }
-    return { id: p.id, name: p.name, color: p.color ?? 0, cells }
+    return { id: p.id, name: p.name, color: p.color ?? 0, cells, ...(p.rootNote != null && { rootNote: p.rootNote }) }
   })
   // Pad to PATTERN_POOL_SIZE if fewer patterns were saved (e.g. stripped export)
   for (let i = patterns.length; i < PATTERN_POOL_SIZE; i++) {

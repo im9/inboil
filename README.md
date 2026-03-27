@@ -27,7 +27,7 @@ Step sequencing, analog-modeled synthesis, graphical sequencer arrangement — a
 | Layer | Tech |
 |-------|------|
 | UI | Svelte 5 (runes), TypeScript |
-| Build | Vite 6 |
+| Build | Vite 8 |
 | DSP | TypeScript AudioWorklet |
 | Audio | AudioWorklet, Web Audio API |
 | Docs | Astro + Starlight |

@@ -130,8 +130,9 @@
     const pat = song.patterns[ui.currentPattern]
     if (!pat) return
     const patNode = song.scene.nodes.find(n => n.type === 'pattern' && n.patternId === pat.id)
+    const patKey = pat.rootNote ?? song.rootNote
     if (!patNode) {
-      perf.rootNote = song.rootNote
+      perf.rootNote = patKey
       return
     }
     // Walk backward through incoming modifier node edges
@@ -164,7 +165,7 @@
       }
       currentId = src.id
     }
-    const raw = absKey ?? (song.rootNote + transpose)
+    const raw = absKey ?? (patKey + transpose)
     perf.rootNote = ((raw % 12) + 12) % 12
   }
 
@@ -222,7 +223,8 @@
         const { advanced, patternIndex, stop: shouldStop } = advanceSceneNode()
         if (shouldStop) { stop(); return }
         if (advanced) {
-          perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
+          const scenePatKey = song.patterns[patternIndex]?.rootNote ?? song.rootNote
+          perf.rootNote = ((playback.sceneAbsoluteKey ?? (scenePatKey + playback.sceneTranspose)) % 12 + 12) % 12
           engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, patternIndex)
           // Check if we just arrived at the solo target
           if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
@@ -273,7 +275,8 @@
         playback.playing = true
         return
       }
-      perf.rootNote = ((playback.sceneAbsoluteKey ?? (song.rootNote + playback.sceneTranspose)) % 12 + 12) % 12
+      const initPatKey = song.patterns[patternIndex]?.rootNote ?? song.rootNote
+      perf.rootNote = ((playback.sceneAbsoluteKey ?? (initPatKey + playback.sceneTranspose)) % 12 + 12) % 12
       engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patternIndex)
     } else {
       applyLoopModifiers()

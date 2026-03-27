@@ -255,7 +255,7 @@
           class="key"
           class:black={key.black}
           class:active={i === perf.rootNote}
-          onpointerdown={() => { perf.rootNote = i }}
+          onpointerdown={() => { perf.rootNote = i; song.patterns[ui.currentPattern].rootNote = i }}
         >{key.note}</button>
       {/each}
     </div>
@@ -381,7 +381,7 @@
       class:black={key.black}
       class:active-note={i === perf.rootNote}
       style="left:{(arcCenter.x + key.x - w / 2).toFixed(1)}px; top:{(arcCenter.y + key.y - h / 2).toFixed(1)}px; --w:{w}px; --h:{h}px; --rot:{key.rot.toFixed(1)}deg; --delay:{i * 15}ms"
-      onpointerdown={() => { perf.rootNote = i; keyMenuOpen = false }}
+      onpointerdown={() => { perf.rootNote = i; song.patterns[ui.currentPattern].rootNote = i; keyMenuOpen = false }}
     ><span class="key-fan-label">{key.note}</span></button>
   {/each}
 </div>
