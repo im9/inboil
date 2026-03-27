@@ -24,7 +24,7 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 
 ## Refactoring
 
-- [ ] **VoicePicker shared component** — MobileParamOverlay and DockTrackEditor both have similar voice picker UI with category tabs. Extract to a shared `VoicePicker.svelte` component to reduce duplication
+- [x] **VoicePicker shared component** — Extracted to `VoicePicker.svelte` with `variant` prop for dock/mobile styling
 
 ## Ideas
 

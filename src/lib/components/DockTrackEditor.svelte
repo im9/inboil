@@ -1,5 +1,5 @@
 <script lang="ts">
-  // NOTE: Large file by design — voice/sample/FX/param sections all operate on same cell+track (VoicePicker extraction in BACKLOG)
+  // NOTE: Large file by design — sample/FX/param sections all operate on same cell+track
   /**
    * Track parameter editor — voice picker, synth knobs, P-Lock, insert FX,
    * sample loader, remove track. (SEND/MIX moved to StepGrid)
@@ -7,41 +7,30 @@
    */
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
   import { captureValue } from '../sweepRecorder.svelte.ts'
-  import type { VoiceId } from '../types.ts'
-  import { clearAllParamLocks, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
+  import { clearAllParamLocks, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
-  import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import { engine } from '../audio/engine.ts'
   import { drawWaveform } from '../domHelpers.ts'
   import Knob from './Knob.svelte'
+  import VoicePicker from './VoicePicker.svelte'
   import DockPresetBrowser from './DockPresetBrowser.svelte'
   import DockPoolBrowser from './DockPoolBrowser.svelte'
   import EnvGraph from './EnvGraph.svelte'
   import WaveGraph from './WaveGraph.svelte'
   import AlgoGraph from './AlgoGraph.svelte'
 
-  const CATEGORIES: { id: VoiceCategory; label: string }[] = [
-    { id: 'drum', label: 'DRUM' },
-    { id: 'synth', label: 'SYNTH' },
-    { id: 'sampler', label: 'SMPL' },
-  ]
-
   const hasSelection = $derived(ui.selectedTrack >= 0)
   const track  = $derived(hasSelection ? song.tracks[ui.selectedTrack] : null)
   const cell   = $derived(hasSelection ? activeCell(ui.selectedTrack) : null)
-  const currentCat = $derived(cell?.voiceId ? (VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum') : 'drum')
-  const voicesInCat = $derived(VOICE_LIST.filter(v => v.category === currentCat))
   const params = $derived(cell ? getParamDefs(cell.voiceId) : [])
   const selTrig = $derived(cell && ui.selectedStep !== null ? cell.trigs[ui.selectedStep] : null)
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
-  // ── Voice picker toggle ──
-  let voiceOpen = $state(false)
-  $effect(() => { void ui.selectedTrack; voiceOpen = false })
-  const currentVoiceMeta = $derived(cell?.voiceId ? VOICE_LIST.find(v => v.id === cell.voiceId) : null)
+  // ── Voice picker ──
+  let voicePickerRef = $state<VoicePicker>(null!)
   let presetBrowserRef = $state<DockPresetBrowser>(null!)
 
   // ── Sample loader ──
@@ -95,40 +84,11 @@
 {#if cell && track}
 
 <!-- Voice selector (floating dropdown) -->
-<div class="voice-picker-wrap">
-  <button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen; if (voiceOpen) presetBrowserRef?.close() }}
-    data-tip="Change instrument" data-tip-ja="楽器を変更">
-    <span class="voice-current-name">{currentVoiceMeta?.fullName ?? cell.voiceId}</span>
-    <span class="voice-current-arrow">{voiceOpen ? '▾' : '▸'}</span>
-  </button>
-  {#if voiceOpen}
-    <div class="voice-dropdown">
-      <div class="picker-cats">
-        {#each CATEGORIES as cat}
-          <button
-            class="cat-btn"
-            class:active={currentCat === cat.id}
-            onpointerdown={() => { changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId); if (VOICE_LIST.filter(v => v.category === cat.id).length === 1) voiceOpen = false }}
-            data-tip={cat.label} data-tip-ja={cat.label}
-          >{cat.label}</button>
-        {/each}
-      </div>
-      <div class="picker-list">
-        {#each voicesInCat as v}
-          <button
-            class="picker-item"
-            class:selected={cell.voiceId === v.id}
-            onpointerdown={() => { changeVoice(ui.selectedTrack, v.id); voiceOpen = false; presetBrowserRef?.close() }}
-            data-tip={v.id} data-tip-ja={v.id}
-          ><span class="picker-cat-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
-        {/each}
-      </div>
-    </div>
-  {/if}
-</div>
+<VoicePicker bind:this={voicePickerRef} voiceId={cell.voiceId} trackId={ui.selectedTrack}
+  onselect={() => presetBrowserRef?.close()} />
 
 <!-- Preset browser -->
-<DockPresetBrowser bind:this={presetBrowserRef} onopen={() => { voiceOpen = false }} />
+<DockPresetBrowser bind:this={presetBrowserRef} onopen={() => { voicePickerRef?.close() }} />
 
 <!-- Sample loader (ADR 012 Phase 2) -->
 {#if isSampler}
@@ -399,118 +359,6 @@
   .mode-switch.on .mode-switch-thumb {
     left: 16px;
     background: var(--color-bg);
-  }
-  /* ── Voice picker (floating dropdown) ── */
-  .voice-picker-wrap {
-    position: relative;
-    z-index: 5;
-  }
-  .voice-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--color-fg);
-    border: 1px solid var(--dz-border);
-    border-top: none;
-    box-shadow: 0 4px 12px var(--lz-text-hint);
-  }
-  .picker-cats {
-    display: flex;
-    gap: 2px;
-    padding: 4px;
-    flex-wrap: wrap;
-  }
-  .cat-btn {
-    flex: 1;
-    border: 1px solid var(--dz-border);
-    background: transparent;
-    color: var(--dz-text-dim);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 7px 6px;
-    cursor: pointer;
-  }
-  .cat-btn.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .picker-list {
-    max-height: 200px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .picker-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    border: none;
-    border-bottom: 1px solid var(--dz-divider);
-    background: transparent;
-    color: var(--dz-text);
-    font-size: var(--fs-base);
-    padding: 7px 8px;
-    text-align: left;
-    cursor: pointer;
-  }
-  .picker-item:hover {
-    background: var(--dz-bg-hover);
-    color: var(--dz-text-bright);
-  }
-  .picker-item:active {
-    background: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .picker-item.selected {
-    background: var(--olive-bg);
-    color: var(--dz-text-bright);
-  }
-  .picker-item.selected .picker-cat-tag {
-    color: var(--color-olive);
-  }
-  .picker-cat-tag {
-    font-size: var(--fs-md);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--dz-text-dim);
-    min-width: 32px;
-    flex-shrink: 0;
-  }
-  .picker-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .voice-current {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    border: 1px solid var(--dz-border);
-    background: transparent;
-    color: var(--dz-text-strong);
-    font-size: var(--fs-base);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 8px 12px;
-    cursor: pointer;
-    margin-bottom: 6px;
-    transition: border-color 80ms;
-  }
-  .voice-current:hover {
-    border-color: var(--dz-border-strong);
-  }
-  .voice-current-name {
-    text-transform: uppercase;
-  }
-  .voice-current-arrow {
-    font-size: var(--fs-md);
-    opacity: 0.4;
   }
   /* ── Sample loader ── */
   .sample-section {

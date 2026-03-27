@@ -1,22 +1,15 @@
 <script lang="ts">
-  // NOTE: Large file by design — voice/sample/FX/param sections all operate on same cell+track (VoicePicker extraction in BACKLOG)
+  // NOTE: Large file by design — sample/FX/param sections all operate on same cell+track
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample } from '../state.svelte.ts'
-  import type { VoiceId } from '../types.ts'
-  import { setTrackSend, clearAllParamLocks, toggleMute, toggleSolo, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
+  import { setTrackSend, clearAllParamLocks, toggleMute, toggleSolo, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
   import { knobValue, knobChange, isParamLocked } from '../paramHelpers.ts'
-  import { VOICE_LIST, type VoiceCategory } from '../audio/dsp/voices.ts'
   import { engine } from '../audio/engine.ts'
   import { isGuest, guestSetParam, guestSetSend } from '../multiDevice/guest.ts'
   import { fade, fly } from 'svelte/transition'
   import { drawWaveform } from '../domHelpers.ts'
   import Knob from './Knob.svelte'
-
-  const CATEGORIES: { id: VoiceCategory; label: string }[] = [
-    { id: 'drum', label: 'DRUM' },
-    { id: 'synth', label: 'SYNTH' },
-    { id: 'sampler', label: 'SMPL' },
-  ]
+  import VoicePicker from './VoicePicker.svelte'
 
   function setParam(key: string, v: number) {
     if (isGuest()) { guestSetParam(ui.selectedTrack, key, v); return }
@@ -37,12 +30,6 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
-  // ── Voice picker ──
-  let voiceOpen = $state(false)
-  $effect(() => { void ui.selectedTrack; voiceOpen = false })
-  const currentCat = $derived(cell?.voiceId ? (VOICE_LIST.find(v => v.id === cell.voiceId)?.category ?? 'drum') : 'drum')
-  const voicesInCat = $derived(VOICE_LIST.filter(v => v.category === currentCat))
-  const currentVoiceMeta = $derived(cell?.voiceId ? VOICE_LIST.find(v => v.id === cell.voiceId) : null)
 
   // ── Collapsible param groups ──
   let collapsedGroups = $state(new Set<string>())
@@ -133,30 +120,7 @@
     <div class="overlay-content">
 
       <!-- Voice picker -->
-      <button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen }}>
-        <span class="voice-name">{currentVoiceMeta?.fullName ?? cell.voiceId}</span>
-        <span class="voice-arrow">{voiceOpen ? '▾' : '▸'}</span>
-      </button>
-      {#if voiceOpen}
-        <div class="picker-cats">
-          {#each CATEGORIES as cat}
-            <button
-              class="cat-btn"
-              class:active={currentCat === cat.id}
-              onpointerdown={() => changeVoice(ui.selectedTrack, VOICE_LIST.find(v => v.category === cat.id)!.id as VoiceId)}
-            >{cat.label}</button>
-          {/each}
-        </div>
-        <div class="picker-list">
-          {#each voicesInCat as v}
-            <button
-              class="picker-item"
-              class:selected={cell.voiceId === v.id}
-              onpointerdown={() => { changeVoice(ui.selectedTrack, v.id); voiceOpen = false }}
-            ><span class="picker-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
-          {/each}
-        </div>
-      {/if}
+      <VoicePicker voiceId={cell.voiceId} trackId={ui.selectedTrack} variant="mobile" />
 
       <!-- Sample loader -->
       {#if isSampler}
@@ -437,94 +401,6 @@
     min-height: 0;
   }
 
-  /* ── Voice picker ── */
-  .voice-current {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    border: 1px solid var(--dz-border);
-    background: transparent;
-    color: var(--dz-text-strong);
-    font-size: var(--fs-base);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 8px 10px;
-    margin-bottom: 6px;
-  }
-  .voice-name {
-    text-transform: uppercase;
-  }
-  .voice-arrow {
-    font-size: var(--fs-sm);
-    opacity: 0.4;
-  }
-  .picker-cats {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 4px;
-  }
-  .cat-btn {
-    flex: 1;
-    border: 1px solid var(--dz-border);
-    background: transparent;
-    color: var(--dz-transport-border);
-    font-size: var(--fs-md);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    padding: 7px 5px;
-  }
-  .cat-btn.active {
-    background: var(--color-olive);
-    border-color: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .picker-list {
-    max-height: 200px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    margin-bottom: 8px;
-    border: 1px solid var(--dz-divider);
-  }
-  .picker-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    border: none;
-    border-bottom: 1px solid var(--dz-divider);
-    background: transparent;
-    color: var(--dz-text);
-    font-size: var(--fs-base);
-    padding: 8px;
-    text-align: left;
-  }
-  .picker-item:active {
-    background: var(--color-olive);
-    color: var(--color-bg);
-  }
-  .picker-item.selected {
-    background: var(--olive-bg);
-    color: var(--dz-text-bright);
-  }
-  .picker-item.selected .picker-tag {
-    color: var(--color-olive);
-  }
-  .picker-tag {
-    font-size: var(--fs-sm);
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: var(--dz-text-dim);
-    min-width: 32px;
-    flex-shrink: 0;
-  }
-  .picker-name {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
   /* ── Sample loader ── */
   .sample-section {
