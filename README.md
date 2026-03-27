@@ -56,35 +56,24 @@ pnpm deploy    # build + Cloudflare Pages
 ```
 src/
 ├── App.svelte                  # Root component (layout, engine wiring)
-├── main.ts                     # Entry point
-├── app.css                     # Global styles (reset, tokens)
+├── app.css                     # Global styles (reset, design tokens)
 ├── lib/
 │   ├── audio/
 │   │   ├── engine.ts           # Main thread ↔ worklet bridge
 │   │   ├── worklet-processor.ts # AudioWorklet sequencer + DSP
-│   │   └── dsp/                # DSP modules (voices, effects, filters)
+│   │   └── dsp/                # Voice engines, effects, filters
+│   ├── components/             # Svelte 5 UI components
 │   ├── multiDevice/            # WebRTC multi-device jam (ADR 019)
-│   ├── components/             # Svelte 5 UI components (50)
 │   ├── types.ts                # Core data types (Song, Pattern, Cell, Trig)
-│   ├── state.svelte.ts         # Reactive state (Svelte 5 runes)
-│   ├── paramDefs.ts            # Synth parameter definitions
-│   ├── presets.ts              # Factory presets (WT 30, FM 20)
-│   ├── factory.ts              # Default song/pattern templates
-│   ├── constants.ts            # Default values (perf, FX flavours, etc.)
-│   ├── sceneActions.ts         # Scene CRUD, layout, clipboard
-│   ├── scenePlayback.ts        # Scene traversal engine
-│   ├── generative.ts           # Turing Machine, Quantizer, Tonnetz
-│   ├── automation.ts           # Automation snapshot capture/restore
-│   ├── sweepEval.ts            # Sweep curve evaluation (pure functions)
-│   ├── sweepRecorder.svelte.ts # Sweep recording engine (arm/capture/stop)
-│   ├── audioPool.ts            # OPFS audio pool (factory + user samples)
+│   ├── state.svelte.ts         # Reactive state ($state declarations, undo/redo)
+│   ├── *Actions.ts             # Domain mutations (step, scene, section, sample, pool, project)
+│   ├── importExport.ts         # JSON export/import, demo song loading
+│   ├── scene*.ts               # Scene graph: actions, playback, geometry, data
+│   ├── sweep*.ts               # Sweep automation: recorder, evaluator, playback
+│   ├── generative.ts           # Turing Machine, Quantizer, Tonnetz engines
 │   ├── storage.ts              # IndexedDB + localStorage persistence
-│   ├── midi.ts                 # Web MIDI API integration
-│   ├── midiExport.ts           # MIDI Type 1 export
-│   ├── wavExport.ts            # WAV recording capture
-│   └── songClone.ts            # Pure data clone/restore for serialization
-public/
-├── samples/                    # Factory sample WebM files (111) + manifest
+│   └── ...                     # Presets, params, helpers, MIDI, WAV, etc.
+public/samples/                 # Factory sample WebM files + manifest
 site/                           # Astro docs & landing page
 docs/ai/                        # Design specs & ADRs
 ```
