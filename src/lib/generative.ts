@@ -160,47 +160,58 @@ export function quantizeTrigs(trigs: Trig[], params: QuantizerParams): Trig[] {
 
 type Triad = [number, number, number]
 
-/** Parallel transform: flip the third (major ↔ minor) */
-function nrP(chord: Triad): Triad {
-  const [a, b, c] = chord
-  const i1 = b - a, i2 = c - b
-  // Major (4,3) → minor (3,4) and vice versa
-  if (i1 === 4 && i2 === 3) return [a, a + 3, c]
-  if (i1 === 3 && i2 === 4) return [a, a + 4, c]
-  return chord // not a triad we recognize
-}
-
-/** Leading-tone transform: move root (major) or fifth (minor) */
-function nrL(chord: Triad): Triad {
-  const [a, b, c] = chord
-  const i1 = b - a, i2 = c - b
-  if (i1 === 4 && i2 === 3) return [b, c, a + 12]  // major → minor (1st inv context)
-  if (i1 === 3 && i2 === 4) return [c - 12, a, b]   // minor → major
-  return chord
-}
-
-/** Relative transform: move fifth (major) or root (minor) */
-function nrR(chord: Triad): Triad {
-  const [a, b, c] = chord
-  const i1 = b - a, i2 = c - b
-  if (i1 === 4 && i2 === 3) return [c - 12, a, b] // C maj → A min (relative minor, shifted down)
-  if (i1 === 3 && i2 === 4) return [b, c, a + 12] // A min → C maj
-  return chord
-}
-
-/** Normalize triad to close voicing within a reasonable range */
-function normalizeTriad(chord: Triad): Triad {
-  // Sort and compact to close position
-  const sorted = [...chord].sort((a, b) => a - b) as Triad
-  // Keep within MIDI range and compact intervals
-  while (sorted[2] - sorted[0] > 12) {
-    sorted[2] -= 12
-    sorted.sort((a, b) => a - b)
+/** Identify root pitch class and quality of a triad (works in any inversion) */
+function identifyTriad(chord: Triad): { rootPc: number; minor: boolean } {
+  const pcs = chord.map(n => ((n % 12) + 12) % 12)
+  for (const pc of pcs) {
+    const ints = pcs.map(p => ((p - pc) % 12 + 12) % 12).sort((a, b) => a - b)
+    if (ints[1] === 4 && ints[2] === 7) return { rootPc: pc, minor: false }
+    if (ints[1] === 3 && ints[2] === 7) return { rootPc: pc, minor: true }
   }
-  // Keep in reasonable range (don't drift too far)
-  while (sorted[0] < 36) { sorted[0] += 12; sorted[1] += 12; sorted[2] += 12 }
-  while (sorted[0] > 84) { sorted[0] -= 12; sorted[1] -= 12; sorted[2] -= 12 }
-  return sorted as Triad
+  return { rootPc: ((chord[0] % 12) + 12) % 12, minor: false }
+}
+
+/** Build a root-position triad near a reference pitch */
+function buildFromPc(rootPc: number, minor: boolean, refRoot: number): Triad {
+  let root = Math.floor(refRoot / 12) * 12 + rootPc
+  // Choose octave closest to reference
+  if (root - refRoot > 6) root -= 12
+  if (refRoot - root > 6) root += 12
+  // Clamp to reasonable MIDI range
+  while (root < 36) root += 12
+  while (root > 84) root -= 12
+  return [root, root + (minor ? 3 : 4), root + 7]
+}
+
+/**
+ * Parallel transform: flip major ↔ minor (same root)
+ * C major → C minor, C minor → C major
+ */
+function nrP(chord: Triad): Triad {
+  const { rootPc, minor } = identifyTriad(chord)
+  return buildFromPc(rootPc, !minor, chord[0])
+}
+
+/**
+ * Leading-tone exchange: move the note outside the minor 3rd by semitone
+ * Major root r → minor root (r+4)  [C major → E minor]
+ * Minor root r → major root (r+8)  [E minor → C major]
+ */
+function nrL(chord: Triad): Triad {
+  const { rootPc, minor } = identifyTriad(chord)
+  const newRootPc = minor ? (rootPc + 8) % 12 : (rootPc + 4) % 12
+  return buildFromPc(newRootPc, !minor, chord[0])
+}
+
+/**
+ * Relative transform: move the note outside the major 3rd by whole tone
+ * Major root r → minor root (r+9)  [C major → A minor]
+ * Minor root r → major root (r+3)  [A minor → C major]
+ */
+function nrR(chord: Triad): Triad {
+  const { rootPc, minor } = identifyTriad(chord)
+  const newRootPc = minor ? (rootPc + 3) % 12 : (rootPc + 9) % 12
+  return buildFromPc(newRootPc, !minor, chord[0])
 }
 
 /** Apply a named neo-Riemannian operation (single or compound) */
@@ -211,7 +222,7 @@ export function applyTonnetzOp(chord: Triad, op: string): Triad {
     else if (ch === 'L') result = nrL(result)
     else if (ch === 'R') result = nrR(result)
   }
-  return normalizeTriad(result)
+  return result
 }
 
 /** Apply voicing to a triad */

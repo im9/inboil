@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { turingGenerate, quantizeTrigs, tonnetzGenerate, resolveRhythm, SCALE_MAP } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate, resolveRhythm, SCALE_MAP, applyTonnetzOp } from './generative.ts'
 import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './types.ts'
 
 describe('turingGenerate', () => {
@@ -143,6 +143,91 @@ describe('quantizeTrigs', () => {
   })
 })
 
+// ── Neo-Riemannian transforms ──
+
+describe('applyTonnetzOp', () => {
+  const Cmaj: [number, number, number] = [60, 64, 67]
+
+  function pcs(chord: number[]): number[] {
+    return chord.map(n => n % 12).sort((a, b) => a - b)
+  }
+
+  it('P: C major → C minor (same root, flip quality)', () => {
+    const result = applyTonnetzOp(Cmaj, 'P')
+    expect(pcs(result)).toEqual([0, 3, 7])  // C minor
+  })
+
+  it('P is involution: PP returns to original', () => {
+    const result = applyTonnetzOp(Cmaj, 'PP')
+    expect(pcs(result)).toEqual([0, 4, 7])  // back to C major
+  })
+
+  it('L: C major → E minor', () => {
+    const result = applyTonnetzOp(Cmaj, 'L')
+    expect(pcs(result)).toEqual([4, 7, 11])  // E minor
+  })
+
+  it('L is involution: LL returns to original', () => {
+    const result = applyTonnetzOp(Cmaj, 'LL')
+    expect(pcs(result)).toEqual([0, 4, 7])
+  })
+
+  it('R: C major → A minor', () => {
+    const result = applyTonnetzOp(Cmaj, 'R')
+    expect(pcs(result)).toEqual([0, 4, 9])  // A minor (root=9, 9+3=0, 9+7=4)
+  })
+
+  it('R is involution: RR returns to original', () => {
+    const result = applyTonnetzOp(Cmaj, 'RR')
+    expect(pcs(result)).toEqual([0, 4, 7])
+  })
+
+  it('compound PL: C major → P → C minor → L → Ab major', () => {
+    const result = applyTonnetzOp(Cmaj, 'PL')
+    expect(pcs(result)).toEqual([0, 3, 8])  // Ab major (root=8, 8+4=0, 8+7=3)
+  })
+
+  it('compound PR: C major → P → C minor → R → Eb major', () => {
+    const result = applyTonnetzOp(Cmaj, 'PR')
+    expect(pcs(result)).toEqual([3, 7, 10])  // Eb major
+  })
+
+  it('long walk: PLR sequence from C major evolves continuously', () => {
+    let chord: [number, number, number] = [...Cmaj]
+    const visited: string[] = []
+    for (let i = 0; i < 6; i++) {
+      const ops = ['P', 'L', 'R']
+      chord = applyTonnetzOp(chord, ops[i % 3])
+      visited.push(pcs(chord).join(','))
+    }
+    // Should visit at least 4 distinct chords in 6 steps
+    const unique = new Set(visited)
+    expect(unique.size).toBeGreaterThanOrEqual(4)
+  })
+
+  it('output is always root-position triad (intervals 3+4 or 4+3)', () => {
+    let chord: [number, number, number] = [...Cmaj]
+    for (const op of ['P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR']) {
+      const result = applyTonnetzOp(chord, op)
+      const i1 = result[1] - result[0]
+      const i2 = result[2] - result[1]
+      expect([i1, i2]).toSatisfy(
+        ([a, b]: number[]) => (a === 3 && b === 4) || (a === 4 && b === 3),
+        `${op} produced intervals [${i1}, ${i2}] instead of [3,4] or [4,3]`
+      )
+    }
+  })
+
+  it('MIDI notes stay in reasonable range after many transforms', () => {
+    let chord: [number, number, number] = [...Cmaj]
+    for (let i = 0; i < 100; i++) {
+      chord = applyTonnetzOp(chord, ['P', 'L', 'R'][i % 3])
+      expect(chord[0]).toBeGreaterThanOrEqual(36)
+      expect(chord[2]).toBeLessThanOrEqual(96)
+    }
+  })
+})
+
 // ── Tonnetz (ADR 126 v2: 1 step = 1 transform) ──
 
 describe('tonnetzGenerate', () => {
@@ -151,6 +236,10 @@ describe('tonnetzGenerate', () => {
     startChord: [60, 64, 67], // C major
     sequence: ['P', 'L', 'R'],
     voicing: 'close',
+  }
+
+  function pcs(notes: number[]): number[] {
+    return notes.map(n => n % 12).sort((a, b) => a - b)
   }
 
   it('generates the requested number of steps', () => {
@@ -176,14 +265,11 @@ describe('tonnetzGenerate', () => {
     expect(trigs[0].notes).toEqual([60, 64, 67])
   })
 
-  it('step 1 applies sequence[0], step 2 applies sequence[1]', () => {
+  it('step 1 applies P (C major → C minor), step 2 applies L (C minor → Ab major)', () => {
     const trigs = tonnetzGenerate(baseParams, 3)
-    // step 0: C major (start)
-    // step 1: P(C maj) = C minor
-    // step 2: L(C min) = Ab major (or normalized equivalent)
-    expect(trigs[0].notes).toEqual([60, 64, 67])
-    expect(trigs[1].notes).not.toEqual(trigs[0].notes) // P changed it
-    expect(trigs[2].notes).not.toEqual(trigs[1].notes) // L changed it
+    expect(trigs[0].notes).toEqual([60, 64, 67]) // C major
+    expect(pcs(trigs[1].notes!)).toEqual([0, 3, 7]) // C minor
+    expect(pcs(trigs[2].notes!)).toEqual([0, 3, 8]) // Ab major
   })
 
   it('P transform flips major to minor on step 1', () => {
@@ -194,13 +280,10 @@ describe('tonnetzGenerate', () => {
     expect(intervals).toEqual([3, 4]) // minor triad
   })
 
-  it('transforms produce chord changes across steps', () => {
+  it('transforms produce genuinely different pitch classes across steps', () => {
     const trigs = tonnetzGenerate(baseParams, 4)
-    // step 0: C major, step 1: P(C)=Cm, step 2: L(Cm), step 3: R(L(Cm))
-    expect(trigs[0].notes).not.toEqual(trigs[1].notes) // P changes chord
-    expect(trigs[1].notes).not.toEqual(trigs[2].notes) // L changes chord
-    // Note: some transforms can return to a previously visited chord (lattice cycles)
-    // so we don't assert all consecutive pairs differ
+    expect(pcs(trigs[0].notes!)).not.toEqual(pcs(trigs[1].notes!))
+    expect(pcs(trigs[1].notes!)).not.toEqual(pcs(trigs[2].notes!))
   })
 
   it('sequence cycles when exhausted', () => {
@@ -260,11 +343,10 @@ describe('tonnetzGenerate', () => {
     // Use P,L so transforms don't cancel out
     const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L'], rhythm: 'offbeat' }
     const trigs = tonnetzGenerate(params, 4)
-    // step 0: rest, step 1: active (P+L applied so far), step 2: rest, step 3: active
-    // Active trigs at 1 and 3 should have different chords (2 more transforms applied)
+    // step 0: rest, step 1: active (P applied), step 2: rest (L applied), step 3: active (P applied)
     expect(trigs[1].active).toBe(true)
     expect(trigs[3].active).toBe(true)
-    expect(trigs[1].notes).not.toEqual(trigs[3].notes)
+    expect(pcs(trigs[1].notes!)).not.toEqual(pcs(trigs[3].notes!))
   })
 
   it('anchor resets chord at specific step', () => {
@@ -353,7 +435,7 @@ describe('tonnetzGenerate', () => {
     expect(trigs[0].active).toBe(false)
     expect(trigs[1].active).toBe(true)
     expect(trigs[1].notes).toEqual(trigs[3].notes) // same chord in block
-    expect(trigs[5].notes).not.toEqual(trigs[1].notes) // different chord after transform
+    expect(pcs(trigs[5].notes!)).not.toEqual(pcs(trigs[1].notes!)) // different chord after transform
   })
 })
 

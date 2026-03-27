@@ -233,7 +233,12 @@
         const sel = (e.target as HTMLSelectElement)
         const presets = GENERATIVE_PRESETS.filter(p => p.engine === gen.engine)
         const idx = parseInt(sel.value)
-        if (idx >= 0 && presets[idx]) { sceneApplyGenerativePreset(nodeId, presets[idx].params); autoGenerateFromNode(nodeId) }
+        if (idx >= 0 && presets[idx]) {
+          sceneApplyGenerativePreset(nodeId, presets[idx].params)
+          autoGenerateFromNode(nodeId)
+          // Auto-open lattice view so user sees the walk path immediately
+          if (gen.engine === 'tonnetz') { ui.tonnetzNodeId = nodeId; ui.phraseView = 'tonnetz' }
+        }
       }}
     >
       <option value="-1" selected>—</option>

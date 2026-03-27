@@ -28,7 +28,7 @@
 
   function vtx(row: number, col: number): { x: number; y: number } {
     return {
-      x: PAD + col * TRI_W + (row % 2 === 1 ? TRI_W / 2 : 0),
+      x: PAD + col * TRI_W + row * TRI_W / 2,
       y: PAD + row * TRI_H,
     }
   }
@@ -43,17 +43,22 @@
 
   function makeTri(p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number },
     na: number, nb: number, nc: number): TriInfo {
-    const sorted = [na, nb, nc].sort((a, b) => a - b)
-    const i1 = (sorted[1] - sorted[0] + 12) % 12
-    const i2 = (sorted[2] - sorted[1] + 12) % 12
-    const isMaj = (i1 === 4 && i2 === 3) || (i1 === 3 && i2 === 5)
+    const sorted = [na, nb, nc].sort((a, b) => a - b) as [number, number, number]
+    // Find root by trying each note — works for all inversions
+    let isMaj = false
+    let rootPc = sorted[0]
+    for (const pc of sorted) {
+      const ints = sorted.map(n => ((n - pc) % 12 + 12) % 12).sort((a, b) => a - b)
+      if (ints[1] === 4 && ints[2] === 7) { isMaj = true; rootPc = pc; break }
+      if (ints[1] === 3 && ints[2] === 7) { isMaj = false; rootPc = pc; break }
+    }
     return {
-      notes: sorted as [number, number, number],
+      notes: sorted,
       cx: (p1.x + p2.x + p3.x) / 3,
       cy: (p1.y + p2.y + p3.y) / 3,
       path: `M${p1.x},${p1.y}L${p2.x},${p2.y}L${p3.x},${p3.y}Z`,
       isMajor: isMaj,
-      label: NOTE_NAMES[sorted[0]] + (isMaj ? '' : 'm'),
+      label: NOTE_NAMES[rootPc] + (isMaj ? '' : 'm'),
     }
   }
 
@@ -61,15 +66,12 @@
     const tris: TriInfo[] = []
     for (let r = 0; r < ROW_COUNT - 1; r++) {
       for (let c = 0; c < COL_COUNT - 1; c++) {
-        const a = vtx(r, c), b = vtx(r, c + 1), d = vtx(r + 1, c), e = vtx(r + 1, c + 1)
-        const bp = r % 2 === 0 ? d : e
-        tris.push(makeTri(a, b, bp,
-          noteAt(r, c, centerNote), noteAt(r, c + 1, centerNote),
-          noteAt(r + 1, r % 2 === 0 ? c : c + 1, centerNote)))
-        const tp = r % 2 === 0 ? b : a
-        tris.push(makeTri(d, e, tp,
-          noteAt(r + 1, c, centerNote), noteAt(r + 1, c + 1, centerNote),
-          noteAt(r, r % 2 === 0 ? c + 1 : c, centerNote)))
+        // Upward △ (major): (r,c), (r,c+1), (r+1,c)
+        tris.push(makeTri(vtx(r, c), vtx(r, c + 1), vtx(r + 1, c),
+          noteAt(r, c, centerNote), noteAt(r, c + 1, centerNote), noteAt(r + 1, c, centerNote)))
+        // Downward ▽ (minor): (r+1,c), (r+1,c+1), (r,c+1)
+        tris.push(makeTri(vtx(r + 1, c), vtx(r + 1, c + 1), vtx(r, c + 1),
+          noteAt(r + 1, c, centerNote), noteAt(r + 1, c + 1, centerNote), noteAt(r, c + 1, centerNote)))
       }
     }
     return tris
@@ -77,7 +79,7 @@
 
   const centerNote = $derived(params?.startChord[0] ?? 60)
   const triangles = $derived(buildTriangles(centerNote % 12))
-  const svgW = $derived(PAD * 2 + (COL_COUNT - 1) * TRI_W + TRI_W / 2)
+  const svgW = $derived(PAD * 2 + (COL_COUNT - 1) * TRI_W + (ROW_COUNT - 1) * TRI_W / 2)
   const svgH = $derived(PAD * 2 + (ROW_COUNT - 1) * TRI_H)
 
   // ── Walk path computation ──
@@ -146,10 +148,17 @@
     return triangles.find(t => t.notes[0] === pcs[0] && t.notes[1] === pcs[1] && t.notes[2] === pcs[2])
   }
 
+  // Visible walk: full path when stopped, up to currentWalkIdx during playback
+  const visibleWalk = $derived.by(() => {
+    const idx = currentWalkIdx()
+    if (idx < 0) return walkPath // stopped: show full path
+    return walkPath.slice(0, idx + 1)
+  })
+
   // Walk trail: lines connecting consecutive chord positions on the lattice
   const walkTrailPoints = $derived.by(() => {
     const points: { x: number; y: number }[] = []
-    for (const wp of walkPath) {
+    for (const wp of visibleWalk) {
       const tri = findTri(wp.pcs)
       if (tri) points.push({ x: tri.cx, y: tri.cy })
     }
@@ -169,8 +178,43 @@
     const pp = playingPCs
     if (pp && tri.notes[0] === pp[0] && tri.notes[1] === pp[1] && tri.notes[2] === pp[2]) return 'playing'
     if (tri.notes[0] === startPCs[0] && tri.notes[1] === startPCs[1] && tri.notes[2] === startPCs[2]) return 'current'
-    if (walkPath.some(wp => wp.pcs[0] === tri.notes[0] && wp.pcs[1] === tri.notes[1] && wp.pcs[2] === tri.notes[2])) return 'walk'
+    if (visibleWalk.some(wp => wp.pcs[0] === tri.notes[0] && wp.pcs[1] === tri.notes[1] && wp.pcs[2] === tri.notes[2])) return 'walk'
     return ''
+  }
+
+  // ── Chord trail auto-scroll ──
+  let trailEl: HTMLElement | undefined = $state()
+  $effect(() => {
+    if (!trailEl || currentWalkIdx() < 0) return
+    // Scroll to keep the current chord visible at the right edge
+    trailEl.scrollLeft = trailEl.scrollWidth
+  })
+
+  // ── Anchor positions on lattice ──
+  const anchorTriPositions = $derived.by(() => {
+    if (!params?.anchors) return []
+    return params.anchors.map((anchor, i) => {
+      const pcs = anchor.chord.map(n => n % 12).sort((a, b) => a - b) as [number, number, number]
+      const tri = findTri(pcs)
+      return tri ? { idx: i, step: anchor.step, cx: tri.cx, cy: tri.cy, label: tri.label } : null
+    }).filter((a): a is NonNullable<typeof a> => a !== null)
+  })
+
+  // ── Long-press for anchor (replaces right-click, mobile-friendly) ──
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+  let longPressFired = false
+  const LONG_PRESS_MS = 400
+
+  function startLongPress(tri: TriInfo) {
+    longPressFired = false
+    longPressTimer = setTimeout(() => {
+      longPressFired = true
+      addAnchor(tri)
+    }, LONG_PRESS_MS)
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
   }
 
   // ── Drag to define sequence ──
@@ -262,6 +306,27 @@
     autoGenerateFromNode(nodeId)
   }
 
+  function setAnchorStep(idx: number, newStep: number) {
+    if (!params || !nodeId || !params.anchors) return
+    const clamped = Math.max(0, Math.min(totalSteps - 1, newStep))
+    const anchors = params.anchors.map((a, i) => i === idx ? { ...a, step: clamped } : a)
+    pushUndo('Edit anchor step')
+    sceneUpdateGenerativeParams(nodeId, { anchors })
+    autoGenerateFromNode(nodeId)
+  }
+
+  // ── Transform descriptions (bilingual) ──
+  const OP_TIPS: Record<string, { en: string; ja: string }> = {
+    '':    { en: 'Hold — no change', ja: 'ホールド（変化なし）' },
+    'P':   { en: 'Parallel — flip major/minor', ja: 'パラレル（長短反転）' },
+    'L':   { en: 'Leading-tone — move by semitone', ja: 'リーディングトーン（半音移動）' },
+    'R':   { en: 'Relative — relative major/minor', ja: 'レラティブ（平行調）' },
+    'PL':  { en: 'Parallel + Leading-tone', ja: 'パラレル＋リーディングトーン' },
+    'PR':  { en: 'Parallel + Relative', ja: 'パラレル＋レラティブ' },
+    'LR':  { en: 'Leading-tone + Relative', ja: 'リーディングトーン＋レラティブ' },
+    'PLR': { en: 'All three transforms', ja: '3変換すべて' },
+  }
+
   // ── Sequence editing ──
   function addOp(op: string) {
     if (!params || !nodeId) return
@@ -326,11 +391,14 @@
           role="button" tabindex="-1"
           onpointerdown={() => {
             if (isDragging) return
+            startLongPress(tri)
             startDrag(tri)
           }}
-          onpointerenter={() => continueDrag(tri)}
-          oncontextmenu={e => { e.preventDefault(); addAnchor(tri) }}
+          onpointerenter={() => { cancelLongPress(); continueDrag(tri) }}
+          oncontextmenu={e => e.preventDefault()}
           onpointerup={() => {
+            cancelLongPress()
+            if (longPressFired) { isDragging = false; dragPath = []; return }
             if (dragPath.length < 2) {
               // Single tap: set startChord
               isDragging = false
@@ -350,17 +418,22 @@
         />
         <text x={tri.cx} y={tri.cy + 4} class="tri-label" class:current={state === 'current'} class:playing={state === 'playing'}>{tri.label}</text>
       {/each}
+      <!-- Anchor markers -->
+      {#each anchorTriPositions as anchor}
+        <circle cx={anchor.cx} cy={anchor.cy - 14} r="8" class="anchor-marker" />
+        <text x={anchor.cx} y={anchor.cy - 10} class="anchor-step-label">@{anchor.step}</text>
+      {/each}
     </svg>
   </div>
 
   <!-- Playback chord trail -->
   {#if currentStep >= 0}
-    <div class="chord-trail">
-      {#each walkPath.slice(Math.max(0, currentWalkIdx() - 6), currentWalkIdx() + 1) as wp, i}
+    <div class="chord-trail" bind:this={trailEl}>
+      {#each visibleWalk as wp, i}
         {@const tri = findTri(wp.pcs)}
         {#if tri}
-          <span class="trail-chord" class:now={i === Math.min(6, currentWalkIdx())}>{tri.label}</span>
-          {#if i < Math.min(6, currentWalkIdx())}<span class="trail-arrow">→</span>{/if}
+          {#if i > 0}<span class="trail-arrow">→</span>{/if}
+          <span class="trail-chord" class:now={i === visibleWalk.length - 1}>{tri.label}</span>
         {/if}
       {/each}
     </div>
@@ -372,6 +445,7 @@
       <div class="seq-pills">
         {#each params.sequence as op, idx}
           <select class="seq-pill-select"
+            data-tip={OP_TIPS[op]?.en ?? ''} data-tip-ja={OP_TIPS[op]?.ja ?? ''}
             onchange={e => setOp(idx, (e.target as HTMLSelectElement).value)}
           >
             {#each ['', 'P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR'] as o}
@@ -386,11 +460,15 @@
       </div>
     </div>
     <div class="tonnetz-row">
-      <span class="ctl-label">RATE</span>
-      <input class="ctl-num" type="number" min="1" max="64"
+      <span class="ctl-label"
+        data-tip="Steps per transform — how many steps each chord is held"
+        data-tip-ja="変換レート — 各コードが保持されるステップ数"
+      >RATE</span>
+      <span class="rate-val">{params.stepsPerTransform ?? 1}</span>
+      <input class="rate-slider" type="range" min="1" max="64"
         value={params.stepsPerTransform ?? 1}
-        onchange={e => {
-          const v = Math.max(1, Math.min(64, parseInt((e.target as HTMLInputElement).value) || 1))
+        oninput={e => {
+          const v = parseInt((e.target as HTMLInputElement).value)
           sceneUpdateGenerativeParams(nodeId, { stepsPerTransform: v })
           autoGenerateFromNode(nodeId)
         }}
@@ -415,13 +493,20 @@
     <!-- Anchors -->
     {#if params.anchors?.length}
       <div class="tonnetz-row">
-        <span class="ctl-label">ANCHORS</span>
+        <span class="ctl-label"
+          data-tip="Chord reset points — long-press a triangle to add"
+          data-tip-ja="コードリセット地点 — 三角形を長押しで追加"
+        >ANCHORS</span>
         <div class="anchor-list">
           {#each params.anchors as anchor, i}
             {@const n = NOTE_NAMES[anchor.chord[0] % 12]}
             {@const q = (anchor.chord[1] - anchor.chord[0]) === 3 ? 'm' : ''}
             <span class="anchor-badge">
-              @{anchor.step} {n}{q}
+              @<input class="anchor-step-input" type="number" min="0" max={totalSteps - 1}
+                value={anchor.step}
+                onchange={e => setAnchorStep(i, parseInt((e.target as HTMLInputElement).value) || 0)}
+              />
+              {n}{q}
               <button class="anchor-rm" onpointerdown={() => removeAnchor(i)}>×</button>
             </span>
           {/each}
@@ -429,7 +514,7 @@
       </div>
     {/if}
     <div class="tonnetz-row hint">
-      <span>tap = set start · drag = draw path · right-click = add anchor</span>
+      <span data-tip="P = flip major/minor · L = semitone shift · R = relative major/minor" data-tip-ja="P = 長短反転 · L = 半音移動 · R = 平行調">tap = set start · drag = draw path · long-press = add anchor</span>
     </div>
   </div>
 </div>
@@ -487,8 +572,12 @@
   .tri.major { fill: rgba(237, 232, 220, 0.06); }
   .tri.minor { fill: rgba(30, 32, 40, 0.06); }
   .tri.current { fill: var(--color-olive); stroke-width: 1.5; }
-  .tri.playing { fill: var(--color-blue); stroke-width: 1.5; }
+  .tri.playing { fill: var(--color-blue); stroke-width: 1.5; animation: tri-pulse 400ms ease-out; }
   .tri.walk { fill: rgba(138, 148, 50, 0.15); }
+  @keyframes tri-pulse {
+    0%   { filter: brightness(1.5); }
+    100% { filter: brightness(1); }
+  }
   .tri:hover { fill: rgba(237, 232, 220, 0.2); }
   .tri.current:hover { fill: var(--color-olive); }
   .tri.playing:hover { fill: var(--color-blue); }
@@ -524,16 +613,20 @@
     font-size: var(--fs-md);
     overflow-x: auto;
     border-top: 1px solid var(--lz-border);
+    scroll-behavior: smooth;
+    white-space: nowrap;
   }
   .trail-chord {
     font-weight: 700;
-    opacity: 0.5;
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: opacity 120ms, color 120ms;
   }
   .trail-chord.now {
     opacity: 1;
     color: var(--color-blue);
   }
-  .trail-arrow { opacity: 0.3; }
+  .trail-arrow { opacity: 0.2; flex-shrink: 0; }
 
   .tonnetz-controls {
     padding: 8px 12px;
@@ -571,13 +664,16 @@
     display: flex; align-items: center; justify-content: center;
   }
   .pill-btn:hover { background: var(--lz-bg-hover); }
-  .ctl-num {
+  .rate-val {
     font-family: var(--font-data); font-size: var(--fs-lg);
-    width: 36px; padding: 2px 4px; text-align: center;
-    border: 1px solid var(--lz-border-mid);
-    background: transparent; color: inherit;
+    font-weight: 700;
+    min-width: 20px; text-align: center;
   }
-  .ctl-num::-webkit-inner-spin-button { opacity: 0; width: 0; }
+  .rate-slider {
+    width: 64px; height: 16px;
+    accent-color: var(--color-olive);
+    cursor: pointer;
+  }
   .ctl-select {
     font-family: var(--font-data); font-size: var(--fs-lg);
     padding: 2px 4px;
@@ -592,8 +688,27 @@
     color: var(--color-salmon);
     display: flex; align-items: center; gap: 4px;
   }
+  .anchor-step-input {
+    font-family: var(--font-data); font-size: var(--fs-md);
+    width: 28px; padding: 0 2px; text-align: center;
+    border: none; border-bottom: 1px solid var(--color-salmon);
+    background: transparent; color: inherit;
+  }
+  .anchor-step-input::-webkit-inner-spin-button { opacity: 0; width: 0; }
   .anchor-rm {
     background: none; border: none; color: inherit;
     font-size: 10px; cursor: pointer; padding: 0; line-height: 1;
+  }
+  .anchor-marker {
+    fill: var(--color-salmon);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  .anchor-step-label {
+    font-family: var(--font-data);
+    font-size: 7px; font-weight: 700;
+    fill: var(--color-bg);
+    text-anchor: middle;
+    pointer-events: none;
   }
 </style>
