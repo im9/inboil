@@ -108,3 +108,4 @@ export interface WorkletTrig {
 export type WorkletEvent =
   | { type: 'step'; playheads: number[]; cycle: boolean }
   | { type: 'levels'; peakL: number; peakR: number; gr: number; cpu?: number }
+  | { type: 'error'; code: string; message: string }

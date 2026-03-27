@@ -144,6 +144,7 @@ interface InsertFxSlot {
 // ── Processor ─────────────────────────────────────────────────────────────────
 
 class GrooveboxProcessor extends AudioWorkletProcessor {
+  private _errored = false
   private voices: (Voice | null)[] = new Array(MAX_VOICES).fill(null)
   private tracks: WorkletTrack[] = []
   private activeCount = 0          // number of active tracks (≤ MAX_VOICES)
@@ -302,6 +303,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     this.reverb.setSize(0.72); this.reverb.setDamp(0.5)
 
     this.port.onmessage = (e: MessageEvent<WorkletCommand>) => {
+      try {
       const cmd = e.data
       switch (cmd.type) {
         case 'play':
@@ -589,6 +591,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
           break
         }
+      }
+      } catch (e) {
+        this.port.postMessage({ type: 'error', code: 'WRK-001', message: e instanceof Error ? e.message : String(e) })
       }
     }
   }
@@ -880,6 +885,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   }
 
   process(_inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+    if (this._errored) return true  // stop processing after fatal DSP error
+    try {
     const t0 = Date.now()
     const outL = outputs[0]?.[0]
     const outR = outputs[0]?.[1] ?? outputs[0]?.[0]
@@ -1212,6 +1219,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     }
 
     return true
+    } catch (e) {
+      this._errored = true
+      this.port.postMessage({ type: 'error', code: 'DSP-001', message: e instanceof Error ? e.message : String(e) })
+      return true
+    }
   }
 }
 

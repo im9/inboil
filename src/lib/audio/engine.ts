@@ -110,6 +110,7 @@ export class GrooveboxEngine {
       node.port.onmessage = (e: MessageEvent<WorkletEvent>) => {
         if (e.data.type === 'step' && this._onStep) this._onStep(e.data.playheads, e.data.cycle)
         else if (e.data.type === 'levels' && this._onLevels) this._onLevels(e.data.peakL, e.data.peakR, e.data.gr, e.data.cpu ?? 0)
+        else if (e.data.type === 'error') showToast(`Audio error [${e.data.code}]: ${e.data.message}`, 'error')
       }
       // Resume and warm up audio pipeline so first play() doesn't lose step 0
       if (ctx.state === 'suspended') await ctx.resume()

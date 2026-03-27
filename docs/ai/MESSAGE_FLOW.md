@@ -24,6 +24,7 @@ UI (main thread) ↔ AudioWorklet (audio thread) communication.
 |---|---|---|
 | `step` | `playheads[]`, `cycle` | Every track step advance |
 | `levels` | `peakL`, `peakR`, `gr`, `cpu` | ~60 fps (meter interval) |
+| `error` | `code`, `message` | On worklet error (WRK-001: command, DSP-001: process) |
 
 ## Sequence: Initial Play
 

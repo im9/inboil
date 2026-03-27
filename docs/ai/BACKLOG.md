@@ -25,6 +25,7 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 ## Refactoring
 
 - [x] **VoicePicker shared component** — Extracted to `VoicePicker.svelte` with `variant` prop for dock/mobile styling
+- [x] **AudioWorklet error propagation** — WorkletEvent `error` type added (WRK-001/DSP-001), engine shows toast on receive
 
 ## Ideas
 
