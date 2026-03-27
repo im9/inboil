@@ -413,8 +413,10 @@
         } else if (dblNode?.type === 'automation') {
           // Double-click on automation node → ensure dock is open for editing
           // dock is always visible (no minimize)
-        } else {
-          // Double-click on function/generative node → no-op
+        } else if (dblNode?.generative?.engine === 'tonnetz') {
+          // Double-click on Tonnetz node → open Tonnetz lattice sheet
+          ui.tonnetzNodeId = dblNode.id
+          ui.phraseView = 'tonnetz'
         }
         lastTapTime = 0
         lastTapNode = ''
@@ -1007,12 +1009,12 @@
           {:else if node.generative.engine === 'tonnetz'}
             {@const tnp = node.generative.params as import('../state.svelte.ts').TonnetzParams}
             {@const gps = genNodePlayState(node)}
-            {@const tnSlots = tnp.slots ?? (tnp.sequence ?? []).map(op => ({ op }))}
-            {@const currentOpIdx = gps && tnSlots.length > 0 ? Math.floor(gps.step / Math.max(1, tnp.stepsPerChord ?? 4)) % tnSlots.length : -1}
+            {@const seq = tnp.sequence ?? []}
+            {@const currentOpIdx = gps && seq.length > 0 ? (gps.step > 0 ? (gps.step - 1) % seq.length : -1) : -1}
             <div class="gen-faceplate tonnetz">
               <div class="tonnetz-ops">
-                {#each tnSlots.slice(0, 5) as slot, i}
-                  <span class="tonnetz-op" class:current={currentOpIdx === i}>{'op' in slot ? slot.op : '♪'}</span>
+                {#each seq.slice(0, 5) as op, i}
+                  <span class="tonnetz-op" class:current={currentOpIdx === i}>{op || '·'}</span>
                 {/each}
               </div>
               <div class="gen-label-row">

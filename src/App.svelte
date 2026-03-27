@@ -18,6 +18,7 @@
   import MobilePerfSheet from './lib/components/MobilePerfSheet.svelte'
   import PatternToolbar from './lib/components/PatternToolbar.svelte'
   import SweepCanvas from './lib/components/SweepCanvas.svelte'
+  import TonnetzSheet from './lib/components/TonnetzSheet.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import { markScenePlayStart } from './lib/scenePlayback.ts'
@@ -333,6 +334,7 @@
     ui.patternSheet = false
     ui.phraseView = 'pattern'
     ui.sweepTab = false
+    ui.tonnetzNodeId = null
   }
 
   function toggleLoop() {
@@ -351,7 +353,7 @@
     }
   }
 
-  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf')
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf' || ui.phraseView === 'tonnetz')
 
   // ── Keyboard routing (ADR 115) ─────────────────────────────────
 
@@ -448,7 +450,13 @@
         <div class="view-main">
           <SceneView onplay={play} onstop={stop} />
           <!-- Overlay sheets (desktop) -->
-          {#if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
+          {#if ui.phraseView === 'tonnetz'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+              <TonnetzSheet onclose={closeAllSheets} />
+            </div>
+          {:else if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>

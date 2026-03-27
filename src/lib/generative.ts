@@ -3,7 +3,7 @@
  * Pure functions — no state imports. Caller handles undo + pattern writes.
  */
 
-import type { Trig, TuringParams, QuantizerParams, TonnetzParams, TonnetzSlot, TonnetzRhythm } from './types.ts'
+import type { Trig, TuringParams, QuantizerParams, TonnetzParams, TonnetzRhythm } from './types.ts'
 
 // ── Turing Machine (shift-register random) ──
 
@@ -204,7 +204,7 @@ function normalizeTriad(chord: Triad): Triad {
 }
 
 /** Apply a named neo-Riemannian operation (single or compound) */
-function applyTonnetzOp(chord: Triad, op: string): Triad {
+export function applyTonnetzOp(chord: Triad, op: string): Triad {
   let result = chord
   for (const ch of op) {
     if (ch === 'P') result = nrP(result)
@@ -224,20 +224,10 @@ function applyVoicing(chord: Triad, voicing: TonnetzParams['voicing']): number[]
   }
 }
 
-/** Convert legacy sequence + stepsPerChord to slot array (ADR 126) */
-export function legacyToSlots(params: TonnetzParams): TonnetzSlot[] {
-  const spc = params.stepsPerChord ?? 4
-  return [
-    { chord: [...params.startChord] as [number, number, number], steps: spc },
-    ...(params.sequence ?? []).map(op => ({ op, steps: spc } as TonnetzSlot)),
-  ]
-}
-
 /** Bjorklund algorithm for euclidean rhythm distribution */
 function bjorklund(hits: number, steps: number): boolean[] {
   if (hits >= steps) return Array(steps).fill(true)
   if (hits <= 0) return Array(steps).fill(false)
-  // Build pattern via Bjorklund's method
   let pattern: number[][] = []
   for (let i = 0; i < steps; i++) pattern.push(i < hits ? [1] : [0])
   let k = hits
@@ -255,84 +245,76 @@ function bjorklund(hits: number, steps: number): boolean[] {
   return pattern.flat().map(v => v === 1)
 }
 
-/** Resolve a rhythm spec to a boolean array of the given length (ADR 126) */
+/** Resolve a rhythm spec to a boolean array of the given length (ADR 126 v2) */
 export function resolveRhythm(rhythm: TonnetzRhythm, steps: number): boolean[] {
   if (Array.isArray(rhythm)) {
-    // Pad with false or trim to length
     if (rhythm.length >= steps) return rhythm.slice(0, steps)
     return [...rhythm, ...Array(steps - rhythm.length).fill(false)]
   }
+  if (rhythm === 'all') return Array(steps).fill(true)
   if (rhythm === 'legato') {
-    const r = Array(steps).fill(false)
-    r[0] = true
-    return r
+    // Handled specially in tonnetzGenerate — return all-true here as fallback
+    return Array(steps).fill(true)
   }
-  if (rhythm === 'offbeat') {
-    return Array.from({ length: steps }, (_, i) => i % 2 === 1)
-  }
-  if (rhythm === 'onbeat') {
-    return Array.from({ length: steps }, (_, i) => i % 4 === 0)
-  }
+  if (rhythm === 'offbeat') return Array.from({ length: steps }, (_, i) => i % 2 === 1)
+  if (rhythm === 'onbeat') return Array.from({ length: steps }, (_, i) => i % 4 === 0)
   if (rhythm === 'syncopated') {
-    // x . x . . x . x  (repeating 8-step pattern)
     const pat = [true, false, true, false, false, true, false, true]
     return Array.from({ length: steps }, (_, i) => pat[i % pat.length])
   }
-  // Euclidean
   return bjorklund(rhythm.hits, steps)
 }
 
 /**
- * Generate a chord sequence by walking the Tonnetz lattice (ADR 078, slots ADR 126).
- * Supports per-slot duration and rhythm patterns.
+ * Generate a chord sequence by walking the Tonnetz lattice.
+ * ADR 126 v2: transforms applied every `stepsPerTransform` steps.
+ * stepsPerTransform=1 → O&C style (chord changes every step).
+ * stepsPerTransform=4 → classic pad style (chord held for 4 steps).
  */
 export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   const trigs: Trig[] = []
-  const slots = params.slots ?? legacyToSlots(params)
+  const seq = params.sequence
+  const spt = params.stepsPerTransform ?? 1
   let chord: Triad = [...params.startChord] as Triad
-  let step = 0
-  let slotIdx = 0
+  const isLegato = params.rhythm === 'legato'
+  const rhythm = resolveRhythm(params.rhythm ?? 'all', steps)
 
-  while (step < steps) {
-    const slot = slots[slotIdx % slots.length]
+  // Build anchor lookup
+  const anchorMap = new Map<number, Triad>()
+  if (params.anchors) {
+    for (const a of params.anchors) {
+      anchorMap.set(a.step, [...a.chord] as Triad)
+    }
+  }
 
-    // Determine chord for this slot
-    if ('chord' in slot) {
-      chord = [...slot.chord] as Triad
-    } else if (slotIdx > 0) {
-      chord = applyTonnetzOp(chord, slot.op)
+  let seqIdx = 0
+  for (let step = 0; step < steps; step++) {
+    // Check for anchor reset
+    if (anchorMap.has(step)) {
+      chord = anchorMap.get(step)!
+    } else if (step > 0 && step % spt === 0) {
+      // Apply next transform at each stepsPerTransform boundary
+      const op = seq[seqIdx % seq.length]
+      if (op) chord = applyTonnetzOp(chord, op)
+      seqIdx++
     }
 
-    // Determine duration
-    const dur = Math.min(slot.steps ?? params.stepsPerChord ?? 4, steps - step)
-
-    // Resolve rhythm
-    const rhythm = resolveRhythm(slot.rhythm ?? 'legato', dur)
     const voiced = applyVoicing(chord, params.voicing)
+    const isChordBoundary = step % spt === 0
 
-    for (let i = 0; i < dur; i++) {
-      if (rhythm[i]) {
-        // Find duration until next active step or slot end
-        let trigDur = 1
-        for (let j = i + 1; j < dur; j++) {
-          if (rhythm[j]) break
-          trigDur++
-        }
-        trigs.push({
-          active: true,
-          note: voiced[0],
-          notes: voiced,
-          velocity: 0.9,
-          duration: trigDur,
-          slide: false,
-        })
+    if (isLegato) {
+      // Legato: active only at chord boundaries, held for stepsPerTransform
+      if (isChordBoundary) {
+        const dur = Math.min(spt, steps - step)
+        trigs.push({ active: true, note: voiced[0], notes: voiced, velocity: 0.9, duration: dur, slide: false })
       } else {
         trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
       }
+    } else if (rhythm[step]) {
+      trigs.push({ active: true, note: voiced[0], notes: voiced, velocity: 0.9, duration: 1, slide: false })
+    } else {
+      trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
     }
-
-    step += dur
-    slotIdx++
   }
 
   return trigs
@@ -361,12 +343,22 @@ export const GENERATIVE_PRESETS: GenerativePreset[] = [
   { name: 'A Blues', engine: 'quantizer', params: { engine: 'quantizer', scale: 'blues', root: 9, octaveRange: [3, 5] } },
   { name: 'Whole Tone', engine: 'quantizer', params: { engine: 'quantizer', scale: 'whole', root: 0, octaveRange: [3, 6] } },
   { name: 'Pentatonic Wide', engine: 'quantizer', params: { engine: 'quantizer', scale: 'pentatonic', root: 0, octaveRange: [2, 6] } },
-  // Tonnetz presets
-  { name: 'Classic P·L·R', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' } },
-  { name: 'Cinematic', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 52, 55], sequence: ['L', 'P', 'R', 'L'], stepsPerChord: 8, voicing: 'spread' } },
-  { name: 'Jazz Tonnetz', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['PL', 'R', 'L', 'PR'], stepsPerChord: 4, voicing: 'drop2' } },
-  { name: 'Minimal Shift', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P'], stepsPerChord: 8, voicing: 'close' } },
-  { name: 'Dark Chords', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 51, 55], sequence: ['R', 'L', 'P'], stepsPerChord: 4, voicing: 'spread' } },
+  // Tonnetz presets (ADR 126 v2: per-step transforms)
+  { name: 'Classic P·L·R', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P', 'L', 'R'], voicing: 'close' } },
+  { name: 'Cinematic', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 52, 55], sequence: ['L', 'P', 'R', 'L'], voicing: 'spread' } },
+  { name: 'Jazz Drift', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['PL', 'R', 'L', 'PR'], voicing: 'drop2' } },
+  { name: 'Minimal P', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P'], voicing: 'close' } },
+  { name: 'Dark Walk', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 51, 55], sequence: ['R', 'L', 'P'], voicing: 'spread' } },
+  // Tonnetz with anchors (chord progressions)
+  { name: 'House Stabs', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: [''], rhythm: 'offbeat', voicing: 'close',
+    anchors: [{ step: 0, chord: [60, 64, 67] }, { step: 16, chord: [55, 60, 64] }, { step: 32, chord: [57, 60, 64] }, { step: 48, chord: [53, 57, 60] }],
+  } },
+  { name: 'Pad Progression', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: [''], voicing: 'spread',
+    anchors: [{ step: 0, chord: [60, 64, 67] }, { step: 32, chord: [53, 57, 60] }, { step: 48, chord: [55, 59, 62] }],
+  } },
+  { name: 'Walk & Reset', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P', 'L', 'R'], voicing: 'spread',
+    anchors: [{ step: 32, chord: [60, 64, 67] }],
+  } },
 ]
 
 // ── Seeded PRNG (simple mulberry32) ──

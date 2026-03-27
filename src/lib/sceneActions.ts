@@ -260,7 +260,13 @@ function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generativ
       engine: 'tonnetz',
       mergeMode: 'replace',
       targetTrack: Math.max(0, ui.selectedTrack),
-      params: { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' as const },
+      params: {
+        engine: 'tonnetz',
+        startChord: [60, 64, 67] as [number, number, number],
+        sequence: ['P', 'L', 'R'],
+        stepsPerTransform: 4,
+        voicing: 'close' as const,
+      },
     }
   }
 }

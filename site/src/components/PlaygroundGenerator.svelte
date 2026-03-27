@@ -22,7 +22,7 @@
     switch (e) {
       case 'turing': return { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note' as const, density: 0.7 }
       case 'quantizer': return { engine: 'quantizer', scale: 'minor', root: 0, octaveRange: [3, 5] as [number, number] }
-      case 'tonnetz': return { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close' as const }
+      case 'tonnetz': return { engine: 'tonnetz', startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], voicing: 'close' as const }
     }
   }
 

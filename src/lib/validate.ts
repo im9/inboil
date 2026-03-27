@@ -25,25 +25,15 @@ function assertOptionalType(path: string, value: unknown, expected: string): voi
   assertType(path, value, expected)
 }
 
-function validateTonnetzSlots(path: string, slots: unknown): void {
-  if (!Array.isArray(slots)) throw new ValidationError(path, 'expected array')
-  for (let i = 0; i < slots.length; i++) {
-    const s = slots[i]
-    if (typeof s !== 'object' || s === null) throw new ValidationError(`${path}[${i}]`, 'expected object')
-    const slot = s as Record<string, unknown>
-    const hasOp = 'op' in slot
-    const hasChord = 'chord' in slot
-    if (!hasOp && !hasChord) throw new ValidationError(`${path}[${i}]`, 'must have op or chord')
-    if (hasOp && typeof slot.op !== 'string') throw new ValidationError(`${path}[${i}].op`, 'expected string')
-    if (hasChord) {
-      if (!Array.isArray(slot.chord) || slot.chord.length !== 3) {
-        throw new ValidationError(`${path}[${i}].chord`, 'expected 3-element array')
-      }
-    }
-    if (slot.steps != null) {
-      if (typeof slot.steps !== 'number' || slot.steps < 1 || slot.steps > 64) {
-        throw new ValidationError(`${path}[${i}].steps`, 'expected number 1–64')
-      }
+function validateTonnetzAnchors(path: string, anchors: unknown): void {
+  if (!Array.isArray(anchors)) throw new ValidationError(path, 'expected array')
+  for (let i = 0; i < anchors.length; i++) {
+    const a = anchors[i]
+    if (typeof a !== 'object' || a === null) throw new ValidationError(`${path}[${i}]`, 'expected object')
+    const anchor = a as Record<string, unknown>
+    if (typeof anchor.step !== 'number') throw new ValidationError(`${path}[${i}].step`, 'expected number')
+    if (!Array.isArray(anchor.chord) || anchor.chord.length !== 3) {
+      throw new ValidationError(`${path}[${i}].chord`, 'expected 3-element array')
     }
   }
 }
@@ -167,8 +157,9 @@ export function validateSongData(data: unknown): Song {
           const gen = node.generative as Record<string, unknown>
           if (gen.params && typeof gen.params === 'object') {
             const p = gen.params as Record<string, unknown>
-            if (p.engine === 'tonnetz' && p.slots != null) {
-              validateTonnetzSlots(`scene.nodes[${i}].generative.params.slots`, p.slots)
+            if (p.engine === 'tonnetz') {
+              if (p.anchors != null) validateTonnetzAnchors(`scene.nodes[${i}].generative.params.anchors`, p.anchors)
+              if (p.sequence != null && !Array.isArray(p.sequence)) throw new ValidationError(`scene.nodes[${i}].generative.params.sequence`, 'expected array')
             }
           }
         }

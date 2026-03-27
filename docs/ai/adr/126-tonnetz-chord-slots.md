@@ -1,257 +1,274 @@
-# ADR 126: Tonnetz Chord Slots
+# ADR 126: Tonnetz Lattice View & Per-Step Transforms
 
 ## Status: Proposed
 
 ## Context
 
-The Tonnetz generative engine (ADR 078) currently supports a single `startChord` and a uniform `stepsPerChord` duration. All subsequent chords are derived by applying neo-Riemannian transforms (P, L, R, etc.) to the start chord.
+The Tonnetz generative engine (ADR 078) is inspired by Ornament & Crime's Tonnetz mode — neo-Riemannian transforms walking a chord lattice. However, the current implementation dilutes the generative character:
 
-This works well for exploratory/generative use, but makes it impossible to produce **deliberate chord progressions** like those common in house, pop, and film music — e.g., Bb → F → Gm → Eb (Calvin Harris style), where:
+1. **`stepsPerChord` holds the same chord for N steps** — a 16-step slot means 16 identical steps. This turns a lattice walker into a slow chord sequencer.
+2. **No lattice visualization** — the user edits a list of dropdown selectors with no spatial sense of where they are on the lattice or where transforms lead.
+3. **Repetitive loops** — when slots cycle, explicit chords reset the position, producing identical repetitions instead of evolving walks.
 
-1. Specific chords are chosen intentionally, not derived from transforms
-2. Each chord may have a different duration (e.g., I held for 2 bars, then V-vi-IV 1 bar each)
+### What O&C Tonnetz does right
 
-Current limitations:
+- **1 clock = 1 transform** — every trigger advances the chord. With sequence [P, L, R], step 1 applies P, step 2 applies L, step 3 applies R, step 4 applies P again — but on the chord R produced. The harmony evolves continuously.
+- The lattice position is the state. Transforms are relative moves, not absolute destinations.
 
-- `sequence: string[]` only accepts transform operators — no way to specify an explicit chord
-- `stepsPerChord: number` is uniform — every chord occupies the same number of steps
-- With `stepsPerChord` max recently raised from 16 to 64, multi-bar progressions via transforms are possible, but the reachable chord set is constrained by the neo-Riemannian lattice
-
-### Current data model (`src/lib/types.ts:175–182`)
+### Current data model
 
 ```typescript
 interface TonnetzParams {
   engine: 'tonnetz'
   startChord: [number, number, number]
-  sequence: string[]       // 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
-  stepsPerChord: number
   voicing: 'close' | 'spread' | 'drop2'
+  sequence?: string[]       // legacy
+  stepsPerChord?: number    // legacy
+  slots?: TonnetzSlot[]     // ADR 126 v1 — being replaced
 }
 ```
-
-### Current generation (`src/lib/generative.ts:231–268`)
-
-Iterates over pattern steps, applies the next transform at each `stepsPerChord` boundary, and emits one active trig per chord with legato hold.
 
 ## Decision
 
-### 1. Introduce `TonnetzSlot` union type
+### 1. Generation: 1 step = 1 transform
 
-Each slot in the sequence is either a **transform** (operate on previous chord) or an **explicit chord** (jump to a specific triad). Each slot can optionally specify its own duration.
+The core change: every pattern step applies the next transform in the sequence. The chord changes on every step.
 
 ```typescript
-type TonnetzSlot =
-  | { op: string; steps?: number; rhythm?: TonnetzRhythm }          // transform
-  | { chord: [number, number, number]; steps?: number; rhythm?: TonnetzRhythm }  // explicit triad
-
-// Rhythm within a slot — controls which steps are active trigs vs rests
-type TonnetzRhythm =
-  | boolean[]                    // explicit pattern, e.g. [true,false,false,true,...]
-  | 'legato'                     // one trig held for full duration (default, current behavior)
-  | 'offbeat'                    // classic house offbeat stab: . x . x . x . x
-  | 'onbeat'                     // four-on-the-floor: x . . . x . . . ...
-  | 'syncopated'                 // x . x . . x . x  (Disclosure / Kaytranada style)
-  | { preset: 'euclidean'; hits: number }  // euclidean distribution of hits across slot steps
-
 interface TonnetzParams {
   engine: 'tonnetz'
   startChord: [number, number, number]
   voicing: 'close' | 'spread' | 'drop2'
-
-  // Legacy fields (backward compat — used when slots is absent)
-  sequence?: string[]
-  stepsPerChord?: number
-
-  // New: per-slot sequence with mixed transforms and explicit chords
-  slots?: TonnetzSlot[]
+  sequence: string[]           // transform ops: 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR' | '' (hold)
+  stepsPerTransform?: number   // steps each chord is held before next transform (default: 1, range 1–64)
+  rhythm?: TonnetzRhythm       // which steps are active trigs vs rests (default: 'all')
+  anchors?: TonnetzAnchor[]    // explicit chord resets at specific step positions
 }
+
+/** Anchor: force a specific chord at a specific step position */
+interface TonnetzAnchor {
+  step: number                         // 0-based step index
+  chord: [number, number, number]      // explicit triad
+}
+
+/** Rhythm pattern — controls which steps produce sound */
+type TonnetzRhythm =
+  | boolean[]
+  | 'all'                              // every step active (default)
+  | 'legato'                           // first step of each chord boundary, held for stepsPerTransform
+  | 'offbeat'                          // . x . x . x . x
+  | 'onbeat'                           // x . . . x . . .
+  | 'syncopated'                       // x . x . . x . x
+  | { preset: 'euclidean'; hits: number }
 ```
 
-**Backward compatibility**: if `slots` is absent, the engine falls back to `sequence` + `stepsPerChord` (current behavior). Migration converts legacy params to slots on first edit.
+**Key differences from v1:**
 
-### 2. Generation algorithm changes (`tonnetzGenerate`)
+- `sequence` is the transform list (cycles when exhausted). `''` = hold (no transform, chord sustains).
+- `stepsPerTransform` controls how many steps each chord is held. 1 = O&C style (chord changes every step). 4+ = pad style (chord held, then next transform). This replaces the old `stepsPerChord`.
+- `rhythm` controls which steps produce sound. `'legato'` triggers only at chord boundaries with full duration hold — classic pad behavior.
+- `anchors` are optional reset points (e.g., "at step 32, jump to F major"). These replace v1's explicit chord slots.
+- No `slots` — the slot duration concept is replaced by `stepsPerTransform` (uniform) and anchors (point resets).
+
+**Generation pseudocode:**
 
 ```
-function tonnetzGenerate(params: TonnetzParams, totalSteps: number): Trig[]
-  slots = params.slots ?? legacyToSlots(params)
+function tonnetzGenerate(params, totalSteps):
   chord = params.startChord
-  step = 0
-  slotIdx = 0
+  spt = params.stepsPerTransform ?? 1
+  anchorMap = Map(params.anchors, a => a.step → a.chord)
+  rhythm = resolveRhythm(params.rhythm ?? 'all', totalSteps)
+  seqIdx = 0
+  trigs = []
 
-  while step < totalSteps:
-    slot = slots[slotIdx % slots.length]
+  for step in 0..totalSteps:
+    // Check for anchor reset
+    if anchorMap.has(step):
+      chord = anchorMap.get(step)
+    else if step > 0 and step % spt == 0:
+      op = params.sequence[seqIdx % params.sequence.length]
+      if op != '':
+        chord = applyTonnetzOp(chord, op)
+      seqIdx++
 
-    // Determine chord for this slot
-    if slot has 'chord':
-      chord = slot.chord
-    else:
-      if slotIdx > 0 or step > 0:  // skip transform on first slot
-        chord = applyTonnetzOp(chord, slot.op)
+    isChordBoundary = step % spt == 0
+    voiced = applyVoicing(chord, params.voicing)
 
-    // Determine duration
-    dur = slot.steps ?? params.stepsPerChord ?? 4
-    dur = min(dur, totalSteps - step)
-
-    // Resolve rhythm pattern for this slot
-    rhythm = resolveRhythm(slot.rhythm ?? 'legato', dur)
-    // rhythm is boolean[] of length dur — true = active trig, false = rest
-
-    voiced = applyVoicing(chord)
-    for i in 0..dur:
-      if rhythm[i]:
-        // Find how long until next active step or slot end
-        trigDur = distance to next true in rhythm after i, or remaining steps
-        emit active trig with notes=voiced, duration=trigDur
+    if rhythm == 'legato':
+      if isChordBoundary:
+        trigs.push(active trig with notes=voiced, duration=spt)
       else:
-        emit inactive trig
+        trigs.push(inactive trig)
+    else if rhythm[step]:
+      trigs.push(active trig with notes=voiced)
+    else:
+      trigs.push(inactive trig)
 
-    step += dur
-    slotIdx++
+  return trigs
 ```
 
+- Step 0 always plays `startChord` (no transform applied).
+- Transforms applied at every `stepsPerTransform` boundary (step 0, spt, 2*spt, ...).
+- `stepsPerTransform=1`: O&C style, chord changes every step.
+- `stepsPerTransform=4`: pad style, chord held for 4 steps before next transform.
+- `rhythm='legato'`: only chord boundaries trigger, held for full `stepsPerTransform` duration.
+- Sequence cycles: transform N uses `sequence[N % sequence.length]`.
+- Anchors override the chord at specific steps — the lattice "jumps" to a new position.
+- After an anchor, transforms continue from the new chord.
+
+### 2. Tonnetz Lattice View (overlay sheet)
+
+A dedicated full-screen overlay sheet (same model as PatternSheet — ADR 054) showing an interactive Tonnetz lattice.
+
+**Visual design:**
+
 ```
-function resolveRhythm(rhythm: TonnetzRhythm, steps: number): boolean[]
-  if rhythm is boolean[]:  return rhythm (padded/trimmed to steps)
-  if rhythm == 'legato':   return [true, false, false, ...]
-  if rhythm == 'offbeat':  return [f,t,f,t,f,t,...] (length=steps)
-  if rhythm == 'onbeat':   return [t,f,f,f,t,f,f,f,...] (every 4 steps)
-  if rhythm == 'syncopated': return [t,f,t,f,f,t,f,t,...] (repeating)
-  if rhythm is euclidean:  return bjorklund(rhythm.hits, steps)
+┌─────────────────────────────────────────────────────────┐
+│  TONNETZ ─ Classic P·L·R                    [×]  close  │
+│─────────────────────────────────────────────────────────│
+│                                                         │
+│         ╱╲    ╱╲    ╱╲    ╱╲    ╱╲    ╱╲               │
+│        ╱Eb╲  ╱Bb╲  ╱ F╲  ╱ C╲  ╱ G╲  ╱ D╲              │
+│       ╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲             │
+│      ╱╲────╱╲────╱╲────╱╲────╱╲────╱╲────╱╲            │
+│     ╱Ab╲  ╱Eb╲  ╱Bb╲  ╱ F╲  ╱ C╲  ╱ G╲  ╱D ╲          │
+│    ╱ M  ╲╱ M  ╲╱ M  ╲╱ M  ╲╱ M★╲╱ M  ╲╱ M  ╲         │
+│   ╱╲────╱╲────╱╲────╱╲────╱╲────╱╲────╱╲────╱╲        │
+│  ╱ C╲  ╱ G╲  ╱ D╲  ╱ A╲  ╱ E╲  ╱ B╲  ╱F# ╲  ╲       │
+│ ╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲╱ m  ╲╱ m   ╲         │
+│ ╲────╱╲────╱╲────╱╲────╱╲────╱╲────╱╲────╱            │
+│                                                         │
+│  ★ = current chord    ● = walk path                     │
+│                                                         │
+│  SEQ: [P] [L] [R] [+]           VOICE [close ▾]        │
+│  RHYTHM [all ▾]                  ANCHORS: 0             │
+│─────────────────────────────────────────────────────────│
+│  ▶ step 12/64  Am → P → Fm → L → Db → R → Bbm         │
+│  ◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼◼  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-Key changes from current algorithm:
-- Variable duration per slot instead of uniform `stepsPerChord`
-- Explicit chord slots bypass transform chain and set `chord` directly
-- Transforms after an explicit chord operate on that chord (chain continues)
-- Slot sequence loops when exhausted (same as current `sequence` cycling)
-- Per-slot rhythm controls active/rest distribution within the slot duration
+**Lattice interaction:**
 
-### 3. Legacy conversion helper
+- **Triangle grid**: major triads (upward △) and minor triads (downward ▽) arranged in the standard Tonnetz layout. Edges shared between adjacent triangles represent P, L, R transforms.
+- **Current chord highlight** (★): shows where the lattice walker is now. Animates during playback.
+- **Walk path** (●): traces the path the walker has taken — fades over time to show directionality.
+- **Tap a triangle**: set as `startChord` (if stopped) or add as anchor (if playing/editing).
+- **Drag across triangles**: define a walk path → auto-generates the sequence of transforms needed to traverse that path.
+- **Pinch/scroll**: pan the lattice (it's infinite in theory, but render 5–7 rows centered on startChord).
+
+**Bottom controls:**
+
+- **SEQ row**: editable sequence of transform ops. Tap to change, [+] to add, swipe to remove. Visually compact pills.
+- **RHYTHM**: single selector for the whole sequence.
+- **VOICE**: voicing selector.
+- **ANCHORS**: count badge; tap to manage anchor list.
+- **Playback strip**: mini step indicator showing current position, with chord name trail.
+
+**Trigger:**
+
+- Tonnetz node double-tap in SceneView (same as PatternSheet trigger for pattern nodes).
+- "EDIT" button in DockPanel generative editor (DockPanel keeps compact summary: voicing, sequence preview, preset selector).
+
+### 3. DockPanel summary (compact)
+
+DockPanel no longer hosts the full editor. It shows:
+
+```
+┌─ TONNETZ ─────────────────────┐
+│  SEQ  P · L · R               │
+│  VOICE close    RHYTHM all    │
+│  [EDIT]  [GEN]                │
+│  MERGE [REPLACE] [FILL]       │
+│  TARGET [1: KICK]             │
+│  PRESET [Classic P·L·R ▾]    │
+└───────────────────────────────┘
+```
+
+The [EDIT] button opens the Tonnetz sheet.
+
+### 4. Backward compatibility & migration
+
+- Legacy saves with `sequence` + `stepsPerChord`: migrate by expanding — if `stepsPerChord` is 4 and `sequence` is `['P','L','R']`, the new sequence is `['P','L','R']` (same) and rhythm becomes `'all'`. The old `stepsPerChord` concept is gone; instead the chord changes every step.
+- v1 saves with `slots`: migrate by flattening — each slot's `op` is repeated for `slot.steps` times in the new sequence. Explicit chord slots become anchors at the corresponding step position.
+- `startChord`, `voicing` are unchanged.
+
+### 5. Presets
 
 ```typescript
-function legacyToSlots(params: TonnetzParams): TonnetzSlot[] {
-  // First slot: no transform (uses startChord as-is)
-  const slots: TonnetzSlot[] = [{ op: 'P', steps: params.stepsPerChord }]
-  // Actually, first chord is startChord with no transform applied.
-  // We model this as: first slot is implicit (startChord plays for stepsPerChord),
-  // then each sequence entry becomes a slot.
-  // But to keep the slot array self-contained, we can use an explicit chord for slot 0:
-  return [
-    { chord: [...params.startChord], steps: params.stepsPerChord },
-    ...params.sequence.map(op => ({ op, steps: params.stepsPerChord })),
-  ]
-}
-```
+// O&C-style generative walks
+{ name: 'Classic P·L·R', sequence: ['P', 'L', 'R'] }
+{ name: 'Cinematic Walk', sequence: ['L', 'P', 'R', 'L'], voicing: 'spread' }
+{ name: 'Jazz Drift', sequence: ['PL', 'R', 'L', 'PR'], voicing: 'drop2' }
+{ name: 'Minimal P', sequence: ['P'] }
+{ name: 'Dark Walk', sequence: ['R', 'L', 'P'], startChord: [48, 51, 55], voicing: 'spread' }
 
-### 4. UI changes (DockGenerativeEditor)
+// Chord progressions with anchors + rhythm
+{ name: 'House Stabs', rhythm: 'offbeat', anchors: [
+  { step: 0, chord: [60,64,67] }, { step: 16, chord: [55,60,64] },
+  { step: 32, chord: [57,60,64] }, { step: 48, chord: [53,57,60] },
+], sequence: [''] }  // hold between anchors
 
-Replace the current OPS sequence editor with a slot editor:
+{ name: 'Pad Progression', anchors: [
+  { step: 0, chord: [60,64,67] }, { step: 32, chord: [53,57,60] },
+  { step: 48, chord: [55,59,62] },
+], sequence: [''] }
 
-```
-┌─ TONNETZ ────────────────────────────────────────────┐
-│  VOICING [close ▾]                                   │
-│                                                      │
-│  ┌─ SLOT 1 ───────────────────────────────────────┐  │
-│  │ [CHORD ▾]  C [maj ▾]  STEPS [16]  [offbeat ▾] │  │
-│  └────────────────────────────────────────────────┘  │
-│  ┌─ SLOT 2 ───────────────────────────────────────┐  │
-│  │ [XFORM ▾]  [P ▾]      STEPS [16]  [legato ▾]  │  │
-│  └────────────────────────────────────────────────┘  │
-│  ┌─ SLOT 3 ───────────────────────────────────────┐  │
-│  │ [CHORD ▾]  F [maj ▾]  STEPS [8]   [offbeat ▾] │  │
-│  └────────────────────────────────────────────────┘  │
-│  ┌─ SLOT 4 ───────────────────────────────────────┐  │
-│  │ [XFORM ▾]  [R ▾]      STEPS [8]   [eucl 5 ▾]  │  │
-│  └────────────────────────────────────────────────┘  │
-│  [+ Add Slot]  [− Remove]                            │
-└──────────────────────────────────────────────────────┘
-```
-
-Each slot row has:
-- **Mode toggle**: `CHORD` (explicit) or `XFORM` (transform) — dropdown or segmented button
-- **CHORD mode**: root note picker + quality (maj/min) — same controls as current startChord
-- **XFORM mode**: transform picker (P/L/R/PL/PR/LR/PLR) — same as current OPS
-- **STEPS**: per-slot duration (1–64), small number stepper
-- **RHYTHM**: dropdown — `legato` (default), `offbeat`, `onbeat`, `syncopated`, `eucl N` (euclidean with hit count)
-
-The existing `startChord` controls remain for setting the initial chord. Slot 0 defaults to `{ chord: startChord }`.
-
-### 5. Validation & migration
-
-- `validateSongData()` accepts both legacy (sequence + stepsPerChord) and new (slots) formats
-- `restoreSong()` auto-migrates: if `slots` is absent and `sequence` exists, convert via `legacyToSlots()`
-- Slot validation: each slot must have either `op` (valid transform string) or `chord` (3-element MIDI array); `steps` if present must be 1–64
-
-### 6. Preset updates
-
-Add house/pop progression presets alongside existing transform-only presets:
-
-```typescript
-{ name: 'House Stabs', engine: 'tonnetz', params: {
-  engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-  slots: [
-    { chord: [60, 64, 67], steps: 16, rhythm: 'offbeat' },  // C major, offbeat stabs
-    { chord: [55, 60, 64], steps: 16, rhythm: 'offbeat' },  // G major
-    { chord: [57, 60, 64], steps: 16, rhythm: 'offbeat' },  // Am
-    { chord: [53, 57, 60], steps: 16, rhythm: 'offbeat' },  // F major
-  ]
-}},
-{ name: 'Pad Progression', engine: 'tonnetz', params: {
-  engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'spread',
-  slots: [
-    { chord: [60, 64, 67], steps: 32 },  // C major, 2 bars legato
-    { chord: [53, 57, 60], steps: 16 },  // F major, 1 bar
-    { chord: [55, 59, 62], steps: 16 },  // G major, 1 bar
-  ]
-}},
-{ name: 'Hybrid P·L + Jump', engine: 'tonnetz', params: {
-  engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'spread',
-  slots: [
-    { op: 'P', steps: 16, rhythm: 'legato' },
-    { op: 'L', steps: 16, rhythm: 'syncopated' },
-    { chord: [53, 57, 60], steps: 16, rhythm: 'offbeat' },  // F major anchor
-    { op: 'R', steps: 16, rhythm: { preset: 'euclidean', hits: 5 } },
-  ]
-}},
+// Hybrid: walk + anchor reset
+{ name: 'Walk & Reset', sequence: ['P', 'L', 'R'],
+  anchors: [{ step: 32, chord: [60, 64, 67] }] }  // reset to C at bar 3
 ```
 
 ## Implementation Checklist
 
-### Phase 1: Data model & generation
-- [ ] Add `TonnetzSlot`, `TonnetzRhythm` types and optional `slots` field to `TonnetzParams` in `types.ts`
-- [ ] Implement `legacyToSlots()` in `generative.ts`
-- [ ] Implement `resolveRhythm()` with preset patterns (legato, offbeat, onbeat, syncopated) and euclidean (Bjorklund)
-- [ ] Update `tonnetzGenerate()` to use slots with per-slot duration and rhythm
-- [ ] Add validation for slots format in `validate.ts`
-- [ ] Add migration in `restoreSong()` (legacy → slots)
-- [ ] Unit tests: slot-based generation, mixed chord/transform, variable duration, rhythm patterns, legacy compat
+### Phase 1: Generation engine rewrite + DockPanel
+- [x] Rewrite `tonnetzGenerate()` — transforms applied every `stepsPerTransform` steps
+- [x] Add `stepsPerTransform` param (1–64, default 1 for O&C style, 4 for default node)
+- [x] Add `TonnetzAnchor` type and anchor support in generation
+- [x] Replace `TonnetzSlot` with new `TonnetzParams` shape (sequence + rhythm + anchors + stepsPerTransform)
+- [x] Update `TonnetzRhythm` — add `'all'`, restore `'legato'` (first of each chord boundary)
+- [x] Migrate v1 slots → new format in `restoreScene()`
+- [x] Migrate legacy `stepsPerChord` → new format
+- [x] Update validation in `validate.ts` (anchors, sequence)
+- [x] Replace DockPanel slot editor with compact summary (RATE knob, SEQ, VOICE, RHYTHM)
+- [x] Update SceneView faceplate + sceneGeometry label for new params
+- [x] Update presets to new format (O&C walks + anchor-based progressions)
+- [x] Update default Tonnetz config in sceneActions
+- [x] Update Playground generator component
+- [x] Unit tests: per-step transforms, anchors, rhythm, stepsPerTransform, legato, evolution (477 passing)
 
-### Phase 2: UI
-- [ ] Replace OPS editor with slot editor in `DockGenerativeEditor.svelte`
-- [ ] Per-slot mode toggle (CHORD / XFORM)
-- [ ] Per-slot step stepper
-- [ ] Per-slot rhythm selector
-- [ ] Add/remove slot buttons
-- [ ] SceneView faceplate: show chord names instead of op labels when slots have explicit chords
+### Phase 2: Tonnetz Lattice View
+- [x] Create `TonnetzSheet.svelte` overlay component (ADR 054 sheet model)
+- [x] SVG triangle lattice rendering (7×5 vertex grid, △ major / ▽ minor)
+- [x] Tap triangle → set startChord + auto-regenerate
+- [x] Current chord highlight (olive = start, blue = playing)
+- [x] Walk path trail (olive polyline connecting visited chords on lattice)
+- [x] Walk-visited triangles highlighted (faded olive)
+- [x] Playback chord name trail (bottom strip: chord history with → arrows)
+- [x] Drag across triangles → auto-detect transforms, set sequence from path
+- [x] SEQ pills now editable (per-op select dropdowns)
+- [x] Bottom controls: SEQ pills (+/−/edit), RATE input, VOICE select, RHYTHM select
+- [x] Sheet trigger: Tonnetz node double-tap in SceneView + DockPanel [EDIT] button
+- [x] Anchor management: right-click triangle to add, × to remove, badge display with step positions
 
-### Phase 3: Presets & polish
-- [ ] Add house/pop progression presets
-- [ ] Update Playground generator component
-- [ ] Update docs (tonnetz.mdx EN + JA)
+### Phase 3: Docs
+- [ ] Update tonnetz.mdx (EN + JA)
 
 ## Considerations
 
-- **Why not a separate `progression` engine?** The transform + explicit chord hybrid is more powerful than either alone. A dedicated engine would duplicate voicing logic, merge modes, and UI infrastructure. Keeping it as a Tonnetz extension means users can freely mix generative transforms with deliberate chords.
+- **Why remove slots?** The slot model (hold chord for N steps) conflicts with O&C-style per-step transforms. Anchors achieve the same "explicit chord at a point" goal without imposing duration-based thinking. The sequence is purely about transforms; anchors are purely about position resets.
 
-- **startChord redundancy**: When `slots[0]` is an explicit chord, `startChord` is technically unused. We keep it for backward compat and as a fallback (if slot 0 is a transform, startChord is the initial chord). Could also serve as a "key center" hint for future UI features.
+- **Performance**: SVG lattice with ~50–100 triangles is lightweight. Walk path animation uses CSS transitions, not per-frame rendering.
 
-- **Slot count limit**: No hard cap, but UI should scroll gracefully. Practical limit is total steps ÷ minimum slot duration. Most house/pop progressions use 4–8 slots.
+- **Mobile**: The lattice view works well with touch — tap triangles, drag paths. The sheet model already handles mobile viewport.
+
+- **Lattice bounds**: The Tonnetz is theoretically infinite but enharmonically wraps after ~30 fifths. Render 5–7 rows centered on startChord; pan to follow the walk if it drifts far.
 
 ## Future Extensions
 
-- **Chord quality beyond triads**: 7th chords (4-note), sus2/sus4, add9 — would require changing `chord` from `[number, number, number]` to `number[]`
-- **Roman numeral input mode**: key-aware entry (I, IV, V, vi) that auto-generates MIDI triads — UI convenience layer on top of slots
-- **Strum / arpeggio per slot**: per-slot note spread timing for strummed chord textures
-- **Custom rhythm editor**: tap-in or grid-draw for `boolean[]` rhythm patterns beyond presets
-- **Tonnetz lattice visualization**: 2D hex grid showing chord positions and transform paths — interactive slot editing by clicking lattice nodes
-- **Generative rhythm via Turing Machine**: feed Turing gate output into slot rhythm for evolving stab patterns
+- **Chord quality beyond triads**: 7th, sus2/sus4, add9 — extend `chord` from `[n,n,n]` to `number[]`
+- **Roman numeral input**: key-aware I, IV, V, vi → MIDI conversion for anchors
+- **Strum / arpeggio**: per-step note spread timing
+- **Generative rhythm via Turing Machine**: feed Turing gate output into Tonnetz rhythm
+- **Lattice zoom levels**: overview (full lattice) vs detail (single neighborhood with voice-leading arrows)
+- **Path recording**: play a MIDI keyboard → record the lattice walk as a sequence

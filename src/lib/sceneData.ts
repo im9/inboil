@@ -3,8 +3,7 @@
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 
-import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType, TonnetzParams } from './types.ts'
-import { legacyToSlots } from './generative.ts'
+import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType, TonnetzParams, TonnetzSlot, TonnetzAnchor } from './types.ts'
 
 // ── Clone helpers ──
 
@@ -36,14 +35,19 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
       ...n.generative,
       params: { ...n.generative.params },
     }
-    // Deep-clone array/tuple fields in params (slots contain objects, need deeper clone)
+    // Deep-clone array/tuple fields in params (slots contain nested arrays like chord/rhythm)
     const p = n.generative.params as unknown as Record<string, unknown>
     const cp = clone.generative.params as unknown as Record<string, unknown>
     for (const k of Object.keys(p)) {
       if (Array.isArray(p[k])) {
-        cp[k] = (p[k] as unknown[]).map(v =>
-          typeof v === 'object' && v !== null ? { ...v } : v
-        )
+        cp[k] = (p[k] as unknown[]).map(v => {
+          if (typeof v !== 'object' || v === null) return v
+          const obj: Record<string, unknown> = {}
+          for (const [key, val] of Object.entries(v as Record<string, unknown>)) {
+            obj[key] = Array.isArray(val) ? [...val] : val
+          }
+          return obj
+        })
       }
     }
   }
@@ -100,12 +104,40 @@ export function restoreScene(src: Scene | undefined): Scene {
       }
     }
   }
-  // ADR 126: migrate legacy Tonnetz params (sequence + stepsPerChord) → slots
+  // ADR 126 v2: migrate Tonnetz params to per-step format
   for (const n of nodes) {
     if (n.generative?.params) {
-      const tp = n.generative.params as TonnetzParams
-      if (tp.engine === 'tonnetz' && !tp.slots && tp.sequence) {
-        tp.slots = legacyToSlots(tp)
+      const tp = n.generative.params as TonnetzParams & { slots?: TonnetzSlot[]; stepsPerChord?: number }
+      if (tp.engine === 'tonnetz') {
+        // Migrate v1 slots → new format (sequence + anchors)
+        if (tp.slots && !Array.isArray(tp.sequence)) {
+          const sequence: string[] = []
+          const anchors: TonnetzAnchor[] = []
+          let step = 0
+          for (const slot of tp.slots) {
+            const dur = slot.steps ?? tp.stepsPerChord ?? 4
+            if ('chord' in slot && slot.chord) {
+              anchors.push({ step, chord: [...slot.chord] as [number, number, number] })
+              // Fill steps with hold
+              for (let i = 0; i < dur; i++) sequence.push('')
+            } else {
+              const op = ('op' in slot ? slot.op : '') ?? ''
+              for (let i = 0; i < dur; i++) sequence.push(op)
+            }
+            step += dur
+          }
+          tp.sequence = sequence.length > 0 ? sequence : ['P', 'L', 'R']
+          if (anchors.length > 0) tp.anchors = anchors
+          delete tp.slots
+        }
+        // Migrate legacy stepsPerChord (pre-v1) — sequence already present, just remove stepsPerChord
+        if (tp.stepsPerChord != null && !tp.slots) {
+          delete tp.stepsPerChord
+        }
+        // Ensure sequence exists
+        if (!tp.sequence || !Array.isArray(tp.sequence)) {
+          tp.sequence = ['P', 'L', 'R']
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { turingGenerate, quantizeTrigs, tonnetzGenerate, legacyToSlots, resolveRhythm, SCALE_MAP } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate, resolveRhythm, SCALE_MAP } from './generative.ts'
 import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './types.ts'
 
 describe('turingGenerate', () => {
@@ -143,14 +143,13 @@ describe('quantizeTrigs', () => {
   })
 })
 
-// ── Tonnetz ──
+// ── Tonnetz (ADR 126 v2: 1 step = 1 transform) ──
 
 describe('tonnetzGenerate', () => {
   const baseParams: TonnetzParams = {
     engine: 'tonnetz',
     startChord: [60, 64, 67], // C major
     sequence: ['P', 'L', 'R'],
-    stepsPerChord: 4,
     voicing: 'close',
   }
 
@@ -159,79 +158,85 @@ describe('tonnetzGenerate', () => {
     expect(trigs).toHaveLength(16)
   })
 
-  it('active trigs have poly notes (chords)', () => {
-    const trigs = tonnetzGenerate(baseParams, 16)
+  it('every step is active by default (rhythm: all)', () => {
+    const trigs = tonnetzGenerate(baseParams, 8)
+    expect(trigs.every(t => t.active)).toBe(true)
+  })
+
+  it('every active trig has poly notes (chords)', () => {
+    const trigs = tonnetzGenerate(baseParams, 8)
     for (const t of trigs.filter(t => t.active)) {
       expect(t.notes).toBeDefined()
       expect(t.notes!.length).toBe(3)
     }
   })
 
-  it('first chord matches startChord', () => {
-    const trigs = tonnetzGenerate(baseParams, 4)
-    // First chord should be C major [60, 64, 67] in close voicing
+  it('step 0 plays startChord (no transform)', () => {
+    const trigs = tonnetzGenerate(baseParams, 1)
     expect(trigs[0].notes).toEqual([60, 64, 67])
   })
 
-  it('P transform flips major to minor', () => {
-    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerChord: 4 }
-    const trigs = tonnetzGenerate(params, 8)
-    // Step 4 should be C minor (P of C major): root stays, third moves
-    const chord2 = trigs[4].notes!
-    // C minor = [60, 63, 67] (but may be normalized)
+  it('step 1 applies sequence[0], step 2 applies sequence[1]', () => {
+    const trigs = tonnetzGenerate(baseParams, 3)
+    // step 0: C major (start)
+    // step 1: P(C maj) = C minor
+    // step 2: L(C min) = Ab major (or normalized equivalent)
+    expect(trigs[0].notes).toEqual([60, 64, 67])
+    expect(trigs[1].notes).not.toEqual(trigs[0].notes) // P changed it
+    expect(trigs[2].notes).not.toEqual(trigs[1].notes) // L changed it
+  })
+
+  it('P transform flips major to minor on step 1', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'] }
+    const trigs = tonnetzGenerate(params, 2)
+    const chord2 = trigs[1].notes!
     const intervals = [chord2[1] - chord2[0], chord2[2] - chord2[1]]
     expect(intervals).toEqual([3, 4]) // minor triad
   })
 
-  it('chords change at stepsPerChord boundaries', () => {
-    const trigs = tonnetzGenerate(baseParams, 12)
-    // Step 0: active chord trig, steps 1-3: inactive (legato)
-    expect(trigs[0].active).toBe(true)
-    expect(trigs[1].active).toBe(false)
-    expect(trigs[3].active).toBe(false)
-    // Step 4: new chord (different)
-    expect(trigs[4].active).toBe(true)
-    expect(trigs[0].notes).not.toEqual(trigs[4].notes)
+  it('transforms produce chord changes across steps', () => {
+    const trigs = tonnetzGenerate(baseParams, 4)
+    // step 0: C major, step 1: P(C)=Cm, step 2: L(Cm), step 3: R(L(Cm))
+    expect(trigs[0].notes).not.toEqual(trigs[1].notes) // P changes chord
+    expect(trigs[1].notes).not.toEqual(trigs[2].notes) // L changes chord
+    // Note: some transforms can return to a previously visited chord (lattice cycles)
+    // so we don't assert all consecutive pairs differ
   })
 
-  it('legato duration spans chord steps', () => {
-    const trigs = tonnetzGenerate(baseParams, 16)
-    // Each chord boundary trig should have duration = stepsPerChord
-    expect(trigs[0].duration).toBe(4)
-    expect(trigs[4].duration).toBe(4)
-    expect(trigs[8].duration).toBe(4)
+  it('sequence cycles when exhausted', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'] }
+    const trigs = tonnetzGenerate(params, 5)
+    // P flips major↔minor each step: C→Cm→C→Cm→C
+    expect(trigs[0].notes).toEqual(trigs[2].notes) // same after 2 P's
+    expect(trigs[0].notes).toEqual(trigs[4].notes) // same after 4 P's
+    expect(trigs[0].notes).not.toEqual(trigs[1].notes)
+  })
+
+  it('hold op ("") keeps chord unchanged', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['', 'P'] }
+    const trigs = tonnetzGenerate(params, 3)
+    // step 0: startChord, step 1: hold (same), step 2: P (changes)
+    expect(trigs[0].notes).toEqual(trigs[1].notes)
+    expect(trigs[2].notes).not.toEqual(trigs[1].notes)
   })
 
   it('spread voicing raises middle note', () => {
     const params: TonnetzParams = { ...baseParams, voicing: 'spread' }
-    const trigs = tonnetzGenerate(params, 4)
+    const trigs = tonnetzGenerate(params, 1)
     const notes = trigs[0].notes!
-    // Spread: [root, middle+12, fifth]
     expect(notes[1] - notes[0]).toBeGreaterThan(12)
   })
 
   it('drop2 voicing reorders voices', () => {
     const params: TonnetzParams = { ...baseParams, voicing: 'drop2' }
-    const trigs = tonnetzGenerate(params, 4)
+    const trigs = tonnetzGenerate(params, 1)
     const notes = trigs[0].notes!
-    // Drop2: [root, fifth, middle+12]
     expect(notes[2]).toBeGreaterThan(notes[1])
     expect(notes[2] - notes[0]).toBeGreaterThan(12)
   })
 
-  it('only chord boundary trigs are active', () => {
-    const trigs = tonnetzGenerate(baseParams, 16)
-    // 16 steps / 4 per chord = 4 active trigs
-    expect(trigs.filter(t => t.active).length).toBe(4)
-    expect(trigs[0].active).toBe(true)
-    expect(trigs[4].active).toBe(true)
-    expect(trigs[8].active).toBe(true)
-    expect(trigs[12].active).toBe(true)
-  })
-
-  it('MIDI notes stay in reasonable range', () => {
-    // Long sequence to test range doesn't drift
-    const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L', 'R', 'PL', 'PR', 'LR'], stepsPerChord: 2 }
+  it('MIDI notes stay in reasonable range over 64 steps', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L', 'R', 'PL', 'PR', 'LR'] }
     const trigs = tonnetzGenerate(params, 64)
     for (const t of trigs.filter(t => t.active)) {
       for (const n of t.notes!) {
@@ -240,33 +245,124 @@ describe('tonnetzGenerate', () => {
       }
     }
   })
-})
 
-// ── legacyToSlots ──
+  it('offbeat rhythm makes alternating steps active/rest', () => {
+    const params: TonnetzParams = { ...baseParams, rhythm: 'offbeat' }
+    const trigs = tonnetzGenerate(params, 8)
+    expect(trigs[0].active).toBe(false)
+    expect(trigs[1].active).toBe(true)
+    expect(trigs[2].active).toBe(false)
+    expect(trigs[3].active).toBe(true)
+    expect(trigs.filter(t => t.active).length).toBe(4)
+  })
 
-describe('legacyToSlots', () => {
-  it('converts sequence + stepsPerChord to slot array', () => {
+  it('rest steps still advance the transform sequence', () => {
+    // Use P,L so transforms don't cancel out
+    const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L'], rhythm: 'offbeat' }
+    const trigs = tonnetzGenerate(params, 4)
+    // step 0: rest, step 1: active (P+L applied so far), step 2: rest, step 3: active
+    // Active trigs at 1 and 3 should have different chords (2 more transforms applied)
+    expect(trigs[1].active).toBe(true)
+    expect(trigs[3].active).toBe(true)
+    expect(trigs[1].notes).not.toEqual(trigs[3].notes)
+  })
+
+  it('anchor resets chord at specific step', () => {
     const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67],
-      sequence: ['P', 'L', 'R'], stepsPerChord: 4, voicing: 'close',
+      ...baseParams,
+      sequence: ['P', 'L', 'R'],
+      anchors: [{ step: 4, chord: [53, 57, 60] }], // F major at step 4
     }
-    const slots = legacyToSlots(params)
-    // First slot is explicit chord (startChord), rest are transforms
-    expect(slots).toHaveLength(4) // 1 chord + 3 ops
-    expect((slots[0] as { chord: number[] }).chord).toEqual([60, 64, 67])
-    expect(slots[0].steps).toBe(4)
-    expect((slots[1] as { op: string }).op).toBe('P')
-    expect((slots[2] as { op: string }).op).toBe('L')
-    expect((slots[3] as { op: string }).op).toBe('R')
+    const trigs = tonnetzGenerate(params, 6)
+    // step 4: anchor resets to F major
+    expect(trigs[4].notes).toEqual([53, 57, 60])
+    // step 5: transform continues from F major
+    expect(trigs[5].notes).not.toEqual(trigs[4].notes)
+  })
+
+  it('anchor at step 0 overrides startChord', () => {
+    const params: TonnetzParams = {
+      ...baseParams,
+      anchors: [{ step: 0, chord: [53, 57, 60] }],
+    }
+    const trigs = tonnetzGenerate(params, 2)
+    expect(trigs[0].notes).toEqual([53, 57, 60]) // F major, not C major
+  })
+
+  it('multiple anchors create a progression with evolving fills', () => {
+    const params: TonnetzParams = {
+      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
+      sequence: ['P', 'L'],
+      anchors: [
+        { step: 0, chord: [60, 64, 67] },  // C
+        { step: 4, chord: [53, 57, 60] },  // F
+      ],
+    }
+    const trigs = tonnetzGenerate(params, 8)
+    expect(trigs[0].notes).toEqual([60, 64, 67]) // C anchor
+    expect(trigs[4].notes).toEqual([53, 57, 60]) // F anchor
+    // steps 1-3: P,L,P from C — evolving
+    // steps 5-7: L,P,L from F — evolving
+    expect(trigs[1].notes).not.toEqual(trigs[0].notes)
+    expect(trigs[5].notes).not.toEqual(trigs[4].notes)
+  })
+
+  it('euclidean rhythm distributes hits', () => {
+    const params: TonnetzParams = { ...baseParams, rhythm: { preset: 'euclidean', hits: 3 } }
+    const trigs = tonnetzGenerate(params, 8)
+    expect(trigs.filter(t => t.active).length).toBe(3)
+  })
+
+  // stepsPerTransform tests
+  it('stepsPerTransform=4 holds chord for 4 steps before next transform', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 4 }
+    const trigs = tonnetzGenerate(params, 8)
+    // Steps 0-3: startChord, steps 4-7: P(startChord)
+    expect(trigs[0].notes).toEqual(trigs[1].notes)
+    expect(trigs[0].notes).toEqual(trigs[3].notes)
+    expect(trigs[4].notes).not.toEqual(trigs[0].notes) // P applied at boundary
+    expect(trigs[4].notes).toEqual(trigs[7].notes) // held for 4 steps
+  })
+
+  it('stepsPerTransform=1 changes chord every step (default)', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'] }
+    const trigs = tonnetzGenerate(params, 3)
+    // step 0: start, step 1: P(start), step 2: PP(start)
+    expect(trigs[0].notes).not.toEqual(trigs[1].notes)
+    expect(trigs[1].notes).not.toEqual(trigs[2].notes)
+  })
+
+  it('legato rhythm triggers only at chord boundaries', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 4, rhythm: 'legato' }
+    const trigs = tonnetzGenerate(params, 8)
+    // Step 0: active (chord boundary), steps 1-3: inactive (held)
+    expect(trigs[0].active).toBe(true)
+    expect(trigs[0].duration).toBe(4)
+    expect(trigs[1].active).toBe(false)
+    expect(trigs[3].active).toBe(false)
+    // Step 4: active (new chord)
+    expect(trigs[4].active).toBe(true)
+    expect(trigs[4].duration).toBe(4)
+    expect(trigs.filter(t => t.active).length).toBe(2)
+  })
+
+  it('offbeat + stepsPerTransform=4 gives stabs within each chord', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 4, rhythm: 'offbeat' }
+    const trigs = tonnetzGenerate(params, 8)
+    // offbeat: .x.x.x.x — all use the same chord within each 4-step block
+    expect(trigs[0].active).toBe(false)
+    expect(trigs[1].active).toBe(true)
+    expect(trigs[1].notes).toEqual(trigs[3].notes) // same chord in block
+    expect(trigs[5].notes).not.toEqual(trigs[1].notes) // different chord after transform
   })
 })
 
 // ── resolveRhythm ──
 
 describe('resolveRhythm', () => {
-  it('legato: first step true, rest false', () => {
-    const r = resolveRhythm('legato', 4)
-    expect(r).toEqual([true, false, false, false])
+  it('all: every step true', () => {
+    const r = resolveRhythm('all', 4)
+    expect(r).toEqual([true, true, true, true])
   })
 
   it('offbeat: alternating false/true', () => {
@@ -286,7 +382,6 @@ describe('resolveRhythm', () => {
 
   it('euclidean: distributes hits evenly', () => {
     const r = resolveRhythm({ preset: 'euclidean', hits: 3 }, 8)
-    // Bjorklund(3,8) = [true, false, false, true, false, false, true, false]
     expect(r.filter(Boolean).length).toBe(3)
     expect(r).toHaveLength(8)
   })
@@ -294,133 +389,6 @@ describe('resolveRhythm', () => {
   it('boolean array: padded or trimmed to length', () => {
     expect(resolveRhythm([true, false], 4)).toEqual([true, false, false, false])
     expect(resolveRhythm([true, false, true, true, true], 3)).toEqual([true, false, true])
-  })
-})
-
-// ── tonnetzGenerate with slots (ADR 126) ──
-
-describe('tonnetzGenerate with slots', () => {
-  const baseSlotParams: TonnetzParams = {
-    engine: 'tonnetz',
-    startChord: [60, 64, 67],
-    voicing: 'close',
-    slots: [
-      { chord: [60, 64, 67], steps: 4 },  // C major
-      { op: 'P', steps: 4 },               // → C minor
-    ],
-  }
-
-  it('generates correct step count', () => {
-    const trigs = tonnetzGenerate(baseSlotParams, 16)
-    expect(trigs).toHaveLength(16)
-  })
-
-  it('explicit chord slot uses given chord', () => {
-    const trigs = tonnetzGenerate(baseSlotParams, 8)
-    expect(trigs[0].notes).toEqual([60, 64, 67])
-  })
-
-  it('transform slot applies op to previous chord', () => {
-    const trigs = tonnetzGenerate(baseSlotParams, 8)
-    // Slot 1 is P transform of C major → C minor
-    const chord2 = trigs[4].notes!
-    const intervals = [chord2[1] - chord2[0], chord2[2] - chord2[1]]
-    expect(intervals).toEqual([3, 4]) // minor triad
-  })
-
-  it('variable duration per slot', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [
-        { chord: [60, 64, 67], steps: 8 },
-        { chord: [53, 57, 60], steps: 4 },
-        { chord: [55, 59, 62], steps: 4 },
-      ],
-    }
-    const trigs = tonnetzGenerate(params, 16)
-    expect(trigs[0].active).toBe(true)
-    expect(trigs[0].duration).toBe(8)
-    expect(trigs[8].active).toBe(true)
-    expect(trigs[8].duration).toBe(4)
-    expect(trigs[12].active).toBe(true)
-    expect(trigs[12].duration).toBe(4)
-  })
-
-  it('slots loop when exhausted', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [{ chord: [60, 64, 67], steps: 4 }],
-    }
-    const trigs = tonnetzGenerate(params, 12)
-    // Single 4-step slot loops 3 times
-    expect(trigs.filter(t => t.active).length).toBe(3)
-    expect(trigs[0].notes).toEqual(trigs[4].notes)
-    expect(trigs[0].notes).toEqual(trigs[8].notes)
-  })
-
-  it('offbeat rhythm produces alternating rests and trigs', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [{ chord: [60, 64, 67], steps: 8, rhythm: 'offbeat' }],
-    }
-    const trigs = tonnetzGenerate(params, 8)
-    // offbeat: .x.x.x.x — steps 1,3,5,7 active
-    expect(trigs[0].active).toBe(false)
-    expect(trigs[1].active).toBe(true)
-    expect(trigs[2].active).toBe(false)
-    expect(trigs[3].active).toBe(true)
-    expect(trigs.filter(t => t.active).length).toBe(4)
-  })
-
-  it('onbeat rhythm triggers every 4 steps', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [{ chord: [60, 64, 67], steps: 8, rhythm: 'onbeat' }],
-    }
-    const trigs = tonnetzGenerate(params, 8)
-    expect(trigs[0].active).toBe(true)
-    expect(trigs[4].active).toBe(true)
-    expect(trigs.filter(t => t.active).length).toBe(2)
-  })
-
-  it('transform after explicit chord operates on that chord', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [
-        { chord: [53, 57, 60], steps: 4 },  // F major
-        { op: 'P', steps: 4 },               // → F minor
-      ],
-    }
-    const trigs = tonnetzGenerate(params, 8)
-    // First slot: F major
-    expect(trigs[0].notes).toEqual([53, 57, 60])
-    // Second slot: P of F major = F minor [53, 56, 60]
-    const chord2 = trigs[4].notes!
-    const intervals = [chord2[1] - chord2[0], chord2[2] - chord2[1]]
-    expect(intervals).toEqual([3, 4]) // minor
-  })
-
-  it('legacy params (no slots) still work via fallback', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67],
-      sequence: ['P'], stepsPerChord: 4, voicing: 'close',
-    }
-    const trigs = tonnetzGenerate(params, 8)
-    expect(trigs).toHaveLength(8)
-    expect(trigs[0].active).toBe(true)
-    expect(trigs[0].notes).toEqual([60, 64, 67])
-    // Step 4: P transform → minor
-    const intervals = [trigs[4].notes![1] - trigs[4].notes![0], trigs[4].notes![2] - trigs[4].notes![1]]
-    expect(intervals).toEqual([3, 4])
-  })
-
-  it('euclidean rhythm distributes hits correctly', () => {
-    const params: TonnetzParams = {
-      engine: 'tonnetz', startChord: [60, 64, 67], voicing: 'close',
-      slots: [{ chord: [60, 64, 67], steps: 8, rhythm: { preset: 'euclidean', hits: 3 } }],
-    }
-    const trigs = tonnetzGenerate(params, 8)
-    expect(trigs.filter(t => t.active).length).toBe(3)
   })
 })
 

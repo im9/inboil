@@ -21,7 +21,7 @@ export type {
   Trig, CellInsertFx, CellSampleRef, Cell, ChainFx, Pattern, Section, Track, Effects,
   SceneDecorator, AutomationPoint, AutomationTarget, AutomationParams, AutomationSnapshot,
   ModifierType, ModifierParams,
-  GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams, TonnetzSlot, TonnetzRhythm,
+  GenerativeEngine, GenerativeConfig, TuringParams, QuantizerParams, TonnetzParams, TonnetzAnchor, TonnetzRhythm, TonnetzSlot,
   SceneNode, SceneEdge, SceneLabel, Scene, Song,
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
@@ -208,7 +208,7 @@ export const playback = $state({
 export const ui = $state<{
   selectedTrack: number
   currentPattern: number
-  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf'
+  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf' | 'tonnetz'
   viewFocus: 'pattern' | 'scene'
   patternSheet: boolean
   patternSheetOrigin: { x: number; y: number } | null
@@ -230,6 +230,7 @@ export const ui = $state<{
   stepPageSize: number
   sweepTab: boolean
   granularMode2: boolean
+  tonnetzNodeId: string | null
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -255,6 +256,7 @@ export const ui = $state<{
   stepPageSize: 16,
   sweepTab: false,
   granularMode2: false,
+  tonnetzNodeId: null,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */

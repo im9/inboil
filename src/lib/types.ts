@@ -172,33 +172,41 @@ export interface QuantizerParams {
   octaveRange: [number, number]
 }
 
-/** Rhythm pattern within a Tonnetz chord slot (ADR 126) */
+/** Rhythm pattern for Tonnetz generation (ADR 126 v2) */
 export type TonnetzRhythm =
   | boolean[]                                  // explicit pattern
-  | 'legato'                                   // one trig held for full duration (default)
+  | 'all'                                      // every step active (default)
+  | 'legato'                                   // first step of each chord active, rest held
   | 'offbeat'                                  // . x . x . x . x
   | 'onbeat'                                   // x . . . x . . .
   | 'syncopated'                               // x . x . . x . x
   | { preset: 'euclidean'; hits: number }      // Bjorklund distribution
 
-/** A single slot in a Tonnetz chord sequence (ADR 126) */
-export type TonnetzSlot =
-  | { op: string; steps?: number; rhythm?: TonnetzRhythm }
-  | { chord: [number, number, number]; steps?: number; rhythm?: TonnetzRhythm }
+/** Anchor: force a specific chord at a specific step (ADR 126 v2) */
+export interface TonnetzAnchor {
+  step: number
+  chord: [number, number, number]
+}
 
-/** Tonnetz / neo-Riemannian chord transform (ADR 078 Phase 3, slots ADR 126) */
+/** Tonnetz / neo-Riemannian per-step transforms (ADR 078, rewritten ADR 126 v2) */
 export interface TonnetzParams {
   engine: 'tonnetz'
   startChord: [number, number, number]
   voicing: 'close' | 'spread' | 'drop2'
+  sequence: string[]         // transform ops: 'P'|'L'|'R'|'PL'|'PR'|'LR'|'PLR'|'' (hold)
+  stepsPerTransform?: number // how many steps each chord is held (default: 1, range 1–64)
+  rhythm?: TonnetzRhythm     // which steps are active (default: 'all'; 'legato' = first of each chord)
+  anchors?: TonnetzAnchor[]  // explicit chord resets at specific steps
 
-  // Legacy fields (backward compat — used when slots is absent)
-  sequence?: string[]       // 'P' | 'L' | 'R' | 'PL' | 'PR' | 'LR' | 'PLR'
+  // Legacy fields (migration only — stripped after restore)
   stepsPerChord?: number
-
-  // Per-slot sequence with mixed transforms and explicit chords (ADR 126)
   slots?: TonnetzSlot[]
 }
+
+/** @deprecated v1 slot type — kept for migration only */
+export type TonnetzSlot =
+  | { op: string; steps?: number; rhythm?: TonnetzRhythm }
+  | { chord: [number, number, number]; steps?: number; rhythm?: TonnetzRhythm }
 
 /** Modifier + sweep node types (ADR 093, sweep ADR 118, terminology ADR 125) */
 export type ModifierType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'

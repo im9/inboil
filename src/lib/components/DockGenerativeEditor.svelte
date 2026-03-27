@@ -1,20 +1,12 @@
 <script lang="ts">
   import type { SceneNode, TuringParams, QuantizerParams, TonnetzParams } from '../state.svelte.ts'
-  import { song, pushUndo } from '../state.svelte.ts'
+  import { song, ui, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, sceneSetSeed, sceneSetTargetTrack, sceneApplyGenerativePreset, autoGenerateFromNode } from '../sceneActions.ts'
   import { SCALE_NAMES, GENERATIVE_PRESETS } from '../generative.ts'
   import Knob from './Knob.svelte'
 
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
-  function chordQuality(chord: [number, number, number]): string {
-    const i1 = chord[1] - chord[0], i2 = chord[2] - chord[1]
-    if (i1 === 4 && i2 === 3) return 'maj'
-    if (i1 === 3 && i2 === 4) return 'min'
-    if (i1 === 3 && i2 === 3) return 'dim'
-    if (i1 === 4 && i2 === 4) return 'aug'
-    return ''
-  }
 
   const { node }: { node: SceneNode } = $props()
 
@@ -136,16 +128,20 @@
     {@const tnp = gen.params as TonnetzParams}
     <div class="gen-param-grid">
       <Knob
-        value={(tnp.stepsPerChord ?? 4) / 64}
-        label="STEPS"
-        displayValue={String(tnp.stepsPerChord ?? 4)}
+        value={(tnp.stepsPerTransform ?? 1) / 64}
+        label="RATE"
+        displayValue={String(tnp.stepsPerTransform ?? 1)}
         size={36}
         steps={64}
-        onchange={v => sceneUpdateGenerativeParams(nodeId, { stepsPerChord: Math.max(1, Math.round(v * 64)) })}
+        onchange={v => sceneUpdateGenerativeParams(nodeId, { stepsPerTransform: Math.max(1, Math.round(v * 64)) })}
       />
     </div>
     <div class="gen-scale-row">
-      <span class="gen-range-label">VOICING</span>
+      <span class="gen-range-label">SEQ</span>
+      <span class="gen-range-val">{tnp.sequence.join(' · ')}</span>
+    </div>
+    <div class="gen-scale-row">
+      <span class="gen-range-label">VOICE</span>
       <select class="gen-scale-select"
         onchange={e => sceneUpdateGenerativeParams(nodeId, { voicing: (e.target as HTMLSelectElement).value as TonnetzParams['voicing'] })}
       >
@@ -155,59 +151,29 @@
       </select>
     </div>
     <div class="gen-scale-row">
-      <span class="gen-range-label">CHORD</span>
-      <select class="tonnetz-op-select" style="width:44px"
+      <span class="gen-range-label">RHYTHM</span>
+      <select class="gen-scale-select"
         onchange={e => {
-          const root = parseInt((e.target as HTMLSelectElement).value)
-          const q = chordQuality(tnp.startChord)
-          const third = q === 'min' ? 3 : 4
-          const fifth = q === 'min' ? 7 : 7
-          sceneUpdateGenerativeParams(nodeId, { startChord: [root, root + third, root + fifth] as [number, number, number] })
+          const v = (e.target as HTMLSelectElement).value
+          sceneUpdateGenerativeParams(nodeId, { rhythm: v === 'all' ? undefined : v } as any)
         }}
       >
-        {#each NOTE_NAMES as name, i}
-          {@const octave = Math.floor(tnp.startChord[0] / 12)}
-          <option value={octave * 12 + i} selected={tnp.startChord[0] % 12 === i}>{name}</option>
-        {/each}
-      </select>
-      <select class="tonnetz-op-select" style="width:44px"
-        onchange={e => {
-          const q = (e.target as HTMLSelectElement).value
-          const root = tnp.startChord[0]
-          const third = q === 'min' ? 3 : 4
-          sceneUpdateGenerativeParams(nodeId, { startChord: [root, root + third, root + 7] as [number, number, number] })
-        }}
-      >
-        {#each ['maj', 'min'] as q}
-          <option value={q} selected={chordQuality(tnp.startChord) === q}>{q}</option>
+        {#each ['all', 'legato', 'offbeat', 'onbeat', 'syncopated'] as r}
+          <option value={r} selected={(tnp.rhythm ?? 'all') === r}>{r.toUpperCase()}</option>
         {/each}
       </select>
     </div>
-    <div class="gen-scale-row">
-      <span class="gen-range-label">OPS</span>
-      <div class="tonnetz-seq-editor">
-        {#each tnp.sequence ?? [] as op, i}
-          <select class="tonnetz-op-select"
-            onchange={e => {
-              const newSeq = [...(tnp.sequence ?? [])]
-              newSeq[i] = (e.target as HTMLSelectElement).value
-              sceneUpdateGenerativeParams(nodeId, { sequence: newSeq } as any)
-            }}
-          >
-            {#each ['P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR'] as o}
-              <option value={o} selected={op === o}>{o}</option>
-            {/each}
-          </select>
-        {/each}
-        <button class="btn-icon" onpointerdown={() => {
-          sceneUpdateGenerativeParams(nodeId, { sequence: [...(tnp.sequence ?? []), 'P'] } as any)
-        }}>+</button>
-        {#if (tnp.sequence ?? []).length > 1}
-          <button class="btn-icon" onpointerdown={() => {
-            sceneUpdateGenerativeParams(nodeId, { sequence: (tnp.sequence ?? []).slice(0, -1) } as any)
-          }}>−</button>
-        {/if}
+    {#if tnp.anchors?.length}
+      <div class="gen-scale-row">
+        <span class="gen-range-label">ANCHORS</span>
+        <span class="gen-range-val">{tnp.anchors.length}</span>
       </div>
+    {/if}
+    <div class="gen-scale-row">
+      <button class="btn-toggle gen-mode-btn" style="flex:1"
+        onpointerdown={() => { ui.tonnetzNodeId = nodeId; ui.phraseView = 'tonnetz' }}
+        data-tip="Open Tonnetz lattice editor" data-tip-ja="Tonnetz格子エディタを開く"
+      >EDIT</button>
     </div>
   {/if}
   <!-- Common: merge mode -->
@@ -268,7 +234,6 @@
         const presets = GENERATIVE_PRESETS.filter(p => p.engine === gen.engine)
         const idx = parseInt(sel.value)
         if (idx >= 0 && presets[idx]) { sceneApplyGenerativePreset(nodeId, presets[idx].params); autoGenerateFromNode(nodeId) }
-        sel.value = '-1'
       }}
     >
       <option value="-1" selected>—</option>
@@ -395,20 +360,5 @@
   .btn-icon:hover {
     background: var(--dz-bg-hover);
     color: var(--dz-text-strong);
-  }
-  .tonnetz-seq-editor {
-    display: flex;
-    gap: 3px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .tonnetz-op-select {
-    font-family: var(--font-data);
-    font-size: var(--fs-md);
-    background: transparent;
-    border: 1px solid var(--dz-border);
-    color: inherit;
-    padding: 1px 2px;
-    width: 36px;
   }
 </style>
