@@ -667,7 +667,6 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior-y: contain;
-    padding: 4px 0;
   }
 
   /* ── Page bar (hardware-style 16-step paging) ── */

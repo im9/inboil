@@ -843,6 +843,8 @@
     height: 244px;
     overflow: hidden;
     padding: 0 8px;
+    margin-right: 135px;
+    border-right: 1px solid var(--lz-border);
   }
 
   /* ── Left spacer: aligns grid with step columns ── */
