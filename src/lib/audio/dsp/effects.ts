@@ -1,6 +1,10 @@
 /**
  * Send/bus effects: reverb, delay, sidechain ducker, bus compressor,
  * peak limiter, granular processor, tape delay, stutter, shimmer pitch shift.
+ *
+ * REFACTOR-OK: `private out = new Float64Array(2)` is repeated per class by design —
+ * pre-allocated stereo output avoids GC pressure in the audio hot path.
+ * Do not extract to a base class; each effect owns its output buffer.
  */
 
 // Tiny DC offset to prevent denormal floats in feedback paths (see filters.ts)

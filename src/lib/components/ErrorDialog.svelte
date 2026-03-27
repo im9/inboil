@@ -21,6 +21,7 @@
     }
   }
 
+  // REFACTOR-OK: clipboard pattern appears in few places; extracting a helper adds indirection for minimal gain
   function copyDetail() {
     if (!fatalError.current) return
     const err = fatalError.current

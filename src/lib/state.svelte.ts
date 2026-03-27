@@ -636,7 +636,7 @@ export async function poolAssignToTrack(entry: PoolEntry, trackId: number, patte
   const mod = await audioPool()
   const rawBuffer = await mod.readSample(entry)
   if (!rawBuffer) { showToast('Sample not found in pool', 'error'); return }
-  const { engine } = await import('./audio/engine.ts')
+  const { engine } = await import('./audio/engine.ts') // REFACTOR-OK: lazy import repeated across functions — intentional to avoid top-level circular dep + keep engine tree-shakeable
   const result = await engine.loadUserSample(trackId, new File([rawBuffer], entry.name), patternIndex)
   if (result) {
     setSample(trackId, patternIndex, entry.name, result.waveform, result.rawBuffer)
@@ -698,7 +698,7 @@ export function copySamplesForPattern(srcIndex: number, dstIndex: number): void 
     // Copy engine cache (packZones / userSamples)
     void import('./audio/engine.ts').then(({ engine }) => {
       engine.copySampleCache(srcKey, dstKey)
-    })
+    }).catch(e => console.warn('[sample] cache copy failed:', e))
     // Persist to IDB
     if (project.id) {
       void storage().then(s => s.saveSample(project.id!, cell.trackId, dstIndex, meta.name, meta.rawBuffer, meta.packId))
@@ -759,6 +759,7 @@ export async function restoreSamples(projectId: string): Promise<void> {
       // Migrate old entry to new format
       if (isLegacy && project.id) {
         void storage().then(st => st.saveSample(project.id!, s.trackId, pi, s.name, s.buffer, s.packId))
+          .catch(e => console.warn('[sample] migration save failed:', e))
       }
     }
     // Old-format IDB entries are left as-is — they'll be overwritten by new-format saves
@@ -877,7 +878,7 @@ function scheduleAutoSave() {
   autoSaveTimer = setTimeout(() => {
     autoSaveTimer = null
     if (!project.dirty || autoSaving) return
-    autoSaving = true
+    autoSaving = true // REFACTOR-OK: 500ms debounce + dirty guard prevents overlapping saves; .finally() resets flag
     const doSave = project.id
       ? projectSave()
       : projectSaveAs(song.name || 'Untitled')

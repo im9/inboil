@@ -203,6 +203,7 @@
     }
   }
 
+  // REFACTOR-OK: effect re-runs on vkbd.enabled toggle — cleanup via return; no optimization needed
   $effect(() => {
     if (vkbd.enabled) {
       window.addEventListener('keydown', handleVkbdKeyDown)

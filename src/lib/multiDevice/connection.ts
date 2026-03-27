@@ -78,6 +78,7 @@ function sendSignal(msg: SignalMessage) {
 
 // ── Signaling reconnection ────────────────────────────────────
 
+// REFACTOR-OK: recursive backoff is bounded by MAX_RECONNECT_ATTEMPTS (5); delay grows linearly
 function scheduleReconnect() {
   if (intentionalDisconnect || reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
