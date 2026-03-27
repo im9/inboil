@@ -1,5 +1,12 @@
-// NOTE: Large file by design — single reactive state module (undo, project, samples, prefs, multi-device)
-// State — Section/Cell model (ADR 042)
+// Reactive state — Section/Cell model (ADR 042)
+// Action modules: sampleActions, poolActions, projectActions, importExport
+
+/** Callback registered by projectActions.ts to avoid circular import.
+ *  `var` (not `let`) — projectActions.ts sets this at module init during circular import;
+ *  `let` would hit TDZ because state.svelte.ts hasn't finished evaluating yet. */
+var _scheduleAutoSave: (() => void) | null = null
+export function setScheduleAutoSave(cb: () => void) { _scheduleAutoSave = cb }
+
 import {
   DEFAULT_FX_PAD, DEFAULT_MASTER_PAD, DEFAULT_PERF,
   DEFAULT_FX_FLAVOURS,
@@ -8,7 +15,6 @@ import type { FxFlavours } from './constants.ts'
 import {
   makeEmptySong, makeEmptyCell,
 } from './factory.ts'
-import { makeDemoSong } from './demo.ts'
 
 export { NOTE_NAMES } from './constants.ts'
 export { FACTORY_COUNT, PATTERN_POOL_SIZE } from './factory.ts'
@@ -30,9 +36,6 @@ import type {
   AutomationSnapshot,
   MidiDevice, SampleMeta, Lang,
 } from './types.ts'
-import { showToast } from './toast.svelte.ts'
-import { showFatalError } from './fatalError.svelte.ts'
-import { validateSongData, validateRecoverySnapshot } from './validate.ts'
 
 /** Find a cell by trackId in a pattern (ADR 079). */
 export function cellForTrack(pat: Pattern, trackId: number): Cell | undefined {
@@ -62,7 +65,7 @@ export function ensureCells(pat: Pattern): void {
 
 import { cloneSongPure, restoreSongPure } from './songClone.ts'
 
-function cloneSong(): Song {
+export function cloneSong(): Song {
   return cloneSongPure(song, {
     fxPad: JSON.parse(JSON.stringify(fxPad)),
     masterPad: JSON.parse(JSON.stringify(masterPad)),
@@ -79,12 +82,17 @@ const UNDO_MAX = 50
 let lastPushTime = 0
 let lastPushLabel = ''
 
+export function clearUndoStacks(): void {
+  undoStack.length = 0
+  redoStack.length = 0
+}
+
 export function pushUndo(label: string): void {
   const now = Date.now()
   // Always mark dirty + schedule save, even if undo snapshot is debounced
   project.dirty = true
   songVer.v++
-  scheduleAutoSave()
+  _scheduleAutoSave?.()
   if (label === lastPushLabel && now - lastPushTime < 500) {
     return
   }
@@ -95,7 +103,7 @@ export function pushUndo(label: string): void {
   lastPushLabel = label
 }
 
-function restoreSong(src: Song): void {
+export function restoreSong(src: Song): void {
   songVer.v++
   const r = restoreSongPure(src)
   // Apply to reactive state
@@ -492,8 +500,7 @@ export function factoryReset(): void {
   // Reset project
   project.id = null
   project.dirty = false
-  undoStack.length = 0
-  redoStack.length = 0
+  clearUndoStacks()
   // Reset prefs (keep lang)
   prefs.scaleMode = true
   if (typeof localStorage !== 'undefined') {
@@ -523,22 +530,10 @@ import { restoreAutomationSnapshot } from './automation.ts'
 // Randomize
 export { randomizePattern } from './randomize.ts'
 
-// ── Project persistence (ADR 020) ────────────────────────────────────
-
-import type { StoredProject } from './storage.ts'
-export type { StoredProject }
-
-const storage = () => import('./storage.ts')
-
-export async function listProjects() {
-  return (await storage()).listProjects()
-}
-
-// ── Audio Pool (ADR 104) ─────────────────────────────────────────────
+// ── Audio Pool state (ADR 104) ───────────────────────────────────────
 
 import type { PoolEntry, PoolStats } from './audioPool.ts'
 export type { PoolEntry, PoolStats }
-const audioPool = () => import('./audioPool.ts')
 
 export const pool = $state<{
   entries: PoolEntry[]
@@ -554,603 +549,36 @@ export const pool = $state<{
   factoryProgress: null,
 })
 
-/** Install factory samples on first launch, then refresh pool. */
-export async function initPool(): Promise<void> {
-  try {
-    const mod = await audioPool()
-    const needs = mod.needsFactoryInstall()
-    if (needs) {
-      pool.loading = true
-      const result = await mod.installFactorySamples((done, total) => {
-        pool.factoryProgress = { done, total }
-      })
-      pool.factoryProgress = null
-      if (result.installed > 0) {
-        showToast(`${result.installed} factory samples installed`, 'info')
-      }
-    }
-  } catch (e) {
-    console.warn('[pool] factory install failed:', e)
-  }
-  await refreshPool()
-}
-
-/** Refresh pool entries and stats from IndexedDB + OPFS. */
-export async function refreshPool(): Promise<void> {
-  pool.loading = true
-  try {
-    const mod = await audioPool()
-    const [entries, folders, stats] = await Promise.all([
-      mod.loadAllMeta(),
-      mod.listFolders(),
-      mod.getPoolStats(),
-    ])
-    pool.entries = entries
-    pool.folders = folders
-    pool.stats = stats
-  } catch (e) {
-    console.warn('[pool] refresh failed:', e)
-  }
-  pool.loading = false
-}
-
-/** Import files into the pool and refresh state. */
-export async function poolImportFiles(files: File[], folder?: string): Promise<void> {
-  const mod = await audioPool()
-  const results = await mod.importFiles(files, folder)
-  const dupeCount = results.filter(r => r.duplicate).length
-  const newCount = results.length - dupeCount
-  if (newCount > 0) showToast(`${newCount} sample${newCount > 1 ? 's' : ''} added to pool`, 'info')
-  if (dupeCount > 0) showToast(`${dupeCount} duplicate${dupeCount > 1 ? 's' : ''} skipped`, 'info')
-  if (results.length > 0) {
-    await refreshPool()
-    if (pool.stats.warning) {
-      showToast(`Pool storage at ${(pool.stats.usageRatio * 100).toFixed(0)}% (${(pool.stats.totalSize / 1024 / 1024).toFixed(1)}MB / ${(pool.stats.limitBytes / 1024 / 1024).toFixed(0)}MB)`, 'warn')
-    }
-  }
-}
-
-/** Delete a sample from the pool and refresh state. */
-export async function poolDeleteEntry(id: string): Promise<void> {
-  const mod = await audioPool()
-  await mod.deleteFromPool(id)
-  await refreshPool()
-}
-
-/** Move a pool sample to a different folder and refresh state. */
-export async function poolMoveEntry(id: string, newFolder: string): Promise<void> {
-  const mod = await audioPool()
-  await mod.moveToFolder(id, newFolder)
-  await refreshPool()
-}
-
-/** Rename a pool sample and refresh state. */
-export async function poolRenameEntry(id: string, newName: string): Promise<void> {
-  const mod = await audioPool()
-  await mod.renameEntry(id, newName)
-  await refreshPool()
-}
-
-/** Assign a pool sample to the current track. Reads from OPFS, decodes, and sets on track. */
-export async function poolAssignToTrack(entry: PoolEntry, trackId: number, patternIndex = ui.currentPattern): Promise<void> {
-  const mod = await audioPool()
-  const rawBuffer = await mod.readSample(entry)
-  if (!rawBuffer) { showToast('Sample not found in pool', 'error'); return }
-  const { engine } = await import('./audio/engine.ts') // REFACTOR-OK: lazy import repeated across functions — intentional to avoid top-level circular dep + keep engine tree-shakeable
-  const result = await engine.loadUserSample(trackId, new File([rawBuffer], entry.name), patternIndex)
-  if (result) {
-    setSample(trackId, patternIndex, entry.name, result.waveform, result.rawBuffer)
-  }
-}
-
-/** Assign a factory pack to the current track+pattern. Loads all zones and sends to worklet. (ADR 106) */
-export async function poolAssignPackToTrack(packId: string, packName: string, trackId: number, patternIndex = ui.currentPattern): Promise<void> {
-  const mod = await audioPool()
-  const zones = await mod.loadPackZones(packId)
-  if (!zones.length) { showToast('Pack has no zones', 'error'); return }
-  const { engine } = await import('./audio/engine.ts')
-  const waveform = await engine.loadPackToTrack(trackId, zones, patternIndex)
-  if (waveform) {
-    setSamplePack(trackId, patternIndex, packName, waveform, zones[0].buffer.buffer as ArrayBuffer, packId)
-  }
-}
-
-// ── Sample persistence (ADR 020 Section I, ADR 110 per-cell) ─────────
+// ── Sample state (ADR 020 Section I, ADR 110 per-cell) ───────────────
 
 /** Per-cell sample storage — key: `${trackId}_${patternIndex}` (ADR 110) */
 export const samplesByCell = $state<Record<string, SampleMeta>>({})
 
-/** Compose a samplesByCell key */
-export function sampleCellKey(trackId: number, patternIndex: number): string {
-  return `${trackId}_${patternIndex}`
-}
+// ── Extracted action modules (re-exported for backwards compatibility) ──
 
-/** Store a loaded sample in memory + persist to IndexedDB + set cell.sampleRef (ADR 110) */
-export function setSample(trackId: number, patternIndex: number, name: string, waveform: Float32Array, rawBuffer: ArrayBuffer): void {
-  samplesByCell[sampleCellKey(trackId, patternIndex)] = { name, waveform, rawBuffer }
-  // Set sampleRef on the Cell
-  const cell = cellForTrack(song.patterns[patternIndex], trackId)
-  if (cell) cell.sampleRef = { name }
-  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, patternIndex, name, rawBuffer))
-    .catch(e => { console.warn('[sample] save failed:', e); showToast('Sample save failed', 'error') })
-}
+export type { StoredProject } from './storage.ts'
 
-/** Store a factory pack reference in memory + persist packId to IndexedDB (ADR 106, 110) */
-export function setSamplePack(trackId: number, patternIndex: number, name: string, waveform: Float32Array, primaryBuffer: ArrayBuffer, packId: string): void {
-  samplesByCell[sampleCellKey(trackId, patternIndex)] = { name, waveform, rawBuffer: primaryBuffer, packId }
-  const cell = cellForTrack(song.patterns[patternIndex], trackId)
-  if (cell) cell.sampleRef = { name, packId }
-  if (project.id) void storage().then(s => s.saveSample(project.id!, trackId, patternIndex, name, new ArrayBuffer(0), packId))
-    .catch(e => { console.warn('[sample] pack save failed:', e); showToast('Sample save failed', 'error') })
-}
+// Sample actions
+export {
+  sampleCellKey, setSample, setSamplePack, copySamplesForPattern,
+  restoreSamples, clearSamples, trackDisplayName,
+} from './sampleActions.ts'
 
-/** Copy sample references from one pattern index to another (for pattern duplicate/paste) */
-export function copySamplesForPattern(srcIndex: number, dstIndex: number): void {
-  const pat = song.patterns[srcIndex]
-  if (!pat) return
-  for (const cell of pat.cells) {
-    const srcKey = sampleCellKey(cell.trackId, srcIndex)
-    const meta = samplesByCell[srcKey]
-    if (!meta) continue
-    const dstKey = sampleCellKey(cell.trackId, dstIndex)
-    // Copy in-memory sample metadata
-    samplesByCell[dstKey] = { ...meta }
-    // Copy engine cache (packZones / userSamples)
-    void import('./audio/engine.ts').then(({ engine }) => {
-      engine.copySampleCache(srcKey, dstKey)
-    }).catch(e => console.warn('[sample] cache copy failed:', e))
-    // Persist to IDB
-    if (project.id) {
-      void storage().then(s => s.saveSample(project.id!, cell.trackId, dstIndex, meta.name, meta.rawBuffer, meta.packId))
-        .catch(e => { console.warn('[sample] copy save failed:', e); showToast('Sample save failed', 'error') })
-    }
-  }
-}
+// Pool actions
+export {
+  initPool, refreshPool, poolImportFiles, poolDeleteEntry,
+  poolMoveEntry, poolRenameEntry, poolAssignToTrack, poolAssignPackToTrack,
+} from './poolActions.ts'
 
-/** Persist any pending samples after project gets an id (called from projectSaveAs) */
-async function persistPendingSamples(projectId: string): Promise<void> {
-  for (const [key, meta] of Object.entries(samplesByCell)) {
-    const [tid, pi] = key.split('_').map(Number)
-    await (await storage()).saveSample(projectId, tid, pi, meta.name, meta.rawBuffer, meta.packId)
-  }
-}
+// Project actions
+export {
+  listProjects, projectSaveAs, projectSave, projectLoad, projectNew,
+  projectDelete, projectAutoSave, projectRestore, projectRename,
+  writeRecoverySnapshot, clearRecoverySnapshot, checkRecovery,
+  scheduleAutoSave,
+} from './projectActions.ts'
 
-/** Restore samples from IndexedDB — decode + cache in engine (sent on next sendPattern) */
-export async function restoreSamples(projectId: string): Promise<void> {
-  clearSamples()
-  const stored = await (await storage()).loadSamples(projectId)
-  if (stored.length === 0) return
-  const { engine } = await import('./audio/engine.ts')
-  for (const s of stored) {
-    // Detect old format (pre-ADR 110): patternIndex missing or undefined
-    const isLegacy = s.patternIndex == null
-    const patternIndices = isLegacy
-      ? song.patterns.map((_, i) => i).filter(i => {
-          const cell = cellForTrack(song.patterns[i], s.trackId)
-          return cell && (cell.voiceId === 'Sampler')
-        })
-      : [s.patternIndex]
-
-    for (const pi of patternIndices) {
-      // Guard: pattern may have been removed/replaced during async restore
-      if (!song.patterns[pi]) continue
-      const key = sampleCellKey(s.trackId, pi)
-      if (s.packId) {
-        try {
-          const mod = await audioPool()
-          const zones = await mod.loadPackZones(s.packId)
-          const waveform = await engine.loadPackToTrack(s.trackId, zones, pi)
-          if (waveform) {
-            samplesByCell[key] = { name: s.name, waveform, rawBuffer: new ArrayBuffer(0), packId: s.packId }
-            const cell = cellForTrack(song.patterns[pi], s.trackId)
-            if (cell) cell.sampleRef = { name: s.name, packId: s.packId }
-          }
-        } catch (e) {
-          console.warn(`[sample] pack restore failed for ${s.packId}:`, e)
-        }
-      } else {
-        const waveform = await engine.loadSampleFromBuffer(s.trackId, s.buffer, pi)
-        if (waveform) {
-          samplesByCell[key] = { name: s.name, waveform, rawBuffer: s.buffer }
-          const cell = cellForTrack(song.patterns[pi], s.trackId)
-          if (cell) cell.sampleRef = { name: s.name }
-        }
-      }
-      // Migrate old entry to new format
-      if (isLegacy && project.id) {
-        void storage().then(st => st.saveSample(project.id!, s.trackId, pi, s.name, s.buffer, s.packId))
-          .catch(e => console.warn('[sample] migration save failed:', e))
-      }
-    }
-    // Old-format IDB entries are left as-is — they'll be overwritten by new-format saves
-    // and won't cause issues (loadSamples returns all, new entries take precedence)
-  }
-  // Trigger pattern re-send so _autoLoadSamples picks up newly cached samples.
-  // Without this, samples restored after the initial pattern sync stay in cache
-  // but never reach the worklet (race between async restore and effect timing).
-  bumpSongVersion()
-}
-
-/** Clear all in-memory sample state */
-function clearSamples(): void {
-  for (const k of Object.keys(samplesByCell)) delete samplesByCell[k]
-}
-
-/** Display name for a track: use sampleRef first, then in-memory lookup (ADR 110) */
-export function trackDisplayName(cell: Cell, patternIndex?: number): string {
-  if (cell.voiceId === 'Sampler') {
-    if (cell.sampleRef?.name) return cell.sampleRef.name
-    if (patternIndex != null) {
-      const meta = samplesByCell[sampleCellKey(cell.trackId, patternIndex)]
-      if (meta?.name) return meta.name
-    }
-  }
-  return cell.name
-}
-
-/** Build a StoredProject from current state */
-function buildStoredProject(id: string, name: string, now: number, createdAt?: number): StoredProject {
-  return { id, name, song: cloneSong(), createdAt: createdAt ?? now, updatedAt: now }
-}
-
-/** Save current song as a new project */
-export async function projectSaveAs(name: string): Promise<string> {
-  song.name = name
-  const id = crypto.randomUUID()
-  const now = Date.now()
-  await (await storage()).saveProject(buildStoredProject(id, name, now))
-  project.id = id
-  project.lastSavedAt = now
-  clearRecoverySnapshot()
-  await persistPendingSamples(id)
-  savePrefs()
-  return id
-}
-
-/** Overwrite the current project (or save-as if no project yet) */
-export async function projectSave(): Promise<void> {
-  if (!project.id) {
-    await projectSaveAs(song.name || 'Untitled')
-    return
-  }
-  const s = await storage()
-  const existing = await s.loadProject(project.id)
-  const now = Date.now()
-  await s.saveProject(buildStoredProject(project.id, song.name, now, existing?.createdAt))
-  project.lastSavedAt = now
-  clearRecoverySnapshot()
-}
-
-/** Load a project by id and replace current state */
-export async function projectLoad(id: string): Promise<boolean> {
-  const proj = await (await storage()).loadProject(id)
-  if (!proj) return false
-  // Migrate: ensure song.name matches project name
-  if (!proj.song.name) proj.song.name = proj.name
-  clearSamples()
-  restoreSong(proj.song)
-  project.id = id
-  project.dirty = false
-  // Reset UI
-  ui.currentPattern = 0
-  ui.selectedTrack = 0
-  ui.patternSheet = false
-  ui.selectedSceneNodes = {}
-  ui.selectedSceneEdge = null
-  undoStack.length = 0
-  redoStack.length = 0
-  savePrefs()
-  // Restore persisted samples (async, non-blocking)
-  void restoreSamples(id)
-  return true
-}
-
-/** Create a new empty project (does not persist until first save) */
-export function projectNew(): void {
-  restoreSong(makeEmptySong())
-  clearSamples()
-  project.id = null
-  project.dirty = false
-  ui.currentPattern = 0
-  ui.selectedTrack = 0
-  ui.patternSheet = false
-  ui.selectedSceneNodes = {}
-  ui.selectedSceneEdge = null
-  undoStack.length = 0
-  redoStack.length = 0
-  savePrefs()
-}
-
-/** Delete a project and reset to new if it was current */
-export async function projectDelete(id: string): Promise<void> {
-  const s = await storage()
-  await s.deleteProject(id)
-  await s.deleteSamples(id)
-  if (project.id === id) projectNew()
-}
-
-/** Auto-save: debounced 500ms after last mutation, with concurrency guard */
-let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
-let autoSaving = false
-
-function scheduleAutoSave() {
-  if (autoSaveTimer) clearTimeout(autoSaveTimer)
-  autoSaveTimer = setTimeout(() => {
-    autoSaveTimer = null
-    if (!project.dirty || autoSaving) return
-    autoSaving = true // REFACTOR-OK: 500ms debounce + dirty guard prevents overlapping saves; .finally() resets flag
-    const doSave = project.id
-      ? projectSave()
-      : projectSaveAs(song.name || 'Untitled')
-    doSave.then(() => {
-      project.dirty = false
-    }).catch(e => {
-      console.error('[autoSave] ERROR:', e)
-      showFatalError('DAT-002', e instanceof Error ? e.message : String(e))
-    }).finally(() => {
-      autoSaving = false
-    })
-  }, 500)
-}
-
-/** Immediate auto-save (for beforeunload) */
-export async function projectAutoSave(): Promise<void> {
-  if (!project.dirty) return
-  if (!project.id) {
-    await projectSaveAs(song.name || 'Untitled')
-  } else {
-    await projectSave()
-  }
-  project.dirty = false
-}
-
-// ── Crash Recovery (ADR 099) ─────────────────────────────────────────
-const RECOVERY_KEY = 'inboil_recovery'
-
-/** Write current song to localStorage as crash recovery (synchronous, safe for beforeunload). */
-export function writeRecoverySnapshot(): void {
-  if (!project.dirty) return
-  try {
-    const snapshot = JSON.stringify({
-      projectId: project.id,
-      song: cloneSong(),
-      timestamp: Date.now(),
-    })
-    localStorage.setItem(RECOVERY_KEY, snapshot)
-  } catch (e) {
-    // localStorage full or unavailable — silently skip
-    console.warn('[recovery] snapshot write failed:', e)
-  }
-}
-
-/** Clear recovery snapshot (call after successful IDB save). */
-export function clearRecoverySnapshot(): void {
-  try { localStorage.removeItem(RECOVERY_KEY) } catch { /* ignore */ }
-}
-
-/** Check for a recovery snapshot newer than IDB and restore if found.
- *  Returns true if recovery was applied. */
-export async function checkRecovery(): Promise<boolean> {
-  try {
-    const raw = localStorage.getItem(RECOVERY_KEY)
-    if (!raw) return false
-    const rec = validateRecoverySnapshot(JSON.parse(raw))
-    // Only recover if it matches the current project (or no project yet)
-    if (rec.projectId !== project.id) {
-      clearRecoverySnapshot()
-      return false
-    }
-    // Only recover if newer than last IDB save
-    if (rec.timestamp <= project.lastSavedAt) {
-      clearRecoverySnapshot()
-      return false
-    }
-    restoreSong(rec.song)
-    project.dirty = true
-    clearRecoverySnapshot()
-    scheduleAutoSave()
-    showToast('Unsaved changes recovered', 'info')
-    return true
-  } catch (e) {
-    console.warn('[recovery] check failed:', e)
-    clearRecoverySnapshot()
-    return false
-  }
-}
-
-/** Restore last project on app startup */
-export async function projectRestore(): Promise<void> {
-  if (!project.id) return
-  const ok = await projectLoad(project.id)
-  if (!ok) { project.id = null; savePrefs() ; return }
-  // Check for crash recovery after IDB load
-  await checkRecovery()
-}
-
-/** Rename the current project */
-export async function projectRename(name: string): Promise<void> {
-  song.name = name
-  if (project.id) {
-    const s = await storage()
-    const existing = await s.loadProject(project.id)
-    if (existing) {
-      existing.name = name
-      existing.song.name = name
-      existing.updatedAt = Date.now()
-      await s.saveProject(existing)
-    }
-  }
-}
-
-// ── Export / Import (ADR 020 Section J) ──────────────────────────────
-
-/** Encode ArrayBuffer to base64 string */
-function bufferToBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-  return btoa(binary)
-}
-
-/** Decode base64 string to ArrayBuffer */
-function base64ToBuffer(b64: string): ArrayBuffer {
-  const binary = atob(b64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  return bytes.buffer
-}
-
-/** Export current project as a downloadable .inboil.json file */
-export function exportProjectJSON(): void {
-  const snapshot = cloneSong()
-  // Serialize samples per cell (ADR 110): key = "trackId_patternIndex"
-  const samples: Record<string, { name: string; packId?: string; buffer?: string }> = {}
-  for (const [key, meta] of Object.entries(samplesByCell)) {
-    if (meta.packId) {
-      samples[key] = { name: meta.name, packId: meta.packId }
-    } else if (meta.rawBuffer.byteLength > 0) {
-      samples[key] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
-    }
-  }
-  // Strip empty patterns to reduce file size (restored on import via restoreSongPure)
-  const scenePatIds = new Set(
-    snapshot.scene.nodes.filter((n: { patternId?: string }) => n.patternId).map((n: { patternId?: string }) => n.patternId)
-  )
-  const stripped = {
-    ...snapshot,
-    patterns: snapshot.patterns.filter((p: { id: string; cells: { trigs: { active: boolean }[] }[] }) =>
-      scenePatIds.has(p.id) || p.cells.some(c => c.trigs.some(t => t.active))
-    ),
-  }
-  const payload = { v: 3 as const, ...stripped, samples, exportedAt: Date.now() }
-  const json = JSON.stringify(payload)
-  const blob = new Blob([json], { type: 'application/json' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = `${song.name || 'untitled'}.inboil.json`
-  a.click()
-  URL.revokeObjectURL(a.href)
-}
-
-/** Import a project from JSON string — creates a new unsaved project */
-export async function importProjectJSON(json: string): Promise<void> {
-  const data = JSON.parse(json)
-  const validated = validateSongData(data)
-  restoreSong(validated)
-  clearSamples()
-  project.id = null
-  project.dirty = false
-  ui.currentPattern = 0
-  ui.selectedTrack = 0
-  ui.patternSheet = false
-  ui.selectedSceneNodes = {}
-  ui.selectedSceneEdge = null
-  undoStack.length = 0
-  redoStack.length = 0
-  // Persist immediately so the imported project isn't lost on page close
-  await projectSaveAs(song.name || 'Untitled')
-  // Restore embedded samples (v2: trackId keys, v3: trackId_patternIndex keys)
-  const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
-  if (samples) {
-    const { engine } = await import('./audio/engine.ts')
-    for (const [key, entry] of Object.entries(samples)) {
-      const isLegacy = !key.includes('_')  // v2: "0", "1" etc.
-      const trackId = isLegacy ? Number(key) : Number(key.split('_')[0])
-      const patternIndices = isLegacy
-        ? song.patterns.map((_, i) => i).filter(i => {
-            const cell = cellForTrack(song.patterns[i], trackId)
-            return cell && cell.voiceId === 'Sampler'
-          })
-        : [Number(key.split('_')[1])]
-
-      for (const pi of patternIndices) {
-        if (entry.packId) {
-          try {
-            const mod = await audioPool()
-            const zones = await mod.loadPackZones(entry.packId)
-            const waveform = await engine.loadPackToTrack(trackId, zones, pi)
-            if (waveform) {
-              setSamplePack(trackId, pi, entry.name, waveform, new ArrayBuffer(0), entry.packId)
-            }
-          } catch (e) {
-            console.warn(`[import] pack restore failed for ${entry.packId}:`, e)
-          }
-        } else if (entry.buffer) {
-          const rawBuffer = base64ToBuffer(entry.buffer)
-          const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer, pi)
-          if (waveform) {
-            setSample(trackId, pi, entry.name, waveform, rawBuffer)
-          }
-        }
-      }
-    }
-  }
-}
-
-/** Load factory demo patterns as a new unsaved project */
-export async function projectLoadFactory(): Promise<void> {
-  return projectLoadDemo()
-}
-
-/** Load demo project (welcome overlay) — fetches demo-song.json from public/ */
-export async function projectLoadDemo(): Promise<void> {
-  try {
-    const res = await fetch(import.meta.env.BASE_URL + 'demo-song.json')
-    if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-    const data = await res.json()
-    const validated = validateSongData(data)
-    restoreSong(validated)
-    clearSamples()
-    project.id = null
-    project.dirty = true
-    ui.currentPattern = 0
-    ui.selectedTrack = 0
-    ui.patternSheet = true   // show sequencer so new users see what to interact with
-    ui.selectedSceneNodes = {}
-    ui.selectedSceneEdge = null
-    undoStack.length = 0
-    redoStack.length = 0
-    // Restore embedded samples
-    const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
-    if (samples) {
-      const { engine } = await import('./audio/engine.ts')
-      for (const [key, entry] of Object.entries(samples)) {
-        const isLegacy = !key.includes('_')
-        const trackId = isLegacy ? Number(key) : Number(key.split('_')[0])
-        const patternIndices = isLegacy
-          ? song.patterns.map((_, i) => i).filter(i => {
-              const cell = cellForTrack(song.patterns[i], trackId)
-              return cell && cell.voiceId === 'Sampler'
-            })
-          : [Number(key.split('_')[1])]
-        for (const pi of patternIndices) {
-          if (entry.packId) {
-            try {
-              const mod = await audioPool()
-              const zones = await mod.loadPackZones(entry.packId)
-              const waveform = await engine.loadPackToTrack(trackId, zones, pi)
-              if (waveform) setSamplePack(trackId, pi, entry.name, waveform, new ArrayBuffer(0), entry.packId)
-            } catch (e) { console.warn(`[demo] pack restore failed for ${entry.packId}:`, e) }
-          } else if (entry.buffer) {
-            const rawBuffer = base64ToBuffer(entry.buffer)
-            const waveform = await engine.loadSampleFromBuffer(trackId, rawBuffer, pi)
-            if (waveform) setSample(trackId, pi, entry.name, waveform, rawBuffer)
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('[demo] Failed to load demo song, falling back to built-in:', e)
-    restoreSong(makeDemoSong())
-    clearSamples()
-    project.id = null
-    project.dirty = true
-    ui.currentPattern = 0
-    ui.selectedTrack = 0
-    ui.patternSheet = true
-    ui.selectedSceneNodes = {}
-    ui.selectedSceneEdge = null
-    undoStack.length = 0
-    redoStack.length = 0
-  }
-}
+// Import/export
+export {
+  exportProjectJSON, importProjectJSON, projectLoadFactory, projectLoadDemo,
+} from './importExport.ts'
