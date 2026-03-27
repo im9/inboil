@@ -227,7 +227,7 @@
   $effect(() => {
     velMounting = true
     void ui.selectedTrack  // re-trigger on track change
-    tick().then(() => { velMounting = false })
+    tick().then(() => { velMounting = false }).catch(() => { velMounting = false })
   })
 
   // ── Vel-fill grow/shrink animation on trig toggle ──

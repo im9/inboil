@@ -26,7 +26,7 @@
   function commitRename() {
     renamingProject = false
     const name = renameName.trim() || 'Untitled'
-    void projectRename(name).then(() => refreshProjects())
+    void projectRename(name).then(() => refreshProjects()).catch(e => console.warn('[project] rename failed:', e))
   }
 
   // ── Import project ──

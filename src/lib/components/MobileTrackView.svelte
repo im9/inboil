@@ -200,6 +200,7 @@
   onDestroy(() => {
     if (longPressTimer) clearTimeout(longPressTimer)
     if (nameLongPress) clearTimeout(nameLongPress)
+    velEnd() // clean up window event listeners if drag was in progress
   })
 
   function prevTrack() {

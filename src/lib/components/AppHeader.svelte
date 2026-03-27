@@ -54,7 +54,7 @@
         const pat = song.patterns[ui.currentPattern]
         const name = pat.name || `pattern_${String(ui.currentPattern).padStart(2, '0')}`
         downloadBlob(blob, `${name}.wav`)
-      })
+      }).catch(e => { recState = 'idle'; console.warn('[rec] capture failed:', e) })
     }
   }
 

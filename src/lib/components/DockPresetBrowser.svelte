@@ -54,7 +54,7 @@
   let userPresetVersion = $state(0)
 
   $effect(() => {
-    if (!isUserPresetsLoaded()) void loadUserPresetsIntoCache().then(() => { userPresetVersion++ })
+    if (!isUserPresetsLoaded()) void loadUserPresetsIntoCache().then(() => { userPresetVersion++ }).catch(e => console.warn('[presets] load failed:', e))
   })
 
   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
