@@ -24,7 +24,7 @@ INBOIL uses **WebRTC DataChannel** for peer-to-peer communication between two de
 
 1. Open **SYSTEM** panel (sidebar)
 2. Under **JAM SESSION**, tap **HOST**
-3. A 4-character room code appears (e.g. `A3F7`)
+3. An 8-character room code appears (e.g. `A3F7KN2X`)
 4. Share the code with your jam partner
 
 ### Guest (Phone/Tablet)

@@ -124,7 +124,7 @@ function toggleTrigGuest(track: number, step: number, on: boolean) {
 Host                              Guest
   │                                 │
   ├─ [SYSTEM] → "HOST SESSION" ──► │
-  │  Display room code: "A3F7"     │
+  │  Display room code: "A3F7KN2X" │
   │                                 │
   │                Enter room code ◄─┤
   │                or scan QR code   │
@@ -142,7 +142,7 @@ Host                              Guest
 ```
 
 - Host starts session from System settings panel
-- 4-character room code displayed (+ QR code)
+- 8-character room code displayed (+ QR code)
 - Guest enters code or scans QR → connects via signaling server
 - After P2P established, host sends full snapshot
 - Ongoing: guest sends control events, host broadcasts deltas + playheads

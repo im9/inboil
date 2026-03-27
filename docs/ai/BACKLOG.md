@@ -18,9 +18,9 @@ Known architectural limits that are fine at current scale but need attention whe
 
 Hardening tasks for signaling server (see ADR 019 §Security Hardening for design rationale).
 
-- [ ] **Room TTL** — Durable Object alarm() to self-destruct after 1h inactivity
-- [ ] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
-- [ ] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
+- [x] **Room TTL** — Durable Object alarm() to self-destruct after 1h inactivity
+- [x] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
+- [x] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
 
 ## Ideas
 
