@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — voice/sample/FX/param sections all operate on same cell+track (VoicePicker extraction in BACKLOG)
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample } from '../state.svelte.ts'
   import type { VoiceId } from '../types.ts'
   import { setTrackSend, clearAllParamLocks, toggleMute, toggleSolo, changeVoice, setInsertFxType, setInsertFxFlavour, setInsertFxParam } from '../stepActions.ts'

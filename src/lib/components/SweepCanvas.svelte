@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — Canvas rendering + pointer handlers + reactive state are tightly coupled (same pattern as SceneView/PianoRoll)
   // Sweep editor — dark-zone review/edit overlay (ADR 123 Phase 1)
   // Recording-based input replaces draw palette. Point editing is always active.
   import { song, ui, playback, pushUndo, fxPad, masterPad, perf, playFromNode } from '../state.svelte.ts'

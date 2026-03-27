@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — VU/GR meters + node calculations share single rAF loop with audio-reactive state
   import { masterPad, fxPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
   import { captureValue } from '../sweepRecorder.svelte.ts'
   import type { SweepTarget } from '../types.ts'

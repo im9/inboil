@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — voice/sample/FX/param sections all operate on same cell+track (VoicePicker extraction in BACKLOG)
   /**
    * Track parameter editor — voice picker, synth knobs, P-Lock, insert FX,
    * sample loader, remove track. (SEND/MIX moved to StepGrid)

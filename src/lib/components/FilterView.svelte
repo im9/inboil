@@ -1,8 +1,10 @@
 <script lang="ts">
+  // NOTE: Large file by design — WebGL spectrum + Canvas EQ curve + node interaction share frequency response data
   import { fxPad, ui, pushUndo } from '../state.svelte.ts'
   import { engine } from '../audio/engine.ts'
   import { PAD_INSET, COLORS_RGB } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
+  import { tToFreq, freqToT, peakingResponse, shelfResponse } from '../eqDsp.ts'
 
   let padEl: HTMLDivElement
   let dragging: 'filter' | 'eqLow' | 'eqMid' | 'eqHigh' | null = $state(null)
@@ -88,70 +90,9 @@
   }
 
   // ── EQ curve computation (biquad frequency response) ───────────
+  // Pure DSP functions extracted to eqDsp.ts for testability
   const EQ_CURVE_POINTS = 128
-  const SR = 44100
   const DB_RANGE = 12  // ±12 dB
-
-  // Logarithmic frequency mapping: t ∈ [0,1] → freq ∈ [20, 20000]
-  function tToFreq(t: number): number { return 20 * Math.pow(1000, t) }
-  function freqToT(f: number): number { return Math.log(f / 20) / Math.log(1000) }
-
-  /** Compute biquad magnitude response from coefficients */
-  function biquadMagnitude(freq: number, b0: number, b1: number, b2: number, a1: number, a2: number): number {
-    const w = 2 * Math.PI * freq / SR
-    const cw = Math.cos(w); const c2w = Math.cos(2 * w)
-    const sw = Math.sin(w); const s2w = Math.sin(2 * w)
-    const numR = b0 + b1 * cw + b2 * c2w
-    const numI = -(b1 * sw + b2 * s2w)
-    const denR = 1 + a1 * cw + a2 * c2w
-    const denI = -(a1 * sw + a2 * s2w)
-    return Math.sqrt((numR * numR + numI * numI) / (denR * denR + denI * denI))
-  }
-
-  function peakingResponse(freq: number, centerFreq: number, dBgain: number, Q: number): number {
-    if (dBgain === 0) return 1
-    const fc = Math.max(1, Math.min(centerFreq, SR * 0.49))
-    const A = Math.pow(10, dBgain / 40)
-    const w0 = 2 * Math.PI * fc / SR
-    const sinw = Math.sin(w0)
-    const cosw = Math.cos(w0)
-    const alpha = sinw / (2 * Math.max(0.1, Q))
-    const a0 = 1 + alpha / A
-    const b0 = (1 + alpha * A) / a0
-    const b1 = (-2 * cosw) / a0
-    const b2 = (1 - alpha * A) / a0
-    const a1 = b1
-    const a2 = (1 - alpha / A) / a0
-    return biquadMagnitude(freq, b0, b1, b2, a1, a2)
-  }
-
-  function shelfResponse(freq: number, centerFreq: number, dBgain: number, Q: number, low: boolean): number {
-    if (dBgain === 0) return 1
-    const fc = Math.max(1, Math.min(centerFreq, SR * 0.49))
-    const A = Math.pow(10, dBgain / 40)
-    const w0 = 2 * Math.PI * fc / SR
-    const sinw = Math.sin(w0)
-    const cosw = Math.cos(w0)
-    const alpha = sinw / (2 * Math.max(0.1, Q))
-    const twoSqrtAAlpha = 2 * Math.sqrt(A) * alpha
-    let b0: number, b1: number, b2: number, a1: number, a2: number
-    if (low) {
-      const a0 = (A + 1) + (A - 1) * cosw + twoSqrtAAlpha
-      b0 = A * ((A + 1) - (A - 1) * cosw + twoSqrtAAlpha) / a0
-      b1 = 2 * A * ((A - 1) - (A + 1) * cosw) / a0
-      b2 = A * ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) / a0
-      a1 = -2 * ((A - 1) + (A + 1) * cosw) / a0
-      a2 = ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) / a0
-    } else {
-      const a0 = (A + 1) - (A - 1) * cosw + twoSqrtAAlpha
-      b0 = A * ((A + 1) + (A - 1) * cosw + twoSqrtAAlpha) / a0
-      b1 = -2 * A * ((A - 1) + (A + 1) * cosw) / a0
-      b2 = A * ((A + 1) + (A - 1) * cosw - twoSqrtAAlpha) / a0
-      a1 = 2 * ((A - 1) - (A + 1) * cosw) / a0
-      a2 = ((A + 1) - (A - 1) * cosw - twoSqrtAAlpha) / a0
-    }
-    return biquadMagnitude(freq, b0, b1, b2, a1, a2)
-  }
 
   /** Compute EQ band response (peaking or shelf depending on mode) */
   function bandResponse(freq: number, key: 'eqLow' | 'eqMid' | 'eqHigh'): number {

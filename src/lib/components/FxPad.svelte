@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — canvas audio-reactive viz + node drag + bubble menu share FX pad state
   import { fxPad, perf, ui, fxFlavours, pushUndo } from '../state.svelte.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   // ui.granularMode2 is now in ui state — accessible from DockFxControls too

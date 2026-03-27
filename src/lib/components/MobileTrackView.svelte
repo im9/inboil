@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — multi-mode editing (step/vel/chance) + drag-paint + long-press state machines share 12+ reactive values
   import { song, activeCell, playback, ui } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, addTrack, removeTrack, STEP_OPTIONS } from '../stepActions.ts'

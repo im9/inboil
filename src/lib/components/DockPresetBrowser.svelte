@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — preset category filter + recent tracking + save/rename state machines are interdependent
   import { activeCell, ui } from '../state.svelte.ts'
   import { applyPreset, resetToDefaults } from '../stepActions.ts'
   import { hasPresets, getPresets, getPresetCategories, CATEGORY_LABELS, loadUserPresetsIntoCache, isUserPresetsLoaded, addUserPresetToCache, removeUserPresetFromCache, renameUserPresetInCache, type UserPreset } from '../presets.ts'

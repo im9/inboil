@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — scene/pattern bidirectional mapping + modifier walkback + sheet triggering are tightly coupled
   import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
   import type { SceneNode, ModifierType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'

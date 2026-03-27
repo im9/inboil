@@ -22,6 +22,10 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 - [x] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
 - [x] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
 
+## Refactoring
+
+- [ ] **VoicePicker shared component** — MobileParamOverlay and DockTrackEditor both have similar voice picker UI with category tabs. Extract to a shared `VoicePicker.svelte` component to reduce duplication
+
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.

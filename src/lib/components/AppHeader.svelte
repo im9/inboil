@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — toolbar sections (BPM/transport/view tabs) share playback state and layout flow
   import { song, playback, ui, project, session, masterLevels, toggleSidebar, pushUndo, bumpSongVersion } from '../state.svelte.ts'
   import { BPM_MIN, BPM_MAX } from '../constants.ts'
   import { startCapture, stopCapture } from '../wavExport.ts'

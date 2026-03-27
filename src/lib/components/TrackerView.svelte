@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — keyboard routing across 11 columns + grid rendering + cursor navigation are interdependent
   import { song, playback, ui, activeCell, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'

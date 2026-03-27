@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — canvas viz + motion sensors + perf zones share 10+ reactive perf values
   import { onMount, onDestroy } from 'svelte'
   import { perf, playback, song, fxPad, masterLevels } from '../state.svelte.ts'
   import { isGuest, guestPerf } from '../multiDevice/guest.ts'

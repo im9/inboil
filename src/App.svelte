@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — engine lifecycle + playback orchestration + sweep automation + scene advancement are tightly coupled
   import AppHeader from './lib/components/AppHeader.svelte'
   import StepGrid from './lib/components/StepGrid.svelte'
   import DockPanel from './lib/components/DockPanel.svelte'

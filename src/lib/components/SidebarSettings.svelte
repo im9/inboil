@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — settings toggles + jam session UI are a single sidebar panel
   import { lang, prefs, session, midiIn, toggleScaleMode, togglePatternEditor, toggleShowGuide, toggleLang } from '../state.svelte.ts'
   import { initMidi, startListening, stopListening } from '../midi.ts'
   import { startHost, joinAsGuest, disconnect } from '../multiDevice/connection.ts'

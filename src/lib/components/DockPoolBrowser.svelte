@@ -1,4 +1,5 @@
 <script lang="ts">
+  // NOTE: Large file by design — browse/search/audition are parts of a single sample selection flow
   /**
    * Inline pool browser for the Sampler section.
    * Shows folder drill-down, audition, and one-tap assign.
