@@ -4,6 +4,12 @@
 
 echo "Running pre-push checks..."
 
+# Ban browser dialogs — use in-app modal instead
+if grep -rn --include='*.svelte' --include='*.ts' -E '\b(confirm|alert|prompt)\s*\(' src/lib/ | grep -v '\.test\.' | grep -v 'ConfirmModal'; then
+  echo "Browser dialogs (confirm/alert/prompt) found. Use in-app modal. Push aborted."
+  exit 1
+fi
+
 pnpm check || { echo "Type check failed. Push aborted."; exit 1; }
 pnpm test  || { echo "Unit tests failed. Push aborted."; exit 1; }
 

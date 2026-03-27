@@ -16,6 +16,7 @@
   import VoicePicker from './VoicePicker.svelte'
   import DockPresetBrowser from './DockPresetBrowser.svelte'
   import DockPoolBrowser from './DockPoolBrowser.svelte'
+  import ConfirmModal from './ConfirmModal.svelte'
   import EnvGraph from './EnvGraph.svelte'
   import WaveGraph from './WaveGraph.svelte'
   import AlgoGraph from './AlgoGraph.svelte'
@@ -32,6 +33,7 @@
   // ── Voice picker ──
   let voicePickerRef = $state<VoicePicker>(null!)
   let presetBrowserRef = $state<DockPresetBrowser>(null!)
+  let confirmRef = $state<ConfirmModal>(null!)
 
   // ── Sample loader ──
   const MAX_SAMPLE_SIZE = 10 * 1024 * 1024
@@ -286,9 +288,11 @@
 
 <div class="section-divider" aria-hidden="true"></div>
 <button class="btn-danger"
-  onclick={() => { if (confirm(`Remove track ${ui.selectedTrack + 1}?`)) removeTrack(ui.selectedTrack) }}
+  onclick={() => confirmRef.ask(`Remove track ${ui.selectedTrack + 1}?`, () => removeTrack(ui.selectedTrack))}
   data-tip="Remove this track" data-tip-ja="このトラックを削除"
 >REMOVE TRACK</button>
+
+<ConfirmModal bind:this={confirmRef} />
 
 {/if}
 

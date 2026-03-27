@@ -7,12 +7,14 @@
   import { VOICE_LIST } from '../audio/dsp/voices.ts'
   import PianoRoll from './PianoRoll.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
+  import ConfirmModal from './ConfirmModal.svelte'
   import { onDestroy } from 'svelte'
 
   const ph = $derived(activeCell(ui.selectedTrack))
   const track = $derived(song.tracks[ui.selectedTrack])
   const drum = $derived(isDrum(ph))
   const voiceMeta = $derived(ph.voiceId ? VOICE_LIST.find(v => v.id === ph.voiceId) : null)
+  let confirmRef = $state<ConfirmModal>(null!)
 
   // Mobile tab: melodic tracks can switch between STEPS and NOTES
   let mobileTab: 'steps' | 'notes' = $state('steps')
@@ -191,7 +193,7 @@
   function onNameDown() {
     nameLongPress = setTimeout(() => {
       nameLongPress = null
-      if (confirm(`Remove "${ph.name}"?`)) removeTrack(ui.selectedTrack)
+      confirmRef.ask(`Remove "${ph.name}"?`, () => removeTrack(ui.selectedTrack))
     }, 500)
   }
   function onNameUp() {
@@ -371,6 +373,7 @@
   {/if}
 
   <MobileParamOverlay />
+  <ConfirmModal bind:this={confirmRef} />
 
 </div>
 
