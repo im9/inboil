@@ -49,7 +49,7 @@
 <div class="voice-picker-wrap" class:mobile={variant === 'mobile'}>
   <button class="voice-current" onpointerdown={() => { voiceOpen = !voiceOpen; if (voiceOpen) onselect?.() }}
     data-tip="Change instrument" data-tip-ja="楽器を変更">
-    <span class="voice-current-name">{currentVoiceMeta?.fullName ?? voiceId}</span>
+    <span class="voice-current-name" class:placeholder={!voiceId}>{currentVoiceMeta?.fullName ?? voiceId ?? 'Select voice…'}</span>
     <span class="voice-current-arrow">{voiceOpen ? '▾' : '▸'}</span>
   </button>
   {#if voiceOpen}
@@ -128,6 +128,11 @@
   }
   .voice-current-name {
     text-transform: uppercase;
+  }
+  .voice-current-name.placeholder {
+    color: var(--dz-text-dim);
+    font-weight: 400;
+    text-transform: none;
   }
   .voice-current-arrow {
     font-size: var(--fs-md);
