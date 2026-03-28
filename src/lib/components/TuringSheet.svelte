@@ -49,9 +49,6 @@
     currentStep >= 0 && snapshots[currentStep] ? snapshots[currentStep] : snapshots[0]
   )
 
-  // Display register: follows playhead during playback, otherwise step 0
-  const displayReg = $derived(displaySnap?.register ?? (snapshots.length > 0 ? snapshots[0].register : []))
-
   // FREEZE state tracking
   let preFreezelock = $state<number | null>(null)
 
@@ -108,6 +105,28 @@
   const BAR_GAP = 4
   const BAR_MAX_H = 64
   const histWidth = $derived(snapshots.length * (BAR_W + BAR_GAP))
+
+  // ── Revolver rotation ──
+  const initialReg = $derived(snapshots.length > 0 ? snapshots[0].register : [])
+  let cumulativeSteps = $state(0)
+  let prevStep = $state(-1)
+
+  $effect(() => {
+    if (currentStep < 0) {
+      cumulativeSteps = 0
+      prevStep = -1
+      return
+    }
+    if (currentStep !== prevStep) {
+      cumulativeSteps++
+      prevStep = currentStep
+    }
+  })
+
+  const stepAngle = $derived(360 / (params?.length ?? 8))
+  const rotationDeg = $derived(currentStep >= 0 ? cumulativeSteps * stepAngle : 0)
+  const len = $derived(params?.length ?? 8)
+  const readingIdx = $derived(currentStep >= 0 && cumulativeSteps > 0 ? (len - (cumulativeSteps - 1) % len) % len : -1)
 
   function onkeydown(e: KeyboardEvent) {
     if (e.code === 'Escape') { e.preventDefault(); onclose() }
@@ -174,22 +193,24 @@
         <!-- Read head: small triangle well above bit 0 -->
         <polygon points="{RING_CX},{RING_CY - RING_R - BIT_R - 12} {RING_CX - 4},{RING_CY - RING_R - BIT_R - 6} {RING_CX + 4},{RING_CY - RING_R - BIT_R - 6}"
           fill="var(--color-fg)" opacity="0.3" />
-        <!-- Bits -->
-        {#each displayReg as bit, idx}
-          {@const pos = bitPos(idx, displayReg.length)}
-          {@const isMutated = currentStep < 0 && displaySnap?.mutatedBit === idx}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <circle
-            cx={pos.x} cy={pos.y} r={BIT_R}
-            class="bit-circle"
-            class:bit-on={bit === 1}
-            class:bit-off={bit === 0}
-            class:bit-mutated={isMutated}
-            role="button" tabindex="-1"
-            onpointerdown={toggleBit}
-          />
-          <text x={pos.x} y={pos.y + 4.5} class="bit-label">{bit}</text>
-        {/each}
+        <!-- Bits (revolver rotation) -->
+        <g class="bit-ring" style="transform: rotate({rotationDeg}deg); transform-origin: {RING_CX}px {RING_CY}px">
+          {#each initialReg as bit, idx}
+            {@const pos = bitPos(idx, initialReg.length)}
+            {@const isMutated = currentStep < 0 && displaySnap?.mutatedBit === idx}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <circle
+              cx={pos.x} cy={pos.y} r={BIT_R}
+              class="bit-circle"
+              class:bit-on={bit === 1 && idx !== readingIdx}
+              class:bit-off={bit === 0 && idx !== readingIdx}
+              class:bit-mutated={isMutated}
+              class:bit-reading={idx === readingIdx}
+              role="button" tabindex="-1"
+              onpointerdown={toggleBit}
+            />
+          {/each}
+        </g>
         <!-- Center info -->
         <text x={RING_CX} y={RING_CY - 8} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
         <text x={RING_CX} y={RING_CY + 14} class="ring-note" class:playing={currentStep >= 0}>
@@ -328,6 +349,9 @@
   }
 
   /* ── Register Ring ── */
+  .bit-ring {
+    transition: transform 200ms ease-out;
+  }
   .t-ring {
     flex-shrink: 0;
   }
@@ -346,23 +370,21 @@
     stroke: var(--color-olive);
   }
   .bit-off {
-    fill: transparent;
+    fill: var(--color-bg);
     stroke: var(--color-olive);
-    opacity: 0.35;
+    stroke-opacity: 0.35;
+  }
+  .bit-reading {
+    fill: #fff;
+    stroke: var(--color-olive);
+    stroke-width: 2.5;
+    opacity: 1;
   }
   .bit-mutated {
     fill: var(--color-salmon);
     stroke: var(--color-salmon);
     opacity: 1;
   }
-  .bit-label {
-    font-family: var(--font-data);
-    font-size: 10px; font-weight: 700;
-    fill: var(--color-bg);
-    text-anchor: middle;
-    pointer-events: none; user-select: none;
-  }
-  /* bit-label fill handled by parent circle opacity */
   .ring-info {
     font-family: var(--font-data);
     font-size: 20px; font-weight: 700;
