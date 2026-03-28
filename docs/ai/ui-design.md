@@ -721,7 +721,7 @@ Pattern editing controls strip (dark zone). Shown when a pattern sheet is open. 
 - **KEY**: 12-key piano keyboard. Active key shown in olive.
 - **OCT**: Octave shift −/+ buttons with display font value (-2 to +2). Pending changes shown with 400ms blink (`isPendingOct`).
 - **RND**: Randomize pattern button.
-- **GEN** (conditional): Generate/sparkle button + target track selector. Only appears when upstream generative nodes exist in scene.
+- **GEN** (conditional): Generate/sparkle button (arm/disarm loop-head generation). Only appears when upstream generative nodes exist in scene. Target track is configured per-node in the generative Sheet.
 - **VKBD** (desktop only): Virtual keyboard toggle. When active, shows `C{octave}` label. See ADR 031.
 - **MIDI indicator** (desktop only): Shows "MIDI" when MIDI input is active.
 - **LOOP**: Loop current pattern button (right-aligned).

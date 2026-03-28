@@ -7,7 +7,7 @@
   import { engine, type EngineContext } from '../audio/engine.ts'
   import { PATTERN_TEMPLATES } from '../factory.ts'
   import { patternApplyTemplate } from '../sectionActions.ts'
-  import { findUpstreamGenerativeNodes, sceneGenerateBuffer, sceneSetTargetTrack } from '../sceneActions.ts'
+  import { findUpstreamGenerativeNodes, sceneGenerateBuffer } from '../sceneActions.ts'
   import { cellForTrack } from '../state.svelte.ts'
 
   let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
@@ -36,19 +36,6 @@
   const patName = $derived(pat?.name || `PAT ${String(ui.currentPattern).padStart(2, '0')}`)
   const patColor = $derived(PATTERN_COLORS[pat?.color ?? 0])
 
-  // Resolve target pattern cells for track selector
-  const targetPatCells = $derived(pat?.cells ?? [])
-
-  // Current targetTrack from first upstream generative node
-  const currentTargetTrack = $derived.by(() => {
-    if (upstreamGenIds.length === 0) return 0
-    const node = song.scene.nodes.find(n => n.id === upstreamGenIds[0])
-    return node?.generative?.targetTrack ?? 0
-  })
-
-  function setTargetTrack(trackId: number) {
-    for (const id of upstreamGenIds) sceneSetTargetTrack(id, trackId)
-  }
 
   // ── Template picker ──
   let tmplOpen = $state(false)
@@ -299,15 +286,6 @@
       data-tip={genArmed ? 'Disarm — stop generating on loop' : 'Arm — generate on next loop head'}
       data-tip-ja={genArmed ? '解除 — ループ生成を停止' : 'アーム — 次のループ頭で生成'}
     ><svg class="gen-icon" viewBox="0 0 14 14" width="13" height="13" fill="currentColor">{@html ICON.sparkle}</svg></button>
-    <select
-      class="gen-track-select"
-      onchange={e => setTargetTrack(parseInt((e.target as HTMLSelectElement).value))}
-      data-tip="Target track for generation" data-tip-ja="生成対象トラック"
-    >
-      {#each targetPatCells as cell}
-        <option value={cell.trackId} selected={currentTargetTrack === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
-      {/each}
-    </select>
   {/if}
 
   <div class="sep" aria-hidden="true"></div>
@@ -672,19 +650,6 @@
     50%      { opacity: 0.4; }
   }
   .gen-icon { display: block; }
-  .gen-track-select {
-    font-family: var(--font-data);
-    font-size: var(--fs-min);
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    color: var(--lz-text-strong);
-    background: transparent;
-    border: 1px solid var(--lz-border-strong);
-    padding: 2px 4px;
-    height: 24px;
-    max-width: 72px;
-    flex-shrink: 0;
-  }
 
   /* ── Page buttons ── */
   .page-group {
