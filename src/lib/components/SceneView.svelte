@@ -8,6 +8,7 @@
   import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddModifier, findAttachedModifiers, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
+  import { clearPatternClipboard } from '../sectionActions.ts'
   import type { AlignMode } from '../sceneActions.ts'
   import { ICON } from '../icons.ts'
   import { STAMP_LIBRARY } from '../stampLibrary.ts'
@@ -742,14 +743,16 @@
     }
     const selectedCount = Object.keys(ui.selectedSceneNodes).length
     const primary = primarySelectedNode()
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && primary) {
+    const sceneFocused = viewEl?.contains(document.activeElement) || document.activeElement === viewEl
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyC' && primary && sceneFocused) {
       e.preventDefault()
       if (e.shiftKey) sceneCopySubgraph(primary)
       else if (selectedCount > 1) sceneCopySelected(ui.selectedSceneNodes)
       else sceneCopyNode(primary)
+      clearPatternClipboard()
       return true
     }
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard()) {
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && hasSceneClipboard() && sceneFocused) {
       e.preventDefault()
       const ids = scenePaste(0.4 + Math.random() * 0.2, 0.4 + Math.random() * 0.2)
       if (ids.length > 0) {

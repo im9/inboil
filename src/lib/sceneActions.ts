@@ -703,6 +703,10 @@ export function hasSceneClipboard(): boolean {
   return sceneClipboard !== null && sceneClipboard.nodes.length > 0
 }
 
+export function clearSceneClipboard(): void {
+  sceneClipboard = null
+}
+
 /** Copy a single node to clipboard */
 export function sceneCopyNode(nodeId: string): void {
   const node = findNode(nodeId)

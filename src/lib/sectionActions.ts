@@ -130,6 +130,11 @@ export function hasPatternClipboard(): boolean {
   return patternClipboard !== null
 }
 
+export function clearPatternClipboard(): void {
+  patternClipboard = null
+  patternClipboardSrcIndex = -1
+}
+
 // ── Cell (track) clipboard ──
 
 let cellClipboard: Pattern['cells'][0] | null = null

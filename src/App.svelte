@@ -31,6 +31,7 @@
   import { applySweepStep } from './lib/scenePlayback.ts'
   import { sweepRec, stopRecording } from './lib/sweepRecorder.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
+  import { clearSceneClipboard } from './lib/sceneActions.ts'
   import { engine, type EngineContext } from './lib/audio/engine.ts'
   import { setSignalingUrl, initHostHandlers, setHostTransportCallbacks, sendSnapshot, sendPlayhead, setOnGuestConnected, initGuestHandlers, disconnect, setOnError } from './lib/multiDevice/index.ts'
   import { syncDelta, resetDeltaSync } from './lib/multiDevice/deltaSync.ts'
@@ -394,7 +395,7 @@
     // Pattern-level copy/paste (skip when scene edge/label is selected — scene layer handles those)
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
       if (!hasSceneEdgeOrLabel) {
-        if (e.code === 'KeyC') { patternCopy(ui.currentPattern); return true }
+        if (e.code === 'KeyC') { patternCopy(ui.currentPattern); clearSceneClipboard(); return true }
         if (e.code === 'KeyV') { e.preventDefault(); patternPaste(ui.currentPattern); return true }
       }
     }
