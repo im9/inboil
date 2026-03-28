@@ -65,11 +65,12 @@ export class TB303Voice implements Voice {
 
 // ── Analog Bass ──────────────────────────────────────────────────────
 
-/** Analog subtractive: saw → saturation → resonant LP → ADSR. */
+/** Analog subtractive: saw + sub sine → drive → resonant LP → ADSR. */
 export class AnalogVoice implements Voice {
-  private phase = 0; private freq = 220; private vel = 1
+  private phase = 0; private subPhase = 0; private freq = 220; private vel = 1
   private env = new ADSR(); private filter = new ResonantLP()
   private cutoffBase = 800; private envMod = 4500; private resonance = 3.5
+  private drive = 1.8; private sub = 0.0
   constructor(private sr: number) {
     this.env.setSampleRate(sr)
     this.env.attack = 0.008; this.env.decay = 0.25; this.env.sustain = 0.3; this.env.release = 0.3
@@ -77,22 +78,34 @@ export class AnalogVoice implements Voice {
   noteOn(note: number, v: number) { this.freq = midiToHz(note); this.vel = v; this.env.noteOn() }
   noteOff() { this.env.noteOff() }
   slideNote(note: number, v: number) { this.noteOn(note, v) }
-  reset() { this.env.reset(); this.filter.reset(); this.phase = 0 }
+  reset() { this.env.reset(); this.filter.reset(); this.phase = 0; this.subPhase = 0 }
   tick(): number {
     if (this.env.isIdle()) return 0
     const env = this.env.tick()
     this.phase += this.freq / this.sr
     if (this.phase >= 1) this.phase -= 1
-    const sat = Math.tanh((this.phase * 2 - 1) * 1.8)
+    let sig = this.phase * 2 - 1  // saw
+    // Sub oscillator: sine one octave below
+    if (this.sub > 0) {
+      this.subPhase += this.freq * 0.5 / this.sr
+      if (this.subPhase >= 1) this.subPhase -= 1
+      sig += Math.sin(this.subPhase * Math.PI * 2) * this.sub
+    }
+    const sat = Math.tanh(sig * this.drive)
     this.filter.setParams(Math.min(this.cutoffBase + this.envMod * env, this.sr * 0.45), this.resonance, this.sr)
     return this.filter.process(sat) * env * this.vel * 0.60
   }
   setParam(key: string, value: number) {
     switch (key) {
-      case 'cutoffBase': this.cutoffBase = value; break
-      case 'envMod':     this.envMod     = value; break
-      case 'resonance':  this.resonance  = value; break
-      case 'decay':      this.env.decay  = value; break
+      case 'cutoffBase': this.cutoffBase   = value; break
+      case 'envMod':     this.envMod       = value; break
+      case 'resonance':  this.resonance    = value; break
+      case 'drive':      this.drive        = value; break
+      case 'sub':        this.sub          = value; break
+      case 'attack':     this.env.attack   = value; break
+      case 'decay':      this.env.decay    = value; break
+      case 'sustain':    this.env.sustain  = value; break
+      case 'release':    this.env.release  = value; break
     }
   }
 }

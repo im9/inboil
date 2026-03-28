@@ -501,22 +501,28 @@ const FM_PRESETS: SynthPreset[] = [
 // ── Analog presets ──────────────────────────────────────────────────
 const ANALOG_PRESETS: SynthPreset[] = [
   { name: 'Warm Sub', voiceId: 'Analog', params: {
-    cutoffBase: 400, envMod: 2000, resonance: 2.0, decay: 0.35,
+    sub: 0.6, drive: 1.4, cutoffBase: 400, envMod: 2000, resonance: 2.0,
+    attack: 0.008, decay: 0.35, sustain: 0.4, release: 0.4,
   }},
   { name: 'Biting', voiceId: 'Analog', params: {
-    cutoffBase: 600, envMod: 6000, resonance: 5.0, decay: 0.20,
+    sub: 0.0, drive: 2.8, cutoffBase: 600, envMod: 6000, resonance: 5.0,
+    attack: 0.001, decay: 0.20, sustain: 0.1, release: 0.15,
   }},
   { name: 'Smooth', voiceId: 'Analog', params: {
-    cutoffBase: 1200, envMod: 3000, resonance: 1.5, decay: 0.40,
+    sub: 0.3, drive: 1.2, cutoffBase: 1200, envMod: 3000, resonance: 1.5,
+    attack: 0.02, decay: 0.40, sustain: 0.5, release: 0.5,
   }},
   { name: 'Growl', voiceId: 'Analog', params: {
-    cutoffBase: 350, envMod: 5500, resonance: 4.5, decay: 0.18,
+    sub: 0.4, drive: 3.2, cutoffBase: 350, envMod: 5500, resonance: 4.5,
+    attack: 0.003, decay: 0.18, sustain: 0.2, release: 0.2,
   }},
   { name: 'Tight', voiceId: 'Analog', params: {
-    cutoffBase: 800, envMod: 4000, resonance: 2.5, decay: 0.12,
+    sub: 0.0, drive: 2.0, cutoffBase: 800, envMod: 4000, resonance: 2.5,
+    attack: 0.001, decay: 0.12, sustain: 0.0, release: 0.08,
   }},
   { name: 'Dark', voiceId: 'Analog', params: {
-    cutoffBase: 250, envMod: 1200, resonance: 1.0, decay: 0.45,
+    sub: 0.7, drive: 1.0, cutoffBase: 250, envMod: 1200, resonance: 1.0,
+    attack: 0.015, decay: 0.45, sustain: 0.6, release: 0.5,
   }},
 ]
 

@@ -79,10 +79,15 @@ const VOICE_PARAMS: Record<string, ParamDef[]> = {
     { key: 'lfoDest',    label: 'LDST', group: 'lfo',    tip: 'LFO dest: OFF/L1-L4/R1-R4',      tipJa: 'LFO 送り先',                  min: 0, max: 8, step: 1, default: 0 },
   ],
   Analog: [
+    { key: 'sub',        label: 'SUB',   group: 'osc',    tip: 'Sub oscillator level (-1 oct sine)', tipJa: 'サブオシレータレベル（-1oct サイン）', min: 0.0, max: 1.0, default: 0.0 },
+    { key: 'drive',      label: 'DRIV',  group: 'osc',    tip: 'Saturation drive',           tipJa: 'サチュレーション',       min: 0.5,   max: 4.0,  default: 1.8  },
     { key: 'cutoffBase', label: 'CUT',   group: 'filter', tip: 'Filter cutoff',              tipJa: 'フィルターカットオフ',   min: 200,   max: 4000, default: 800  },
     { key: 'envMod',     label: 'MOD',   group: 'filter', tip: 'Filter envelope depth',      tipJa: 'フィルターエンベロープ深さ', min: 500,   max: 8000, default: 4500 },
     { key: 'resonance',  label: 'RESO',  group: 'filter', tip: 'Filter resonance',           tipJa: 'レゾナンス',             min: 0.5,   max: 6.0,  default: 3.5  },
-    { key: 'decay',      label: 'DCY',   group: 'amp',    tip: 'Amplitude decay',            tipJa: '音量ディケイ',           min: 0.1,   max: 0.5,  default: 0.25 },
+    { key: 'attack',     label: 'ATK',   group: 'amp',    tip: 'Amp attack',                 tipJa: 'アタック',               min: 0.001, max: 0.5,  default: 0.008 },
+    { key: 'decay',      label: 'DCY',   group: 'amp',    tip: 'Amp decay',                  tipJa: 'ディケイ',               min: 0.05,  max: 2.0,  default: 0.25 },
+    { key: 'sustain',    label: 'SUS',   group: 'amp',    tip: 'Amp sustain',                tipJa: 'サスティン',             min: 0.0,   max: 1.0,  default: 0.3  },
+    { key: 'release',    label: 'RLS',   group: 'amp',    tip: 'Amp release',                tipJa: 'リリース',               min: 0.01,  max: 2.0,  default: 0.3  },
   ],
   WT: [
     { key: 'polyMode',   label: 'POLY',  group: 'osc',    tip: 'MONO → POLY16 → WIDE8 → UNISON', tipJa: 'MONO → POLY16 → WIDE8 → UNISON', min: 0, max: 3, step: 1, default: 0 },
