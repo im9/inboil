@@ -26,6 +26,8 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 
 - [x] **VoicePicker shared component** — Extracted to `VoicePicker.svelte` with `variant` prop for dock/mobile styling
 - [x] **AudioWorklet error propagation** — WorkletEvent `error` type added (WRK-001/DSP-001), engine shows toast on receive
+- [ ] **Clone roundtrip tests** — Add tests that create fully-populated objects (SweepData, Scene, ModifierParams), clone them, and deepEqual. Catches missing fields on type changes. Triggered by: globalSweep/durationMs/offsetMs lost on reload because cloneScene/cloneModifierParams didn't copy them
+- [ ] **SweepCanvas pure function extraction** — Extract label generators, hit-test calculations, and curve draw path builders from SweepCanvas.svelte (~1900 lines) into a separate `sweepCanvasHelpers.ts`. Improves testability without changing component structure
 
 ## Ideas
 
