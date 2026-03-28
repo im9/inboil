@@ -830,6 +830,9 @@
       stampPickerPos = { x: pickerPos.x, y: pickerPos.y }
       stampPickerFromToolbar = false
       stampPickerOpen = true
+    } else if (type.startsWith('fn-')) {
+      // Modifier: enter placement mode (user clicks a pattern node to attach)
+      placingType = type
     } else {
       const id = sceneAddGenerativeNode(type as GenerativeEngine, nx, ny)
       ui.selectedSceneNodes = {}

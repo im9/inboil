@@ -5,10 +5,10 @@
   export type BubblePickType = GenerativeEngine | 'label' | 'stamp' | 'fn-transpose' | 'fn-repeat' | 'fn-tempo' | 'fn-fx' | 'fn-sweep'
 
   const BUBBLE_ACCENT: Record<string, string> = {
-    'fn-sweep': '#c47a2a',
-    turing: '#8a9432',
-    quantizer: '#2a9485',
-    tonnetz: '#9456b0',
+    'fn-sweep': 'var(--tool-sweep)',
+    turing: 'var(--tool-turing)',
+    quantizer: 'var(--tool-quantizer)',
+    tonnetz: 'var(--tool-tonnetz)',
   }
 
   const BUBBLE_ITEMS: { type: BubblePickType; tip: string; tipJa: string }[] = [
