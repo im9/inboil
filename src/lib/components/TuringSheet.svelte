@@ -386,15 +386,17 @@
     opacity: 0.7;
   }
   .hist-bar.playing {
-    fill: var(--color-blue);
+    fill: #fff;
     opacity: 1;
+    stroke: var(--color-fg);
+    stroke-width: 0.5;
   }
   .hist-bar.rest {
     fill: var(--color-fg);
     opacity: 0.08;
   }
   .ring-note.playing {
-    fill: var(--color-blue);
+    font-weight: 900;
   }
   .hist-label {
     font-family: var(--font-data);

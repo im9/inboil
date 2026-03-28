@@ -88,7 +88,7 @@
   const kbdWidth = $derived((KBD_OCT_HI - KBD_OCT_LO + 1) * 7 * WK_W)
 
   function keyFill(key: KeyInfo): string {
-    if (playingPc === key.pc) return 'var(--color-blue)'
+    if (playingPc === key.pc) return '#fff'
     const inChord = chordPcs.has(key.pc)
     const inScale = scalePcs.has(key.pc)
     if (mode === 'chord' && inChord) return 'var(--color-olive)'
@@ -526,6 +526,6 @@
     font-size: var(--fs-md);
   }
   .status-label { opacity: 0.5; }
-  .status-note { font-weight: 700; color: var(--color-blue); }
+  .status-note { font-weight: 700; }
   .status-rest { opacity: 0.3; }
 </style>

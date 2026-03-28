@@ -669,7 +669,7 @@
   .tri.major { fill: rgba(237, 232, 220, 0.06); }
   .tri.minor { fill: rgba(30, 32, 40, 0.06); }
   .tri.current { fill: var(--color-olive); stroke-width: 1.5; }
-  .tri.playing { fill: var(--color-blue); stroke-width: 1.5; animation: tri-pulse 400ms ease-out; }
+  .tri.playing { fill: #fff; stroke-width: 1.5; animation: tri-pulse 400ms ease-out; }
   .tri.walk { fill: rgba(138, 148, 50, 0.15); }
   @keyframes tri-pulse {
     0%   { filter: brightness(1.5); }
@@ -677,7 +677,7 @@
   }
   .tri:hover { fill: rgba(237, 232, 220, 0.2); }
   .tri.current:hover { fill: var(--color-olive); }
-  .tri.playing:hover { fill: var(--color-blue); }
+  .tri.playing:hover { fill: #fff; }
   .tri-label {
     font-family: var(--font-data);
     font-size: 9px; font-weight: 700;
@@ -685,7 +685,8 @@
     text-anchor: middle;
     pointer-events: none; user-select: none;
   }
-  .tri-label.current, .tri-label.playing { fill: var(--color-bg); }
+  .tri-label.current { fill: var(--color-bg); }
+  .tri-label.playing { fill: var(--color-fg); }
   .walk-trail {
     fill: none;
     stroke: var(--color-olive);
@@ -721,7 +722,6 @@
   }
   .trail-chord.now {
     opacity: 1;
-    color: var(--color-blue);
   }
   .trail-arrow { opacity: 0.2; flex-shrink: 0; }
 
