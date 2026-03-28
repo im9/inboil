@@ -178,6 +178,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   if (node.type === 'pattern') {
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
+    reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
     applyLiveGenerative(node)
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
     const idx = pi >= 0 ? pi : 0
@@ -211,6 +212,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
         restoreAutomationSnapshot(playback.automationSnapshot)
       }
       playback.automationSnapshot = snapshotAutomationTargets()
+      reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
       applyLiveGenerative(node)
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
@@ -296,6 +298,20 @@ function findConnectedSweep(patternNodeId: string): SweepData | null {
     if (src?.type === 'sweep' && src.modifierParams?.sweep) return src.modifierParams.sweep
   }
   return null
+}
+
+/** Re-apply global sweep at current progress after snapshot restore.
+ *  Called during pattern transitions so global parameters don't snap back.
+ *  Must be called AFTER snapshotAutomationTargets() so the snapshot has clean base values. */
+function reapplyGlobalSweep(): void {
+  const globalSweep = song.scene.globalSweep
+  const snap = playback.automationSnapshot
+  if (!globalSweep || !globalSweep.durationMs || !snap) return
+  if (globalSweep.curves.length === 0 && (!globalSweep.toggles?.length)) return
+  const elapsedMs = performance.now() - scenePlayStartMs - (globalSweep.offsetMs ?? 0)
+  if (elapsedMs < 0) return
+  const progress = Math.min(1, elapsedMs / globalSweep.durationMs)
+  applySweepData(globalSweep, progress, snap)
 }
 
 /** Apply sweep automation for current step. Called from App.svelte onStep.
