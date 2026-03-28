@@ -281,6 +281,11 @@ export function markScenePlayStart(): void {
   scenePlayStartMs = performance.now()
 }
 
+/** Returns ms elapsed since scene playback started. */
+export function scenePlayElapsedMs(): number {
+  return scenePlayStartMs > 0 ? performance.now() - scenePlayStartMs : 0
+}
+
 // ── Sweep automation (ADR 118) ──────────────────────────────────────
 
 /** Find sweep node connected to a pattern node */
@@ -307,7 +312,7 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   // Global sweep evaluation (ADR 123 Phase 5)
   const globalSweep = song.scene.globalSweep
   if (globalSweep && (globalSweep.curves.length > 0 || (globalSweep.toggles?.length ?? 0) > 0) && globalSweep.durationMs) {
-    const elapsedMs = performance.now() - scenePlayStartMs
+    const elapsedMs = performance.now() - scenePlayStartMs - (globalSweep.offsetMs ?? 0)
     const globalProgress = Math.max(0, Math.min(1, elapsedMs / globalSweep.durationMs))
     changed = applySweepData(globalSweep, globalProgress, snap) || changed
   }

@@ -280,6 +280,8 @@ export interface SweepData {
   toggles?: SweepToggleCurve[]  // boolean automation (ADR 123)
   /** Total recording duration in ms — used for global sweep playback timing (ADR 123 Phase 5) */
   durationMs?: number
+  /** Offset from scene play start to recording start in ms (ADR 123 Phase 5) */
+  offsetMs?: number
 }
 
 /** Modifier/sweep node parameters — type-specific (ADR 093, sweep ADR 118, terminology ADR 125) */

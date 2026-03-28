@@ -6,6 +6,7 @@
  * Flow: arm → (user touches pad) → playback starts → recording → stop
  */
 import { song, playback, pushUndo, playFromNode } from './state.svelte.ts'
+import { scenePlayElapsedMs } from './scenePlayback.ts'
 import { repositionSatellites } from './sceneActions.ts'
 import { buildSweepData, targetKey, setUserControlledChecker, mergeOverdub, mergeOverdubToggles, rdpSimplify, isGlobalTarget } from './sweepEval.ts'
 import type { SweepCurve, SweepTarget, SweepToggleCurve, SweepToggleTarget } from './types.ts'
@@ -307,6 +308,8 @@ export function stopRecording(): void {
     const mergedToggles = mergeOverdubToggles(existing.toggles ?? [], globalToggles)
     const data = buildSweepData(mergedCurves, mergedToggles)
     data.durationMs = totalRecMs
+    // Store offset from scene play start so playback aligns correctly
+    data.offsetMs = scenePlayElapsedMs() - totalRecMs
     song.scene.globalSweep = data
   }
 

@@ -10,7 +10,7 @@
   import { evaluateCurve, targetsEqual, isMuteCurve } from '../sweepEval.ts'
   import { PATTERN_COLORS } from '../constants.ts'
   import Knob from './Knob.svelte'
-  import type { SweepCurve, SweepTarget, SweepToggleTarget, VoiceId } from '../types.ts'
+  import type { SweepCurve, SweepTarget, SweepToggleCurve, SweepToggleTarget, VoiceId } from '../types.ts'
 
   // ── Sweep node detection (follows playback during scene play) ──
   const activePatIdx = $derived(
@@ -77,10 +77,46 @@
 
   const { onClose, onstop }: { onClose: () => void; onstop?: () => void } = $props()
 
+  // ── Global curve remap scale (global t → pattern-local t) ──
+  const globalRemapScale = $derived.by(() => {
+    const durMs = globalSweep?.durationMs ?? 1
+    const stepMs = (60000 / song.bpm) / 4
+    const patMs = Math.max(...(song.patterns[activePatIdx]?.cells.map(c => c.steps) ?? [16])) * stepMs * repeatCount
+    return patMs > 0 ? durMs / patMs : 1
+  })
+
+  /** Remap a global curve's points to pattern-local t coordinates */
+  function remapGlobalCurve(gc: SweepCurve): SweepCurve {
+    return { ...gc, points: gc.points.map(p => ({ ...p, t: p.t * globalRemapScale })) }
+  }
+
+  /** Convert pattern-local t back to global t for saving */
+  function unmapGlobalPoint(t: number): number {
+    return globalRemapScale > 0 ? t / globalRemapScale : t
+  }
+
   // ── Selected curve/toggle ──
   let selectedCurveIdx = $state<number | null>(null)
+  let selectedGlobalCurveIdx = $state<number | null>(null)
   let selectedToggleIdx = $state<number | null>(null)
-  const selectedCurve = $derived(selectedCurveIdx !== null ? sweepData.curves[selectedCurveIdx] ?? null : null)
+  let selectedGlobalToggleIdx = $state<number | null>(null)
+  const selectedCurve = $derived.by(() => {
+    if (selectedCurveIdx !== null) return sweepData.curves[selectedCurveIdx] ?? null
+    if (selectedGlobalCurveIdx !== null) {
+      const gc = globalCurves[selectedGlobalCurveIdx]
+      return gc ? remapGlobalCurve(gc) : null
+    }
+    return null
+  })
+  const isSelectedGlobal = $derived(selectedGlobalCurveIdx !== null)
+
+  // ── Selected toggle (for canvas rendering) ──
+  const selectedToggle = $derived.by((): SweepToggleCurve | null => {
+    if (selectedToggleIdx !== null) return sweepData.toggles?.[selectedToggleIdx] ?? null
+    if (selectedGlobalToggleIdx !== null) return globalSweep?.toggles?.[selectedGlobalToggleIdx] ?? null
+    return null
+  })
+  const isSelectedToggleGlobal = $derived(selectedGlobalToggleIdx !== null)
 
   // ── Canvas state ──
   let canvasEl: HTMLCanvasElement | undefined = $state()
@@ -171,6 +207,7 @@
   const viewSpan = $derived(zoomEnd - zoomStart)
 
   const TIMELINE_H = 22
+  const TOGGLE_LANE_H = 28
 
   // ── Dark-zone canvas colors ──
   const DZ_BG = '#1E2028'
@@ -277,8 +314,10 @@
       }
     }
 
-    // ── Drawing area (below timeline) ──
-    const drawH = h - TIMELINE_H
+    // ── Drawing area (below timeline, above optional toggle lane) ──
+    const hasToggleLane = selectedToggle !== null
+    const toggleLaneH = hasToggleLane ? TOGGLE_LANE_H : 0
+    const drawH = h - TIMELINE_H - toggleLaneH
     const drawY = TIMELINE_H
 
     // Grid dots
@@ -350,30 +389,18 @@
     }
 
     // Draw all curves (with flash-fade during clear)
-    // Remap global curves' t (0-1 = full recording) to pattern-local t coordinate system
-    const globalRemapped: SweepCurve[] = globalCurves.map(gc => {
-      const durMs = globalSweep?.durationMs ?? 1
-      // Chain t space: 0..repeatCount covers one full pattern cycle
-      // Global t space: 0..1 covers durMs of recording
-      // patternDurationMs = (stepsPerPattern / (bpm / 60)) * (scale / 2) — approximate via step timing
-      const stepMs = (60000 / song.bpm) / 4  // 16th note duration
-      const patMs = stepsPerPattern * stepMs * rc
-      const scale = patMs > 0 ? durMs / patMs : 1
-      return {
-        ...gc,
-        points: gc.points.map(p => ({ ...p, t: p.t * scale })),
-      }
-    })
+    const globalRemapped: SweepCurve[] = globalCurves.map(remapGlobalCurve)
 
     if (clearProgress === null) {
       for (const curve of sweepData.curves) {
         if (isMuteCurve(curve)) continue
-        const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
+        const isActive = selectedCurve && !isSelectedGlobal && targetsEqual(curve.target, selectedCurve.target)
         drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
       }
       for (const curve of globalRemapped) {
         if (isMuteCurve(curve)) continue
-        drawCurve(ctx, curve, w, drawY, drawH, 0.3, playProgress)
+        const isActive = selectedCurve && isSelectedGlobal && targetsEqual(curve.target, selectedCurve.target)
+        drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
       }
     } else {
       const fade = 1 - clearProgress
@@ -433,6 +460,79 @@
             ctx.fillStyle = DZ_TEXT
           }
         }
+      }
+    }
+
+    // ── Toggle lane (bottom strip) ──
+    if (hasToggleLane && selectedToggle) {
+      const laneY = h - toggleLaneH
+      // Divider line
+      ctx.strokeStyle = DZ_DIVIDER
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(0, laneY)
+      ctx.lineTo(w, laneY)
+      ctx.stroke()
+
+      // Background
+      ctx.fillStyle = 'rgba(237,232,220, 0.03)'
+      ctx.fillRect(0, laneY, w, toggleLaneH)
+
+      // Label
+      ctx.fillStyle = DZ_TEXT_DIM
+      ctx.font = '9px monospace'
+      ctx.textAlign = 'right'
+      ctx.fillText(selectedToggle.target.kind === 'mute' ? 'MUTE' : 'ON/OFF', w - 6, laneY + 11)
+
+      // Repeat boundary ticks
+      for (let s = 0; s <= totalSteps; s++) {
+        const t = s / totalSteps
+        if (t < viewStart - 0.01 || t > viewEnd + 0.01) continue
+        const isRepeatBoundary = s % spp === 0
+        if (isRepeatBoundary && s > 0) {
+          ctx.strokeStyle = DZ_GRID_BEAT
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(tToX(t, w), laneY)
+          ctx.lineTo(tToX(t, w), h)
+          ctx.stroke()
+        }
+      }
+
+      // On blocks
+      const pts = selectedToggle.points
+      for (let pi = 0; pi < pts.length; pi++) {
+        const pt = pts[pi]
+        const nextT = pi < pts.length - 1 ? pts[pi + 1].t : 1
+        if (pt.on) {
+          const x0 = tToX(pt.t, w)
+          const x1 = tToX(nextT, w)
+          ctx.fillStyle = selectedToggle.color
+          ctx.globalAlpha = 0.5
+          ctx.fillRect(x0, laneY + 2, x1 - x0, toggleLaneH - 4)
+          // Brighter top edge
+          ctx.globalAlpha = 0.8
+          ctx.fillRect(x0, laneY + 2, x1 - x0, 2)
+          ctx.globalAlpha = 1.0
+        }
+      }
+
+      // Boundary handles
+      for (let pi = 0; pi < pts.length; pi++) {
+        const x = tToX(pts[pi].t, w)
+        if (x < -4 || x > w + 4) continue
+        // Handle line
+        ctx.strokeStyle = 'rgba(237,232,220, 0.5)'
+        ctx.lineWidth = 1.5
+        ctx.beginPath()
+        ctx.moveTo(x, laneY + 1)
+        ctx.lineTo(x, h - 1)
+        ctx.stroke()
+        // Handle grip dot
+        ctx.fillStyle = 'rgba(237,232,220, 0.7)'
+        ctx.beginPath()
+        ctx.arc(x, laneY + toggleLaneH / 2, 3, 0, Math.PI * 2)
+        ctx.fill()
       }
     }
 
@@ -768,6 +868,34 @@
     return (e.clientY - rect.top) < timelineH
   }
 
+  function isInToggleLane(e: PointerEvent): boolean {
+    if (!canvasEl || !selectedToggle) return false
+    const rect = canvasEl.getBoundingClientRect()
+    const laneTop = rect.bottom - TOGGLE_LANE_H * (rect.height / canvasH)
+    return e.clientY >= laneTop
+  }
+
+  /** Convert pointer event to t value using canvas coordinates */
+  function pointerToT(e: PointerEvent): number {
+    if (!canvasEl) return 0
+    const rect = canvasEl.getBoundingClientRect()
+    const screenT = (e.clientX - rect.left) / rect.width
+    return Math.max(0, Math.min(1, viewStart + screenT * viewSpan))
+  }
+
+  /** Hit-test toggle boundary handles — returns point index or -1 */
+  function hitTestToggleBoundary(e: PointerEvent): number {
+    if (!canvasEl || !selectedToggle) return -1
+    const rect = canvasEl.getBoundingClientRect()
+    const w = rect.width
+    for (let i = 0; i < selectedToggle.points.length; i++) {
+      const bx = tToX(selectedToggle.points[i].t, w)
+      const dx = Math.abs(e.clientX - rect.left - bx)
+      if (dx < 8) return i
+    }
+    return -1
+  }
+
   function hitTestPoint(e: PointerEvent): number {
     if (!selectedCurve || !canvasEl) return -1
     const rect = canvasEl.getBoundingClientRect()
@@ -784,27 +912,33 @@
     return -1
   }
 
-  /** Hit-test which curve is near the pointer (for click-to-select) */
-  function hitTestCurve(e: PointerEvent): number {
-    if (!canvasEl) return -1
+  /** Hit-test which curve is near the pointer (for click-to-select).
+   *  Returns { scope: 'chain' | 'global', idx } or null. */
+  function hitTestCurve(e: PointerEvent): { scope: 'chain' | 'global'; idx: number } | null {
+    if (!canvasEl) return null
     const norm = pointerToNorm(e)
-    const HIT_DIST = 0.05 // normalized v distance threshold
+    const HIT_DIST = 0.05
 
-    let bestIdx = -1
+    let best: { scope: 'chain' | 'global'; idx: number } | null = null
     let bestDist = HIT_DIST
+
     for (let ci = 0; ci < sweepData.curves.length; ci++) {
       const curve = sweepData.curves[ci]
       if (isMuteCurve(curve)) continue
       if (curve.points.length < 2) continue
-      // Evaluate curve at pointer's t position
       const v = evaluateCurve(curve.points, norm.t)
       const dist = Math.abs(v - norm.v)
-      if (dist < bestDist) {
-        bestDist = dist
-        bestIdx = ci
-      }
+      if (dist < bestDist) { bestDist = dist; best = { scope: 'chain', idx: ci } }
     }
-    return bestIdx
+    for (let ci = 0; ci < globalCurves.length; ci++) {
+      const remapped = remapGlobalCurve(globalCurves[ci])
+      if (isMuteCurve(remapped)) continue
+      if (remapped.points.length < 2) continue
+      const v = evaluateCurve(remapped.points, norm.t)
+      const dist = Math.abs(v - norm.v)
+      if (dist < bestDist) { bestDist = dist; best = { scope: 'global', idx: ci } }
+    }
+    return best
   }
 
   function onPointerDown(e: PointerEvent) {
@@ -827,6 +961,26 @@
     }
 
     canvasEl.setPointerCapture(e.pointerId)
+
+    // Toggle lane interactions
+    if (isInToggleLane(e) && selectedToggle) {
+      const bi = hitTestToggleBoundary(e)
+      if (bi >= 0) {
+        // Start boundary drag
+        e.preventDefault()
+        const scope: 'chain' | 'global' = isSelectedToggleGlobal ? 'global' : 'chain'
+        const idx = isSelectedToggleGlobal ? selectedGlobalToggleIdx! : selectedToggleIdx!
+        toggleDragState = { toggleIdx: idx, boundaryIdx: bi, side: 'left', scope }
+        return
+      }
+      // Click on empty area → split toggle block
+      const t = pointerToT(e)
+      const scope: 'chain' | 'global' = isSelectedToggleGlobal ? 'global' : 'chain'
+      const idx = isSelectedToggleGlobal ? selectedGlobalToggleIdx! : selectedToggleIdx!
+      splitToggleBlock(idx, t, scope)
+      redraw()
+      return
+    }
 
     // Edge drag on existing range
     if (hasRange && selectedCurve) {
@@ -910,20 +1064,35 @@
     }
 
     // Click on a different curve → select it
-    const curveIdx = hitTestCurve(e)
-    if (curveIdx >= 0) {
-      selectedCurveIdx = curveIdx
+    const hit = hitTestCurve(e)
+    if (hit) {
+      if (hit.scope === 'chain') {
+        selectedCurveIdx = hit.idx
+        selectedGlobalCurveIdx = null
+      } else {
+        selectedCurveIdx = null
+        selectedGlobalCurveIdx = hit.idx
+      }
       selectedToggleIdx = null
+      selectedGlobalToggleIdx = null
       redraw()
     } else {
       // Click on empty space → deselect
       selectedCurveIdx = null
+      selectedGlobalCurveIdx = null
       selectedToggleIdx = null
+      selectedGlobalToggleIdx = null
       redraw()
     }
   }
 
   function onPointerMove(e: PointerEvent) {
+    // Toggle boundary drag
+    if (toggleDragState) {
+      onToggleBoundaryMove(e)
+      redraw()
+      return
+    }
     // Range selection / edge drag
     if (rangeDragging) {
       const norm = pointerToNorm(e)
@@ -1001,6 +1170,10 @@
   }
 
   function onPointerUp(_e: PointerEvent) {
+    if (toggleDragState) {
+      onToggleBoundaryUp()
+      return
+    }
     if (rangeDragging) {
       rangeDragging = false
       rangeDragEdge = null
@@ -1008,6 +1181,7 @@
     }
     draggingPointIdx = null
     dragging = false
+    dragUndoPushed = false
   }
 
   // ── Flash-fade clear effect ──
@@ -1031,7 +1205,7 @@
         pushUndo('Clear all sweep curves')
         sceneUpdateModifierParams(nodeId, { sweep: { curves: [] } })
         if (song.scene.globalSweep) song.scene.globalSweep = undefined
-        selectedCurveIdx = null; selectedToggleIdx = null
+        selectedCurveIdx = null; selectedGlobalCurveIdx = null; selectedToggleIdx = null; selectedGlobalToggleIdx = null
         clearProgress = null; clearRafId = 0
         redraw()
       }
@@ -1040,8 +1214,16 @@
   }
 
   // ── Commit curve to sweep data ──
+  // Track whether undo has been pushed for current drag to avoid undo stack flooding
+  let dragUndoPushed = false
+
   function commitCurve(target: SweepTarget, color: string, points: { t: number; v: number }[]) {
+    if (isSelectedGlobal) {
+      commitGlobalCurve(target, color, points)
+      return
+    }
     if (!sweepNode) return
+    if (!dragUndoPushed) { pushUndo('Edit sweep curve'); dragUndoPushed = true }
     const curves = [...sweepData.curves]
     const existingIdx = curves.findIndex(c => targetsEqual(c.target, target))
     const newCurve: SweepCurve = { target, points, color }
@@ -1050,7 +1232,24 @@
     } else {
       curves.push(newCurve)
     }
-    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves, toggles: sweepData.toggles } })
+    // Direct update without sceneUpdateModifierParams to avoid extra pushUndo
+    const node = song.scene.nodes.find(n => n.id === sweepNode!.id)
+    if (node) node.modifierParams = { ...node.modifierParams, sweep: { curves, toggles: sweepData.toggles } }
+  }
+
+  function commitGlobalCurve(target: SweepTarget, color: string, localPoints: { t: number; v: number }[]) {
+    if (!globalSweep) return
+    if (!dragUndoPushed) { pushUndo('Edit global sweep curve'); dragUndoPushed = true }
+    const points = localPoints.map(p => ({ ...p, t: unmapGlobalPoint(p.t) }))
+    const curves = [...(globalSweep.curves ?? [])]
+    const existingIdx = curves.findIndex(c => targetsEqual(c.target, target))
+    const newCurve: SweepCurve = { target, points, color }
+    if (existingIdx >= 0) {
+      curves[existingIdx] = newCurve
+    } else {
+      curves.push(newCurve)
+    }
+    song.scene.globalSweep = { ...globalSweep, curves }
   }
 
   function deleteCurve(target: SweepTarget) {
@@ -1098,32 +1297,22 @@
   // ── Toggle editing helpers ──
   let toggleDragState = $state<{
     toggleIdx: number
-    boundaryIdx: number  // index of the point whose t is being dragged
+    boundaryIdx: number
     side: 'left' | 'right'
+    scope: 'chain' | 'global'
   } | null>(null)
 
-  // Cleanup window listeners if component unmounts mid-drag
-  $effect(() => () => { if (toggleDragState) onToggleBoundaryUp() })
-
-  function onToggleBoundaryDown(e: PointerEvent, toggleIdx: number, boundaryIdx: number, side: 'left' | 'right') {
-    e.preventDefault()
-    e.stopPropagation()
-    if (toggleDragState) return // guard against double-initiation
-    toggleDragState = { toggleIdx, boundaryIdx, side }
-    window.addEventListener('pointermove', onToggleBoundaryMove)
-    window.addEventListener('pointerup', onToggleBoundaryUp)
-  }
+  $effect(() => () => { if (toggleDragState) toggleDragState = null })
 
   function onToggleBoundaryMove(e: PointerEvent) {
-    if (!toggleDragState || !sweepNode || !sweepData.toggles) return
-    const toggle = sweepData.toggles[toggleDragState.toggleIdx]
+    if (!toggleDragState) return
+    const isGlobal = toggleDragState.scope === 'global'
+    const toggles = isGlobal ? globalSweep?.toggles : sweepData.toggles
+    if (!toggles) return
+    const toggle = toggles[toggleDragState.toggleIdx]
     if (!toggle) return
 
-    // Convert screen X to t
-    const listEl = document.querySelector('.sweep-toggle-bar') as HTMLElement | null
-    if (!listEl) return
-    const rect = listEl.getBoundingClientRect()
-    const t = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const t = pointerToT(e)
 
     const pts = [...toggle.points]
     const bi = toggleDragState.boundaryIdx
@@ -1131,33 +1320,44 @@
     pts[bi] = { ...pts[bi], t }
     pts.sort((a, b) => a.t - b.t)
 
-    const toggles = [...sweepData.toggles]
-    toggles[toggleDragState.toggleIdx] = { ...toggle, points: pts }
-    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles } })
-    // Update boundary index after sort
+    if (isGlobal && globalSweep) {
+      const newToggles = [...(globalSweep.toggles ?? [])]
+      newToggles[toggleDragState.toggleIdx] = { ...toggle, points: pts }
+      song.scene.globalSweep = { ...globalSweep, toggles: newToggles }
+    } else if (sweepNode) {
+      const newToggles = [...(sweepData.toggles ?? [])]
+      newToggles[toggleDragState.toggleIdx] = { ...toggle, points: pts }
+      sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles: newToggles } })
+    }
     toggleDragState.boundaryIdx = pts.findIndex(p => p.t === t)
   }
 
   function onToggleBoundaryUp() {
     toggleDragState = null
-    window.removeEventListener('pointermove', onToggleBoundaryMove)
-    window.removeEventListener('pointerup', onToggleBoundaryUp)
   }
 
-  function splitToggleBlock(toggleIdx: number, t: number) {
-    if (!sweepNode || !sweepData.toggles) return
-    const toggle = sweepData.toggles[toggleIdx]
+  function splitToggleBlock(toggleIdx: number, t: number, scope: 'chain' | 'global' = 'chain') {
+    const isGlobal = scope === 'global'
+    const toggles = isGlobal ? globalSweep?.toggles : sweepData.toggles
+    if (!toggles) return
+    const toggle = toggles[toggleIdx]
     if (!toggle) return
     pushUndo('Split sweep toggle')
     const pts = [...toggle.points]
-    // Insert off-on pair to create a gap
     const gap = 0.02
     pts.push({ t: Math.max(0, t - gap / 2), on: false })
     pts.push({ t: Math.min(1, t + gap / 2), on: true })
     pts.sort((a, b) => a.t - b.t)
-    const toggles = [...sweepData.toggles]
-    toggles[toggleIdx] = { ...toggle, points: pts }
-    sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles } })
+
+    if (isGlobal && globalSweep) {
+      const newToggles = [...(globalSweep.toggles ?? [])]
+      newToggles[toggleIdx] = { ...toggle, points: pts }
+      song.scene.globalSweep = { ...globalSweep, toggles: newToggles }
+    } else if (sweepNode) {
+      const newToggles = [...(sweepData.toggles ?? [])]
+      newToggles[toggleIdx] = { ...toggle, points: pts }
+      sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles: newToggles } })
+    }
   }
 
   // ── Knob precision editing ──
@@ -1260,6 +1460,8 @@
     canvasW
     canvasH
     selectedCurveIdx
+    selectedToggleIdx
+    selectedGlobalToggleIdx
     scrollPage
     zoomOverride
     if (!playback.playing) redraw()
@@ -1347,7 +1549,7 @@
               class="sweep-list-item"
               class:active={selectedCurveIdx === i}
               style="--accent: {curve.color}"
-              onpointerdown={() => { selectedCurveIdx = i; selectedToggleIdx = null }}
+              onpointerdown={() => { selectedCurveIdx = i; selectedGlobalCurveIdx = null; selectedToggleIdx = null; selectedGlobalToggleIdx = null }}
             >
               <span class="sweep-list-dot"></span>
               <span class="sweep-list-label">{curveLabel(curve.target)}</span>
@@ -1366,63 +1568,44 @@
             class="sweep-list-item toggle-item"
             class:active={selectedToggleIdx === i}
             style="--accent: {toggle.color}"
-            onpointerdown={() => { selectedToggleIdx = i; selectedCurveIdx = null }}
+            onpointerdown={() => { selectedToggleIdx = i; selectedCurveIdx = null; selectedGlobalCurveIdx = null; selectedGlobalToggleIdx = null; redraw() }}
           >
+            <span class="sweep-list-dot"></span>
             <span class="sweep-list-label">{toggleLabel(toggle.target)}</span>
             <button class="sweep-list-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteToggle(i) }}
               data-tip="Delete toggle" data-tip-ja="トグルを削除"
             >✕</button>
-          </div>
-          <!-- Toggle block visualization -->
-          <div class="sweep-toggle-row" class:active={selectedToggleIdx === i}>
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="sweep-toggle-bar"
-              style="--accent: {toggle.color}"
-              onpointerdown={(e: PointerEvent) => {
-                if (selectedToggleIdx === i) {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  const t = (e.clientX - rect.left) / rect.width
-                  splitToggleBlock(i, t)
-                }
-              }}
-            >
-              {#each toggle.points as pt, pi}
-                {@const nextT = pi < toggle.points.length - 1 ? toggle.points[pi + 1].t : 1}
-                {#if pt.on}
-                  <div
-                    class="toggle-block on"
-                    style="left: {pt.t * 100}%; width: {(nextT - pt.t) * 100}%"
-                  ></div>
-                {/if}
-                <!-- Boundary handle -->
-                {#if selectedToggleIdx === i}
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div
-                    class="toggle-boundary"
-                    style="left: {pt.t * 100}%"
-                    onpointerdown={(e: PointerEvent) => onToggleBoundaryDown(e, i, pi, 'left')}
-                  ></div>
-                {/if}
-              {/each}
-            </div>
           </div>
         {/each}
       {/if}
       {#if song.scene.globalSweep && ((song.scene.globalSweep.curves?.length ?? 0) > 0 || (song.scene.globalSweep.toggles?.length ?? 0) > 0)}
         <div class="sweep-section-label global-label">Global</div>
         {#each song.scene.globalSweep.curves ?? [] as curve, i}
-          <div class="sweep-list-item global-item" style="--accent: {curve.color}">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="sweep-list-item global-item"
+            class:active={selectedGlobalCurveIdx === i}
+            style="--accent: {curve.color}"
+            onpointerdown={() => { selectedGlobalCurveIdx = i; selectedCurveIdx = null; selectedToggleIdx = null; selectedGlobalToggleIdx = null }}
+          >
             <span class="sweep-list-dot"></span>
             <span class="sweep-list-label">{curveLabel(curve.target)}</span>
-            <button class="sweep-list-del" onpointerdown={() => deleteGlobalCurve(i)}
+            <button class="sweep-list-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteGlobalCurve(i) }}
               data-tip="Delete global curve" data-tip-ja="グローバルカーブを削除"
             >✕</button>
           </div>
         {/each}
         {#each song.scene.globalSweep.toggles ?? [] as toggle, i}
-          <div class="sweep-list-item global-item" style="--accent: {toggle.color}">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="sweep-list-item global-item toggle-item"
+            class:active={selectedGlobalToggleIdx === i}
+            style="--accent: {toggle.color}"
+            onpointerdown={() => { selectedGlobalToggleIdx = i; selectedCurveIdx = null; selectedGlobalCurveIdx = null; selectedToggleIdx = null; redraw() }}
+          >
+            <span class="sweep-list-dot"></span>
             <span class="sweep-list-label">{toggleLabel(toggle.target)}</span>
-            <button class="sweep-list-del" onpointerdown={() => deleteGlobalToggle(i)}
+            <button class="sweep-list-del" onpointerdown={(e: PointerEvent) => { e.stopPropagation(); deleteGlobalToggle(i) }}
               data-tip="Delete global toggle" data-tip-ja="グローバルトグルを削除"
             >✕</button>
           </div>
@@ -1708,53 +1891,6 @@
     color: var(--dz-text-dim);
     font-size: var(--fs-sm);
     text-align: center;
-  }
-
-  /* ── Toggle blocks ── */
-  .sweep-toggle-row {
-    padding: 2px 8px 4px;
-  }
-  .sweep-toggle-bar {
-    position: relative;
-    height: 12px;
-    background: var(--dz-bg-hover);
-    border-radius: 2px;
-    overflow: visible;
-  }
-  .sweep-toggle-row.active .sweep-toggle-bar {
-    cursor: crosshair;
-  }
-  .toggle-block {
-    position: absolute;
-    top: 0;
-    height: 100%;
-    border-radius: 2px;
-  }
-  .toggle-block.on {
-    background: var(--accent);
-    opacity: 0.6;
-  }
-  .sweep-toggle-row.active .toggle-block.on {
-    opacity: 0.8;
-  }
-  .toggle-boundary {
-    position: absolute;
-    top: -2px;
-    width: 6px;
-    height: 16px;
-    margin-left: -3px;
-    background: var(--dz-text-strong);
-    border-radius: 2px;
-    cursor: ew-resize;
-    opacity: 0;
-    transition: opacity 80ms;
-    z-index: 1;
-  }
-  .sweep-toggle-row.active .toggle-boundary {
-    opacity: 0.6;
-  }
-  .toggle-boundary:hover {
-    opacity: 1 !important;
   }
 
   /* ── Canvas ── */
