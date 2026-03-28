@@ -90,10 +90,10 @@
   }
 
   // ── Ring geometry ──
-  const RING_R = 90
-  const RING_CX = 120
-  const RING_CY = 120
-  const BIT_R = 10
+  const RING_R = 120
+  const RING_CX = 155
+  const RING_CY = 155
+  const BIT_R = 14
 
   function bitPos(idx: number, total: number): { x: number; y: number } {
     const angle = (idx / total) * Math.PI * 2 - Math.PI / 2 // start from top
@@ -168,19 +168,19 @@
   <div class="t-main">
     <!-- SVG Register Ring -->
     <div class="t-ring">
-      <svg width="240" height="240" viewBox="0 0 240 240">
-        <!-- Ring circle (guide) with notch at read position (top) -->
+      <svg width="310" height="310" viewBox="0 0 310 310">
+        <!-- Ring circle (guide) -->
         <circle cx={RING_CX} cy={RING_CY} r={RING_R} fill="none" stroke="var(--color-fg)" stroke-width="0.5" opacity="0.15" />
-        <line x1={RING_CX} y1={RING_CY - RING_R - 6} x2={RING_CX} y2={RING_CY - RING_R + 6}
-          stroke="var(--color-fg)" stroke-width="1.5" opacity="0.3" />
+        <!-- Read head: small triangle well above bit 0 -->
+        <polygon points="{RING_CX},{RING_CY - RING_R - BIT_R - 12} {RING_CX - 4},{RING_CY - RING_R - BIT_R - 6} {RING_CX + 4},{RING_CY - RING_R - BIT_R - 6}"
+          fill="var(--color-fg)" opacity="0.3" />
         <!-- Bits -->
         {#each displayReg as bit, idx}
           {@const pos = bitPos(idx, displayReg.length)}
           {@const isMutated = currentStep < 0 && displaySnap?.mutatedBit === idx}
-          {@const isHead = idx === 0}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <circle
-            cx={pos.x} cy={pos.y} r={isHead ? BIT_R + 2 : BIT_R}
+            cx={pos.x} cy={pos.y} r={BIT_R}
             class="bit-circle"
             class:bit-on={bit === 1}
             class:bit-off={bit === 0}
@@ -188,11 +188,11 @@
             role="button" tabindex="-1"
             onpointerdown={toggleBit}
           />
-          <text x={pos.x} y={pos.y + 3.5} class="bit-label">{bit}</text>
+          <text x={pos.x} y={pos.y + 4.5} class="bit-label">{bit}</text>
         {/each}
         <!-- Center info -->
-        <text x={RING_CX} y={RING_CY - 6} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
-        <text x={RING_CX} y={RING_CY + 10} class="ring-note" class:playing={currentStep >= 0}>
+        <text x={RING_CX} y={RING_CY - 8} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
+        <text x={RING_CX} y={RING_CY + 14} class="ring-note" class:playing={currentStep >= 0}>
           {displaySnap ? NOTE_NAMES[displaySnap.note % 12] + String(Math.floor(displaySnap.note / 12)) : '—'}
         </text>
       </svg>
@@ -342,12 +342,12 @@
     stroke-width: 2.5;
   }
   .bit-on {
-    fill: var(--color-fg);
-    stroke: var(--color-fg);
+    fill: var(--color-olive);
+    stroke: var(--color-olive);
   }
   .bit-off {
     fill: transparent;
-    stroke: var(--color-fg);
+    stroke: var(--color-olive);
     opacity: 0.35;
   }
   .bit-mutated {
@@ -357,7 +357,7 @@
   }
   .bit-label {
     font-family: var(--font-data);
-    font-size: 8px; font-weight: 700;
+    font-size: 10px; font-weight: 700;
     fill: var(--color-bg);
     text-anchor: middle;
     pointer-events: none; user-select: none;
@@ -365,13 +365,13 @@
   /* bit-label fill handled by parent circle opacity */
   .ring-info {
     font-family: var(--font-data);
-    font-size: 14px; font-weight: 700;
+    font-size: 20px; font-weight: 700;
     fill: var(--color-fg);
     text-anchor: middle;
   }
   .ring-note {
     font-family: var(--font-data);
-    font-size: 11px; font-weight: 700;
+    font-size: 14px; font-weight: 700;
     fill: var(--color-olive);
     text-anchor: middle;
   }
