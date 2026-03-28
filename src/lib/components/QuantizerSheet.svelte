@@ -141,6 +141,10 @@
     update({ harmonyVoices: voices })
   }
 
+  function tapKey(pc: number) {
+    update({ root: pc })
+  }
+
   function onkeydown(e: KeyboardEvent) {
     if (e.code === 'Escape') { e.preventDefault(); onclose() }
   }
@@ -190,7 +194,7 @@
         onchange={e => update({ root: parseInt((e.target as HTMLSelectElement).value) })}
       >
         {#each NOTE_NAMES as name, i}
-          <option value={i}>{name}</option>
+          <option value={String(i)}>{name}</option>
         {/each}
       </select>
       <span class="ctl-label">OCT</span>
@@ -274,6 +278,9 @@
         <span>Notes are snapped to the nearest scale degree</span>
       </div>
     {/if}
+    <div class="q-row hint">
+      <span>tap = set root</span>
+    </div>
   </div>
 
   <!-- Keyboard visualization (centered like Tonnetz lattice) -->
@@ -287,6 +294,9 @@
           fill={keyFill(key)}
           stroke={keyStroke(key)}
           stroke-width="1"
+          class="key-rect"
+          role="button" tabindex="-1"
+          onpointerdown={() => tapKey(key.pc)}
         />
         {#if scalePcs.has(key.pc)}
           <circle
@@ -309,6 +319,9 @@
           fill={keyFill(key)}
           stroke={keyStroke(key)}
           stroke-width="1"
+          class="key-rect"
+          role="button" tabindex="-1"
+          onpointerdown={() => tapKey(key.pc)}
         />
         {#if scalePcs.has(key.pc)}
           <circle
@@ -450,6 +463,10 @@
     justify-content: center;
     padding: 16px;
     touch-action: none;
+  }
+  .key-rect {
+    cursor: pointer;
+    transition: fill 80ms;
   }
   .key-label {
     font-family: var(--font-data);
