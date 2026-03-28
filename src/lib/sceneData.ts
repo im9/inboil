@@ -3,9 +3,19 @@
  * Extracted from state.svelte.ts for testability and separation of concerns.
  */
 
-import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType, TonnetzParams, TonnetzSlot, TonnetzAnchor } from './types.ts'
+import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, ModifierType, TonnetzParams, TonnetzSlot, TonnetzAnchor, SweepData } from './types.ts'
 
 // ── Clone helpers ──
+
+function cloneSweepData(sd: SweepData): SweepData {
+  const clone: SweepData = {
+    curves: sd.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })),
+  }
+  if (sd.toggles) clone.toggles = sd.toggles.map(t => ({ ...t, target: { ...t.target }, points: t.points.map(p => ({ ...p })) }))
+  if (sd.durationMs !== undefined) clone.durationMs = sd.durationMs
+  if (sd.offsetMs !== undefined) clone.offsetMs = sd.offsetMs
+  return clone
+}
 
 function cloneModifierParams(fp: ModifierParams): ModifierParams {
   const clone: ModifierParams = {}
@@ -13,10 +23,7 @@ function cloneModifierParams(fp: ModifierParams): ModifierParams {
   if (fp.tempo) clone.tempo = { ...fp.tempo }
   if (fp.repeat) clone.repeat = { ...fp.repeat }
   if (fp.fx) clone.fx = { ...fp.fx, ...(fp.fx.flavourOverrides ? { flavourOverrides: { ...fp.fx.flavourOverrides } } : {}) }
-  if (fp.sweep) clone.sweep = {
-    curves: fp.sweep.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })),
-    ...(fp.sweep.toggles ? { toggles: fp.sweep.toggles.map(t => ({ ...t, target: { ...t.target }, points: t.points.map(p => ({ ...p })) })) } : {}),
-  }
+  if (fp.sweep) clone.sweep = cloneSweepData(fp.sweep)
   return clone
 }
 
@@ -65,13 +72,15 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
 }
 
 export function cloneScene(sc: Scene): Scene {
-  return {
+  const clone: Scene = {
     name: sc.name,
     nodes: sc.nodes.map(cloneSceneNode),
     edges: sc.edges.map(e => ({ ...e })),
     labels: (sc.labels ?? []).map(l => ({ ...l })),
     stamps: (sc.stamps ?? []).map(s => ({ ...s })),
   }
+  if (sc.globalSweep) clone.globalSweep = cloneSweepData(sc.globalSweep)
+  return clone
 }
 
 /** Restore a scene from saved data, filling in defaults for missing fields.
@@ -152,13 +161,15 @@ export function restoreScene(src: Scene | undefined): Scene {
   // Remove orphan automation/probability nodes
   const p = purgeOrphanModifiers(nodes, edges)
   nodes = p.nodes; edges = p.edges
-  return {
+  const scene: Scene = {
     name: src.name,
     nodes,
     edges,
     labels: (src.labels ?? []).map(l => ({ ...l })),
     stamps: (src.stamps ?? []).map(s => ({ ...s })),
   }
+  if (src.globalSweep) scene.globalSweep = cloneSweepData(src.globalSweep)
+  return scene
 }
 
 // ── Migration (ADR 093) ──

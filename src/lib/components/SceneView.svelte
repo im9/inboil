@@ -1085,7 +1085,9 @@
             <span class="node-label">{nodeName(node, song.patterns)}</span>
           {/if}
         {:else if isSweep}
-          {@const curves = (node.modifierParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
+          {@const chainCurves = (node.modifierParams?.sweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
+          {@const globalCurves = (song.scene.globalSweep?.curves ?? []).filter(c => (c.target as {kind:string}).kind !== 'mute')}
+          {@const curves = [...chainCurves, ...globalCurves]}
           {@const targetPatNode = song.scene.edges.find(e => e.from === node.id) ? song.scene.nodes.find(n => n.id === song.scene.edges.find(e => e.from === node.id)?.to) : null}
           {@const targetPatName = targetPatNode?.patternId ? (song.patterns.find(p => p.id === targetPatNode.patternId)?.name || 'Pattern') : 'unlinked'}
           {@const sweepPlaying = playback.playing && song.scene.edges.some(e => e.from === node.id && e.to === playback.sceneNodeId)}
@@ -1117,7 +1119,6 @@
             </div>
             <div class="gen-label-row">
               <span class="gen-label">→ {targetPatName}</span>
-              <span class="gen-target">{curves.length}</span>
             </div>
           </div>
         {:else if isFn && node.type === 'fx' && node.modifierParams?.fx}
