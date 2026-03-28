@@ -264,34 +264,34 @@ When a Quantizer node is in chord mode with `chordSource: { nodeId }`:
 ## Implementation Checklist
 
 ### Phase 1: Quantizer Expansion
-- [ ] Add `mode`, `chords`, `chordSource`, `harmonyVoices` to QuantizerParams
-- [ ] Implement chord-aware quantization in `quantizeTrigs()`
-- [ ] Implement harmony voice generation
-- [ ] Implement Tonnetz walk path lookup for `chordSource`
-- [ ] Update validation in `validate.ts`
-- [ ] Update `cloneSceneNode` for new nested objects
-- [ ] Add chord mode + harmony mode presets
-- [ ] Unit tests: chord snapping, harmony voices, Tonnetz reference, fallback behavior
-- [ ] Create `QuantizerSheet.svelte` overlay (ADR 054 sheet model)
-- [ ] Keyboard visualization (scale tones, chord tones, playing note)
-- [ ] Chord progression editor (manual + Tonnetz source selector)
-- [ ] Harmony voice editor
-- [ ] Real-time input→output display during playback
-- [ ] Sheet trigger: node double-tap + DockPanel EDIT button
-- [ ] Update DockPanel compact summary
+- [x] Add `mode`, `chords`, `chordSource`, `harmonyVoices` to QuantizerParams
+- [x] Implement chord-aware quantization in `quantizeTrigs()`
+- [x] Implement harmony voice generation
+- [x] Implement Tonnetz walk path lookup for `chordSource`
+- [x] Update validation in `validate.ts`
+- [x] Update `cloneSceneNode` for new nested objects
+- [x] Add chord mode + harmony mode presets
+- [x] Unit tests: chord snapping, harmony voices, Tonnetz reference, fallback behavior
+- [x] Create `QuantizerSheet.svelte` overlay (ADR 054 sheet model)
+- [x] Keyboard visualization (scale tones, chord tones, playing note)
+- [x] Chord progression editor (manual + Tonnetz source selector)
+- [x] Harmony voice editor
+- [x] Sheet trigger: node double-tap + DockPanel EDIT button
+- [x] Update DockPanel compact summary
 
 ### Phase 2: Turing Machine View
-- [ ] Create `TuringSheet.svelte` overlay
-- [ ] SVG register ring visualization (circular bit display)
-- [ ] Bit mutation animation (flash on flip)
-- [ ] Tap bit to toggle (direct register editing)
-- [ ] FREEZE button (lock=1.0 toggle with previous value restore)
-- [ ] ROLL button (re-randomize seed)
-- [ ] Output history bar graph (scrolling, like Tonnetz chord trail)
-- [ ] Real-time playback feedback (current step, value, note, gate)
-- [ ] Sheet trigger: node double-tap + DockPanel EDIT button
+- [x] Create `TuringSheet.svelte` overlay
+- [x] SVG register ring visualization (circular bit display)
+- [x] Bit mutation animation (flash on flip)
+- [x] Tap bit to toggle (direct register editing)
+- [x] FREEZE button (lock=1.0 toggle with previous value restore)
+- [x] ROLL button (re-randomize seed)
+- [x] Output history bar graph (scrolling, like Tonnetz chord trail)
+- [x] Real-time playback feedback (current step, value, note, gate)
+- [x] Sheet trigger: node double-tap + DockPanel EDIT button
 
 ### Phase 3: Cross-Generator Polish
+- [ ] Real-time input→output display during playback (Quantizer + Turing)
 - [ ] Scene visual indicator for Tonnetz→Quantizer reference link
 - [ ] `__auto__` chordSource resolution (find connected Tonnetz)
 - [ ] Preset: "Follow Tonnetz" auto-connects to upstream Tonnetz

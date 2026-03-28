@@ -80,6 +80,12 @@
         >{m.toUpperCase().slice(0, 3)}</button>
       {/each}
     </div>
+    <div class="gen-scale-row">
+      <button class="btn-toggle gen-mode-btn" style="flex:1"
+        onpointerdown={() => { ui.turingNodeId = nodeId; ui.phraseView = 'turing' }}
+        data-tip="Open Turing Machine editor" data-tip-ja="Turingマシンエディタを開く"
+      >EDIT</button>
+    </div>
   {:else if gen.engine === 'quantizer'}
     {@const qp = gen.params as QuantizerParams}
     <div class="gen-param-grid">

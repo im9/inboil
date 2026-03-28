@@ -80,6 +80,58 @@ export function turingGenerate(
   return trigs
 }
 
+/** Per-step snapshot of the Turing Machine state (ADR 127 Phase 2) */
+export interface TuringStepSnapshot {
+  register: number[]  // register state at this step (before shift)
+  value: number       // 0–1 fraction from register
+  note: number        // output MIDI note
+  active: boolean     // gate on/off
+  velocity: number    // output velocity
+  mutatedBit: number | null  // index of bit that was flipped (null if none)
+}
+
+/**
+ * Simulate the Turing Machine and return per-step snapshots for visualization.
+ * Same algorithm as turingGenerate but captures register state at each step.
+ */
+export function turingSimulate(params: TuringParams, steps: number, seed?: number): TuringStepSnapshot[] {
+  const rng = seed != null ? seededRng(seed) : Math.random
+  const len = params.length
+  const register = Array.from({ length: len }, () => rng() < 0.5 ? 1 : 0)
+  const [lo, hi] = params.range
+  const snapshots: TuringStepSnapshot[] = []
+
+  for (let step = 0; step < steps; step++) {
+    const regValue = registerToFraction(register, len)
+    const isActive = params.mode === 'gate'
+      ? rng() < params.density
+      : regValue > (1 - params.density) * 0.5
+    let note = Math.round(lo + regValue * (hi - lo))
+    let velocity = params.mode === 'velocity' ? 0.3 + regValue * 0.7 : 0.8
+    const active = params.mode === 'velocity' ? rng() < params.density : isActive
+    if (params.mode === 'gate') note = Math.round((lo + hi) / 2)
+
+    snapshots.push({
+      register: [...register],
+      value: regValue,
+      note,
+      active,
+      velocity,
+      mutatedBit: null, // filled below after shift
+    })
+
+    // Shift register
+    const flipProb = 1 - params.lock
+    const lastBit = register[len - 1]
+    for (let i = len - 1; i > 0; i--) register[i] = register[i - 1]
+    const newBit = rng() < flipProb ? (1 - lastBit) : lastBit
+    register[0] = newBit as 0 | 1
+    // Record mutation
+    if (newBit !== lastBit) snapshots[step].mutatedBit = 0
+  }
+  return snapshots
+}
+
 /** Convert register bits to a 0–1 fraction */
 function registerToFraction(register: number[], length: number): number {
   let sum = 0

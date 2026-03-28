@@ -421,6 +421,10 @@
           // Double-click on Quantizer node → open Quantizer sheet (ADR 127)
           ui.quantizerNodeId = dblNode.id
           ui.phraseView = 'quantizer'
+        } else if (dblNode?.generative?.engine === 'turing') {
+          // Double-click on Turing node → open Turing sheet (ADR 127)
+          ui.turingNodeId = dblNode.id
+          ui.phraseView = 'turing'
         }
         lastTapTime = 0
         lastTapNode = ''

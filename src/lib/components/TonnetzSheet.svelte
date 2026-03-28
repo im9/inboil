@@ -660,6 +660,11 @@
     stroke-width: 0.5;
     cursor: pointer;
     transition: fill 80ms;
+    outline: none;
+  }
+  .tri:focus-visible {
+    stroke: var(--color-olive);
+    stroke-width: 2;
   }
   .tri.major { fill: rgba(237, 232, 220, 0.06); }
   .tri.minor { fill: rgba(30, 32, 40, 0.06); }

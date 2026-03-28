@@ -467,6 +467,11 @@
   .key-rect {
     cursor: pointer;
     transition: fill 80ms;
+    outline: none;
+  }
+  .key-rect:focus-visible {
+    stroke: var(--color-olive);
+    stroke-width: 2;
   }
   .key-label {
     font-family: var(--font-data);
