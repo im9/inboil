@@ -1,6 +1,6 @@
 ---
 title: Tonnetz
-description: Generates chord progressions by navigating neo-Riemannian harmonic relationships.
+description: Generates chord progressions by navigating neo-Riemannian harmonic relationships on a lattice.
 sidebar:
   order: 4
 ---
@@ -11,7 +11,7 @@ import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.s
 
 Generates **chord progressions** by navigating the [Tonnetz](https://en.wikipedia.org/wiki/Tonnetz) — a mathematical lattice of harmonic relationships used in neo-Riemannian music theory.
 
-Starting from an initial triad, it applies a sequence of transformations to walk through related chords. Each transformation moves to a nearby chord that shares two of three notes.
+Starting from an initial triad, each step applies the next transformation in the sequence to walk through related chords. Inspired by [Ornament & Crime](https://ornament-and-cri.me/)'s Tonnetz mode — every clock tick advances the chord, so harmony evolves continuously.
 
 ## Transformations
 
@@ -21,28 +21,45 @@ Starting from an initial triad, it applies a sequence of transformations to walk
 | **L** | Leading-tone | Moves root or fifth by semitone (C major → E minor) |
 | **R** | Relative | Shifts to the relative key (C major → A minor) |
 
-Compound operations apply multiple transforms at once: **PL**, **PR**, **LR**, **PLR**.
+Compound operations apply multiple transforms at once: **PL**, **PR**, **LR**, **PLR**. Use **·** (hold) to sustain the current chord without transforming.
 
 ## Parameters
 
 | Control | Description |
 |---------|-------------|
-| **Chord** | Starting triad — root note + quality (major / minor) |
+| **Chord** | Starting triad — root note + quality (major / minor). Tap a triangle on the lattice view to change. |
 | **Sequence** | Ordered list of transform operations. Add with **+**, remove with **−**. The sequence loops when exhausted. |
-| **STEPS** knob | Steps per chord (1–16) — how long each chord is held before the next transform |
+| **RATE** | Steps per transform (1–64). **1** = chord changes every step (O&C style). **4+** = pad style, chord held before next transform. |
 | **Voicing** | How chord notes are spaced: **Close** (root, 3rd, 5th), **Spread** (root, 3rd+octave, 5th), **Drop2** (root, 5th, 3rd+octave) |
+| **Rhythm** | Which steps produce sound: **all** (every step), **legato** (chord boundaries only, held), **offbeat**, **onbeat**, **syncopated** |
+| **Anchors** | Chord reset points at specific step positions. The walk jumps to the anchor chord, then continues transforming from there. Long-press a triangle on the lattice to add. |
+
+## Lattice View
+
+Double-tap a Tonnetz node in the Scene view (or press **EDIT** in the Dock panel) to open the lattice view — a full-screen overlay showing the Tonnetz grid.
+
+| Interaction | Action |
+|-------------|--------|
+| **Tap** a triangle | Set as start chord |
+| **Drag** across triangles | Draw a walk path — auto-generates the transform sequence |
+| **Long-press** a triangle | Add an anchor at the next available step position |
+
+During playback, the lattice highlights the current chord (blue pulse) and traces the walk path. A chord name trail below the header shows the progression history.
 
 ## Example
 
-Start chord: C major. Sequence: P → L → R.
+Start chord: C major. Sequence: P → L → R. Rate: 1 (per-step).
 
 | Step | Transform | Chord |
 |------|-----------|-------|
-| 1–4 | — | C major (C E G) |
-| 5–8 | P | C minor (C E♭ G) |
-| 9–12 | L | A♭ major (A♭ C E♭) |
-| 13–16 | R | F minor (F A♭ C) |
-| 17–20 | P (loops) | F major (F A C) |
+| 0 | — | C major (C E G) |
+| 1 | P | C minor (C E♭ G) |
+| 2 | L | A♭ major (A♭ C E♭) |
+| 3 | R | F minor (F A♭ C) |
+| 4 | P (loops) | F major (F A C) |
+| 5 | L | D♭ major (D♭ F A♭) |
+
+With **Rate: 4**, each chord would be held for 4 steps before the next transform — slower harmonic movement.
 
 ## Related
 

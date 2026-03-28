@@ -278,7 +278,7 @@ The [EDIT] button opens the Tonnetz sheet.
 - [x] Validate anchor step doesn't exceed track length (clamped to totalSteps - 1)
 
 ### Phase 4: Docs
-- [ ] Update tonnetz.mdx (EN + JA)
+- [x] Update tonnetz.mdx (EN + JA)
 
 ## Known Issues
 

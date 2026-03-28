@@ -360,72 +360,6 @@
     <button class="tonnetz-close" onpointerdown={onclose}>×</button>
   </div>
 
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="tonnetz-lattice" onpointerup={endDrag} onpointerleave={endDrag}>
-    <svg width={svgW} height={svgH} viewBox="0 0 {svgW} {svgH}">
-      <!-- Walk trail lines -->
-      {#if walkTrailPoints.length > 1}
-        <polyline
-          points={walkTrailPoints.map(p => `${p.x},${p.y}`).join(' ')}
-          class="walk-trail"
-        />
-      {/if}
-      <!-- Drag preview lines -->
-      {#if dragPath.length > 1}
-        <polyline
-          points={dragPath.map(t => `${t.cx},${t.cy}`).join(' ')}
-          class="drag-trail"
-        />
-      {/if}
-      <!-- Triangles -->
-      {#each triangles as tri}
-        {@const state = triState(tri)}
-        <path
-          d={tri.path}
-          class="tri"
-          class:major={tri.isMajor}
-          class:minor={!tri.isMajor}
-          class:current={state === 'current'}
-          class:playing={state === 'playing'}
-          class:walk={state === 'walk'}
-          role="button" tabindex="-1"
-          onpointerdown={() => {
-            if (isDragging) return
-            startLongPress(tri)
-            startDrag(tri)
-          }}
-          onpointerenter={() => { cancelLongPress(); continueDrag(tri) }}
-          oncontextmenu={e => e.preventDefault()}
-          onpointerup={() => {
-            cancelLongPress()
-            if (longPressFired) { isDragging = false; dragPath = []; return }
-            if (dragPath.length < 2) {
-              // Single tap: set startChord
-              isDragging = false
-              dragPath = []
-              const oct = Math.floor((params?.startChord[0] ?? 60) / 12)
-              const chord: [number, number, number] = [
-                oct * 12 + tri.notes[0], oct * 12 + tri.notes[1], oct * 12 + tri.notes[2],
-              ]
-              if (chord[1] < chord[0]) chord[1] += 12
-              if (chord[2] < chord[1]) chord[2] += 12
-              pushUndo('Set Tonnetz start chord')
-              sceneUpdateGenerativeParams(nodeId, { startChord: chord })
-              autoGenerateFromNode(nodeId)
-            }
-            // Multi-drag: endDrag handles it
-          }}
-        />
-        <text x={tri.cx} y={tri.cy + 4} class="tri-label" class:current={state === 'current'} class:playing={state === 'playing'}>{tri.label}</text>
-      {/each}
-      <!-- Anchor markers -->
-      {#each anchorTriPositions as anchor}
-        <circle cx={anchor.cx} cy={anchor.cy - 14} r="8" class="anchor-marker" />
-        <text x={anchor.cx} y={anchor.cy - 10} class="anchor-step-label">@{anchor.step}</text>
-      {/each}
-    </svg>
-  </div>
-
   <!-- Playback chord trail -->
   {#if currentStep >= 0}
     <div class="chord-trail" bind:this={trailEl}>
@@ -516,6 +450,72 @@
     <div class="tonnetz-row hint">
       <span data-tip="P = flip major/minor · L = semitone shift · R = relative major/minor" data-tip-ja="P = 長短反転 · L = 半音移動 · R = 平行調">tap = set start · drag = draw path · long-press = add anchor</span>
     </div>
+  </div>
+
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="tonnetz-lattice" onpointerup={endDrag} onpointerleave={endDrag}>
+    <svg width={svgW} height={svgH} viewBox="0 0 {svgW} {svgH}">
+      <!-- Walk trail lines -->
+      {#if walkTrailPoints.length > 1}
+        <polyline
+          points={walkTrailPoints.map(p => `${p.x},${p.y}`).join(' ')}
+          class="walk-trail"
+        />
+      {/if}
+      <!-- Drag preview lines -->
+      {#if dragPath.length > 1}
+        <polyline
+          points={dragPath.map(t => `${t.cx},${t.cy}`).join(' ')}
+          class="drag-trail"
+        />
+      {/if}
+      <!-- Triangles -->
+      {#each triangles as tri}
+        {@const state = triState(tri)}
+        <path
+          d={tri.path}
+          class="tri"
+          class:major={tri.isMajor}
+          class:minor={!tri.isMajor}
+          class:current={state === 'current'}
+          class:playing={state === 'playing'}
+          class:walk={state === 'walk'}
+          role="button" tabindex="-1"
+          onpointerdown={() => {
+            if (isDragging) return
+            startLongPress(tri)
+            startDrag(tri)
+          }}
+          onpointerenter={() => { cancelLongPress(); continueDrag(tri) }}
+          oncontextmenu={e => e.preventDefault()}
+          onpointerup={() => {
+            cancelLongPress()
+            if (longPressFired) { isDragging = false; dragPath = []; return }
+            if (dragPath.length < 2) {
+              // Single tap: set startChord
+              isDragging = false
+              dragPath = []
+              const oct = Math.floor((params?.startChord[0] ?? 60) / 12)
+              const chord: [number, number, number] = [
+                oct * 12 + tri.notes[0], oct * 12 + tri.notes[1], oct * 12 + tri.notes[2],
+              ]
+              if (chord[1] < chord[0]) chord[1] += 12
+              if (chord[2] < chord[1]) chord[2] += 12
+              pushUndo('Set Tonnetz start chord')
+              sceneUpdateGenerativeParams(nodeId, { startChord: chord })
+              autoGenerateFromNode(nodeId)
+            }
+            // Multi-drag: endDrag handles it
+          }}
+        />
+        <text x={tri.cx} y={tri.cy + 4} class="tri-label" class:current={state === 'current'} class:playing={state === 'playing'}>{tri.label}</text>
+      {/each}
+      <!-- Anchor markers -->
+      {#each anchorTriPositions as anchor}
+        <circle cx={anchor.cx} cy={anchor.cy - 14} r="8" class="anchor-marker" />
+        <text x={anchor.cx} y={anchor.cy - 10} class="anchor-step-label">@{anchor.step}</text>
+      {/each}
+    </svg>
   </div>
 </div>
 {/if}
@@ -612,7 +612,7 @@
     font-family: var(--font-data);
     font-size: var(--fs-md);
     overflow-x: auto;
-    border-top: 1px solid var(--lz-border);
+    border-bottom: 1px solid var(--lz-border);
     scroll-behavior: smooth;
     white-space: nowrap;
   }
@@ -630,7 +630,7 @@
 
   .tonnetz-controls {
     padding: 8px 12px;
-    border-top: 1px solid var(--lz-border);
+    border-bottom: 1px solid var(--lz-border);
     display: flex; flex-direction: column; gap: 6px;
   }
   .tonnetz-row {
