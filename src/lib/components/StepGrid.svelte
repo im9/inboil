@@ -195,14 +195,16 @@
     if (!velDragging || !velContainer) return
     const trackId = ui.selectedTrack
     const { x: relX } = relativeCoords(e, velContainer)
-    const visibleCount = Math.min(activeCell(trackId).steps, pageEnd) - pageStart
+    const visibleCount = pageEnd - pageStart
     const localIdx = stepIndexFromX(relX, 26, 0, visibleCount - 1)
-    velApply(e, trackId, pageStart + localIdx)
+    const ph = activeCell(trackId)
+    velApply(e, trackId, (pageStart + localIdx) % ph.steps)
   }
 
   function velApply(e: PointerEvent, trackId: number, idx: number) {
     if (!velContainer) return
-    const cell = velContainer.children[idx - pageStart] as HTMLElement
+    const displayPos = ((idx - pageStart) % (pageEnd - pageStart) + (pageEnd - pageStart)) % (pageEnd - pageStart)
+    const cell = velContainer.children[displayPos] as HTMLElement
     if (!cell) return
     const rect = cell.getBoundingClientRect()
     const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
@@ -291,9 +293,9 @@
     if (!stepDragging || !stepStepsEl) return
     const { x: relX } = relativeCoords(e, stepStepsEl)
     const ph = activeCell(stepDragTrack)
-    const visibleCount = Math.min(ph.steps, pageEnd) - pageStart
+    const visibleCount = pageEnd - pageStart
     const localIdx = stepIndexFromX(relX, 26, 0, visibleCount - 1)
-    const idx = pageStart + localIdx
+    const idx = (pageStart + localIdx) % ph.steps
     if (stepVisited.has(idx)) return
     stepVisited.add(idx)
     const trig = ph.trigs[idx]
@@ -489,30 +491,33 @@
               {/each}
             </div>
           {:else}
-            {@const visibleTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
+            {@const displayCount = pageEnd - pageStart}
+            {@const isWrapped = pageStart >= ph.steps}
             <div
               class="steps"
+              class:wrapped={isWrapped}
               role="application"
-              style="--steps: {visibleTrigs.length}"
+              style="--steps: {displayCount}"
               onpointermove={stepOnMove}
               onpointerup={stepEndDrag}
               onpointercancel={stepEndDrag}
               data-tip="Tap or drag to toggle steps" data-tip-ja="タップ/ドラッグでステップを切り替え"
             >
-              {#each visibleTrigs as trig, i}
-                {@const stepIdx = pageStart + i}
-                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
-                {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === stepIdx}
+              {#each { length: displayCount } as _, i}
+                {@const sourceIdx = (pageStart + i) % ph.steps}
+                {@const trig = ph.trigs[sourceIdx]}
+                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
+                {@const isLockSel = ui.lockMode && ui.selectedTrack === trackId && ui.selectedStep === sourceIdx}
                 {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
                 <button
                   class="step flip-host"
                   class:playhead={isPlayhead}
                   class:lock-selected={isLockSel}
-                  aria-label="Step {stepIdx + 1}"
+                  aria-label="Step {sourceIdx + 1}"
                   data-track={trackId}
-                  data-step={stepIdx}
-                  onpointerdown={(e) => stepStartDrag(e, trackId, stepIdx)}
-                  onkeydown={(e) => stepKeydown(e, trackId, stepIdx)}
+                  data-step={sourceIdx}
+                  onpointerdown={(e) => stepStartDrag(e, trackId, sourceIdx)}
+                  onkeydown={(e) => stepKeydown(e, trackId, sourceIdx)}
                 >
                   <span class="flip-card" class:flipped={trig.active}>
                     <span class="flip-face step-off"></span>
@@ -525,13 +530,15 @@
             </div>
           {/if}
           {#if selected}
-            {@const velTrigs = ph.trigs.slice(pageStart, Math.min(ph.steps, pageEnd))}
+            {@const velDisplayCount = pageEnd - pageStart}
+            {@const velIsWrapped = pageStart >= ph.steps}
             <div
               class="vel-bars"
               class:plk-mode={isPlkMode}
               class:chance-mode={velMode === 'CHNC'}
               class:mounting={velMounting}
-              style="--steps: {velTrigs.length}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
+              class:wrapped={velIsWrapped}
+              style="--steps: {velDisplayCount}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
               role="application"
               bind:this={velContainer}
               onpointermove={velOnMove}
@@ -540,10 +547,11 @@
               data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
               data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
             >
-              {#each velTrigs as trig, i}
-                {@const stepIdx = pageStart + i}
-                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
-                {@const isActive = trig.active || shrinking.has(`${trackId}-${stepIdx}`)}
+              {#each { length: velDisplayCount } as _, i}
+                {@const sourceIdx = (pageStart + i) % ph.steps}
+                {@const trig = ph.trigs[sourceIdx]}
+                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
+                {@const isActive = trig.active || shrinking.has(`${trackId}-${sourceIdx}`)}
                 {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
                 {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
                 <div
@@ -551,13 +559,13 @@
                   role="slider"
                   tabindex="-1"
                   aria-valuenow={velReadValue(trig)}
-                  onpointerdown={e => velStartDrag(e, trackId, stepIdx)}
+                  onpointerdown={e => velStartDrag(e, trackId, sourceIdx)}
                 >
                   <div
                     class="vel-fill"
                     class:active={isPlkMode ? barHeight > 0 : isActive}
-                    class:growing={growing.has(`${trackId}-${stepIdx}`)}
-                    class:shrinking={shrinking.has(`${trackId}-${stepIdx}`)}
+                    class:growing={growing.has(`${trackId}-${sourceIdx}`)}
+                    class:shrinking={shrinking.has(`${trackId}-${sourceIdx}`)}
                     class:playhead={isPlayhead}
                     style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
                   ></div>
@@ -889,6 +897,11 @@
     background: var(--color-olive);
     border: 1px solid var(--color-olive);
   }
+
+  /* ── Wrapped (looped) steps ── */
+  .steps.wrapped .step-on { opacity: 0.5; }
+  .steps.wrapped .step-off { opacity: 0.35; }
+  .vel-bars.wrapped .vel-fill { opacity: 0.5; }
 
   /* ── P-Lock indicators ── */
   .step.lock-selected .step-off {
