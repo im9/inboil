@@ -4,7 +4,7 @@
   // Visual parts are already extracted (SceneCanvas, SceneBubbleMenu, SceneLabels,
   // SceneToolbar, SceneNodePopup). Remaining logic resists splitting without
   // creating excessive prop pass-through for no structural benefit.
-  import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo, playFromNode } from '../state.svelte.ts'
+  import { song, playback, ui, primarySelectedNode, selectPattern, pushUndo, playFromNode, cellForTrack } from '../state.svelte.ts'
   import { sweepRec, armRecording, disarmRecording, stopRecording, findPatternForSweep } from '../sweepRecorder.svelte.ts'
   import { hasScenePlayback } from '../scenePlayback.ts'
   import { sceneUpdateNode, sceneAddNode, sceneDeleteNode, sceneAddEdge, sceneDeleteEdge, sceneAddGenerativeNode, sceneAddModifier, findAttachedModifiers, repositionSatellites, sceneGenerateWrite, sceneReorderEdge, sceneCopyNode, sceneCopySubgraph, sceneCopySelected, scenePaste, hasSceneClipboard, sceneAlignNodes, sceneAddLabel, sceneDeleteLabel, sceneAddStamp, sceneDeleteStamp } from '../sceneActions.ts'
@@ -803,17 +803,31 @@
   /** Get the target cell's trigs and current playhead for a generative node (Phase 2) */
   function genNodePlayState(node: import('../types.ts').SceneNode): { trigs: import('../types.ts').Trig[]; step: number } | null {
     if (!playback.playing || !node.generative) return null
-    // Follow outgoing edge to find pattern node
-    const edge = song.scene.edges.find(e => e.from === node.id)
-    if (!edge) return null
-    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    // BFS through outgoing edges to find the target pattern node (supports chaining: Turing → Quantizer → Pattern)
+    const visited = new Set<string>()
+    const queue = [node.id]
+    let patNode: import('../types.ts').SceneNode | null = null
+    while (queue.length > 0) {
+      const id = queue.shift()!
+      if (visited.has(id)) continue
+      visited.add(id)
+      for (const e of song.scene.edges) {
+        if (e.from !== id) continue
+        const target = song.scene.nodes.find(n => n.id === e.to)
+        if (!target) continue
+        if (target.type === 'pattern') { patNode = target; break }
+        queue.push(target.id)
+      }
+      if (patNode) break
+    }
     if (!patNode?.patternId) return null
-    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    const pat = song.patterns.find(p => p.id === patNode!.patternId)
     if (!pat) return null
-    const trackIdx = node.generative.targetTrack ?? 0
-    const cell = pat.cells[trackIdx]
+    const trackId = node.generative.targetTrack ?? 0
+    const cell = cellForTrack(pat, trackId)
     if (!cell) return null
-    return { trigs: cell.trigs, step: playback.playheads[trackIdx] ?? 0 }
+    const trackArrayIdx = song.tracks.findIndex(t => t.id === trackId)
+    return { trigs: cell.trigs, step: playback.playheads[trackArrayIdx] ?? 0 }
   }
 
   function pickBubbleItem(type: BubblePickType) {
@@ -979,7 +993,7 @@
             <div class="gen-faceplate turing">
               <div class="turing-bits">
                 {#each Array(tp.length) as _, i}
-                  <span class="turing-bit" class:on={gps ? gps.trigs[i]?.active : i % 3 === 0} class:current={gps?.step === i}></span>
+                  <span class="turing-bit" class:on={gps ? gps.trigs[i]?.active : i % 3 === 0} class:current={gps != null && (gps.step % tp.length) === i}></span>
                 {/each}
               </div>
               <div class="gen-label-row">
@@ -1667,8 +1681,13 @@
     background: var(--lz-text-strong);
   }
   .turing-bit.current {
-    background: var(--lz-solid);
-    box-shadow: 0 0 4px var(--lz-text-hint);
+    background: #fff;
+    box-shadow: 0 0 6px var(--lz-text-mid);
+    animation: turing-pulse var(--beat, 0.25s) ease-out;
+  }
+  @keyframes turing-pulse {
+    0%   { transform: scale(1.6); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
   }
   /* Quantizer mini keyboard */
   .quant-keys {

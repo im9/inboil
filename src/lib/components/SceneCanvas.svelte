@@ -64,6 +64,39 @@
     const { nodes, edges } = song.scene
     const fg = { r: 30, g: 32, b: 40 } // --color-fg navy
     const FN_TYPES = new Set(['transpose', 'tempo', 'repeat', 'fx'])
+
+    /** BFS: does a generative node's outgoing chain reach a pattern with the given patternId? */
+    function isGenChainActive(fromId: string, targetPatId: string): boolean {
+      const visited = new Set<string>()
+      const queue = [fromId]
+      while (queue.length > 0) {
+        const id = queue.shift()!
+        if (visited.has(id)) continue
+        visited.add(id)
+        for (const e of edges) {
+          if (e.from !== id) continue
+          const t = nodes.find(n => n.id === e.to)
+          if (!t) continue
+          if (t.type === 'pattern' && t.patternId === targetPatId) return true
+          if (t.type === 'generative' || t.type === 'sweep') queue.push(t.id)
+        }
+      }
+      return false
+    }
+    // Pre-compute which generative nodes chain into the currently playing pattern
+    const playingPatId = playback.playing
+      ? song.patterns[playback.playingPattern ?? ui.currentPattern]?.id ?? null
+      : null
+    const activeGenNodes = new Set<string>()
+    if (playingPatId) {
+      for (const node of nodes) {
+        if ((node.type === 'generative' || node.type === 'sweep') && isGenChainActive(node.id, playingPatId)) {
+          activeGenNodes.add(node.id)
+        }
+      }
+    }
+
+    const now = performance.now()
     for (const edge of edges) {
       const fromNode = nodes.find(n => n.id === edge.from)
       const toNode = nodes.find(n => n.id === edge.to)
@@ -76,27 +109,26 @@
       const isSel = ui.selectedSceneEdge === edge.id
       const b = bezierEdge(from, to, nodeSizeKind(fromNode), nodeSizeKind(toNode))
 
-      // Generative/sweep edges always use accent color
       const isGenOrSweep = fromNode.type === 'generative' || fromNode.type === 'sweep'
       const accentColor = isGenOrSweep ? nodeColor(fromNode, song.patterns) : null
+      const isActive = isGenOrSweep && activeGenNodes.has(fromNode.id)
 
+      // Draw edge
       if (accentColor && !isSel) {
-        const isActive = playback.playing && toNode.id === playback.sceneNodeId
         drawBezier(ctx, b, accentColor, isActive ? 2 : 1.5)
-        // Flowing dot during playback
-        if (isActive) {
-          const now = performance.now()
-          const t = (now % 1200) / 1200  // 1.2s cycle
-          const pt = bezierAt(b, t)
-          ctx.fillStyle = accentColor
-          ctx.beginPath()
-          ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2)
-          ctx.fill()
-        }
       } else {
-        // Pre-composited opaque color — avoids alpha overlap artifacts at arrowhead
         const edgeColor = isSel ? flatColor(fg.r, fg.g, fg.b, 0.5) : flatColor(fg.r, fg.g, fg.b, 0.18)
         drawBezier(ctx, b, edgeColor, isSel ? 2.5 : 1.5)
+      }
+
+      // Flowing dot on active generative/sweep edges
+      if (isActive && accentColor) {
+        const t = (now % 1200) / 1200  // 1.2s cycle
+        const pt = bezierAt(b, t)
+        ctx.fillStyle = accentColor
+        ctx.beginPath()
+        ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2)
+        ctx.fill()
       }
     }
 
