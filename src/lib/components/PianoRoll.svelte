@@ -13,7 +13,7 @@
 </script>
 
 <script lang="ts">
-  import { activeCell, playback, perf, prefs, vkbd, ui, pushUndo } from '../state.svelte.ts'
+  import { activeCell, song, playback, perf, prefs, vkbd, ui, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import type { BrushMode, ChordShape } from '../state.svelte.ts'
   import { setTrigDuration, placeNoteBar, findNoteHead, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
@@ -31,14 +31,20 @@
 
   // ── Step paging (responsive — synced with StepGrid) ──
   const pageSize = $derived(ui.stepPageSize)
+  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
   const pageStart = $derived(ui.stepPage * pageSize)
-  const pageEnd = $derived(Math.min(ph.steps, pageStart + pageSize))
+  const pageEnd = $derived(Math.min(maxSteps, pageStart + pageSize))
   const visibleSteps = $derived(pageEnd - pageStart)
+  const isWrapped = $derived(pageStart >= ph.steps)
   const playheadCol = $derived.by(() => {
     if (!isViewingPlayingPattern()) return -1
     const raw = playback.playheads[trackId]
-    if (raw == null || raw < pageStart || raw >= pageEnd) return -1
-    return raw - pageStart
+    if (raw == null) return -1
+    // For wrapped tracks, find if the source step matches any display column
+    for (let i = 0; i < visibleSteps; i++) {
+      if ((pageStart + i) % ph.steps === raw) return i
+    }
+    return -1
   })
 
   // ── Octave shift: ▲▼ buttons shift the 2-octave window ──
@@ -154,12 +160,13 @@
 
   /** Returns cell visual state for duration rendering */
   function getCellState(stepIdx: number, note: number): 'empty' | 'head' | 'continuation' {
-    const trig = ph.trigs[stepIdx]
+    const srcIdx = stepIdx % ph.steps
+    const trig = ph.trigs[srcIdx]
     if (trig?.active && trigHasNote(trig, note)) return 'head'
-    // Look backwards for a head whose duration covers this step (no wrap-around)
-    const maxLook = Math.min(16, stepIdx)
+    // Look backwards for a head whose duration covers this step (no wrap-around within source range)
+    const maxLook = Math.min(16, srcIdx)
     for (let d = 1; d <= maxLook; d++) {
-      const prevStep = stepIdx - d
+      const prevStep = srcIdx - d
       const prevTrig = ph.trigs[prevStep]
       if (prevTrig?.active && trigHasNote(prevTrig, note)) {
         return (prevTrig.duration ?? 1) > d ? 'continuation' : 'empty'
@@ -224,14 +231,19 @@
 
     if (durationDragging) {
       const { x: relX } = relativeCoords(e, noteGridEl)
-      const localStep = durationDragStep - pageStart
+      // Find the display column for the drag start step
+      let localStep = 0
+      for (let di = 0; di < visibleSteps; di++) {
+        if ((pageStart + di) % ph.steps === durationDragStep) { localStep = di; break }
+      }
       const dur = Math.max(1, Math.min(ph.steps - durationDragStep, Math.floor((relX - localStep * 26) / 26) + 1))
       setTrigDuration(trackId, durationDragStep, dur)
       return
     }
     if (!barDragging) return
     const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
-    const endStep = stepIndexFromX(relX, 26, barStartStep, pageEnd - 1, pageStart)
+    const displayIdx = stepIndexFromX(relX, 26, 0, visibleSteps - 1, 0)
+    const endStep = (pageStart + displayIdx) % ph.steps
     const duration = endStep - barStartStep + 1
 
     // Vertical: change note pitch during drag (snap to scale)
@@ -340,7 +352,8 @@
   function selectMove(e: PointerEvent) {
     if (!selectDragging || !noteGridEl) return
     const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
-    selectEndStep = stepIndexFromX(relX, 26, pageStart, pageEnd - 1, pageStart)
+    const displayIdx = stepIndexFromX(relX, 26, 0, visibleSteps - 1, 0)
+    selectEndStep = (pageStart + displayIdx) % ph.steps
     selectEndNoteIdx = Math.max(0, Math.min(RANGE - 1, Math.floor(relY / (noteGridEl.scrollHeight / RANGE))))
   }
 
@@ -588,7 +601,8 @@
   function brushMove(e: PointerEvent) {
     if (!brushDragging || !noteGridEl) return
     const { x: relX, y: relY } = relativeCoords(e, noteGridEl)
-    const stepIdx = stepIndexFromX(relX, 26, pageStart, pageEnd - 1, pageStart)
+    const displayIdx = stepIndexFromX(relX, 26, 0, visibleSteps - 1, 0)
+    const stepIdx = (pageStart + displayIdx) % ph.steps
     let note = getNoteFromY(relY)
     if (note < 0) return
     if (activeBrush !== 'eraser' && !brushRightClick) note = snapToScale(note)
@@ -801,6 +815,7 @@
       data-brush={activeBrush}
       role="application"
       class:has-playhead={playheadCol >= 0}
+      class:wrapped={isWrapped}
       style="--steps: {visibleSteps}; --ph-col: {playheadCol}"
       data-tip="Tap or drag to place/erase notes" data-tip-ja="タップ/ドラッグでノートを配置/消去"
       onpointermove={noteOnMove}
@@ -811,18 +826,18 @@
       {#each NOTES as note, noteIdx}
         <div class="row" class:black={isBlack(note)} class:disabled={isOutOfScale(note)}>
           {#each { length: visibleSteps } as _, i}
-            {@const stepIdx = pageStart + i}
-            {@const state = getCellState(stepIdx, note)}
+            {@const sourceIdx = (pageStart + i) % ph.steps}
+            {@const state = getCellState(pageStart + i, note)}
             <button
               class="cell"
               class:active={state === 'head'}
               class:continuation={state === 'continuation'}
-              class:selected={`${stepIdx}:${note}` in selectedNotes}
-              aria-label="Step {stepIdx + 1} note {note}"
-              onpointerdown={(e) => noteStartDrag(e, stepIdx, activeBrush === 'eraser' ? note : snapToScale(note), noteIdx)}
+              class:selected={`${sourceIdx}:${note}` in selectedNotes}
+              aria-label="Step {sourceIdx + 1} note {note}"
+              onpointerdown={(e) => noteStartDrag(e, sourceIdx, activeBrush === 'eraser' ? note : snapToScale(note), noteIdx)}
             >
               {#if state === 'head'}
-                <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, stepIdx)}></div>
+                <div class="resize-handle" role="separator" onpointerdown={(e) => startDurationDrag(e, sourceIdx)}></div>
               {/if}
             </button>
           {/each}
@@ -1045,6 +1060,11 @@
   .cell.active.selected {
     background: var(--color-blue);
   }
+
+  /* ── Wrapped (looped) display ── */
+  .grid.wrapped .cell.active { opacity: 0.5; }
+  .grid.wrapped .cell.continuation { opacity: 0.5; }
+
   .select-rect {
     position: absolute;
     border: 1.5px dashed var(--color-blue);
