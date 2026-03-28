@@ -164,12 +164,32 @@ export interface TuringParams {
   density: number          // 0.0–1.0 — probability of a step being active (gate mode)
 }
 
-/** Quantizer — scale-constrained note mapping (ADR 078, Phase 2) */
+/** Chord definition for Quantizer chord mode (ADR 127) */
+export interface QuantizerChord {
+  step: number             // step position where this chord starts
+  notes: number[]          // chord tones (pitch classes 0–11)
+}
+
+/** Harmony voice definition for Quantizer harmony mode (ADR 127) */
+export interface HarmonyVoice {
+  interval: number         // diatonic interval: 3 = 3rd, 5 = 5th, etc.
+  direction: 'above' | 'below'
+}
+
+/** Quantizer — scale-constrained note mapping (ADR 078 Phase 2, ADR 127 chord/harmony) */
 export interface QuantizerParams {
   engine: 'quantizer'
   scale: string            // e.g. 'major', 'minor', 'dorian', 'pentatonic'
   root: number             // 0–11 (C=0)
   octaveRange: [number, number]
+  mode?: 'scale' | 'chord' | 'harmony'  // default: 'scale' (backward compat)
+
+  // Chord mode: snap to chord tones with scale fallback
+  chords?: QuantizerChord[]
+  chordSource?: { nodeId: string }       // reference a Tonnetz node's walk
+
+  // Harmony mode: add parallel diatonic voices
+  harmonyVoices?: HarmonyVoice[]
 }
 
 /** Rhythm pattern for Tonnetz generation (ADR 126 v2) */

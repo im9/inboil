@@ -149,7 +149,7 @@ export function validateSongData(data: unknown): Song {
     if (scene.edges != null && !Array.isArray(scene.edges)) {
       throw new ValidationError('scene.edges', 'expected array')
     }
-    // Validate Tonnetz slots in generative nodes (ADR 126)
+    // Validate generative node params (ADR 126, ADR 127)
     if (Array.isArray(scene.nodes)) {
       for (let i = 0; i < scene.nodes.length; i++) {
         const node = scene.nodes[i] as Record<string, unknown>
@@ -160,6 +160,27 @@ export function validateSongData(data: unknown): Song {
             if (p.engine === 'tonnetz') {
               if (p.anchors != null) validateTonnetzAnchors(`scene.nodes[${i}].generative.params.anchors`, p.anchors)
               if (p.sequence != null && !Array.isArray(p.sequence)) throw new ValidationError(`scene.nodes[${i}].generative.params.sequence`, 'expected array')
+            }
+            if (p.engine === 'quantizer') {
+              // ADR 127: validate chords array if present
+              if (p.chords != null) {
+                if (!Array.isArray(p.chords)) throw new ValidationError(`scene.nodes[${i}].generative.params.chords`, 'expected array')
+                for (let j = 0; j < (p.chords as unknown[]).length; j++) {
+                  const c = (p.chords as Record<string, unknown>[])[j]
+                  if (typeof c !== 'object' || c === null) throw new ValidationError(`scene.nodes[${i}].generative.params.chords[${j}]`, 'expected object')
+                  if (typeof c.step !== 'number') throw new ValidationError(`scene.nodes[${i}].generative.params.chords[${j}].step`, 'expected number')
+                  if (!Array.isArray(c.notes)) throw new ValidationError(`scene.nodes[${i}].generative.params.chords[${j}].notes`, 'expected array')
+                }
+              }
+              // ADR 127: validate harmonyVoices array if present
+              if (p.harmonyVoices != null) {
+                if (!Array.isArray(p.harmonyVoices)) throw new ValidationError(`scene.nodes[${i}].generative.params.harmonyVoices`, 'expected array')
+                for (let j = 0; j < (p.harmonyVoices as unknown[]).length; j++) {
+                  const v = (p.harmonyVoices as Record<string, unknown>[])[j]
+                  if (typeof v !== 'object' || v === null) throw new ValidationError(`scene.nodes[${i}].generative.params.harmonyVoices[${j}]`, 'expected object')
+                  if (typeof v.interval !== 'number') throw new ValidationError(`scene.nodes[${i}].generative.params.harmonyVoices[${j}].interval`, 'expected number')
+                }
+              }
             }
           }
         }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { turingGenerate, quantizeTrigs, tonnetzGenerate, resolveRhythm, SCALE_MAP, applyTonnetzOp } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate, resolveRhythm, SCALE_MAP, applyTonnetzOp, computeWalkPath } from './generative.ts'
 import type { TuringParams, QuantizerParams, TonnetzParams, Trig } from './types.ts'
 
 describe('turingGenerate', () => {
@@ -140,6 +140,266 @@ describe('quantizeTrigs', () => {
     for (const n of result[0].notes!) {
       expect(SCALE_MAP.major).toContain(n % 12)
     }
+  })
+
+  it('mode defaults to scale (backward compat)', () => {
+    // No mode field — should behave exactly like before
+    const trigs = [makeTrig(61)]
+    const result = quantizeTrigs(trigs, qParams)
+    expect(SCALE_MAP.major).toContain(result[0].note % 12)
+  })
+})
+
+// ── Quantizer: Chord Mode (ADR 127) ──
+
+describe('quantizeTrigs chord mode', () => {
+  function makeTrig(note: number, active = true): Trig {
+    return { active, note, velocity: 0.8, duration: 1, slide: false }
+  }
+
+  const chordParams: QuantizerParams = {
+    engine: 'quantizer',
+    scale: 'major',
+    root: 0,
+    octaveRange: [3, 5],
+    mode: 'chord',
+    chords: [
+      { step: 0, notes: [0, 4, 7] },    // C major (steps 0+)
+      { step: 8, notes: [9, 0, 4] },    // Am (steps 8+)
+    ],
+  }
+
+  it('snaps notes to chord tones when within 2 semitones', () => {
+    // C=60 is a chord tone (root), D=62 is 2 away from C(60) and E(64)
+    const trigs = [makeTrig(60), makeTrig(62)]
+    const result = quantizeTrigs(trigs, chordParams)
+    // 60 (C) is already a chord tone → stays
+    expect(result[0].note).toBe(60)
+    // 62 (D) → nearest chord tone is C(60) at dist 2 or E(64) at dist 2 → either is valid
+    expect([0, 4, 7]).toContain(result[1].note % 12)
+  })
+
+  it('falls back to scale when chord tone is >2 semitones away', () => {
+    // F#=66 is not within 2 of any C major chord tone (C=60,E=64,G=67)
+    // Nearest chord tone is G(67) at dist 1, so should snap to G
+    const trigs = [makeTrig(66)]
+    const result = quantizeTrigs(trigs, chordParams)
+    // G is both a chord tone and scale tone at dist 1
+    expect(SCALE_MAP.major).toContain(result[0].note % 12)
+  })
+
+  it('uses different chords at different steps', () => {
+    // Step 0 uses C major, step 8 uses Am
+    const trigs = Array.from({ length: 16 }, () => makeTrig(61)) // C#
+    const result = quantizeTrigs(trigs, chordParams)
+    // Step 0: C# → nearest chord tone in Cmaj is C(60) at dist 1
+    expect(result[0].note).toBe(60)
+    // Step 8: C# → nearest chord tone in Am is A at dist... A=57(oct3) or 69(oct5)
+    // C#4=61 → nearest Am chord tone: C(60)=0, E(64)=4, A(57)=9
+    // A3=57 dist 4, C4=60 dist 1, E4=64 dist 3 → C4(60) is nearest at dist 1
+    expect(result[8].note).toBe(60)
+  })
+
+  it('falls back to scale mode when no chords provided', () => {
+    const noChords: QuantizerParams = {
+      engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5],
+      mode: 'chord', // chord mode but no chords array
+    }
+    const trigs = [makeTrig(61)]
+    const result = quantizeTrigs(trigs, noChords)
+    expect(SCALE_MAP.major).toContain(result[0].note % 12)
+  })
+
+  it('works with Tonnetz walk path', () => {
+    const params: QuantizerParams = {
+      engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5],
+      mode: 'chord',
+    }
+    // Simulate a Tonnetz walk: C major for 4 steps, then F major for 4 steps
+    const walk = [
+      [0, 4, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7],  // C
+      [5, 9, 0], [5, 9, 0], [5, 9, 0], [5, 9, 0],  // F
+    ]
+    const trigs = Array.from({ length: 8 }, () => makeTrig(62)) // D4
+    const result = quantizeTrigs(trigs, params, walk)
+    // Step 0-3: C major chord tones [C,E,G] → D(62) nearest chord tone E(64) dist 2
+    expect([0, 4, 7]).toContain(result[0].note % 12)
+    // Step 4-7: F major chord tones [F,A,C] → D(62) nearest chord tone C(60) dist 2
+    expect([5, 9, 0]).toContain(result[4].note % 12)
+  })
+
+  it('preserves inactive trigs in chord mode', () => {
+    const trigs = [makeTrig(61, false)]
+    const result = quantizeTrigs(trigs, chordParams)
+    expect(result[0].active).toBe(false)
+    expect(result[0].note).toBe(61)
+  })
+
+  it('quantizes poly notes in chord mode', () => {
+    const trig: Trig = { active: true, note: 61, velocity: 0.8, duration: 1, slide: false, notes: [61, 66] }
+    const result = quantizeTrigs([trig], chordParams)
+    expect(result[0].notes).toBeDefined()
+    // Each poly note should be snapped
+    expect(result[0].notes!.length).toBe(2)
+  })
+})
+
+// ── Quantizer: Harmony Mode (ADR 127) ──
+
+describe('quantizeTrigs harmony mode', () => {
+  function makeTrig(note: number, active = true): Trig {
+    return { active, note, velocity: 0.8, duration: 1, slide: false }
+  }
+
+  const harmonyParams: QuantizerParams = {
+    engine: 'quantizer',
+    scale: 'major',
+    root: 0,
+    octaveRange: [3, 5],
+    mode: 'harmony',
+    harmonyVoices: [{ interval: 3, direction: 'above' }],
+  }
+
+  it('adds a diatonic 3rd above', () => {
+    const trigs = [makeTrig(60)] // C4
+    const result = quantizeTrigs(trigs, harmonyParams)
+    expect(result[0].notes).toBeDefined()
+    expect(result[0].notes!.length).toBe(2)
+    // C4 + diatonic 3rd above = E4 (64)
+    expect(result[0].notes).toContain(60)
+    expect(result[0].notes).toContain(64)
+  })
+
+  it('adds a diatonic 5th above', () => {
+    const params: QuantizerParams = {
+      ...harmonyParams,
+      harmonyVoices: [{ interval: 5, direction: 'above' }],
+    }
+    const trigs = [makeTrig(60)] // C4
+    const result = quantizeTrigs(trigs, params)
+    expect(result[0].notes).toContain(60)
+    expect(result[0].notes).toContain(67) // G4
+  })
+
+  it('adds harmony below', () => {
+    const params: QuantizerParams = {
+      ...harmonyParams,
+      harmonyVoices: [{ interval: 3, direction: 'below' }],
+    }
+    const trigs = [makeTrig(64)] // E4
+    const result = quantizeTrigs(trigs, params)
+    expect(result[0].notes).toContain(64) // E4
+    expect(result[0].notes).toContain(60) // C4 (diatonic 3rd below E)
+  })
+
+  it('supports multiple harmony voices (full stack)', () => {
+    const params: QuantizerParams = {
+      ...harmonyParams,
+      harmonyVoices: [
+        { interval: 3, direction: 'above' },
+        { interval: 5, direction: 'above' },
+      ],
+    }
+    const trigs = [makeTrig(60)] // C4
+    const result = quantizeTrigs(trigs, params)
+    expect(result[0].notes!.length).toBe(3) // root + 3rd + 5th
+    expect(result[0].notes).toContain(60) // C4
+    expect(result[0].notes).toContain(64) // E4
+    expect(result[0].notes).toContain(67) // G4
+  })
+
+  it('snaps input to scale first, then adds harmony', () => {
+    // C#4 (61) is not in C major → snaps to C4 (60) or D4 (62)
+    const trigs = [makeTrig(61)]
+    const result = quantizeTrigs(trigs, harmonyParams)
+    // Root note should be scale-snapped
+    const root = result[0].notes![0]
+    expect(SCALE_MAP.major).toContain(root % 12)
+    // Harmony note should also be in scale
+    expect(SCALE_MAP.major).toContain(result[0].notes![1] % 12)
+  })
+
+  it('falls back to scale-only when no harmony voices', () => {
+    const params: QuantizerParams = {
+      ...harmonyParams,
+      harmonyVoices: [], // empty
+    }
+    const trigs = [makeTrig(61)]
+    const result = quantizeTrigs(trigs, params)
+    expect(result[0].notes).toBeUndefined()
+    expect(SCALE_MAP.major).toContain(result[0].note % 12)
+  })
+
+  it('preserves inactive trigs', () => {
+    const trigs = [makeTrig(61, false)]
+    const result = quantizeTrigs(trigs, harmonyParams)
+    expect(result[0].active).toBe(false)
+    expect(result[0].note).toBe(61)
+  })
+
+  it('notes array is sorted low to high', () => {
+    const params: QuantizerParams = {
+      ...harmonyParams,
+      harmonyVoices: [
+        { interval: 3, direction: 'below' },
+        { interval: 5, direction: 'above' },
+      ],
+    }
+    const trigs = [makeTrig(64)] // E4
+    const result = quantizeTrigs(trigs, params)
+    const notes = result[0].notes!
+    for (let i = 1; i < notes.length; i++) {
+      expect(notes[i]).toBeGreaterThanOrEqual(notes[i - 1])
+    }
+  })
+})
+
+// ── computeWalkPath (ADR 127) ──
+
+describe('computeWalkPath', () => {
+  const baseParams: TonnetzParams = {
+    engine: 'tonnetz',
+    startChord: [60, 64, 67],
+    sequence: ['P', 'L', 'R'],
+    voicing: 'close',
+  }
+
+  it('returns pitch classes for each step', () => {
+    const path = computeWalkPath(baseParams, 4)
+    expect(path).toHaveLength(4)
+    // Each entry should be an array of 3 pitch classes (0-11)
+    for (const chord of path) {
+      expect(chord).toHaveLength(3)
+      for (const pc of chord) {
+        expect(pc).toBeGreaterThanOrEqual(0)
+        expect(pc).toBeLessThan(12)
+      }
+    }
+  })
+
+  it('step 0 returns startChord pitch classes', () => {
+    const path = computeWalkPath(baseParams, 1)
+    expect(path[0].sort((a, b) => a - b)).toEqual([0, 4, 7]) // C major
+  })
+
+  it('transforms applied at stepsPerTransform boundaries', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 4 }
+    const path = computeWalkPath(params, 8)
+    // Steps 0-3: C major [0,4,7]
+    expect(path[0]).toEqual(path[1])
+    expect(path[0]).toEqual(path[3])
+    // Steps 4-7: P → C minor [0,3,7]
+    expect(path[4]).not.toEqual(path[0])
+    expect(path[4]).toEqual(path[7])
+  })
+
+  it('anchors override chord at specific steps', () => {
+    const params: TonnetzParams = {
+      ...baseParams,
+      anchors: [{ step: 4, chord: [53, 57, 60] }], // F major
+    }
+    const path = computeWalkPath(params, 6)
+    expect(path[4].sort((a, b) => a - b)).toEqual([0, 5, 9]) // F major PCs
   })
 })
 

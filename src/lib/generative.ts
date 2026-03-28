@@ -3,7 +3,7 @@
  * Pure functions — no state imports. Caller handles undo + pattern writes.
  */
 
-import type { Trig, TuringParams, QuantizerParams, TonnetzParams, TonnetzRhythm } from './types.ts'
+import type { Trig, TuringParams, QuantizerParams, QuantizerChord, TonnetzParams, TonnetzRhythm } from './types.ts'
 
 // ── Turing Machine (shift-register random) ──
 
@@ -133,7 +133,7 @@ export const SCALE_MAP: Record<string, number[]> = {
 export const SCALE_NAMES = Object.keys(SCALE_MAP)
 
 /** Build the set of all valid MIDI notes for a scale + root + octave range */
-function buildScaleNotes(root: number, scale: number[], octLo: number, octHi: number): number[] {
+export function buildScaleNotes(root: number, scale: number[], octLo: number, octHi: number): number[] {
   const notes: number[] = []
   for (let oct = octLo; oct <= octHi; oct++) {
     for (const interval of scale) {
@@ -145,7 +145,7 @@ function buildScaleNotes(root: number, scale: number[], octLo: number, octHi: nu
 }
 
 /** Snap a MIDI note to the nearest note in a sorted list */
-function snapToNearest(note: number, scaleNotes: number[]): number {
+export function snapToNearest(note: number, scaleNotes: number[]): number {
   if (scaleNotes.length === 0) return note
   let best = scaleNotes[0]
   let bestDist = Math.abs(note - best)
@@ -157,23 +157,162 @@ function snapToNearest(note: number, scaleNotes: number[]): number {
   return best
 }
 
-/** Quantize an array of trigs: snap notes to the nearest scale degree */
-export function quantizeTrigs(trigs: Trig[], params: QuantizerParams): Trig[] {
+/** Expand pitch classes to concrete MIDI notes across an octave range */
+function expandPcsToRange(pcs: number[], octLo: number, octHi: number): number[] {
+  const notes: number[] = []
+  for (let oct = octLo; oct <= octHi; oct++) {
+    for (const pc of pcs) {
+      const midi = oct * 12 + pc
+      if (midi >= 0 && midi <= 127) notes.push(midi)
+    }
+  }
+  return notes.sort((a, b) => a - b)
+}
+
+/** Get the active chord at a given step from a sorted chord list */
+function getActiveChord(step: number, chords: QuantizerChord[]): QuantizerChord | undefined {
+  let active: QuantizerChord | undefined
+  for (const c of chords) {
+    if (c.step <= step) active = c
+    else break
+  }
+  return active
+}
+
+/** Compute the diatonic note at an interval above/below a given note within a scale */
+function diatonicShift(note: number, interval: number, direction: 'above' | 'below', scaleNotes: number[]): number {
+  // Find the note's position in the scale
+  let idx = scaleNotes.indexOf(note)
+  if (idx === -1) {
+    // Note wasn't in scale — find nearest scale position
+    idx = 0
+    let best = Math.abs(scaleNotes[0] - note)
+    for (let i = 1; i < scaleNotes.length; i++) {
+      const d = Math.abs(scaleNotes[i] - note)
+      if (d < best) { idx = i; best = d }
+      if (scaleNotes[i] > note) break
+    }
+  }
+  // Shift by diatonic steps (interval - 1 because interval=3 means 2 steps up)
+  const steps = interval - 1
+  const targetIdx = direction === 'above' ? idx + steps : idx - steps
+  if (targetIdx < 0) return scaleNotes[0]
+  if (targetIdx >= scaleNotes.length) return scaleNotes[scaleNotes.length - 1]
+  return scaleNotes[targetIdx]
+}
+
+/** Quantize trigs: scale snap, chord-aware snap, or harmony voice generation (ADR 127) */
+export function quantizeTrigs(trigs: Trig[], params: QuantizerParams, tonnetzWalk?: number[][]): Trig[] {
   const intervals = SCALE_MAP[params.scale] ?? SCALE_MAP.major
   const [octLo, octHi] = params.octaveRange
   const scaleNotes = buildScaleNotes(params.root, intervals, octLo, octHi)
   if (scaleNotes.length === 0) return trigs
 
+  const mode = params.mode ?? 'scale'
+
+  if (mode === 'chord') {
+    return quantizeChordMode(trigs, params, scaleNotes, tonnetzWalk)
+  }
+
+  if (mode === 'harmony') {
+    return quantizeHarmonyMode(trigs, params, scaleNotes)
+  }
+
+  // Scale mode (original behavior)
   return trigs.map(t => {
     if (!t.active) return { ...t }
     const snapped = snapToNearest(t.note, scaleNotes)
     const result: Trig = { ...t, note: snapped }
-    // Also quantize poly notes if present
     if (t.notes) {
       result.notes = t.notes.map(n => snapToNearest(n, scaleNotes))
     }
     return result
   })
+}
+
+/** Chord mode: snap to chord tones with scale fallback (ADR 127) */
+function quantizeChordMode(
+  trigs: Trig[], params: QuantizerParams, scaleNotes: number[], tonnetzWalk?: number[][]
+): Trig[] {
+  const [octLo, octHi] = params.octaveRange
+  // Build chord list from params or Tonnetz walk
+  const chords: QuantizerChord[] = []
+  if (tonnetzWalk && tonnetzWalk.length > 0) {
+    // Each entry in tonnetzWalk is a chord (pitch classes) for that step
+    for (let step = 0; step < tonnetzWalk.length; step++) {
+      const pcs = tonnetzWalk[step]
+      if (step === 0 || !arrEq(pcs, tonnetzWalk[step - 1])) {
+        chords.push({ step, notes: pcs })
+      }
+    }
+  } else if (params.chords && params.chords.length > 0) {
+    chords.push(...[...params.chords].sort((a, b) => a.step - b.step))
+  }
+
+  // If no chords available, fall back to scale mode
+  if (chords.length === 0) {
+    return trigs.map(t => {
+      if (!t.active) return { ...t }
+      const snapped = snapToNearest(t.note, scaleNotes)
+      const result: Trig = { ...t, note: snapped }
+      if (t.notes) result.notes = t.notes.map(n => snapToNearest(n, scaleNotes))
+      return result
+    })
+  }
+
+  return trigs.map((t, step) => {
+    if (!t.active) return { ...t }
+    const chord = getActiveChord(step, chords)
+    if (!chord) {
+      const snapped = snapToNearest(t.note, scaleNotes)
+      return { ...t, note: snapped }
+    }
+    const chordMidi = expandPcsToRange(chord.notes, octLo, octHi)
+    const nearestChord = snapToNearest(t.note, chordMidi)
+    // Use chord tone if within 2 semitones, otherwise fall back to scale
+    const snapped = Math.abs(nearestChord - t.note) <= 2
+      ? nearestChord
+      : snapToNearest(t.note, scaleNotes)
+
+    const result: Trig = { ...t, note: snapped }
+    if (t.notes) {
+      result.notes = t.notes.map(n => {
+        const nc = snapToNearest(n, chordMidi)
+        return Math.abs(nc - n) <= 2 ? nc : snapToNearest(n, scaleNotes)
+      })
+    }
+    return result
+  })
+}
+
+/** Harmony mode: add parallel diatonic voices (ADR 127) */
+function quantizeHarmonyMode(trigs: Trig[], params: QuantizerParams, scaleNotes: number[]): Trig[] {
+  const voices = params.harmonyVoices
+  if (!voices || voices.length === 0) {
+    // No harmony voices — just scale-snap
+    return trigs.map(t => {
+      if (!t.active) return { ...t }
+      const snapped = snapToNearest(t.note, scaleNotes)
+      const result: Trig = { ...t, note: snapped }
+      if (t.notes) result.notes = t.notes.map(n => snapToNearest(n, scaleNotes))
+      return result
+    })
+  }
+
+  return trigs.map(t => {
+    if (!t.active) return { ...t }
+    const root = snapToNearest(t.note, scaleNotes)
+    const harmonyNotes = voices.map(v => diatonicShift(root, v.interval, v.direction, scaleNotes))
+    const allNotes = [root, ...harmonyNotes].sort((a, b) => a - b)
+    return { ...t, note: allNotes[0], notes: allNotes }
+  })
+}
+
+/** Simple array equality check */
+function arrEq(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
 }
 
 // ── Tonnetz (neo-Riemannian chord transforms) ──
@@ -322,6 +461,35 @@ function turingRhythm(length: number, lock: number, steps: number, seed?: number
 }
 
 /**
+ * Compute the walk path (pitch classes per step) for a Tonnetz node.
+ * Used by Quantizer chord mode to reference Tonnetz chord progressions (ADR 127).
+ * Returns an array where each element is the chord pitch classes for that step.
+ */
+export function computeWalkPath(params: TonnetzParams, steps: number): number[][] {
+  const seq = params.sequence
+  const spt = params.stepsPerTransform ?? 1
+  let chord: Triad = [...params.startChord] as Triad
+  const anchorMap = new Map<number, Triad>()
+  if (params.anchors) {
+    for (const a of params.anchors) anchorMap.set(a.step, [...a.chord] as Triad)
+  }
+
+  const path: number[][] = []
+  let seqIdx = 0
+  for (let step = 0; step < steps; step++) {
+    if (anchorMap.has(step)) {
+      chord = anchorMap.get(step)!
+    } else if (step > 0 && step % spt === 0) {
+      const op = seq[seqIdx % seq.length]
+      if (op) chord = applyTonnetzOp(chord, op)
+      seqIdx++
+    }
+    path.push(chord.map(n => ((n % 12) + 12) % 12))
+  }
+  return path
+}
+
+/**
  * Generate a chord sequence by walking the Tonnetz lattice.
  * ADR 126 v2: transforms applied every `stepsPerTransform` steps.
  * stepsPerTransform=1 → O&C style (chord changes every step).
@@ -421,6 +589,20 @@ export const GENERATIVE_PRESETS: GenerativePreset[] = [
   { name: 'A Blues', engine: 'quantizer', params: { engine: 'quantizer', scale: 'blues', root: 9, octaveRange: [3, 5] } },
   { name: 'Whole Tone', engine: 'quantizer', params: { engine: 'quantizer', scale: 'whole', root: 0, octaveRange: [3, 6] } },
   { name: 'Pentatonic Wide', engine: 'quantizer', params: { engine: 'quantizer', scale: 'pentatonic', root: 0, octaveRange: [2, 6] } },
+  // Quantizer chord mode presets (ADR 127)
+  { name: 'Pop Chords (C)', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'chord',
+    chords: [{ step: 0, notes: [0, 4, 7] }, { step: 16, notes: [9, 0, 4] }, { step: 32, notes: [5, 9, 0] }, { step: 48, notes: [7, 11, 2] }] } },
+  { name: 'Jazz ii-V-I', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'chord',
+    chords: [{ step: 0, notes: [2, 5, 9, 0] }, { step: 16, notes: [7, 11, 2, 5] }, { step: 32, notes: [0, 4, 7, 11] }] } },
+  { name: 'Follow Tonnetz', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'chord',
+    chordSource: { nodeId: '__auto__' } } },
+  // Quantizer harmony mode presets (ADR 127)
+  { name: 'Parallel 3rds', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'harmony',
+    harmonyVoices: [{ interval: 3, direction: 'above' }] } },
+  { name: 'Power Chords', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'harmony',
+    harmonyVoices: [{ interval: 5, direction: 'above' }] } },
+  { name: 'Full Stack', engine: 'quantizer', params: { engine: 'quantizer', scale: 'major', root: 0, octaveRange: [3, 5], mode: 'harmony',
+    harmonyVoices: [{ interval: 3, direction: 'above' }, { interval: 5, direction: 'above' }] } },
   // Tonnetz presets (ADR 126 v2: per-step transforms)
   { name: 'Classic P·L·R', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [60, 64, 67], sequence: ['P', 'L', 'R'], voicing: 'close' } },
   { name: 'Cinematic', engine: 'tonnetz', params: { engine: 'tonnetz', startChord: [48, 52, 55], sequence: ['L', 'P', 'R', 'L'], voicing: 'spread' } },

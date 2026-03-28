@@ -417,6 +417,10 @@
           // Double-click on Tonnetz node → open Tonnetz lattice sheet
           ui.tonnetzNodeId = dblNode.id
           ui.phraseView = 'tonnetz'
+        } else if (dblNode?.generative?.engine === 'quantizer') {
+          // Double-click on Quantizer node → open Quantizer sheet (ADR 127)
+          ui.quantizerNodeId = dblNode.id
+          ui.phraseView = 'quantizer'
         }
         lastTapTime = 0
         lastTapNode = ''

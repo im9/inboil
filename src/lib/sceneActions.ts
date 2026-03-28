@@ -6,10 +6,22 @@
 import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
 import type { SceneNode, SceneEdge, ModifierType, ModifierParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
 import { cloneSceneNode } from './sceneData.ts'
-import { turingGenerate, quantizeTrigs, tonnetzGenerate } from './generative.ts'
+import { turingGenerate, quantizeTrigs, tonnetzGenerate, computeWalkPath } from './generative.ts'
 import { randomPatternName } from './factory.ts'
 
 // ── Shared generative chain execution ──
+
+/** Resolve a Quantizer's chordSource to a Tonnetz walk path (ADR 127) */
+function resolveTonnetzWalk(params: QuantizerParams, steps: number): number[][] | undefined {
+  if (params.mode !== 'chord' || !params.chordSource) return undefined
+  const nodeId = params.chordSource.nodeId
+  // __auto__: find first Tonnetz node connected upstream via edges
+  const target = nodeId === '__auto__'
+    ? song.scene.nodes.find(n => n.generative?.engine === 'tonnetz')
+    : song.scene.nodes.find(n => n.id === nodeId)
+  if (!target?.generative || target.generative.engine !== 'tonnetz') return undefined
+  return computeWalkPath(target.generative.params as TonnetzParams, steps)
+}
 
 /** Execute a chain of generative nodes, returning resulting trigs or null */
 export function executeGenChain(chain: SceneNode[], cell: Cell, steps: number): Trig[] | null {
@@ -20,7 +32,8 @@ export function executeGenChain(chain: SceneNode[], cell: Cell, steps: number): 
       trigs = turingGenerate(gen.params as TuringParams, steps, gen.seed)
     } else if (gen.engine === 'quantizer') {
       const input = trigs ?? cell.trigs.map(t => ({ ...t }))
-      trigs = quantizeTrigs(input, gen.params as QuantizerParams)
+      const tonnetzWalk = resolveTonnetzWalk(gen.params as QuantizerParams, steps)
+      trigs = quantizeTrigs(input, gen.params as QuantizerParams, tonnetzWalk)
     } else if (gen.engine === 'tonnetz') {
       trigs = tonnetzGenerate(gen.params as TonnetzParams, steps)
     }

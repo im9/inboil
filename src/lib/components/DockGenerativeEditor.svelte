@@ -124,6 +124,41 @@
         {/each}
       </select>
     </div>
+    <div class="gen-mode-row" role="tablist" aria-label="Quantizer mode">
+      {#each ['scale', 'chord', 'harmony'] as m}
+        <button
+          class="btn-toggle gen-mode-btn"
+          role="tab"
+          aria-selected={(qp.mode ?? 'scale') === m}
+          class:active={(qp.mode ?? 'scale') === m}
+          onpointerdown={() => sceneUpdateGenerativeParams(nodeId, { mode: m as QuantizerParams['mode'] })}
+        >{m.toUpperCase()}</button>
+      {/each}
+    </div>
+    {#if qp.mode === 'chord' && qp.chords?.length}
+      <div class="gen-scale-row">
+        <span class="gen-range-label">CHORDS</span>
+        <span class="gen-range-val">{qp.chords.length}</span>
+      </div>
+    {/if}
+    {#if qp.mode === 'chord' && qp.chordSource}
+      <div class="gen-scale-row">
+        <span class="gen-range-label">SOURCE</span>
+        <span class="gen-range-val">Tonnetz</span>
+      </div>
+    {/if}
+    {#if qp.mode === 'harmony' && qp.harmonyVoices?.length}
+      <div class="gen-scale-row">
+        <span class="gen-range-label">VOICES</span>
+        <span class="gen-range-val">{qp.harmonyVoices.length}</span>
+      </div>
+    {/if}
+    <div class="gen-scale-row">
+      <button class="btn-toggle gen-mode-btn" style="flex:1"
+        onpointerdown={() => { ui.quantizerNodeId = nodeId; ui.phraseView = 'quantizer' }}
+        data-tip="Open Quantizer editor" data-tip-ja="Quantizerエディタを開く"
+      >EDIT</button>
+    </div>
   {:else if gen.engine === 'tonnetz'}
     {@const tnp = gen.params as TonnetzParams}
     <div class="gen-param-grid">
