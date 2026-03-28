@@ -5,7 +5,7 @@
   import { WORLD_W, WORLD_H, toPixel } from '../sceneGeometry.ts'
   import type { BubblePickType } from './SceneBubbleMenu.svelte'
 
-  const ADD_ITEMS: { type: BubblePickType | 'sep'; tip: string; tipJa: string }[] = [
+  const ADD_ITEMS: { type: BubblePickType | 'sep' | 'eraser'; tip: string; tipJa: string }[] = [
     { type: 'fn-transpose', tip: 'Transpose', tipJa: 'トランスポーズ' },
     { type: 'fn-repeat', tip: 'Repeat', tipJa: 'リピート' },
     { type: 'fn-tempo', tip: 'Tempo', tipJa: 'テンポ' },
@@ -18,6 +18,7 @@
     { type: 'sep', tip: '', tipJa: '' },
     { type: 'label', tip: 'Label', tipJa: 'ラベル' },
     { type: 'stamp', tip: 'Stamp', tipJa: 'スタンプ' },
+    { type: 'eraser', tip: 'Delete node', tipJa: 'ノード削除' },
   ]
 
   const TOOL_ACCENT: Record<string, string> = {
@@ -27,13 +28,15 @@
     tonnetz: 'var(--tool-tonnetz)',
   }
 
-  const { zoom, viewEl, onpan, onreset, onadd, activeType }: {
+  const { zoom, viewEl, onpan, onreset, onadd, activeType, eraserActive, oneraser }: {
     zoom: number
     viewEl: HTMLDivElement
     onpan?: (x: number, y: number) => void
     onreset?: (x: number, y: number) => void
     onadd?: (type: BubblePickType) => void
     activeType?: BubblePickType | null
+    eraserActive?: boolean
+    oneraser?: () => void
   } = $props()
 
 
@@ -76,14 +79,16 @@
     {#if item.type === 'sep'}
       <div class="tool-sep"></div>
     {:else}
+      {@const isEraser = item.type === 'eraser'}
       {@const accent = TOOL_ACCENT[item.type as string]}
       <button
         class="tool-btn"
-        class:active={activeType === item.type}
+        class:active={isEraser ? eraserActive : activeType === item.type}
+        class:eraser={isEraser}
         aria-label={item.tip}
         data-tip={item.tip} data-tip-ja={item.tipJa}
         style={accent ? `--tool-accent: ${accent}` : ''}
-        onpointerdown={(e: PointerEvent) => { e.stopPropagation(); onadd?.(item.type as BubblePickType) }}
+        onpointerdown={(e: PointerEvent) => { e.stopPropagation(); isEraser ? oneraser?.() : onadd?.(item.type as BubblePickType) }}
       >
         {#if item.type === 'fn-transpose'}
           <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.transpose}</svg>
@@ -123,6 +128,8 @@
             <rect x="2.5" y="8" width="9" height="2" rx="0.5"/>
             <rect x="1.5" y="10.5" width="11" height="2" rx="0.5" opacity="0.5"/>
           </svg>
+        {:else if item.type === 'eraser'}
+          <svg viewBox="0 0 14 14" width="16" height="16" fill="currentColor" aria-hidden="true">{@html ICON.eraser}</svg>
         {/if}
       </button>
     {/if}
@@ -233,6 +240,11 @@
   .tool-btn[style*="--tool-accent"]:hover {
     color: var(--tool-accent);
     background: rgba(255, 255, 255, 0.95);
+  }
+  .tool-btn[style*="--tool-accent"].active {
+    background: var(--tool-accent);
+    color: rgba(237, 232, 220, 0.9);
+    border-color: var(--tool-accent);
   }
 
   .scene-toolbar-btn {

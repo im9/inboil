@@ -77,6 +77,9 @@
   let snapTarget: string | null = $state(null)  // pattern node id for snap highlight
   let justAttached: string | null = $state(null)  // pattern node id for bounce animation
 
+  // ── Eraser mode (toolbar toggle) ──
+  let eraserMode = $state(false)
+
   // ── Placement mode (toolbar → click-to-place) ──
   let placingType: BubblePickType | null = $state(null)
   let placingCursor = $state({ x: 0, y: 0 })  // pixel position within .scene-view
@@ -429,6 +432,20 @@
         lastTapTime = 0
         lastTapNode = ''
       } else {
+        // Eraser mode — delete node on click
+        if (eraserMode) {
+          const node = song.scene.nodes.find(n => n.id === nodeId)
+          if (node && !node.root) {
+            pushUndo('Delete node')
+            sceneDeleteNode(nodeId)
+            ui.selectedSceneNodes = {}
+          }
+          lastTapTime = now
+          lastTapNode = nodeId
+          dragging = null
+          return
+        }
+
         // Single click — select (Shift toggles)
         const node = song.scene.nodes.find(n => n.id === nodeId)
         if (node?.patternId) {
@@ -710,6 +727,7 @@
       if (stampPickerOpen) { stampPickerOpen = false; return true }
       if (placingStampId) { placingStampId = null; return true }
       if (placingType) { placingType = null; return true }
+      if (eraserMode) { eraserMode = false; return true }
       ui.selectedSceneNodes = {}
       ui.selectedSceneEdge = null
       ui.selectedSceneLabels = {}
@@ -914,6 +932,7 @@
   class:drop-active={dropActive}
   class:space-pan={spaceHeld}
   class:placing={placingType !== null || placingStampId !== null}
+  class:eraser-mode={eraserMode}
   bind:this={viewEl}
   tabindex="-1"
   onpointermove={onMove}
@@ -1267,6 +1286,7 @@
     onpan={(x, y) => { panX = x; panY = y }}
     onreset={(x, y) => { zoom = 1; panX = x; panY = y }}
     onadd={(type) => {
+      eraserMode = false
       if (type === 'stamp') {
         if (stampPickerOpen) { stampPickerOpen = false; return }
         if (placingStampId) { placingStampId = null; return }
@@ -1282,6 +1302,8 @@
       }
     }}
     activeType={placingStampId ? 'stamp' as BubblePickType : placingType}
+    eraserActive={eraserMode}
+    oneraser={() => { eraserMode = !eraserMode; placingType = null; placingStampId = null }}
   />
 
   <!-- Radial bubble menu for modifier nodes (appears at pointer position) -->
@@ -1385,6 +1407,9 @@
     cursor: grabbing;
   }
   .scene-view.placing {
+    cursor: crosshair;
+  }
+  .scene-view.eraser-mode {
     cursor: crosshair;
   }
   .scene-view.drop-active {
