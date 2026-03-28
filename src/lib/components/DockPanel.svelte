@@ -261,12 +261,6 @@
                 onpointerdown={() => sceneUpdateModifierParams(selectedModNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
               >{fxp.granular ? 'ON' : 'OFF'}</button>
             </div>
-          {:else if selectedModNode.modifierParams?.sweep}
-            {@const swp = selectedModNode.modifierParams.sweep}
-            <div class="mod-row">
-              <span class="mod-label">Curves</span>
-              <span class="mod-step-val">{swp.curves.length}</span>
-            </div>
           {/if}
         </div>
         <div class="node-actions">
@@ -435,11 +429,6 @@
                     <button class="mod-toggle-btn wide" class:active={fxp.granular}
                       onpointerdown={() => sceneUpdateModifierParams(modNode.id, { fx: { ...fxp, granular: !fxp.granular } })}
                     >{fxp.granular ? 'ON' : 'OFF'}</button>
-                  </div>
-                {:else if modNode.modifierParams?.sweep}
-                  <div class="mod-row">
-                    <span class="mod-label">Curves</span>
-                    <span class="mod-step-val">{modNode.modifierParams.sweep.curves.length}</span>
                   </div>
                 {/if}
               </div>
