@@ -3,6 +3,7 @@
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
   import { applyTonnetzOp } from '../generative.ts'
+  import { engine } from '../audio/engine.ts'
 
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -296,6 +297,7 @@
     pushUndo('Add Tonnetz anchor')
     sceneUpdateGenerativeParams(nodeId, { anchors })
     autoGenerateFromNode(nodeId)
+    previewChord(chord)
   }
 
   function removeAnchor(idx: number) {
@@ -349,6 +351,22 @@
     pushUndo('Edit Tonnetz sequence')
     sceneUpdateGenerativeParams(nodeId, { sequence: seq })
     autoGenerateFromNode(nodeId)
+  }
+
+  // ── Chord preview (audition on tap) ──
+  let previewTimer: ReturnType<typeof setTimeout> | null = null
+  const PREVIEW_MS = 300
+
+  function previewChord(chord: [number, number, number]) {
+    if (!engine.getContext() || !node?.generative) return
+    const trackIdx = node.generative.targetTrack ?? 0
+    // Release any previous preview
+    if (previewTimer) { clearTimeout(previewTimer); engine.releaseNote(trackIdx) }
+    for (const note of chord) engine.triggerNote(trackIdx, note, 0.6)
+    previewTimer = setTimeout(() => {
+      for (const note of chord) engine.releaseNoteByPitch(trackIdx, note)
+      previewTimer = null
+    }, PREVIEW_MS)
   }
 </script>
 
@@ -504,6 +522,7 @@
               pushUndo('Set Tonnetz start chord')
               sceneUpdateGenerativeParams(nodeId, { startChord: chord })
               autoGenerateFromNode(nodeId)
+              previewChord(chord)
             }
             // Multi-drag: endDrag handles it
           }}
