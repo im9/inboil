@@ -40,7 +40,7 @@
     overflow: hidden;
     cursor: pointer;
     background: var(--color-fg);
-    border-top: 1px solid rgba(237, 232, 220, 0.06);
+    border-top: 1px solid var(--dz-divider);
   }
 
   .mini-label {
@@ -49,7 +49,7 @@
     font-size: var(--fs-min);
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237, 232, 220, 0.45);
+    color: var(--dz-transport-border);
     white-space: nowrap;
     min-width: 40px;
   }
@@ -71,12 +71,12 @@
   .mini-step {
     flex: 1;
     min-width: 0;
-    background: rgba(237, 232, 220, 0.06);
+    background: var(--dz-divider);
     border-radius: 0;
   }
 
   .mini-step.on {
-    background: rgba(237, 232, 220, 0.30);
+    background: var(--dz-border-strong);
   }
 
   .mini-step.head {

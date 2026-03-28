@@ -46,7 +46,7 @@
     position: fixed;
     inset: 0;
     z-index: 200;
-    background: rgba(0, 0, 0, 0.45);
+    background: var(--lz-text);
     display: flex;
     align-items: center;
     justify-content: center;

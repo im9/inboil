@@ -608,10 +608,10 @@
     transition: background 60ms;
   }
   .zone.active { background: var(--dz-bg-hover); }
-  .zone.active.accent-blue { background: rgba(78, 132, 196, 0.2); }
-  .zone.active.accent-salmon { background: rgba(232, 160, 144, 0.08); }
-  .zone.active.accent-teal { background: rgba(74, 155, 155, 0.2); }
-  .zone.active.accent-purple { background: rgba(155, 107, 160, 0.2); }
+  .zone.active.accent-blue { background: var(--blue-bg); }
+  .zone.active.accent-salmon { background: var(--salmon-bg-key); }
+  .zone.active.accent-teal { background: var(--teal-bg); }
+  .zone.active.accent-purple { background: var(--purple-bg); }
 
   .zone-label {
     font-family: 'JetBrains Mono', monospace;
@@ -622,14 +622,14 @@
     pointer-events: none;
   }
   .zone.active .zone-label { color: var(--dz-text-mid); }
-  .zone.accent-blue .zone-label { color: rgba(78, 132, 196, 0.25); }
+  .zone.accent-blue .zone-label { color: var(--blue-bg); }
   .zone.accent-blue.active .zone-label { color: var(--color-blue); }
-  .zone.accent-salmon .zone-label { color: rgba(232, 160, 144, 0.08); }
+  .zone.accent-salmon .zone-label { color: var(--salmon-bg-key); }
   .zone.accent-salmon.active .zone-label { color: var(--color-salmon); }
-  .zone.accent-teal .zone-label { color: rgba(74, 155, 155, 0.25); }
-  .zone.accent-teal.active .zone-label { color: var(--color-teal, #4A9B9B); }
-  .zone.accent-purple .zone-label { color: rgba(155, 107, 160, 0.25); }
-  .zone.accent-purple.active .zone-label { color: var(--color-purple, #9B6BA0); }
+  .zone.accent-teal .zone-label { color: var(--teal-bg); }
+  .zone.accent-teal.active .zone-label { color: var(--color-teal); }
+  .zone.accent-purple .zone-label { color: var(--purple-bg); }
+  .zone.accent-purple.active .zone-label { color: var(--color-purple); }
 
   .zone-sub {
     font-family: 'JetBrains Mono', monospace;

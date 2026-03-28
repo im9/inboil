@@ -666,16 +666,16 @@
     stroke: var(--color-olive);
     stroke-width: 2;
   }
-  .tri.major { fill: rgba(237, 232, 220, 0.06); }
-  .tri.minor { fill: rgba(30, 32, 40, 0.06); }
+  .tri.major { fill: var(--dz-divider); }
+  .tri.minor { fill: var(--lz-divider); }
   .tri.current { fill: var(--color-olive); stroke-width: 1.5; }
   .tri.playing { fill: #fff; stroke-width: 1.5; animation: tri-pulse 400ms ease-out; }
-  .tri.walk { fill: rgba(138, 148, 50, 0.15); }
+  .tri.walk { fill: var(--olive-bg); }
   @keyframes tri-pulse {
     0%   { filter: brightness(1.5); }
     100% { filter: brightness(1); }
   }
-  .tri:hover { fill: rgba(237, 232, 220, 0.2); }
+  .tri:hover { fill: var(--dz-border); }
   .tri.current:hover { fill: var(--color-olive); }
   .tri.playing:hover { fill: #fff; }
   .tri-label {

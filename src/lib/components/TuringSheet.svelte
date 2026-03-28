@@ -386,7 +386,7 @@
     opacity: 0.7;
   }
   .hist-bar.playing {
-    fill: #fff;
+    fill: var(--dz-text-bright);
     opacity: 1;
     stroke: var(--color-fg);
     stroke-width: 0.5;

@@ -548,11 +548,11 @@
     color: var(--dz-text-strong);
   }
   .action-del {
-    color: rgba(232,80,80,0.6);
-    border-color: rgba(232,80,80,0.2);
+    color: var(--danger-border);
+    border-color: var(--danger-bg-hover);
   }
   .action-del:hover {
-    background: rgba(232,80,80,0.1);
+    background: var(--danger-bg-hover);
     color: var(--color-danger);
   }
   .rename-input {

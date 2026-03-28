@@ -527,6 +527,8 @@ Used for borders, text, backgrounds on cream/surface backgrounds.
 | `--lz-text-mid` | 0.50 | Step-set numbers, secondary text |
 | `--lz-text` | 0.55 | Pattern name, inactive button text |
 | `--lz-text-strong` | 0.70 | Dropdown options, hover text |
+| `--lz-text-bright` | 0.85 | High-contrast text, scene popup text |
+| `--lz-solid` | 0.95 | Near-black backgrounds (piano black keys, node fills) |
 | `--lz-step-border` | 0.50 | Inactive step cell border |
 
 ### Dark zone (navy bg) — base `237,232,220` (≈ `--color-bg`)
@@ -565,6 +567,11 @@ Translucent versions of accent colors for backgrounds/borders:
 | `--blue-bg-playhead` | `rgba(68,114,180,0.13)` | Piano-roll playhead column |
 | `--salmon-bg-scale` | `rgba(232,160,144,0.06)` | Disabled scale-mode rows |
 | `--salmon-bg-key` | `rgba(232,160,144,0.08)` | Disabled scale-mode keys |
+| `--salmon-bg` | `rgba(232,160,144,0.25)` | Probability node background |
+| `--salmon-border` | `rgba(232,160,144,0.30)` | Probability node pulse animation |
+| `--purple-bg` | `rgba(155,107,160,0.20)` | MobilePerfSheet zone accent |
+| `--teal-bg` | `rgba(74,155,155,0.20)` | MobilePerfSheet zone accent |
+| `--blue-bg` | `rgba(68,114,180,0.20)` | MobilePerfSheet zone accent |
 | `--danger-border` | `rgba(248,113,113,0.40)` | Delete confirm border |
 | `--danger-bg-hover` | `rgba(248,113,113,0.15)` | Delete hover bg |
 

@@ -1310,7 +1310,7 @@
     {@const isSweepGhost = placingType === 'fn-sweep'}
     {@const isFnGhost = placingType.startsWith('fn-') && !isSweepGhost}
     {@const isGenGhost = (!isFnGhost && placingType !== 'label') || isSweepGhost}
-    {@const ghostAccent = ({ 'fn-sweep': '#c47a2a', turing: '#8a9432', quantizer: '#2a9485', tonnetz: '#9456b0' } as Record<string, string>)[placingType] ?? ''}
+    {@const ghostAccent = ({ 'fn-sweep': 'var(--tool-sweep)', turing: 'var(--tool-turing)', quantizer: 'var(--tool-quantizer)', tonnetz: 'var(--tool-tonnetz)' } as Record<string, string>)[placingType] ?? ''}
     <div
       class="placing-ghost"
       class:gen={isGenGhost}
@@ -1377,7 +1377,7 @@
 
   .select-rect {
     position: absolute;
-    border: 1px dashed rgba(30, 32, 40, 0.35);
+    border: 1px dashed var(--lz-text-hint);
     background: var(--lz-bg-hover);
     z-index: 8;
     pointer-events: none;
@@ -1425,8 +1425,8 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    border: 2px solid rgba(30, 32, 40, 0.35);
-    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid var(--lz-text-hint);
+    background: var(--color-bg);
     color: var(--lz-text-mid);
     display: flex;
     align-items: center;
@@ -1466,7 +1466,7 @@
     height: 28px;
     border-radius: 50%;
     border: 2px solid var(--color-salmon);
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--color-bg);
     color: var(--color-salmon);
     display: flex;
     align-items: center;
@@ -1481,7 +1481,7 @@
     border-color: var(--color-salmon);
   }
   .scene-rec-btn.armed {
-    background: rgba(232, 160, 144, 0.25);
+    background: var(--salmon-bg);
     border-color: var(--color-salmon);
     animation: rec-pulse 1.5s ease-in-out infinite;
   }
@@ -1493,7 +1493,7 @@
   }
   @keyframes rec-pulse {
     0%, 100% { box-shadow: 0 1px 4px var(--lz-border-strong); }
-    50% { box-shadow: 0 0 0 5px rgba(232, 160, 144, 0.3); }
+    50% { box-shadow: 0 0 0 5px var(--salmon-border); }
   }
 
   /* ── Snap-attach highlight (ADR 062) ── */
@@ -1573,8 +1573,8 @@
     width: 120px;
     height: 72px;
     border-radius: var(--radius-md);
-    background: rgba(245, 240, 230, 0.95);
-    color: rgba(30, 32, 40, 0.85);
+    background: var(--color-bg);
+    color: var(--lz-text-bright);
     border: 2px solid var(--nc, var(--color-fg));
     padding: 6px 8px;
     flex-direction: column;
@@ -1602,13 +1602,13 @@
     font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: rgba(30, 32, 40, 0.8);
+    color: var(--lz-text-bright);
   }
   .gen-target {
     font-family: var(--font-data);
     font-size: var(--fs-min);
     font-weight: 700;
-    color: rgba(30, 32, 40, 0.4);
+    color: var(--lz-text-hint);
     white-space: nowrap;
   }
   .gen-chord-src {
@@ -1616,8 +1616,8 @@
     font-size: 6px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: #9456b0;
-    border: 1px dashed #9456b0;
+    color: var(--tool-tonnetz);
+    border: 1px dashed var(--tool-tonnetz);
     padding: 0 3px;
     border-radius: 2px;
     white-space: nowrap;
@@ -1634,7 +1634,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 1px 5px;
-    border: 1px solid rgba(30, 32, 40, 0.2);
+    border: 1px solid var(--lz-border-mid);
     border-radius: 0;
     background: var(--lz-bg-hover);
     color: var(--lz-text-strong);
@@ -1642,7 +1642,7 @@
   }
   .gen-run-btn:hover {
     background: var(--lz-border-strong);
-    color: rgba(30, 32, 40, 0.9);
+    color: var(--lz-solid);
   }
   .gen-run-btn:active {
     transform: scale(0.95);
@@ -1657,15 +1657,15 @@
     width: 8px;
     height: 8px;
     border-radius: 0;
-    background: rgba(30, 32, 40, 0.1);
+    background: var(--lz-border);
     flex-shrink: 0;
   }
   .turing-bit.on {
-    background: rgba(30, 32, 40, 0.7);
+    background: var(--lz-text-strong);
   }
   .turing-bit.current {
-    background: rgba(30, 32, 40, 0.9);
-    box-shadow: 0 0 4px rgba(30, 32, 40, 0.3);
+    background: var(--lz-solid);
+    box-shadow: 0 0 4px var(--lz-text-hint);
   }
   /* Quantizer mini keyboard */
   .quant-keys {
@@ -1683,14 +1683,14 @@
     margin-top: 2px;
   }
   .quant-key.active {
-    background: rgba(30, 32, 40, 0.5);
+    background: var(--lz-text-mid);
   }
   .quant-key.black.active {
-    background: rgba(30, 32, 40, 0.65);
+    background: var(--lz-text);
   }
   .quant-key.playing {
-    background: rgba(30, 32, 40, 0.85);
-    box-shadow: 0 0 4px rgba(30, 32, 40, 0.3);
+    background: var(--lz-text-strong);
+    box-shadow: 0 0 4px var(--lz-text-hint);
   }
   /* Tonnetz transform ops */
   .tonnetz-ops {
@@ -1704,12 +1704,12 @@
     padding: 1px 3px;
     border-radius: 0;
     background: var(--lz-bg-active);
-    color: rgba(30, 32, 40, 0.6);
+    color: var(--lz-text);
     transition: background 80ms, color 80ms;
   }
   .tonnetz-op.current {
-    background: rgba(30, 32, 40, 0.7);
-    color: rgba(245, 240, 230, 0.9);
+    background: var(--lz-text-strong);
+    color: var(--dz-text-bright);
   }
 
   /* ── Sweep node faceplate ── */
@@ -1725,12 +1725,12 @@
   }
 
   .scene-node.playing {
-    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    border: 1.5px solid var(--dz-text);
     animation: node-pulse var(--beat, 0.25s) ease-out infinite alternate;
   }
   .scene-node.gen.playing {
     border: 2px solid var(--nc, var(--color-fg));
-    box-shadow: 0 0 8px var(--nc, rgba(30, 32, 40, 0.3));
+    box-shadow: 0 0 8px var(--nc, var(--lz-text-hint));
   }
   .scene-node.playing .node-label {
     color: white;
@@ -1794,14 +1794,14 @@
     height: 10px;
     border-radius: 50%;
     background: var(--lz-border-strong);
-    border: 1.5px solid rgba(30, 32, 40, 0.35);
+    border: 1.5px solid var(--lz-text-hint);
     transform: translate(-50%, -50%);
     cursor: crosshair;
     z-index: 4;
     transition: background 80ms, transform 80ms;
   }
   .edge-handle:hover {
-    background: rgba(30, 32, 40, 0.5);
+    background: var(--lz-text-mid);
     border-color: var(--color-fg);
     transform: translate(-50%, -50%) scale(1.3);
   }
@@ -1822,8 +1822,8 @@
     width: 26px;
     height: 26px;
     border-radius: 0;
-    border: 1.5px solid rgba(30, 32, 40, 0.35);
-    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid var(--lz-text-hint);
+    background: var(--color-bg);
     color: var(--lz-text-mid);
     font-size: var(--fs-md);
     font-weight: 700;
@@ -1835,18 +1835,18 @@
     transition: background 80ms, border-color 80ms, color 80ms;
   }
   .solo-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--color-bg);
     border-color: var(--color-fg);
     color: var(--color-fg);
   }
   .solo-btn.armed {
     background: var(--lz-bg-hover);
-    border-color: rgba(30, 32, 40, 0.35);
+    border-color: var(--lz-text-hint);
     color: var(--lz-text-hint);
     border-style: dashed;
   }
   .solo-btn.active {
-    background: rgba(30, 32, 40, 0.12);
+    background: var(--lz-border-mid);
     border-color: var(--color-fg);
     color: var(--color-fg);
     box-shadow: 0 0 6px var(--lz-border-strong);
@@ -1867,8 +1867,8 @@
     width: 26px;
     height: 26px;
     border-radius: 0;
-    border: 1.5px solid rgba(30, 32, 40, 0.35);
-    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid var(--lz-text-hint);
+    background: var(--color-bg);
     color: var(--lz-text-mid);
     font-size: var(--fs-md);
     cursor: pointer;
@@ -1878,7 +1878,7 @@
     padding: 0;
   }
   .play-from-btn:hover {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--color-bg);
     border-color: var(--color-fg);
     color: var(--color-fg);
   }
@@ -1897,14 +1897,14 @@
     justify-content: center;
     padding: 0 12px;
     background: var(--color-olive);
-    border: 1.5px dashed rgba(30, 32, 40, 0.35);
+    border: 1.5px dashed var(--lz-text-hint);
   }
   .placing-ghost.gen {
     width: 120px;
     height: 72px;
     border-radius: var(--radius-md);
     background: var(--color-fg);
-    border: 1.5px dashed rgba(237, 232, 220, 0.3);
+    border: 1.5px dashed var(--dz-border-strong);
   }
   .placing-ghost.fn-ghost {
     width: 36px;
@@ -1922,7 +1922,7 @@
     height: 32px;
     border-radius: 50%;
     background: transparent;
-    border: 1.5px dashed rgba(30, 32, 40, 0.25);
+    border: 1.5px dashed var(--lz-border-mid);
     padding: 0;
     opacity: 0.5;
   }
@@ -1931,7 +1931,7 @@
     font-size: var(--fs-sm);
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(237, 232, 220, 0.9);
+    color: var(--dz-text-bright);
     pointer-events: none;
   }
 

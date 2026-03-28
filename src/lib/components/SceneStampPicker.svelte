@@ -57,14 +57,14 @@
     position: absolute;
     z-index: 10;
     background: var(--color-fg);
-    border: 1px solid rgba(30, 32, 40, 0.15);
+    border: 1px solid var(--lz-border-strong);
     padding: 4px 8px 8px;
     animation: stamp-picker-in 120ms ease-out both;
   }
   .stamp-picker-label {
     font-family: var(--font-data);
     font-size: var(--fs-sm);
-    color: rgba(237, 232, 220, 0.45);
+    color: var(--dz-transport-border);
     letter-spacing: 0.08em;
     margin-bottom: 4px;
   }
@@ -80,14 +80,14 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    border: 1px solid rgba(237, 232, 220, 0.1);
-    color: rgba(237, 232, 220, 0.7);
+    border: 1px solid var(--dz-border-subtle);
+    color: var(--dz-text);
     cursor: pointer;
     transition: background 80ms, color 80ms;
   }
   .stamp-picker-item:hover {
-    background: rgba(237, 232, 220, 0.1);
-    color: rgba(237, 232, 220, 1);
+    background: var(--dz-border-subtle);
+    color: var(--dz-text-bright);
   }
   .stamp-picker-item:active {
     transform: scale(0.9);

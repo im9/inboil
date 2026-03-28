@@ -18,6 +18,12 @@
   --color-teal:    #4A9B9B;   /* teal — DJ filter */
   --color-chance:  #5b7dba;   /* chance mode bars */
   --color-danger:  #f87171;   /* destructive actions */
+
+  /* ── Scene tool accents (distinct from FX palette colors) ── */
+  --tool-sweep:     #c47a2a;
+  --tool-turing:    #8a9432;
+  --tool-quantizer: #2a9485;
+  --tool-tonnetz:   #9456b0;
   --danger-border: rgba(248,113,113,0.40);
   --danger-bg-hover: rgba(248,113,113,0.15);
 
@@ -35,6 +41,8 @@
   --lz-step-border:   rgba(30,32,40, 0.50);
   --lz-text:          rgba(30,32,40, 0.55);
   --lz-text-strong:   rgba(30,32,40, 0.70);
+  --lz-text-bright:   rgba(30,32,40, 0.85);
+  --lz-solid:         rgba(30,32,40, 0.95);
 
   /* ── Dark zone (base: 237,232,220 = --color-bg) ── */
   --dz-divider:          rgba(237,232,220, 0.06);
@@ -66,6 +74,17 @@
   /* ── Salmon accent overlays (base: 232,160,144 = --color-salmon) ── */
   --salmon-bg-scale: rgba(232,160,144, 0.06);
   --salmon-bg-key:   rgba(232,160,144, 0.08);
+  --salmon-bg:       rgba(232,160,144, 0.25);
+  --salmon-border:   rgba(232,160,144, 0.30);
+
+  /* ── Purple accent overlays ── */
+  --purple-bg:       rgba(155,107,160, 0.20);
+
+  /* ── Teal accent overlays ── */
+  --teal-bg:         rgba(74,155,155, 0.20);
+
+  /* ── Blue extended overlays ── */
+  --blue-bg:         rgba(68,114,180, 0.20);
 
   /* ── Font-size scale (data tier — monospace/controls) ── */
   --fs-min:  8px;   /* badges, scale labels, key labels */

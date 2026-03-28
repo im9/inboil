@@ -87,16 +87,16 @@
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 2px 8px rgba(30, 32, 40, 0.35);
+    box-shadow: 0 2px 8px var(--lz-text-hint);
     animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .bubble-item.current {
-    background: rgba(237, 232, 220, 0.15);
-    border-color: rgba(237, 232, 220, 0.45);
-    color: rgba(237, 232, 220, 0.9);
+    background: var(--dz-bg-press);
+    border-color: var(--dz-transport-border);
+    color: var(--dz-text-bright);
   }
   .bubble-item:hover {
-    background: rgba(30, 32, 40, 0.7);
+    background: var(--lz-text-strong);
     color: white;
     transform: scale(1.12);
   }

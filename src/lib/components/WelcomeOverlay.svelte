@@ -69,7 +69,7 @@
     position: fixed;
     inset: 0;
     z-index: 300;
-    background: rgba(30, 32, 40, 0.55);
+    background: var(--lz-text);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -122,13 +122,13 @@
     font-family: var(--font-data);
     font-size: var(--fs-base);
     letter-spacing: 0.04em;
-    border: 1px solid rgba(237, 232, 220, 0.15);
+    border: 1px solid var(--dz-border);
     transition: background 80ms, border-color 80ms;
   }
 
   .welcome-btn:hover {
-    border-color: rgba(237, 232, 220, 0.30);
-    background: rgba(237, 232, 220, 0.06);
+    border-color: var(--dz-border-strong);
+    background: var(--dz-divider);
   }
 
   .welcome-btn.primary {
