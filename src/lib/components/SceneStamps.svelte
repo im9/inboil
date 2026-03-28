@@ -61,7 +61,7 @@
         width: {size + 8}px;
         height: {size + 8}px;
         color: {def.color};
-        {isPlaying ? `--beat: ${30 / song.bpm}s;` : ''}
+        {isPlaying ? `--beat: ${60 / song.bpm}s;` : ''}
       "
       onpointerdown={(e: PointerEvent) => {
         e.stopPropagation()
@@ -273,11 +273,10 @@
     animation: stamp-heartbeat calc(var(--beat) * 4) ease-out infinite;
   }
   @keyframes stamp-heartbeat {
-    0%   { transform: scale(1); }
-    7%   { transform: scale(1.25); }
-    14%  { transform: scale(1); }
-    21%  { transform: scale(1.18); }
-    28%  { transform: scale(1); }
+    0%   { transform: scale(1.25); }
+    8%   { transform: scale(1); }
+    16%  { transform: scale(1.18); }
+    24%  { transform: scale(1); }
     100% { transform: scale(1); }
   }
 
