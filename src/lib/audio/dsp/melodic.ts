@@ -1048,7 +1048,7 @@ class WTCore {
       sig = this._applyDrive(sig, effectiveDrive)
     }
 
-    const vol = Math.max(0, 0.75 + volMod * 0.3)
+    const vol = Math.max(0, 1.0 + volMod * 0.3)
     const out = sig * aenv * this.vel * vol
     if (out !== out) { this.filter.reset(); this.combFilter.reset(); this.formantFilter.reset(); return 0 }
     return out
@@ -1142,7 +1142,7 @@ class WTCore {
       sigR = this._applyDrive(sigR, effectiveDrive)
     }
 
-    const vol = Math.max(0, 0.75 + volMod * 0.3)
+    const vol = Math.max(0, 1.0 + volMod * 0.3)
     out[0] = sigL * aenv * this.vel * vol
     out[1] = sigR * aenv * this.vel * vol
     if (out[0] !== out[0] || out[1] !== out[1]) { this.filter.reset(); this.combFilter.reset(); this.formantFilter.reset(); out[0] = 0; out[1] = 0 }
