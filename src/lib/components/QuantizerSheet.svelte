@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { QuantizerParams, QuantizerChord, HarmonyVoice } from '../types.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
+  import { sceneUpdateGenerativeParams, autoGenerateFromNode, findTargetPatternNode } from '../sceneActions.ts'
   import GenSheetCommon from './GenSheetCommon.svelte'
   import { SCALE_MAP, SCALE_NAMES } from '../generative.ts'
 
@@ -32,9 +32,7 @@
   // Playback state: current step and output note
   const playState = $derived.by(() => {
     if (!playback.playing || !node?.generative || !nodeId) return null
-    const edge = song.scene.edges.find(e => e.from === nodeId)
-    if (!edge) return null
-    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    const patNode = findTargetPatternNode(nodeId)
     if (!patNode?.patternId) return null
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return null

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { TonnetzParams, TonnetzAnchor } from '../state.svelte.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
+  import { sceneUpdateGenerativeParams, autoGenerateFromNode, findTargetPatternNode } from '../sceneActions.ts'
   import GenSheetCommon from './GenSheetCommon.svelte'
   import { applyTonnetzOp } from '../generative.ts'
   import { engine } from '../audio/engine.ts'
@@ -119,9 +119,7 @@
   // Get current playback step for this node
   const currentStep = $derived.by(() => {
     if (!playback.playing || !node?.generative || !nodeId) return -1
-    const edge = song.scene.edges.find(e => e.from === nodeId)
-    if (!edge) return -1
-    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    const patNode = findTargetPatternNode(nodeId)
     if (!patNode?.patternId) return -1
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return -1
@@ -132,9 +130,7 @@
   // Total steps from target cell
   const totalSteps = $derived.by(() => {
     if (!node?.generative || !nodeId) return 16
-    const edge = song.scene.edges.find(e => e.from === nodeId)
-    if (!edge) return 16
-    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    const patNode = findTargetPatternNode(nodeId)
     if (!patNode?.patternId) return 16
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return 16

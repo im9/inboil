@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { TuringParams } from '../types.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
-  import { sceneUpdateGenerativeParams, sceneSetSeed, autoGenerateFromNode } from '../sceneActions.ts'
+  import { sceneUpdateGenerativeParams, sceneSetSeed, autoGenerateFromNode, findTargetPatternNode } from '../sceneActions.ts'
   import GenSheetCommon from './GenSheetCommon.svelte'
   import { turingSimulate } from '../generative.ts'
   import type { TuringStepSnapshot } from '../generative.ts'
@@ -15,22 +15,28 @@
   const gen = $derived(node?.generative)
   const params = $derived(gen?.params as TuringParams | undefined)
 
-  // Simulate the Turing Machine to get register snapshots
-  const steps = $derived(16) // default view length
-  const snapshots = $derived.by((): TuringStepSnapshot[] => {
-    if (!params) return []
-    return turingSimulate(params, steps, gen?.seed)
+  // Derive step count from target pattern cell
+  const targetSteps = $derived.by(() => {
+    if (!node?.generative || !nodeId) return 16
+    const patNode = findTargetPatternNode(nodeId)
+    if (!patNode?.patternId) return 16
+    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    if (!pat) return 16
+    const trackIdx = node.generative.targetTrack ?? 0
+    const cell = pat.cells.find(c => c.trackId === trackIdx)
+    return cell?.steps ?? 16
   })
 
-  // Current register (step 0's state = initial register)
-  const currentReg = $derived(snapshots.length > 0 ? snapshots[0].register : [])
+  // Simulate the Turing Machine to get register snapshots
+  const snapshots = $derived.by((): TuringStepSnapshot[] => {
+    if (!params) return []
+    return turingSimulate(params, targetSteps, gen?.seed)
+  })
 
-  // Playback step
+  // Playback step — follows generative chain to find target pattern
   const currentStep = $derived.by(() => {
     if (!playback.playing || !node?.generative || !nodeId) return -1
-    const edge = song.scene.edges.find(e => e.from === nodeId)
-    if (!edge) return -1
-    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    const patNode = findTargetPatternNode(nodeId)
     if (!patNode?.patternId) return -1
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return -1
@@ -42,6 +48,9 @@
   const displaySnap = $derived(
     currentStep >= 0 && snapshots[currentStep] ? snapshots[currentStep] : snapshots[0]
   )
+
+  // Display register: follows playhead during playback, otherwise step 0
+  const displayReg = $derived(displaySnap?.register ?? (snapshots.length > 0 ? snapshots[0].register : []))
 
   // FREEZE state tracking
   let preFreezelock = $state<number | null>(null)
@@ -95,9 +104,9 @@
   }
 
   // ── Output history ──
-  const BAR_W = 12
-  const BAR_GAP = 2
-  const BAR_MAX_H = 48
+  const BAR_W = 18
+  const BAR_GAP = 4
+  const BAR_MAX_H = 64
   const histWidth = $derived(snapshots.length * (BAR_W + BAR_GAP))
 
   function onkeydown(e: KeyboardEvent) {
@@ -112,7 +121,6 @@
   <!-- Header -->
   <div class="t-header">
     <span class="t-title">TURING MACHINE</span>
-    <span class="t-info">{params.length}×{params.lock.toFixed(2)}</span>
     <button class="t-close" onpointerdown={onclose}>×</button>
   </div>
 
@@ -161,18 +169,18 @@
     <!-- SVG Register Ring -->
     <div class="t-ring">
       <svg width="240" height="240" viewBox="0 0 240 240">
-        <!-- Ring circle (guide) -->
+        <!-- Ring circle (guide) with notch at read position (top) -->
         <circle cx={RING_CX} cy={RING_CY} r={RING_R} fill="none" stroke="var(--color-fg)" stroke-width="0.5" opacity="0.15" />
-        <!-- Read head indicator at top -->
-        <polygon points="{RING_CX},{RING_CY - RING_R - 18} {RING_CX - 5},{RING_CY - RING_R - 10} {RING_CX + 5},{RING_CY - RING_R - 10}"
-          fill="var(--color-fg)" opacity="0.4" />
+        <line x1={RING_CX} y1={RING_CY - RING_R - 6} x2={RING_CX} y2={RING_CY - RING_R + 6}
+          stroke="var(--color-fg)" stroke-width="1.5" opacity="0.3" />
         <!-- Bits -->
-        {#each currentReg as bit, idx}
-          {@const pos = bitPos(idx, currentReg.length)}
-          {@const isMutated = snapshots[0]?.mutatedBit === idx}
+        {#each displayReg as bit, idx}
+          {@const pos = bitPos(idx, displayReg.length)}
+          {@const isMutated = currentStep < 0 && displaySnap?.mutatedBit === idx}
+          {@const isHead = idx === 0}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <circle
-            cx={pos.x} cy={pos.y} r={BIT_R}
+            cx={pos.x} cy={pos.y} r={isHead ? BIT_R + 2 : BIT_R}
             class="bit-circle"
             class:bit-on={bit === 1}
             class:bit-off={bit === 0}
@@ -192,13 +200,13 @@
 
     <!-- Output History -->
     <div class="t-history">
-      <svg width={histWidth} height={BAR_MAX_H + 16} viewBox="0 0 {histWidth} {BAR_MAX_H + 16}">
+      <svg width={histWidth} height={BAR_MAX_H + 20} viewBox="0 0 {histWidth} {BAR_MAX_H + 20}">
         {#each snapshots as snap, i}
-          {@const h = snap.active ? Math.max(2, snap.value * BAR_MAX_H) : 2}
+          {@const h = snap.active ? Math.max(3, snap.value * BAR_MAX_H) : 3}
           <rect
-            x={i * (BAR_W + BAR_GAP)} y={BAR_MAX_H - h + 8}
+            x={i * (BAR_W + BAR_GAP)} y={BAR_MAX_H - h + 4}
             width={BAR_W} height={h}
-            rx="1"
+            rx="2"
             class="hist-bar"
             class:active={snap.active}
             class:rest={!snap.active}
@@ -236,12 +244,6 @@
     font-size: var(--fs-lg);
     font-weight: 700;
     letter-spacing: 0.12em;
-  }
-  .t-info {
-    font-family: var(--font-data);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-    color: var(--color-olive);
   }
   .t-close {
     width: 24px; height: 24px;
@@ -388,7 +390,7 @@
     opacity: 0.7;
   }
   .hist-bar.playing {
-    fill: var(--dz-text-bright);
+    fill: #fff;
     opacity: 1;
     stroke: var(--color-fg);
     stroke-width: 0.5;
@@ -402,7 +404,7 @@
   }
   .hist-label {
     font-family: var(--font-data);
-    font-size: 7px;
+    font-size: 9px;
     fill: var(--color-fg);
     text-anchor: middle;
     opacity: 0.4;

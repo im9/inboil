@@ -9,6 +9,17 @@
   const gen = $derived(node?.generative)
 
   // Resolve target pattern's cells for track selector
+  // Find currently matching preset index (-1 if none)
+  const activePresetIdx = $derived.by(() => {
+    if (!gen) return -1
+    const presets = GENERATIVE_PRESETS.filter(p => p.engine === gen.engine)
+    return presets.findIndex(p => {
+      const pp = p.params as unknown as Record<string, unknown>
+      const gp = gen.params as unknown as Record<string, unknown>
+      return Object.keys(pp).every(k => k === 'engine' || JSON.stringify(pp[k]) === JSON.stringify(gp[k]))
+    })
+  })
+
   const targetPatCells = $derived.by(() => {
     const visited = new Set<string>()
     const queue = [nodeId]
@@ -94,12 +105,11 @@
             autoGenerateFromNode(nodeId)
             if (gen.engine === 'tonnetz') { ui.tonnetzNodeId = nodeId; ui.phraseView = 'tonnetz' }
           }
-          ;(e.target as HTMLSelectElement).value = '-1'
         }}
       >
-        <option value="-1" selected>—</option>
+        <option value="-1" selected={activePresetIdx < 0}>—</option>
         {#each GENERATIVE_PRESETS.filter(p => p.engine === gen.engine) as preset, i}
-          <option value={i}>{preset.name}</option>
+          <option value={i} selected={i === activePresetIdx}>{preset.name}</option>
         {/each}
       </select>
     </div>

@@ -400,6 +400,7 @@ function collectGenChain(fromId: string): SceneNode[] {
 }
 
 /** Find first pattern node reachable via outgoing edges (BFS) */
+export { findTargetPattern as findTargetPatternNode }
 function findTargetPattern(fromId: string): SceneNode | null {
   const visited = new Set<string>()
   const queue = [fromId]
