@@ -46,6 +46,7 @@
   <!-- Merge mode -->
   <div class="gc-row" role="tablist" aria-label="Merge mode">
     <span class="gc-label">MERGE</span>
+    <span class="gc-desc">how to write</span>
     {#each [['replace', 'REPLACE'], ['merge', 'FILL']] as [m, label]}
       <button
         class="gc-pill"
@@ -59,7 +60,7 @@
 
   <!-- Target track -->
   <div class="gc-row">
-    <span class="gc-label">TARGET</span>
+    <span class="gc-label">TRACK</span>
     {#if targetPatCells.length > 0}
       <select class="gc-select"
         onchange={e => { sceneSetTargetTrack(nodeId, parseInt((e.target as HTMLSelectElement).value)); autoGenerateFromNode(nodeId) }}
@@ -76,6 +77,7 @@
   <!-- Seed -->
   <div class="gc-row">
     <span class="gc-label">SEED</span>
+    <span class="gc-desc">reproducibility</span>
     {#if gen.seed != null}
       <span class="gc-val">{gen.seed}</span>
       <button class="gc-icon" aria-label="Randomize seed" data-tip="Randomize seed" data-tip-ja="シードをランダム化"
@@ -120,9 +122,8 @@
 <style>
   .gen-common {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 12px;
+    flex-direction: column;
+    gap: 4px;
     padding: 4px 0;
   }
   .gc-row {
@@ -140,6 +141,12 @@
   .gc-val {
     font-family: var(--font-data);
     font-size: var(--fs-md);
+  }
+  .gc-desc {
+    font-family: var(--font-data);
+    font-size: 9px;
+    opacity: 0.35;
+    letter-spacing: 0.02em;
   }
   .gc-dim {
     font-family: var(--font-data);

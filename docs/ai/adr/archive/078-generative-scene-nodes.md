@@ -129,7 +129,7 @@ Shift-register random sequence generator inspired by Music Thing Modular's Turin
 ```typescript
 interface TuringParams {
   engine: 'turing'
-  length: number           // register length (2–32 steps)
+  length: number           // register length (2–target steps; select from 2,4,8,16,32,64)
   lock: number             // 0.0 = fully random, 1.0 = fully locked loop
   range: [number, number]  // output note range (MIDI note numbers)
   mode: 'note' | 'gate' | 'velocity'  // what the random values control

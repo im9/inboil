@@ -157,7 +157,7 @@ export interface GenerativeConfig {
 /** Turing Machine / shift-register random (ADR 078) */
 export interface TuringParams {
   engine: 'turing'
-  length: number           // register length (2–32 steps)
+  length: number           // register length (2–target steps)
   lock: number             // 0.0 = fully random, 1.0 = fully locked loop
   range: [number, number]  // output note range (MIDI note numbers)
   mode: 'note' | 'gate' | 'velocity'

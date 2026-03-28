@@ -61,9 +61,9 @@
 
   function freeze() {
     if (!params || !nodeId) return
-    if (params.lock === 1.0 && preFreezelock !== null) {
-      // Unfreeze: restore previous lock
-      update({ lock: preFreezelock })
+    if (params.lock === 1.0) {
+      // Unfreeze: restore previous lock, or 0.5 if no saved value
+      update({ lock: preFreezelock ?? 0.5 })
       preFreezelock = null
     } else {
       preFreezelock = params.lock
@@ -87,10 +87,11 @@
   }
 
   // ── Ring geometry ──
-  const RING_R = 120
-  const RING_CX = 155
-  const RING_CY = 155
-  const BIT_R = 14
+  const RING_R = 105
+  const RING_CX = 125
+  const RING_CY = 125
+  const len = $derived(params?.length ?? 8)
+  const bitR = $derived(Math.min(14, Math.PI * RING_R / Math.max(len, 4) - 2))
 
   function bitPos(idx: number, total: number): { x: number; y: number } {
     const angle = (idx / total) * Math.PI * 2 - Math.PI / 2 // start from top
@@ -103,7 +104,7 @@
   // ── Output history ──
   const BAR_W = 18
   const BAR_GAP = 4
-  const BAR_MAX_H = 64
+  const BAR_MAX_H = 100
   const histWidth = $derived(snapshots.length * (BAR_W + BAR_GAP))
 
   // ── Revolver rotation ──
@@ -123,10 +124,18 @@
     }
   })
 
-  const stepAngle = $derived(360 / (params?.length ?? 8))
+  const stepAngle = $derived(360 / len)
   const rotationDeg = $derived(currentStep >= 0 ? cumulativeSteps * stepAngle : 0)
-  const len = $derived(params?.length ?? 8)
   const readingIdx = $derived(currentStep >= 0 && cumulativeSteps > 0 ? (len - (cumulativeSteps - 1) % len) % len : -1)
+
+  // Clamp length when target steps shrinks
+  const lenOptions = [2, 4, 8, 16, 32, 64] as const
+  $effect(() => {
+    if (params && params.length > targetSteps) {
+      const valid = lenOptions.filter(v => v <= targetSteps)
+      update({ length: valid[valid.length - 1] ?? 2 })
+    }
+  })
 
   function onkeydown(e: KeyboardEvent) {
     if (e.code === 'Escape') { e.preventDefault(); onclose() }
@@ -143,64 +152,25 @@
     <button class="t-close" onpointerdown={onclose}>×</button>
   </div>
 
-  <!-- Controls -->
-  <div class="t-controls">
-    <div class="t-row">
-      <span class="ctl-label">LEN</span>
-      <span class="ctl-val">{params.length}</span>
-      <span class="ctl-label">LOCK</span>
-      <input class="ctl-slider" type="range" min="0" max="1" step="0.01"
-        value={params.lock}
-        oninput={e => update({ lock: parseFloat((e.target as HTMLInputElement).value) })}
-      />
-      <span class="ctl-val">{params.lock.toFixed(2)}</span>
-    </div>
-    <div class="t-row">
-      <span class="ctl-label">DENS</span>
-      <span class="ctl-val">{params.density.toFixed(2)}</span>
-      <span class="ctl-label">MODE</span>
-      <div class="mode-pills">
-        {#each ['note', 'gate', 'velocity'] as m}
-          <button
-            class="mode-pill"
-            class:active={params.mode === m}
-            onpointerdown={() => update({ mode: m as TuringParams['mode'] })}
-          >{m.toUpperCase().slice(0, 3)}</button>
-        {/each}
-      </div>
-    </div>
-    <div class="t-row">
-      <button class="action-btn" class:frozen={params.lock === 1.0} onpointerdown={freeze}
-        data-tip="Freeze register (lock=1.0)" data-tip-ja="レジスタをフリーズ"
-      >{params.lock === 1.0 ? 'THAW' : 'FREEZE'}</button>
-      <button class="action-btn" onpointerdown={roll}
-        data-tip="Re-randomize seed" data-tip-ja="シードをランダム化"
-      >ROLL</button>
-    </div>
-    <div class="t-row hint">
-      <span>tap bit = re-roll · FREEZE = lock pattern · ROLL = new seed</span>
-    </div>
-    <GenSheetCommon {nodeId} />
-  </div>
-
-  <!-- Register ring + output history side by side -->
-  <div class="t-main">
-    <!-- SVG Register Ring -->
+  <!-- Main body: 2-column layout -->
+  <div class="t-body">
+    <!-- Left: Ring visualization -->
     <div class="t-ring">
-      <svg width="310" height="310" viewBox="0 0 310 310">
-        <!-- Ring circle (guide) -->
+      <div class="t-ring-actions">
+        <button class="action-btn" class:frozen={params.lock === 1.0} onpointerdown={freeze}>FREEZE</button>
+        <button class="action-btn" onpointerdown={roll}>ROLL</button>
+      </div>
+      <svg viewBox="0 0 250 250">
         <circle cx={RING_CX} cy={RING_CY} r={RING_R} fill="none" stroke="var(--color-fg)" stroke-width="0.5" opacity="0.15" />
-        <!-- Read head: small triangle well above bit 0 -->
-        <polygon points="{RING_CX},{RING_CY - RING_R - BIT_R - 12} {RING_CX - 4},{RING_CY - RING_R - BIT_R - 6} {RING_CX + 4},{RING_CY - RING_R - BIT_R - 6}"
+        <polygon points="{RING_CX},{RING_CY - RING_R - bitR - 10} {RING_CX - 3},{RING_CY - RING_R - bitR - 5} {RING_CX + 3},{RING_CY - RING_R - bitR - 5}"
           fill="var(--color-fg)" opacity="0.3" />
-        <!-- Bits (revolver rotation) -->
         <g class="bit-ring" style="transform: rotate({rotationDeg}deg); transform-origin: {RING_CX}px {RING_CY}px">
           {#each initialReg as bit, idx}
             {@const pos = bitPos(idx, initialReg.length)}
             {@const isMutated = currentStep < 0 && displaySnap?.mutatedBit === idx}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <circle
-              cx={pos.x} cy={pos.y} r={BIT_R}
+              cx={pos.x} cy={pos.y} r={bitR}
               class="bit-circle"
               class:bit-on={bit === 1 && idx !== readingIdx}
               class:bit-off={bit === 0 && idx !== readingIdx}
@@ -211,40 +181,97 @@
             />
           {/each}
         </g>
-        <!-- Center info -->
-        <text x={RING_CX} y={RING_CY - 8} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
-        <text x={RING_CX} y={RING_CY + 14} class="ring-note" class:playing={currentStep >= 0}>
+        <text x={RING_CX} y={RING_CY - 6} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
+        <text x={RING_CX} y={RING_CY + 12} class="ring-note" class:playing={currentStep >= 0}>
           {displaySnap ? NOTE_NAMES[displaySnap.note % 12] + String(Math.floor(displaySnap.note / 12)) : '—'}
         </text>
       </svg>
+
     </div>
 
-    <!-- Output History -->
-    <div class="t-history">
-      <svg width={histWidth} height={BAR_MAX_H + 20} viewBox="0 0 {histWidth} {BAR_MAX_H + 20}">
-        {#each snapshots as snap, i}
-          {@const h = snap.active ? Math.max(3, snap.value * BAR_MAX_H) : 3}
-          <rect
-            x={i * (BAR_W + BAR_GAP)} y={BAR_MAX_H - h + 4}
-            width={BAR_W} height={h}
-            rx="2"
-            class="hist-bar"
-            class:active={snap.active}
-            class:rest={!snap.active}
-            class:playing={i === currentStep}
+    <!-- Right: Controls -->
+    <div class="t-controls">
+      <fieldset class="t-group">
+        <legend>Parameters</legend>
+        <div class="t-row">
+          <span class="ctl-label">LEN</span>
+          <select class="ctl-select"
+            value={params.length}
+            onchange={e => update({ length: parseInt((e.target as HTMLSelectElement).value) })}
+          >
+            {#each [2, 4, 8, 16, 32, 64].filter(v => v <= targetSteps) as v}
+              <option value={v} selected={v === params.length}>{v}</option>
+            {/each}
+          </select>
+          <span class="ctl-desc">bits</span>
+        </div>
+        <div class="t-row">
+          <span class="ctl-label">LOCK</span>
+          <input class="ctl-slider" type="range" min="0" max="1" step="0.01"
+            value={params.lock}
+            oninput={e => update({ lock: parseFloat((e.target as HTMLInputElement).value) })}
           />
-          <text
-            x={i * (BAR_W + BAR_GAP) + BAR_W / 2} y={BAR_MAX_H + 16}
-            class="hist-label"
-          >{snap.active ? NOTE_NAMES[snap.note % 12] : '·'}</text>
-        {/each}
-      </svg>
+          <span class="ctl-val">{params.lock.toFixed(2)}</span>
+        </div>
+        <div class="t-row">
+          <span class="ctl-label">DENS</span>
+          <input class="ctl-slider" type="range" min="0" max="1" step="0.01"
+            value={params.density}
+            oninput={e => update({ density: parseFloat((e.target as HTMLInputElement).value) })}
+          />
+          <span class="ctl-val">{params.density.toFixed(2)}</span>
+        </div>
+      </fieldset>
+
+      <fieldset class="t-group">
+        <legend>Mode</legend>
+        <div class="mode-pills">
+          {#each ['note', 'gate', 'velocity'] as m}
+            <button
+              class="mode-pill"
+              class:active={params.mode === m}
+              onpointerdown={() => update({ mode: m as TuringParams['mode'] })}
+            >{m.toUpperCase().slice(0, 3)}</button>
+          {/each}
+        </div>
+        <div class="ctl-desc mode-desc">
+          {params.mode === 'note' ? 'bits → pitch' : params.mode === 'gate' ? 'bits → on/off' : 'bits → velocity'}
+        </div>
+      </fieldset>
+
+      <fieldset class="t-group">
+        <legend>Target</legend>
+        <GenSheetCommon {nodeId} />
+      </fieldset>
     </div>
+  </div>
+
+  <!-- Output History (read-only, below) -->
+  <div class="t-history">
+    <svg width={histWidth} height={BAR_MAX_H + 20} viewBox="0 0 {histWidth} {BAR_MAX_H + 20}">
+      {#each snapshots as snap, i}
+        {@const h = snap.active ? Math.max(3, snap.value * BAR_MAX_H) : 3}
+        <rect
+          x={i * (BAR_W + BAR_GAP)} y={BAR_MAX_H - h + 4}
+          width={BAR_W} height={h}
+          rx="2"
+          class="hist-bar"
+          class:active={snap.active}
+          class:rest={!snap.active}
+          class:playing={i === currentStep}
+        />
+        <text
+          x={i * (BAR_W + BAR_GAP) + BAR_W / 2} y={BAR_MAX_H + 16}
+          class="hist-label"
+        >{snap.active ? NOTE_NAMES[snap.note % 12] : '·'}</text>
+      {/each}
+    </svg>
   </div>
 </div>
 {/if}
 
 <style>
+  /* ── Layout: header / controls / ring(flex) / history ── */
   .turing-sheet {
     display: flex;
     flex-direction: column;
@@ -252,7 +279,7 @@
     background: var(--color-bg);
   }
 
-  /* ── Header ── */
+  /* ── Header — 40px ── */
   .t-header {
     display: flex;
     align-items: center;
@@ -275,19 +302,63 @@
     margin-left: auto;
   }
 
-  /* ── Controls ── */
+  /* ── 2-column body: ring (left) + controls (right) ── */
+  .t-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+
+  /* ── Left: Ring ── */
+  .t-ring {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  .t-ring svg {
+    width: 100%;
+    height: 100%;
+    max-width: 400px;
+    max-height: 400px;
+  }
+  .t-ring-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  /* ── Right: Controls (fixed width) ── */
   .t-controls {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--lz-border);
-    display: flex; flex-direction: column; gap: 6px;
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--lz-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .t-group {
+    border: 1px solid var(--lz-border);
+    padding: 6px 8px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .t-group legend {
+    font-family: var(--font-data);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em;
+    opacity: 0.4;
+    padding: 0 4px;
   }
   .t-row {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  }
-  .t-row.hint {
-    opacity: 0.4;
-    font-family: var(--font-data);
-    font-size: 8px;
+    display: flex; align-items: center; gap: 8px;
   }
   .ctl-label {
     font-family: var(--font-data);
@@ -303,9 +374,23 @@
     accent-color: var(--color-olive);
     cursor: pointer;
   }
-
+  .ctl-desc {
+    font-family: var(--font-data);
+    font-size: 9px;
+    opacity: 0.4;
+    letter-spacing: 0.02em;
+  }
+  .ctl-select {
+    font-family: var(--font-data);
+    font-size: var(--fs-lg); font-weight: 700;
+    padding: 1px 4px;
+    border: 1px solid var(--lz-border-mid);
+    background: transparent; color: inherit;
+    cursor: pointer;
+  }
   .mode-pills {
-    display: flex; gap: 3px;
+    display: flex;
+    gap: 4px;
   }
   .mode-pill {
     font-family: var(--font-data);
@@ -320,7 +405,6 @@
     color: var(--color-olive);
     opacity: 1;
   }
-
   .action-btn {
     font-family: var(--font-data);
     font-size: var(--fs-md); font-weight: 700;
@@ -335,25 +419,11 @@
     border-color: var(--color-blue);
     color: var(--color-blue);
   }
-
-  /* ── Main area ── */
-  .t-main {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 16px;
-    overflow: auto;
-    flex-wrap: wrap;
+  .mode-desc {
+    margin-top: 4px;
   }
-
-  /* ── Register Ring ── */
   .bit-ring {
     transition: transform 200ms ease-out;
-  }
-  .t-ring {
-    flex-shrink: 0;
   }
   .bit-circle {
     cursor: pointer;
@@ -375,7 +445,7 @@
     stroke-opacity: 0.35;
   }
   .bit-reading {
-    fill: #fff;
+    fill: var(--color-bg);
     stroke: var(--color-olive);
     stroke-width: 2.5;
     opacity: 1;
@@ -397,11 +467,17 @@
     fill: var(--color-olive);
     text-anchor: middle;
   }
+  .ring-note.playing {
+    font-weight: 900;
+  }
 
-  /* ── Output History ── */
+  /* ── History (read-only, bottom, fixed height) ── */
   .t-history {
-    overflow-x: auto;
+    height: 136px;
     flex-shrink: 0;
+    border-top: 1px solid var(--lz-border);
+    overflow-x: auto;
+    padding: 8px 12px;
     -webkit-overflow-scrolling: touch;
   }
   .hist-bar {
@@ -412,7 +488,7 @@
     opacity: 0.7;
   }
   .hist-bar.playing {
-    fill: #fff;
+    fill: var(--color-bg);
     opacity: 1;
     stroke: var(--color-fg);
     stroke-width: 0.5;
@@ -420,9 +496,6 @@
   .hist-bar.rest {
     fill: var(--color-fg);
     opacity: 0.08;
-  }
-  .ring-note.playing {
-    font-weight: 900;
   }
   .hist-label {
     font-family: var(--font-data);
