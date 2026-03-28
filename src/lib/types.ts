@@ -181,11 +181,18 @@ export type TonnetzRhythm =
   | 'onbeat'                                   // x . . . x . . .
   | 'syncopated'                               // x . x . . x . x
   | { preset: 'euclidean'; hits: number }      // Bjorklund distribution
+  | { preset: 'turing'; length: number; lock: number; seed?: number }  // shift-register stochastic rhythm
 
 /** Anchor: force a specific chord at a specific step (ADR 126 v2) */
 export interface TonnetzAnchor {
   step: number
   chord: [number, number, number]
+}
+
+/** Arpeggio mode for Tonnetz chords */
+export interface TonnetzArp {
+  mode: 'up' | 'down' | 'updown' | 'random'
+  seed?: number              // seed for 'random' mode determinism
 }
 
 /** Tonnetz / neo-Riemannian per-step transforms (ADR 078, rewritten ADR 126 v2) */
@@ -197,6 +204,8 @@ export interface TonnetzParams {
   stepsPerTransform?: number // how many steps each chord is held (default: 1, range 1–64)
   rhythm?: TonnetzRhythm     // which steps are active (default: 'all'; 'legato' = first of each chord)
   anchors?: TonnetzAnchor[]  // explicit chord resets at specific steps
+  arp?: TonnetzArp           // arpeggio: cycle chord notes across steps instead of full chords
+  chordQuality?: 'triad' | '7th' // 7th adds a 4th note: maj7 for major, min7 for minor (default: triad)
 
   // Legacy fields (migration only — stripped after restore)
   stepsPerChord?: number

@@ -82,7 +82,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 117 | Generative UX Simplification | Implemented | Auto-generate on connect, debounced param regen, target track on faceplate, merge mode replace/fill only |
 | 096 | Odd Step Counts & PO-Style Step Picker | Implemented | STEP_OPTIONS 2–16 + 24/32/48/64, long-press grid picker (bubble picker rejected) |
 | 125 | Scene Terminology Unification | Implemented | Retired "Function Node"/"Decorator" — 4 categories: Pattern, Generator, Modifier, Sweep. Code rename FnNode→Modifier, docs restructure, interactive Playground embeds per engine page |
-| 126 | Tonnetz Lattice View & Per-Step Transforms | Proposed | 1 step = 1 transform (O&C style), interactive SVG lattice overlay sheet, anchors for explicit chord resets |
+| 126 | Tonnetz Lattice View & Per-Step Transforms | Implemented | Per-step transforms (O&C style), SVG lattice overlay, anchors, chord preview, arpeggio, 7th chords, Turing rhythm |
 
 ## UI / Layout
 

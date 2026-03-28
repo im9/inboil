@@ -12,6 +12,12 @@
   const nodeId = $derived(ui.tonnetzNodeId)
   const node = $derived(nodeId ? song.scene.nodes.find(n => n.id === nodeId) : null)
   const params = $derived(node?.generative?.params as TonnetzParams | undefined)
+  const rhythmKey = $derived(
+    !params?.rhythm || params.rhythm === 'all' ? 'all'
+    : typeof params.rhythm === 'string' ? params.rhythm
+    : Array.isArray(params.rhythm) ? 'all'
+    : (params.rhythm as { preset: string }).preset
+  )
 
   // ── Lattice geometry ──
 
@@ -433,15 +439,82 @@
           <option value={v} selected={params.voicing === v}>{v}</option>
         {/each}
       </select>
+      <span class="ctl-label"
+        data-tip="Chord quality — triad (3 notes) or 7th (4 notes)"
+        data-tip-ja="コードの種類 — トライアド（3音）または7th（4音）"
+      >CHORD</span>
+      <select class="ctl-select"
+        onchange={e => {
+          const v = (e.target as HTMLSelectElement).value
+          sceneUpdateGenerativeParams(nodeId, { chordQuality: v === 'triad' ? undefined : v } as any)
+          autoGenerateFromNode(nodeId)
+        }}
+      >
+        {#each ['triad', '7th'] as q}
+          <option value={q} selected={(params.chordQuality ?? 'triad') === q}>{q}</option>
+        {/each}
+      </select>
       <span class="ctl-label">RHYTHM</span>
       <select class="ctl-select"
-        onchange={e => { sceneUpdateGenerativeParams(nodeId, { rhythm: (e.target as HTMLSelectElement).value === 'all' ? undefined : (e.target as HTMLSelectElement).value } as any); autoGenerateFromNode(nodeId) }}
+        onchange={e => {
+          const v = (e.target as HTMLSelectElement).value
+          const rhythm = v === 'all' ? undefined : v === 'turing' ? { preset: 'turing', length: 8, lock: 0.7 } : v
+          sceneUpdateGenerativeParams(nodeId, { rhythm } as any)
+          autoGenerateFromNode(nodeId)
+        }}
       >
-        {#each ['all', 'legato', 'offbeat', 'onbeat', 'syncopated'] as r}
-          <option value={r} selected={(params.rhythm ?? 'all') === r}>{r}</option>
+        {#each ['all', 'legato', 'offbeat', 'onbeat', 'syncopated', 'turing'] as r}
+          <option value={r} selected={rhythmKey === r}>{r}</option>
+        {/each}
+      </select>
+      <span class="ctl-label"
+        data-tip="Arpeggio — cycle chord notes across steps instead of full chords"
+        data-tip-ja="アルペジオ — コード全音ではなく1音ずつステップに割り当て"
+      >ARP</span>
+      <select class="ctl-select"
+        onchange={e => {
+          const v = (e.target as HTMLSelectElement).value
+          sceneUpdateGenerativeParams(nodeId, { arp: v === 'off' ? undefined : { mode: v } } as any)
+          autoGenerateFromNode(nodeId)
+        }}
+      >
+        {#each ['off', 'up', 'down', 'updown', 'random'] as a}
+          <option value={a} selected={(params.arp?.mode ?? 'off') === a}>{a}</option>
         {/each}
       </select>
     </div>
+    <!-- Turing rhythm params -->
+    {#if rhythmKey === 'turing' && params.rhythm && typeof params.rhythm === 'object' && !Array.isArray(params.rhythm) && 'lock' in params.rhythm}
+      {@const tr = params.rhythm as { preset: 'turing'; length: number; lock: number; seed?: number }}
+      <div class="tonnetz-row">
+        <span class="ctl-label"
+          data-tip="Turing register length — shorter = faster repetition"
+          data-tip-ja="チューリングレジスタ長 — 短いほどパターンが早く繰り返す"
+        >LEN</span>
+        <span class="rate-val">{tr.length}</span>
+        <input class="rate-slider" type="range" min="2" max="32"
+          value={tr.length}
+          oninput={e => {
+            const v = parseInt((e.target as HTMLInputElement).value)
+            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, length: v } } as any)
+            autoGenerateFromNode(nodeId)
+          }}
+        />
+        <span class="ctl-label"
+          data-tip="Lock — 1.0 = frozen loop, 0.0 = fully random"
+          data-tip-ja="ロック — 1.0 = 固定ループ、0.0 = 完全ランダム"
+        >LOCK</span>
+        <span class="rate-val">{tr.lock.toFixed(1)}</span>
+        <input class="rate-slider" type="range" min="0" max="100"
+          value={Math.round(tr.lock * 100)}
+          oninput={e => {
+            const v = parseInt((e.target as HTMLInputElement).value) / 100
+            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, lock: v } } as any)
+            autoGenerateFromNode(nodeId)
+          }}
+        />
+      </div>
+    {/if}
     <!-- Anchors -->
     {#if params.anchors?.length}
       <div class="tonnetz-row">

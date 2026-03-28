@@ -1,6 +1,6 @@
 # ADR 126: Tonnetz Lattice View & Per-Step Transforms
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -282,7 +282,7 @@ The [EDIT] button opens the Tonnetz sheet.
 
 ## Known Issues
 
-- **No audio preview on lattice interaction** — tapping a triangle changes startChord but gives no immediate auditory feedback. The regeneration + playback loop is indirect.
+- ~~**No audio preview on lattice interaction**~~ — ✅ Resolved: tapping or long-pressing a triangle now plays a 300ms preview of the chord via the target track's voice.
 
 - **Why remove slots?** The slot model (hold chord for N steps) conflicts with O&C-style per-step transforms. Anchors achieve the same "explicit chord at a point" goal without imposing duration-based thinking. The sequence is purely about transforms; anchors are purely about position resets.
 
@@ -294,9 +294,9 @@ The [EDIT] button opens the Tonnetz sheet.
 
 ## Future Extensions
 
-- **Chord quality beyond triads**: 7th, sus2/sus4, add9 — extend `chord` from `[n,n,n]` to `number[]`
+- ~~**Chord quality beyond triads**~~: ✅ Done — `chordQuality: '7th'` adds major 7th (for major triads) or minor 7th (for minor triads). P/L/R transforms operate on the triad core; 7th follows automatically.
 - **Roman numeral input**: key-aware I, IV, V, vi → MIDI conversion for anchors
-- **Strum / arpeggio**: per-step note spread timing
-- **Generative rhythm via Turing Machine**: feed Turing gate output into Tonnetz rhythm
+- ~~**Strum / arpeggio**~~: ✅ Done — `arp: { mode: 'up' | 'down' | 'updown' | 'random' }` cycles individual chord notes across steps instead of playing full chords. Resets on chord change.
+- ~~**Generative rhythm via Turing Machine**~~: ✅ Done — `rhythm: { preset: 'turing', length, lock, seed? }` uses a shift-register to generate stochastic rhythm patterns. Embedded in Tonnetz (no cross-node routing needed).
 - **Lattice zoom levels**: overview (full lattice) vs detail (single neighborhood with voice-leading arrows)
 - **Path recording**: play a MIDI keyboard → record the lattice walk as a sequence

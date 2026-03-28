@@ -35,19 +35,27 @@ export function cloneSceneNode(n: SceneNode): SceneNode {
       ...n.generative,
       params: { ...n.generative.params },
     }
-    // Deep-clone array/tuple fields in params (slots contain nested arrays like chord/rhythm)
+    // Deep-clone array and object fields in params (nested objects like arp, rhythm can be Svelte proxies)
     const p = n.generative.params as unknown as Record<string, unknown>
     const cp = clone.generative.params as unknown as Record<string, unknown>
     for (const k of Object.keys(p)) {
-      if (Array.isArray(p[k])) {
-        cp[k] = (p[k] as unknown[]).map(v => {
-          if (typeof v !== 'object' || v === null) return v
+      const v = p[k]
+      if (Array.isArray(v)) {
+        cp[k] = v.map(item => {
+          if (typeof item !== 'object' || item === null) return item
           const obj: Record<string, unknown> = {}
-          for (const [key, val] of Object.entries(v as Record<string, unknown>)) {
+          for (const [key, val] of Object.entries(item as Record<string, unknown>)) {
             obj[key] = Array.isArray(val) ? [...val] : val
           }
           return obj
         })
+      } else if (typeof v === 'object' && v !== null) {
+        // Plain object (arp, rhythm preset object) — shallow clone with array spread
+        const obj: Record<string, unknown> = {}
+        for (const [key, val] of Object.entries(v as Record<string, unknown>)) {
+          obj[key] = Array.isArray(val) ? [...val] : val
+        }
+        cp[k] = obj
       }
     }
   }

@@ -437,6 +437,135 @@ describe('tonnetzGenerate', () => {
     expect(trigs[1].notes).toEqual(trigs[3].notes) // same chord in block
     expect(pcs(trigs[5].notes!)).not.toEqual(pcs(trigs[1].notes!)) // different chord after transform
   })
+  // ── Arpeggio (Feature 1: Strum/Arpeggio) ──
+
+  it('arp up: each step gets one note cycling low→high', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], arp: { mode: 'up' } }
+    const trigs = tonnetzGenerate(params, 6)
+    // startChord close voicing = [60, 64, 67], held (no transform)
+    // up cycle: 60, 64, 67, 60, 64, 67
+    expect(trigs[0].note).toBe(60)
+    expect(trigs[1].note).toBe(64)
+    expect(trigs[2].note).toBe(67)
+    expect(trigs[3].note).toBe(60) // cycles
+    // Each trig should be mono (no notes array or single-note)
+    for (const t of trigs) {
+      expect(t.notes).toBeUndefined()
+    }
+  })
+
+  it('arp down: each step cycles high→low', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], arp: { mode: 'down' } }
+    const trigs = tonnetzGenerate(params, 6)
+    expect(trigs[0].note).toBe(67)
+    expect(trigs[1].note).toBe(64)
+    expect(trigs[2].note).toBe(60)
+    expect(trigs[3].note).toBe(67) // cycles
+  })
+
+  it('arp updown: bounces low→high→low without repeating endpoints', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], arp: { mode: 'updown' } }
+    const trigs = tonnetzGenerate(params, 8)
+    // 3-note chord: up-down = 60, 64, 67, 64, 60, 64, 67, 64
+    expect(trigs[0].note).toBe(60)
+    expect(trigs[1].note).toBe(64)
+    expect(trigs[2].note).toBe(67)
+    expect(trigs[3].note).toBe(64)
+    expect(trigs[4].note).toBe(60)
+  })
+
+  it('arp random: notes are from the chord set', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], arp: { mode: 'random', seed: 42 } }
+    const trigs = tonnetzGenerate(params, 16)
+    const chordNotes = [60, 64, 67]
+    for (const t of trigs.filter(t => t.active)) {
+      expect(chordNotes).toContain(t.note)
+    }
+  })
+
+  it('arp resets note index when chord changes', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 3, arp: { mode: 'up' } }
+    const trigs = tonnetzGenerate(params, 6)
+    // steps 0-2: C major [60,64,67], arp cycles: 60, 64, 67
+    expect(trigs[0].note).toBe(60)
+    expect(trigs[1].note).toBe(64)
+    expect(trigs[2].note).toBe(67)
+    // step 3: P → C minor [60,63,67], arp resets: 60, 63, 67
+    expect(trigs[3].note).toBe(60) // reset to 0
+    expect(trigs[4].note).toBe(63) // C minor 2nd note
+    expect(trigs[5].note).toBe(67)
+  })
+
+  it('arp works with stepsPerTransform (cycles within held chord)', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], stepsPerTransform: 4, arp: { mode: 'up' } }
+    const trigs = tonnetzGenerate(params, 8)
+    // steps 0-3: C major [60,64,67], cycling: 60,64,67,60
+    expect(trigs[0].note).toBe(60)
+    expect(trigs[1].note).toBe(64)
+    expect(trigs[2].note).toBe(67)
+    expect(trigs[3].note).toBe(60)
+    // step 4: chord changes to C minor, arp resets: 60,63,67,60
+    expect(trigs[4].note).toBe(60)
+    expect(trigs[5].note).toBe(63)
+  })
+
+  it('arp + rhythm: inactive steps do not advance arp index', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], rhythm: 'offbeat', arp: { mode: 'up' } }
+    const trigs = tonnetzGenerate(params, 6)
+    // offbeat: .x.x.x — only active steps get arp notes
+    const active = trigs.filter(t => t.active)
+    expect(active[0].note).toBe(60) // first arp note
+    expect(active[1].note).toBe(64) // second arp note
+    expect(active[2].note).toBe(67) // third arp note
+  })
+
+  // ── Chord quality: 7th chords (Feature 2) ──
+
+  it('chordQuality 7th: produces 4-note chords', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], chordQuality: '7th' }
+    const trigs = tonnetzGenerate(params, 1)
+    expect(trigs[0].notes).toBeDefined()
+    expect(trigs[0].notes!.length).toBe(4)
+  })
+
+  it('chordQuality 7th: C major → Cmaj7 (adds B natural)', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], chordQuality: '7th' }
+    const trigs = tonnetzGenerate(params, 1)
+    // C major triad [60,64,67] + major 7th = B (71)
+    expect(trigs[0].notes).toEqual([60, 64, 67, 71])
+  })
+
+  it('chordQuality 7th: C minor → Cm7 (adds Bb)', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P'], chordQuality: '7th' }
+    const trigs = tonnetzGenerate(params, 2)
+    // step 1: P → C minor [60,63,67] + minor 7th = Bb (70)
+    expect(trigs[1].notes).toEqual([60, 63, 67, 70])
+  })
+
+  it('chordQuality 7th: transforms still work on the triad core', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: ['P', 'L', 'R'], chordQuality: '7th' }
+    const trigs = tonnetzGenerate(params, 4)
+    // All active trigs should have 4 notes
+    for (const t of trigs.filter(t => t.active)) {
+      expect(t.notes!.length).toBe(4)
+    }
+    // Chords should differ
+    expect(trigs[0].notes).not.toEqual(trigs[1].notes)
+  })
+
+  it('chordQuality 7th + arp: cycles through 4 notes', () => {
+    const params: TonnetzParams = { ...baseParams, sequence: [''], chordQuality: '7th', arp: { mode: 'up' } }
+    const trigs = tonnetzGenerate(params, 4)
+    expect(trigs[0].note).toBe(60) // root
+    expect(trigs[1].note).toBe(64) // 3rd
+    expect(trigs[2].note).toBe(67) // 5th
+    expect(trigs[3].note).toBe(71) // 7th
+  })
+
+  it('chordQuality triad (default): produces 3-note chords', () => {
+    const trigs = tonnetzGenerate(baseParams, 1)
+    expect(trigs[0].notes!.length).toBe(3)
+  })
 })
 
 // ── resolveRhythm ──
@@ -471,6 +600,53 @@ describe('resolveRhythm', () => {
   it('boolean array: padded or trimmed to length', () => {
     expect(resolveRhythm([true, false], 4)).toEqual([true, false, false, false])
     expect(resolveRhythm([true, false, true, true, true], 3)).toEqual([true, false, true])
+  })
+
+  // ── Turing Machine rhythm (Feature 3) ──
+
+  it('turing: produces boolean array of correct length', () => {
+    const r = resolveRhythm({ preset: 'turing', length: 8, lock: 0.5 }, 16)
+    expect(r).toHaveLength(16)
+    for (const v of r) expect(typeof v).toBe('boolean')
+  })
+
+  it('turing: deterministic with same seed', () => {
+    const a = resolveRhythm({ preset: 'turing', length: 8, lock: 0.5, seed: 42 }, 16)
+    const b = resolveRhythm({ preset: 'turing', length: 8, lock: 0.5, seed: 42 }, 16)
+    expect(a).toEqual(b)
+  })
+
+  it('turing: different seeds produce different patterns', () => {
+    const a = resolveRhythm({ preset: 'turing', length: 8, lock: 0.5, seed: 1 }, 16)
+    const b = resolveRhythm({ preset: 'turing', length: 8, lock: 0.5, seed: 2 }, 16)
+    expect(a).not.toEqual(b)
+  })
+
+  it('turing lock=1.0: pattern repeats with period = length', () => {
+    const r = resolveRhythm({ preset: 'turing', length: 4, lock: 1.0, seed: 42 }, 16)
+    for (let i = 4; i < 16; i++) {
+      expect(r[i]).toBe(r[i % 4])
+    }
+  })
+
+  it('turing lock=0.0: has some variation (not all same)', () => {
+    const r = resolveRhythm({ preset: 'turing', length: 8, lock: 0.0, seed: 42 }, 32)
+    const trues = r.filter(Boolean).length
+    // Should have mix of true/false (not all or none)
+    expect(trues).toBeGreaterThan(0)
+    expect(trues).toBeLessThan(32)
+  })
+
+  it('turing rhythm integrates with tonnetzGenerate', () => {
+    const params: TonnetzParams = {
+      ...{ engine: 'tonnetz' as const, startChord: [60, 64, 67] as [number, number, number], sequence: ['P', 'L', 'R'], voicing: 'close' as const },
+      rhythm: { preset: 'turing', length: 8, lock: 0.7, seed: 42 },
+    }
+    const trigs = tonnetzGenerate(params, 16)
+    expect(trigs).toHaveLength(16)
+    const active = trigs.filter(t => t.active).length
+    expect(active).toBeGreaterThan(0)
+    expect(active).toBeLessThan(16)
   })
 })
 

@@ -89,6 +89,26 @@ function registerToFraction(register: number[], length: number): number {
   return sum / ((1 << length) - 1 || 1)
 }
 
+// ── Arpeggiator helper ──
+
+/** Pick next note from chord based on arp mode. Mutates arpIdx in-place. */
+function arpNext(notes: number[], mode: 'up' | 'down' | 'updown' | 'random', arpState: { idx: number; dir: 1 | -1 }, rng: () => number): number {
+  const n = notes.length
+  if (mode === 'random') return notes[Math.floor(rng() * n)]
+  const note = notes[arpState.idx]
+  if (mode === 'up') {
+    arpState.idx = (arpState.idx + 1) % n
+  } else if (mode === 'down') {
+    arpState.idx = (arpState.idx - 1 + n) % n
+  } else {
+    // updown: bounce without repeating endpoints
+    arpState.idx += arpState.dir
+    if (arpState.idx >= n - 1) { arpState.idx = n - 1; arpState.dir = -1 }
+    if (arpState.idx <= 0) { arpState.idx = 0; arpState.dir = 1 }
+  }
+  return note
+}
+
 // ── Quantizer (scale-constrained note mapping) ──
 
 /** Scale interval definitions (semitones from root) */
@@ -235,6 +255,13 @@ function applyVoicing(chord: Triad, voicing: TonnetzParams['voicing']): number[]
   }
 }
 
+/** Add 7th to a voiced chord. Major triad → maj7, minor triad → min7. */
+function addSeventh(voiced: number[], triad: Triad): number[] {
+  const isMajor = (triad[1] - triad[0] + 12) % 12 === 4
+  const seventh = triad[0] + (isMajor ? 11 : 10)
+  return [...voiced, seventh]
+}
+
 /** Bjorklund algorithm for euclidean rhythm distribution */
 function bjorklund(hits: number, steps: number): boolean[] {
   if (hits >= steps) return Array(steps).fill(true)
@@ -273,7 +300,25 @@ export function resolveRhythm(rhythm: TonnetzRhythm, steps: number): boolean[] {
     const pat = [true, false, true, false, false, true, false, true]
     return Array.from({ length: steps }, (_, i) => pat[i % pat.length])
   }
+  if (rhythm.preset === 'turing') return turingRhythm(rhythm.length, rhythm.lock, steps, rhythm.seed)
   return bjorklund(rhythm.hits, steps)
+}
+
+/** Generate a stochastic rhythm pattern using a Turing Machine shift register */
+function turingRhythm(length: number, lock: number, steps: number, seed?: number): boolean[] {
+  const rng = seed != null ? seededRng(seed) : Math.random
+  const register = Array.from({ length }, () => rng() < 0.5 ? 1 : 0)
+  const result: boolean[] = []
+  for (let i = 0; i < steps; i++) {
+    const frac = registerToFraction(register, length)
+    result.push(frac >= 0.5)
+    // Shift register
+    const flipProb = 1 - lock
+    const lastBit = register[length - 1]
+    for (let j = length - 1; j > 0; j--) register[j] = register[j - 1]
+    register[0] = (rng() < flipProb ? (1 - lastBit) : lastBit) as 0 | 1
+  }
+  return result
 }
 
 /**
@@ -289,6 +334,11 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   let chord: Triad = [...params.startChord] as Triad
   const isLegato = params.rhythm === 'legato'
   const rhythm = resolveRhythm(params.rhythm ?? 'all', steps)
+  const arp = params.arp
+
+  // Arp state: resets when chord changes
+  const arpState = { idx: arp?.mode === 'down' ? 2 : 0, dir: 1 as 1 | -1 }
+  const arpRng = arp?.seed != null ? seededRng(arp.seed) : Math.random
 
   // Build anchor lookup
   const anchorMap = new Map<number, Triad>()
@@ -299,6 +349,7 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
   }
 
   let seqIdx = 0
+  let prevChordKey = ''
   for (let step = 0; step < steps; step++) {
     // Check for anchor reset
     if (anchorMap.has(step)) {
@@ -310,8 +361,19 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
       seqIdx++
     }
 
-    const voiced = applyVoicing(chord, params.voicing)
+    let voiced = applyVoicing(chord, params.voicing)
+    if (params.chordQuality === '7th') voiced = addSeventh(voiced, chord)
     const isChordBoundary = step % spt === 0
+
+    // Reset arp when chord changes
+    if (arp) {
+      const chordKey = voiced.join(',')
+      if (chordKey !== prevChordKey) {
+        arpState.idx = arp.mode === 'down' ? voiced.length - 1 : 0
+        arpState.dir = 1
+        prevChordKey = chordKey
+      }
+    }
 
     if (isLegato) {
       // Legato: active only at chord boundaries, held for stepsPerTransform
@@ -322,7 +384,12 @@ export function tonnetzGenerate(params: TonnetzParams, steps: number): Trig[] {
         trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
       }
     } else if (rhythm[step]) {
-      trigs.push({ active: true, note: voiced[0], notes: voiced, velocity: 0.9, duration: 1, slide: false })
+      if (arp) {
+        const note = arpNext(voiced, arp.mode, arpState, arpRng)
+        trigs.push({ active: true, note, velocity: 0.9, duration: 1, slide: false })
+      } else {
+        trigs.push({ active: true, note: voiced[0], notes: voiced, velocity: 0.9, duration: 1, slide: false })
+      }
     } else {
       trigs.push({ active: false, note: 0, velocity: 0, duration: 1, slide: false })
     }
