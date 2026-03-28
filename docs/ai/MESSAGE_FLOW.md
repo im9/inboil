@@ -104,7 +104,7 @@ sequenceDiagram
 
     Note over U: onStep: mode=scene, cycle=true
     U->>S: advanceSceneNode()
-    S->>S: walkToNode(edge)<br/>applyDecorators()<br/>applyLiveGenerative()
+    S->>S: walkToNode(edge)<br/>applySatelliteModifiers()<br/>applyLiveGenerative()
     S-->>U: { advanced=true, patternIndex=B }
 
     U->>U: perf.rootNote = transpose
@@ -198,10 +198,10 @@ During this gap, OLD pattern step 0+ plays briefly before reset.
 
 | Source | reset | When |
 |---|---|---|
-| `$effect` (line 81) | `false` | Any reactive state change (songVer, perf, fxPad, etc.) |
-| `play()` (line 228/233) | `false` | Initial play — paired with `engine.play()` |
-| `onStep` cycle (line 179/190) | `true` | Pattern switch at cycle boundary |
-| Solo node (line 167) | `true` | Solo target reached at cycle |
+| `$effect` in App.svelte | `false` | Any reactive state change (songVer, perf, fxPad, etc.) |
+| `play()` in App.svelte | `false` | Initial play — paired with `engine.play()` |
+| `onStep` cycle handler | `true` | Pattern switch at cycle boundary |
+| Solo node handler | `true` | Solo target reached at cycle |
 
 **Rule**: `reset=true` rewinds playheads and retriggers step 0. `reset=false` hot-swaps data mid-playback.
 

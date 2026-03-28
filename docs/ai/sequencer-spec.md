@@ -72,8 +72,8 @@ Cell {
 }
 
 CellInsertFx {
-  type:    'verb' | 'delay' | 'glitch' | null
-  flavour: string             // e.g. 'room', 'hall', 'tape', 'bitcrush'
+  type:    'verb' | 'delay' | 'glitch' | 'dist' | null
+  flavour: string             // e.g. 'room', 'hall', 'tape', 'bitcrush', 'overdrive', 'fuzz'
   mix:     number             // 0.0–1.0
   x:       number             // 0.0–1.0 param1
   y:       number             // 0.0–1.0 param2
@@ -156,21 +156,21 @@ AutomationParams {
 
 SceneNode {
   id:                string
-  type:              'pattern' | 'generative' | 'probability' | FnNodeType | LegacyFnType
-                     // FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep' (ADR 093/116/118)
-                     // LegacyFnType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation' (migration only)
+  type:              'pattern' | 'generative' | 'probability' | ModifierType | LegacyModifierType
+                     // ModifierType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep' (ADR 093/116/118/125)
+                     // LegacyModifierType = 'transpose' | 'tempo' | 'repeat' | 'probability' | 'fx' | 'automation' (migration only)
   x:                 number           // canvas position (normalized 0–1)
   y:                 number
   root:              boolean          // true = playback entry point (exactly one)
   patternId?:        string           // for type === 'pattern'
-  params?:           Record<string, number>       // legacy fn node params (migration only)
+  params?:           Record<string, number>       // legacy modifier node params (migration only)
   automationParams?: AutomationParams // legacy automation (migration only)
-  fnParams?:         FnParams         // function node params (ADR 093/116/118)
-  decorators?:       SceneDecorator[] // deprecated (ADR 093) — migrated to fn nodes
+  modifierParams?:   ModifierParams   // modifier/sweep node params (ADR 093/125)
+  decorators?:       SceneDecorator[] // deprecated (ADR 093) — migrated to modifier nodes
   generative?:       GenerativeConfig // for type === 'generative' (ADR 078)
 }
 
-FnNodeType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
+ModifierType = 'transpose' | 'tempo' | 'repeat' | 'fx' | 'sweep'
 
 SweepTarget =
   | { kind: 'master'; param: 'masterVolume' | 'swing'
@@ -209,12 +209,12 @@ SweepData {
   durationMs?: number                   // total recording duration, used for global sweep (ADR 123 Phase 5)
 }
 
-FnParams {
+ModifierParams {
   transpose?: { semitones: number; mode: 'rel' | 'abs'; key?: number }
   tempo?:     { bpm: number }
   repeat?:    { count: number }
   fx?:        { verb: boolean; delay: boolean; glitch: boolean; granular: boolean; flavourOverrides?: Partial<FxFlavours> }
-  sweep?:     SweepData                // repeat sweep automation (ADR 118)
+  sweep?:     SweepData                // sweep automation (ADR 118)
 }
 
 SceneEdge {
@@ -257,9 +257,9 @@ GenerativeConfig {
 }
 ```
 
-### Function Node Satellite Model (ADR 116)
+### Modifier Satellite Model (ADR 116/125)
 
-Function nodes (transpose/repeat/tempo/fx/sweep) attach as **satellites** to pattern nodes — no manual edge wiring needed. They are rendered as naked SVG icons positioned above their parent pattern node. Edges from fn nodes are hidden visually but maintained in data for playback. Drag a satellite away to detach; drop on another pattern to reattach. Same-type duplicates on one pattern are replaced automatically. During scene playback, satellite fn effects are applied via `applySatelliteFnNodes()` when entering a pattern.
+Modifier nodes (transpose/repeat/tempo/fx/sweep) attach as **satellites** to pattern nodes — no manual edge wiring needed. They are rendered as naked SVG icons positioned above their parent pattern node. Edges from modifier nodes are hidden visually but maintained in data for playback. Drag a satellite away to detach; drop on another pattern to reattach. Same-type duplicates on one pattern are replaced automatically. During scene playback, satellite modifier effects are applied via `applySatelliteModifiers()` when entering a pattern.
 
 ### Auto-generate on Connect (ADR 117)
 
@@ -335,7 +335,7 @@ Selecting a pattern via MatrixView or SectionNav sets `ui.currentPattern` and se
 ### Scene playback
 When the scene is active (has a root node) and `playback.mode === 'scene'`, the directed graph drives pattern advancement at beat boundaries. See ADR 044 for traversal logic.
 
-Repeat phase tracking (ADR 118): `playback.sceneRepeatIndex` (0-based current repeat) and `playback.sceneRepeatTotal` (total repeat count from repeat fn node) enable sweep automation to compute progress across the full repeat cycle.
+Repeat phase tracking (ADR 118): `playback.sceneRepeatIndex` (0-based current repeat) and `playback.sceneRepeatTotal` (total repeat count from repeat modifier node) enable sweep automation to compute progress across the full repeat cycle.
 
 Sweep automation (ADR 123): Recording-based performance automation. Users arm recording via ● button, perform parameter movements on FX/Master/EQ pads, and captured data becomes `SweepCurve`/`SweepToggleCurve` data. `applySweepStep()` in `scenePlayback.ts` evaluates curves on each step advance — global sweep (master/fx/eq targets, elapsed-time progress) first, then chain sweep (track/send targets, chain-local progress). `sweepRecorder.svelte.ts` manages arm/capture/stop flow with overdub merge. `sweepEval.ts` provides pure evaluation functions (Catmull-Rom interpolation, RDP simplification). `ui.sweepTab` toggles the sweep editor in the pattern sheet. Automation snapshot (`automation.ts`) captures state for restore on stop.
 

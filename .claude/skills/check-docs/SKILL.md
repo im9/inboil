@@ -27,8 +27,8 @@ Check these doc files against implementation:
 8. `docs/ai/sound-design.md` — voice params, paramDefs ranges/defaults
 9. `docs/ai/ui-design.md` — component descriptions, layout, mobile views
 10. `docs/ai/glossary.md` — term accuracy, missing terms
-11. `docs/ai/DATA_MODEL.md` — Song/Pattern/Cell/Track/Trig interfaces, relationships
-12. `docs/ai/MESSAGE_FLOW.md` — WorkletCommand flow, message protocol, signaling
+11. `docs/ai/DATA_MODEL.md` — Song/Pattern/Cell/Track/Trig interfaces, relationships, **mermaid ERD entity fields and classDiagram runtime state fields**
+12. `docs/ai/MESSAGE_FLOW.md` — WorkletCommand flow, message protocol, signaling, **mermaid sequence diagram function names**
 13. `docs/ai/adr/INDEX.md` — ADR statuses (Implemented vs actual state)
 14. All ADR files marked as "Implemented" in INDEX.md — check against code
 
@@ -52,18 +52,20 @@ Check these doc files against implementation:
    - `src/lib/audio/engine.ts` — Engine API, patternToWorklet serialization
    - `src/lib/audio/dsp/types.ts` — WorkletCommand, WorkletPattern, WorkletTrig, WorkletInsertFx
    - `src/lib/audio/worklet-processor.ts` — WorkletCommand handling
-   - `src/lib/audio/paramDefs.ts` — voice parameter definitions (names, ranges, defaults)
+   - `src/lib/paramDefs.ts` — voice parameter definitions (names, ranges, defaults)
    - `src/lib/components/*.svelte` — component names and existence
    - `src/lib/audio/dsp/voices.ts` — voice registry
    - `src/lib/components/SidebarHelp.svelte` — app help text
 
 3. **Check for these types of inconsistencies**:
    - Type/interface field mismatches (missing fields, wrong field names, wrong types)
+   - **Mermaid diagrams**: treat `erDiagram` entity fields and `classDiagram` class fields as structured data — compare every field name, type, and description 1:1 against the source TypeScript interfaces (DATA_MODEL.md ERD vs `types.ts`, classDiagram vs `state.svelte.ts`, MESSAGE_FLOW.md sequence diagrams vs actual function names in `scenePlayback.ts` / `engine.ts`)
    - Wrong parameter ranges or defaults in docs vs paramDefs.ts
    - Components mentioned in docs that don't exist, or existing components not documented
    - ADR status mismatches (doc says PROPOSED but feature is implemented, or vice versa)
    - Removed/renamed features still documented
    - Missing documentation for implemented features
+   - Stale line-number references to source files
 
 4. **Output a report** in this format:
 

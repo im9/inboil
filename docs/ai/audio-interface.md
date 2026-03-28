@@ -149,9 +149,10 @@ interface WorkletTrig {
 type WorkletEvent =
   | { type: 'step'; playheads: number[]; cycle: boolean }   // current step position per track; cycle=true on pattern loop
   | { type: 'levels'; peakL: number; peakR: number; gr: number; cpu?: number }  // master output levels + gain reduction + CPU load
+  | { type: 'error'; code: string; message: string }        // worklet error (WRK-001: command, DSP-001: process)
 ```
 
-The `step` event fires on every step advance and carries the current playhead position for all tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching). The `levels` event provides master output peak levels for VU metering, gain reduction (`gr`) for compressor visualization, and optional CPU load percentage (EMA-smoothed).
+The `step` event fires on every step advance and carries the current playhead position for all tracks. `cycle` is `true` when the pattern loops back to step 0 (used for cycle-boundary switching). The `levels` event provides master output peak levels for VU metering, gain reduction (`gr`) for compressor visualization, and optional CPU load percentage (EMA-smoothed). The `error` event reports worklet-side errors (e.g. invalid command, DSP exception).
 
 ## Parameter Application Timing
 
@@ -178,9 +179,9 @@ class GrooveboxEngine {
   releaseNote(trackId): void                                                     // Release triggered note
   releaseNoteByPitch(trackId, note): void                                        // Release specific pitch (MIDI per-note release)
   async loadBuiltinSample(trackId, voiceId): Promise<void>                       // Load Crash/Ride from Audio Pool OPFS (ADR 104)
-  async loadUserSample(trackId, file): Promise<{waveform, rawBuffer} | null>     // Load user audio file (ADR 012)
-  async loadSampleFromBuffer(trackId, rawBuffer): Promise<Float32Array | null>   // Reload stored buffer (ADR 020 §I)
-  async loadPackToTrack(trackId, zones): Promise<Float32Array | null>            // Load multi-sample pack zones (ADR 106)
+  async loadUserSample(trackId, file, patternIndex?): Promise<{waveform, rawBuffer} | null>  // Load user audio file (ADR 012)
+  async loadSampleFromBuffer(trackId, rawBuffer, patternIndex?): Promise<Float32Array | null> // Reload stored buffer (ADR 020 §I)
+  async loadPackToTrack(trackId, zones, patternIndex?): Promise<Float32Array | null>          // Load multi-sample pack zones (ADR 106)
   set onStep(cb: (playheads: number[], cycle: boolean) => void)                   // Register step callback
   getAnalyser(): AnalyserNode | null                                             // FFT data for visualizer
   getContext(): AudioContext | null                                               // Current AudioContext
@@ -188,7 +189,26 @@ class GrooveboxEngine {
 }
 ```
 
-`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene playback and solo mode. Effects are read from `song.effects` internally. The `ctx` parameter (`EngineContext`) passes `fxFlavours`, `masterPad` (comp/duck/ret/sat XY pads), and `soloTracks` — these live in reactive state, not the Song object. `EngineCallbacks` (passed to `init()`) provides `onLevels()` for peak/GR/CPU metering.
+`sendPatternByIndex()` takes a pattern index, builds a `WorkletPattern` via `buildWorkletPattern()`, and posts it to the worklet — used by scene playback and solo mode. Effects are read from `song.effects` internally. Sample-loading methods accept an optional `patternIndex` for per-cell sample cache keying (ADR 110).
+
+```typescript
+interface EngineContext {
+  fxFlavours: FxFlavours                                  // current FX flavour selections
+  masterPad: {                                            // master bus XY pad states
+    comp: { on: boolean; x: number; y: number }           // x=threshold, y=ratio
+    duck: { on: boolean; x: number; y: number }           // x=depth, y=release
+    ret:  { on: boolean; x: number; y: number }           // x=verbReturn, y=dlyReturn
+    sat:  { on: boolean; x: number; y: number }           // x=drive, y=tone
+  }
+  soloTracks: Set<number>                                 // currently soloed track IDs
+}
+
+interface EngineCallbacks {
+  onLevels(peakL: number, peakR: number, gr: number, cpu: number): void  // peak/GR/CPU metering
+}
+```
+
+These live in reactive state, not the Song object. `EngineContext` is passed via the `ctx` parameter of `sendPatternByIndex()`. `EngineCallbacks` is passed to `init()`.
 
 ## State Serialization
 
@@ -218,4 +238,4 @@ class GrooveboxEngine {
 ## Error Handling
 
 The AudioWorklet processor uses `return true` from `process()` to stay alive indefinitely.
-No explicit error channel is implemented yet — WASM errors are not applicable since DSP runs in TypeScript.
+Errors are reported via `WorkletEvent` with `type: 'error'` — error codes: `WRK-001` (invalid command), `DSP-001` (process exception). The engine shows a toast notification on receive.

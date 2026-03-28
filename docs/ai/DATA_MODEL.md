@@ -51,6 +51,7 @@ erDiagram
         string id "e.g. pat_00"
         string name "max 8 chars"
         number color "0-7"
+        number rootNote "0-11 per-pattern key override (optional)"
     }
 
     Cell {
@@ -178,8 +179,8 @@ classDiagram
         boolean playing
         number[] playheads
         string mode "loop | scene"
-        number playingPattern
-        number queuedPattern
+        number playingPattern "null when stopped"
+        number queuedPattern "null = no queue"
         string sceneNodeId
         string sceneEdgeId
         number sceneRepeatLeft
@@ -194,7 +195,7 @@ classDiagram
     class UI {
         number selectedTrack
         number currentPattern
-        string phraseView "pattern|scene|fx|eq|master|perf"
+        string phraseView "pattern|scene|fx|eq|master|perf|tonnetz|quantizer|turing"
         string viewFocus "pattern | scene"
         boolean patternSheet
         object patternSheetOrigin "x, y | null"
@@ -216,6 +217,9 @@ classDiagram
         number stepPageSize
         boolean sweepTab
         boolean granularMode2
+        string tonnetzNodeId "active Tonnetz sheet node (ADR 126)"
+        string quantizerNodeId "active Quantizer sheet node (ADR 127)"
+        string turingNodeId "active Turing sheet node (ADR 127)"
     }
 
     class Perf {

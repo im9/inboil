@@ -28,9 +28,9 @@ New here? Start with the tutorial:
 
 ### Scene
 - [Nodes](/docs/scene/nodes/) — pattern and generative node types
-- [Function Node Modifiers](/docs/scene/modifiers/) — transpose, tempo, repeat, FX
+- [Modifiers](/docs/scene/modifiers/) — transpose, tempo, repeat, FX
 - [Playback](/docs/scene/playback/) — how the scene engine traverses the graph
-- [Function Nodes](/docs/scene/function/) — generative engines (Turing Machine, Quantizer, Tonnetz)
+- [Generators](/docs/scene/generators/) — generative engines (Turing Machine, Quantizer, Tonnetz)
 
 ### Reference
 - [Keyboard Shortcuts](/docs/reference/shortcuts/) — every shortcut at a glance

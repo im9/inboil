@@ -113,7 +113,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (50 files)  ← Svelte 5 UI components
+│   │   ├── components/ (55 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -155,7 +155,12 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── EnvGraph.svelte     ← ADSR envelope visualization
 │   │   │   ├── WaveGraph.svelte    ← Wavetable preview visualization
 │   │   │   ├── Knob.svelte         ← SVG rotary knob control
+│   │   │   ├── QuantizerSheet.svelte ← Quantizer keyboard/chord overlay sheet (ADR 127)
+│   │   │   ├── TonnetzSheet.svelte   ← Tonnetz lattice overlay sheet (ADR 126)
+│   │   │   ├── TuringSheet.svelte    ← Turing Machine register ring overlay sheet (ADR 127)
+│   │   │   ├── VoicePicker.svelte    ← Voice selection picker (DRUM/SYNTH/SMPL tabs)
 │   │   │   ├── VFader.svelte      ← Vertical fader control
+│   │   │   ├── ConfirmModal.svelte ← In-app confirmation modal (replaces browser dialogs)
 │   │   │   ├── ErrorDialog.svelte  ← Fatal error dialog with error codes (ADR 091)
 │   │   │   ├── ErrorToast.svelte   ← Transient error/info notification
 │   │   │   ├── SweepCanvas.svelte  ← Sweep recording editor, dark-zone overlay (ADR 123)
@@ -198,10 +203,17 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   ├── sceneGeometry.ts        ← Scene node geometry calculations
 │   │   ├── scenePlayback.ts        ← Scene traversal engine
 │   │   ├── sectionActions.ts       ← Pattern/section operations, copy/paste
+│   │   ├── sampleActions.ts       ← Sample loading, unloading, zone mapping
+│   │   ├── poolActions.ts         ← Audio Pool operations (browse, import, manage)
+│   │   ├── projectActions.ts      ← Project-level operations (save, load, export)
+│   │   ├── importExport.ts        ← JSON export/import, demo song loading
 │   │   ├── stepActions.ts          ← Step-level mutations (toggle, velocity, etc.)
 │   │   ├── songClone.ts            ← Pure data clone/restore for Song serialization
 │   │   ├── generative.ts           ← Turing Machine, Quantizer, Tonnetz algorithms
 │   │   ├── automation.ts           ← Scene playback snapshot/restore (voice params, mute, FX)
+│   │   ├── sweepEval.ts            ← Sweep curve evaluation (Catmull-Rom, RDP simplification)
+│   │   ├── sweepRecorder.svelte.ts ← Sweep arm/capture/stop flow with overdub merge
+│   │   ├── eqDsp.ts                ← EQ DSP parameter calculations
 │   │   ├── randomize.ts            ← Pattern randomization
 │   │   ├── audioPool.ts            ← OPFS audio pool: factory install, import, browse (ADR 104)
 │   │   ├── storage.ts              ← IndexedDB access layer (ADR 020)

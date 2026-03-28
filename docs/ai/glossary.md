@@ -36,7 +36,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Track** | Mixer channel only: id, muted, volume, pan (ADR 080). Name and voiceId moved to Cell (ADR 062). |
 | **Section** | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, oct, FX). |
 | **Scene** | Node-based directed graph for arrangement. Contains SceneNodes and SceneEdges. See ADR 044. User-facing name (LP only): **Graphical Sequencer**. |
-| **SceneNode** | A node on the scene canvas: pattern, generator, or modifier type (transpose/tempo/repeat/fx/sweep). Legacy types (probability/automation) kept for migration only. |
+| **SceneNode** | A node on the scene canvas. 4 categories (ADR 125): **Pattern** (references a pattern), **Generator** (Turing/Quantizer/Tonnetz), **Modifier** (transpose/tempo/repeat/fx — satellite-attached), **Sweep** (recording-based automation). Legacy types (probability/automation) kept for migration only. |
 | **SceneEdge** | Directed connection between scene nodes with playback order. |
 | **SceneDecorator** | *(legacy/migration-only)* Former function decorator on pattern nodes (ADR 066). Migrated to standalone modifier nodes with satellite attachment (ADR 093/116). Type retained for data migration only. |
 | **Automation** | Time-varying parameter curves attached to scene nodes (ADR 053). Graphical curve editor with linear/smooth interpolation. Target types: global (tempo, masterVolume), track (volume, pan), FX, and sends. |
@@ -55,7 +55,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **Undo** | Snapshot-based undo/redo stack (max 50). `pushUndo()` before mutations, debounced 500ms. |
 | **Generator** | Scene node running algorithmic composition: Turing Machine, Quantizer, or Tonnetz (ADR 078). |
 | **FX Flavours** | 3 variants per send effect (e.g. reverb: room/hall/shimmer). Per-song default, per-pattern via decorators (ADR 075/076). |
-| **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch/dist). Each slot has independent type/flavour/mix/params. Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114/122). |
+| **Insert FX** | Dual-slot serial insert chain per track (verb/delay/glitch/dist). Each slot has independent type/flavour/mix/params. Dist types: overdrive, fuzz (ADR 122). Per-step P-Locks supported (ins0/ins1 mix/x/y). Processed before send bus (ADR 077/114/122). |
 | **Cell.trackId** | Stable numeric reference linking Cell to Track.id. Decouples array position from identity (ADR 079). |
 | **Step Scale** | Per-track step resolution divisor (ADR 112). Values: 1/8 (div 4), 3/16 (div 3), 1/16 (div 2, default), 3/32 (div 1.5), 1/32 (div 1). Enables polyrhythmic patterns. |
 | **Modifier** | Scene node applying a transform to a pattern: transpose, repeat, tempo, FX, or sweep. Satellite types (transpose/repeat/tempo/fx) attach to pattern nodes (ADR 116). Sweep is an independent generator-sized node (ADR 123). |
@@ -80,7 +80,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **SVF** | State Variable Filter. Trapezoidal-integrated multi-mode filter (LP/HP/BP/Notch). Used by WT synth. |
 | **WT** | Wavetable synth (formerly iDEATH). Waldorf Protein-inspired direction (ADR 113). 16-voice poly (MONO/POLY16/WIDE8/UNISON). 2 osc (WT morph, MIX/FM/Ring combine) + SVF + unison + 2 env + 2 LFO + mod matrix + drive. VoiceId: `'WT'`. |
 | **DrumMachine** | Unified drum synth (ADR 010). Tone osc + noise + metallic osc layers, configured per-drum via presets. All drum VoiceIds (except FMDrum) share this class. |
-| **FMDrum** | FM-based drum synthesizer (ADR 111). 6 machines (KICK/SNARE/METAL/PERC/TONE/CHORD), 8 macro params, 21 factory presets. VoiceId: `'FMDrum'`. |
+| **FMDrum** | FM-based drum synthesizer (ADR 111). 6 machines (KICK/SNARE/METAL/PERC/TONE/CHORD), 8 macro params, 22 factory presets. VoiceId: `'FMDrum'`. |
 | **SamplerVoice** | Single-voice sample playback engine (ADR 012). Supports multi-sample zone mapping, chop, timestretch. Used directly by Crash/Ride (drum category) and as core inside PolySampler. |
 | **PolySampler** | 8-voice polyphonic sampler wrapping SamplerVoice (ADR 106). Round-robin allocation, dynamic gain `1/√N`. Used by `Sampler` VoiceId — a melodic voice supporting piano roll, transpose, and arpeggiator. |
 | **Factory preset** | Named parameter snapshot. WT: 30 presets across 6 categories (Lead/Bass/Pad/Pluck/Keys/FX). FM: 20 presets across 6 categories (Keys/Bass/Lead/Bells/Pad/SFX). |
@@ -128,7 +128,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **OCT** | Octave shift (-2 to +2) for melodic tracks. Applied at cycle boundary (pending shown with SplitFlap blink). |
 | **FILL** | Press-hold: random high-density drum triggers. Snare-heavy (75%), hat-heavy (85%), sparse kick (25%). Not saved. |
 | **REV** | Press-hold: reverse step playback direction. All playheads decrement. |
-| **GLT** | Glitch effect (downsample + bitcrush). Activatable from PerfBar (press-hold) or FxPad GLT node (XY control). |
+| **GLT** | Glitch send effect with 3 flavours: bitcrush (S&H + quantize), redux (aggressive downsample), stutter (buffer repeat). Activatable from PerfBar (press-hold) or FxPad GLT node (XY control). |
 | **BRK** | Press-hold: rhythmic 16th-note gate on master output. |
 | **GRN (Granular)** | FxPad node: captures recent audio into ring buffer, replays as overlapping grains. X=size, Y=density. |
 | **SWG (Swing)** | Global swing knob (0–100%). Even-step timing delayed by up to 17% of step duration (0.50–0.67 ratio). |

@@ -58,7 +58,7 @@ Each drum VoiceId has a factory preset in `DRUM_PRESETS` that overrides these de
 
 ### FMDrum (ADR 111)
 
-FM-based drum synthesizer with 6 selectable machines: KICK, SNARE, METAL, PERC, TONE, CHORD. Each machine uses 2-operator FM synthesis with machine-specific routing and envelope curves. 21 factory presets across all machines. 8 macro parameters mapped to machine-specific DSP controls:
+FM-based drum synthesizer with 6 selectable machines: KICK, SNARE, METAL, PERC, TONE, CHORD. Each machine uses 2-operator FM synthesis with machine-specific routing and envelope curves. 22 factory presets across all machines. 8 macro parameters mapped to machine-specific DSP controls:
 
 | Param | Label | Range | Default | Description |
 |---|---|---|---|---|
@@ -381,7 +381,7 @@ Each send effect has 3 flavour variants, selectable per-song and overridable per
 | Reverb | **room** (SimpleReverb) | **hall** (longer tail) | **shimmer** (octave-shifted feedback) |
 | Delay | **digital** (PingPongDelay) | **dotted** (dotted-8th timing) | **tape** (TapeDelay with wow/flutter) |
 | Glitch | **bitcrush** (S&H + quantize) | **redux** (OctaveShifter pitch shift) | **stutter** (StutterBuffer loop capture) |
-| Granular | **cloud** (standard grains) | **freeze** (frozen buffer position) | **stretch** (time-stretch mode) |
+| Granular | **cloud** (standard grains) | **stretch** (time-stretch large grains) | **reverse** (reversed grain playback) |
 
 ### Per-Track Insert FX — DECIDED (ADR 077/114)
 
@@ -391,6 +391,7 @@ Available types:
 - **verb**: LiteReverb (lightweight 2-comb reverb)
 - **delay**: PingPongDelay or TapeDelay (per flavour)
 - **glitch**: Sample-and-hold downsample
+- **dist**: Overdrive or Fuzz (per flavour) (ADR 122)
 
 Per-step P-Locks supported via `trig.paramLocks` keys: `ins0mix`, `ins0x`, `ins0y`, `ins1mix`, `ins1x`, `ins1y` (ADR 114 Phase 3). Insert FX do not affect send levels.
 

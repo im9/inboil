@@ -789,11 +789,11 @@ Node-based directed graph canvas. Always the main view (ADR 054). Full arrangeme
 - Node drag to reposition; group drag for multi-selected nodes
 - Edge creation: drag from blue connection handle (dot) on node to another node; long-press node on mobile
 - Node click: selects pattern and syncs `ui.currentPattern` to Grid/Tracker
-- Double-tap pattern node: open pattern sheet; double-tap function node: set as root
-- Satellite attach: fn nodes (transpose/repeat/tempo/fx/sweep) attach to pattern nodes as satellites — click pattern in placement mode to attach, drag to detach/reattach (ADR 116/118)
+- Double-tap pattern node: open pattern sheet; double-tap modifier node: set as root
+- Satellite attach: modifier nodes (transpose/repeat/tempo/fx/sweep) attach to pattern nodes as satellites — click pattern in placement mode to attach, drag to detach/reattach (ADR 116/118/125)
 - Rectangle select: background drag to select multiple nodes
 - Delete/Backspace: delete selected node or edge
-- Tool palette (center): 34px circular buttons for adding nodes, grouped by category — FN tools (neutral), GEN tools (high-saturation accent border: chartreuse/emerald/violet), Sweep (amber), Label. Distinct from UI controls (ADR 116)
+- Tool palette (center): 34px circular buttons for adding nodes, grouped by category — Modifier tools (neutral), Generator tools (high-saturation accent border: chartreuse/emerald/violet), Sweep (amber), Label. Distinct from UI controls (ADR 116/125)
 - View controls (right): 28px square buttons — auto-layout (horizontal/vertical), focus root, focus playing, zoom reset. Flat style, visually recessive
 - Long-press background: opens bubble menu for adding nodes/labels (mobile)
 - Drag from MatrixView: drop pattern onto canvas to add pattern node
@@ -862,7 +862,7 @@ Contents (multi-mode, context-dependent):
 
 **Track editor tabs** (ADR 092): DockTrackEditor with TRACKS / SCENE tabs when pattern sheet is open.
 
-**Function node editor** (ADR 093): When a scene function node is selected, DockPanel shows its parameters with full-size knobs. SceneNodePopup shows read-only labels only.
+**Modifier node editor** (ADR 093/125): When a scene modifier node is selected, DockPanel shows its parameters with full-size knobs. SceneNodePopup shows read-only labels only.
 
 **Generative node editor** (ADR 078): DockGenerativeEditor for Turing Machine, Quantizer, Tonnetz node parameters.
 
