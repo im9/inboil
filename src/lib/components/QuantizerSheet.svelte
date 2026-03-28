@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { QuantizerParams, QuantizerChord, HarmonyVoice } from '../types.ts'
-  import { song, ui, pushUndo } from '../state.svelte.ts'
+  import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
   import { SCALE_MAP, SCALE_NAMES } from '../generative.ts'
 
@@ -27,6 +27,26 @@
   const tonnetzNodes = $derived(
     song.scene.nodes.filter(n => n.generative?.engine === 'tonnetz')
   )
+
+  // Playback state: current step and output note
+  const playState = $derived.by(() => {
+    if (!playback.playing || !node?.generative || !nodeId) return null
+    const edge = song.scene.edges.find(e => e.from === nodeId)
+    if (!edge) return null
+    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    if (!patNode?.patternId) return null
+    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    if (!pat) return null
+    const trackIdx = node.generative.targetTrack ?? 0
+    const cell = pat.cells.find(c => c.trackId === trackIdx)
+    if (!cell) return null
+    const step = playback.playheads[trackIdx] ?? 0
+    const trig = cell.trigs[step]
+    if (!trig?.active) return { step, note: -1, pc: -1 }
+    return { step, note: trig.note, pc: trig.note % 12 }
+  })
+
+  const playingPc = $derived(playState?.pc ?? -1)
 
   function update(patch: Partial<QuantizerParams>) {
     if (!nodeId) return
@@ -68,6 +88,7 @@
   const kbdWidth = $derived((KBD_OCT_HI - KBD_OCT_LO + 1) * 7 * WK_W)
 
   function keyFill(key: KeyInfo): string {
+    if (playingPc === key.pc) return 'var(--color-blue)'
     const inChord = chordPcs.has(key.pc)
     const inScale = scalePcs.has(key.pc)
     if (mode === 'chord' && inChord) return 'var(--color-olive)'
@@ -332,6 +353,18 @@
       {/each}
     </svg>
   </div>
+
+  <!-- Playback status strip -->
+  {#if playState}
+    <div class="q-status">
+      <span class="status-label">step {playState.step + 1}</span>
+      {#if playState.note >= 0}
+        <span class="status-note">{NOTE_NAMES[playState.pc]}{Math.floor(playState.note / 12)}</span>
+      {:else}
+        <span class="status-rest">·</span>
+      {/if}
+    </div>
+  {/if}
 </div>
 {/if}
 
@@ -481,4 +514,18 @@
     pointer-events: none; user-select: none;
     opacity: 0.4;
   }
+
+  /* ── Playback status ── */
+  .q-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-top: 1px solid var(--lz-border);
+    font-family: var(--font-data);
+    font-size: var(--fs-md);
+  }
+  .status-label { opacity: 0.5; }
+  .status-note { font-weight: 700; color: var(--color-blue); }
+  .status-rest { opacity: 0.3; }
 </style>

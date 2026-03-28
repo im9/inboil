@@ -291,12 +291,12 @@ When a Quantizer node is in chord mode with `chordSource: { nodeId }`:
 - [x] Sheet trigger: node double-tap + DockPanel EDIT button
 
 ### Phase 3: Cross-Generator Polish
-- [ ] Real-time input→output display during playback (Quantizer + Turing)
-- [ ] Scene visual indicator for Tonnetz→Quantizer reference link
-- [ ] `__auto__` chordSource resolution (find connected Tonnetz)
-- [ ] Preset: "Follow Tonnetz" auto-connects to upstream Tonnetz
-- [ ] Update docs: quantizer.mdx, turing-machine.mdx (EN + JA)
-- [ ] Update generators index page
+- [x] Real-time input→output display during playback (Quantizer + Turing)
+- [x] Scene visual indicator for Tonnetz→Quantizer reference link
+- [x] `__auto__` chordSource resolution (find connected Tonnetz)
+- [x] Preset: "Follow Tonnetz" auto-connects to upstream Tonnetz
+- [x] Update docs: quantizer.mdx, turing-machine.mdx (EN + JA)
+- [x] Update generators index page
 
 ## Known Issues
 

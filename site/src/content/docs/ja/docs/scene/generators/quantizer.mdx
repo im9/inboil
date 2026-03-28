@@ -11,11 +11,13 @@ import PlaygroundGenerator from '../../../../../../components/PlaygroundGenerato
 
 ノートのシーケンスを受け取り、**最も近いスケール度数にスナップ**します。Turing Machine の後に接続して、ランダムな出力を音楽的なキーに固定するのが最も一般的な使い方です。
 
+Scene で Quantizer ノードをダブルタップ（または Dock の **EDIT** ボタン）すると、**Quantizer Sheet** が開きます — スケールトーン、コードトーン、3つのモードのコントロールが表示されるキーボードビューです。
+
 ## パラメータ
 
 | ノブ | 範囲 | 説明 |
 |------|------|------|
-| **ROOT** | C–B | スケールのルートノート |
+| **ROOT** | C–B | スケールのルートノート（Sheet のキータップでも設定可） |
 | **OCT LO** | 0–8 | 最低オクターブ |
 | **OCT HI** | 0–8 | 最高オクターブ |
 
@@ -25,17 +27,41 @@ import PlaygroundGenerator from '../../../../../../components/PlaygroundGenerato
 
 Major、Minor、Dorian、Phrygian、Lydian、Mixolydian、Locrian、Pentatonic、Minor Pentatonic、Blues、Harmonic Minor、Melodic Minor、Whole Tone、Chromatic。
 
+## モード
+
+3つのクオンタイズモードを Dock または Sheet のピルで選択できます：
+
+### Scale（デフォルト）
+
+ノートを最も近いスケール度数にスナップします。シンプルで効果的な元来の動作です。
+
+### Chord
+
+**コードトーンを優先してスナップ**し、最も近いコードトーンが2半音以上離れている場合はスケールトーンにフォールバックします。コード進行に沿ったメロディが生まれます。
+
+コードのソースは2種類：
+
+- **手動** — Sheet でコードバッジを追加（例: C @ step 0, Am @ step 8）
+- **Tonnetz ソース** — Tonnetz ノードのコードウォークを参照。各ステップのアクティブコードが Tonnetz のウォークパスから読み取られます。
+
+### Harmony
+
+入力ノートをスケールスナップした後、**平行ダイアトニックボイス**を上下に追加します。最大3声まで重ねられます（オリジナル + 3 = 4音コード最大）。
+
+利用可能なインターバル: 3rd、4th、5th、6th — それぞれ上方向または下方向。
+
 ## チェイン：Turing → Quantizer
 
 Turing Machine ノードの出力エッジを Quantizer ノードに接続し、さらに Quantizer をパターンノードに接続します。シグナルフローのように動作します：
 
 1. Turing Machine が生のランダムノートを生成
-2. Quantizer が全ノートを選択したスケールにスナップ
+2. Quantizer が全ノートを選択したスケール（またはコードトーン、ハーモニー）にスナップ
 3. 結果がターゲットパターンに書き込まれる（またはレイヤーされる）
 
-これが最も一般的なジェネレーターの構成です — リズム的には予測不能ながら、和声的に調和したメロディが得られます。
+最も音楽的な結果を得るには、3つのジェネレーターを組み合わせます：**Tonnetz** がコード進行を定義し、**Turing Machine** がメロディを生成し、**Quantizer**（Tonnetz ソースの Chord モード）がコードトーンにスナップします。
 
 ## 関連
 
 - [Turing Machine](/ja/docs/scene/generators/turing-machine/) — 最も一般的な入力ソース
+- [Tonnetz](/ja/docs/scene/generators/tonnetz/) — Chord モードのコード進行ソース
 - [ジェネレーター](/ja/docs/scene/generators/) — マージモード、シード、プリセット、シーケンサー連携

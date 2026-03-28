@@ -1004,6 +1004,7 @@
               </div>
               <div class="gen-label-row">
                 <span class="gen-label">{nodeName(node, song.patterns)}</span>
+                {#if qp.chordSource}<span class="gen-chord-src" data-tip="Tonnetz chord source" data-tip-ja="Tonnetzコードソース">♦ TNZ</span>{/if}
                 {#if genTrack}<span class="gen-target">→ {genTrack}</span>{/if}
               </div>
               <div class="gen-controls">
@@ -1609,6 +1610,18 @@
     font-weight: 700;
     color: rgba(30, 32, 40, 0.4);
     white-space: nowrap;
+  }
+  .gen-chord-src {
+    font-family: var(--font-data);
+    font-size: 6px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #9456b0;
+    border: 1px dashed #9456b0;
+    padding: 0 3px;
+    border-radius: 2px;
+    white-space: nowrap;
+    opacity: 0.8;
   }
   .gen-controls {
     display: flex;

@@ -11,6 +11,8 @@ import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.s
 
 A shift-register sequencer inspired by [Music Thing Modular's Turing Machine](https://musicthing.co.uk/). A chain of bits shifts on each step, with a probability of the last bit flipping. The result is a sequence that **evolves gradually** — from frozen loops to pure randomness.
 
+Double-tap a Turing Machine node in the Scene (or press **EDIT** in the Dock) to open the **Turing Sheet** — a circular register ring visualization with output history.
+
 ## Parameters
 
 | Knob | Range | Description |
@@ -28,6 +30,14 @@ Three output modes, selectable via toggle buttons:
 | **NOTE** | Register bits map to pitch within the note range. Density controls step activity. |
 | **GAT** | Fixed pitch (center of range). Register bits control which steps are active — useful for hi-hat patterns. |
 | **VEL** | All steps active. Register bits control velocity (0.3–1.0) — for ghost-note grooves. |
+
+## Turing Sheet
+
+The sheet shows the register as a **circular ring** of bits (filled = 1, hollow = 0). The center displays the current register value and output note.
+
+- **FREEZE** — instantly locks the register (sets LOCK to 1.0). Tap again to restore the previous LOCK value.
+- **ROLL** — re-randomizes the seed, producing a completely new register pattern.
+- **Output history** — a horizontal bar graph showing the value at each step, with note names below.
 
 ## Note Range
 

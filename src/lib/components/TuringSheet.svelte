@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { TuringParams } from '../types.ts'
-  import { song, ui, pushUndo } from '../state.svelte.ts'
+  import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, sceneSetSeed, autoGenerateFromNode } from '../sceneActions.ts'
   import { turingSimulate } from '../generative.ts'
   import type { TuringStepSnapshot } from '../generative.ts'
@@ -23,6 +23,24 @@
 
   // Current register (step 0's state = initial register)
   const currentReg = $derived(snapshots.length > 0 ? snapshots[0].register : [])
+
+  // Playback step
+  const currentStep = $derived.by(() => {
+    if (!playback.playing || !node?.generative || !nodeId) return -1
+    const edge = song.scene.edges.find(e => e.from === nodeId)
+    if (!edge) return -1
+    const patNode = song.scene.nodes.find(n => n.id === edge.to && n.type === 'pattern')
+    if (!patNode?.patternId) return -1
+    const pat = song.patterns.find(p => p.id === patNode.patternId)
+    if (!pat) return -1
+    const trackIdx = node.generative.targetTrack ?? 0
+    return playback.playheads[trackIdx] ?? -1
+  })
+
+  // Display snapshot: current playback step or step 0
+  const displaySnap = $derived(
+    currentStep >= 0 && snapshots[currentStep] ? snapshots[currentStep] : snapshots[0]
+  )
 
   // FREEZE state tracking
   let preFreezelock = $state<number | null>(null)
@@ -163,9 +181,9 @@
           <text x={pos.x} y={pos.y + 3.5} class="bit-label">{bit}</text>
         {/each}
         <!-- Center info -->
-        <text x={RING_CX} y={RING_CY - 6} class="ring-info">{snapshots[0]?.value.toFixed(2) ?? '—'}</text>
-        <text x={RING_CX} y={RING_CY + 10} class="ring-note">
-          {snapshots[0] ? NOTE_NAMES[snapshots[0].note % 12] + String(Math.floor(snapshots[0].note / 12)) : '—'}
+        <text x={RING_CX} y={RING_CY - 6} class="ring-info">{displaySnap?.value.toFixed(2) ?? '—'}</text>
+        <text x={RING_CX} y={RING_CY + 10} class="ring-note" class:playing={currentStep >= 0}>
+          {displaySnap ? NOTE_NAMES[displaySnap.note % 12] + String(Math.floor(displaySnap.note / 12)) : '—'}
         </text>
       </svg>
     </div>
@@ -182,6 +200,7 @@
             class="hist-bar"
             class:active={snap.active}
             class:rest={!snap.active}
+            class:playing={i === currentStep}
           />
           <text
             x={i * (BAR_W + BAR_GAP) + BAR_W / 2} y={BAR_MAX_H + 16}
@@ -366,9 +385,16 @@
     fill: var(--color-olive);
     opacity: 0.7;
   }
+  .hist-bar.playing {
+    fill: var(--color-blue);
+    opacity: 1;
+  }
   .hist-bar.rest {
     fill: var(--color-fg);
     opacity: 0.08;
+  }
+  .ring-note.playing {
+    fill: var(--color-blue);
   }
   .hist-label {
     font-family: var(--font-data);

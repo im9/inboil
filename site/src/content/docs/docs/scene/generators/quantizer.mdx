@@ -11,11 +11,13 @@ import PlaygroundGenerator from '../../../../../components/PlaygroundGenerator.s
 
 Takes a sequence of notes and **snaps each to the nearest scale degree**. Most commonly used after a Turing Machine to lock random output to a musical key.
 
+Double-tap a Quantizer node in the Scene (or press **EDIT** in the Dock) to open the **Quantizer Sheet** — a keyboard visualization showing scale tones, chord tones, and controls for all three modes.
+
 ## Parameters
 
 | Knob | Range | Description |
 |------|-------|-------------|
-| **ROOT** | C–B | Root note of the scale |
+| **ROOT** | C–B | Root note of the scale (also settable by tapping a key in the sheet) |
 | **OCT LO** | 0–8 | Lowest octave |
 | **OCT HI** | 0–8 | Highest octave |
 
@@ -25,17 +27,41 @@ Select from the dropdown:
 
 Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, Pentatonic, Minor Pentatonic, Blues, Harmonic Minor, Melodic Minor, Whole Tone, Chromatic.
 
+## Mode
+
+Three quantization modes, selectable via pills in the Dock or the Sheet:
+
+### Scale (default)
+
+Notes are snapped to the nearest scale degree. This is the original behavior — simple and effective.
+
+### Chord
+
+Notes are snapped to **chord tones first**, falling back to scale tones when the nearest chord tone is more than 2 semitones away. This creates melodies that follow chord progressions without being rigidly locked.
+
+Chords can come from two sources:
+
+- **Manual** — add chord badges directly in the Sheet (e.g. C @ step 0, Am @ step 8)
+- **Tonnetz source** — reference a Tonnetz node's chord walk. The active chord at each step is read from the Tonnetz walk path.
+
+### Harmony
+
+Input notes are scale-snapped, then **parallel diatonic voices** are added above or below. Up to 3 harmony voices can be stacked (original + 3 = 4-note chords max).
+
+Available intervals: 3rd, 4th, 5th, 6th — each above or below.
+
 ## Chaining: Turing → Quantizer
 
 Connect a Turing Machine node's output edge to a Quantizer node, then connect the Quantizer to a Pattern node. The chain works like a signal flow:
 
 1. Turing Machine generates raw pseudo-random notes
-2. Quantizer snaps every note to the chosen scale
+2. Quantizer snaps every note to the chosen scale (or chord tones, or adds harmony)
 3. Result is written to (or layered on) the target pattern
 
-This is the most common generator setup — rhythmically unpredictable but harmonically consonant melodies.
+For the most musical results, combine all three generators: **Tonnetz** defines chord progressions, **Turing Machine** generates melody, **Quantizer** (chord mode with Tonnetz source) snaps to chord tones.
 
 ## Related
 
 - [Turing Machine](/docs/scene/generators/turing-machine/) — the most common input source
+- [Tonnetz](/docs/scene/generators/tonnetz/) — chord progression source for chord mode
 - [Generators](/docs/scene/generators/) — merge mode, seed, presets, step sequencer integration
