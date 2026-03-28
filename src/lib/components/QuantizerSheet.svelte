@@ -177,194 +177,197 @@
   <!-- Header (matches Tonnetz) -->
   <div class="q-header">
     <span class="q-title">QUANTIZER</span>
-    <span class="q-info">{NOTE_NAMES[params.root]} {params.scale}</span>
     <button class="q-close" onpointerdown={onclose}>×</button>
   </div>
 
-  <!-- Controls -->
-  <div class="q-controls">
-    <!-- Mode selector -->
-    <div class="q-row">
-      <span class="ctl-label">MODE</span>
-      <div class="mode-pills">
-        {#each ['scale', 'chord', 'harmony'] as m}
-          <button
-            class="mode-pill"
-            class:active={mode === m}
-            onpointerdown={() => update({ mode: m as QuantizerParams['mode'] })}
-          >{m.toUpperCase()}</button>
+  <!-- Main body: 2-column layout -->
+  <div class="q-body">
+    <!-- Left: Keyboard visualization -->
+    <div class="q-keyboard">
+      <svg width={kbdWidth} height={WK_H + 4} viewBox="0 0 {kbdWidth} {WK_H + 4}">
+        <!-- White keys -->
+        {#each keyboardKeys.filter(k => !k.isBlack) as key}
+          <rect
+            x={key.x + 1} y={2} width={key.w - 2} height={key.h}
+            rx="3"
+            fill={keyFill(key)}
+            stroke={keyStroke(key)}
+            stroke-width="1"
+            class="key-rect"
+            role="button" tabindex="-1"
+            onpointerdown={() => tapKey(key.pc)}
+          />
+          {#if scalePcs.has(key.pc)}
+            <circle
+              cx={key.x + key.w / 2} cy={key.h - 12} r="4"
+              fill={chordPcs.has(key.pc) ? 'var(--color-olive)' : 'var(--color-fg)'}
+              opacity={chordPcs.has(key.pc) ? 1 : 0.35}
+            />
+          {/if}
+          <text
+            x={key.x + key.w / 2} y={key.h - 24}
+            text-anchor="middle"
+            class="key-label"
+          >{NOTE_NAMES[key.pc]}</text>
         {/each}
-      </div>
-    </div>
-
-    <!-- Scale + Root -->
-    <div class="q-row">
-      <span class="ctl-label">SCALE</span>
-      <select class="ctl-select"
-        value={params.scale}
-        onchange={e => update({ scale: (e.target as HTMLSelectElement).value })}
-      >
-        {#each SCALE_NAMES as s}
-          <option value={s}>{s}</option>
+        <!-- Black keys -->
+        {#each keyboardKeys.filter(k => k.isBlack) as key}
+          <rect
+            x={key.x + 1} y={2} width={key.w - 2} height={key.h}
+            rx="3"
+            fill={keyFill(key)}
+            stroke={keyStroke(key)}
+            stroke-width="1"
+            class="key-rect"
+            role="button" tabindex="-1"
+            onpointerdown={() => tapKey(key.pc)}
+          />
+          {#if scalePcs.has(key.pc)}
+            <circle
+              cx={key.x + key.w / 2} cy={key.h - 10} r="3"
+              fill={chordPcs.has(key.pc) ? 'var(--color-olive)' : 'rgba(237, 232, 220, 0.7)'}
+            />
+          {/if}
         {/each}
-      </select>
-      <span class="ctl-label">ROOT</span>
-      <select class="ctl-select"
-        value={String(params.root)}
-        onchange={e => update({ root: parseInt((e.target as HTMLSelectElement).value) })}
-      >
-        {#each NOTE_NAMES as name, i}
-          <option value={String(i)}>{name}</option>
-        {/each}
-      </select>
-      <span class="ctl-label">OCT</span>
-      <span class="ctl-val">{params.octaveRange[0]}–{params.octaveRange[1]}</span>
-    </div>
-
-    <!-- Mode-specific controls -->
-    {#if mode === 'chord'}
-      {#if params.chordSource}
-        <div class="q-row">
-          <span class="ctl-label">SOURCE</span>
-          <select class="ctl-select"
-            value={params.chordSource.nodeId}
-            onchange={e => {
-              const val = (e.target as HTMLSelectElement).value
-              if (val === '__none__') update({ chordSource: undefined })
-              else update({ chordSource: { nodeId: val } })
-            }}
-          >
-            <option value="__auto__">Auto (first Tonnetz)</option>
-            {#each tonnetzNodes as tn}
-              <option value={tn.id}>{tn.id}</option>
-            {/each}
-            <option value="__none__">Manual chords</option>
-          </select>
-        </div>
-      {:else}
-        <div class="q-row">
-          <span class="ctl-label">CHORDS</span>
-          <div class="chord-pills">
-            {#each params.chords ?? [] as chord, idx}
-              <div class="chord-badge">
-                <span class="chord-badge-name">{chordName(chord.notes)}</span>
-                <span class="chord-badge-step">@{chord.step}</span>
-                <button class="badge-btn" onpointerdown={() => cycleChordRoot(idx, -1)}>−</button>
-                <button class="badge-btn" onpointerdown={() => cycleChordRoot(idx, 1)}>+</button>
-                <button class="badge-btn badge-rm" onpointerdown={() => removeChord(idx)}>×</button>
-              </div>
-            {/each}
-            <button class="pill-btn" onpointerdown={addChord}>+</button>
-          </div>
-        </div>
-        <div class="q-row">
-          <span class="ctl-label"></span>
-          <button class="pill-btn" style="width: auto; padding: 2px 8px"
-            onpointerdown={() => update({ chordSource: { nodeId: '__auto__' } })}
-          >Use Tonnetz</button>
-        </div>
-      {/if}
-    {:else if mode === 'harmony'}
-      <div class="q-row">
-        <span class="ctl-label">VOICES</span>
-        <div class="chord-pills">
-          {#each params.harmonyVoices ?? [] as voice, idx}
-            <div class="chord-badge">
-              <select class="badge-select"
-                value={voice.interval}
-                onchange={e => updateHarmonyVoice(idx, { interval: parseInt((e.target as HTMLSelectElement).value) })}
-              >
-                {#each [3, 4, 5, 6] as iv}
-                  <option value={iv}>{iv === 3 ? '3rd' : iv === 4 ? '4th' : iv === 5 ? '5th' : '6th'}</option>
-                {/each}
-              </select>
-              <select class="badge-select"
-                value={voice.direction}
-                onchange={e => updateHarmonyVoice(idx, { direction: (e.target as HTMLSelectElement).value as HarmonyVoice['direction'] })}
-              >
-                <option value="above">above</option>
-                <option value="below">below</option>
-              </select>
-              <button class="badge-btn badge-rm" onpointerdown={() => removeHarmonyVoice(idx)}>×</button>
-            </div>
-          {/each}
-          {#if (params.harmonyVoices?.length ?? 0) < 3}
-            <button class="pill-btn" onpointerdown={addHarmonyVoice}>+</button>
+      </svg>
+      <!-- Playback status below keyboard -->
+      {#if playState}
+        <div class="q-status">
+          <span class="status-label">step {playState.step + 1}</span>
+          {#if playState.note >= 0}
+            <span class="status-note">{NOTE_NAMES[playState.pc]}{Math.floor(playState.note / 12)}</span>
+          {:else}
+            <span class="status-rest">·</span>
           {/if}
         </div>
-      </div>
-    {:else}
-      <div class="q-row hint">
-        <span>Notes are snapped to the nearest scale degree</span>
-      </div>
-    {/if}
-    <div class="q-row hint">
-      <span>tap = set root</span>
-    </div>
-    <GenSheetCommon {nodeId} />
-  </div>
-
-  <!-- Keyboard visualization (centered like Tonnetz lattice) -->
-  <div class="q-keyboard">
-    <svg width={kbdWidth} height={WK_H + 4} viewBox="0 0 {kbdWidth} {WK_H + 4}">
-      <!-- White keys -->
-      {#each keyboardKeys.filter(k => !k.isBlack) as key}
-        <rect
-          x={key.x + 1} y={2} width={key.w - 2} height={key.h}
-          rx="3"
-          fill={keyFill(key)}
-          stroke={keyStroke(key)}
-          stroke-width="1"
-          class="key-rect"
-          role="button" tabindex="-1"
-          onpointerdown={() => tapKey(key.pc)}
-        />
-        {#if scalePcs.has(key.pc)}
-          <circle
-            cx={key.x + key.w / 2} cy={key.h - 12} r="4"
-            fill={chordPcs.has(key.pc) ? 'var(--color-olive)' : 'var(--color-fg)'}
-            opacity={chordPcs.has(key.pc) ? 1 : 0.35}
-          />
-        {/if}
-        <text
-          x={key.x + key.w / 2} y={key.h - 24}
-          text-anchor="middle"
-          class="key-label"
-        >{NOTE_NAMES[key.pc]}</text>
-      {/each}
-      <!-- Black keys -->
-      {#each keyboardKeys.filter(k => k.isBlack) as key}
-        <rect
-          x={key.x + 1} y={2} width={key.w - 2} height={key.h}
-          rx="3"
-          fill={keyFill(key)}
-          stroke={keyStroke(key)}
-          stroke-width="1"
-          class="key-rect"
-          role="button" tabindex="-1"
-          onpointerdown={() => tapKey(key.pc)}
-        />
-        {#if scalePcs.has(key.pc)}
-          <circle
-            cx={key.x + key.w / 2} cy={key.h - 10} r="3"
-            fill={chordPcs.has(key.pc) ? 'var(--color-olive)' : 'rgba(237, 232, 220, 0.7)'}
-          />
-        {/if}
-      {/each}
-    </svg>
-  </div>
-
-  <!-- Playback status strip -->
-  {#if playState}
-    <div class="q-status">
-      <span class="status-label">step {playState.step + 1}</span>
-      {#if playState.note >= 0}
-        <span class="status-note">{NOTE_NAMES[playState.pc]}{Math.floor(playState.note / 12)}</span>
-      {:else}
-        <span class="status-rest">·</span>
       {/if}
     </div>
-  {/if}
+
+    <!-- Right: Controls -->
+    <div class="q-controls">
+      <fieldset class="q-group">
+        <legend>Scale</legend>
+        <div class="q-row">
+          <span class="ctl-label">SCALE</span>
+          <select class="ctl-select"
+            value={params.scale}
+            onchange={e => update({ scale: (e.target as HTMLSelectElement).value })}
+          >
+            {#each SCALE_NAMES as s}
+              <option value={s}>{s}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="q-row">
+          <span class="ctl-label">ROOT</span>
+          <select class="ctl-select"
+            value={String(params.root)}
+            onchange={e => update({ root: parseInt((e.target as HTMLSelectElement).value) })}
+          >
+            {#each NOTE_NAMES as name, i}
+              <option value={String(i)}>{name}</option>
+            {/each}
+          </select>
+          <span class="ctl-label">OCT</span>
+          <span class="ctl-val">{params.octaveRange[0]}–{params.octaveRange[1]}</span>
+        </div>
+      </fieldset>
+
+      <fieldset class="q-group">
+        <legend>Mode</legend>
+        <div class="mode-pills">
+          {#each ['scale', 'chord', 'harmony'] as m}
+            <button
+              class="mode-pill"
+              class:active={mode === m}
+              onpointerdown={() => update({ mode: m as QuantizerParams['mode'] })}
+            >{m.toUpperCase()}</button>
+          {/each}
+        </div>
+        <div class="ctl-desc mode-desc">
+          {mode === 'scale' ? 'snap to nearest scale degree' : mode === 'chord' ? 'snap to chord tones' : 'add parallel diatonic voices'}
+        </div>
+
+        {#if mode === 'chord'}
+          {#if params.chordSource}
+            <div class="q-row">
+              <span class="ctl-label">SOURCE</span>
+              <select class="ctl-select"
+                value={params.chordSource.nodeId}
+                onchange={e => {
+                  const val = (e.target as HTMLSelectElement).value
+                  if (val === '__none__') update({ chordSource: undefined })
+                  else update({ chordSource: { nodeId: val } })
+                }}
+              >
+                <option value="__auto__">Auto (first Tonnetz)</option>
+                {#each tonnetzNodes as tn}
+                  <option value={tn.id}>{tn.id}</option>
+                {/each}
+                <option value="__none__">Manual chords</option>
+              </select>
+            </div>
+          {:else}
+            <div class="q-row">
+              <span class="ctl-label">CHORDS</span>
+              <div class="chord-pills">
+                {#each params.chords ?? [] as chord, idx}
+                  <div class="chord-badge">
+                    <span class="chord-badge-name">{chordName(chord.notes)}</span>
+                    <span class="chord-badge-step">@{chord.step}</span>
+                    <button class="badge-btn" onpointerdown={() => cycleChordRoot(idx, -1)}>−</button>
+                    <button class="badge-btn" onpointerdown={() => cycleChordRoot(idx, 1)}>+</button>
+                    <button class="badge-btn badge-rm" onpointerdown={() => removeChord(idx)}>×</button>
+                  </div>
+                {/each}
+                <button class="pill-btn" onpointerdown={addChord}>+</button>
+              </div>
+            </div>
+            <div class="q-row">
+              <span class="ctl-label"></span>
+              <button class="pill-btn" style="width: auto; padding: 2px 8px"
+                onpointerdown={() => update({ chordSource: { nodeId: '__auto__' } })}
+              >Use Tonnetz</button>
+            </div>
+          {/if}
+        {:else if mode === 'harmony'}
+          <div class="q-row">
+            <span class="ctl-label">VOICES</span>
+            <div class="chord-pills">
+              {#each params.harmonyVoices ?? [] as voice, idx}
+                <div class="chord-badge">
+                  <select class="badge-select"
+                    value={voice.interval}
+                    onchange={e => updateHarmonyVoice(idx, { interval: parseInt((e.target as HTMLSelectElement).value) })}
+                  >
+                    {#each [3, 4, 5, 6] as iv}
+                      <option value={iv}>{iv === 3 ? '3rd' : iv === 4 ? '4th' : iv === 5 ? '5th' : '6th'}</option>
+                    {/each}
+                  </select>
+                  <select class="badge-select"
+                    value={voice.direction}
+                    onchange={e => updateHarmonyVoice(idx, { direction: (e.target as HTMLSelectElement).value as HarmonyVoice['direction'] })}
+                  >
+                    <option value="above">above</option>
+                    <option value="below">below</option>
+                  </select>
+                  <button class="badge-btn badge-rm" onpointerdown={() => removeHarmonyVoice(idx)}>×</button>
+                </div>
+              {/each}
+              {#if (params.harmonyVoices?.length ?? 0) < 3}
+                <button class="pill-btn" onpointerdown={addHarmonyVoice}>+</button>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      </fieldset>
+
+      <fieldset class="q-group">
+        <legend>Target</legend>
+        <GenSheetCommon {nodeId} />
+      </fieldset>
+    </div>
+  </div>
 </div>
 {/if}
 
@@ -390,12 +393,6 @@
     font-weight: 700;
     letter-spacing: 0.12em;
   }
-  .q-info {
-    font-family: var(--font-data);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-    color: var(--color-olive);
-  }
   .q-close {
     width: 24px; height: 24px;
     border: 1px solid var(--color-fg);
@@ -405,19 +402,50 @@
     margin-left: auto;
   }
 
-  /* ── Controls (matches tonnetz-controls) ── */
+  /* ── 2-column body: keyboard (left) + controls (right) ── */
+  .q-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+
+  /* ── Right: Controls (fixed width) ── */
   .q-controls {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--lz-border);
-    display: flex; flex-direction: column; gap: 6px;
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--lz-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+  }
+  .q-group {
+    border: 1px solid var(--lz-border);
+    padding: 6px 8px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .q-group legend {
+    font-family: var(--font-data);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em;
+    opacity: 0.4;
+    padding: 0 4px;
   }
   .q-row {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   }
-  .q-row.hint {
-    opacity: 0.4;
+  .ctl-desc {
     font-family: var(--font-data);
-    font-size: 8px;
+    font-size: 9px;
+    opacity: 0.4;
+    letter-spacing: 0.02em;
+  }
+  .mode-desc {
+    margin-top: 4px;
   }
   .ctl-label {
     font-family: var(--font-data);
@@ -487,14 +515,16 @@
   }
   .pill-btn:hover { background: var(--lz-bg-hover); }
 
-  /* ── Keyboard (matches tonnetz-lattice) ── */
+  /* ── Left: Keyboard ── */
   .q-keyboard {
     flex: 1;
+    min-width: 0;
     overflow: auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 12px;
     touch-action: none;
   }
   .key-rect {
@@ -520,8 +550,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 12px;
-    border-top: 1px solid var(--lz-border);
+    padding: 8px 0 0;
     font-family: var(--font-data);
     font-size: var(--fs-md);
   }
