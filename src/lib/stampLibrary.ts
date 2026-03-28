@@ -32,7 +32,7 @@ export const STAMP_LIBRARY: Record<string, StampDef> = {
     svg: '<path d="M20 12.79A8.5 8.5 0 1 1 11.71 3.5 6.5 6.5 0 0 0 20 12.79Z"/>',
     name: 'Moon',
     nameJa: '月',
-    color: '#5a6a8a',
+    color: '#4472B4',
     animation: 'moon',
     particles: 'stars',
   },

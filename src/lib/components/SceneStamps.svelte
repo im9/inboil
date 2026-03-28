@@ -195,7 +195,7 @@
     opacity: 0;
   }
   .particle.star {
-    color: var(--color-fg);
+    color: var(--color-blue);
     animation: star-twinkle calc(var(--beat) * 8) ease-in-out infinite;
   }
   .particle.bird {
