@@ -91,7 +91,17 @@ export function sceneAddNode(patternId: string, x: number, y: number): string {
 /** Delete a node and its connected edges */
 export function sceneDeleteNode(nodeId: string): void {
   pushUndo('Delete scene node')
-  const wasRoot = findNode(nodeId)?.root
+  const deleted = findNode(nodeId)
+  const wasRoot = deleted?.root
+  // ADR 127: clear chordSource references to a deleted Tonnetz node
+  if (deleted?.generative?.engine === 'tonnetz') {
+    for (const n of song.scene.nodes) {
+      const qp = n.generative?.params as QuantizerParams | undefined
+      if (qp?.chordSource?.nodeId === nodeId) {
+        qp.chordSource = undefined
+      }
+    }
+  }
   song.scene.edges = song.scene.edges.filter(e => e.from !== nodeId && e.to !== nodeId)
   song.scene.nodes = song.scene.nodes.filter(n => n.id !== nodeId)
   if (wasRoot && song.scene.nodes.length > 0) {

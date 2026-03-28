@@ -50,6 +50,10 @@ Input notes are scale-snapped, then **parallel diatonic voices** are added above
 
 Available intervals: 3rd, 4th, 5th, 6th — each above or below.
 
+:::note[Harmony + Arp]
+If a Tonnetz with arpeggio feeds mono notes into a Quantizer in Harmony mode, the Quantizer adds harmony voices to each arp note — turning single notes into chords. This can produce rich results, but may not always be the intended behavior.
+:::
+
 ## Chaining: Turing → Quantizer
 
 Connect a Turing Machine node's output edge to a Quantizer node, then connect the Quantizer to a Pattern node. The chain works like a signal flow:

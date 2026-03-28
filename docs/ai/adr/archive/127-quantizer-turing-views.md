@@ -1,6 +1,6 @@
 # ADR 127: Quantizer & Turing Machine — Dedicated Views + Generator Chaining
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -300,9 +300,9 @@ When a Quantizer node is in chord mode with `chordSource: { nodeId }`:
 
 ## Known Issues
 
-- **Chord source is a soft reference**: If the referenced Tonnetz node is deleted, Quantizer silently falls back to scale-only mode. No dangling pointer error, but the user might not notice.
+- ~~**Chord source is a soft reference**~~: Fixed — `sceneDeleteNode` now clears `chordSource` on any Quantizer referencing the deleted Tonnetz node.
 
-- **Harmony voice + arp interaction**: If Tonnetz arp is active (mono notes) and feeds into a Quantizer with harmony voices, the Quantizer will add harmony to each mono note — creating chords from arp notes. This might be desirable or confusing. Document it.
+- ~~**Harmony voice + arp interaction**~~: Documented in quantizer.mdx (EN + JA) as a note. Behavior is intentional — can produce rich results.
 
 - **Performance**: `computeWalkPath` for Tonnetz is called each time Quantizer regenerates. For typical step counts (16–64), this is negligible.
 

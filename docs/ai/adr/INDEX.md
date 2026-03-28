@@ -83,7 +83,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 096 | Odd Step Counts & PO-Style Step Picker | Implemented | STEP_OPTIONS 2–16 + 24/32/48/64, long-press grid picker (bubble picker rejected) |
 | 125 | Scene Terminology Unification | Implemented | Retired "Function Node"/"Decorator" — 4 categories: Pattern, Generator, Modifier, Sweep. Code rename FnNode→Modifier, docs restructure, interactive Playground embeds per engine page |
 | 126 | Tonnetz Lattice View & Per-Step Transforms | Implemented | Per-step transforms (O&C style), SVG lattice overlay, anchors, chord preview, arpeggio, 7th chords, Turing rhythm |
-| 127 | Quantizer & Turing Machine Views + Chaining | Proposed | Quantizer chord mode + harmony voices + keyboard sheet, Turing register ring + output history sheet, Tonnetz→Quantizer chord source |
+| 127 | Quantizer & Turing Machine Views + Chaining | Implemented | Quantizer chord/harmony modes + keyboard sheet, Turing register ring + output history sheet, Tonnetz→Quantizer chord source, white playback highlight, real-time display |
 
 ## UI / Layout
 
