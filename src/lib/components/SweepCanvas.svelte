@@ -27,6 +27,8 @@
   const recState = $derived(sweepRec.sweepNodeId === sweepNode?.id ? sweepRec.state : 'idle')
 
   const sweepData = $derived(sweepNode?.modifierParams?.sweep ?? { curves: [] })
+  const globalSweep = $derived(song.scene.globalSweep)
+  const globalCurves = $derived(globalSweep?.curves ?? [])
 
   // ── Pattern info ──
   const pat = $derived(song.patterns[activePatIdx])
@@ -348,15 +350,38 @@
     }
 
     // Draw all curves (with flash-fade during clear)
+    // Remap global curves' t (0-1 = full recording) to pattern-local t coordinate system
+    const globalRemapped: SweepCurve[] = globalCurves.map(gc => {
+      const durMs = globalSweep?.durationMs ?? 1
+      // Chain t space: 0..repeatCount covers one full pattern cycle
+      // Global t space: 0..1 covers durMs of recording
+      // patternDurationMs = (stepsPerPattern / (bpm / 60)) * (scale / 2) — approximate via step timing
+      const stepMs = (60000 / song.bpm) / 4  // 16th note duration
+      const patMs = stepsPerPattern * stepMs * rc
+      const scale = patMs > 0 ? durMs / patMs : 1
+      return {
+        ...gc,
+        points: gc.points.map(p => ({ ...p, t: p.t * scale })),
+      }
+    })
+
     if (clearProgress === null) {
       for (const curve of sweepData.curves) {
         if (isMuteCurve(curve)) continue
         const isActive = selectedCurve && targetsEqual(curve.target, selectedCurve.target)
         drawCurve(ctx, curve, w, drawY, drawH, isActive ? 1.0 : 0.3, playProgress)
       }
+      for (const curve of globalRemapped) {
+        if (isMuteCurve(curve)) continue
+        drawCurve(ctx, curve, w, drawY, drawH, 0.3, playProgress)
+      }
     } else {
       const fade = 1 - clearProgress
       for (const curve of sweepData.curves) {
+        if (isMuteCurve(curve)) continue
+        drawCurve(ctx, curve, w, drawY, drawH, fade)
+      }
+      for (const curve of globalRemapped) {
         if (isMuteCurve(curve)) continue
         drawCurve(ctx, curve, w, drawY, drawH, fade)
       }
