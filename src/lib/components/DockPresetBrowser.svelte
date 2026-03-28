@@ -58,14 +58,12 @@
     if (!isUserPresetsLoaded()) void loadUserPresetsIntoCache().then(() => { userPresetVersion++ }).catch(e => console.warn('[presets] load failed:', e))
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   const presetListAll = $derived.by(() => {
-    userPresetVersion
+    void userPresetVersion // reactive dependency on user preset changes
     return cell ? getPresets(cell.voiceId, presetCategory) : []
   })
-  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   const presetCatsAll = $derived.by(() => {
-    userPresetVersion
+    void userPresetVersion // reactive dependency on user preset changes
     return cell ? getPresetCategories(cell.voiceId) : []
   })
 

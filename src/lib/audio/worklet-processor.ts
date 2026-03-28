@@ -36,7 +36,7 @@ declare const sampleRate: number
 import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
 import { SimpleReverb, LiteReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, TapeSaturator, EarlyReflections, PreDelay, Distortion } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
-import type { Voice } from './dsp/voices.ts'
+import type { Voice, SampleZone } from './dsp/voices.ts'
 import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
 import { SCALE_TEMPLATES } from '../constants.ts'
 
@@ -370,7 +370,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (!cmd.buffer || !cmd.sampleRate) break
           const sv = this.voices[t]
           if (sv && 'loadSample' in sv) {
-            (sv as any).loadSample(cmd.buffer, cmd.sampleRate)
+            (sv as { loadSample(b: Float32Array, sr: number): void }).loadSample(cmd.buffer, cmd.sampleRate)
           }
           break
         }
@@ -379,7 +379,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (!cmd.zones || !cmd.zones.length) break
           const zv = this.voices[t]
           if (zv && 'loadZones' in zv) {
-            (zv as any).loadZones(cmd.zones)
+            (zv as { loadZones(z: SampleZone[]): void }).loadZones(cmd.zones)
           }
           break
         }

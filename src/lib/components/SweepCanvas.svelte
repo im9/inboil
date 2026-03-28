@@ -1077,6 +1077,9 @@
     side: 'left' | 'right'
   } | null>(null)
 
+  // Cleanup window listeners if component unmounts mid-drag
+  $effect(() => () => { if (toggleDragState) onToggleBoundaryUp() })
+
   function onToggleBoundaryDown(e: PointerEvent, toggleIdx: number, boundaryIdx: number, side: 'left' | 'right') {
     e.preventDefault()
     e.stopPropagation()

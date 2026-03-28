@@ -25,7 +25,7 @@
     dot.style.left = `${x}px`
     dot.style.top = `${y}px`
     document.body.appendChild(dot)
-    dot.addEventListener('animationend', () => dot.remove())
+    dot.addEventListener('animationend', () => dot.remove(), { once: true })
   }
 
   function onRibbonBgTap() {

@@ -310,7 +310,7 @@
     if (!params || !nodeId || !params.anchors) return
     const anchors = params.anchors.filter((_, i) => i !== idx)
     pushUndo('Remove Tonnetz anchor')
-    sceneUpdateGenerativeParams(nodeId, { anchors: anchors.length > 0 ? anchors : undefined } as any)
+    sceneUpdateGenerativeParams(nodeId, { anchors: anchors.length > 0 ? anchors : undefined } as Partial<TonnetzParams>)
     autoGenerateFromNode(nodeId)
   }
 
@@ -446,7 +446,7 @@
       <select class="ctl-select"
         onchange={e => {
           const v = (e.target as HTMLSelectElement).value
-          sceneUpdateGenerativeParams(nodeId, { chordQuality: v === 'triad' ? undefined : v } as any)
+          sceneUpdateGenerativeParams(nodeId, { chordQuality: v === 'triad' ? undefined : v } as Partial<TonnetzParams>)
           autoGenerateFromNode(nodeId)
         }}
       >
@@ -459,7 +459,7 @@
         onchange={e => {
           const v = (e.target as HTMLSelectElement).value
           const rhythm = v === 'all' ? undefined : v === 'turing' ? { preset: 'turing', length: 8, lock: 0.7 } : v
-          sceneUpdateGenerativeParams(nodeId, { rhythm } as any)
+          sceneUpdateGenerativeParams(nodeId, { rhythm } as Partial<TonnetzParams>)
           autoGenerateFromNode(nodeId)
         }}
       >
@@ -474,7 +474,7 @@
       <select class="ctl-select"
         onchange={e => {
           const v = (e.target as HTMLSelectElement).value
-          sceneUpdateGenerativeParams(nodeId, { arp: v === 'off' ? undefined : { mode: v } } as any)
+          sceneUpdateGenerativeParams(nodeId, { arp: v === 'off' ? undefined : { mode: v } } as Partial<TonnetzParams>)
           autoGenerateFromNode(nodeId)
         }}
       >
@@ -496,7 +496,7 @@
           value={tr.length}
           oninput={e => {
             const v = parseInt((e.target as HTMLInputElement).value)
-            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, length: v } } as any)
+            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, length: v } } as Partial<TonnetzParams>)
             autoGenerateFromNode(nodeId)
           }}
         />
@@ -509,7 +509,7 @@
           value={Math.round(tr.lock * 100)}
           oninput={e => {
             const v = parseInt((e.target as HTMLInputElement).value) / 100
-            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, lock: v } } as any)
+            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, lock: v } } as Partial<TonnetzParams>)
             autoGenerateFromNode(nodeId)
           }}
         />
