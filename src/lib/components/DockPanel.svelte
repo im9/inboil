@@ -5,7 +5,6 @@
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams, findConnectedSweepNode } from '../sceneActions.ts'
   import { PATTERN_COLORS } from '../constants.ts'
-  import DockGenerativeEditor from './DockGenerativeEditor.svelte'
   import DockTrackEditor from './DockTrackEditor.svelte'
   import DockNavigator from './DockNavigator.svelte'
   import DockFxControls from './DockFxControls.svelte'
@@ -42,7 +41,8 @@
     return (node && MOD_TYPES.includes(node.type as ModifierType)) ? node : null
   })
 
-  // Selected generative node (for generative node display in scene view)
+
+  // Selected generative node (for Edit/Remove actions in scene view)
   const selectedGenNode = $derived.by(() => {
     if (ui.patternSheet || isOverlaySheet) return null
     const selected = Object.keys(ui.selectedSceneNodes)
@@ -77,13 +77,6 @@
     return selected ?? matches[0]
   })
   // Generative nodes connected to current pattern's scene node (incoming edges)
-  const connectedGenerativeNodes = $derived.by(() => {
-    if (!currentPatternSceneNode) return []
-    const inEdges = song.scene.edges.filter(e => e.to === currentPatternSceneNode.id)
-    return inEdges
-      .map(e => song.scene.nodes.find(n => n.id === e.from))
-      .filter((n): n is SceneNode => n?.type === 'generative' && !!n.generative)
-  })
   // Modifier nodes attached to current pattern (satellite edges, ADR 110)
   const connectedModNodes = $derived.by(() => {
     if (!currentPatternSceneNode) return []
@@ -92,7 +85,7 @@
       .map(e => song.scene.nodes.find(n => n.id === e.from))
       .filter((n): n is SceneNode => !!n && MOD_TYPES.includes(n.type as ModifierType))
   })
-  const sceneTabCount = $derived(connectedGenerativeNodes.length + connectedModNodes.length)
+  const sceneTabCount = $derived(connectedModNodes.length)
 
   function openPatternSheet() {
     if (!scenePatternNode?.patternId) return
@@ -298,11 +291,25 @@
         <div class="section-divider" aria-hidden="true"></div>
       {/if}
 
-      <!-- Generative node editor (when selected in scene view) -->
+      <!-- Generative node actions (when selected in scene view) -->
       {#if selectedGenNode}
-        <DockGenerativeEditor node={selectedGenNode} />
+        <span class="section-label">{selectedGenNode.generative!.engine.toUpperCase()}</span>
         <div class="node-actions">
-          <button class="btn-delete-node" onpointerdown={() => { sceneDeleteNode(selectedGenNode.id); ui.selectedSceneNodes = {} }}
+          <button class="btn-action-node" onpointerdown={() => {
+            const eng = selectedGenNode.generative!.engine
+            if (eng === 'tonnetz') { ui.tonnetzNodeId = selectedGenNode.id; ui.phraseView = 'tonnetz' }
+            else if (eng === 'quantizer') { ui.quantizerNodeId = selectedGenNode.id; ui.phraseView = 'quantizer' }
+            else if (eng === 'turing') { ui.turingNodeId = selectedGenNode.id; ui.phraseView = 'turing' }
+          }}
+            data-tip="Open editor" data-tip-ja="エディタを開く"
+          >Edit</button>
+          <button class="btn-delete-node" onpointerdown={() => {
+            // Close sheet if this node's editor is open
+            if (ui.tonnetzNodeId === selectedGenNode.id) { ui.tonnetzNodeId = null; ui.phraseView = 'pattern' }
+            if (ui.quantizerNodeId === selectedGenNode.id) { ui.quantizerNodeId = null; ui.phraseView = 'pattern' }
+            if (ui.turingNodeId === selectedGenNode.id) { ui.turingNodeId = null; ui.phraseView = 'pattern' }
+            sceneDeleteNode(selectedGenNode.id); ui.selectedSceneNodes = {}
+          }}
             data-tip="Remove node" data-tip-ja="ノードを削除"
           >✕ Remove</button>
         </div>
@@ -336,11 +343,6 @@
         {#if ui.dockTab === 'tracks'}
           <DockTrackEditor />
         {:else if ui.dockTab === 'scene'}
-          {#if connectedGenerativeNodes.length > 0}
-            {#each connectedGenerativeNodes as genNode}
-              <DockGenerativeEditor node={genNode} />
-            {/each}
-          {/if}
           {#if connectedModNodes.length > 0}
             {#each connectedModNodes as modNode}
               <div class="section-divider" aria-hidden="true"></div>
@@ -443,7 +445,7 @@
               </div>
             {/each}
           {/if}
-          {#if connectedGenerativeNodes.length === 0 && connectedModNodes.length === 0}
+          {#if connectedModNodes.length === 0}
             <div class="empty-hint">{lang.value === 'ja' ? 'ノード未接続' : 'No nodes connected'}</div>
           {/if}
         {/if}

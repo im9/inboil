@@ -436,6 +436,10 @@
         if (eraserMode) {
           const node = song.scene.nodes.find(n => n.id === nodeId)
           if (node && !node.root) {
+            // Close sheet if this node's editor is open
+            if (ui.tonnetzNodeId === nodeId) { ui.tonnetzNodeId = null; ui.phraseView = 'pattern' }
+            if (ui.quantizerNodeId === nodeId) { ui.quantizerNodeId = null; ui.phraseView = 'pattern' }
+            if (ui.turingNodeId === nodeId) { ui.turingNodeId = null; ui.phraseView = 'pattern' }
             pushUndo('Delete node')
             sceneDeleteNode(nodeId)
             ui.selectedSceneNodes = {}
@@ -1277,8 +1281,8 @@
 
     <SceneNodePopup />
 
-    <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} />
-    <SceneStamps {zoom} {panX} {panY} {viewEl} />
+    <SceneLabels bind:this={sceneLabelsRef} {zoom} {panX} {panY} {viewEl} {eraserMode} />
+    <SceneStamps {zoom} {panX} {panY} {viewEl} {eraserMode} />
   </div>
 
   <!-- UI controls (outside zoom/pan transform) -->

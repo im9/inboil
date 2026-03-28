@@ -5,11 +5,14 @@
   import { WORLD_W, WORLD_H, toNormScene } from '../sceneGeometry.ts'
   import { STAMP_LIBRARY } from '../stampLibrary.ts'
 
-  const { zoom, panX, panY, viewEl }: {
+  import { sceneDeleteStamp } from '../sceneActions.ts'
+
+  const { zoom, panX, panY, viewEl, eraserMode }: {
     zoom: number
     panX: number
     panY: number
     viewEl: HTMLDivElement
+    eraserMode?: boolean
   } = $props()
 
   let draggingStamp: string | null = $state(null)
@@ -62,6 +65,11 @@
       "
       onpointerdown={(e: PointerEvent) => {
         e.stopPropagation()
+        if (eraserMode) {
+          pushUndo('Delete stamp')
+          sceneDeleteStamp(stamp.id)
+          return
+        }
         pushUndo('Move stamp')
         ui.selectedSceneNodes = {}
         ui.selectedSceneEdge = null

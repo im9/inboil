@@ -2,6 +2,7 @@
   import type { TuringParams } from '../types.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, sceneSetSeed, autoGenerateFromNode } from '../sceneActions.ts'
+  import GenSheetCommon from './GenSheetCommon.svelte'
   import { turingSimulate } from '../generative.ts'
   import type { TuringStepSnapshot } from '../generative.ts'
 
@@ -152,6 +153,7 @@
     <div class="t-row hint">
       <span>tap bit = re-roll · FREEZE = lock pattern · ROLL = new seed</span>
     </div>
+    <GenSheetCommon {nodeId} />
   </div>
 
   <!-- Register ring + output history side by side -->

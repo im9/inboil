@@ -2,6 +2,7 @@
   import type { QuantizerParams, QuantizerChord, HarmonyVoice } from '../types.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
+  import GenSheetCommon from './GenSheetCommon.svelte'
   import { SCALE_MAP, SCALE_NAMES } from '../generative.ts'
 
   const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -302,6 +303,7 @@
     <div class="q-row hint">
       <span>tap = set root</span>
     </div>
+    <GenSheetCommon {nodeId} />
   </div>
 
   <!-- Keyboard visualization (centered like Tonnetz lattice) -->

@@ -4,11 +4,12 @@
   import { TAP_THRESHOLD, PAD_INSET } from '../constants.ts'
   import { WORLD_W, WORLD_H, toNormScene } from '../sceneGeometry.ts'
 
-  const { zoom, panX, panY, viewEl }: {
+  const { zoom, panX, panY, viewEl, eraserMode }: {
     zoom: number
     panX: number
     panY: number
     viewEl: HTMLDivElement
+    eraserMode?: boolean
   } = $props()
 
   let editingLabelId: string | null = $state(null)
@@ -79,6 +80,11 @@
       "
       onpointerdown={(e: PointerEvent) => {
         e.stopPropagation()
+        if (eraserMode) {
+          pushUndo('Delete label')
+          sceneDeleteLabel(label.id)
+          return
+        }
         pushUndo('Move label')
         ui.selectedSceneNodes = {}
         ui.selectedSceneEdge = null

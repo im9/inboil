@@ -2,6 +2,7 @@
   import type { TonnetzParams, TonnetzAnchor } from '../state.svelte.ts'
   import { song, ui, playback, pushUndo } from '../state.svelte.ts'
   import { sceneUpdateGenerativeParams, autoGenerateFromNode } from '../sceneActions.ts'
+  import GenSheetCommon from './GenSheetCommon.svelte'
   import { applyTonnetzOp } from '../generative.ts'
   import { engine } from '../audio/engine.ts'
 
@@ -541,6 +542,7 @@
     <div class="tonnetz-row hint">
       <span data-tip="P = flip major/minor · L = semitone shift · R = relative major/minor" data-tip-ja="P = 長短反転 · L = 半音移動 · R = 平行調">tap = set start · drag = draw path · long-press = add anchor</span>
     </div>
+    <GenSheetCommon {nodeId} />
   </div>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
