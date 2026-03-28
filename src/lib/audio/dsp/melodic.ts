@@ -1120,8 +1120,8 @@ class WTCore {
       sumL += sigNeg * (1 + pan); sumR += sigNeg * (1 - pan)
     }
 
-    let sigL = Math.tanh(sumL * gain * 0.5 * 1.8)
-    let sigR = Math.tanh(sumR * gain * 0.5 * 1.8)
+    let sigL = Math.tanh(sumL * gain * 1.8)
+    let sigR = Math.tanh(sumR * gain * 1.8)
 
     // Filter (shared, applied to L and R)
     const fc = Math.min(

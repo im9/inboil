@@ -203,5 +203,5 @@ export function normalizeParam(def: ParamDef, actual: number): number {
 /** Map 0–1 from Knob → actual value in physical units */
 export function denormalizeParam(def: ParamDef, normalized: number): number {
   const raw = def.min + normalized * (def.max - def.min)
-  return def.step ? Math.round(raw / def.step) * def.step : raw
+  return def.step ? Math.round((raw - def.min) / def.step) * def.step + def.min : raw
 }
