@@ -4,13 +4,15 @@
   import { engine } from '$app/lib/audio/engine.ts'
   import { advanceSceneNode, hasScenePlayback } from '$app/lib/scenePlayback.ts'
   import { initTutorialPatterns } from './tutorialSetup.ts'
-  import SceneView from '$app/lib/components/SceneView.svelte'
-  import DockPanel from '$app/lib/components/DockPanel.svelte'
+  import TuringSheet from '$app/lib/components/TuringSheet.svelte'
+  import QuantizerSheet from '$app/lib/components/QuantizerSheet.svelte'
+  import TonnetzSheet from '$app/lib/components/TonnetzSheet.svelte'
   import type { GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams } from '$app/lib/types.ts'
 
   const { engine: engineType = 'turing' }: { engine?: GenerativeEngine } = $props()
 
   let audioReady = $state(false)
+  let error = $state('')
 
   const engineCtx = $derived({
     fxFlavours: { verb: 'room' as const, delay: 'sync' as const, glitch: 'glitch' as const, granular: 'cloud' as const },
@@ -60,8 +62,10 @@
   song.scene.labels = []
   song.scene.stamps = []
 
-  // Pre-select the generator node so DockPanel shows its controls
-  ui.selectedSceneNodes = { [genId]: true }
+  // Point each sheet to its generator node
+  if (engineType === 'turing') ui.turingNodeId = genId
+  else if (engineType === 'quantizer') ui.quantizerNodeId = genId
+  else if (engineType === 'tonnetz') ui.tonnetzNodeId = genId
 
   // Sync pattern data to engine reactively
   let rafId = 0
@@ -78,6 +82,7 @@
   })
 
   async function play() {
+    if (playback.playing) return
     try {
       await engine.init()
       audioReady = true
@@ -105,8 +110,8 @@
       engine.sendPatternByIndex(song, perf, undefined, engineCtx, false, patternIndex)
       await engine.play()
       playback.playing = true
-    } catch (e) {
-      console.error('Audio init failed', e)
+    } catch {
+      error = 'Audio not available'
     }
   }
 
@@ -120,23 +125,85 @@
   }
 </script>
 
-<div class="playground pg-generator">
-  <SceneView onplay={play} onstop={stop} />
-  <div class="pg-dock-wrap">
-    <DockPanel />
+<div class="transport-demo not-content">
+  <div class="transport-bar">
+    {#if !playback.playing}
+      <button class="btn btn-play" onclick={play}>▶ Play</button>
+    {:else}
+      <button class="btn btn-stop" onclick={stop}>■ Stop</button>
+    {/if}
+    <span class="bpm-label">BPM {song.bpm}</span>
+    {#if error}<span class="error">{error}</span>{/if}
+  </div>
+  <div class="playground pg-generator">
+    {#if engineType === 'turing'}
+      <TuringSheet onclose={() => {}} />
+    {:else if engineType === 'quantizer'}
+      <QuantizerSheet onclose={() => {}} />
+    {:else}
+      <TonnetzSheet onclose={() => {}} />
+    {/if}
   </div>
 </div>
 
 <style>
-  .pg-generator {
-    flex-direction: row;
-    height: 400px;
+  .transport-demo {
+    border-radius: 12px;
+    overflow: hidden;
+    --c-bg:      #1E2028;
+    --c-fg:      #EDE8DC;
+    --c-olive:   #787845;
+    --c-salmon:  #E8A090;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
-  .pg-dock-wrap {
-    width: 280px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    background: var(--color-fg);
-    color: var(--color-bg);
+
+  .transport-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--c-bg);
+    color: var(--c-fg);
+    font-family: var(--font-mono);
+    font-size: var(--fs-base);
+    border-radius: 12px 12px 0 0;
+  }
+
+  .btn {
+    height: 28px;
+    line-height: 26px;
+    padding: 0 10px;
+    border: 1.5px solid;
+    border-radius: 3px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: var(--fs-base);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    user-select: none;
+    touch-action: none;
+    box-sizing: border-box;
+    transition: background 0.1s, color 0.1s;
+  }
+
+  .btn-play { border-color: var(--c-olive); color: var(--c-fg); }
+  .btn-play:hover { background: var(--c-olive); }
+  .btn-stop { border-color: var(--c-salmon); color: var(--c-fg); }
+  .btn-stop:hover { background: var(--c-salmon); color: var(--c-bg); }
+
+  .bpm-label { opacity: 0.5; font-size: var(--fs-lg); }
+  .error { color: var(--c-salmon); }
+
+  .pg-generator {
+    height: 480px;
+    border-radius: 0 0 12px 12px;
+  }
+
+  /* Hide close button inside playground — sheets are always visible here */
+  .pg-generator :global(.t-close),
+  .pg-generator :global(.q-close),
+  .pg-generator :global(.tonnetz-close) {
+    display: none;
   }
 </style>
