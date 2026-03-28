@@ -75,11 +75,12 @@
   {@const accent = BUBBLE_ACCENT[item.type as string]}
   <button
     class="bubble-item"
+    class:accent={!!accent}
     style="
-      left: {bx - 16}px;
-      top: {by - 16}px;
+      left: {bx - 17}px;
+      top: {by - 17}px;
       transition-delay: {i * 30}ms;
-      {accent ? `border-color: ${accent}; box-shadow: 0 0 0 1.5px ${accent}, 0 2px 8px rgba(30,32,40,0.15);` : ''}
+      {accent ? `--bubble-accent: ${accent}` : ''}
     "
     data-tip={item.tip} data-tip-ja={item.tipJa}
     onpointerdown={e => { e.stopPropagation(); onpick(item.type) }}
@@ -140,27 +141,37 @@
   }
   .bubble-item {
     position: absolute;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    border: 1.5px solid var(--lz-border-strong);
-    background: var(--color-fg);
-    color: rgba(237, 232, 220, 0.85);
+    border: none;
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(30, 32, 40, 0.50);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 2px 8px var(--lz-border-strong);
+    box-shadow: 0 1px 3px rgba(30, 32, 40, 0.1);
     animation: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transition: transform 80ms, box-shadow 80ms, color 80ms, background 80ms;
   }
   .bubble-item:hover {
-    background: rgba(30, 32, 40, 0.7);
-    color: white;
-    transform: scale(1.15);
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(30, 32, 40, 0.15);
+    color: var(--color-fg);
   }
   .bubble-item:active {
     transform: scale(0.95);
+  }
+  /* Generative tool accent ring */
+  .bubble-item.accent {
+    border: 2px solid var(--bubble-accent);
+    color: var(--bubble-accent);
+  }
+  .bubble-item.accent:hover {
+    color: var(--bubble-accent);
+    background: rgba(255, 255, 255, 0.95);
   }
   @keyframes bubble-pop {
     from { opacity: 0; transform: scale(0.3); }
@@ -168,6 +179,6 @@
   }
 
   @media (pointer: coarse) {
-    .bubble-item { width: 36px; height: 36px; }
+    .bubble-item { width: 38px; height: 38px; }
   }
 </style>
