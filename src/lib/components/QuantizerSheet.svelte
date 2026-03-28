@@ -526,6 +526,7 @@
     justify-content: center;
     padding: 12px;
     touch-action: none;
+    position: relative;
   }
   .key-rect {
     cursor: pointer;
@@ -547,12 +548,19 @@
 
   /* ── Playback status ── */
   .q-status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 0 0;
+    padding: 4px 12px;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--lz-border);
     font-family: var(--font-data);
     font-size: var(--fs-md);
+    z-index: 1;
   }
   .status-label { opacity: 0.5; }
   .status-note { font-weight: 700; }

@@ -24,9 +24,9 @@
 
   const COL_COUNT = 7
   const ROW_COUNT = 5
-  const TRI_W = 60
-  const TRI_H = 52
-  const PAD = 30
+  const TRI_W = 80
+  const TRI_H = 70
+  const PAD = 40
 
   function noteAt(row: number, col: number, centerNote: number): number {
     const cr = Math.floor(ROW_COUNT / 2)
@@ -377,172 +377,26 @@
 <div class="tonnetz-sheet">
   <div class="tonnetz-header">
     <span class="tonnetz-title">TONNETZ</span>
-    <span class="tonnetz-chord-name">{NOTE_NAMES[params.startChord[0] % 12]}{(params.startChord[1] - params.startChord[0]) === 3 ? 'm' : ''}</span>
     <button class="tonnetz-close" onpointerdown={onclose}>×</button>
   </div>
 
-  <!-- Playback chord trail -->
-  {#if currentStep >= 0}
-    <div class="chord-trail" bind:this={trailEl}>
-      {#each visibleWalk as wp, i}
-        {@const tri = findTri(wp.pcs)}
-        {#if tri}
-          {#if i > 0}<span class="trail-arrow">→</span>{/if}
-          <span class="trail-chord" class:now={i === visibleWalk.length - 1}>{tri.label}</span>
-        {/if}
-      {/each}
-    </div>
-  {/if}
-
-  <div class="tonnetz-controls">
-    <div class="tonnetz-row">
-      <span class="ctl-label">SEQ</span>
-      <div class="seq-pills">
-        {#each params.sequence as op, idx}
-          <select class="seq-pill-select"
-            data-tip={OP_TIPS[op]?.en ?? ''} data-tip-ja={OP_TIPS[op]?.ja ?? ''}
-            onchange={e => setOp(idx, (e.target as HTMLSelectElement).value)}
-          >
-            {#each ['', 'P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR'] as o}
-              <option value={o} selected={op === o}>{o || '·'}</option>
-            {/each}
-          </select>
-        {/each}
-        <button class="pill-btn" onpointerdown={() => addOp('P')}>+</button>
-        {#if params.sequence.length > 1}
-          <button class="pill-btn" onpointerdown={removeLastOp}>−</button>
-        {/if}
-      </div>
-    </div>
-    <div class="tonnetz-row">
-      <span class="ctl-label"
-        data-tip="Steps per transform — how many steps each chord is held"
-        data-tip-ja="変換レート — 各コードが保持されるステップ数"
-      >RATE</span>
-      <span class="rate-val">{params.stepsPerTransform ?? 1}</span>
-      <input class="rate-slider" type="range" min="1" max="64"
-        value={params.stepsPerTransform ?? 1}
-        oninput={e => {
-          const v = parseInt((e.target as HTMLInputElement).value)
-          sceneUpdateGenerativeParams(nodeId, { stepsPerTransform: v })
-          autoGenerateFromNode(nodeId)
-        }}
-      />
-      <span class="ctl-label">VOICE</span>
-      <select class="ctl-select"
-        onchange={e => { sceneUpdateGenerativeParams(nodeId, { voicing: (e.target as HTMLSelectElement).value as TonnetzParams['voicing'] }); autoGenerateFromNode(nodeId) }}
-      >
-        {#each ['close', 'spread', 'drop2'] as v}
-          <option value={v} selected={params.voicing === v}>{v}</option>
-        {/each}
-      </select>
-      <span class="ctl-label"
-        data-tip="Chord quality — triad (3 notes) or 7th (4 notes)"
-        data-tip-ja="コードの種類 — トライアド（3音）または7th（4音）"
-      >CHORD</span>
-      <select class="ctl-select"
-        onchange={e => {
-          const v = (e.target as HTMLSelectElement).value
-          sceneUpdateGenerativeParams(nodeId, { chordQuality: v === 'triad' ? undefined : v } as Partial<TonnetzParams>)
-          autoGenerateFromNode(nodeId)
-        }}
-      >
-        {#each ['triad', '7th'] as q}
-          <option value={q} selected={(params.chordQuality ?? 'triad') === q}>{q}</option>
-        {/each}
-      </select>
-      <span class="ctl-label">RHYTHM</span>
-      <select class="ctl-select"
-        onchange={e => {
-          const v = (e.target as HTMLSelectElement).value
-          const rhythm = v === 'all' ? undefined : v === 'turing' ? { preset: 'turing', length: 8, lock: 0.7 } : v
-          sceneUpdateGenerativeParams(nodeId, { rhythm } as Partial<TonnetzParams>)
-          autoGenerateFromNode(nodeId)
-        }}
-      >
-        {#each ['all', 'legato', 'offbeat', 'onbeat', 'syncopated', 'turing'] as r}
-          <option value={r} selected={rhythmKey === r}>{r}</option>
-        {/each}
-      </select>
-      <span class="ctl-label"
-        data-tip="Arpeggio — cycle chord notes across steps instead of full chords"
-        data-tip-ja="アルペジオ — コード全音ではなく1音ずつステップに割り当て"
-      >ARP</span>
-      <select class="ctl-select"
-        onchange={e => {
-          const v = (e.target as HTMLSelectElement).value
-          sceneUpdateGenerativeParams(nodeId, { arp: v === 'off' ? undefined : { mode: v } } as Partial<TonnetzParams>)
-          autoGenerateFromNode(nodeId)
-        }}
-      >
-        {#each ['off', 'up', 'down', 'updown', 'random'] as a}
-          <option value={a} selected={(params.arp?.mode ?? 'off') === a}>{a}</option>
-        {/each}
-      </select>
-    </div>
-    <!-- Turing rhythm params -->
-    {#if rhythmKey === 'turing' && params.rhythm && typeof params.rhythm === 'object' && !Array.isArray(params.rhythm) && 'lock' in params.rhythm}
-      {@const tr = params.rhythm as { preset: 'turing'; length: number; lock: number; seed?: number }}
-      <div class="tonnetz-row">
-        <span class="ctl-label"
-          data-tip="Turing register length — shorter = faster repetition"
-          data-tip-ja="チューリングレジスタ長 — 短いほどパターンが早く繰り返す"
-        >LEN</span>
-        <span class="rate-val">{tr.length}</span>
-        <input class="rate-slider" type="range" min="2" max="32"
-          value={tr.length}
-          oninput={e => {
-            const v = parseInt((e.target as HTMLInputElement).value)
-            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, length: v } } as Partial<TonnetzParams>)
-            autoGenerateFromNode(nodeId)
-          }}
-        />
-        <span class="ctl-label"
-          data-tip="Lock — 1.0 = frozen loop, 0.0 = fully random"
-          data-tip-ja="ロック — 1.0 = 固定ループ、0.0 = 完全ランダム"
-        >LOCK</span>
-        <span class="rate-val">{tr.lock.toFixed(1)}</span>
-        <input class="rate-slider" type="range" min="0" max="100"
-          value={Math.round(tr.lock * 100)}
-          oninput={e => {
-            const v = parseInt((e.target as HTMLInputElement).value) / 100
-            sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, lock: v } } as Partial<TonnetzParams>)
-            autoGenerateFromNode(nodeId)
-          }}
-        />
-      </div>
-    {/if}
-    <!-- Anchors -->
-    {#if params.anchors?.length}
-      <div class="tonnetz-row">
-        <span class="ctl-label"
-          data-tip="Chord reset points — long-press a triangle to add"
-          data-tip-ja="コードリセット地点 — 三角形を長押しで追加"
-        >ANCHORS</span>
-        <div class="anchor-list">
-          {#each params.anchors as anchor, i}
-            {@const n = NOTE_NAMES[anchor.chord[0] % 12]}
-            {@const q = (anchor.chord[1] - anchor.chord[0]) === 3 ? 'm' : ''}
-            <span class="anchor-badge">
-              @<input class="anchor-step-input" type="number" min="0" max={totalSteps - 1}
-                value={anchor.step}
-                onchange={e => setAnchorStep(i, parseInt((e.target as HTMLInputElement).value) || 0)}
-              />
-              {n}{q}
-              <button class="anchor-rm" onpointerdown={() => removeAnchor(i)}>×</button>
-            </span>
+  <!-- Main body: 2-column layout -->
+  <div class="tonnetz-body">
+    <!-- Left: Lattice visualization -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="tonnetz-lattice" onpointerup={endDrag} onpointerleave={endDrag}>
+      <!-- Playback chord trail -->
+      {#if currentStep >= 0}
+        <div class="chord-trail" bind:this={trailEl}>
+          {#each visibleWalk as wp, i}
+            {@const tri = findTri(wp.pcs)}
+            {#if tri}
+              {#if i > 0}<span class="trail-arrow">→</span>{/if}
+              <span class="trail-chord" class:now={i === visibleWalk.length - 1}>{tri.label}</span>
+            {/if}
           {/each}
         </div>
-      </div>
-    {/if}
-    <div class="tonnetz-row hint">
-      <span data-tip="P = flip major/minor · L = semitone shift · R = relative major/minor" data-tip-ja="P = 長短反転 · L = 半音移動 · R = 平行調">tap = set start · drag = draw path · long-press = add anchor</span>
-    </div>
-    <GenSheetCommon {nodeId} />
-  </div>
-
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="tonnetz-lattice" onpointerup={endDrag} onpointerleave={endDrag}>
+      {/if}
     <svg width={svgW} height={svgH} viewBox="0 0 {svgW} {svgH}">
       <!-- Walk trail lines -->
       {#if walkTrailPoints.length > 1}
@@ -606,6 +460,171 @@
         <text x={anchor.cx} y={anchor.cy - 10} class="anchor-step-label">@{anchor.step}</text>
       {/each}
     </svg>
+    </div>
+
+    <!-- Right: Controls -->
+    <div class="tonnetz-controls">
+      <fieldset class="tn-group">
+        <legend>Sequence</legend>
+        <div class="tonnetz-row">
+          <span class="ctl-label">SEQ</span>
+          <div class="seq-pills">
+            {#each params.sequence as op, idx}
+              <select class="seq-pill-select"
+                data-tip={OP_TIPS[op]?.en ?? ''} data-tip-ja={OP_TIPS[op]?.ja ?? ''}
+                onchange={e => setOp(idx, (e.target as HTMLSelectElement).value)}
+              >
+                {#each ['', 'P', 'L', 'R', 'PL', 'PR', 'LR', 'PLR'] as o}
+                  <option value={o} selected={op === o}>{o || '·'}</option>
+                {/each}
+              </select>
+            {/each}
+            <button class="pill-btn" onpointerdown={() => addOp('P')}>+</button>
+            {#if params.sequence.length > 1}
+              <button class="pill-btn" onpointerdown={removeLastOp}>−</button>
+            {/if}
+          </div>
+        </div>
+        <div class="tonnetz-row">
+          <span class="ctl-label"
+            data-tip="Steps per transform — how many steps each chord is held"
+            data-tip-ja="変換レート — 各コードが保持されるステップ数"
+          >RATE</span>
+          <span class="rate-val">{params.stepsPerTransform ?? 1}</span>
+          <input class="rate-slider" type="range" min="1" max="64"
+            value={params.stepsPerTransform ?? 1}
+            oninput={e => {
+              const v = parseInt((e.target as HTMLInputElement).value)
+              sceneUpdateGenerativeParams(nodeId, { stepsPerTransform: v })
+              autoGenerateFromNode(nodeId)
+            }}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset class="tn-group">
+        <legend>Voicing</legend>
+        <div class="tonnetz-row">
+          <span class="ctl-label">VOICE</span>
+          <select class="ctl-select"
+            onchange={e => { sceneUpdateGenerativeParams(nodeId, { voicing: (e.target as HTMLSelectElement).value as TonnetzParams['voicing'] }); autoGenerateFromNode(nodeId) }}
+          >
+            {#each ['close', 'spread', 'drop2'] as v}
+              <option value={v} selected={params.voicing === v}>{v}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="tonnetz-row">
+          <span class="ctl-label"
+            data-tip="Chord quality — triad (3 notes) or 7th (4 notes)"
+            data-tip-ja="コードの種類 — トライアド（3音）または7th（4音）"
+          >CHORD</span>
+          <select class="ctl-select"
+            onchange={e => {
+              const v = (e.target as HTMLSelectElement).value
+              sceneUpdateGenerativeParams(nodeId, { chordQuality: v === 'triad' ? undefined : v } as Partial<TonnetzParams>)
+              autoGenerateFromNode(nodeId)
+            }}
+          >
+            {#each ['triad', '7th'] as q}
+              <option value={q} selected={(params.chordQuality ?? 'triad') === q}>{q}</option>
+            {/each}
+          </select>
+        </div>
+        <div class="tonnetz-row">
+          <span class="ctl-label">RHYTHM</span>
+          <select class="ctl-select"
+            onchange={e => {
+              const v = (e.target as HTMLSelectElement).value
+              const rhythm = v === 'all' ? undefined : v === 'turing' ? { preset: 'turing', length: 8, lock: 0.7 } : v
+              sceneUpdateGenerativeParams(nodeId, { rhythm } as Partial<TonnetzParams>)
+              autoGenerateFromNode(nodeId)
+            }}
+          >
+            {#each ['all', 'legato', 'offbeat', 'onbeat', 'syncopated', 'turing'] as r}
+              <option value={r} selected={rhythmKey === r}>{r}</option>
+            {/each}
+          </select>
+        </div>
+        <!-- Turing rhythm params -->
+        {#if rhythmKey === 'turing' && params.rhythm && typeof params.rhythm === 'object' && !Array.isArray(params.rhythm) && 'lock' in params.rhythm}
+          {@const tr = params.rhythm as { preset: 'turing'; length: number; lock: number; seed?: number }}
+          <div class="tonnetz-row">
+            <span class="ctl-label"
+              data-tip="Turing register length — shorter = faster repetition"
+              data-tip-ja="チューリングレジスタ長 — 短いほどパターンが早く繰り返す"
+            >LEN</span>
+            <span class="rate-val">{tr.length}</span>
+            <input class="rate-slider" type="range" min="2" max="32"
+              value={tr.length}
+              oninput={e => {
+                const v = parseInt((e.target as HTMLInputElement).value)
+                sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, length: v } } as Partial<TonnetzParams>)
+                autoGenerateFromNode(nodeId)
+              }}
+            />
+          </div>
+          <div class="tonnetz-row">
+            <span class="ctl-label"
+              data-tip="Lock — 1.0 = frozen loop, 0.0 = fully random"
+              data-tip-ja="ロック — 1.0 = 固定ループ、0.0 = 完全ランダム"
+            >LOCK</span>
+            <span class="rate-val">{tr.lock.toFixed(1)}</span>
+            <input class="rate-slider" type="range" min="0" max="100"
+              value={Math.round(tr.lock * 100)}
+              oninput={e => {
+                const v = parseInt((e.target as HTMLInputElement).value) / 100
+                sceneUpdateGenerativeParams(nodeId, { rhythm: { ...tr, lock: v } } as Partial<TonnetzParams>)
+                autoGenerateFromNode(nodeId)
+              }}
+            />
+          </div>
+        {/if}
+        <div class="tonnetz-row">
+          <span class="ctl-label"
+            data-tip="Arpeggio — cycle chord notes across steps instead of full chords"
+            data-tip-ja="アルペジオ — コード全音ではなく1音ずつステップに割り当て"
+          >ARP</span>
+          <select class="ctl-select"
+            onchange={e => {
+              const v = (e.target as HTMLSelectElement).value
+              sceneUpdateGenerativeParams(nodeId, { arp: v === 'off' ? undefined : { mode: v } } as Partial<TonnetzParams>)
+              autoGenerateFromNode(nodeId)
+            }}
+          >
+            {#each ['off', 'up', 'down', 'updown', 'random'] as a}
+              <option value={a} selected={(params.arp?.mode ?? 'off') === a}>{a}</option>
+            {/each}
+          </select>
+        </div>
+      </fieldset>
+
+      <!-- Anchors (only when present) -->
+      {#if params.anchors?.length}
+        <fieldset class="tn-group">
+          <legend>Anchors</legend>
+          <div class="anchor-list">
+            {#each params.anchors as anchor, i}
+              {@const n = NOTE_NAMES[anchor.chord[0] % 12]}
+              {@const q = (anchor.chord[1] - anchor.chord[0]) === 3 ? 'm' : ''}
+              <span class="anchor-badge">
+                @<input class="anchor-step-input" type="number" min="0" max={totalSteps - 1}
+                  value={anchor.step}
+                  onchange={e => setAnchorStep(i, parseInt((e.target as HTMLInputElement).value) || 0)}
+                />
+                {n}{q}
+                <button class="anchor-rm" onpointerdown={() => removeAnchor(i)}>×</button>
+              </span>
+            {/each}
+          </div>
+        </fieldset>
+      {/if}
+
+      <fieldset class="tn-group">
+        <legend>Target</legend>
+        <GenSheetCommon {nodeId} />
+      </fieldset>
+    </div>
   </div>
 </div>
 {/if}
@@ -630,12 +649,6 @@
     font-weight: 700;
     letter-spacing: 0.12em;
   }
-  .tonnetz-chord-name {
-    font-family: var(--font-data);
-    font-size: var(--fs-lg);
-    font-weight: 700;
-    color: var(--color-olive);
-  }
   .tonnetz-close {
     width: 24px; height: 24px;
     border: 1px solid var(--color-fg);
@@ -644,14 +657,23 @@
     display: flex; align-items: center; justify-content: center;
     margin-left: auto;
   }
+  /* ── 2-column body: lattice (left) + controls (right) ── */
+  .tonnetz-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
   .tonnetz-lattice {
     flex: 1;
+    min-width: 0;
     overflow: auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 8px;
     touch-action: none;
+    position: relative;
   }
   .tri {
     stroke: var(--color-fg);
@@ -678,7 +700,7 @@
   .tri.playing:hover { fill: #fff; }
   .tri-label {
     font-family: var(--font-data);
-    font-size: 9px; font-weight: 700;
+    font-size: 11px; font-weight: 700;
     fill: var(--color-fg);
     text-anchor: middle;
     pointer-events: none; user-select: none;
@@ -701,6 +723,10 @@
     stroke-linecap: round;
   }
   .chord-trail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -708,9 +734,11 @@
     font-family: var(--font-data);
     font-size: var(--fs-md);
     overflow-x: auto;
+    background: var(--color-bg);
     border-bottom: 1px solid var(--lz-border);
     scroll-behavior: smooth;
     white-space: nowrap;
+    z-index: 1;
   }
   .trail-chord {
     font-weight: 700;
@@ -723,18 +751,34 @@
   }
   .trail-arrow { opacity: 0.2; flex-shrink: 0; }
 
+  /* ── Right: Controls (fixed width) ── */
   .tonnetz-controls {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--lz-border);
-    display: flex; flex-direction: column; gap: 6px;
+    width: 280px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--lz-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .tn-group {
+    border: 1px solid var(--lz-border);
+    padding: 6px 8px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tn-group legend {
+    font-family: var(--font-data);
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em;
+    opacity: 0.4;
+    padding: 0 4px;
   }
   .tonnetz-row {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  }
-  .tonnetz-row.hint {
-    opacity: 0.4;
-    font-family: var(--font-data);
-    font-size: 8px;
   }
   .ctl-label {
     font-family: var(--font-data);
