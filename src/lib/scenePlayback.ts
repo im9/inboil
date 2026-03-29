@@ -166,12 +166,20 @@ function collectLiveChain(startId: string): SceneNode[] {
 
 // ── Graph traversal ─────────────────────────────────────────────────
 
+/** Reset perf toggles (fill/rev/brk) on pattern transition — these are momentary, not carry-over. */
+function resetPerfToggles(): void {
+  if (perf.filling) perf.filling = false
+  if (perf.reversing) perf.reversing = false
+  if (perf.breaking) perf.breaking = false
+}
+
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
   if (node.type === 'pattern') {
     // No snapshot restore — previous sweep values carry over as next pattern's baseline.
     // Satellite modifiers handle their own resets (fx on/off, transpose).
+    resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
     clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
@@ -206,6 +214,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     if (node.type === 'pattern') {
       // No snapshot restore — previous sweep values carry over as next pattern's baseline.
       // Satellite modifiers handle their own resets (fx on/off, transpose).
+      resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
       clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
       applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
       playback.automationSnapshot = snapshotAutomationTargets()
