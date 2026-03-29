@@ -103,6 +103,11 @@
     return { ...gc, points: gc.points.map(p => ({ ...p, t: p.t * globalRemapScale })) }
   }
 
+  /** Remap a global toggle's points to pattern-local t coordinates */
+  function remapGlobalToggle(gt: SweepToggleCurve): SweepToggleCurve {
+    return { ...gt, points: gt.points.map(p => ({ ...p, t: p.t * globalRemapScale })) }
+  }
+
   /** Convert pattern-local t back to global t for saving */
   function unmapGlobalPoint(t: number): number {
     return globalRemapScale > 0 ? t / globalRemapScale : t
@@ -126,7 +131,10 @@
   // ── Selected toggle (for canvas rendering) ──
   const selectedToggle = $derived.by((): SweepToggleCurve | null => {
     if (selectedToggleIdx !== null) return sweepData.toggles?.[selectedToggleIdx] ?? null
-    if (selectedGlobalToggleIdx !== null) return globalSweep?.toggles?.[selectedGlobalToggleIdx] ?? null
+    if (selectedGlobalToggleIdx !== null) {
+      const gt = globalSweep?.toggles?.[selectedGlobalToggleIdx]
+      return gt ? remapGlobalToggle(gt) : null
+    }
     return null
   })
   const isSelectedToggleGlobal = $derived(selectedGlobalToggleIdx !== null)
@@ -1263,7 +1271,9 @@
     const toggle = toggles[toggleDragState.toggleIdx]
     if (!toggle) return
 
-    const t = pointerToT(e)
+    const localT = pointerToT(e)
+    // Global toggles: convert pattern-local t back to global t for storage
+    const t = isGlobal ? unmapGlobalPoint(localT) : localT
 
     const pts = [...toggle.points]
     const bi = toggleDragState.boundaryIdx
@@ -1287,13 +1297,15 @@
     toggleDragState = null
   }
 
-  function splitToggleBlock(toggleIdx: number, t: number, scope: 'chain' | 'global' = 'chain') {
+  function splitToggleBlock(toggleIdx: number, localT: number, scope: 'chain' | 'global' = 'chain') {
     const isGlobal = scope === 'global'
     const toggles = isGlobal ? globalSweep?.toggles : sweepData.toggles
     if (!toggles) return
     const toggle = toggles[toggleIdx]
     if (!toggle) return
     pushUndo('Split sweep toggle')
+    // Global toggles: convert pattern-local t back to global t for storage
+    const t = isGlobal ? unmapGlobalPoint(localT) : localT
     const pts = [...toggle.points]
     const gap = 0.02
     pts.push({ t: Math.max(0, t - gap / 2), on: false })

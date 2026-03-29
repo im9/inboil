@@ -78,15 +78,12 @@ export function isMuteCurve(curve: SweepCurve): boolean {
 
 // ── Global vs chain scope routing (ADR 123 Phase 5) ──
 
-/** Returns true if a target should route to global sweep (master/fx/eq/fxOn/hold).
- *  Track-scoped targets (track/send/mute) route to chain sweep. */
-export function isGlobalTarget(target: SweepTarget | SweepToggleTarget): boolean {
-  if ('param' in target) {
-    // SweepTarget (master/fx/eq → global, track/send → chain) + perf toggle (ADR 128)
-    return target.kind === 'master' || target.kind === 'fx' || target.kind === 'eq' || target.kind === 'perf'
-  }
-  // Toggle targets: fxOn and hold are global; mute is chain-scoped
-  return target.kind === 'fxOn' || target.kind === 'hold'
+/** Returns true if a target should route to global sweep.
+ *  Currently all targets are chain-scoped: automation is stored per-pattern
+ *  in each pattern's sweep node, even for global parameters (master/fx/eq).
+ *  The globalSweep field on Scene is reserved for future scene-wide automation. */
+export function isGlobalTarget(_target: SweepTarget | SweepToggleTarget): boolean {
+  return false
 }
 
 // ── Overdub merge (pure) ──

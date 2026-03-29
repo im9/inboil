@@ -329,26 +329,21 @@ describe('targetsEqual', () => {
 // ── Tests: isGlobalTarget (ADR 123 Phase 5) ──
 
 describe('isGlobalTarget', () => {
-  it('master targets are global', () => {
-    expect(isGlobalTarget({ kind: 'master', param: 'masterVolume' })).toBe(true)
-    expect(isGlobalTarget({ kind: 'master', param: 'filterCutoff' })).toBe(true)
+  it('all targets are chain-scoped (automation stored per-pattern)', () => {
+    // Target parameters may be global (affect whole mix), but automation is per-pattern
+    expect(isGlobalTarget({ kind: 'master', param: 'masterVolume' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'master', param: 'filterCutoff' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'fx', param: 'reverbWet' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'fx', param: 'delayFeedback' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'eq', band: 'eqLow', param: 'freq' })).toBe(false)
   })
 
-  it('fx targets are global', () => {
-    expect(isGlobalTarget({ kind: 'fx', param: 'reverbWet' })).toBe(true)
-    expect(isGlobalTarget({ kind: 'fx', param: 'delayFeedback' })).toBe(true)
+  it('fxOn toggles are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'fxOn', fx: 'verb' })).toBe(false)
   })
 
-  it('eq targets are global', () => {
-    expect(isGlobalTarget({ kind: 'eq', band: 'eqLow', param: 'freq' })).toBe(true)
-  })
-
-  it('fxOn toggles are global', () => {
-    expect(isGlobalTarget({ kind: 'fxOn', fx: 'verb' })).toBe(true)
-  })
-
-  it('hold toggles are global', () => {
-    expect(isGlobalTarget({ kind: 'hold', fx: 'delay' })).toBe(true)
+  it('hold toggles are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'hold', fx: 'delay' })).toBe(false)
   })
 
   it('track targets are chain-scoped', () => {
@@ -364,10 +359,10 @@ describe('isGlobalTarget', () => {
     expect(isGlobalTarget({ kind: 'mute', trackId: 0 })).toBe(false)
   })
 
-  it('perf toggles are global (ADR 128)', () => {
-    expect(isGlobalTarget({ kind: 'perf', param: 'fill' })).toBe(true)
-    expect(isGlobalTarget({ kind: 'perf', param: 'rev' })).toBe(true)
-    expect(isGlobalTarget({ kind: 'perf', param: 'brk' })).toBe(true)
+  it('perf toggles are chain-scoped (ADR 128)', () => {
+    expect(isGlobalTarget({ kind: 'perf', param: 'fill' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'perf', param: 'rev' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'perf', param: 'brk' })).toBe(false)
   })
 })
 

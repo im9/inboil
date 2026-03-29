@@ -8,6 +8,7 @@ import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
 import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
+import { calcGlobalSweepProgress, applyPerfToggle } from './scenePlaybackPure.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
 
@@ -207,10 +208,12 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
-      applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
+      // Transition order defined by buildTransitionSteps('walk'):
+      // restore → satellite → snapshot → globalSweep
       if (playback.automationSnapshot) {
         restoreAutomationSnapshot(playback.automationSnapshot)
       }
+      applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
       playback.automationSnapshot = snapshotAutomationTargets()
       reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
       applyLiveGenerative(node)
@@ -308,9 +311,9 @@ function reapplyGlobalSweep(): void {
   const snap = playback.automationSnapshot
   if (!globalSweep || !globalSweep.durationMs || !snap) return
   if (globalSweep.curves.length === 0 && (!globalSweep.toggles?.length)) return
-  const elapsedMs = performance.now() - scenePlayStartMs - (globalSweep.offsetMs ?? 0)
-  if (elapsedMs < 0) return
-  const progress = Math.min(1, elapsedMs / globalSweep.durationMs)
+  const elapsedMs = performance.now() - scenePlayStartMs
+  const progress = calcGlobalSweepProgress(elapsedMs, globalSweep.offsetMs ?? 0, globalSweep.durationMs)
+  if (progress <= 0) return
   applySweepData(globalSweep, progress, snap)
 }
 
@@ -328,8 +331,8 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
   // Global sweep evaluation (ADR 123 Phase 5)
   const globalSweep = song.scene.globalSweep
   if (globalSweep && (globalSweep.curves.length > 0 || (globalSweep.toggles?.length ?? 0) > 0) && globalSweep.durationMs) {
-    const elapsedMs = performance.now() - scenePlayStartMs - (globalSweep.offsetMs ?? 0)
-    const globalProgress = Math.max(0, Math.min(1, elapsedMs / globalSweep.durationMs))
+    const elapsedMs = performance.now() - scenePlayStartMs
+    const globalProgress = calcGlobalSweepProgress(elapsedMs, globalSweep.offsetMs ?? 0, globalSweep.durationMs)
     changed = applySweepData(globalSweep, globalProgress, snap) || changed
   }
 
@@ -371,9 +374,6 @@ const HOLD_MAP: Record<string, keyof typeof perf> = {
   verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
 }
 
-const PERF_MAP: Record<string, keyof typeof perf> = {
-  fill: 'filling', rev: 'reversing', brk: 'breaking',
-}
 
 /** Apply a single SweepData set at the given progress value. */
 function applySweepData(sweepData: SweepData, progress: number, snap: AutomationSnapshot): boolean {
@@ -484,8 +484,10 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
         const track = song.tracks.find(t => t.id === tgt.trackId)
         if (track && track.muted !== on) { track.muted = on; changed = true }
       } else if (toggle.target.kind === 'perf') {
-        const key = PERF_MAP[toggle.target.param]
-        if (key && perf[key] !== on) { (perf as unknown as Record<string, boolean>)[key] = on; changed = true }
+        const result = applyPerfToggle(toggle.target.param, on)
+        if (result && perf[result.key as keyof typeof perf] !== result.value) {
+          ;(perf as unknown as Record<string, boolean>)[result.key] = result.value; changed = true
+        }
       }
     }
   }

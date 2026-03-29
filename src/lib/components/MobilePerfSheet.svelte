@@ -69,10 +69,14 @@
     fill: '#5b8a72', reverse: '#5b8a72', break: '#c47a5a',
   }
 
+  function capturePerfIfChanged(action: PerfAction, prev: boolean, on: boolean) {
+    if (prev !== on) captureToggle(PERF_TOGGLE[action], on, PERF_COLOR[action])
+  }
+
   function setEffect(action: ZoneAction, on: boolean) {
-    if (action === 'fill') { if (isGuest()) { guestPerf('fill', on); return }; perf.filling = on; captureToggle(PERF_TOGGLE.fill, on, PERF_COLOR.fill) }
-    else if (action === 'reverse') { if (isGuest()) { guestPerf('reverse', on); return }; perf.reversing = on; captureToggle(PERF_TOGGLE.reverse, on, PERF_COLOR.reverse) }
-    else if (action === 'break') { if (isGuest()) { guestPerf('break', on); return }; perf.breaking = on; captureToggle(PERF_TOGGLE.break, on, PERF_COLOR.break) }
+    if (action === 'fill') { if (isGuest()) { guestPerf('fill', on); return }; const prev = perf.filling; perf.filling = on; capturePerfIfChanged('fill', prev, on) }
+    else if (action === 'reverse') { if (isGuest()) { guestPerf('reverse', on); return }; const prev = perf.reversing; perf.reversing = on; capturePerfIfChanged('reverse', prev, on) }
+    else if (action === 'break') { if (isGuest()) { guestPerf('break', on); return }; const prev = perf.breaking; perf.breaking = on; capturePerfIfChanged('break', prev, on) }
     else if (action === 'stutter') perf.stuttering = on
     else if (action === 'half') perf.halfSpeed = on
     else if (action === 'tape') perf.tapeStop = on

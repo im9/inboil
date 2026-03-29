@@ -45,13 +45,9 @@ export type SweepToggleTarget =
 
 ### 2. Scope routing
 
-Perf triggers are global (not per-track/per-chain), so `isGlobalTarget()` in `sweepEval.ts` must include them:
+Perf triggers are **chain-scoped** (per-pattern), so `isGlobalTarget()` returns false for them. Each pattern's sweep node stores its own fill/rev/brk automation, enabling different perf gestures per pattern (e.g. "fill on bar 4 of INTRO", "brk before BUILD drop").
 
-```typescript
-return target.kind === 'fxOn' || target.kind === 'hold' || target.kind === 'perf'
-```
-
-This routes perf toggles to `globalSweep` (scene-wide), matching how fill/rev/brk affect the entire playback engine.
+During recording, perf toggles go to `toggleCaptures` (not `globalToggleCaptures`) and get flushed at chain transitions, ensuring each pattern gets its own perf automation.
 
 ### 3. Playback application
 
@@ -134,8 +130,21 @@ The toggle target picker in SweepCanvas needs to offer perf targets alongside ex
 - **Restore/migration**: no migration needed. Old saves without `perf` toggles simply have no perf automation — backwards compatible.
 - **Conflict with manual input**: if the user manually presses Fill while sweep has it automated, `isUserControlled()` already prevents sweep from overriding manual input during recording.
 
+## Phase 2: Quantized Recording (Implemented)
+
+Perf toggle points are auto-quantized to bar boundaries during recording. `quantizeTogglePoints()` in `sweepRecorder.svelte.ts` snaps each point's `t` to the nearest bar grid (`msPerBar / totalMs`).
+
+- Only applies to `perf` kind targets — other toggles (hold/fxOn/mute) remain unquantized
+- Pure helper exported for testability
+- Bar size derived from `song.bpm` at recording time
+
+### Phase 2 Checklist
+
+- [x] Extract `quantizeTogglePoints()` as pure function
+- [x] Apply quantization in `convertGlobalToggleCaptures()` for perf targets
+- [x] Add unit tests for quantize logic
+
 ## Future Extensions
 
-- **Quantized perf triggers**: snap fill/brk boundaries to bar/beat for tighter timing
-- **Fill intensity parameter**: varying fill density (light fill vs heavy fill) as a continuous sweep curve rather than toggle
+- **Fill intensity parameter**: varying fill density (light fill vs heavy fill) as a continuous sweep curve rather than toggle (see BACKLOG)
 - **Custom break patterns**: instead of silence, allow break to trigger a specific pattern or effect tail

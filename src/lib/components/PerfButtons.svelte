@@ -19,10 +19,12 @@
 
   function setPerf(action: 'fill' | 'reverse' | 'break', on: boolean) {
     if (isGuest()) { guestPerf(action, on); return }
+    const prev = action === 'fill' ? perf.filling : action === 'reverse' ? perf.reversing : perf.breaking
     if (action === 'fill') perf.filling = on
     else if (action === 'reverse') perf.reversing = on
     else perf.breaking = on
-    captureToggle(PERF_TARGET[action], on, PERF_COLOR[action])
+    // Only capture when state actually changes — prevents spurious entries from pointerleave
+    if (prev !== on) captureToggle(PERF_TARGET[action], on, PERF_COLOR[action])
   }
 </script>
 

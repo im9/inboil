@@ -464,9 +464,31 @@ function convertGlobalToggleCaptures(totalMs: number): SweepToggleCurve[] {
       t: Math.max(0, Math.min(1, (p.timeMs - recordingStartMs) / totalMs)),
       on: p.on,
     }))
+    // Quantize perf toggle points to bar boundaries (ADR 128 Phase 2)
+    const isPerfTarget = 'param' in capture.target && capture.target.kind === 'perf'
+    if (isPerfTarget) {
+      quantizeTogglePointsToBar(points, totalMs)
+    }
     result.push({ target: capture.target, points, color: capture.color })
   }
   return result
+}
+
+/** Snap toggle point t-values to the nearest bar boundary (ADR 128 Phase 2).
+ *  Mutates points in place. */
+function quantizeTogglePointsToBar(points: { t: number; on: boolean }[], totalMs: number): void {
+  quantizeTogglePoints(points, totalMs, song.bpm)
+}
+
+/** Pure quantize helper — snap toggle t-values to nearest bar boundary.
+ *  Exported for testability. */
+export function quantizeTogglePoints(points: { t: number; on: boolean }[], totalMs: number, bpm: number): void {
+  const msPerBar = (60000 / bpm) * 4
+  const barT = msPerBar / totalMs
+  if (barT <= 0) return
+  for (const p of points) {
+    p.t = Math.max(0, Math.min(1, Math.round(p.t / barT) * barT))
+  }
 }
 
 // ── Internal ──
