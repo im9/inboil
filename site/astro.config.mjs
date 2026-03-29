@@ -8,7 +8,7 @@ import path from 'node:path';
 const appSrc = path.resolve(fileURLToPath(import.meta.url), '../../src');
 
 export default defineConfig({
-  site: 'https://inboil.pages.dev',
+  site: process.env.SITE || 'https://inboil.app',
   outDir: './dist',
   prefetch: false,
   integrations: [
@@ -24,7 +24,7 @@ export default defineConfig({
       head: [
         {
           tag: 'meta',
-          attrs: { name: 'app-url', content: process.env.PUBLIC_APP_URL || 'https://inboil.pages.dev' },
+          attrs: { name: 'app-url', content: process.env.PUBLIC_APP_URL || 'https://app.inboil.app' },
         },
         {
           tag: 'script',
@@ -45,7 +45,7 @@ export default defineConfig({
     home.className='home-link';
     hdr.appendChild(home);
     const lnk=document.createElement('a');
-    lnk.href=location.hostname==='localhost'?'http://localhost:5173':(document.head.querySelector('meta[name=app-url]')?.content||'https://inboil.pages.dev');
+    lnk.href=location.hostname==='localhost'?'http://localhost:5173':(document.head.querySelector('meta[name=app-url]')?.content||'https://app.inboil.app');
     lnk.textContent='Open App';
     lnk.className='app-link';
     lnk.target='_blank';
