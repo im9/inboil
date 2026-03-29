@@ -307,9 +307,6 @@ export function purgeOrphanModifiers(
     }
   }
   if (toRemove.size === 0) return { removed: 0, nodes, edges }
-  if (typeof console !== 'undefined') {
-    console.warn(`[ADR 093] Removing ${toRemove.size} orphan node(s):`, [...toRemove])
-  }
   edges = edges.filter(e => !toRemove.has(e.from) && !toRemove.has(e.to))
   nodes = nodes.filter(n => !toRemove.has(n.id))
   return { removed: toRemove.size, nodes, edges }
