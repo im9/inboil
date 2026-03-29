@@ -11,6 +11,19 @@
   import { PATTERN_COLORS } from '../constants.ts'
   import Knob from './Knob.svelte'
   import type { SweepCurve, SweepTarget, SweepToggleCurve, SweepToggleTarget, VoiceId } from '../types.ts'
+  import {
+    tToX as tToXPure,
+    pointerToNorm as pointerToNormPure,
+    pointerToT as pointerToTPure,
+    isInTimeline as isInTimelinePure,
+    isInToggleLane as isInToggleLanePure,
+    hitTestPoint as hitTestPointPure,
+    hitTestToggleBoundary as hitTestToggleBoundaryPure,
+    hitTestCurveNearest,
+    curveLabel as curveLabelPure,
+    toggleLabel as toggleLabelPure,
+    type ViewWindow,
+  } from '../sweepCanvasHelpers.ts'
 
   // ── Sweep node detection (follows playback during scene play) ──
   const activePatIdx = $derived(
@@ -220,8 +233,10 @@
 
   // ── Canvas rendering ──
 
+  function getViewWindow(): ViewWindow { return { viewStart, viewSpan } }
+
   function tToX(t: number, w: number): number {
-    return ((t - viewStart) / viewSpan) * w
+    return tToXPure(t, w, getViewWindow())
   }
 
   function redraw() {
@@ -751,49 +766,13 @@
     ctx.globalAlpha = 1.0
   }
 
-  // ── Target label helpers ──
+  // ── Target label helpers (delegated to sweepCanvasHelpers.ts) ──
   function curveLabel(target: SweepTarget): string {
-    if (target.kind === 'master') {
-      const labels: Record<string, string> = {
-        masterVolume: 'Volume', swing: 'Swing', compThreshold: 'Comp thr', compRatio: 'Comp rat',
-        duckDepth: 'Duck dep', duckRelease: 'Duck rel', retVerb: 'Ret verb', retDelay: 'Ret dly',
-        satDrive: 'Sat drv', satTone: 'Sat tone', filterCutoff: 'Filter freq', filterResonance: 'Filter reso',
-      }
-      return labels[target.param] ?? target.param
-    }
-    if (target.kind === 'track') {
-      const cell = pat?.cells.find(c => c.trackId === target.trackId)
-      const name = cell?.name || `Trk ${target.trackId + 1}`
-      return `${name} ${target.param}`
-    }
-    if (target.kind === 'send') {
-      const cell = pat?.cells.find(c => c.trackId === target.trackId)
-      const name = cell?.name || `Trk ${target.trackId + 1}`
-      const sendLabels: Record<string, string> = { reverbSend: 'verb', delaySend: 'dly', glitchSend: 'glitch', granularSend: 'grain' }
-      return `${name} ${sendLabels[target.param] ?? target.param}`
-    }
-    if (target.kind === 'fx') {
-      const labels: Record<string, string> = {
-        reverbWet: 'Verb wet', reverbDamp: 'Verb damp', delayTime: 'Dly time', delayFeedback: 'Dly feed',
-        glitchX: 'Glitch X', glitchY: 'Glitch Y', granularSize: 'Gran size', granularDensity: 'Gran dens',
-      }
-      return labels[target.param] ?? target.param
-    }
-    if (target.kind === 'eq') {
-      const bandLabels: Record<string, string> = { eqLow: 'Low', eqMid: 'Mid', eqHigh: 'High' }
-      return `${bandLabels[target.band] ?? target.band} ${target.param}`
-    }
-    return 'Unknown'
+    return curveLabelPure(target, pat?.cells)
   }
 
   function toggleLabel(target: SweepToggleTarget): string {
-    if (target.kind === 'hold') return `${target.fx} hold`
-    if (target.kind === 'fxOn') return `${target.fx} on`
-    if (target.kind === 'mute') {
-      const cell = pat?.cells.find(c => c.trackId === target.trackId)
-      return `${cell?.name || `Trk ${target.trackId + 1}`} mute`
-    }
-    return 'Unknown'
+    return toggleLabelPure(target, pat?.cells)
   }
 
   // ── Base value display ──
@@ -848,68 +827,41 @@
   }
 
   // ── Pointer handlers (point editing only) ──
+  // Delegated to sweepCanvasHelpers.ts for testability — local wrappers bridge reactive state.
+
+  function getGeo() {
+    const rect = canvasEl!.getBoundingClientRect()
+    return { rectLeft: rect.left, rectTop: rect.top, rectWidth: rect.width, rectHeight: rect.height }
+  }
+
   function pointerToNorm(e: PointerEvent): { t: number; v: number } {
     if (!canvasEl) return { t: 0, v: 0 }
-    const rect = canvasEl.getBoundingClientRect()
-    const timelineH = TIMELINE_H * (rect.height / canvasH)
-    const screenT = (e.clientX - rect.left) / rect.width
-    const t = Math.max(0, Math.min(1, viewStart + screenT * viewSpan))
-    const drawTop = rect.top + timelineH
-    const drawHeight = rect.height - timelineH
-    const y = (e.clientY - drawTop) / drawHeight
-    const v = Math.max(-1, Math.min(1, (0.5 - y) * 2))
-    return { t, v }
+    return pointerToNormPure(e.clientX, e.clientY, getGeo(), canvasH, TIMELINE_H, getViewWindow())
   }
 
   function isInTimeline(e: PointerEvent): boolean {
     if (!canvasEl) return false
-    const rect = canvasEl.getBoundingClientRect()
-    const timelineH = TIMELINE_H * (rect.height / canvasH)
-    return (e.clientY - rect.top) < timelineH
+    return isInTimelinePure(e.clientY, getGeo(), canvasH, TIMELINE_H)
   }
 
   function isInToggleLane(e: PointerEvent): boolean {
     if (!canvasEl || !selectedToggle) return false
-    const rect = canvasEl.getBoundingClientRect()
-    const laneTop = rect.bottom - TOGGLE_LANE_H * (rect.height / canvasH)
-    return e.clientY >= laneTop
+    return isInToggleLanePure(e.clientY, getGeo(), canvasH, TOGGLE_LANE_H)
   }
 
-  /** Convert pointer event to t value using canvas coordinates */
   function pointerToT(e: PointerEvent): number {
     if (!canvasEl) return 0
-    const rect = canvasEl.getBoundingClientRect()
-    const screenT = (e.clientX - rect.left) / rect.width
-    return Math.max(0, Math.min(1, viewStart + screenT * viewSpan))
+    return pointerToTPure(e.clientX, getGeo(), getViewWindow())
   }
 
-  /** Hit-test toggle boundary handles — returns point index or -1 */
   function hitTestToggleBoundary(e: PointerEvent): number {
     if (!canvasEl || !selectedToggle) return -1
-    const rect = canvasEl.getBoundingClientRect()
-    const w = rect.width
-    for (let i = 0; i < selectedToggle.points.length; i++) {
-      const bx = tToX(selectedToggle.points[i].t, w)
-      const dx = Math.abs(e.clientX - rect.left - bx)
-      if (dx < 8) return i
-    }
-    return -1
+    return hitTestToggleBoundaryPure(e.clientX, selectedToggle.points, getGeo(), getViewWindow())
   }
 
   function hitTestPoint(e: PointerEvent): number {
     if (!selectedCurve || !canvasEl) return -1
-    const rect = canvasEl.getBoundingClientRect()
-    const w = rect.width
-    const timelineH = TIMELINE_H * (rect.height / canvasH)
-    const drawH = rect.height - timelineH
-    for (let i = 0; i < selectedCurve.points.length; i++) {
-      const px = tToX(selectedCurve.points[i].t, w)
-      const py = (0.5 - selectedCurve.points[i].v / 2) * drawH + timelineH
-      const dx = e.clientX - rect.left - px
-      const dy = e.clientY - rect.top - py
-      if (Math.sqrt(dx * dx + dy * dy) < POINT_HIT_RADIUS) return i
-    }
-    return -1
+    return hitTestPointPure(e.clientX, e.clientY, selectedCurve.points, getGeo(), canvasH, TIMELINE_H, getViewWindow(), POINT_HIT_RADIUS)
   }
 
   /** Hit-test which curve is near the pointer (for click-to-select).
@@ -919,26 +871,25 @@
     const norm = pointerToNorm(e)
     const HIT_DIST = 0.05
 
-    let best: { scope: 'chain' | 'global'; idx: number } | null = null
-    let bestDist = HIT_DIST
-
-    for (let ci = 0; ci < sweepData.curves.length; ci++) {
-      const curve = sweepData.curves[ci]
-      if (isMuteCurve(curve)) continue
-      if (curve.points.length < 2) continue
-      const v = evaluateCurve(curve.points, norm.t)
-      const dist = Math.abs(v - norm.v)
-      if (dist < bestDist) { bestDist = dist; best = { scope: 'chain', idx: ci } }
+    const chainIdx = hitTestCurveNearest(norm, sweepData.curves, HIT_DIST, isMuteCurve)
+    if (chainIdx >= 0) {
+      // Check if global is even closer
+      const remappedGlobal = globalCurves.map(remapGlobalCurve)
+      const globalIdx = hitTestCurveNearest(norm, remappedGlobal, HIT_DIST, isMuteCurve)
+      if (globalIdx >= 0) {
+        // Compare distances to pick the closest
+        const chainV = evaluateCurve(sweepData.curves[chainIdx].points, norm.t)
+        const globalV = evaluateCurve(remappedGlobal[globalIdx].points, norm.t)
+        if (Math.abs(globalV - norm.v) < Math.abs(chainV - norm.v)) {
+          return { scope: 'global', idx: globalIdx }
+        }
+      }
+      return { scope: 'chain', idx: chainIdx }
     }
-    for (let ci = 0; ci < globalCurves.length; ci++) {
-      const remapped = remapGlobalCurve(globalCurves[ci])
-      if (isMuteCurve(remapped)) continue
-      if (remapped.points.length < 2) continue
-      const v = evaluateCurve(remapped.points, norm.t)
-      const dist = Math.abs(v - norm.v)
-      if (dist < bestDist) { bestDist = dist; best = { scope: 'global', idx: ci } }
-    }
-    return best
+    const remappedGlobal = globalCurves.map(remapGlobalCurve)
+    const globalIdx = hitTestCurveNearest(norm, remappedGlobal, HIT_DIST, isMuteCurve)
+    if (globalIdx >= 0) return { scope: 'global', idx: globalIdx }
+    return null
   }
 
   function onPointerDown(e: PointerEvent) {

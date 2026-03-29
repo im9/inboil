@@ -7,7 +7,7 @@ import type { SceneNode, SceneEdge, Scene, SceneDecorator, ModifierParams, Modif
 
 // ── Clone helpers ──
 
-function cloneSweepData(sd: SweepData): SweepData {
+export function cloneSweepData(sd: SweepData): SweepData {
   const clone: SweepData = {
     curves: sd.curves.map(c => ({ ...c, target: { ...c.target }, points: c.points.map(p => ({ ...p })) })),
   }
@@ -17,7 +17,7 @@ function cloneSweepData(sd: SweepData): SweepData {
   return clone
 }
 
-function cloneModifierParams(fp: ModifierParams): ModifierParams {
+export function cloneModifierParams(fp: ModifierParams): ModifierParams {
   const clone: ModifierParams = {}
   if (fp.transpose) clone.transpose = { ...fp.transpose }
   if (fp.tempo) clone.tempo = { ...fp.tempo }

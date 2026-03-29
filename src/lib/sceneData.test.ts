@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { cloneSceneNode, cloneScene, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers } from './sceneData.ts'
-import type { SceneNode, SceneEdge, Scene, GenerativeConfig, SweepToggleCurve } from './types.ts'
+import { cloneSceneNode, cloneScene, cloneSweepData, cloneModifierParams, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers } from './sceneData.ts'
+import type { SceneNode, SceneEdge, Scene, GenerativeConfig, SweepData, SweepToggleCurve, ModifierParams } from './types.ts'
 
 // ── Helpers ──
 
@@ -339,5 +339,185 @@ describe('restoreScene (sweep migration)', () => {
     expect(s.modifierParams!.sweep!.toggles).toHaveLength(2)
     expect(s.modifierParams!.sweep!.toggles![0].target).toEqual({ kind: 'hold', fx: 'verb' })
     expect(s.modifierParams!.sweep!.toggles![1].points[0].on).toBe(true)
+  })
+})
+
+// ── Clone roundtrip tests (BACKLOG) ──
+// Fully-populated objects → clone → deepEqual + independence.
+// Catches missing fields when types change.
+
+function fullSweepData(): SweepData {
+  return {
+    curves: [
+      { target: { kind: 'master', param: 'masterVolume' }, points: [{ t: 0, v: -0.5 }, { t: 0.5, v: 0.3 }, { t: 1, v: 1 }], color: '#f00' },
+      { target: { kind: 'track', trackId: 2, param: 'volume' }, points: [{ t: 0.1, v: 0 }], color: '#0f0' },
+      { target: { kind: 'send', trackId: 1, param: 'reverbSend' }, points: [{ t: 0, v: -1 }, { t: 1, v: 1 }], color: '#00f' },
+      { target: { kind: 'fx', param: 'delayFeedback' }, points: [{ t: 0.2, v: 0.4 }], color: '#ff0' },
+      { target: { kind: 'eq', band: 'eqMid', param: 'gain' }, points: [{ t: 0, v: 0 }, { t: 1, v: 0.8 }], color: '#0ff' },
+    ],
+    toggles: [
+      { target: { kind: 'hold', fx: 'verb' }, points: [{ t: 0, on: false }, { t: 0.3, on: true }, { t: 0.7, on: false }], color: '#f0f' },
+      { target: { kind: 'fxOn', fx: 'delay' }, points: [{ t: 0.5, on: true }], color: '#fa0' },
+      { target: { kind: 'mute', trackId: 3 }, points: [{ t: 0, on: false }, { t: 1, on: true }], color: '#0af' },
+    ],
+    durationMs: 8000,
+    offsetMs: 1200,
+  }
+}
+
+function fullModifierParams(): ModifierParams {
+  return {
+    transpose: { semitones: -3, mode: 'abs', key: 7 },
+    tempo: { bpm: 145 },
+    repeat: { count: 4 },
+    fx: { verb: true, delay: false, glitch: true, granular: false, flavourOverrides: { verb: 'hall', delay: 'tape' } },
+    sweep: fullSweepData(),
+  }
+}
+
+function fullScene(): Scene {
+  return {
+    name: 'Full Test Scene',
+    nodes: [
+      { id: 'p1', type: 'pattern', x: 0.1, y: 0.2, root: true, patternId: 'pat_00' },
+      { id: 'p2', type: 'pattern', x: 0.6, y: 0.4, root: false, patternId: 'pat_01' },
+      { id: 'f1', type: 'transpose', x: 0.3, y: 0.3, root: false, modifierParams: fullModifierParams() },
+      { id: 'f2', type: 'sweep', x: 0.4, y: 0.5, root: false, modifierParams: { sweep: fullSweepData() } },
+      {
+        id: 'g1', type: 'generative', x: 0.7, y: 0.7, root: false,
+        generative: {
+          engine: 'turing', mergeMode: 'replace', targetTrack: 0,
+          params: { engine: 'turing', length: 16, lock: 0.8, range: [36, 84] as [number, number], mode: 'note' as const, density: 0.5 },
+        },
+      },
+      { id: 'prob1', type: 'probability', x: 0.5, y: 0.6, root: false },
+    ],
+    edges: [
+      { id: 'e1', from: 'p1', to: 'f1', order: 0 },
+      { id: 'e2', from: 'f1', to: 'f2', order: 0 },
+      { id: 'e3', from: 'f2', to: 'p2', order: 0 },
+      { id: 'e4', from: 'p1', to: 'g1', order: 1 },
+      { id: 'e5', from: 'p1', to: 'prob1', order: 2 },
+    ],
+    labels: [
+      { id: 'l1', text: 'Intro', x: 0.1, y: 0.05 },
+      { id: 'l2', text: 'Build', x: 0.5, y: 0.05 },
+    ],
+    stamps: [
+      { id: 's1', stampId: 'run', x: 0.8, y: 0.1 },
+    ],
+    globalSweep: fullSweepData(),
+  }
+}
+
+describe('cloneSweepData roundtrip', () => {
+  it('produces a deep equal copy of a fully-populated SweepData', () => {
+    const orig = fullSweepData()
+    const cloned = cloneSweepData(orig)
+    expect(cloned).toEqual(orig)
+  })
+
+  it('clone is fully independent from original', () => {
+    const orig = fullSweepData()
+    const cloned = cloneSweepData(orig)
+
+    // Mutate every nested structure in the clone
+    cloned.curves[0].points[0].v = 999
+    cloned.curves[0].target = { kind: 'fx', param: 'glitchX' }
+    cloned.curves.push({ target: { kind: 'fx', param: 'reverbWet' }, points: [], color: '#000' })
+    cloned.toggles![0].points[0].on = true
+    cloned.toggles![0].target = { kind: 'fxOn', fx: 'glitch' }
+    cloned.durationMs = 0
+    cloned.offsetMs = 0
+
+    // Original must be unaffected
+    expect(orig.curves[0].points[0].v).toBe(-0.5)
+    expect(orig.curves[0].target).toEqual({ kind: 'master', param: 'masterVolume' })
+    expect(orig.curves).toHaveLength(5)
+    expect(orig.toggles![0].points[0].on).toBe(false)
+    expect(orig.toggles![0].target).toEqual({ kind: 'hold', fx: 'verb' })
+    expect(orig.durationMs).toBe(8000)
+    expect(orig.offsetMs).toBe(1200)
+  })
+})
+
+describe('cloneModifierParams roundtrip', () => {
+  it('produces a deep equal copy of fully-populated ModifierParams', () => {
+    const orig = fullModifierParams()
+    const cloned = cloneModifierParams(orig)
+    expect(cloned).toEqual(orig)
+  })
+
+  it('clone is fully independent from original', () => {
+    const orig = fullModifierParams()
+    const cloned = cloneModifierParams(orig)
+
+    cloned.transpose!.semitones = 12
+    cloned.transpose!.key = 0
+    cloned.tempo!.bpm = 200
+    cloned.repeat!.count = 1
+    cloned.fx!.verb = false
+    cloned.fx!.flavourOverrides!.verb = 'room'
+    cloned.sweep!.curves[0].points[0].v = 999
+
+    expect(orig.transpose!.semitones).toBe(-3)
+    expect(orig.transpose!.key).toBe(7)
+    expect(orig.tempo!.bpm).toBe(145)
+    expect(orig.repeat!.count).toBe(4)
+    expect(orig.fx!.verb).toBe(true)
+    expect(orig.fx!.flavourOverrides!.verb).toBe('hall')
+    expect(orig.sweep!.curves[0].points[0].v).toBe(-0.5)
+  })
+
+  it('handles empty ModifierParams', () => {
+    const orig: ModifierParams = {}
+    const cloned = cloneModifierParams(orig)
+    expect(cloned).toEqual({})
+  })
+})
+
+describe('cloneScene roundtrip', () => {
+  it('produces a deep equal copy of a fully-populated Scene', () => {
+    const orig = fullScene()
+    const cloned = cloneScene(orig)
+    // cloneSceneNode strips decorators, so compare excluding that
+    expect(cloned).toEqual(orig)
+  })
+
+  it('clone is fully independent from original', () => {
+    const orig = fullScene()
+    const cloned = cloneScene(orig)
+
+    // Mutate nodes
+    cloned.nodes[0].x = 0.99
+    cloned.nodes[2].modifierParams!.transpose!.semitones = 99
+    cloned.nodes[3].modifierParams!.sweep!.curves[0].points[0].v = 999
+    ;(cloned.nodes[4].generative!.params as any).length = 64
+
+    // Mutate edges
+    cloned.edges[0].from = 'mutated'
+
+    // Mutate labels
+    cloned.labels[0].text = 'mutated'
+
+    // Mutate stamps
+    cloned.stamps[0].stampId = 'mutated'
+
+    // Mutate globalSweep
+    cloned.globalSweep!.curves[0].points[0].v = 999
+    cloned.globalSweep!.toggles![0].points[0].on = true
+    cloned.globalSweep!.durationMs = 0
+
+    // Original must be unaffected
+    expect(orig.nodes[0].x).toBe(0.1)
+    expect(orig.nodes[2].modifierParams!.transpose!.semitones).toBe(-3)
+    expect(orig.nodes[3].modifierParams!.sweep!.curves[0].points[0].v).toBe(-0.5)
+    expect((orig.nodes[4].generative!.params as any).length).toBe(16)
+    expect(orig.edges[0].from).toBe('p1')
+    expect(orig.labels[0].text).toBe('Intro')
+    expect(orig.stamps[0].stampId).toBe('run')
+    expect(orig.globalSweep!.curves[0].points[0].v).toBe(-0.5)
+    expect(orig.globalSweep!.toggles![0].points[0].on).toBe(false)
+    expect(orig.globalSweep!.durationMs).toBe(8000)
   })
 })
