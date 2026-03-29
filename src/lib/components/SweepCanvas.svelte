@@ -1324,8 +1324,13 @@
     const pts = [...toggle.points]
     const bi = toggleDragState.boundaryIdx
     if (bi < 0 || bi >= pts.length) return
+    const firstOn = toggle.points[0].on  // preserve original alternation base
     pts[bi] = { ...pts[bi], t }
     pts.sort((a, b) => a.t - b.t)
+    // Re-assign alternating on/off — handles boundary crossing naturally
+    for (let i = 0; i < pts.length; i++) {
+      pts[i] = { ...pts[i], on: i % 2 === 0 ? firstOn : !firstOn }
+    }
 
     if (isGlobal && globalSweep) {
       const newToggles = [...(globalSweep.toggles ?? [])]
