@@ -108,6 +108,7 @@ function shortLabel(target: SweepTarget | SweepToggleTarget): string {
     if (target.kind === 'track') return `T${(target.trackId ?? 0) + 1} ${target.param}`
     if (target.kind === 'send') return `T${(target.trackId ?? 0) + 1} snd`
     if (target.kind === 'eq') return `${target.band.replace('eq', '')} ${target.param}`
+    if (target.kind === 'masterFxOn') return `${target.param} on`
     return SHORT_LABELS[target.param] ?? target.param
   }
   if (target.kind === 'mute') return `T${(target.trackId ?? 0) + 1} mute`
@@ -127,7 +128,7 @@ function pushTrace(key: string, label: string, color: string, value: number): vo
     trace.values.splice(0, trace.values.length - TRACE_MAX_SAMPLES)
   }
   // Move this trace to end (most recent) and cap visible count
-  const idx = sweepRec.recentTraces.indexOf(trace)
+  const idx = sweepRec.recentTraces.findIndex(t => t.key === key)
   if (idx >= 0 && idx < sweepRec.recentTraces.length - 1) {
     sweepRec.recentTraces.splice(idx, 1)
     sweepRec.recentTraces.push(trace)

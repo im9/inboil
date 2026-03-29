@@ -176,5 +176,6 @@ export function toggleLabel(target: SweepToggleTarget, cells?: readonly CellRef[
     return `${name} mute`
   }
   if (target.kind === 'perf') return PERF_LABELS[target.param] ?? target.param
+  if (target.kind === 'masterFxOn') return `${target.param} on`
   return 'Unknown'
 }

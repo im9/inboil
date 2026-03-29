@@ -98,6 +98,8 @@ After REC:
 | Drag send level knobs | `SweepCurve` (kind: `send`) |
 | Toggle FX on/off | `SweepToggleCurve` (kind: `fxOn`) |
 | Toggle FX hold | `SweepToggleCurve` (kind: `hold`) |
+| Toggle master pad on/off (comp/duck/ret/sat) | `SweepToggleCurve` (kind: `masterFxOn`) |
+| Toggle filter on/off | `SweepToggleCurve` (kind: `fxOn`, fx: `filter`) |
 | Toggle track mute | `SweepToggleCurve` (kind: `mute`) |
 
 Each recording pass **merges** into existing data: re-recording a parameter overwrites that parameter's curve in the active chain's sweep; untouched parameters keep their curves.
@@ -435,7 +437,7 @@ Introduce a **global sweep layer** that runs independently of chain playback:
 | `master` (volume, swing, comp, duck, ret, sat) | global | Affects entire mix |
 | `fx` (verb, delay, glitch, granular params) | global | Shared FX bus |
 | `eq` (low/mid/high freq/gain/q) | global | Master bus EQ |
-| `fxOn` / `hold` toggles | global | FX on/off is global state |
+| `fxOn` / `hold` / `masterFxOn` toggles | global | FX/master on/off is global state |
 | `track` (volume, pan, voice params) | chain | Per-pattern track config |
 | `send` (reverb/delay/glitch/granular send) | chain | Per-pattern send levels |
 | `mute` toggles | chain | Per-pattern mute state |

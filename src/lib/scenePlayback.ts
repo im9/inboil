@@ -534,6 +534,9 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
       } else if (toggle.target.kind === 'fxOn') {
         const pad = fxPad[toggle.target.fx as keyof typeof fxPad]
         if (pad && pad.on !== on) { pad.on = on; changed = true }
+      } else if (toggle.target.kind === 'masterFxOn') {
+        const pad = masterPad[toggle.target.param]
+        if (pad && pad.on !== on) { pad.on = on; changed = true }
       } else if (toggle.target.kind === 'mute') {
         const tgt = toggle.target
         const track = song.tracks.find(t => t.id === tgt.trackId)

@@ -264,7 +264,8 @@ export interface SweepCurve {
 /** Boolean sweep toggle target (ADR 123, ADR 128) */
 export type SweepToggleTarget =
   | { kind: 'hold';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
-  | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' | 'filter' }
+  | { kind: 'masterFxOn'; param: 'comp' | 'duck' | 'ret' | 'sat' }
   | { kind: 'mute';  trackId: number }
   | { kind: 'perf';  param: 'fill' | 'rev' | 'brk' }
 

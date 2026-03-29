@@ -372,6 +372,17 @@ describe('isGlobalTarget', () => {
     expect(isGlobalTarget({ kind: 'perf', param: 'rev' })).toBe(false)
     expect(isGlobalTarget({ kind: 'perf', param: 'brk' })).toBe(false)
   })
+
+  it('masterFxOn toggles are chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'masterFxOn', param: 'sat' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'masterFxOn', param: 'comp' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'masterFxOn', param: 'duck' })).toBe(false)
+    expect(isGlobalTarget({ kind: 'masterFxOn', param: 'ret' })).toBe(false)
+  })
+
+  it('filter fxOn toggle is chain-scoped', () => {
+    expect(isGlobalTarget({ kind: 'fxOn', fx: 'filter' })).toBe(false)
+  })
 })
 
 // ── Tests: targetKey for perf targets (ADR 128) ──
@@ -389,5 +400,26 @@ describe('targetKey (perf)', () => {
     const muteKey = targetKey({ kind: 'mute', trackId: 0 })
     expect(perfKey).not.toBe(holdKey)
     expect(perfKey).not.toBe(muteKey)
+  })
+})
+
+// ── Tests: targetKey for masterFxOn / filter targets ──
+
+describe('targetKey (masterFxOn)', () => {
+  it('generates unique keys for masterFxOn targets', () => {
+    expect(targetKey({ kind: 'masterFxOn', param: 'sat' })).toBe('masterFxOn:sat')
+    expect(targetKey({ kind: 'masterFxOn', param: 'comp' })).toBe('masterFxOn:comp')
+    expect(targetKey({ kind: 'masterFxOn', param: 'duck' })).toBe('masterFxOn:duck')
+    expect(targetKey({ kind: 'masterFxOn', param: 'ret' })).toBe('masterFxOn:ret')
+  })
+
+  it('masterFxOn keys are distinct from fxOn keys', () => {
+    const masterKey = targetKey({ kind: 'masterFxOn', param: 'sat' })
+    const fxKey = targetKey({ kind: 'fxOn', fx: 'verb' })
+    expect(masterKey).not.toBe(fxKey)
+  })
+
+  it('filter fxOn key uses fx format', () => {
+    expect(targetKey({ kind: 'fxOn', fx: 'filter' })).toBe('fxOn:filter')
   })
 })

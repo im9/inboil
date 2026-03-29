@@ -1,7 +1,7 @@
 <script lang="ts">
   // NOTE: Large file by design — VU/GR meters + node calculations share single rAF loop with audio-reactive state
   import { masterPad, fxPad, masterLevels, playback, song, pushUndo } from '../state.svelte.ts'
-  import { captureValue } from '../sweepRecorder.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import type { SweepTarget } from '../types.ts'
   import { PAD_INSET } from '../constants.ts'
   import { padNorm, movedPastTap } from '../padHelpers.ts'
@@ -93,7 +93,16 @@
 
   function endDrag() {
     if (!dragging) return
-    if (!dragMoved) { const st = nodeState(dragging); st.on = !st.on }
+    if (!dragMoved) {
+      const key = dragging
+      const st = nodeState(key)
+      st.on = !st.on
+      if (key === 'filter') {
+        captureToggle({ kind: 'fxOn', fx: 'filter' }, st.on)
+      } else {
+        captureToggle({ kind: 'masterFxOn', param: key }, st.on)
+      }
+    }
     dragging = null
     dragRect = null
   }

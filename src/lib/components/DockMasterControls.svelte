@@ -1,6 +1,6 @@
 <script lang="ts">
   import { perf, effects, masterPad, fxPad, pushUndo } from '../state.svelte.ts'
-  import { captureValue } from '../sweepRecorder.svelte.ts'
+  import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import Knob from './Knob.svelte'
   import VFader from './VFader.svelte'
 
@@ -78,6 +78,7 @@
   function toggleMasterPadOn(key: MasterPadKey) {
     pushUndo('Master toggle')
     masterPad[key].on = !masterPad[key].on
+    captureToggle({ kind: 'masterFxOn', param: key }, masterPad[key].on)
   }
 
   // DJ Filter (state in fxPad.filter for backwards compatibility)
@@ -88,6 +89,7 @@
   function toggleFilterOn() {
     pushUndo('Toggle filter')
     fxPad.filter.on = !fxPad.filter.on
+    captureToggle({ kind: 'fxOn', fx: 'filter' }, fxPad.filter.on)
   }
   function setFilterX(v: number) { pushUndo('Filter'); fxPad.filter.x = v; captureValue({ kind: 'master', param: 'filterCutoff' }, v) }
   function setFilterY(v: number) { pushUndo('Filter'); fxPad.filter.y = v; captureValue({ kind: 'master', param: 'filterResonance' }, v) }
