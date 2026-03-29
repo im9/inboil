@@ -121,7 +121,7 @@ The toggle target picker in SweepCanvas needs to offer perf targets alongside ex
 - [x] Call `captureToggle()` from `MobilePerfSheet.svelte`
 - [x] Add perf targets to SweepCanvas toggle picker (recording-only — no manual picker needed)
 - [x] Add unit tests for new target in `sweepPlayback.test.ts` + `sweepCanvasHelpers.test.ts`
-- [ ] Verify with demo song: fill on bar 4, brk before drop
+- [x] Verify with demo song: fill on bar 4, brk before drop
 
 ## Considerations
 
