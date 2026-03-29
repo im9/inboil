@@ -1,6 +1,6 @@
 # ADR 128: Sweep Automation for Perf Triggers (Fill / Reverse / Break)
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 

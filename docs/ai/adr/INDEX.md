@@ -142,7 +142,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 121 | FX Hold Unification | Implemented | Unified HOLD on all 4 FX buses, granular freeze→hold rename, reverse flavour, DockPanel toggles, FxPad long-press hold, shimmer hold via internal SimpleReverb crossfade |
 | 122 | FX & Master Audio Design | Implemented | Insert distortion (OD/fuzz), TapeSaturator mid-presence + soft-knee, per-FX dock colors, EQ band toggles, DJ Filter → Master |
 | 123 | Sweep Redesign | Implemented | Recording-based sweep: arm/capture/stop engine, dark-zone editor, point/trim/knob editing, playback trail glow, trail strip preview, global-scope sweep (master/fx/eq), overdub merge |
-| 128 | Sweep Perf Triggers | Proposed | Fill/Reverse/Break as SweepToggleTarget `perf` kind, interval semantics, global scope, recording via captureToggle |
+| 128 | Sweep Perf Triggers | Implemented | Fill/Reverse/Break as SweepToggleTarget `perf` kind, bar-quantized toggles, chain-scoped. Sweep carry-over + absolute value bugs fixed |
 
 ## Data / Infrastructure
 
