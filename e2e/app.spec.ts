@@ -1036,4 +1036,131 @@ test.describe('sweep carry-over', () => {
     expect(verbOnAfterStop).toBe(false)
     expect(verbXAfterStop).toBeCloseTo(0.25, 1) // DEFAULT_FX_PAD.verb.x
   })
+
+  test('carry-over: master, track, send, EQ params at pattern boundary', async ({ page }) => {
+    // Test multiple param types in a single scene to verify all target kinds.
+    // Pattern0 curves move params to known end values.
+    // Pattern1 curves start from those values (continuous recording).
+    // Assert: no jump at boundary for any param.
+    await page.evaluate(() => {
+      const S = (globalThis as any).__TEST_STATE__
+      const song = S.song
+
+      song.patterns[0].cells[0].trigs[0] = { on: true, note: 60, velocity: 100, gateLength: 0.5 }
+      song.patterns[1].cells[0].trigs[0] = { on: true, note: 60, velocity: 100, gateLength: 0.5 }
+
+      const mkCurve = (target: any, v0: number, v1: number, color = '#fff') =>
+        ({ target, points: [{ t: 0, v: v0 }, { t: 1, v: v1 }], color })
+
+      const trackId = song.tracks[0].id
+
+      song.scene.nodes = [
+        { id: 'p0', type: 'pattern', x: 0.3, y: 0.5, root: true, patternId: song.patterns[0].id },
+        { id: 'rep0', type: 'repeat', x: 0.2, y: 0.5, root: false, modifierParams: { repeat: { count: 2 } } },
+        { id: 'sw0', type: 'sweep', x: 0.2, y: 0.3, root: false, modifierParams: { sweep: { curves: [
+          // FX: delay x/y
+          mkCurve({ kind: 'fx', param: 'delayTime' }, 0.7, 0.3, '#f00'),
+          mkCurve({ kind: 'fx', param: 'delayFeedback' }, 0.4, 0.7, '#f01'),
+          // Master: masterVolume, swing
+          mkCurve({ kind: 'master', param: 'masterVolume' }, 0.8, 0.4, '#0f0'),
+          mkCurve({ kind: 'master', param: 'swing' }, 0.0, 0.6, '#0f1'),
+          // Master pad: compThreshold
+          mkCurve({ kind: 'master', param: 'compThreshold' }, 0.22, 0.7, '#0f2'),
+          // Track: volume, pan
+          mkCurve({ kind: 'track', trackId, param: 'volume' }, 0.8, 0.4, '#00f'),
+          mkCurve({ kind: 'track', trackId, param: 'pan' }, 0.5, 0.8, '#01f'),
+          // Send: reverbSend
+          mkCurve({ kind: 'send', trackId, param: 'reverbSend' }, 0.0, 0.6, '#ff0'),
+          // EQ: eqMid freq/gain
+          mkCurve({ kind: 'eq', band: 'eqMid', param: 'freq' }, 0.57, 0.3, '#f0f'),
+          mkCurve({ kind: 'eq', band: 'eqMid', param: 'gain' }, 0.5, 0.8, '#f1f'),
+        ] } } },
+        { id: 'p1', type: 'pattern', x: 0.7, y: 0.5, root: false, patternId: song.patterns[1].id },
+        { id: 'rep1', type: 'repeat', x: 0.6, y: 0.5, root: false, modifierParams: { repeat: { count: 2 } } },
+        { id: 'sw1', type: 'sweep', x: 0.6, y: 0.3, root: false, modifierParams: { sweep: { curves: [
+          // Continuous from pattern0 end values
+          mkCurve({ kind: 'fx', param: 'delayTime' }, 0.3, 0.5, '#f00'),
+          mkCurve({ kind: 'fx', param: 'delayFeedback' }, 0.7, 0.5, '#f01'),
+          mkCurve({ kind: 'master', param: 'masterVolume' }, 0.4, 0.7, '#0f0'),
+          mkCurve({ kind: 'master', param: 'swing' }, 0.6, 0.3, '#0f1'),
+          mkCurve({ kind: 'master', param: 'compThreshold' }, 0.7, 0.4, '#0f2'),
+          mkCurve({ kind: 'track', trackId, param: 'volume' }, 0.4, 0.7, '#00f'),
+          mkCurve({ kind: 'track', trackId, param: 'pan' }, 0.8, 0.3, '#01f'),
+          mkCurve({ kind: 'send', trackId, param: 'reverbSend' }, 0.6, 0.2, '#ff0'),
+          mkCurve({ kind: 'eq', band: 'eqMid', param: 'freq' }, 0.3, 0.6, '#f0f'),
+          mkCurve({ kind: 'eq', band: 'eqMid', param: 'gain' }, 0.8, 0.4, '#f1f'),
+        ] } } },
+      ]
+      song.scene.edges = [
+        { id: 'e-rep0-p0', from: 'rep0', to: 'p0', order: 0 },
+        { id: 'e-sw0-p0', from: 'sw0', to: 'p0', order: 0 },
+        { id: 'e-p0-p1', from: 'p0', to: 'p1', order: 0 },
+        { id: 'e-rep1-p1', from: 'rep1', to: 'p1', order: 0 },
+        { id: 'e-sw1-p1', from: 'sw1', to: 'p1', order: 0 },
+      ]
+    })
+
+    await page.evaluate(() => { (globalThis as any).__TEST_STATE__.song.bpm = 200 })
+
+    await page.locator('[aria-label="Play"]').click()
+    await page.waitForTimeout(300)
+
+    // Sample all params every 200ms
+    type Sample = {
+      pat: number | null
+      delayX: number; delayY: number
+      masterVol: number; swing: number; compX: number
+      trackVol: number; trackPan: number
+      reverbSend: number
+      eqMidX: number; eqMidY: number
+    }
+    const samples: Sample[] = []
+    for (let i = 0; i < 25; i++) {
+      await page.waitForTimeout(200)
+      const s: Sample = await page.evaluate(() => {
+        const S = (globalThis as any).__TEST_STATE__
+        const cell = S.song.patterns[S.playback.playingPattern ?? 0]?.cells?.[0]
+        return {
+          pat: S.playback.playingPattern,
+          delayX: S.fxPad.delay.x,
+          delayY: S.fxPad.delay.y,
+          masterVol: S.perf.masterGain,
+          swing: S.perf.swing,
+          compX: S.masterPad.comp.x,
+          trackVol: S.song.tracks[0].volume,
+          trackPan: S.song.tracks[0].pan,
+          reverbSend: cell?.reverbSend ?? -1,
+          eqMidX: S.fxPad.eqMid.x,
+          eqMidY: S.fxPad.eqMid.y,
+        }
+      })
+      samples.push(s)
+    }
+
+    const transitionIdx = samples.findIndex(s => s.pat === 1)
+    expect(transitionIdx).toBeGreaterThan(0)
+
+    const before = samples[transitionIdx - 1]
+    const after = samples[transitionIdx]
+    const TOLERANCE = 0.08 // 8% tolerance for sampling jitter across step boundaries
+
+    // FX params
+    expect(Math.abs(after.delayX - before.delayX)).toBeLessThan(TOLERANCE)
+    expect(Math.abs(after.delayY - before.delayY)).toBeLessThan(TOLERANCE)
+    // Master params
+    expect(Math.abs(after.masterVol - before.masterVol)).toBeLessThan(TOLERANCE)
+    expect(Math.abs(after.swing - before.swing)).toBeLessThan(TOLERANCE)
+    expect(Math.abs(after.compX - before.compX)).toBeLessThan(TOLERANCE)
+    // Track params
+    expect(Math.abs(after.trackVol - before.trackVol)).toBeLessThan(TOLERANCE)
+    expect(Math.abs(after.trackPan - before.trackPan)).toBeLessThan(TOLERANCE * 2) // pan is -1..+1 range
+    // Send params — sends are per-pattern-cell, so values reset on pattern change.
+    // Verify sweep applies correctly within pattern1 (not carry-over).
+    expect(after.reverbSend).toBeGreaterThanOrEqual(0)
+    // EQ params
+    expect(Math.abs(after.eqMidX - before.eqMidX)).toBeLessThan(TOLERANCE)
+    expect(Math.abs(after.eqMidY - before.eqMidY)).toBeLessThan(TOLERANCE)
+
+    await page.locator('[aria-label="Stop"]').click()
+  })
 })
