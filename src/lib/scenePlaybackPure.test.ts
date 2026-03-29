@@ -7,7 +7,9 @@ import {
   calcGlobalSweepProgress,
   applyPerfToggle,
   buildTransitionSteps,
+  applySweepValue,
 } from './scenePlaybackPure.ts'
+import { evaluateCurve } from './sweepEval.ts'
 
 // ── calcGlobalSweepProgress ──
 
@@ -95,5 +97,33 @@ describe('buildTransitionSteps', () => {
   it('globalSweep always comes last', () => {
     const steps = buildTransitionSteps('walk')
     expect(steps[steps.length - 1]).toBe('globalSweep')
+  })
+})
+
+// ── Sweep carry-over delta (lazy, from live value) ──
+
+describe('applySweepValue', () => {
+  it('preserves carry-over when curveValue matches firstValue', () => {
+    // Live fxPad value = 0.8 (carry-over from pattern1)
+    // Pattern2 curve starts at firstValue = 0.8 (continuous recording)
+    // At progress=0: curveValue = firstValue = 0.8
+    // result = 0.8 + (0.8 - 0.8) = 0.8 → no jump
+    expect(applySweepValue(0.8, 0.8, 0.8)).toBeCloseTo(0.8)
+  })
+
+  it('applies delta from live carry-over (separately recorded)', () => {
+    // Live fxPad value = 0.8 (carry-over), curve recorded starting at 0.5
+    // At start: result = 0.8 + (0.5 - 0.5) = 0.8 → carry-over preserved
+    expect(applySweepValue(0.8, 0.5, 0.5)).toBeCloseTo(0.8)
+    // Curve moves to 0.7: result = 0.8 + (0.7 - 0.5) = 1.0
+    expect(applySweepValue(0.8, 0.7, 0.5)).toBeCloseTo(1.0)
+  })
+
+  it('rep2: progress spans both reps correctly', () => {
+    // evaluateCurve is range-agnostic — verify rep math
+    const curve = [{ t: 0, v: 0.3 }, { t: 0.5, v: 0.6 }, { t: 1, v: 0.8 }]
+    expect(evaluateCurve(curve, 0)).toBeCloseTo(0.3)          // rep0 start
+    expect(evaluateCurve(curve, 0.5)).toBeCloseTo(0.6)         // rep1 start
+    expect(evaluateCurve(curve, 1.0)).toBeCloseTo(0.8)         // rep1 end
   })
 })

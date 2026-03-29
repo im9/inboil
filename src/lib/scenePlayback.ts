@@ -8,7 +8,7 @@ import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
 import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
-import { calcGlobalSweepProgress, applyPerfToggle } from './scenePlaybackPure.ts'
+import { calcGlobalSweepProgress, applyPerfToggle, applySweepValue } from './scenePlaybackPure.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
 
@@ -170,6 +170,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   if (node.type === 'pattern') {
     // No snapshot restore — previous sweep values carry over as next pattern's baseline.
     // Satellite modifiers handle their own resets (fx on/off, transpose).
+    clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
     reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
@@ -203,6 +204,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     if (node.type === 'pattern') {
       // No snapshot restore — previous sweep values carry over as next pattern's baseline.
       // Satellite modifiers handle their own resets (fx on/off, transpose).
+      clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
       applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
       playback.automationSnapshot = snapshotAutomationTargets()
       reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
@@ -278,6 +280,8 @@ let initialAutomationSnapshot: AutomationSnapshot | null = null
 export function markScenePlayStart(): void {
   scenePlayStartMs = performance.now()
   initialAutomationSnapshot = snapshotAutomationTargets()
+  patternTransitionCount = 0
+  curveCarryOverDeltas.clear()
 }
 
 /** Return the snapshot taken at scene play start (before any sweep/modifier application).
@@ -380,12 +384,33 @@ const HOLD_MAP: Record<string, keyof typeof perf> = {
 }
 
 
-/** EQ Q denormalization: 0–1 knob → 0.3–8.0 actual Q value */
+/** EQ Q range constants */
 const EQ_Q_MIN = 0.3, EQ_Q_MAX = 8.0
-function eqQDenorm(v: number): number { return EQ_Q_MIN + v * (EQ_Q_MAX - EQ_Q_MIN) }
+
+/** Per-curve carry-over deltas. Computed lazily on each curve's first evaluation
+ *  per pattern. Key = targetKey, value = delta in native range.
+ *  Cleared on every pattern transition so each pattern starts fresh. */
+const curveCarryOverDeltas = new Map<string, number>()
+
+/** Counts pattern transitions since scene play start.
+ *  0 = not started, 1 = first pattern (use absolute, delta=0),
+ *  2+ = subsequent patterns (use carry-over delta from live value). */
+let patternTransitionCount = 0
+
+/** True when the current pattern is the first in the scene (use absolute values). */
+function isFirstPattern(): boolean { return patternTransitionCount <= 1 }
+
+/** Clear carry-over delta cache — call on pattern transition. */
+export function clearCurveCarryOverDeltas(): void {
+  patternTransitionCount++
+  curveCarryOverDeltas.clear()
+}
 
 /** Apply a single SweepData set at the given progress value.
- *  Curve values are absolute normalized (0–1); converted to native range per target. */
+ *  Curve values are absolute normalized (0–1). On first evaluation per curve
+ *  per pattern, a carry-over delta is computed from the LIVE parameter value
+ *  (not a stale snapshot): delta = liveValue − denorm(firstPointValue).
+ *  This ensures seamless transitions at pattern boundaries. */
 function applySweepData(sweepData: SweepData, progress: number, _snap: AutomationSnapshot): boolean {
   let changed = false
 
@@ -398,7 +423,11 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
     // Skip targets currently being controlled by user during recording (ADR 123 §8)
     if (isUserControlled(targetKey(curve.target))) continue
 
-    const value = evaluateCurve(curve.points, progress) // 0–1 absolute
+    const value = evaluateCurve(curve.points, progress) // 0–1 absolute, NaN = carry-over
+    if (Number.isNaN(value)) continue // before first recorded point — preserve carry-over
+
+    const key = targetKey(curve.target)
+    const firstValue = curve.points[0]?.v ?? 0.5
 
     if (curve.target.kind === 'track') {
       const tgt = curve.target
@@ -407,20 +436,26 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
       const track = song.tracks[trackIdx]
       const param = curve.target.param
       if (param === 'volume') {
-        const newVal = clamp(value, 0, 1)
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : track.volume - firstValue)
+        const newVal = applySweepValue(curveCarryOverDeltas.get(key)! + firstValue, value, firstValue)
         if (Math.abs(track.volume - newVal) > 0.001) { track.volume = newVal; changed = true }
       } else if (param === 'pan') {
-        const newVal = clamp(value * 2 - 1, -1, 1) // 0–1 → -1..+1
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : track.pan - (firstValue * 2 - 1))
+        const base = curveCarryOverDeltas.get(key)! + (firstValue * 2 - 1)
+        const newVal = applySweepValue(base, value, firstValue, -1, 1)
         if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
       } else {
-        // Voice params (TONE, CUT, RESO, etc.) — denormalize 0–1 to param range
+        // Voice params (TONE, CUT, RESO, etc.)
         const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
         if (cell?.voiceId && cell.voiceParams) {
           const defs = getParamDefs(cell.voiceId as VoiceId)
           const def = defs.find(d => d.key === param)
           if (def) {
             const range = def.max - def.min
-            const newVal = clamp(def.min + value * range, def.min, def.max)
+            const nativeFirst = def.min + firstValue * range
+            if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : (cell.voiceParams[param] ?? def.default) - nativeFirst)
+            const base = curveCarryOverDeltas.get(key)! + nativeFirst
+            const newVal = applySweepValue(base, value, firstValue, def.min, def.max)
             if (Math.abs((cell.voiceParams[param] ?? def.default) - newVal) > range * 0.001) {
               cell.voiceParams[param] = newVal
               changed = true
@@ -432,7 +467,8 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
       const param = curve.target.param
       const m = MASTER_MAP[param]
       if (m) {
-        const newVal = clamp(value, 0, 1)
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : m.get() - firstValue)
+        const newVal = applySweepValue(curveCarryOverDeltas.get(key)! + firstValue, value, firstValue)
         if (Math.abs(m.get() - newVal) > 0.001) { m.set(newVal); changed = true }
       }
     } else if (curve.target.kind === 'send') {
@@ -442,24 +478,35 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
       const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
       if (cell) {
         const param = tgt.param
-        const newVal = clamp(value, 0, 1)
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : cell[param] - firstValue)
+        const newVal = applySweepValue(curveCarryOverDeltas.get(key)! + firstValue, value, firstValue)
         if (Math.abs(cell[param] - newVal) > 0.001) { cell[param] = newVal; changed = true }
       }
     } else if (curve.target.kind === 'fx') {
       const param = curve.target.param
       const mapping = FX_MAP[param]
       if (mapping) {
-        const [pad, key] = mapping
-        ;(fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[key] = clamp(value, 0, 1)
+        const [pad, padKey] = mapping
+        const currentVal = (fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[padKey] as number
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : currentVal - firstValue)
+        const newVal = applySweepValue(curveCarryOverDeltas.get(key)! + firstValue, value, firstValue)
+        ;(fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[padKey] = newVal
         changed = true
       }
     } else if (curve.target.kind === 'eq') {
       const { band, param } = curve.target
-      const eqPad = fxPad[band]
-      if (eqPad) {
-        const key = param === 'freq' ? 'x' : param === 'gain' ? 'y' : 'q'
-        const newVal = key === 'q' ? eqQDenorm(clamp(value, 0, 1)) : clamp(value, 0, 1)
-        if (Math.abs((eqPad[key] as number) - newVal) > 0.001) { (eqPad as Record<string, number | boolean>)[key] = newVal; changed = true }
+      const eqPadRef = fxPad[band]
+      if (eqPadRef) {
+        const eqKey = param === 'freq' ? 'x' : param === 'gain' ? 'y' : 'q'
+        const max = eqKey === 'q' ? EQ_Q_MAX : 1
+        const min = eqKey === 'q' ? EQ_Q_MIN : 0
+        const range = max - min
+        const nativeFirst = min + firstValue * range
+        const currentVal = eqPadRef[eqKey] as number
+        if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : currentVal - nativeFirst)
+        const base = curveCarryOverDeltas.get(key)! + nativeFirst
+        const newVal = applySweepValue(base, value, firstValue, min, max)
+        if (Math.abs(currentVal - newVal) > 0.001) { (eqPadRef as Record<string, number | boolean>)[eqKey] = newVal; changed = true }
       }
     }
   }
@@ -491,8 +538,3 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
 
   return changed
 }
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v))
-}
-

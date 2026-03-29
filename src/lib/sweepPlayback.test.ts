@@ -9,14 +9,9 @@ import type { SweepCurve, SweepToggleCurve } from './types'
 // ── Tests: evaluateCurve ──
 
 describe('evaluateCurve', () => {
-  it('returns 0 for empty points', () => {
-    expect(evaluateCurve([], 0.5)).toBe(0)
-  })
-
-  it('clamps to first value before first point', () => {
+  it('returns first value at exactly first point t', () => {
     const pts = [{ t: 0.2, v: 0.5 }, { t: 0.8, v: 1.0 }]
-    expect(evaluateCurve(pts, 0)).toBe(0.5)
-    expect(evaluateCurve(pts, 0.1)).toBe(0.5)
+    expect(evaluateCurve(pts, 0.2)).toBe(0.5)
   })
 
   it('clamps to last value after last point', () => {
@@ -62,6 +57,19 @@ describe('evaluateCurve', () => {
   it('handles negative values', () => {
     const pts = [{ t: 0, v: 0 }, { t: 1, v: -1 }]
     expect(evaluateCurve(pts, 0.5)).toBeCloseTo(-0.5)
+  })
+
+  it('returns NaN before first point (carry-over zone)', () => {
+    // Curve recorded from t=0.3 — before that, previous pattern value should carry over
+    const pts = [{ t: 0.3, v: 0.6 }, { t: 0.8, v: 0.9 }]
+    expect(evaluateCurve(pts, 0)).toBeNaN()
+    expect(evaluateCurve(pts, 0.29)).toBeNaN()
+    // At and after first point, value is returned normally
+    expect(evaluateCurve(pts, 0.3)).toBeCloseTo(0.6)
+  })
+
+  it('returns NaN for empty points', () => {
+    expect(evaluateCurve([], 0.5)).toBeNaN()
   })
 })
 

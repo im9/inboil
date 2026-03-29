@@ -611,3 +611,8 @@ export {
 export {
   exportProjectJSON, importProjectJSON, projectLoadFactory, projectLoadDemo,
 } from './importExport.ts'
+
+// ── E2E test access (dev only) ──────────────────────────────────────
+if (import.meta.env.DEV) {
+  ;(globalThis as any).__TEST_STATE__ = { song, playback, fxPad, perf, masterPad }
+}

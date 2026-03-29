@@ -2,7 +2,7 @@
  * E2E tests — core app flows (ADR 082 Phase 3 + 4).
  * Runs against dev server via Playwright + Chromium.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /** Dismiss welcome overlay and help sidebar if visible */
 async function dismissHelp(page: import('@playwright/test').Page) {
@@ -914,5 +914,126 @@ test.describe('scene keyboard', () => {
     await page.keyboard.press('Control+z')
     await page.waitForTimeout(400)
     await expect(page.locator('.scene-node')).toHaveCount(1)
+  })
+})
+
+// ── Sweep carry-over at pattern boundary ──
+
+test.describe('sweep carry-over', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await dismissHelp(page)
+  })
+
+  /** Read fxPad.verb.x from the app state via __TEST_STATE__ */
+  async function getVerbX(page: Page): Promise<number> {
+    return page.evaluate(() => (globalThis as any).__TEST_STATE__.fxPad.verb.x)
+  }
+
+  /** Read fxPad.verb.on from the app state */
+  async function getVerbOn(page: Page): Promise<boolean> {
+    return page.evaluate(() => (globalThis as any).__TEST_STATE__.fxPad.verb.on)
+  }
+
+  /** Read current playing pattern index */
+  async function getPlayingPattern(page: Page): Promise<number | null> {
+    return page.evaluate(() => (globalThis as any).__TEST_STATE__.playback.playingPattern)
+  }
+
+  test('pattern1 rep2 → pattern2 rep2: FX XY carries over at boundary', async ({ page }) => {
+    // Build scene: root → repeat(2) → pattern0 → sweep0
+    //                                  pattern0 → repeat2(2) → pattern1 → sweep1
+    // Pattern0 sweep: verb.x goes 0.3 → 0.8 across 2 reps
+    // Pattern1 sweep: verb.x goes 0.8 → 0.5 across 2 reps
+    await page.evaluate(() => {
+      const S = (globalThis as any).__TEST_STATE__
+      const song = S.song
+
+      // Pattern 0 and 1 already exist (empty). Give pattern 0 a step so it plays.
+      song.patterns[0].cells[0].trigs[0] = { on: true, note: 60, velocity: 100, gateLength: 0.5 }
+      song.patterns[1].cells[0].trigs[0] = { on: true, note: 60, velocity: 100, gateLength: 0.5 }
+
+      // Build scene graph
+      song.scene.nodes = [
+        { id: 'p0', type: 'pattern', x: 0.3, y: 0.5, root: true, patternId: song.patterns[0].id },
+        { id: 'rep0', type: 'repeat', x: 0.2, y: 0.5, root: false, modifierParams: { repeat: { count: 2 } } },
+        { id: 'sw0', type: 'sweep', x: 0.2, y: 0.3, root: false, modifierParams: {
+          sweep: {
+            curves: [
+              { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0.3 }, { t: 1, v: 0.8 }], color: '#f00' },
+            ],
+            toggles: [
+              { target: { kind: 'fxOn', fx: 'verb' }, points: [{ t: 0, on: false }, { t: 0.5, on: true }], color: '#f00' },
+            ],
+          },
+        }},
+        { id: 'p1', type: 'pattern', x: 0.7, y: 0.5, root: false, patternId: song.patterns[1].id },
+        { id: 'rep1', type: 'repeat', x: 0.6, y: 0.5, root: false, modifierParams: { repeat: { count: 2 } } },
+        { id: 'sw1', type: 'sweep', x: 0.6, y: 0.3, root: false, modifierParams: {
+          sweep: {
+            curves: [
+              { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0.8 }, { t: 1, v: 0.5 }], color: '#0f0' },
+            ],
+          },
+        }},
+      ]
+      song.scene.edges = [
+        { id: 'e-rep0-p0', from: 'rep0', to: 'p0', order: 0 },
+        { id: 'e-sw0-p0', from: 'sw0', to: 'p0', order: 0 },
+        { id: 'e-p0-p1', from: 'p0', to: 'p1', order: 0 },
+        { id: 'e-rep1-p1', from: 'rep1', to: 'p1', order: 0 },
+        { id: 'e-sw1-p1', from: 'sw1', to: 'p1', order: 0 },
+      ]
+    })
+
+    // Set a fast BPM so the test doesn't take forever
+    await page.evaluate(() => { (globalThis as any).__TEST_STATE__.song.bpm = 200 })
+
+    // Press Play
+    await page.locator('[aria-label="Play"]').click()
+    await page.waitForTimeout(300)
+
+    // Collect samples every 200ms to trace verbX through both patterns
+    const samples: { t: number; pat: number | null; verbX: number; verbOn: boolean }[] = []
+    const startTime = Date.now()
+    for (let i = 0; i < 25; i++) {
+      await page.waitForTimeout(200)
+      const s = await page.evaluate(() => {
+        const S = (globalThis as any).__TEST_STATE__
+        return { pat: S.playback.playingPattern, verbX: S.fxPad.verb.x, verbOn: S.fxPad.verb.on }
+      })
+      samples.push({ t: Date.now() - startTime, ...s })
+    }
+
+
+    // Find the transition point in samples and verify carry-over
+    const transitionIdx = samples.findIndex(s => s.pat === 1)
+    expect(transitionIdx).toBeGreaterThan(0) // must have pattern0 samples before
+
+    const lastP0 = samples[transitionIdx - 1]
+    const firstP1 = samples[transitionIdx]
+
+    // KEY ASSERTION: no jump at boundary — values must be close
+    const jump = Math.abs(firstP1.verbX - lastP0.verbX)
+    expect(jump).toBeLessThan(0.05) // within 5% tolerance (sampling jitter)
+
+    // verb.on should have carried over (was turned on at rep1 of pattern0)
+    expect(firstP1.verbOn).toBe(true)
+
+    // verb.x must NOT have jumped to default (0.25 for verb)
+    expect(firstP1.verbX).toBeGreaterThan(0.6)
+
+    // Press Stop
+    await page.locator('[aria-label="Stop"]').click()
+    await page.waitForTimeout(300)
+
+    // After stop: verb should be reset to initial state (before play)
+    const verbXAfterStop = await getVerbX(page)
+    const verbOnAfterStop = await getVerbOn(page)
+    expect(verbOnAfterStop).toBe(false)
+    expect(verbXAfterStop).toBeCloseTo(0.25, 1) // DEFAULT_FX_PAD.verb.x
   })
 })

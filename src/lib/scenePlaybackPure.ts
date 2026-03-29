@@ -33,3 +33,20 @@ export type TransitionStep = 'satellite' | 'snapshot' | 'globalSweep'
 export function buildTransitionSteps(_kind: TransitionKind): TransitionStep[] {
   return ['satellite', 'snapshot', 'globalSweep']
 }
+
+/** Compute sweep application value with carry-over delta.
+ *  Curve stores absolute normalized values (0–1).
+ *  On playback, the result is offset so the curve starts from the carry-over value.
+ *  `snapValue`: carry-over in native range (from snapshot at pattern transition)
+ *  `curveValue`: current curve evaluation (0–1 normalized)
+ *  `firstValue`: curve's first point value (0–1 normalized)
+ *  `min/max`: native range of the parameter
+ *  Returns the value in native range, clamped. */
+export function applySweepValue(
+  snapValue: number, curveValue: number, firstValue: number,
+  min = 0, max = 1,
+): number {
+  const range = max - min
+  const result = snapValue + (curveValue - firstValue) * range
+  return Math.max(min, Math.min(max, result))
+}

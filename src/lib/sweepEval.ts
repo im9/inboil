@@ -4,10 +4,12 @@
  */
 import type { SweepCurve, SweepToggleCurve, SweepData, SweepTarget, SweepToggleTarget } from './types'
 
-/** Evaluate a sweep curve at a given progress (0–1) using Catmull-Rom interpolation */
+/** Evaluate a sweep curve at a given progress (0–1) using Catmull-Rom interpolation.
+ *  Returns NaN when progress is before the first recorded point (or empty),
+ *  signaling that the previous value should be preserved (carry-over). */
 export function evaluateCurve(points: { t: number; v: number }[], progress: number): number {
-  if (points.length === 0) return 0
-  if (progress <= points[0].t) return points[0].v
+  if (points.length === 0) return NaN
+  if (progress < points[0].t) return NaN
   if (progress >= points[points.length - 1].t) return points[points.length - 1].v
   for (let i = 0; i < points.length - 1; i++) {
     if (progress >= points[i].t && progress <= points[i + 1].t) {

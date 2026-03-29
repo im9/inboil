@@ -183,8 +183,10 @@
 
   engine.onStep = (heads: number[], cycle: boolean) => {
     playback.playheads = heads
-    // Sweep automation — apply on every step (ADR 118)
-    if (playback.mode === 'scene' && playback.playing) {
+    // Sweep automation — apply on every step EXCEPT cycle boundaries where
+    // pattern transition will happen (cycle step has wrapped-around heads=0,
+    // which would set sweep to progress=0 and corrupt carry-over values).
+    if (playback.mode === 'scene' && playback.playing && !(cycle && hasScenePlayback())) {
       const patIdx = playback.playingPattern ?? 0
       const pat = song.patterns[patIdx]
       // Use the longest track's step count as cycle length; find its playhead for position
