@@ -183,7 +183,7 @@ export const song = $state<Song>(makeEmptySong())
 export const songVer = $state({ v: 0 })
 export function bumpSongVersion() { songVer.v++ }
 // Restore project name + BPM synchronously to avoid flash before async IDB load
-try { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } catch (e) { console.warn('[state] localStorage restore failed:', e) }
+try { if (typeof localStorage !== 'undefined') { const p = JSON.parse(localStorage.getItem('inboil') ?? ''); if (p.lastProjectName) song.name = p.lastProjectName; if (p.lastBpm) song.bpm = p.lastBpm } } catch { /* expected in SSR/test */ }
 
 export const playback = $state({
   playing: false,
