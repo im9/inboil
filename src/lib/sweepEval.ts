@@ -82,9 +82,10 @@ export function isMuteCurve(curve: SweepCurve): boolean {
  *  Track-scoped targets (track/send/mute) route to chain sweep. */
 export function isGlobalTarget(target: SweepTarget | SweepToggleTarget): boolean {
   if ('param' in target) {
-    return target.kind === 'master' || target.kind === 'fx' || target.kind === 'eq'
+    // SweepTarget (master/fx/eq → global, track/send → chain) + perf toggle (ADR 128)
+    return target.kind === 'master' || target.kind === 'fx' || target.kind === 'eq' || target.kind === 'perf'
   }
-  // Toggle targets: fxOn and hold are global, mute is chain-scoped
+  // Toggle targets: fxOn and hold are global; mute is chain-scoped
   return target.kind === 'fxOn' || target.kind === 'hold'
 }
 

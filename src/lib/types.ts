@@ -261,11 +261,12 @@ export interface SweepCurve {
   color: string
 }
 
-/** Boolean sweep toggle target (ADR 123) */
+/** Boolean sweep toggle target (ADR 123, ADR 128) */
 export type SweepToggleTarget =
   | { kind: 'hold';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
   | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
   | { kind: 'mute';  trackId: number }
+  | { kind: 'perf';  param: 'fill' | 'rev' | 'brk' }
 
 /** A single boolean toggle curve — points with explicit ON/OFF state (ADR 123) */
 export interface SweepToggleCurve {

@@ -371,6 +371,10 @@ const HOLD_MAP: Record<string, keyof typeof perf> = {
   verb: 'reverbHold', delay: 'delayHold', glitch: 'glitchHold', granular: 'granularHold',
 }
 
+const PERF_MAP: Record<string, keyof typeof perf> = {
+  fill: 'filling', rev: 'reversing', brk: 'breaking',
+}
+
 /** Apply a single SweepData set at the given progress value. */
 function applySweepData(sweepData: SweepData, progress: number, snap: AutomationSnapshot): boolean {
   let changed = false
@@ -479,6 +483,9 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
         const tgt = toggle.target
         const track = song.tracks.find(t => t.id === tgt.trackId)
         if (track && track.muted !== on) { track.muted = on; changed = true }
+      } else if (toggle.target.kind === 'perf') {
+        const key = PERF_MAP[toggle.target.param]
+        if (key && perf[key] !== on) { (perf as unknown as Record<string, boolean>)[key] = on; changed = true }
       }
     }
   }

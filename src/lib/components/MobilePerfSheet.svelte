@@ -3,6 +3,8 @@
   import { onMount, onDestroy } from 'svelte'
   import { perf, playback, song, fxPad, masterLevels } from '../state.svelte.ts'
   import { isGuest, guestPerf } from '../multiDevice/guest.ts'
+  import { captureToggle } from '../sweepRecorder.svelte.ts'
+  import type { SweepToggleTarget } from '../types.ts'
 
   type PerfAction = 'fill' | 'reverse' | 'break'
   type GlitchAction = 'stutter' | 'half' | 'tape'
@@ -58,10 +60,19 @@
   let savedGain = 0.8
   let chopActive = false
 
+  const PERF_TOGGLE: Record<PerfAction, SweepToggleTarget> = {
+    fill: { kind: 'perf', param: 'fill' },
+    reverse: { kind: 'perf', param: 'rev' },
+    break: { kind: 'perf', param: 'brk' },
+  }
+  const PERF_COLOR: Record<PerfAction, string> = {
+    fill: '#5b8a72', reverse: '#5b8a72', break: '#c47a5a',
+  }
+
   function setEffect(action: ZoneAction, on: boolean) {
-    if (action === 'fill') { if (isGuest()) { guestPerf('fill', on); return }; perf.filling = on }
-    else if (action === 'reverse') { if (isGuest()) { guestPerf('reverse', on); return }; perf.reversing = on }
-    else if (action === 'break') { if (isGuest()) { guestPerf('break', on); return }; perf.breaking = on }
+    if (action === 'fill') { if (isGuest()) { guestPerf('fill', on); return }; perf.filling = on; captureToggle(PERF_TOGGLE.fill, on, PERF_COLOR.fill) }
+    else if (action === 'reverse') { if (isGuest()) { guestPerf('reverse', on); return }; perf.reversing = on; captureToggle(PERF_TOGGLE.reverse, on, PERF_COLOR.reverse) }
+    else if (action === 'break') { if (isGuest()) { guestPerf('break', on); return }; perf.breaking = on; captureToggle(PERF_TOGGLE.break, on, PERF_COLOR.break) }
     else if (action === 'stutter') perf.stuttering = on
     else if (action === 'half') perf.halfSpeed = on
     else if (action === 'tape') perf.tapeStop = on

@@ -3,7 +3,7 @@
  * and boolean toggle evaluation (ADR 118, ADR 123).
  */
 import { describe, it, expect } from 'vitest'
-import { evaluateCurve, evaluateToggle, buildSweepData, rdpSimplify, mergeOverdub, mergeOverdubToggles, targetsEqual, isGlobalTarget } from './sweepEval'
+import { evaluateCurve, evaluateToggle, buildSweepData, rdpSimplify, mergeOverdub, mergeOverdubToggles, targetsEqual, isGlobalTarget, targetKey } from './sweepEval'
 import type { SweepCurve, SweepToggleCurve } from './types'
 
 // ── Tests: evaluateCurve ──
@@ -362,5 +362,29 @@ describe('isGlobalTarget', () => {
 
   it('mute toggles are chain-scoped', () => {
     expect(isGlobalTarget({ kind: 'mute', trackId: 0 })).toBe(false)
+  })
+
+  it('perf toggles are global (ADR 128)', () => {
+    expect(isGlobalTarget({ kind: 'perf', param: 'fill' })).toBe(true)
+    expect(isGlobalTarget({ kind: 'perf', param: 'rev' })).toBe(true)
+    expect(isGlobalTarget({ kind: 'perf', param: 'brk' })).toBe(true)
+  })
+})
+
+// ── Tests: targetKey for perf targets (ADR 128) ──
+
+describe('targetKey (perf)', () => {
+  it('generates unique keys for perf targets', () => {
+    expect(targetKey({ kind: 'perf', param: 'fill' })).toBe('perf:fill')
+    expect(targetKey({ kind: 'perf', param: 'rev' })).toBe('perf:rev')
+    expect(targetKey({ kind: 'perf', param: 'brk' })).toBe('perf:brk')
+  })
+
+  it('perf keys are distinct from other target keys', () => {
+    const perfKey = targetKey({ kind: 'perf', param: 'fill' })
+    const holdKey = targetKey({ kind: 'hold', fx: 'verb' })
+    const muteKey = targetKey({ kind: 'mute', trackId: 0 })
+    expect(perfKey).not.toBe(holdKey)
+    expect(perfKey).not.toBe(muteKey)
   })
 })

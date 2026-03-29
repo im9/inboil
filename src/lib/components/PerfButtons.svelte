@@ -1,16 +1,28 @@
 <script lang="ts">
   import { perf, playback } from '../state.svelte.ts'
   import { isGuest, guestPerf } from '../multiDevice/guest.ts'
+  import { captureToggle } from '../sweepRecorder.svelte.ts'
+  import type { SweepToggleTarget } from '../types.ts'
 
   let { variant = 'bar' }: { variant?: 'bar' | 'bubble' } = $props()
 
   const stopped = $derived(!playback.playing)
+
+  const PERF_TARGET: Record<string, SweepToggleTarget> = {
+    fill: { kind: 'perf', param: 'fill' },
+    reverse: { kind: 'perf', param: 'rev' },
+    break: { kind: 'perf', param: 'brk' },
+  }
+  const PERF_COLOR: Record<string, string> = {
+    fill: '#5b8a72', reverse: '#5b8a72', break: '#c47a5a',
+  }
 
   function setPerf(action: 'fill' | 'reverse' | 'break', on: boolean) {
     if (isGuest()) { guestPerf(action, on); return }
     if (action === 'fill') perf.filling = on
     else if (action === 'reverse') perf.reversing = on
     else perf.breaking = on
+    captureToggle(PERF_TARGET[action], on, PERF_COLOR[action])
   }
 </script>
 

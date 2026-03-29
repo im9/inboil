@@ -165,6 +165,8 @@ export function curveLabel(target: SweepTarget, cells?: readonly CellRef[]): str
   return 'Unknown'
 }
 
+const PERF_LABELS: Record<string, string> = { fill: 'Fill', rev: 'Reverse', brk: 'Break' }
+
 /** Human-readable label for a sweep toggle target */
 export function toggleLabel(target: SweepToggleTarget, cells?: readonly CellRef[]): string {
   if (target.kind === 'hold') return `${target.fx} hold`
@@ -173,5 +175,6 @@ export function toggleLabel(target: SweepToggleTarget, cells?: readonly CellRef[
     const name = cells?.find(c => c.trackId === target.trackId)?.name || `Trk ${target.trackId + 1}`
     return `${name} mute`
   }
+  if (target.kind === 'perf') return PERF_LABELS[target.param] ?? target.param
   return 'Unknown'
 }

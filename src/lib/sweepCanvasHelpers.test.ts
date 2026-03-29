@@ -267,4 +267,10 @@ describe('toggleLabel', () => {
   it('returns Unknown for unrecognized target', () => {
     expect(toggleLabel({ kind: 'unknown' } as any)).toBe('Unknown')
   })
+
+  it('returns perf labels (ADR 128)', () => {
+    expect(toggleLabel({ kind: 'perf', param: 'fill' })).toBe('Fill')
+    expect(toggleLabel({ kind: 'perf', param: 'rev' })).toBe('Reverse')
+    expect(toggleLabel({ kind: 'perf', param: 'brk' })).toBe('Break')
+  })
 })
