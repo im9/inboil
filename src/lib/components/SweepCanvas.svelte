@@ -883,10 +883,14 @@
   function hitTestToggleBlock(t: number): number {
     if (!selectedToggle) return -1
     const pts = selectedToggle.points
+    // Minimum hit margin in t-space (so narrow blocks are still clickable)
+    const vw = getViewWindow()
+    const minMargin = vw.viewSpan * 0.015
     for (let i = 0; i < pts.length; i++) {
       if (!pts[i].on) continue
       const end = i < pts.length - 1 ? pts[i + 1].t : 1
-      if (t >= pts[i].t && t <= end) return i
+      const margin = (end - pts[i].t) < minMargin * 2 ? minMargin : 0
+      if (t >= pts[i].t - margin && t <= end + margin) return i
     }
     return -1
   }
@@ -1362,9 +1366,10 @@
     const hasNextOff = blockPointIdx < pts.length - 1 && !pts[blockPointIdx + 1].on
     pts.splice(blockPointIdx, hasNextOff ? 2 : 1)
 
+    // If no on-points remain, remove toggle entirely
+    const hasOnPoint = pts.some(p => p.on)
     const newToggles = [...toggles]
-    if (pts.length === 0) {
-      // No points left — remove toggle entirely
+    if (pts.length === 0 || !hasOnPoint) {
       if (isGlobal) { deleteGlobalToggle(toggleIdx) } else { deleteToggle(toggleIdx) }
     } else {
       newToggles[toggleIdx] = { ...toggle, points: pts }
