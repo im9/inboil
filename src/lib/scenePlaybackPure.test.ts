@@ -73,19 +73,18 @@ describe('applyPerfToggle', () => {
 // 1. restore old snapshot → 2. apply satellite modifiers → 3. take new snapshot → 4. reapply global sweep
 
 describe('buildTransitionSteps', () => {
-  it('produces steps in correct order for walkToNode', () => {
+  it('does not include restore (sweep values carry over)', () => {
     const steps = buildTransitionSteps('walk')
-    expect(steps).toEqual(['restore', 'satellite', 'snapshot', 'globalSweep'])
+    expect(steps).not.toContain('restore')
   })
 
-  it('produces steps in correct order for startSceneNode', () => {
-    const steps = buildTransitionSteps('start')
-    expect(steps).toEqual(['restore', 'satellite', 'snapshot', 'globalSweep'])
+  it('produces steps in correct order', () => {
+    const steps = buildTransitionSteps('walk')
+    expect(steps).toEqual(['satellite', 'snapshot', 'globalSweep'])
   })
 
-  it('restore always comes before satellite', () => {
-    const steps = buildTransitionSteps('walk')
-    expect(steps.indexOf('restore')).toBeLessThan(steps.indexOf('satellite'))
+  it('start and walk use same order', () => {
+    expect(buildTransitionSteps('start')).toEqual(buildTransitionSteps('walk'))
   })
 
   it('satellite always comes before snapshot', () => {

@@ -25,11 +25,11 @@ export function applyPerfToggle(param: string, on: boolean): { key: string; valu
 }
 
 /** Canonical ordering of pattern transition steps.
- *  Both `start` and `walk` transitions must follow the same order:
- *  restore → satellite → snapshot → globalSweep */
+ *  No snapshot restore — previous sweep values carry over as baseline.
+ *  Satellite modifiers handle their own resets (fx on/off, transpose). */
 export type TransitionKind = 'start' | 'walk'
-export type TransitionStep = 'restore' | 'satellite' | 'snapshot' | 'globalSweep'
+export type TransitionStep = 'satellite' | 'snapshot' | 'globalSweep'
 
 export function buildTransitionSteps(_kind: TransitionKind): TransitionStep[] {
-  return ['restore', 'satellite', 'snapshot', 'globalSweep']
+  return ['satellite', 'snapshot', 'globalSweep']
 }

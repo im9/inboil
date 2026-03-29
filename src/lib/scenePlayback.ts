@@ -3,7 +3,7 @@
  * Extracted from state.svelte.ts for modularity.
  */
 import { song, bumpSongVersion, playback, ui, fxPad, fxFlavours, cellForTrack, masterPad, perf } from './state.svelte.ts'
-import { snapshotAutomationTargets, restoreAutomationSnapshot } from './automation.ts'
+import { snapshotAutomationTargets } from './automation.ts'
 import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
@@ -96,13 +96,8 @@ function applySatelliteModifiers(patternNodeId: string): void {
     const src = findNode(edge.from)
     if (src && isModifierNode(src)) satellites.push(src)
   }
-  // Reset scoped fn effects if no matching satellite on this pattern
-  if (!satellites.some(n => n.type === 'fx')) {
-    fxPad.verb.on = false
-    fxPad.delay.on = false
-    fxPad.glitch.on = false
-    fxPad.granular.on = false
-  }
+  // Reset transpose if no matching satellite (transpose is positional, not carry-over).
+  // FX on/off is NOT reset — carries over from previous pattern's sweep values.
   if (!satellites.some(n => n.type === 'transpose')) {
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
@@ -172,11 +167,9 @@ function collectLiveChain(startId: string): SceneNode[] {
 function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: number; stop?: boolean } {
   playback.sceneNodeId = node.id
   playback.sceneEdgeId = null
-  if (playback.automationSnapshot) {
-    restoreAutomationSnapshot(playback.automationSnapshot)
-    playback.automationSnapshot = null
-  }
   if (node.type === 'pattern') {
+    // No snapshot restore — previous sweep values carry over as next pattern's baseline.
+    // Satellite modifiers handle their own resets (fx on/off, transpose).
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
     playback.automationSnapshot = snapshotAutomationTargets()
     reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
@@ -208,11 +201,8 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     visited.add(node.id)
 
     if (node.type === 'pattern') {
-      // Transition order defined by buildTransitionSteps('walk'):
-      // restore → satellite → snapshot → globalSweep
-      if (playback.automationSnapshot) {
-        restoreAutomationSnapshot(playback.automationSnapshot)
-      }
+      // No snapshot restore — previous sweep values carry over as next pattern's baseline.
+      // Satellite modifiers handle their own resets (fx on/off, transpose).
       applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
       playback.automationSnapshot = snapshotAutomationTargets()
       reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
