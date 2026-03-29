@@ -10,7 +10,9 @@
 
   const docsBase = location.hostname === 'localhost'
     ? 'http://localhost:4321'
-    : 'https://inboil-site.pages.dev'
+    : location.hostname.endsWith('.pages.dev')
+      ? 'https://inboil-site.pages.dev'
+      : 'https://inboil.app'
 
   const tutorialPath = $derived(
     lang.value === 'ja'

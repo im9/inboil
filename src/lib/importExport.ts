@@ -137,7 +137,6 @@ export async function projectLoadDemo(): Promise<void> {
     project.id = null
     project.dirty = true
     resetProjectState()
-    ui.patternSheet = true   // show sequencer so new users see what to interact with
     // Restore embedded samples
     const samples = data.samples as Record<string, { name: string; packId?: string; buffer?: string }> | undefined
     if (samples) await restoreEmbeddedSamples(samples)
@@ -148,6 +147,5 @@ export async function projectLoadDemo(): Promise<void> {
     project.id = null
     project.dirty = true
     resetProjectState()
-    ui.patternSheet = true
   }
 }
