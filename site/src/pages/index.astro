@@ -2483,11 +2483,11 @@ const ogImage = `${siteUrl}/og.png`;
     const ns = 'http://www.w3.org/2000/svg';
 
     const nodes = [
-      { id:'intro', label:'Intro', x:80, y:104, color:'#787845', root:true },
-      { id:'verse', label:'Verse', x:220, y:104, color:'#4472B4', playing:true },
-      { id:'drop',  label:'Drop',  x:380, y:50, color:'#E8A090', deco:'T +5' },
-      { id:'chill', label:'Chill', x:380, y:162, color:'#4A9B9B', deco:'RPT ×2' },
-      { id:'outro', label:'Outro', x:540, y:104, color:'#9B6BA0' },
+      { id:'intro', label:'INTRO', x:80, y:104, color:'#787845', root:true },
+      { id:'verse', label:'VERSE', x:220, y:104, color:'#4472B4', playing:true },
+      { id:'drop',  label:'DROP',  x:380, y:50, color:'#E8A090', fn:{ type:'transpose', value:'+5' } },
+      { id:'chill', label:'CHILL', x:380, y:162, color:'#4A9B9B', fn:{ type:'repeat', value:'×2' } },
+      { id:'outro', label:'OUTRO', x:540, y:104, color:'#9B6BA0' },
     ];
 
     const edges = [
@@ -2624,29 +2624,45 @@ const ogImage = `${siteUrl}/og.png`;
         handle.setAttribute('stroke-width', '1.5');
         g.appendChild(handle);
 
-        // Decorator pill
-        if (n.deco) {
-          const pw = n.deco.length * 6 + 12;
-          const px = n.x + NW / 2 - pw / 2;
-          const py = n.y + NH + 4;
-          const pill = document.createElementNS(ns, 'rect');
-          pill.setAttribute('x', String(px));
-          pill.setAttribute('y', String(py));
-          pill.setAttribute('width', String(pw));
-          pill.setAttribute('height', '16');
-          pill.setAttribute('rx', '8');
-          pill.setAttribute('fill', '#1E2028');
-          g.appendChild(pill);
-          const dt = document.createElementNS(ns, 'text');
-          dt.setAttribute('x', String(n.x + NW / 2));
-          dt.setAttribute('y', String(py + 11));
-          dt.setAttribute('text-anchor', 'middle');
-          dt.setAttribute('font-family', 'JetBrains Mono,monospace');
-          dt.setAttribute('font-size', '8');
-          dt.setAttribute('font-weight', '700');
-          dt.setAttribute('fill', 'rgba(237,232,220,0.7)');
-          dt.textContent = n.deco;
-          g.appendChild(dt);
+        // Modifier function node (satellite circle with icon + label)
+        if (n.fn) {
+          const fnCx = n.x + NW / 2;
+          const fnCy = n.y - 24;
+
+          // SVG icon paths (viewBox 0 0 14 14)
+          const iconPaths = {
+            transpose: `<circle cx="4.5" cy="10.5" r="2.2" fill="currentColor"/><rect x="6.2" y="3" width="1.4" height="7.5" fill="currentColor"/>`
+              + `<path d="M10.5 2 L12.5 4.5 H11 V8.5 H12.5 L10.5 11 L8.5 8.5 H10 V4.5 H8.5 Z" fill="currentColor" opacity="0.7"/>`,
+            repeat: `<path d="M11 5.5A4.5 4.5 0 0 0 3.5 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+              + `<path d="M3 8.5A4.5 4.5 0 0 0 10.5 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>`
+              + `<polyline points="3.5,1.5 3.5,4.5 6.5,4.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`
+              + `<polyline points="10.5,12.5 10.5,9.5 7.5,9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`,
+          };
+
+          // Icon
+          const icon = document.createElementNS(ns, 'svg');
+          icon.setAttribute('viewBox', '0 0 14 14');
+          icon.setAttribute('width', '18');
+          icon.setAttribute('height', '18');
+          icon.setAttribute('x', String(fnCx - 9));
+          icon.setAttribute('y', String(fnCy - 15));
+          icon.setAttribute('fill', 'currentColor');
+          icon.setAttribute('color', '#1E2028');
+          icon.style.filter = 'drop-shadow(0 1px 2px rgba(30,32,40,0.15))';
+          icon.innerHTML = iconPaths[n.fn.type] || '';
+          g.appendChild(icon);
+
+          // Value label
+          const lbl = document.createElementNS(ns, 'text');
+          lbl.setAttribute('x', String(fnCx));
+          lbl.setAttribute('y', String(fnCy + 8));
+          lbl.setAttribute('text-anchor', 'middle');
+          lbl.setAttribute('font-family', 'JetBrains Mono,monospace');
+          lbl.setAttribute('font-size', '8');
+          lbl.setAttribute('font-weight', '700');
+          lbl.setAttribute('fill', 'rgba(30,32,40,0.55)');
+          lbl.textContent = n.fn.value;
+          g.appendChild(lbl);
         }
 
         // Play button on top of everything (root only)
@@ -2667,25 +2683,12 @@ const ogImage = `${siteUrl}/og.png`;
           btn.setAttribute('stroke-width', '2');
           btn.style.cursor = 'pointer';
           g.appendChild(btn);
-          const bw = 3.5, bh = 10, bg = 2;
-          const bar1 = document.createElementNS(ns, 'rect');
-          bar1.setAttribute('x', String(bx - bw - bg/2));
-          bar1.setAttribute('y', String(by - bh/2));
-          bar1.setAttribute('width', String(bw));
-          bar1.setAttribute('height', String(bh));
-          bar1.setAttribute('rx', '0.8');
-          bar1.setAttribute('fill', '#1E2028');
-          bar1.style.pointerEvents = 'none';
-          g.appendChild(bar1);
-          const bar2 = document.createElementNS(ns, 'rect');
-          bar2.setAttribute('x', String(bx + bg/2));
-          bar2.setAttribute('y', String(by - bh/2));
-          bar2.setAttribute('width', String(bw));
-          bar2.setAttribute('height', String(bh));
-          bar2.setAttribute('rx', '0.8');
-          bar2.setAttribute('fill', '#1E2028');
-          bar2.style.pointerEvents = 'none';
-          g.appendChild(bar2);
+          // Play triangle
+          const tri = document.createElementNS(ns, 'polygon');
+          tri.setAttribute('points', `${bx - 3.5},${by - 5} ${bx - 3.5},${by + 5} ${bx + 5},${by}`);
+          tri.setAttribute('fill', '#1E2028');
+          tri.style.pointerEvents = 'none';
+          g.appendChild(tri);
         }
 
         nodesG.appendChild(g);
@@ -2723,7 +2726,8 @@ const ogImage = `${siteUrl}/og.png`;
       if (!dragNode) return;
       const p = svgPoint(e);
       dragNode.x = Math.max(0, Math.min(720 - NW, p.x - dragOffX));
-      dragNode.y = Math.max(0, Math.min(240 - NH, p.y - dragOffY));
+      const yMin = dragNode.fn ? 40 : 0;
+      dragNode.y = Math.max(yMin, Math.min(240 - NH, p.y - dragOffY));
       renderEdges();
       renderNodes();
     });
