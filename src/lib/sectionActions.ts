@@ -70,10 +70,10 @@ function pruneOrphanedTracks(): void {
   song.tracks = song.tracks.filter(t => usedIds.has(t.id))
 }
 
-/** Rename a pattern (max 8 chars, uppercase) */
+/** Rename a pattern (max 12 chars, uppercase) */
 export function patternRename(patternIndex: number, name: string): void {
   pushUndo('Rename pattern')
-  song.patterns[patternIndex].name = name.slice(0, 8).toUpperCase()
+  song.patterns[patternIndex].name = name.slice(0, 12).toUpperCase()
 }
 
 /** Set pattern color (index into PATTERN_COLORS) */

@@ -1869,6 +1869,9 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
     pointer-events: none;
   }
 

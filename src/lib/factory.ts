@@ -8,7 +8,7 @@ export { DRUM_VOICES }
 
 export const PATTERN_POOL_SIZE = 100
 
-// ── Random pattern names (≤8 chars) ─────────────────────────────────
+// ── Random pattern names (≤12 chars, auto-generated ones ≤8) ────────
 
 const PATTERN_WORDS = [
   'DRIFT',  'PULSE',  'HAZE',   'BLOOM',  'GHOST',

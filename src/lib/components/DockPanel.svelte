@@ -131,7 +131,7 @@
           <input
             class="pat-input"
             value={selectedPattern.name ?? ''}
-            maxlength="8"
+            maxlength="12"
             placeholder="NAME"
             onpointerdown={e => e.stopPropagation()}
             onfocus={e => (e.target as HTMLInputElement).select()}
