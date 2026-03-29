@@ -1,6 +1,6 @@
 # ADR 091: Release Readiness Assessment & Pre-Launch Checklist
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
@@ -116,7 +116,7 @@ ADR 072 Implemented. LP with interactive demos (step sequencer, voice engine vie
 - [x] Landing page live at root URL
 - [x] Getting-started tutorial accessible from LP and in-app Help
 - [x] Tested in Chrome, Firefox, Safari (desktop + mobile)
-- [ ] Custom domain active (ADR 072 consideration)
+- [x] Custom domain active (ADR 072 consideration)
 
 ## Considerations
 
