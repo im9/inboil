@@ -491,7 +491,7 @@
               {/each}
             </div>
           {:else}
-            {@const displayCount = pageEnd - pageStart}
+            {@const displayCount = Math.min(pageEnd - pageStart, ph.steps - (pageStart % ph.steps))}
             {@const isWrapped = pageStart >= ph.steps}
             <div
               class="steps"
@@ -530,7 +530,7 @@
             </div>
           {/if}
           {#if selected}
-            {@const velDisplayCount = pageEnd - pageStart}
+            {@const velDisplayCount = Math.min(pageEnd - pageStart, ph.steps - (pageStart % ph.steps))}
             {@const velIsWrapped = pageStart >= ph.steps}
             <div
               class="vel-bars"

@@ -34,7 +34,7 @@
   const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
   const pageStart = $derived(ui.stepPage * pageSize)
   const pageEnd = $derived(Math.min(maxSteps, pageStart + pageSize))
-  const visibleSteps = $derived(pageEnd - pageStart)
+  const visibleSteps = $derived(Math.min(pageEnd - pageStart, ph.steps - (pageStart % ph.steps)))
   const isWrapped = $derived(pageStart >= ph.steps)
   const playheadCol = $derived.by(() => {
     if (!isViewingPlayingPattern()) return -1
