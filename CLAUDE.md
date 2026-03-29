@@ -70,3 +70,4 @@ When changing these source files, review and update the corresponding doc:
 |---|---|
 | `src/lib/types.ts`, `src/lib/state.svelte.ts`, `src/lib/constants.ts` | `docs/ai/DATA_MODEL.md` |
 | `src/lib/audio/dsp/types.ts`, `src/lib/audio/worklet-processor.ts` | `docs/ai/MESSAGE_FLOW.md` |
+| `src/lib/sweepRecorder.svelte.ts`, `src/lib/scenePlayback.ts`, `src/lib/sweepEval.ts` | `docs/ai/SWEEP_AUTOMATION.md` |
