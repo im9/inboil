@@ -139,6 +139,11 @@
   })
   const isSelectedToggleGlobal = $derived(selectedGlobalToggleIdx !== null)
 
+  // ── Selected toggle block (on-region point index within the toggle) ──
+  let selectedToggleBlockIdx = $state<number | null>(null)
+  // Clear block selection when toggle selection changes
+  $effect(() => { selectedToggleIdx; selectedGlobalToggleIdx; selectedToggleBlockIdx = null })
+
   // ── Canvas state ──
   let canvasEl: HTMLCanvasElement | undefined = $state()
   let canvasW = $state(600)
@@ -530,13 +535,20 @@
         if (pt.on) {
           const x0 = tToX(pt.t, w)
           const x1 = tToX(nextT, w)
+          const isSelected = selectedToggleBlockIdx === pi
           ctx.fillStyle = selectedToggle.color
-          ctx.globalAlpha = 0.5
+          ctx.globalAlpha = isSelected ? 0.75 : 0.5
           ctx.fillRect(x0, laneY + 2, x1 - x0, toggleLaneH - 4)
           // Brighter top edge
-          ctx.globalAlpha = 0.8
+          ctx.globalAlpha = isSelected ? 1.0 : 0.8
           ctx.fillRect(x0, laneY + 2, x1 - x0, 2)
           ctx.globalAlpha = 1.0
+          // Selection border
+          if (isSelected) {
+            ctx.strokeStyle = 'rgba(237,232,220, 0.6)'
+            ctx.lineWidth = 1
+            ctx.strokeRect(x0, laneY + 2, x1 - x0, toggleLaneH - 4)
+          }
         }
       }
 
@@ -867,6 +879,18 @@
     return hitTestToggleBoundaryPure(e.clientX, selectedToggle.points, getGeo(), getViewWindow())
   }
 
+  /** Find the on-block index at time t. Returns the point index of the on-block start, or -1. */
+  function hitTestToggleBlock(t: number): number {
+    if (!selectedToggle) return -1
+    const pts = selectedToggle.points
+    for (let i = 0; i < pts.length; i++) {
+      if (!pts[i].on) continue
+      const end = i < pts.length - 1 ? pts[i + 1].t : 1
+      if (t >= pts[i].t && t <= end) return i
+    }
+    return -1
+  }
+
   function hitTestPoint(e: PointerEvent): number {
     if (!selectedCurve || !canvasEl) return -1
     return hitTestPointPure(e.clientX, e.clientY, selectedCurve.points, getGeo(), canvasH, TIMELINE_H, getViewWindow(), POINT_HIT_RADIUS)
@@ -932,8 +956,16 @@
         toggleDragState = { toggleIdx: idx, boundaryIdx: bi, side: 'left', scope }
         return
       }
-      // Click on empty area → split toggle block
       const t = pointerToT(e)
+      const blockIdx = hitTestToggleBlock(t)
+      if (blockIdx >= 0) {
+        // Click on on-block → select it (Backspace to delete)
+        selectedToggleBlockIdx = blockIdx
+        redraw()
+        return
+      }
+      // Click on empty area → split toggle block
+      selectedToggleBlockIdx = null
       const scope: 'chain' | 'global' = isSelectedToggleGlobal ? 'global' : 'chain'
       const idx = isSelectedToggleGlobal ? selectedGlobalToggleIdx! : selectedToggleIdx!
       splitToggleBlock(idx, t, scope)
@@ -1120,11 +1152,25 @@
       redraw()
       return
     }
-    // Escape → clear range
-    if (e.key === 'Escape' && hasRange) {
-      rangeStart = null
-      rangeEnd = null
+    // Delete/Backspace with selected toggle block → delete that on-block
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !hasRange && selectedToggleBlockIdx !== null && selectedToggle) {
+      e.preventDefault()
+      deleteToggleBlock(selectedToggleBlockIdx)
       redraw()
+      return
+    }
+    // Escape → clear range or block selection
+    if (e.key === 'Escape') {
+      if (selectedToggleBlockIdx !== null) {
+        selectedToggleBlockIdx = null
+        redraw()
+        return
+      }
+      if (hasRange) {
+        rangeStart = null
+        rangeEnd = null
+        redraw()
+      }
     }
   }
 
@@ -1164,7 +1210,7 @@
         pushUndo('Clear all sweep curves')
         sceneUpdateModifierParams(nodeId, { sweep: { curves: [] } })
         if (song.scene.globalSweep) song.scene.globalSweep = undefined
-        selectedCurveIdx = null; selectedGlobalCurveIdx = null; selectedToggleIdx = null; selectedGlobalToggleIdx = null
+        selectedCurveIdx = null; selectedGlobalCurveIdx = null; selectedToggleIdx = null; selectedGlobalToggleIdx = null; selectedToggleBlockIdx = null
         clearProgress = null; clearRafId = 0
         redraw()
       }
@@ -1295,6 +1341,35 @@
 
   function onToggleBoundaryUp() {
     toggleDragState = null
+  }
+
+  /** Delete a single on-block by turning it off (removing its boundary points or setting on=false). */
+  function deleteToggleBlock(blockPointIdx: number) {
+    const isGlobal = isSelectedToggleGlobal
+    const toggleIdx = isGlobal ? selectedGlobalToggleIdx! : selectedToggleIdx!
+    const toggles = isGlobal ? globalSweep?.toggles : sweepData.toggles
+    if (!toggles) return
+    const toggle = toggles[toggleIdx]
+    if (!toggle) return
+    pushUndo('Delete toggle block')
+    const pts = [...toggle.points]
+    // An on-block is: pts[i] (on=true) → pts[i+1] (on=false or end)
+    const hasNextOff = blockPointIdx < pts.length - 1 && !pts[blockPointIdx + 1].on
+    pts.splice(blockPointIdx, hasNextOff ? 2 : 1)
+
+    const newToggles = [...toggles]
+    if (pts.length === 0) {
+      // No points left — remove toggle entirely
+      if (isGlobal) { deleteGlobalToggle(toggleIdx) } else { deleteToggle(toggleIdx) }
+    } else {
+      newToggles[toggleIdx] = { ...toggle, points: pts }
+      if (isGlobal && globalSweep) {
+        song.scene.globalSweep = { ...globalSweep, toggles: newToggles }
+      } else if (sweepNode) {
+        sceneUpdateModifierParams(sweepNode.id, { sweep: { curves: sweepData.curves, toggles: newToggles } })
+      }
+    }
+    selectedToggleBlockIdx = null
   }
 
   function splitToggleBlock(toggleIdx: number, localT: number, scope: 'chain' | 'global' = 'chain') {
