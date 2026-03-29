@@ -22,7 +22,7 @@
     if (!patNode?.patternId) return 16
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return 16
-    const trackIdx = node.generative.targetTrack ?? 0
+    const trackIdx = node.generative.targetTrack
     const cell = pat.cells.find(c => c.trackId === trackIdx)
     return cell?.steps ?? 16
   })
@@ -40,7 +40,8 @@
     if (!patNode?.patternId) return -1
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return -1
-    const trackIdx = node.generative.targetTrack ?? 0
+    const trackIdx = node.generative.targetTrack
+    if (trackIdx === undefined) return -1
     return playback.playheads[trackIdx] ?? -1
   })
 

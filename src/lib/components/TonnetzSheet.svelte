@@ -123,7 +123,8 @@
     if (!patNode?.patternId) return -1
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return -1
-    const trackIdx = node.generative.targetTrack ?? 0
+    const trackIdx = node.generative.targetTrack
+    if (trackIdx === undefined) return -1
     return playback.playheads[trackIdx] ?? 0
   })
 
@@ -134,7 +135,8 @@
     if (!patNode?.patternId) return 16
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return 16
-    const trackIdx = node.generative.targetTrack ?? 0
+    const trackIdx = node.generative.targetTrack
+    if (trackIdx === undefined) return 16
     return pat.cells[trackIdx]?.steps ?? 16
   })
 
@@ -361,8 +363,8 @@
   const PREVIEW_MS = 300
 
   function previewChord(chord: [number, number, number]) {
-    if (!engine.getContext() || !node?.generative) return
-    const trackIdx = node.generative.targetTrack ?? 0
+    if (!engine.getContext() || !node?.generative || node.generative.targetTrack === undefined) return
+    const trackIdx = node.generative.targetTrack
     // Release any previous preview
     if (previewTimer) { clearTimeout(previewTimer); engine.releaseNote(trackIdx) }
     for (const note of chord) engine.triggerNote(trackIdx, note, 0.6)

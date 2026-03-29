@@ -119,8 +119,10 @@ function applyLiveGenerative(patternNode: SceneNode): void {
     const chain = collectLiveChain(srcNode.id)
     if (chain.length === 0) continue
 
-    const trackIdx = srcNode.generative.targetTrack ?? 0
-    const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+    const trackIdx = srcNode.generative.targetTrack
+    if (trackIdx === undefined) continue  // targetTrack not yet selected
+    const cell = cellForTrack(pat, trackIdx)
+    if (!cell) continue
     const steps = cell.steps
     const trigs = executeGenChain(chain, cell, steps)
     if (trigs) {

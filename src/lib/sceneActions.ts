@@ -3,11 +3,12 @@
  * Extracted from state.svelte.ts for modularity.
  */
 
-import { song, ui, pushUndo, cellForTrack } from './state.svelte.ts'
+import { song, ui, pushUndo } from './state.svelte.ts'
 import type { SceneNode, SceneEdge, ModifierType, ModifierParams, GenerativeEngine, TuringParams, QuantizerParams, TonnetzParams, Trig, Cell } from './state.svelte.ts'
 import { cloneSceneNode } from './sceneData.ts'
 import { turingGenerate, quantizeTrigs, tonnetzGenerate, computeWalkPath } from './generative.ts'
 import { randomPatternName } from './factory.ts'
+import { resolveTargetCell } from './generativeTarget.ts'
 
 // ── Shared generative chain execution ──
 
@@ -135,26 +136,7 @@ export function sceneAddEdge(from: string, to: string): string | null {
     .filter(e => e.from === from)
     .reduce((m, e) => Math.max(m, e.order), -1)
   song.scene.edges.push({ id, from, to, order: maxOrder + 1 })
-  // Auto-select unused target track on connect (ADR 117 Phase 2)
-  const fromNode = findNode(from)
-  const toNode = findNode(to)
-  if (fromNode?.generative && toNode?.type === 'pattern' && toNode.patternId) {
-    const pat = song.patterns.find(p => p.id === toNode.patternId)
-    if (pat) {
-      // Find tracks already targeted by other gen nodes on this pattern
-      const usedTracks = new Set(
-        song.scene.edges
-          .filter(e => e.to === to && e.from !== from)
-          .map(e => findNode(e.from))
-          .filter(n => n?.generative)
-          .map(n => n!.generative!.targetTrack ?? 0)
-      )
-      // Pick first unused track
-      const unused = pat.cells.find(c => !usedTracks.has(c.trackId))
-      if (unused) fromNode.generative.targetTrack = unused.trackId
-    }
-  }
-  // Auto-generate on connect (ADR 117)
+  // Auto-generate on connect only if targetTrack is already set (ADR 117)
   autoGenerateFromNode(from)
   return id
 }
@@ -169,8 +151,8 @@ export function autoGenerateFromNode(nodeId: string): void {
   // Inline generate (no extra undo — already in caller's undo group)
   const pat = song.patterns.find(p => p.id === target.patternId)
   if (!pat || pat.cells.length === 0) return
-  const trackIdx = node.generative.targetTrack ?? 0
-  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+  const cell = resolveTargetCell(pat.cells, node.generative.targetTrack)
+  if (!cell) return  // targetTrack not yet selected — skip generation
   const chain = collectGenChain(nodeId)
   const trigs = executeGenChain(chain, cell, cell.steps)
   if (trigs) {
@@ -270,19 +252,16 @@ function defaultGenerativeConfig(engine: GenerativeEngine): SceneNode['generativ
     case 'turing': return {
       engine: 'turing',
       mergeMode: 'replace',
-      targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'turing', length: 8, lock: 0.5, range: [48, 72], mode: 'note' as const, density: 0.7 },
     }
     case 'quantizer': return {
       engine: 'quantizer',
       mergeMode: 'replace',
-      targetTrack: Math.max(0, ui.selectedTrack),
       params: { engine: 'quantizer', scale: 'minor', root: 0, octaveRange: [3, 5] as [number, number] },
     }
     case 'tonnetz': return {
       engine: 'tonnetz',
       mergeMode: 'replace',
-      targetTrack: Math.max(0, ui.selectedTrack),
       params: {
         engine: 'tonnetz',
         startChord: [60, 64, 67] as [number, number, number],
@@ -336,8 +315,8 @@ export function sceneGenerateWrite(nodeId: string): boolean {
 
   pushUndo('Generate sequence')
 
-  const trackIdx = node.generative.targetTrack ?? 0
-  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+  const cell = resolveTargetCell(pat.cells, node.generative.targetTrack)
+  if (!cell) return false  // targetTrack not yet selected — skip generation
   const steps = cell.steps
 
   // Collect the generative chain from this node to the target pattern
@@ -364,15 +343,15 @@ export function sceneGenerateBuffer(nodeId: string): { trigs: Trig[]; trackId: n
   const pat = song.patterns.find(p => p.id === targetPatNode.patternId)
   if (!pat || pat.cells.length === 0) return null
 
-  const trackIdx = node.generative.targetTrack ?? 0
-  const cell = cellForTrack(pat, trackIdx) ?? pat.cells[0]
+  const cell = resolveTargetCell(pat.cells, node.generative.targetTrack)
+  if (!cell) return null  // targetTrack not yet selected — skip generation
   const steps = cell.steps
 
   const chain = collectGenChain(nodeId)
   const trigs = executeGenChain(chain, cell, steps)
   if (!trigs) return null
   const lastGen = chain[chain.length - 1].generative!
-  return { trigs, trackId: trackIdx, mergeMode: lastGen.mergeMode }
+  return { trigs, trackId: cell.trackId, mergeMode: lastGen.mergeMode }
 }
 
 /** Collect generative nodes along outgoing edges until we hit a pattern node.

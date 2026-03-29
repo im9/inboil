@@ -820,8 +820,9 @@
     if (!patNode?.patternId) return null
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return null
-    const trackIdx = node.generative.targetTrack ?? 0
-    const cell = pat.cells.find(c => c.trackId === trackIdx) ?? pat.cells[0]
+    const trackIdx = node.generative.targetTrack
+    if (trackIdx === undefined) return '—'
+    const cell = pat.cells.find(c => c.trackId === trackIdx)
     return cell?.name ?? `T${trackIdx + 1}`
   }
 
@@ -848,7 +849,8 @@
     if (!patNode?.patternId) return null
     const pat = song.patterns.find(p => p.id === patNode!.patternId)
     if (!pat) return null
-    const trackId = node.generative.targetTrack ?? 0
+    const trackId = node.generative.targetTrack
+    if (trackId === undefined) return null
     const cell = cellForTrack(pat, trackId)
     if (!cell) return null
     const trackArrayIdx = song.tracks.findIndex(t => t.id === trackId)

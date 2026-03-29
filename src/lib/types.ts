@@ -149,7 +149,7 @@ export type GenerativeEngine = 'turing' | 'quantizer' | 'tonnetz'
 export interface GenerativeConfig {
   engine: GenerativeEngine
   mergeMode: 'replace' | 'merge' | 'layer'
-  targetTrack: number            // target cell index in the pattern (0-based)
+  targetTrack?: number           // target cell trackId (undefined = not yet selected)
   seed?: number
   params: TuringParams | QuantizerParams | TonnetzParams
 }

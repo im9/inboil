@@ -36,7 +36,8 @@
     if (!patNode?.patternId) return null
     const pat = song.patterns.find(p => p.id === patNode.patternId)
     if (!pat) return null
-    const trackIdx = node.generative.targetTrack ?? 0
+    const trackIdx = node.generative.targetTrack
+    if (trackIdx === undefined) return null
     const cell = pat.cells.find(c => c.trackId === trackIdx)
     if (!cell) return null
     const step = playback.playheads[trackIdx] ?? 0

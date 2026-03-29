@@ -63,10 +63,18 @@
     <span class="gc-label">TRACK</span>
     {#if targetPatCells.length > 0}
       <select class="gc-select"
-        onchange={e => { sceneSetTargetTrack(nodeId, parseInt((e.target as HTMLSelectElement).value)); autoGenerateFromNode(nodeId) }}
+        onchange={e => {
+          const v = (e.target as HTMLSelectElement).value
+          if (v === '') return
+          sceneSetTargetTrack(nodeId, parseInt(v))
+          autoGenerateFromNode(nodeId)
+        }}
       >
+        {#if gen.targetTrack === undefined}
+          <option value="" selected>-- select --</option>
+        {/if}
         {#each targetPatCells as cell}
-          <option value={cell.trackId} selected={(gen.targetTrack ?? 0) === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
+          <option value={cell.trackId} selected={gen.targetTrack === cell.trackId}>{cell.trackId + 1}: {cell.name}</option>
         {/each}
       </select>
     {:else}
