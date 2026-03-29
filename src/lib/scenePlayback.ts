@@ -270,10 +270,25 @@ export function advanceSceneNode(startFrom?: string): { advanced: boolean; patte
 // ── Global sweep timing (ADR 123 Phase 5) ───────────────────────────
 
 let scenePlayStartMs = 0
+let initialAutomationSnapshot: AutomationSnapshot | null = null
 
-/** Call when scene playback starts to mark the global sweep clock origin. */
+/** Call when scene playback starts to mark the global sweep clock origin.
+ *  Also captures the initial automation snapshot — used by stop() to restore
+ *  the pre-playback state (not the carry-over state from the last pattern transition). */
 export function markScenePlayStart(): void {
   scenePlayStartMs = performance.now()
+  initialAutomationSnapshot = snapshotAutomationTargets()
+}
+
+/** Return the snapshot taken at scene play start (before any sweep/modifier application).
+ *  Used by stop() to restore the clean pre-playback state. */
+export function getInitialAutomationSnapshot(): AutomationSnapshot | null {
+  return initialAutomationSnapshot
+}
+
+/** Clear the initial snapshot (call on stop). */
+export function clearInitialAutomationSnapshot(): void {
+  initialAutomationSnapshot = null
 }
 
 /** Returns ms elapsed since scene playback started. */
@@ -365,8 +380,13 @@ const HOLD_MAP: Record<string, keyof typeof perf> = {
 }
 
 
-/** Apply a single SweepData set at the given progress value. */
-function applySweepData(sweepData: SweepData, progress: number, snap: AutomationSnapshot): boolean {
+/** EQ Q denormalization: 0–1 knob → 0.3–8.0 actual Q value */
+const EQ_Q_MIN = 0.3, EQ_Q_MAX = 8.0
+function eqQDenorm(v: number): number { return EQ_Q_MIN + v * (EQ_Q_MAX - EQ_Q_MIN) }
+
+/** Apply a single SweepData set at the given progress value.
+ *  Curve values are absolute normalized (0–1); converted to native range per target. */
+function applySweepData(sweepData: SweepData, progress: number, _snap: AutomationSnapshot): boolean {
   let changed = false
 
   // Cache pattern lookup once per call (fixes #2: nested find in hot path)
@@ -378,7 +398,7 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
     // Skip targets currently being controlled by user during recording (ADR 123 §8)
     if (isUserControlled(targetKey(curve.target))) continue
 
-    const offset = evaluateCurve(curve.points, progress)
+    const value = evaluateCurve(curve.points, progress) // 0–1 absolute
 
     if (curve.target.kind === 'track') {
       const tgt = curve.target
@@ -387,23 +407,20 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       const track = song.tracks[trackIdx]
       const param = curve.target.param
       if (param === 'volume') {
-        const base = snap.values[`track:${trackIdx}:volume`] ?? track.volume
-        const newVal = clamp(base + offset, 0, 1)
+        const newVal = clamp(value, 0, 1)
         if (Math.abs(track.volume - newVal) > 0.001) { track.volume = newVal; changed = true }
       } else if (param === 'pan') {
-        const base = snap.values[`track:${trackIdx}:pan`] ?? track.pan
-        const newVal = clamp(base + offset, -1, 1)
+        const newVal = clamp(value * 2 - 1, -1, 1) // 0–1 → -1..+1
         if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
       } else {
-        // Voice params (TONE, CUT, RESO, etc.) — apply offset scaled to param range
+        // Voice params (TONE, CUT, RESO, etc.) — denormalize 0–1 to param range
         const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
         if (cell?.voiceId && cell.voiceParams) {
           const defs = getParamDefs(cell.voiceId as VoiceId)
           const def = defs.find(d => d.key === param)
           if (def) {
             const range = def.max - def.min
-            const baseVal = snap.values[`voice:${trackIdx}:${param}`] ?? cell.voiceParams[param] ?? def.default
-            const newVal = clamp(baseVal + offset * range, def.min, def.max)
+            const newVal = clamp(def.min + value * range, def.min, def.max)
             if (Math.abs((cell.voiceParams[param] ?? def.default) - newVal) > range * 0.001) {
               cell.voiceParams[param] = newVal
               changed = true
@@ -415,12 +432,7 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       const param = curve.target.param
       const m = MASTER_MAP[param]
       if (m) {
-        const base = m.snapKey
-          ? (snap.values[m.snapKey] ?? m.get())
-          : 'fxPad' in m
-            ? (snap.fxPad as Record<string, Record<string, number | boolean>>)?.[m.fxPad!]?.[m.xy!] as number ?? m.get()
-            : (snap.masterPad as Record<string, Record<string, number | boolean>>)?.[m.pad!]?.[m.xy!] as number ?? m.get()
-        const newVal = clamp(base + offset, 0, 1)
+        const newVal = clamp(value, 0, 1)
         if (Math.abs(m.get() - newVal) > 0.001) { m.set(newVal); changed = true }
       }
     } else if (curve.target.kind === 'send') {
@@ -430,28 +442,23 @@ function applySweepData(sweepData: SweepData, progress: number, snap: Automation
       const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
       if (cell) {
         const param = tgt.param
-        const base = snap.values[`send:${trackIdx}:${param}`] ?? cell[param]
-        const newVal = clamp(base + offset, 0, 1)
+        const newVal = clamp(value, 0, 1)
         if (Math.abs(cell[param] - newVal) > 0.001) { cell[param] = newVal; changed = true }
       }
     } else if (curve.target.kind === 'fx') {
       const param = curve.target.param
-      const fxSnap = snap.fxPad
       const mapping = FX_MAP[param]
       if (mapping) {
         const [pad, key] = mapping
-        const base = fxSnap[pad]?.[key] as number ?? 0.5
-        ;(fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[key] = clamp(base + offset, 0, 1)
+        ;(fxPad[pad as keyof typeof fxPad] as Record<string, number | boolean>)[key] = clamp(value, 0, 1)
         changed = true
       }
     } else if (curve.target.kind === 'eq') {
       const { band, param } = curve.target
-      const eqSnap = snap.fxPad[band]
       const eqPad = fxPad[band]
-      if (eqSnap && eqPad) {
+      if (eqPad) {
         const key = param === 'freq' ? 'x' : param === 'gain' ? 'y' : 'q'
-        const base = eqSnap[key] as number ?? (key === 'q' ? 1.5 : 0.5)
-        const newVal = clamp(base + offset, 0, key === 'q' ? 3 : 1)
+        const newVal = key === 'q' ? eqQDenorm(clamp(value, 0, 1)) : clamp(value, 0, 1)
         if (Math.abs((eqPad[key] as number) - newVal) > 0.001) { (eqPad as Record<string, number | boolean>)[key] = newVal; changed = true }
       }
     }

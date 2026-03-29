@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cloneSceneNode, cloneScene, cloneSweepData, cloneModifierParams, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers } from './sceneData.ts'
+import { cloneSceneNode, cloneScene, cloneSweepData, cloneModifierParams, restoreScene, migrateDecoratorsToModifiers, purgeOrphanModifiers, migrateSweepCurvesToAbsolute } from './sceneData.ts'
 import type { SceneNode, SceneEdge, Scene, GenerativeConfig, SweepData, SweepToggleCurve, ModifierParams } from './types.ts'
 
 // ── Helpers ──
@@ -519,5 +519,90 @@ describe('cloneScene roundtrip', () => {
     expect(orig.globalSweep!.curves[0].points[0].v).toBe(-0.5)
     expect(orig.globalSweep!.toggles![0].points[0].on).toBe(false)
     expect(orig.globalSweep!.durationMs).toBe(8000)
+  })
+})
+
+// ── migrateSweepCurvesToAbsolute ──
+
+describe('migrateSweepCurvesToAbsolute', () => {
+  it('converts offset values (-1..+1) to absolute (0..1)', () => {
+    const sd: SweepData = {
+      curves: [
+        { target: { kind: 'master', param: 'masterVolume' }, points: [{ t: 0, v: -1 }, { t: 0.5, v: 0 }, { t: 1, v: 1 }], color: '#f00' },
+      ],
+    }
+    migrateSweepCurvesToAbsolute(sd)
+    expect(sd.curves[0].points[0].v).toBeCloseTo(0)    // -1 → 0
+    expect(sd.curves[0].points[1].v).toBeCloseTo(0.5)   // 0 → 0.5
+    expect(sd.curves[0].points[2].v).toBeCloseTo(1)      // 1 → 1
+  })
+
+  it('leaves already-absolute values (0..1) unchanged', () => {
+    const sd: SweepData = {
+      curves: [
+        { target: { kind: 'master', param: 'swing' }, points: [{ t: 0, v: 0.2 }, { t: 1, v: 0.8 }], color: '#0f0' },
+      ],
+    }
+    migrateSweepCurvesToAbsolute(sd)
+    expect(sd.curves[0].points[0].v).toBeCloseTo(0.2)
+    expect(sd.curves[0].points[1].v).toBeCloseTo(0.8)
+  })
+
+  it('migrates only curves with out-of-range values', () => {
+    const sd: SweepData = {
+      curves: [
+        { target: { kind: 'master', param: 'masterVolume' }, points: [{ t: 0, v: -0.5 }, { t: 1, v: 0.5 }], color: '#f00' },
+        { target: { kind: 'master', param: 'swing' }, points: [{ t: 0, v: 0.3 }, { t: 1, v: 0.7 }], color: '#0f0' },
+      ],
+    }
+    migrateSweepCurvesToAbsolute(sd)
+    // First curve migrated (had v < 0)
+    expect(sd.curves[0].points[0].v).toBeCloseTo(0.25)  // (-0.5 + 1) / 2
+    expect(sd.curves[0].points[1].v).toBeCloseTo(0.75)  // (0.5 + 1) / 2
+    // Second curve left alone (all within 0..1)
+    expect(sd.curves[1].points[0].v).toBeCloseTo(0.3)
+    expect(sd.curves[1].points[1].v).toBeCloseTo(0.7)
+  })
+})
+
+describe('restoreScene (sweep absolute migration)', () => {
+  it('migrates legacy offset sweep curves to absolute values', () => {
+    const src: Scene = {
+      name: 'Test',
+      nodes: [
+        patNode('p1'),
+        sweepNode('s1', [
+          { target: { kind: 'master', param: 'masterVolume' }, points: [{ t: 0, v: -0.6 }, { t: 1, v: 0.8 }], color: '#f00' },
+        ]),
+      ],
+      edges: [edge('s1', 'p1')],
+      labels: [],
+      stamps: [],
+    }
+    const restored = restoreScene(src)
+    const s = restored.nodes.find((n: SceneNode) => n.id === 's1')!
+    const pts = s.modifierParams!.sweep!.curves[0].points
+    expect(pts[0].v).toBeCloseTo(0.2)   // (-0.6 + 1) / 2
+    expect(pts[1].v).toBeCloseTo(0.9)   // (0.8 + 1) / 2
+  })
+
+  it('migrates globalSweep offset curves to absolute values', () => {
+    const src: Scene = {
+      name: 'Test',
+      nodes: [patNode('p1')],
+      edges: [],
+      labels: [],
+      stamps: [],
+      globalSweep: {
+        curves: [
+          { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: -1 }, { t: 1, v: 1 }], color: '#00f' },
+        ],
+        durationMs: 4000,
+      },
+    }
+    const restored = restoreScene(src)
+    const pts = restored.globalSweep!.curves[0].points
+    expect(pts[0].v).toBeCloseTo(0)   // (-1 + 1) / 2
+    expect(pts[1].v).toBeCloseTo(1)   // (1 + 1) / 2
   })
 })

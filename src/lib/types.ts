@@ -257,7 +257,7 @@ export type SweepTarget =
 /** A single painted sweep curve (ADR 118) */
 export interface SweepCurve {
   target: SweepTarget
-  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: -1 to +1 (relative offset)
+  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: 0–1 (absolute normalized value)
   color: string
 }
 

@@ -83,6 +83,18 @@ export function cloneScene(sc: Scene): Scene {
   return clone
 }
 
+/** Migrate legacy sweep curve values from offset (-1..+1) to absolute (0..1).
+ *  Detects old format by checking if any point has v < 0 or v > 1. */
+export function migrateSweepCurvesToAbsolute(sd: SweepData): void {
+  for (const curve of sd.curves) {
+    if (curve.points.some(p => p.v < -0.001 || p.v > 1.001)) {
+      for (const p of curve.points) {
+        p.v = (p.v + 1) / 2  // -1..+1 → 0..1
+      }
+    }
+  }
+}
+
 /** Restore a scene from saved data, filling in defaults for missing fields.
  *  Auto-migrates decorators to modifier nodes, fnParams→modifierParams, and legacy formats (ADR 093, ADR 125). */
 export function restoreScene(src: Scene | undefined): Scene {
@@ -119,6 +131,8 @@ export function restoreScene(src: Scene | undefined): Scene {
           t.kind = 'master'
         }
       }
+      // Migrate sweep curve values from offset (-1..+1) to absolute (0..1)
+      migrateSweepCurvesToAbsolute(n.modifierParams.sweep)
     }
   }
   // ADR 126 v2: migrate Tonnetz params to per-step format
@@ -168,7 +182,10 @@ export function restoreScene(src: Scene | undefined): Scene {
     labels: (src.labels ?? []).map(l => ({ ...l })),
     stamps: (src.stamps ?? []).map(s => ({ ...s })),
   }
-  if (src.globalSweep) scene.globalSweep = cloneSweepData(src.globalSweep)
+  if (src.globalSweep) {
+    scene.globalSweep = cloneSweepData(src.globalSweep)
+    migrateSweepCurvesToAbsolute(scene.globalSweep)
+  }
   return scene
 }
 

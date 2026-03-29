@@ -585,7 +585,7 @@
   function drawCurve(ctx: CanvasRenderingContext2D, curve: SweepCurve, w: number, drawY: number, drawH: number, alpha: number, playProgress = -1) {
     if (curve.points.length < 2) return
     const xFor = (t: number) => tToX(t, w)
-    const yForV = (v: number) => drawY + (0.5 - v / 2) * drawH
+    const yForV = (v: number) => drawY + (1 - v) * drawH
     const midY = drawY + drawH / 2
     const isActive = alpha > 0.5
     const isPlaying = playProgress >= 0

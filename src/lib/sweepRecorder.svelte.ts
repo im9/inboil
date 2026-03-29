@@ -416,7 +416,7 @@ function convertCurveCaptures(duration: number): SweepCurve[] {
     if (capture.points.length < 2) continue
     let points = capture.points.map(p => ({
       t: Math.max(0, Math.min(1, recordingProgressOffset + (p.timeMs - recordingStartMs) / duration)),
-      v: p.value * 2 - 1, // 0–1 → -1 to +1 offset
+      v: p.value, // 0–1 absolute normalized value
     }))
     points = rdpSimplify(points, 0.02)
     result.push({ target: capture.target, points, color: capture.color })
@@ -447,7 +447,7 @@ function convertGlobalCurveCaptures(totalMs: number): SweepCurve[] {
     if (capture.points.length < 2) continue
     let points = capture.points.map(p => ({
       t: Math.max(0, Math.min(1, (p.timeMs - recordingStartMs) / totalMs)),
-      v: p.value * 2 - 1,
+      v: p.value, // 0–1 absolute normalized value
     }))
     points = rdpSimplify(points, 0.02)
     result.push({ target: capture.target, points, color: capture.color })

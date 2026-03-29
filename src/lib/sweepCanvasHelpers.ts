@@ -45,7 +45,7 @@ export function pointerToNorm(
   const drawTop = geo.rectTop + tlH
   const drawHeight = geo.rectHeight - tlH
   const y = (clientY - drawTop) / drawHeight
-  const v = Math.max(-1, Math.min(1, (0.5 - y) * 2))
+  const v = Math.max(0, Math.min(1, 1 - y))
   return { t, v }
 }
 
@@ -87,7 +87,7 @@ export function hitTestPoint(
   const drawH = geo.rectHeight - tlH
   for (let i = 0; i < points.length; i++) {
     const px = tToX(points[i].t, w, vw)
-    const py = (0.5 - points[i].v / 2) * drawH + tlH
+    const py = (1 - points[i].v) * drawH + tlH
     const dx = clientX - geo.rectLeft - px
     const dy = clientY - geo.rectTop - py
     if (Math.sqrt(dx * dx + dy * dy) < hitRadius) return i

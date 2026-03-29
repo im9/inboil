@@ -23,7 +23,7 @@
   import TuringSheet from './lib/components/TuringSheet.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
-  import { markScenePlayStart } from './lib/scenePlayback.ts'
+  import { markScenePlayStart, getInitialAutomationSnapshot, clearInitialAutomationSnapshot } from './lib/scenePlayback.ts'
   import ErrorToast from './lib/components/ErrorToast.svelte'
   import ErrorDialog from './lib/components/ErrorDialog.svelte'
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
@@ -311,10 +311,16 @@
     playback.sceneRepeatLeft = 0
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
-    if (playback.automationSnapshot) {
+    // Restore pre-playback state: use initial snapshot (taken at scene play start)
+    // not the carry-over snapshot (which reflects state at last pattern transition).
+    const initialSnap = getInitialAutomationSnapshot()
+    if (initialSnap) {
+      restoreAutomationSnapshot(initialSnap)
+    } else if (playback.automationSnapshot) {
       restoreAutomationSnapshot(playback.automationSnapshot)
-      playback.automationSnapshot = null
     }
+    playback.automationSnapshot = null
+    clearInitialAutomationSnapshot()
     playback.mode = 'loop'
     playback.playingPattern = null
     playback.queuedPattern = null

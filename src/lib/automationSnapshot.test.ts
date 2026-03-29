@@ -135,6 +135,32 @@ describe('automation snapshot: FX persistence', () => {
     }
   })
 
+  it('stop must restore initial snapshot, not carry-over snapshot', () => {
+    // Scenario: pattern1 starts with verb.on=false, sweep turns it on,
+    // pattern2 transition snapshots verb.on=true (carry-over).
+    // On stop, restoring the carry-over snapshot would leave verb.on=true — wrong.
+    // stop must restore the initial snapshot (verb.on=false).
+
+    const pad: FxPad = JSON.parse(JSON.stringify(DEFAULT_FX_PAD))
+    const flavours: FxFlavours = { ...DEFAULT_FX_FLAVOURS }
+
+    // ① Initial snapshot at scene play start (verb.on = false)
+    const initialSnap = snapshotFx(pad, flavours)
+    expect(initialSnap.fxPad.verb.on).toBe(false)
+
+    // ② Sweep automation turns verb on during pattern1
+    pad.verb = { ...pad.verb, on: true }
+
+    // ③ Pattern transition: carry-over snapshot captures verb.on=true
+    const carryOverSnap = snapshotFx(pad, flavours)
+    expect(carryOverSnap.fxPad.verb.on).toBe(true)
+
+    // ④ Stop: restoring carry-over would be WRONG
+    //    Restoring initial snapshot is CORRECT
+    restoreFx(initialSnap, pad, flavours)
+    expect(pad.verb.on).toBe(false) // must be off for song to work
+  })
+
   it('restores all 3 masterPad sub-objects (MASTER_PAD_KEYS coverage)', () => {
     type MasterPad = typeof DEFAULT_MASTER_PAD
     const master: MasterPad = JSON.parse(JSON.stringify(DEFAULT_MASTER_PAD))

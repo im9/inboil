@@ -52,13 +52,13 @@ describe('tToX', () => {
 // ── pointerToNorm ──
 
 describe('pointerToNorm', () => {
-  it('maps center of draw area to t=0.5, v=0', () => {
+  it('maps center of draw area to t=0.5, v=0.5', () => {
     const canvasH = 400
     const drawH = canvasH - TIMELINE_H
     const centerY = TIMELINE_H + drawH / 2
     const result = pointerToNorm(400, centerY, geo, canvasH, TIMELINE_H, fullView)
     expect(result.t).toBeCloseTo(0.5, 5)
-    expect(result.v).toBeCloseTo(0, 2)
+    expect(result.v).toBeCloseTo(0.5, 2)
   })
 
   it('maps top of draw area to v≈1', () => {
@@ -67,10 +67,10 @@ describe('pointerToNorm', () => {
     expect(result.v).toBeCloseTo(1, 2)
   })
 
-  it('clamps v to [-1, 1]', () => {
+  it('clamps v to [0, 1]', () => {
     const canvasH = 400
     const result = pointerToNorm(400, 500, geo, canvasH, TIMELINE_H, fullView)
-    expect(result.v).toBe(-1)
+    expect(result.v).toBe(0)
   })
 
   it('clamps t to [0, 1]', () => {
@@ -127,17 +127,17 @@ describe('isInToggleLane', () => {
 
 describe('hitTestPoint', () => {
   const points = [
-    { t: 0.25, v: 0.5 },
-    { t: 0.5, v: 0 },
-    { t: 0.75, v: -0.5 },
+    { t: 0.25, v: 0.75 },
+    { t: 0.5, v: 0.5 },
+    { t: 0.75, v: 0.25 },
   ]
 
   it('returns point index when pointer is within hit radius', () => {
     // Point at t=0.5 → x=400 in full view on 800px canvas
-    // Point at v=0 → midpoint of draw area
+    // Point at v=0.5 → midpoint of draw area
     const canvasH = 400
     const drawH = canvasH - TIMELINE_H
-    const py = (0.5 - 0 / 2) * drawH + TIMELINE_H // v=0 → y = midpoint
+    const py = (1 - 0.5) * drawH + TIMELINE_H // v=0.5 → y = midpoint
     const idx = hitTestPoint(400, py, points, geo, canvasH, TIMELINE_H, fullView, 10)
     expect(idx).toBe(1)
   })
@@ -178,19 +178,20 @@ describe('hitTestToggleBoundary', () => {
 
 describe('hitTestCurveNearest', () => {
   const curves: SweepCurve[] = [
-    { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0 }, { t: 1, v: 1 }], color: '#f00' },
-    { target: { kind: 'fx', param: 'delayFeedback' }, points: [{ t: 0, v: -0.5 }, { t: 1, v: -0.5 }], color: '#0f0' },
+    { target: { kind: 'fx', param: 'reverbWet' }, points: [{ t: 0, v: 0.2 }, { t: 1, v: 0.8 }], color: '#f00' },
+    { target: { kind: 'fx', param: 'delayFeedback' }, points: [{ t: 0, v: 0.1 }, { t: 1, v: 0.1 }], color: '#0f0' },
   ]
   const noMute = () => false
 
   it('returns nearest curve index', () => {
-    // norm at t=0.5, v=0.4 → curve[0] evaluates to ~0.5, curve[1] to -0.5
-    const idx = hitTestCurveNearest({ t: 0.5, v: 0.4 }, curves, 0.2, noMute)
+    // norm at t=0.5, v=0.55 → curve[0] evaluates to ~0.5, curve[1] to 0.1
+    const idx = hitTestCurveNearest({ t: 0.5, v: 0.55 }, curves, 0.2, noMute)
     expect(idx).toBe(0)
   })
 
   it('returns -1 when no curve is near', () => {
-    const idx = hitTestCurveNearest({ t: 0.5, v: -0.1 }, curves, 0.05, noMute)
+    // Both curves are far from v=0.95: curve[0] ≈ 0.5, curve[1] = 0.1
+    const idx = hitTestCurveNearest({ t: 0.5, v: 0.95 }, curves, 0.05, noMute)
     expect(idx).toBe(-1)
   })
 
