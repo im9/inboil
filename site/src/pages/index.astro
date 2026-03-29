@@ -1,7 +1,7 @@
 ---
 import pkg from '../../../package.json';
-const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : (import.meta.env.PUBLIC_APP_URL || 'https://app.inboil.app');
-const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : (import.meta.env.SITE || 'https://inboil.app');
+const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://app.inboil.app';
+const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : 'https://inboil.app';
 const description = 'A browser-based groove box with 19 sound engines, a graphical sequencer, and zero setup. No install. No signup. Just play.';
 const ogImage = `${siteUrl}/og.png`;
 ---
@@ -1392,6 +1392,15 @@ const ogImage = `${siteUrl}/og.png`;
 
   <script is:inline>
   const _reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // Runtime app URL resolution (same build serves both pages.dev and custom domain)
+  (() => {
+    const h = location.hostname;
+    const appUrl = h === 'localhost' ? 'http://localhost:5173'
+      : h.endsWith('.pages.dev') ? 'https://inboil.pages.dev'
+      : 'https://app.inboil.app';
+    document.querySelectorAll('#header-app, #app-link, #final-app-link').forEach(a => { a.href = appUrl; });
+  })();
 
   // Language toggle
   (() => {

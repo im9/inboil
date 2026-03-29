@@ -8,7 +8,7 @@ import path from 'node:path';
 const appSrc = path.resolve(fileURLToPath(import.meta.url), '../../src');
 
 export default defineConfig({
-  site: process.env.SITE || 'https://inboil.app',
+  site: 'https://inboil.app',
   outDir: './dist',
   prefetch: false,
   integrations: [
@@ -23,13 +23,11 @@ export default defineConfig({
       customCss: ['./src/styles/custom.css'],
       head: [
         {
-          tag: 'meta',
-          attrs: { name: 'app-url', content: process.env.PUBLIC_APP_URL || 'https://app.inboil.app' },
-        },
-        {
           tag: 'script',
           content: `document.addEventListener('DOMContentLoaded',()=>{
   const a=document.querySelector('a.site-title');if(a)a.href='/';
+  const _appUrl=location.hostname==='localhost'?'http://localhost:5173':location.hostname.endsWith('.pages.dev')?'https://inboil.pages.dev':'https://app.inboil.app';
+  document.querySelectorAll('.app-link-dynamic').forEach(el=>{el.href=_appUrl});
   if(location.pathname.startsWith('/ja/'))document.cookie='lang=en;path=/;max-age=0';
   else if(location.pathname.startsWith('/docs/'))document.cookie='lang=en;path=/;max-age=31536000';
   const sel=document.querySelector('starlight-lang-select select');
@@ -45,7 +43,7 @@ export default defineConfig({
     home.className='home-link';
     hdr.appendChild(home);
     const lnk=document.createElement('a');
-    lnk.href=location.hostname==='localhost'?'http://localhost:5173':(document.head.querySelector('meta[name=app-url]')?.content||'https://app.inboil.app');
+    lnk.href=location.hostname==='localhost'?'http://localhost:5173':location.hostname.endsWith('.pages.dev')?'https://inboil.pages.dev':'https://app.inboil.app';
     lnk.textContent='Open App';
     lnk.className='app-link';
     lnk.target='_blank';
