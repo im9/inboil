@@ -12,7 +12,7 @@ The data model uses a Song → Pattern → Cell hierarchy (ADR 042/044). Each Pa
 | Song | Top-level container: BPM, rootNote, tracks (instrument config), patterns (pool), sections, scene. |
 | Pattern | A reusable unit of music: id + name + N cells (one per track). One pattern plays at a time. |
 | Cell | Step data for one track in one pattern: name, voiceId, steps, trigs, voiceParams, FX sends. |
-| Track | Instrument configuration only: id, name, voiceId, muted, volume, pan. |
+| Track | Mixer channel only: id, muted, volume, pan (ADR 080). Name and voiceId moved to Cell (ADR 062). |
 | Section | Arrangement slot referencing a pattern by index, with optional metadata (repeats, key, FX). |
 | Scene | Node-based directed graph for arrangement. Nodes reference patterns or apply functions. |
 | Trig | An active step that triggers a note/sound. Inactive steps are "empty". |
@@ -46,6 +46,7 @@ Pattern {
   name:      string            // max 8 chars
   color:     number            // 0–7 index into PATTERN_COLORS
   cells:     Cell[]            // one per track (up to 16)
+  rootNote?: number            // 0–11, per-pattern key override (undefined → song.rootNote)
 }
 ```
 
@@ -188,14 +189,16 @@ SweepTarget =
 
 SweepCurve {
   target: SweepTarget
-  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: -1 to +1 (relative offset)
+  points: { t: number; v: number }[]  // t: 0–1 (sweep progress), v: 0–1 (absolute normalized)
   color:  string
 }
 
 SweepToggleTarget =
-  | { kind: 'hold';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
-  | { kind: 'fxOn';  fx: 'verb' | 'delay' | 'glitch' | 'granular' }
-  | { kind: 'mute';  trackId: number }
+  | { kind: 'hold';      fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'fxOn';      fx: 'verb' | 'delay' | 'glitch' | 'granular' }
+  | { kind: 'masterFxOn'; param: 'comp' | 'duck' | 'ret' | 'sat' }
+  | { kind: 'mute';      trackId: number }
+  | { kind: 'perf';      param: 'fill' | 'rev' | 'brk' }  // ADR 128
 
 SweepToggleCurve {
   target: SweepToggleTarget
@@ -207,6 +210,7 @@ SweepData {
   curves: SweepCurve[]
   toggles?: SweepToggleCurve[]          // boolean automation (ADR 123)
   durationMs?: number                   // total recording duration, used for global sweep (ADR 123 Phase 5)
+  offsetMs?: number                     // recording start offset
 }
 
 ModifierParams {

@@ -113,7 +113,7 @@ General nouns use katakana. Proper nouns / engine names stay in English. Abbrevi
 | **MobilePerfSheet** | Mobile Kaoss Pad XY controller. 4 tabs (PERF/GLITCH/FILTER/MOTION) with per-zone effects, Canvas visualizer, accelerometer/gyroscope support. |
 | **Oscilloscope** | Waveform display in AppHeader. Zero-crossing-aligned, DPR-aware Canvas 2D. |
 | **TrackSelector** | Track dot selector bar, used in mobile FX/EQ views. Hidden on desktop. |
-| **VoicePicker** | Voice selection UI (inline in DockPanel, not a standalone component) for changing a cell's instrument. Category tabs (DRUM/SYNTH/SMPL) + voice list (ADR 009/058). |
+| **VoicePicker** | Voice selection component (`VoicePicker.svelte`) for changing a cell's instrument. Category tabs (DRUM/SYNTH/SMPL) + voice list. Used in DockPanel and MobileParamOverlay with `variant` prop for styling (ADR 009/058). |
 | **VoiceId** | Granular voice identifier string (e.g. 'Kick', 'Bass303', 'FM'). Replaces the old coarse SynthType. See ADR 009. |
 | **Virtual keyboard (VKBD)** | PC keyboard as musical note input. QWERTY two-row chromatic layout. Phase 1: audition only. |
 | **Hardware MIDI** | Web MIDI API integration for USB + BLE MIDI keyboards. Per-note release, CC1→DJ Filter (ADR 081). |

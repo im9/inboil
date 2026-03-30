@@ -113,7 +113,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (55 files)  ← Svelte 5 UI components
+│   │   ├── components/ (56 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
@@ -129,7 +129,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── DockTrackEditor.svelte ← Track param knobs, send/mixer, sample LOAD/POOL
 │   │   │   ├── DockPoolBrowser.svelte ← Inline audio pool browser (ADR 104)
 │   │   │   ├── DockPresetBrowser.svelte ← Factory preset browser (WT/FM)
-│   │   │   ├── DockGenerativeEditor.svelte ← Dock generative node editor (ADR 078)
+│   │   │   ├── GenSheetCommon.svelte  ← Shared generative sheet layout (Turing/Quantizer/Tonnetz)
 │   │   │   ├── DockNavigator.svelte  ← Scene BFS navigator (ADR 070)
 │   │   │   ├── DockFxControls.svelte ← FX knobs/toggles/flavours
 │   │   │   ├── DockEqControls.svelte ← EQ band controls (freq/gain/Q)
@@ -148,6 +148,7 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   │   │   ├── MobileParamOverlay.svelte ← Mobile: bottom-sheet param overlay
 │   │   │   ├── MobileMatrixView.svelte ← Mobile pattern pool browser (ADR 095)
 │   │   │   ├── MobilePerfSheet.svelte ← Mobile Kaoss Pad (4 tabs, accelerometer/gyroscope)
+│   │   │   ├── PadGrid.svelte        ← Mobile pad grid for melodic step input (ADR 102)
 │   │   │   ├── MobileSceneRibbon.svelte ← Mobile scene playback ribbon (future)
 │   │   │   ├── WelcomeOverlay.svelte ← First-visit welcome overlay
 │   │   │   ├── Oscilloscope.svelte ← Waveform display in header
