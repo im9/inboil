@@ -129,10 +129,10 @@
     | 'I1M' | 'I1X' | 'I1Y' | 'I2M' | 'I2X' | 'I2Y'
   const VEL_MODES: VelMode[] = ['VEL', 'CHNC', 'VOL', 'PAN', 'VERB', 'DLY', 'GLT', 'GRN', 'I1M', 'I1X', 'I1Y', 'I2M', 'I2X', 'I2Y']
   const VEL_MODE_COLORS: Record<VelMode, string> = {
-    VEL: '', CHNC: '#4472B4', VOL: '#508080', PAN: '#508080',
-    VERB: '#787845', DLY: '#4472B4', GLT: '#E8A090', GRN: '#9B6BA0',
-    I1M: '#6B8E8E', I1X: '#6B8E8E', I1Y: '#6B8E8E',
-    I2M: '#8E6B8E', I2X: '#8E6B8E', I2Y: '#8E6B8E',
+    VEL: '', CHNC: 'var(--color-blue)', VOL: 'var(--color-teal)', PAN: 'var(--color-teal)',
+    VERB: 'var(--color-olive)', DLY: 'var(--color-blue)', GLT: 'var(--color-salmon)', GRN: 'var(--color-purple)',
+    I1M: 'var(--color-teal)', I1X: 'var(--color-teal)', I1Y: 'var(--color-teal)',
+    I2M: 'var(--color-purple)', I2X: 'var(--color-purple)', I2Y: 'var(--color-purple)',
   }
   const VEL_MODE_KEYS: Record<VelMode, string> = {
     VEL: '', CHNC: '', VOL: 'vol', PAN: 'pan',

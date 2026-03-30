@@ -133,12 +133,13 @@
   <!-- Top bar: logo + oscilloscope background -->
   <header class="app-header">
     <Oscilloscope />
+    <!-- REFACTOR-OK: #a3a145 is the logo brand olive (brighter than --color-olive #787845 for dark-zone visibility) -->
     <svg class="app-logo" viewBox="0 0 32 32" aria-hidden="true">
       <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
       <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>
       <rect x="4" y="14" width="8" height="8" fill="#a3a145" opacity="0.5"/>
       <rect x="14" y="14" width="8" height="8" fill="#a3a145"/>
-      <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
+      <rect x="24" y="4" width="4" height="18" rx="1" fill="var(--color-bg)" opacity="0.4"/>
     </svg>
     <span class="app-name">INBOIL</span>
     <span class="version-badge" data-tip="v{__APP_VERSION__} beta" data-tip-ja="v{__APP_VERSION__} ベータ版">β</span>

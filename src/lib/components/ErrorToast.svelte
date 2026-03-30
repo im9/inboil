@@ -50,8 +50,8 @@
   }
   .toast-error {
     background: var(--danger-bg-hover);
-    border: 1px solid var(--color-salmon, #E8A090);
-    color: var(--color-salmon, #E8A090);
+    border: 1px solid var(--color-salmon);
+    color: var(--color-salmon);
   }
   .toast-warn {
     background: var(--olive-bg);
@@ -60,8 +60,8 @@
   }
   .toast-info {
     background: var(--blue-bg-playhead);
-    border: 1px solid var(--color-blue, #4472B4);
-    color: var(--color-blue, #4472B4);
+    border: 1px solid var(--color-blue);
+    color: var(--color-blue);
   }
   .toast-icon {
     flex-shrink: 0;

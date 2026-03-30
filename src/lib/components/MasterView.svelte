@@ -56,6 +56,7 @@
     return base
   }
 
+  // REFACTOR-OK: drag lifecycle similar to FilterView/FxPad — unique sweep-recording/nodeState logic makes extraction a net-negative
   let padEl: HTMLDivElement
   let dragging: NodeKey | null = $state(null)
   let dragMoved = false
@@ -601,7 +602,7 @@
   }
   .vu-dot.clip {
     background: var(--color-danger);
-    box-shadow: 0 0 8px rgba(255,68,68,0.7);
+    box-shadow: 0 0 8px var(--danger-border);
     animation: clip-throb 200ms ease-in-out infinite alternate;
   }
   @keyframes clip-throb {

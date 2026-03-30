@@ -92,13 +92,13 @@
     const inChord = chordPcs.has(key.pc)
     const inScale = scalePcs.has(key.pc)
     if (mode === 'chord' && inChord) return 'var(--color-olive)'
-    if (inScale) return key.isBlack ? 'rgba(30, 32, 40, 0.7)' : 'rgba(138, 148, 50, 0.18)'
-    return key.isBlack ? 'rgba(30, 32, 40, 0.85)' : 'rgba(237, 232, 220, 0.6)'
+    if (inScale) return key.isBlack ? 'rgba(30, 32, 40, 0.70)' : 'rgba(120, 120, 69, 0.15)'
+    return key.isBlack ? 'rgba(30, 32, 40, 0.85)' : 'rgba(237, 232, 220, 0.55)'
   }
 
   function keyStroke(key: KeyInfo): string {
     if (mode === 'chord' && chordPcs.has(key.pc)) return 'var(--color-olive)'
-    return 'rgba(30, 32, 40, 0.25)'
+    return 'rgba(30, 32, 40, 0.20)'
   }
 
   // ── Chord editor helpers ──

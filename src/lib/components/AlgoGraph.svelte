@@ -74,17 +74,17 @@
     {@const cx = algo.ops[ci][0]}
     {@const cy = algo.ops[ci][1]}
     <line x1={cx} y1={cy + OPR + 1} x2={cx} y2={H - 1}
-      stroke="rgba(180,200,140,0.5)" stroke-width="1.5" />
+      stroke="rgba(120,120,69,0.40)" stroke-width="1.5" />
   {/each}
   <!-- Operator circles -->
   {#each algo.ops as [ox, oy], i}
     {@const isCarrier = algo.carriers.includes(i)}
     <circle cx={ox} cy={oy} r={OPR}
-      fill={isCarrier ? 'rgba(180,200,140,0.25)' : 'rgba(237,232,220,0.08)'}
-      stroke={isCarrier ? 'rgba(180,200,140,0.7)' : 'rgba(237,232,220,0.4)'}
+      fill={isCarrier ? 'rgba(120,120,69,0.15)' : 'rgba(237,232,220,0.08)'}
+      stroke={isCarrier ? 'rgba(120,120,69,0.40)' : 'rgba(237,232,220,0.45)'}
       stroke-width="1.5" />
     <text x={ox} y={oy + 3.5} text-anchor="middle"
-      fill={isCarrier ? 'rgba(180,200,140,0.9)' : 'rgba(237,232,220,0.6)'}
+      fill={isCarrier ? 'rgba(120,120,69,0.70)' : 'rgba(237,232,220,0.55)'}
       font-size="9" font-family="monospace">{i + 1}</text>
   {/each}
   <!-- Algorithm label -->

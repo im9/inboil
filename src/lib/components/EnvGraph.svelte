@@ -38,8 +38,8 @@
 </script>
 
 <svg class="env-graph" viewBox="0 0 {W} {H}" preserveAspectRatio="none">
-  <path d={fillPath} fill="rgba(108,119,68,0.15)" />
-  <path d={points} fill="none" stroke="rgba(108,119,68,0.7)" stroke-width="1.5" stroke-linejoin="round" />
+  <path d={fillPath} fill="rgba(120,120,69,0.15)" />
+  <path d={points} fill="none" stroke="rgba(120,120,69,0.70)" stroke-width="1.5" stroke-linejoin="round" />
 </svg>
 
 <style>

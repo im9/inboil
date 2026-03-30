@@ -75,7 +75,7 @@
   }
   .error-dialog {
     background: var(--color-fg);
-    border: 1px solid var(--color-salmon, #E8A090);
+    border: 1px solid var(--color-salmon);
     border-radius: var(--radius-md);
     max-width: 440px;
     width: 100%;
@@ -91,12 +91,12 @@
   }
   .error-icon {
     font-size: 18px; /* display: error title */
-    color: var(--color-salmon, #E8A090);
+    color: var(--color-salmon);
   }
   .error-code {
     font-size: 14px; /* display: error subtitle */
     font-weight: 700;
-    color: var(--color-salmon, #E8A090);
+    color: var(--color-salmon);
     letter-spacing: 0.05em;
   }
   .error-message {
@@ -129,8 +129,8 @@
     font-weight: 700;
     padding: 6px 14px;
     border-radius: 0;
-    border: 1px solid var(--color-salmon, #E8A090);
-    background: var(--color-salmon, #E8A090);
+    border: 1px solid var(--color-salmon);
+    background: var(--color-salmon);
     color: var(--color-fg);
     cursor: pointer;
   }

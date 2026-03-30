@@ -38,6 +38,7 @@
 
 <div class="welcome-backdrop" transition:fade={{ duration: 150 }}>
   <div class="welcome-card">
+    <!-- REFACTOR-OK: #a3a145 is the logo brand olive (brighter than --color-olive for visibility) -->
     <svg class="welcome-logo" viewBox="0 0 32 32" aria-hidden="true">
       <rect x="4" y="4" width="8" height="8" fill="#a3a145"/>
       <rect x="14" y="4" width="8" height="8" fill="#a3a145" opacity="0.5"/>

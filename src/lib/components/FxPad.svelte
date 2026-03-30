@@ -16,6 +16,7 @@
     { key: 'granular' as const, label: 'GRN',  color: 'var(--color-purple)', tip: 'Granular — drag: size/density, hold+drag: pitch/scatter, hold: hold', tipJa: 'グラニュラー — ドラッグ: サイズ/密度, 長押し+ドラッグ: ピッチ/スキャッタ, 長押し: ホールド' },
   ]
 
+  // REFACTOR-OK: drag lifecycle similar to FilterView/MasterView — unique long-press/hold/bubble-menu logic makes extraction a net-negative
   let padEl: HTMLDivElement
   let dragging: typeof nodes[number]['key'] | null = $state(null)
   let dragMoved = false

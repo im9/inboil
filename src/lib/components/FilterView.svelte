@@ -6,6 +6,9 @@
   import { padNorm, movedPastTap } from '../padHelpers.ts'
   import { tToFreq, freqToT, peakingResponse, shelfResponse } from '../eqDsp.ts'
 
+  // REFACTOR-OK: drag lifecycle (dragRect/startDrag/toNorm/endDrag) is similar to FxPad and MasterView,
+  // but each pad has unique business logic (double-tap, long-press, sweep recording) making extraction
+  // a net-negative abstraction.
   let padEl: HTMLDivElement
   let dragging: 'filter' | 'eqLow' | 'eqMid' | 'eqHigh' | null = $state(null)
   let dragMoved = false

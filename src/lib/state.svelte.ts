@@ -466,17 +466,6 @@ export const midiIn = $state({
   receiving: false,
 })
 
-/** @deprecated Use song.effects directly — kept as re-export for migration convenience */
-export const effects = {
-  get reverb() { return song.effects.reverb },
-  set reverb(v) { song.effects.reverb = v },
-  get delay() { return song.effects.delay },
-  set delay(v) { song.effects.delay = v },
-  get ducker() { return song.effects.ducker },
-  set ducker(v) { song.effects.ducker = v },
-  get comp() { return song.effects.comp },
-  set comp(v) { song.effects.comp = v },
-}
 
 // ── Factory reset ────────────────────────────────────────────────────
 

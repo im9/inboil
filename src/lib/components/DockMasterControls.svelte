@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { perf, effects, masterPad, fxPad, pushUndo } from '../state.svelte.ts'
+  import { perf, song, masterPad, fxPad, pushUndo } from '../state.svelte.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import Knob from './Knob.svelte'
   import VFader from './VFader.svelte'
@@ -15,26 +15,26 @@
 
   function getMasterKnobValue(key: MasterKnobKey): number {
     if (key === 'gain') return perf.masterGain
-    if (key === 'mkp') return (effects.comp.makeup - 1) / 3
-    if (key === 'atk') return (effects.comp.attack - 0.1) / 29.9
-    if (key === 'rel') return (effects.comp.release - 10) / 290
+    if (key === 'mkp') return (song.effects.comp.makeup - 1) / 3
+    if (key === 'atk') return (song.effects.comp.attack - 0.1) / 29.9
+    if (key === 'rel') return (song.effects.comp.release - 10) / 290
     return perf.swing
   }
 
   function setMasterKnobValue(key: MasterKnobKey, v: number) {
     pushUndo('Master knob')
     if (key === 'gain') { perf.masterGain = v; captureValue({ kind: 'master', param: 'masterVolume' }, v) }
-    else if (key === 'mkp') effects.comp.makeup = 1 + v * 3
-    else if (key === 'atk') effects.comp.attack = 0.1 + v * 29.9
-    else if (key === 'rel') effects.comp.release = 10 + v * 290
+    else if (key === 'mkp') song.effects.comp.makeup = 1 + v * 3
+    else if (key === 'atk') song.effects.comp.attack = 0.1 + v * 29.9
+    else if (key === 'rel') song.effects.comp.release = 10 + v * 290
     else { perf.swing = v; captureValue({ kind: 'master', param: 'swing' }, v) }
   }
 
   function masterKnobDisplay(key: MasterKnobKey): string {
     if (key === 'gain') return `${Math.round(perf.masterGain * 100)}%`
-    if (key === 'mkp') return `${effects.comp.makeup.toFixed(1)}×`
-    if (key === 'atk') return `${effects.comp.attack.toFixed(1)}ms`
-    if (key === 'rel') return `${Math.round(effects.comp.release)}ms`
+    if (key === 'mkp') return `${song.effects.comp.makeup.toFixed(1)}×`
+    if (key === 'atk') return `${song.effects.comp.attack.toFixed(1)}ms`
+    if (key === 'rel') return `${Math.round(song.effects.comp.release)}ms`
     return `${Math.round(perf.swing * 100)}%`
   }
 

@@ -26,8 +26,8 @@
 
   // Column colors for active steps
   const COL_COLORS: Partial<Record<ColId, string>> = {
-    VOL: '#508080', PAN: '#508080',
-    VERB: '#787845', DLY: '#4472B4', GLT: '#E8A090', GRN: '#9B6BA0',
+    VOL: 'var(--color-teal)', PAN: 'var(--color-teal)',
+    VERB: 'var(--color-olive)', DLY: 'var(--color-blue)', GLT: 'var(--color-salmon)', GRN: 'var(--color-purple)',
   }
 
   // ── Cursor state ─────────────────────────────────────────────────

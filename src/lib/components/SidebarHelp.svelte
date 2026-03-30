@@ -249,7 +249,7 @@
     display: block;
     padding: 8px 12px;
     font-size: var(--fs-lg);
-    color: var(--color-blue, #4472B4);
+    color: var(--color-blue);
     text-decoration: none;
     border-bottom: 1px solid var(--dz-bg-hover);
     transition: background 0.15s;
@@ -306,7 +306,7 @@
   }
   .docs-link {
     font-size: var(--fs-sm);
-    color: var(--color-blue, #4472B4);
+    color: var(--color-blue);
     text-decoration: none;
     letter-spacing: 0;
     text-transform: none;

@@ -692,25 +692,28 @@
 
   function handleSceneKeys(e: KeyboardEvent): boolean | void {
     // Delete/Backspace: allow from anywhere when scene nodes/edges/labels/stamps are selected
-    const hasSceneSelection = Object.keys(ui.selectedSceneNodes).length > 0
-      || ui.selectedSceneEdge || Object.keys(ui.selectedSceneLabels).length > 0
-      || Object.keys(ui.selectedSceneStamps).length > 0
+    const stampIds = Object.keys(ui.selectedSceneStamps)
+    const labelIds = Object.keys(ui.selectedSceneLabels)
+    const nodeIds = Object.keys(ui.selectedSceneNodes)
+    const hasSceneSelection = nodeIds.length > 0
+      || ui.selectedSceneEdge || labelIds.length > 0
+      || stampIds.length > 0
     if (hasSceneSelection && (e.key === 'Delete' || e.key === 'Backspace')) {
       e.preventDefault()
-      if (Object.keys(ui.selectedSceneStamps).length > 0) {
-        for (const id of Object.keys(ui.selectedSceneStamps)) {
+      if (stampIds.length > 0) {
+        for (const id of stampIds) {
           sceneDeleteStamp(id)
         }
         ui.selectedSceneStamps = {}
-      } else if (Object.keys(ui.selectedSceneLabels).length > 0) {
-        for (const id of Object.keys(ui.selectedSceneLabels)) {
+      } else if (labelIds.length > 0) {
+        for (const id of labelIds) {
           sceneDeleteLabel(id)
         }
         ui.selectedSceneLabels = {}
       } else if (ui.selectedSceneEdge) {
         sceneDeleteEdge(ui.selectedSceneEdge)
-      } else if (Object.keys(ui.selectedSceneNodes).length > 0) {
-        for (const id of Object.keys(ui.selectedSceneNodes)) {
+      } else if (nodeIds.length > 0) {
+        for (const id of nodeIds) {
           sceneDeleteNode(id)
         }
         ui.selectedSceneNodes = {}
@@ -1448,7 +1451,7 @@
 
   /* ── Pattern nodes (flat color labels) ── */
   .scene-node {
-    --nc: #787845; /* fallback */
+    --nc: var(--color-olive); /* fallback */
     position: absolute;
     min-width: 72px;
     height: 32px;

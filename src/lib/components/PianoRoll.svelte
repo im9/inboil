@@ -1048,7 +1048,7 @@
     border-color: transparent;
   }
   .cell.continuation {
-    background: rgba(108,119,68,0.3);
+    background: rgba(120,120,69,0.30);
     margin: 1px;
     border-radius: 0;
   }
