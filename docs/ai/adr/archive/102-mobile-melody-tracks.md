@@ -1,6 +1,6 @@
 # ADR 102: Mobile Melodic Input & Track Management
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
