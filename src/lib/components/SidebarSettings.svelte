@@ -28,8 +28,8 @@
   async function handleJoin() {
     const code = joinCode.trim().toUpperCase()
     const name = joinName.trim() || 'Guest'
-    if (code.length !== 4) {
-      joinError = L === 'ja' ? '4文字のルームコードを入力' : 'Enter 4-character room code'
+    if (code.length !== 8) {
+      joinError = L === 'ja' ? '8文字のルームコードを入力' : 'Enter 8-character room code'
       return
     }
     joining = true
@@ -173,7 +173,7 @@
       <input
         class="jam-input"
         type="text"
-        maxlength="6"
+        maxlength="8"
         placeholder={L === 'ja' ? 'コード' : 'CODE'}
         bind:value={joinCode}
         onkeydown={(e) => { if (e.key === 'Enter') void handleJoin() }}
@@ -349,11 +349,12 @@
     font-size: var(--fs-lg);
     letter-spacing: 0.08em;
     padding: 5px 6px;
-    width: 64px;
+    width: 96px;
     text-transform: uppercase;
   }
   .jam-input.jam-name {
     flex: 1;
+    min-width: 0;
     text-transform: none;
   }
   .jam-input::placeholder {
