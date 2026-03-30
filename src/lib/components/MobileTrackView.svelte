@@ -5,7 +5,7 @@
   import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, addTrack, removeTrack, STEP_OPTIONS } from '../stepActions.ts'
   import { randomizePattern } from '../randomize.ts'
   import { VOICE_LIST } from '../audio/dsp/voices.ts'
-  import PianoRoll from './PianoRoll.svelte'
+  import PadGrid from './PadGrid.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
   import ConfirmModal from './ConfirmModal.svelte'
   import { onDestroy } from 'svelte'
@@ -16,8 +16,8 @@
   const voiceMeta = $derived(ph.voiceId ? VOICE_LIST.find(v => v.id === ph.voiceId) : null)
   let confirmRef = $state<ConfirmModal>(null!)
 
-  // Mobile tab: melodic tracks can switch between STEPS and NOTES
-  let mobileTab: 'steps' | 'notes' = $state('steps')
+  // Mobile tab: melodic tracks can switch between STEPS and PADS
+  let mobileTab: 'steps' | 'pads' = $state('steps')
 
   // Dynamic column count based on step count
   const calcCols = $derived(ph.steps <= 8 ? 4 : ph.steps <= 16 ? 4 : ph.steps <= 32 ? 8 : 8)
@@ -207,11 +207,17 @@
   })
 
   function prevTrack() {
-    ui.selectedTrack = (ui.selectedTrack - 1 + song.tracks.length) % song.tracks.length
+    const ids = song.patterns[ui.currentPattern].cells.map(c => c.trackId)
+    if (!ids.length) return
+    const idx = ids.indexOf(ui.selectedTrack)
+    ui.selectedTrack = ids[((idx === -1 ? 0 : idx) - 1 + ids.length) % ids.length]
     ui.selectedStep = null
   }
   function nextTrack() {
-    ui.selectedTrack = (ui.selectedTrack + 1) % song.tracks.length
+    const ids = song.patterns[ui.currentPattern].cells.map(c => c.trackId)
+    if (!ids.length) return
+    const idx = ids.indexOf(ui.selectedTrack)
+    ui.selectedTrack = ids[((idx === -1 ? 0 : idx) + 1) % ids.length]
     ui.selectedStep = null
   }
 
@@ -292,7 +298,7 @@
   {#if !drum}
     <div class="view-tabs" role="tablist" aria-label="View">
       <button class="tab" role="tab" aria-selected={mobileTab === 'steps'} class:active={mobileTab === 'steps'} onpointerdown={() => { mobileTab = 'steps' }}>STEPS</button>
-      <button class="tab" role="tab" aria-selected={mobileTab === 'notes'} class:active={mobileTab === 'notes'} onpointerdown={() => { mobileTab = 'notes' }}>NOTES</button>
+      <button class="tab" role="tab" aria-selected={mobileTab === 'pads'} class:active={mobileTab === 'pads'} onpointerdown={() => { mobileTab = 'pads' }}>PADS</button>
     </div>
   {/if}
 
@@ -367,9 +373,7 @@
       {/each}
     </div>
   {:else}
-    <div class="piano-wrap">
-      <PianoRoll trackId={ui.selectedTrack} />
-    </div>
+    <PadGrid trackId={ui.selectedTrack} />
   {/if}
 
   <MobileParamOverlay />
@@ -763,11 +767,6 @@
     animation: ph-glow 180ms ease-out;
   }
 
-  /* ── Piano roll ── */
-  .piano-wrap {
-    flex: 1;
-    overflow: hidden;
-  }
 
 
 </style>
