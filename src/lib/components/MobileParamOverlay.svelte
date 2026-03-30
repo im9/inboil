@@ -10,6 +10,8 @@
   import { drawWaveform } from '../domHelpers.ts'
   import Knob from './Knob.svelte'
   import VoicePicker from './VoicePicker.svelte'
+  import DockPresetBrowser from './DockPresetBrowser.svelte'
+  import DockPoolBrowser from './DockPoolBrowser.svelte'
 
   function setParam(key: string, v: number) {
     if (isGuest()) { guestSetParam(ui.selectedTrack, key, v); return }
@@ -30,6 +32,14 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
+
+  // ── Voice picker / preset browser refs ──
+  let voicePickerRef = $state<VoicePicker>(null!)
+  let presetBrowserRef = $state<DockPresetBrowser>(null!)
+
+  // ── Pool browser ──
+  let poolOpen = $state(false)
+  $effect(() => { void ui.selectedTrack; poolOpen = false })
 
   // ── Collapsible param groups ──
   let collapsedGroups = $state(new Set<string>())
@@ -120,14 +130,20 @@
     <div class="overlay-content">
 
       <!-- Voice picker -->
-      <VoicePicker voiceId={cell.voiceId} trackId={ui.selectedTrack} variant="mobile" />
+      <VoicePicker bind:this={voicePickerRef} voiceId={cell.voiceId} trackId={ui.selectedTrack} variant="mobile"
+        onselect={() => presetBrowserRef?.close()} />
+
+      <!-- Preset browser -->
+      <DockPresetBrowser bind:this={presetBrowserRef} onopen={() => { voicePickerRef?.close() }} />
 
       <!-- Sample loader -->
       {#if isSampler}
         <div class="sample-section">
           <div class="sample-file-row">
             <button class="btn-load" onpointerdown={() => fileInput.click()}>LOAD</button>
-            <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || currentSample?.name || 'Tap LOAD to select audio'}</span>
+            <button class="btn-load" class:btn-active={poolOpen}
+              onpointerdown={() => poolOpen = !poolOpen}>POOL</button>
+            <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || (currentSample?.packId ? '🎹 ' : '') + (currentSample?.name || '') || 'Tap LOAD to select audio'}</span>
           </div>
           <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
           <input
@@ -137,6 +153,9 @@
             onchange={handleFileSelect}
             style="display: none"
           />
+          {#if poolOpen}
+            <DockPoolBrowser trackId={ui.selectedTrack} onclose={() => poolOpen = false} />
+          {/if}
         </div>
       {/if}
 
@@ -426,6 +445,11 @@
   }
   .btn-load:active {
     color: var(--dz-text-bright);
+    border-color: var(--dz-transport-border);
+  }
+  .btn-load.btn-active {
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
     border-color: var(--dz-transport-border);
   }
   .sample-name {
