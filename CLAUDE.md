@@ -18,7 +18,8 @@ pnpm build     # production build
 pnpm check     # svelte-check (strict, 0 errors required — enforced by CI)
 pnpm test      # vitest unit tests
 pnpm test:e2e  # Playwright (chromium/firefox/webkit)
-pnpm deploy    # build + Cloudflare Pages
+pnpm deploy          # build + Cloudflare Pages (production)
+pnpm deploy:preview  # build + Cloudflare Pages preview (current branch)
 ```
 
 ### Jam Session Local Testing
