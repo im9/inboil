@@ -562,6 +562,7 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    background: var(--color-fg);
   }
 
   /* ── Tab bar ── */
@@ -597,7 +598,7 @@
     position: relative;
     width: 100%;
     aspect-ratio: 3 / 2;
-    background: var(--color-bg);
+    background: var(--dz-bg-hover);
     border-radius: var(--radius-md);
     overflow: hidden;
     touch-action: none;
@@ -728,7 +729,7 @@
     width: 100%;
     min-height: 80px;
     max-height: 160px;
-    background: var(--color-bg);
+    background: var(--dz-bg-hover);
     border-radius: var(--radius-md);
     flex-shrink: 1;
   }
