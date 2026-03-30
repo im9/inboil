@@ -493,7 +493,7 @@ Sidebar should adopt `--dz-*` tokens. Current values map to:
 --color-blue:    #4472B4;   /* steel blue — playhead, FILL/REV buttons */
 --color-salmon:  #E8A090;   /* salmon — BRK button, record/alert, GLT node */
 --color-purple:  #9B6BA0;   /* soft violet — granular FX node */
---color-teal:    #508080;   /* teal — filter node */
+--color-teal:    #4A9B9B;   /* teal — DJ filter */
 ```
 
 The palette is warm and restrained. Olive, blue, salmon, purple, and teal are chromatic; everything else is cream/navy/gray.
