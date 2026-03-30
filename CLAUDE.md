@@ -13,12 +13,23 @@ git config core.hooksPath .githooks   # enable pre-push check+test hook
 
 ```bash
 pnpm dev       # Vite dev server
+pnpm dev:jam   # Vite + local signaling server (for jam session testing)
 pnpm build     # production build
 pnpm check     # svelte-check (strict, 0 errors required — enforced by CI)
 pnpm test      # vitest unit tests
 pnpm test:e2e  # Playwright (chromium/firefox/webkit)
 pnpm deploy    # build + Cloudflare Pages
 ```
+
+### Jam Session Local Testing
+
+`pnpm dev:jam` starts both Vite and a local Cloudflare Workers signaling server (`workers/signaling/`). The Vite dev server is configured with `VITE_SIGNALING_URL=ws://localhost:8787/ws` so WebRTC signaling goes through the local server.
+
+1. Stop any running `pnpm dev` first (port 5173 conflict)
+2. Run `pnpm dev:jam`
+3. Open two browser tabs at `http://localhost:5173`
+4. Tab 1: SYSTEM → JAM SESSION → HOST (get room code)
+5. Tab 2: SYSTEM → JAM SESSION → enter code → JOIN
 
 ## Conventions
 

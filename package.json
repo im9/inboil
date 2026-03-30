@@ -13,6 +13,7 @@
     "deploy:site": "cd site && pnpm build && npx wrangler pages deploy dist --project-name=inboil-site",
     "deploy:signaling": "cd workers/signaling && npx wrangler deploy",
     "dev:signaling": "cd workers/signaling && npx wrangler dev",
+    "dev:jam": "npx concurrently -n sig,vite -c blue,green \"pnpm dev:signaling\" \"VITE_SIGNALING_URL=ws://localhost:8787/ws vite\"",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@playwright/test": "~1.58.2",
     "@sveltejs/vite-plugin-svelte": "~7.0.0",
+    "concurrently": "^9.2.1",
     "fake-indexeddb": "~6.2.5",
     "svelte": "~5.55.0",
     "svelte-check": "~4.4.5",
