@@ -118,6 +118,16 @@
     }
   })
 
+  /** Clamp pan so the world edge never leaves the viewport interior */
+  function clampPan(px: number, py: number, vw: number, vh: number, z: number): { x: number; y: number } {
+    const scaledW = WORLD_W * z
+    const scaledH = WORLD_H * z
+    return {
+      x: Math.min(0, Math.max(vw - scaledW, px)),
+      y: Math.min(0, Math.max(vh - scaledH, py)),
+    }
+  }
+
   // ── Focus on node from DockPanel navigator (ADR 070) ──
   $effect(() => {
     const nodeId = ui.focusSceneNodeId
@@ -127,8 +137,9 @@
     const rect = viewEl.getBoundingClientRect()
     const px = PAD_INSET + node.x * (WORLD_W - PAD_INSET * 2)
     const py = PAD_INSET + node.y * (WORLD_H - PAD_INSET * 2)
-    panX = rect.width / 2 - px * zoom
-    panY = rect.height / 2 - py * zoom
+    const clamped = clampPan(rect.width / 2 - px * zoom, rect.height / 2 - py * zoom, rect.width, rect.height, zoom)
+    panX = clamped.x
+    panY = clamped.y
     ui.focusSceneNodeId = null
   })
 

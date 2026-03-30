@@ -66,6 +66,9 @@ export async function projectLoad(id: string): Promise<boolean> {
   ui.selectedSceneEdge = null
   clearUndoStacks()
   savePrefs()
+  // Focus scene view on root node
+  const rootNode = proj.song.scene.nodes.find(n => n.root)
+  if (rootNode) ui.focusSceneNodeId = rootNode.id
   // Restore persisted samples (async, non-blocking)
   void restoreSamples(id)
   return true
