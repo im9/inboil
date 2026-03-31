@@ -1,6 +1,7 @@
 /**
- * Pattern randomization logic — drum patterns, chord progressions, melodic lines.
- * Extracted from state.svelte.ts for modularity.
+ * Genre-aware pattern randomizer (ADR 129).
+ * Uses Tonnetz + Turing Machine + Quantizer pipeline for musically coherent patterns.
+ * Legacy "acid" genre preserves original behavior as fallback.
  */
 import {
   SCALE_DEGREES_SET,
@@ -8,8 +9,214 @@ import {
 } from './constants.ts'
 import { DRUM_VOICES } from './factory.ts'
 import { song, ui, prefs, pushUndo } from './state.svelte.ts'
+import {
+  turingGenerate, tonnetzGenerate, quantizeTrigs, computeWalkPath,
+} from './generative.ts'
 
-// ── Constants ────────────────────────────────────────────────────────
+// ── Genre Preset Type ───────────────────────────────────────────────
+
+export interface GenrePreset {
+  id: string
+  label: string
+  bpmRange: [number, number]
+  tonnetz: {
+    startChord: [number, number, number]
+    sequence: string[]
+    stepsPerTransform: number
+    voicing: 'close' | 'spread' | 'drop2'
+    chordQuality: 'triad' | '7th'
+    rhythms: ('all' | 'legato' | 'offbeat' | 'onbeat' | 'syncopated')[]
+  }
+  bass: {
+    lock: number
+    density: number
+    octaveRange: [number, number]
+    mode: 'root' | 'scale'
+  } | null
+  melody: {
+    lock: number
+    density: number
+    octaveRange: [number, number]
+    quantizeMode: 'chord' | 'scale'
+  }
+  drums: Record<string, number[]>
+  swing?: number
+}
+
+// ── Genre Presets ───────────────────────────────────────────────────
+
+//                                            beat:  0     1     2     3     4     5     6     7
+export const GENRE_PRESETS: GenrePreset[] = [
+  {
+    id: 'house',
+    label: 'HOUSE',
+    bpmRange: [120, 128],
+    tonnetz: {
+      startChord: [60, 64, 67],   // C major
+      sequence: ['P', 'L', 'R'],
+      stepsPerTransform: 4,
+      voicing: 'spread',
+      chordQuality: '7th',
+      rhythms: ['offbeat', 'syncopated', 'legato'],
+    },
+    bass: {
+      lock: 0.7,
+      density: 0.6,
+      octaveRange: [2, 3],        // C1–C2 (oct*12 = MIDI 24–36)
+      mode: 'root',
+    },
+    melody: {
+      lock: 0.3,
+      density: 0.35,
+      octaveRange: [4, 5],
+      quantizeMode: 'chord',
+    },
+    drums: {
+      Kick:    [0.95, 0.05, 0.05, 0.05, 0.95, 0.05, 0.05, 0.05],  // 4-on-floor
+      Snare:   [0.00, 0.00, 0.00, 0.00, 0.85, 0.00, 0.00, 0.00],
+      Clap:    [0.00, 0.00, 0.00, 0.00, 0.75, 0.00, 0.00, 0.00],  // clap on 4
+      Hat:     [0.80, 0.80, 0.80, 0.80, 0.80, 0.80, 0.80, 0.80],  // 8th hats
+      OpenHat: [0.00, 0.00, 0.50, 0.00, 0.00, 0.00, 0.50, 0.00],  // offbeat open hats
+      Cymbal:  [0.20, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+    },
+  },
+  {
+    id: 'techno',
+    label: 'TECHNO',
+    bpmRange: [128, 140],
+    tonnetz: {
+      startChord: [60, 64, 67],
+      sequence: ['P', ''],
+      stepsPerTransform: 8,
+      voicing: 'close',
+      chordQuality: 'triad',
+      rhythms: ['onbeat', 'legato', 'all'],
+    },
+    bass: {
+      lock: 0.9,
+      density: 0.7,
+      octaveRange: [2, 3],
+      mode: 'root',
+    },
+    melody: {
+      lock: 0.5,
+      density: 0.2,
+      octaveRange: [4, 5],
+      quantizeMode: 'scale',
+    },
+    drums: {
+      Kick:    [0.98, 0.05, 0.05, 0.05, 0.98, 0.05, 0.05, 0.05],
+      Snare:   [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+      Clap:    [0.00, 0.00, 0.00, 0.00, 0.80, 0.00, 0.00, 0.10],
+      Hat:     [0.90, 0.90, 0.90, 0.90, 0.90, 0.90, 0.90, 0.90],  // 16th hats
+      OpenHat: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.20],
+      Cymbal:  [0.15, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+    },
+  },
+  {
+    id: 'hiphop',
+    label: 'HIPHOP',
+    bpmRange: [80, 95],
+    tonnetz: {
+      startChord: [60, 64, 67],
+      sequence: ['R', 'P', 'L'],
+      stepsPerTransform: 4,
+      voicing: 'drop2',
+      chordQuality: '7th',
+      rhythms: ['syncopated', 'offbeat', 'onbeat'],
+    },
+    bass: {
+      lock: 0.6,
+      density: 0.5,
+      octaveRange: [2, 3],
+      mode: 'scale',
+    },
+    melody: {
+      lock: 0.2,
+      density: 0.25,
+      octaveRange: [4, 5],
+      quantizeMode: 'chord',
+    },
+    drums: {
+      Kick:    [0.92, 0.00, 0.00, 0.30, 0.00, 0.00, 0.85, 0.00],  // boom-bap
+      Snare:   [0.00, 0.00, 0.00, 0.00, 0.90, 0.00, 0.00, 0.00],
+      Clap:    [0.00, 0.00, 0.00, 0.00, 0.70, 0.00, 0.00, 0.15],
+      Hat:     [0.70, 0.50, 0.70, 0.50, 0.70, 0.50, 0.70, 0.50],
+      OpenHat: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 0.00],
+      Cymbal:  [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+    },
+    swing: 0.6,
+  },
+  {
+    id: 'ambient',
+    label: 'AMBIENT',
+    bpmRange: [60, 90],
+    tonnetz: {
+      startChord: [60, 64, 67],
+      sequence: ['L', '', 'P', ''],
+      stepsPerTransform: 8,
+      voicing: 'spread',
+      chordQuality: '7th',
+      rhythms: ['legato'],
+    },
+    bass: null,                    // no bass
+    melody: {
+      lock: 0.1,
+      density: 0.15,
+      octaveRange: [4, 6],
+      quantizeMode: 'scale',
+    },
+    drums: {
+      Kick:    [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+      Snare:   [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+      Clap:    [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+      Hat:     [0.10, 0.00, 0.05, 0.00, 0.10, 0.00, 0.05, 0.00],
+      OpenHat: [0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+      Cymbal:  [0.10, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00],
+    },
+  },
+  {
+    id: 'acid',
+    label: 'ACID',
+    bpmRange: [130, 145],
+    // Tonnetz/bass/melody unused — acid uses legacy path
+    tonnetz: {
+      startChord: [60, 64, 67],
+      sequence: ['P', 'L', 'R'],
+      stepsPerTransform: 4,
+      voicing: 'close',
+      chordQuality: 'triad',
+      rhythms: ['all'],
+    },
+    bass: {
+      lock: 0.5,
+      density: 0.7,
+      octaveRange: [2, 3],
+      mode: 'scale',
+    },
+    melody: {
+      lock: 0.3,
+      density: 0.27,
+      octaveRange: [4, 5],
+      quantizeMode: 'scale',
+    },
+    drums: {
+      Kick:    [0.92, 0.08, 0.08, 0.08, 0.40, 0.08, 0.08, 0.08],
+      Snare:   [0.05, 0.05, 0.05, 0.05, 0.88, 0.05, 0.25, 0.05],
+      Clap:    [0.03, 0.03, 0.03, 0.03, 0.70, 0.03, 0.03, 0.03],
+      Hat:     [0.82, 0.40, 0.82, 0.40, 0.82, 0.40, 0.82, 0.40],
+      OpenHat: [0.05, 0.05, 0.50, 0.05, 0.05, 0.05, 0.50, 0.05],
+      Cymbal:  [0.25, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+    },
+  },
+]
+
+/** Look up a genre preset by id */
+export function getGenrePreset(id: string): GenrePreset {
+  return GENRE_PRESETS.find(g => g.id === id) ?? GENRE_PRESETS[0]
+}
+
+// ── Legacy acid helpers (preserved for backward compat) ─────────────
 
 const SCALES = [
   [0, 3, 5, 7, 10],        // minor pentatonic
@@ -26,12 +233,8 @@ const PROGRESSIONS = [
   [0, 3, 5, 3],  // I  - IV - vi - IV  (chill)
 ]
 
-// Diatonic scale intervals (C major)
 const DIATONIC = [0, 2, 4, 5, 7, 9, 11]
 
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/** Build a diatonic chord (triad or 7th) from a scale degree root in a given octave */
 function buildChord(degree: number, octave: number, seventh: boolean): number[] {
   const notes: number[] = []
   const offsets = seventh ? [0, 2, 4, 6] : [0, 2, 4]
@@ -45,13 +248,11 @@ function buildChord(degree: number, octave: number, seventh: boolean): number[] 
   return notes
 }
 
-/** Pick a random element from an array */
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
 
-// ── Main ─────────────────────────────────────────────────────────────
+// ── Legacy acid randomizer ──────────────────────────────────────────
 
-export function randomizePattern(): void {
-  pushUndo('Randomize')
+function randomizeAcid(): void {
   const roots = [48, 50, 51, 53, 55, 56, 58, 60]
   const root  = pick(roots)
   const scale = pick(SCALES)
@@ -181,4 +382,187 @@ export function randomizePattern(): void {
       }
     }
   }
+}
+
+// ── Genre-aware generation pipeline ─────────────────────────────────
+
+/** Common starting triads (pitch classes relative to root) */
+const START_CHORDS_MAJOR: [number, number, number][] = [
+  [0, 4, 7],   // I  (C major)
+  [5, 9, 0],   // IV (F major)
+  [7, 11, 2],  // V  (G major)
+]
+const START_CHORDS_MINOR: [number, number, number][] = [
+  [0, 3, 7],   // i   (C minor)
+  [9, 0, 4],   // vi  (A minor / relative minor)
+  [2, 5, 9],   // ii  (D minor)
+]
+
+/** Build a randomized startChord in MIDI range, transposed to song root */
+function randomStartChord(rootNote: number): [number, number, number] {
+  const pool = Math.random() < 0.6 ? START_CHORDS_MAJOR : START_CHORDS_MINOR
+  const pcs = pick(pool)
+  const base = 60 + (rootNote % 12)
+  return [base + pcs[0], base + pcs[1], base + pcs[2]]
+}
+
+/** Shuffle an array (Fisher-Yates) and return a new copy */
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
+/** Apply genre-aware generation to a single pattern */
+function randomizeWithGenre(genre: GenrePreset): void {
+  const rootNote = song.rootNote ?? 0
+  const startChord = randomStartChord(rootNote)
+
+  // Build Tonnetz walk path for harmonic context
+  const currentPat = song.patterns[ui.currentPattern]
+  // Use the longest track's step count for the walk
+  const maxSteps = Math.max(...currentPat.cells.map(c => c.steps), 16)
+
+  // Shuffle transform sequence for variety on each randomize
+  const sequence = shuffle(genre.tonnetz.sequence)
+
+  const tonnetzParams = {
+    engine: 'tonnetz' as const,
+    startChord,
+    sequence,
+    stepsPerTransform: genre.tonnetz.stepsPerTransform,
+    voicing: genre.tonnetz.voicing,
+    chordQuality: genre.tonnetz.chordQuality,
+  }
+
+  const walkPath = computeWalkPath(tonnetzParams, maxSteps)
+
+  // BPM: only adjust if current BPM is outside genre range
+  const [bpmLo, bpmHi] = genre.bpmRange
+  if (song.bpm < bpmLo || song.bpm > bpmHi) {
+    song.bpm = bpmLo + Math.floor(Math.random() * (bpmHi - bpmLo + 1))
+  }
+
+  for (const c of currentPat.cells) {
+    const steps = c.steps
+    const isPoly = (c.voiceId === 'WT' || c.voiceId === 'FM') && (c.voiceParams?.polyMode ?? 0) >= 0.5
+    const isBass = c.voiceId === 'Bass303' || c.voiceId === 'Analog'
+      || (c.voiceId === 'MoogLead' && c.trigs[0]?.note <= 48)
+    const isDrum = c.voiceId != null && DRUM_VOICES.has(c.voiceId)
+
+    if (isDrum) {
+      // ── Drums: genre probability table ──
+      const table = genre.drums[c.voiceId!]
+      for (let s = 0; s < steps; s++) {
+        const beat = s % 8
+        const prob = table ? table[beat] : 0.1
+        const active = Math.random() < prob
+        c.trigs[s].active   = active
+        c.trigs[s].velocity = 0.55 + Math.random() * 0.45
+        c.trigs[s].chance = active && prob < 0.5 ? 0.5 + Math.random() * 0.4 : undefined
+      }
+    } else if (isPoly) {
+      // ── Chords/Pads: Tonnetz chord voicings ──
+      const chordRhythm = pick(genre.tonnetz.rhythms)
+      const chordTrigs = tonnetzGenerate({
+        ...tonnetzParams,
+        rhythm: chordRhythm,
+      }, steps)
+      for (let s = 0; s < steps; s++) {
+        const ct = chordTrigs[s]
+        c.trigs[s].active   = ct.active
+        c.trigs[s].note     = ct.note
+        c.trigs[s].notes    = ct.notes
+        c.trigs[s].velocity = ct.active ? 0.7 + Math.random() * 0.2 : 0
+        c.trigs[s].duration = ct.duration
+      }
+    } else if (isBass && genre.bass) {
+      // ── Bass: Turing rhythm + Quantizer chord-root snap ──
+      const bassRhythm = turingGenerate({
+        engine: 'turing',
+        length: 8,
+        lock: genre.bass.lock,
+        range: [genre.bass.octaveRange[0] * 12, genre.bass.octaveRange[1] * 12 + 11],
+        mode: 'gate',
+        density: genre.bass.density,
+      }, steps)
+
+      // Generate note content with Turing
+      const bassNotes = turingGenerate({
+        engine: 'turing',
+        length: 8,
+        lock: genre.bass.lock,
+        range: [genre.bass.octaveRange[0] * 12, genre.bass.octaveRange[1] * 12 + 11],
+        mode: 'note',
+        density: 1.0,
+      }, steps)
+
+      // Merge: rhythm from gate mode, notes from note mode
+      for (let s = 0; s < steps; s++) {
+        bassNotes[s].active = bassRhythm[s].active
+      }
+
+      // Quantize to chord tones (root-priority via chord mode)
+      const quantized = quantizeTrigs(bassNotes, {
+        engine: 'quantizer',
+        scale: 'major',
+        root: rootNote % 12,
+        octaveRange: genre.bass.octaveRange,
+        mode: genre.bass.mode === 'root' ? 'chord' : 'scale',
+      }, walkPath.slice(0, steps))
+
+      for (let s = 0; s < steps; s++) {
+        c.trigs[s].active   = quantized[s].active
+        c.trigs[s].note     = quantized[s].note
+        c.trigs[s].velocity = quantized[s].active ? 0.6 + Math.random() * 0.3 : 0
+      }
+    } else if (isBass && !genre.bass) {
+      // Genre has no bass — clear the track
+      for (let s = 0; s < steps; s++) {
+        c.trigs[s].active = false
+      }
+    } else {
+      // ── Melody: Turing notes + Quantizer scale/chord snap ──
+      const melodyTrigs = turingGenerate({
+        engine: 'turing',
+        length: 8,
+        lock: genre.melody.lock,
+        range: [genre.melody.octaveRange[0] * 12, genre.melody.octaveRange[1] * 12 + 11],
+        mode: 'note',
+        density: genre.melody.density,
+      }, steps)
+
+      const quantized = quantizeTrigs(melodyTrigs, {
+        engine: 'quantizer',
+        scale: 'major',
+        root: rootNote % 12,
+        octaveRange: genre.melody.octaveRange,
+        mode: genre.melody.quantizeMode,
+      }, walkPath.slice(0, steps))
+
+      for (let s = 0; s < steps; s++) {
+        c.trigs[s].active   = quantized[s].active
+        c.trigs[s].note     = quantized[s].note
+        c.trigs[s].velocity = quantized[s].active ? 0.55 + Math.random() * 0.4 : 0
+      }
+    }
+  }
+}
+
+// ── Public API ──────────────────────────────────────────────────────
+
+export function randomizePattern(): void {
+  pushUndo('Randomize')
+  const genreId = prefs.randomGenre ?? 'house'
+
+  if (genreId === 'acid') {
+    randomizeAcid()
+    return
+  }
+
+  const genre = getGenrePreset(genreId)
+  randomizeWithGenre(genre)
 }

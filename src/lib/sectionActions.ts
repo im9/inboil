@@ -7,7 +7,7 @@ import { song, ui, pushUndo, copySamplesForPattern } from './state.svelte.ts'
 import type { Pattern } from './state.svelte.ts'
 import {
   makePatternId, makeEmptyCell, makeTrack,
-  FACTORY_COUNT, getTemplate,
+  FACTORY_COUNT, getTemplate, applyTemplateTrack,
 } from './factory.ts'
 
 // ── Internal helpers (needed for pattern ops) ──
@@ -54,7 +54,9 @@ export function patternApplyTemplate(patternIndex: number, templateId: string): 
 
   // Build cells using existing track IDs — only this pattern is affected
   pat.cells = tmpl.tracks.map((d, i) => {
-    return makeEmptyCell(song.tracks[i].id, d.name, d.voiceId, d.note)
+    const cell = makeEmptyCell(song.tracks[i].id, d.name, d.voiceId, d.note)
+    applyTemplateTrack(cell, d)
+    return cell
   })
 
   // Remove orphaned tracks (no cells in any pattern)

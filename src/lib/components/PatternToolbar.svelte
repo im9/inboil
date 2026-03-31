@@ -10,7 +10,34 @@
   import { findUpstreamGenerativeNodes, sceneGenerateBuffer } from '../sceneActions.ts'
   import { cellForTrack } from '../state.svelte.ts'
 
+  import { GENRE_PRESETS } from '../randomize.ts'
+  import { savePrefs } from '../state.svelte.ts'
+
   let { onRandom, onClose, onLoop }: { onRandom: () => void; onClose: () => void; onLoop: () => void } = $props()
+
+  // ── Genre long-press (ADR 129) ──
+  let genreOpen = $state(false)
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+
+  function onRndPointerDown() {
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null
+      genreOpen = true
+    }, 300)
+  }
+  function onRndPointerUp() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      longPressTimer = null
+      onRandom()
+    }
+  }
+  function selectGenre(id: string) {
+    prefs.randomGenre = id
+    savePrefs()
+    genreOpen = false
+    onRandom()
+  }
 
   const isLooping = $derived(playback.playing && playback.mode === 'loop')
 
@@ -268,13 +295,30 @@
 
   <div class="sep" aria-hidden="true"></div>
 
-  <!-- RAND -->
-  <button
-    class="btn-rand"
-    onpointerdown={onRandom}
-    aria-label="Randomize"
-    data-tip="Randomize pattern" data-tip-ja="パターンをランダム生成"
-  >RND</button>
+  <!-- RAND + genre selector (ADR 129) -->
+  <div class="rand-wrap">
+    <button
+      class="btn-rand"
+      onpointerdown={onRndPointerDown}
+      onpointerup={onRndPointerUp}
+      onpointerleave={onRndPointerUp}
+      aria-label="Randomize"
+      data-tip="Tap: randomize / Long-press: genre" data-tip-ja="タップ: ランダム / 長押し: ジャンル選択"
+    >RND</button>
+    {#if genreOpen}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="genre-backdrop" onpointerdown={() => { genreOpen = false }}></div>
+      <div class="genre-dropdown">
+        {#each GENRE_PRESETS as g}
+          <button
+            class="genre-option"
+            class:selected={prefs.randomGenre === g.id}
+            onpointerdown={() => selectGenre(g.id)}
+          >{prefs.randomGenre === g.id ? '\u25CF ' : '  '}{g.label}</button>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
   <!-- Generate arm (ADR 089) — only visible when upstream generative nodes exist -->
   {#if hasGenerative}
@@ -607,7 +651,10 @@
     50%      { opacity: 0.3; }
   }
 
-  /* ── RAND ── */
+  /* ── RAND + genre dropdown (ADR 129) ── */
+  .rand-wrap {
+    position: relative;
+  }
   .btn-rand {
     border: 1.5px solid var(--color-olive);
     background: transparent;
@@ -618,10 +665,54 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     flex-shrink: 0;
+    user-select: none;
+    touch-action: none;
   }
   .btn-rand:active {
     background: var(--color-olive);
     color: var(--color-bg);
+  }
+  .genre-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+  }
+  .genre-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 200;
+    min-width: 100px;
+    background: var(--color-bg);
+    border: 1px solid var(--lz-border-strong);
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+    animation: genre-in 80ms ease-out;
+  }
+  @keyframes genre-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .genre-option {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--lz-text-strong);
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .genre-option:hover {
+    background: var(--lz-border-mid);
+  }
+  .genre-option.selected {
+    color: var(--color-olive);
+    font-weight: 700;
   }
 
   /* ── Generate (ADR 089) ── */

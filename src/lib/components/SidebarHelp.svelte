@@ -28,8 +28,8 @@
       title: L === 'ja' ? 'クイックスタート' : 'QUICK START',
       docsUrl: '/docs/getting-started/first-beat/',
       body: L === 'ja'
-        ? '▶ (SPACE) で再生 → ステップをタップ → ドックのノブで音作り\nRAND でランダム生成、Ctrl+Z で戻す'
-        : '▶ (SPACE) to play → tap steps → turn dock knobs\nRAND to randomize, Ctrl+Z to undo',
+        ? '▶ (SPACE) で再生 → ステップをタップ → ドックのノブで音作り\nRND タップでランダム生成、長押しでジャンル選択（HOUSE / TECHNO / HIPHOP / AMBIENT / ACID）\nCtrl+Z で戻す'
+        : '▶ (SPACE) to play → tap steps → turn dock knobs\nTap RND to randomize, long-press to pick a genre (HOUSE / TECHNO / HIPHOP / AMBIENT / ACID)\nCtrl+Z to undo',
     },
     {
       category: 0,

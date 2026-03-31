@@ -1,5 +1,6 @@
 // Factory pattern definitions + track builder helpers
 import { defaultVoiceParams } from './paramDefs.ts'
+import { getPresets } from './presets.ts'
 import type { Trig, Track, Cell, Pattern, Song, Scene, SceneNode, SceneEdge, ModifierParams, VoiceId } from './types.ts'
 import { DRUM_VOICES } from './audio/dsp/voices.ts'
 import { DEFAULT_EFFECTS } from './constants.ts'
@@ -54,7 +55,7 @@ export function makeTrack(id: number, pan = 0): Track {
 export interface PatternTemplate {
   id: string
   name: string
-  tracks: { name: string; voiceId: VoiceId; note: number; pan: number }[]
+  tracks: { name: string; voiceId: VoiceId; note: number; pan: number; voiceParams?: Record<string, number>; presetName?: string }[]
 }
 
 export const PATTERN_TEMPLATES: PatternTemplate[] = [
@@ -66,12 +67,13 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
-      { name: 'CYM',   voiceId: 'Cymbal',   note: 60, pan:  0.25 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10 },
+      { name: 'PAD',   voiceId: 'WT',       note: 60, pan:  0.25, presetName: 'Warm Pad' },
+      { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Warm Sub' },
+      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10, presetName: 'Fat Lead' },
     ],
   },
   {
+    // Techno: 303 is iconic — acid/squelch bass, dark minimal pads, cold arps
     id: 'techno', name: 'Techno',
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
@@ -79,12 +81,13 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'RIM',   voiceId: 'Rimshot',  note: 60, pan:  0.10 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-      { name: 'PAD',   voiceId: 'WT',       note: 60, pan: -0.15 },
+      { name: 'PAD',   voiceId: 'WT',       note: 60, pan: -0.15, presetName: 'Dark Pad' },
+      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00, presetName: 'Squelch' },
       { name: 'ARP',   voiceId: 'FM',       note: 60, pan:  0.20 },
     ],
   },
   {
+    // House: warm soulful pads, deep sub bass, smooth leads
     id: 'house', name: 'House',
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
@@ -92,33 +95,35 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'SHAK',  voiceId: 'Shaker',   note: 60, pan:  0.20 },
-      { name: 'COWB',  voiceId: 'Cowbell',   note: 60, pan: -0.20 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-      { name: 'LEAD',  voiceId: 'WT',       note: 64, pan:  0.10 },
+      { name: 'PAD',   voiceId: 'WT',       note: 60, pan: -0.15, presetName: 'Warm Pad' },
+      { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Warm Sub' },
+      { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10, presetName: 'Soft' },
     ],
   },
   {
+    // Ambient: lush layered pads, ethereal bells, no drums
     id: 'ambient', name: 'Ambient',
     tracks: [
-      { name: 'PAD1',  voiceId: 'WT',       note: 60, pan: -0.20 },
-      { name: 'PAD2',  voiceId: 'WT',       note: 60, pan:  0.20 },
-      { name: 'LEAD',  voiceId: 'FM',       note: 64, pan:  0.00 },
-      { name: 'BELL',  voiceId: 'FM',       note: 72, pan: -0.35 },
-      { name: 'WARM',  voiceId: 'Analog',   note: 60, pan:  0.00 },
+      { name: 'PAD1',  voiceId: 'WT',       note: 60, pan: -0.20, presetName: 'Shimmer' },
+      { name: 'PAD2',  voiceId: 'WT',       note: 60, pan:  0.20, presetName: 'Dark Pad' },
+      { name: 'LEAD',  voiceId: 'FM',       note: 64, pan:  0.00, presetName: 'Flute' },
+      { name: 'BELL',  voiceId: 'FM',       note: 72, pan: -0.35, presetName: 'Vibraphone' },
+      { name: 'WARM',  voiceId: 'Analog',   note: 60, pan:  0.00, presetName: 'Dark' },
       { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.35 },
     ],
   },
   {
+    // HipHop: 808 kick, EP/Rhodes chords, fat Moog bass, sampler chops
     id: 'hiphop', name: 'HipHop',
     tracks: [
-      { name: 'KICK',  voiceId: 'Kick808',  note: 60, pan:  0.00 },
+      { name: 'KICK',  voiceId: 'Kick808',  note: 60, pan:  0.00, presetName: '808 Sub' },
       { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
-      { name: 'SMP1',  voiceId: 'Sampler',  note: 60, pan: -0.20 },
-      { name: 'SMP2',  voiceId: 'Sampler',  note: 60, pan:  0.20 },
-      { name: 'BASS',  voiceId: 'MoogLead', note: 36, pan:  0.00 },
-      { name: 'LEAD',  voiceId: 'FM',       note: 64, pan:  0.10 },
+      { name: 'KEYS',  voiceId: 'FM',       note: 60, pan: -0.15, presetName: 'EP Piano' },
+      { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.20 },
+      { name: 'BASS',  voiceId: 'MoogLead', note: 36, pan:  0.00, presetName: 'Mono Bass' },
+      { name: 'LEAD',  voiceId: 'FM',       note: 64, pan:  0.10, presetName: 'Brass' },
     ],
   },
   {
@@ -141,27 +146,27 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
   {
     id: 'synth', name: 'Synth',
     tracks: [
-      { name: 'FM 1',  voiceId: 'FM',       note: 60, pan: -0.15 },
-      { name: 'FM 2',  voiceId: 'FM',       note: 60, pan:  0.15 },
-      { name: 'WT 1',  voiceId: 'WT',       note: 60, pan: -0.25 },
-      { name: 'WT 2',  voiceId: 'WT',       note: 60, pan:  0.25 },
-      { name: 'MOOG',  voiceId: 'MoogLead', note: 64, pan:  0.00 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
-      { name: 'ANLG',  voiceId: 'Analog',   note: 60, pan: -0.10 },
+      { name: 'FM 1',  voiceId: 'FM',       note: 60, pan: -0.15, presetName: 'EP Piano' },
+      { name: 'FM 2',  voiceId: 'FM',       note: 60, pan:  0.15, presetName: 'Sync Lead' },
+      { name: 'WT 1',  voiceId: 'WT',       note: 60, pan: -0.25, presetName: 'Warm Pad' },
+      { name: 'WT 2',  voiceId: 'WT',       note: 60, pan:  0.25, presetName: 'Saw Lead' },
+      { name: 'MOOG',  voiceId: 'MoogLead', note: 64, pan:  0.00, presetName: 'Fat Lead' },
+      { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Warm Sub' },
+      { name: 'ANLG',  voiceId: 'Analog',   note: 60, pan: -0.10, presetName: 'Smooth' },
       { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.10 },
     ],
   },
   {
     id: 'breaks', name: 'Breaks',
     tracks: [
-      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00, presetName: 'Punchy' },
       { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'RIDE',  voiceId: 'Ride',     note: 60, pan:  0.30 },
       { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.00 },
-      { name: 'BASS',  voiceId: 'MoogLead', note: 48, pan:  0.00 },
-      { name: 'LEAD',  voiceId: 'Analog',   note: 64, pan:  0.15 },
+      { name: 'BASS',  voiceId: 'MoogLead', note: 48, pan:  0.00, presetName: 'Punch Bass' },
+      { name: 'LEAD',  voiceId: 'Analog',   note: 64, pan:  0.15, presetName: 'Biting' },
     ],
   },
   {
@@ -170,7 +175,7 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
       { name: 'PERC',  voiceId: 'Rimshot',  note: 60, pan:  0.15 },
       { name: 'HAT',   voiceId: 'Hat',      note: 60, pan: -0.30 },
-      { name: 'BASS',  voiceId: 'Bass303',  note: 48, pan:  0.00 },
+      { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Tight' },
     ],
   },
 ]
@@ -203,17 +208,36 @@ export function makePatternId(index: number): string {
   return `pat_${String(index).padStart(2, '0')}`
 }
 
+/** Apply template track overrides (voiceParams + preset) to a cell */
+export function applyTemplateTrack(cell: Cell, d: PatternTemplate['tracks'][number]): void {
+  if (d.presetName) {
+    const preset = getPresets(d.voiceId).find(p => p.name === d.presetName)
+    if (preset) {
+      Object.assign(cell.voiceParams, preset.params)
+      cell.presetName = d.presetName
+    }
+  }
+  // Explicit voiceParams override on top of preset (e.g. polyMode)
+  if (d.voiceParams) Object.assign(cell.voiceParams, d.voiceParams)
+}
+
 export function makeEmptyPattern(index: number, name = '', templateId?: string): Pattern {
   const tmpl = getTemplate(templateId)
   return {
     id: makePatternId(index),
     name,
     color: 0,
-    cells: tmpl.tracks.map((d, i) => makeEmptyCell(i, d.name, d.voiceId, d.note)),
+    cells: tmpl.tracks.map((d, i) => {
+      const cell = makeEmptyCell(i, d.name, d.voiceId, d.note)
+      applyTemplateTrack(cell, d)
+      return cell
+    }),
   }
 }
 
-// ── Factory pattern definitions ──────────────────────────────────────
+// ── Test fixture: hardcoded song data ────────────────────────────────
+// Used by makeDefaultSong() in persistence/storage tests as a rich Song fixture.
+// Production demo is loaded from public/demo-song.json — this is NOT the demo.
 // "VELVET" — jazzy neo-soul song (120 BPM, Am)
 // 9-track layout: Kick, Snare, Clap, C.HH, O.HH, Ride, Bass303, FM, MoogLead
 
@@ -530,7 +554,14 @@ export function makeDefaultSong(): Song {
     })
   }
   for (let i = FACTORY.length; i < PATTERN_POOL_SIZE; i++) {
-    patterns.push(makeEmptyPattern(i))
+    patterns.push({
+      id: makePatternId(i),
+      name: '',
+      color: 0,
+      cells: FACTORY_TRACKS.map((d, trackIdx) =>
+        makeEmptyCell(trackIdx, d.name, d.voiceId, d.note)
+      ),
+    })
   }
 
   return {

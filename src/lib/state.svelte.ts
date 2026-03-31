@@ -334,13 +334,14 @@ interface StoredPrefs {
   scaleMode: boolean
   patternEditor: 'grid' | 'tracker'
   showGuide: boolean
+  randomGenre: string
   lastProjectId: string | null
   lastProjectName: string
   lastBpm: number
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, patternEditor: 'grid', showGuide: true, lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, patternEditor: 'grid', showGuide: true, randomGenre: 'house', lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -367,6 +368,7 @@ export function savePrefs(): void {
     scaleMode: prefs.scaleMode,
     patternEditor: prefs.patternEditor,
     showGuide: prefs.showGuide,
+    randomGenre: prefs.randomGenre,
     lastProjectId: project.id,
     lastProjectName: song.name,
     lastBpm: song.bpm,
@@ -381,6 +383,7 @@ export const prefs = $state({
   scaleMode: initialPrefs.scaleMode,
   patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
   showGuide: initialPrefs.showGuide,
+  randomGenre: initialPrefs.randomGenre,
 })
 
 /** Project tracking state */

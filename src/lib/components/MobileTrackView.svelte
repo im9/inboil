@@ -1,9 +1,9 @@
 <script lang="ts">
   // NOTE: Large file by design — multi-mode editing (step/vel/chance) + drag-paint + long-press state machines share 12+ reactive values
-  import { song, activeCell, playback, ui } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, prefs, savePrefs } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, isDrum, setTrackSteps, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, addTrack, removeTrack, STEP_OPTIONS } from '../stepActions.ts'
-  import { randomizePattern } from '../randomize.ts'
+  import { randomizePattern, GENRE_PRESETS } from '../randomize.ts'
   import { VOICE_LIST } from '../audio/dsp/voices.ts'
   import PadGrid from './PadGrid.svelte'
   import MobileParamOverlay from './MobileParamOverlay.svelte'
@@ -21,6 +21,30 @@
 
   // Dynamic column count based on step count
   const calcCols = $derived(ph.steps <= 8 ? 4 : ph.steps <= 16 ? 4 : ph.steps <= 32 ? 8 : 8)
+
+  // ── Genre long-press (ADR 129) ──
+  let genreOpen = $state(false)
+  let rndLongPressTimer: ReturnType<typeof setTimeout> | null = null
+
+  function onRndPointerDown() {
+    rndLongPressTimer = setTimeout(() => {
+      rndLongPressTimer = null
+      genreOpen = true
+    }, 300)
+  }
+  function onRndPointerUp() {
+    if (rndLongPressTimer) {
+      clearTimeout(rndLongPressTimer)
+      rndLongPressTimer = null
+      randomizePattern()
+    }
+  }
+  function selectGenre(id: string) {
+    prefs.randomGenre = id
+    savePrefs()
+    genreOpen = false
+    randomizePattern()
+  }
 
   // ── Step drag-to-paint ──
   let paintDragging = $state(false)
@@ -291,7 +315,27 @@
         <span class="flip-face back mute-on">M</span>
       </span>
     </button>
-    <button class="btn-rand" onpointerdown={randomizePattern}>RND</button>
+    <div class="rand-wrap">
+      <button
+        class="btn-rand"
+        onpointerdown={onRndPointerDown}
+        onpointerup={onRndPointerUp}
+        onpointerleave={onRndPointerUp}
+      >RND</button>
+      {#if genreOpen}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="genre-backdrop" onpointerdown={() => { genreOpen = false }}></div>
+        <div class="genre-dropdown">
+          {#each GENRE_PRESETS as g}
+            <button
+              class="genre-option"
+              class:selected={prefs.randomGenre === g.id}
+              onpointerdown={() => selectGenre(g.id)}
+            >{prefs.randomGenre === g.id ? '\u25CF ' : '  '}{g.label}</button>
+          {/each}
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Melodic tab switcher -->
@@ -552,6 +596,9 @@
     justify-content: center;
   }
 
+  .rand-wrap {
+    position: relative;
+  }
   .btn-rand {
     height: 28px;
     border: 1.5px solid var(--color-olive);
@@ -562,10 +609,54 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     flex-shrink: 0;
+    user-select: none;
+    touch-action: none;
   }
   .btn-rand:active {
     background: var(--color-olive);
     color: var(--color-bg);
+  }
+  .genre-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+  }
+  .genre-dropdown {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    z-index: 200;
+    min-width: 100px;
+    background: var(--color-bg);
+    border: 1px solid var(--lz-border-strong);
+    display: flex;
+    flex-direction: column;
+    padding: 2px;
+    animation: genre-in 80ms ease-out;
+  }
+  @keyframes genre-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .genre-option {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--lz-text-strong);
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .genre-option:hover {
+    background: var(--lz-border-mid);
+  }
+  .genre-option.selected {
+    color: var(--color-olive);
+    font-weight: 700;
   }
 
   /* ── PO-style step picker (inside calculator) ── */
