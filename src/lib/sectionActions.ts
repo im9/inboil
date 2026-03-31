@@ -62,6 +62,11 @@ export function patternApplyTemplate(patternIndex: number, templateId: string): 
   // Remove orphaned tracks (no cells in any pattern)
   pruneOrphanedTracks()
 
+  // Reset selected track if it no longer exists in this pattern
+  if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
+    ui.selectedTrack = pat.cells.length > 0 ? pat.cells[0].trackId : 0
+  }
+
   // Async: load factory sample packs referenced by template
   void loadTemplatePacks(patternIndex, templateId)
 }
