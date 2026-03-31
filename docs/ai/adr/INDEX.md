@@ -165,7 +165,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 091 | Release Readiness Assessment | Implemented | Pre-launch checklist: error UI, browser compat, LP/tutorial, storage notice, custom domain |
 | 099 | Auto-Save and Undo Durability | Implemented | beforeunload localStorage recovery snapshot, auto-restore on load (Option 3) |
 | 100 | WebRTC Chunk Buffer Hardening | Implemented | MAX_CHUNKS limit, 30s TTL, duplicate guard, channel cleanup, 5MB memory budget |
-| 101 | Branch Strategy, Versioning & Changelog | Proposed | main-only + tags, SemVer 0.x beta, manual CHANGELOG.md, annotated tag releases |
+| 101 | Branch Strategy, Versioning & Changelog | Implemented | main-only + tags, SemVer 0.x beta, semi-auto CHANGELOG.md via /release skill, v0.1.0 tagged |
 | 102 | Mobile Melodic Input & Track Management | Implemented | Mobile piano roll improvements + track add/remove |
 | 103 | Orchestration Layer | Proposed | Multi-node parameter curves, gradual transitions across scene segments |
 | 104 | Audio Pool | Implemented | OPFS-based pool with 111 factory samples (WebM/Opus, incl. Grand Piano pack), inline Sampler browser with search/drill-down/audition, user sample auto-import, 909 crash/ride migration, rename/move/delete management |

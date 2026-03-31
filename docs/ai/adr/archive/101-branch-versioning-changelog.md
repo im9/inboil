@@ -1,6 +1,6 @@
 # ADR 101: Branch Strategy, Versioning & Changelog
 
-## Status: Proposed
+## Status: Implemented
 
 ## Context
 
