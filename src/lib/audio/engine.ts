@@ -97,7 +97,7 @@ export class GrooveboxEngine {
     if (callbacks) this._onLevels = callbacks.onLevels
     if (this.ctx) return
     try {
-      const ctx = new AudioContext()
+      const ctx = new AudioContext({ latencyHint: 'playback' })
       await ctx.audioWorklet.addModule(workletUrl)
       const node = new AudioWorkletNode(ctx, 'groovebox-processor', {
         numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2],
