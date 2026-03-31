@@ -81,8 +81,9 @@ const ARP_CHORD_DEGS: number[][] = [
   [0, 2, 4, 6],  // 4 = 7TH  (diatonic 7th — auto quality)
 ]
 
-/** Generate arp note list using scale-degree intervals resolved via SCALE_TEMPLATES */
-function generateArpNotes(base: number, mode: number, chord: number, oct: number, root: number): number[] {
+/** Generate arp note list using scale-degree intervals resolved via SCALE_TEMPLATES.
+ *  Writes into `out` array in-place to avoid allocation. */
+function generateArpNotes(base: number, mode: number, chord: number, oct: number, root: number, out: number[]): void {
   const scale = SCALE_TEMPLATES[root] ?? SCALE_TEMPLATES[0]
   const degOffsets = ARP_CHORD_DEGS[chord] ?? ARP_CHORD_DEGS[0]
 
@@ -94,26 +95,34 @@ function generateArpNotes(base: number, mode: number, chord: number, oct: number
   }
 
   const baseOctave = Math.floor(base / 12)
-  const notes: number[] = []
+  let len = 0
 
   for (let o = 0; o < oct; o++) {
     for (const dOff of degOffsets) {
       const deg = baseDeg + dOff + o * 7
       const octShift = Math.floor(deg / 7)
       const scaleDeg = ((deg % 7) + 7) % 7
-      notes.push(root + scale[scaleDeg] + (baseOctave + octShift) * 12)
+      out[len++] = root + scale[scaleDeg] + (baseOctave + octShift) * 12
     }
   }
 
   switch (mode) {
-    case 2: notes.reverse(); break  // DOWN
-    case 3: {                        // UP-DOWN
-      if (notes.length > 1) notes.push(...notes.slice(1, -1).reverse())
+    case 2: {  // DOWN — reverse in place
+      for (let i = 0, j = len - 1; i < j; i++, j--) {
+        const tmp = out[i]; out[i] = out[j]; out[j] = tmp
+      }
+      break
+    }
+    case 3: {  // UP-DOWN — append reversed middle without temp array
+      if (len > 1) {
+        // Copy indices 1..(len-2) in reverse to end of array
+        for (let i = len - 2; i >= 1; i--) out[len++] = out[i]
+      }
       break
     }
     // case 1 (UP) & case 4 (RANDOM): UP order, RANDOM picks at tick time
   }
-  return notes
+  out.length = len
 }
 
 // ── Insert FX slot (ADR 077) ──────────────────────────────────────────────────
@@ -249,6 +258,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private arpSeed      = new Uint32Array(MAX_VOICES).fill(77777)
   // Fill PRNG
   private fillSeed       = 12321
+  // Chance PRNG (step probability)
+  private _chanceSeed    = 12345
+  // Pre-allocated postMessage buffer
+  private _phBuf: number[] = []
   // Tape delay (ADR 075 Phase 2)
   private tapeDelay      = new TapeDelay(1000, sampleRate)
   private delayTape      = false
@@ -353,7 +366,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const t = cmd.trackId ?? 0
           const v = this.voices[t]
           if (v) v.noteOff()
-          delete this.auditionNote[t]
+          this.auditionNote[t] = -1
           break
         }
         case 'releaseNoteByPitch': {
@@ -361,7 +374,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (this.auditionNote[t] === cmd.note) {
             const v = this.voices[t]
             if (v) v.noteOff()
-            delete this.auditionNote[t]
+            this.auditionNote[t] = -1
           }
           break
         }
@@ -396,7 +409,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.playheads[i] = this.patternPos % (p.tracks[i].steps || 16)
             this.gateCounters[i] = 0
             this.muteGains[i] = 1.0
-            this.arpNotes[i] = []
+            this.arpNotes[i].length = 0
             this.arpIdx[i] = 0
             this.arpCounter[i] = 0
             this.arpSeed[i] = 77777
@@ -407,7 +420,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.voices[i]?.noteOff()
             this.voices[i] = null
             this.gateCounters[i] = 0
-            this.arpNotes[i] = []
+            this.arpNotes[i].length = 0
             this.insertSlots[i] = [null, null]
           }
           this.activeCount = n
@@ -570,7 +583,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             for (let t = 0; t < this.activeCount; t++) {
               this.voices[t]?.reset()
               this.gateCounters[t] = 0
-              this.arpNotes[t] = []
+              this.arpNotes[t].length = 0
               const steps = this.tracks[t]?.steps ?? 16
               this.playheads[t] = steps - 1
               this.trackSwingPhase[t] = 0
@@ -794,7 +807,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       this.gateCounters[t]--
       if (this.gateCounters[t] === 0 && !isLegato) {
         this.voices[t]?.noteOff()
-        this.arpNotes[t] = []
+        this.arpNotes[t].length = 0
       }
     }
 
@@ -834,7 +847,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
     } else if (trig?.active) {
       // Step probability: skip note if chance check fails
-      if (Math.random() >= (trig.chance ?? 1.0)) {
+      this._chanceSeed = (this._chanceSeed * 1664525 + 1013904223) >>> 0
+      if ((this._chanceSeed >>> 16) / 65536 >= (trig.chance ?? 1.0)) {
         this.gateCounters[t] = trig.duration ?? 1
         return
       }
@@ -867,14 +881,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         const ac = Math.round(trig.paramLocks?.arpChord ?? track.voiceParams?.arpChord ?? 0)
         const ao = Math.round(trig.paramLocks?.arpOct   ?? track.voiceParams?.arpOct   ?? 1)
         if (am > 0 && (ac > 0 || ao >= 2)) {
-          this.arpNotes[t] = generateArpNotes(note, am, ac, ao, this.rootNote)
+          generateArpNotes(note, am, ac, ao, this.rootNote, this.arpNotes[t])
           this.arpIdx[t] = 0
           this.arpCounter[t] = 0
           this.arpTickSize[t] = Math.round(this.baseSPS * this.divisors[t] / Math.max(1, ar))
           this.arpVel[t] = trig.velocity
           this.arpSeed[t] = (note * 7919 + this.playheads[t] * 104729) >>> 0
         } else {
-          this.arpNotes[t] = []
+          this.arpNotes[t].length = 0
         }
       }
     }
@@ -946,7 +960,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
         }
         if (anyAdvanced) {
-          this.port.postMessage({ type: 'step', playheads: this.playheads.slice(0, this.activeCount), cycle: this._pendingCycle } satisfies WorkletEvent)
+          const n = this.activeCount
+          this._phBuf.length = n
+          for (let i = 0; i < n; i++) this._phBuf[i] = this.playheads[i]
+          this.port.postMessage({ type: 'step', playheads: this._phBuf, cycle: this._pendingCycle } satisfies WorkletEvent)
           this._pendingCycle = false
         }
 
@@ -973,7 +990,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
               const ph = this.playheads[t]
               const trig = track.trigs[ph]
               if (trig?.active) {
-                const vel = (trig.velocity ?? 1.0) * (0.6 + Math.random() * 0.3)
+                this._chanceSeed = (this._chanceSeed * 1664525 + 1013904223) >>> 0
+                const vel = (trig.velocity ?? 1.0) * (0.6 + (this._chanceSeed >>> 16) / 65536 * 0.3)
                 this.voices[t]?.noteOn(trig.note, vel)
                 this.gateCounters[t] = 1
               }
