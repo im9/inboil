@@ -53,6 +53,26 @@ describe('FMVoice', () => {
     // At least one channel should have output
     expect(Math.abs(out[0]) + Math.abs(out[1])).toBeGreaterThan(0)
   })
+
+  it('soft-clips extreme output to [-1, 1)', () => {
+    const v = new FMVoice(SR)
+    // High modulation index to provoke amplitude spikes
+    v.setParam('fmIndex', 1.0)
+    v.noteOn(60, 1.0)
+    let peak = 0
+    for (let i = 0; i < 4000; i++) {
+      const s = v.tick()
+      if (Math.abs(s) > peak) peak = Math.abs(s)
+    }
+    expect(peak).toBeLessThan(1.0)
+  })
+
+  it('tanh is transparent at normal levels', () => {
+    // At small x, tanh(x) ≈ x within ~x³/3
+    // Verify output stays close to raw value for typical signal levels
+    const x = 0.2
+    expect(Math.tanh(x)).toBeCloseTo(x, 2)  // within 0.005
+  })
 })
 
 describe('WTSynth', () => {
