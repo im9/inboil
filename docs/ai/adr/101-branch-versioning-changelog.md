@@ -89,7 +89,9 @@ Place `CHANGELOG.md` at the project root using [Keep a Changelog](https://keepac
 - Browser capability detection with graceful fallback
 ```
 
-**Why manual, not auto-generated**: Zero npm dependencies policy. Manual changelogs are also better for users — commit messages are technical, changelog entries should be user-facing. The cost of writing a few lines per release is negligible.
+**Semi-automated via `/release` skill**: A `/release` skill generates a changelog draft by collecting commits since the last tag, grouped by type (feat/fix/etc). The user edits the draft to make entries user-facing, then the skill commits, tags, and deploys. No npm dependencies — uses `git log` only.
+
+**Why semi-auto, not fully auto**: Commit messages are technical ("fix: guard StepGrid against undefined track") — changelog entries should be user-facing ("Fixed a crash when switching patterns quickly"). Auto-generation provides the skeleton; human editing provides the quality.
 
 **Commit convention** (formalize existing style):
 
@@ -116,15 +118,16 @@ GitHub Releases are optional during beta. Consider adopting them at v1.0 when th
 
 #### Phase 1: First Tagged Release (now)
 
-1. Create `CHANGELOG.md` with the initial release entry
-2. Update `package.json` version to `0.1.0`
-3. Commit, tag `v0.1.0`, push with tags
-4. Deploy
+1. Update `package.json` version to `0.1.0`
+2. Commit, tag `v0.1.0`, push with tags
+3. Deploy
+
+No `CHANGELOG.md` for the initial release — 360+ commits don't summarize meaningfully into one entry. Start the changelog from v0.2.0.
 
 #### Phase 2: Ongoing Beta (pages.dev)
 
 - Bump minor for feature batches, patch for fixes
-- Update `CHANGELOG.md` with each tagged release
+- Create `CHANGELOG.md` at v0.2.0, update with each tagged release
 - Cycle: develop → changelog → commit → tag → deploy
 
 #### Phase 3: Stable (custom domain)
@@ -152,18 +155,16 @@ All options are within the Cloudflare Free plan.
 
 ### 7. v1.0 Blockers: Project Format Stability
 
-SemVer `1.0` implies that the Song JSON export format is stable — breaking changes to the format would require a major version bump. The following proposed ADRs may change the `Song` structure and should be resolved (implemented or deferred) before v1.0:
+SemVer `1.0` implies that the Song JSON export format is stable — breaking changes to the format would require a major version bump. The following proposed ADRs may add optional fields to `Song` and should have `restoreSong` migration coverage before v1.0:
 
 | ADR | Feature | Format Impact | Risk |
 |-----|---------|---------------|------|
-| **087** | Looper / Tape Node | New `SceneNode` type `'looper'` + `LooperConfig`. Audio buffer persistence (~11MB for 8 bars/4 tracks) could fundamentally change save format. | **High** |
+| **087** | Looper / Tape Node | Audio buffers stored in IDB only (live performance / online recording use case) — **not included in Song JSON**. No format impact. | None |
 | **093** | Cross-Node Automation | Adds `crossNode?: number` to `AutomationParams`. Optional field — backward compatible via `restoreSong` migration. | Low |
 | **083** | MIDI Learn & Pitch Bend | `CcMapping[]` for MIDI CC bindings. Persistence location undecided (Song field vs separate config). | Low |
 
-**ADR 087 (Looper)** is the primary blocker. It introduces large binary audio data into what is currently a pure JSON structure. This decision (embed as base64? separate blob storage? IndexedDB-only with no export?) will shape the save format significantly.
-
 **Criteria to proceed to v1.0**:
-1. ADR 087 is either implemented (format settled) or explicitly deferred past v1.0
+1. Custom domain acquired and configured on Cloudflare Pages
 2. ADR 093 and 083, if implemented, have their new fields covered by `restoreSong` migration
 3. `restoreSong` handles all known format transitions gracefully (old projects load without data loss)
 
@@ -172,12 +173,31 @@ SemVer `1.0` implies that the Song JSON export format is stable — breaking cha
 - **Why no release branches**: With a single developer and `main` always deployable, release branches add management cost with no benefit. Revisit if parallel hotfix work becomes necessary.
 - **Why no `-beta` suffix**: SemVer `0.x` already communicates instability (§4: "anything MAY change at any time"). Adding `-beta` is redundant and makes version strings longer for no gain.
 - **Why `pages.dev` = beta**: The URL itself communicates "this is a preview". Users who find it understand it's not the final home. A custom domain signals "this is real" — that's the right moment for v1.0.
-- **Why not start at v1.0**: The Song JSON structure is not yet stable. ADR 087 (Looper) could fundamentally change the save format with audio buffer persistence. Starting at `0.x` gives freedom to evolve the format without violating SemVer's backward compatibility promise.
+- **Why not start at v1.0**: The Song JSON structure has a few pending optional field additions (ADR 093, 083). Starting at `0.x` gives freedom to evolve the format without violating SemVer's backward compatibility promise. Custom domain acquisition is the primary gate for v1.0.
 - **Cloudflare Pages integration**: Currently manual `pnpm deploy`. GitHub integration would auto-deploy on push, but manual deploys prevent accidental releases. Keep manual for now.
+
+### 8. `/release` Skill
+
+A Claude Code skill that handles the full release cycle:
+
+```
+/release [patch|minor|major]   (default: minor)
+```
+
+**Steps**:
+
+1. Determine next version from latest git tag + bump type
+2. Collect commits since last tag via `git log`, group by type
+3. Generate draft changelog section in `CHANGELOG.md` (create file at v0.2.0 if absent)
+4. Open draft for user editing (user rewrites entries to be user-facing)
+5. Update `package.json` version
+6. Commit: `chore: release v{version}`
+7. Create annotated tag: `v{version}`
+8. Prompt user to confirm deploy (`pnpm deploy`)
+
+**First release (v0.1.0)**: Skip changelog (no prior tag to diff against). Version bump + tag + deploy only.
 
 ## Future Extensions
 
 - **GitHub Actions**: Tag push → build → Cloudflare Pages deploy → GitHub Release automation
-- **`pnpm release` script**: One-command version bump + changelog + tag + deploy
-- **Release notes draft**: Lightweight shell script to generate changelog draft from `git log` (no npm dependency needed)
 - **Format version field**: Add `formatVersion: number` to `Song` interface for explicit migration tracking
