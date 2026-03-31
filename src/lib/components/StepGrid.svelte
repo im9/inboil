@@ -31,7 +31,7 @@
   })
 
   const pageSize = $derived(ui.stepPageSize)
-  const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
+  const maxSteps = $derived(Math.max(...(song.patterns[ui.currentPattern]?.cells ?? []).map(c => c.steps), 16))
   const totalPages = $derived(Math.ceil(maxSteps / pageSize))
   const needsPaging = $derived(maxSteps > pageSize)
   const pageStart = $derived(ui.stepPage * pageSize)
@@ -48,7 +48,7 @@
   $effect(() => {
     if (!playback.playing || !needsPaging) return
     // Find the track with the most steps (the one that actually uses multiple pages)
-    const cells = song.patterns[ui.currentPattern].cells
+    const cells = song.patterns[ui.currentPattern]?.cells ?? []
     let longestTrackId = 0, longestSteps = 0
     for (const c of cells) {
       if (c.steps > longestSteps) { longestSteps = c.steps; longestTrackId = c.trackId }
@@ -310,7 +310,7 @@
 
   // ── Keyboard navigation for step buttons ──
   function stepKeydown(e: KeyboardEvent, trackId: number, stepIdx: number) {
-    const cells = song.patterns[ui.currentPattern].cells
+    const cells = song.patterns[ui.currentPattern]?.cells ?? []
     const steps = activeCell(trackId).steps
     let targetTrack = trackId
     let targetStep = stepIdx
@@ -363,9 +363,10 @@
   <div class="track-content"><div class="track-seq" bind:this={seqEl}></div><div class="track-mix"></div></div>
 </div>
 <div class="step-grid-scroll" bind:this={scrollEl}>
-  {#each song.patterns[ui.currentPattern].cells as ph}
+  {#each (song.patterns[ui.currentPattern]?.cells ?? []) as ph}
     {@const trackId = ph.trackId}
     {@const track = song.tracks[trackId]}
+    {#if track}
     {@const selected = ui.selectedTrack === trackId}
 
     <div
@@ -633,6 +634,7 @@
         <PianoRoll trackId={trackId} />
       {/if}
     </div>
+    {/if}
   {/each}
   {#if canAddTrack()}
     <button
