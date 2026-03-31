@@ -7,7 +7,7 @@ import type { Trig, Cell, CellInsertFx, Pattern, Track, Song, Effects, VoiceId }
 import type { FxFlavours } from './constants.ts'
 import { DEFAULT_EFFECTS, DEFAULT_FX_PAD, DEFAULT_MASTER_PAD } from './constants.ts'
 import { cloneScene, restoreScene } from './sceneData.ts'
-import { makeEmptyCell, makeEmptyPattern, PATTERN_POOL_SIZE } from './factory.ts'
+import { makeEmptyCell, makeEmptyPattern, makeTrack, PATTERN_POOL_SIZE } from './factory.ts'
 
 // ── Clone helpers (pure) ────────────────────────────────────────────────────
 
@@ -128,6 +128,17 @@ export function restoreSongPure(src: Song): RestoredState {
   const tracks = src.tracks.map((t: Track & { name?: string; voiceId?: VoiceId | null }) => ({
     id: t.id, muted: t.muted, volume: t.volume, pan: t.pan,
   }))
+  // Migration: fill gaps so tracks[i].id === i (broken by old pruneOrphanedTracks)
+  const maxId = tracks.reduce((m, t) => Math.max(m, t.id), -1)
+  if (maxId >= tracks.length) {
+    const byId = new Map(tracks.map(t => [t.id, t]))
+    const filled: Track[] = []
+    for (let i = 0; i <= maxId; i++) {
+      filled.push(byId.get(i) ?? makeTrack(i))
+    }
+    tracks.length = 0
+    tracks.push(...filled)
+  }
   const legacyTrackData = src.tracks as (Track & { name?: string; voiceId?: VoiceId | null })[]
 
   const patterns = src.patterns.map(p => {

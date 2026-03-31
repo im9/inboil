@@ -428,4 +428,20 @@ describe('legacy migration', () => {
     const r = restoreSongPure(song)
     expect(r.song.rootNote).toBe(0)
   })
+
+  it('fills gaps in song.tracks so tracks[i].id === i', () => {
+    const song = makeEmptySong()
+    // Simulate pruneOrphanedTracks damage: remove tracks 2 and 4, leaving gaps
+    song.tracks = song.tracks.filter(t => t.id !== 2 && t.id !== 4)
+    const r = restoreSongPure(song)
+    // All indices 0..maxId should be present
+    for (let i = 0; i < r.song.tracks.length; i++) {
+      expect(r.song.tracks[i].id).toBe(i)
+    }
+    // Original track data preserved
+    expect(r.song.tracks[0].volume).toBe(0.8)
+    // Gap-filled tracks get defaults
+    expect(r.song.tracks[2].volume).toBe(0.8)
+    expect(r.song.tracks[2].muted).toBe(false)
+  })
 })
