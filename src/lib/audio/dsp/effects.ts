@@ -769,6 +769,7 @@ export class ShimmerReverb {
   // LFO for allpass modulation
   private lfoPhases: Float64Array
   private lfoIncs: Float64Array
+  private _mods = new Float64Array(4)
 
   // Parameters
   private feedback = 0.0
@@ -935,9 +936,8 @@ export class ShimmerReverb {
     // dampCoeff is already smooth (one-pole LP state tracks naturally)
 
     // LFO modulation offsets (±49 samples max, from Faust)
-    const mods: number[] = []
     for (let i = 0; i < 4; i++) {
-      mods.push(49 * k * (Math.sin(6.283185 * this.lfoPhases[i]) + 1) / 2)
+      this._mods[i] = 49 * k * (Math.sin(6.283185 * this.lfoPhases[i]) + 1) / 2
       this.lfoPhases[i] += this.lfoIncs[i]
       if (this.lfoPhases[i] >= 1) this.lfoPhases[i] -= 1
     }
@@ -952,13 +952,13 @@ export class ShimmerReverb {
 
     // Forward path: 2 allpass chains + HF damping (one per channel)
     // L channel: AP(601*s, 0.7*diff) → AP(613*s, 0.75*diff) → LP
-    let L = this._allpass(0, fwdL, Math.round(601 * k * s) + mods[0], 0.7 * diff)
+    let L = this._allpass(0, fwdL, Math.round(601 * k * s) + this._mods[0], 0.7 * diff)
     L = this._allpass(1, L, Math.round(613 * k * s), 0.75 * diff)
     this.dampL = L * (1 - this.dampCoeff) + this.dampL * this.dampCoeff
     L = this.dampL
 
     // R channel: AP(2043*s, 0.75*diff) → AP(2087*s, 0.75*diff) → LP
-    let R = this._allpass(2, fwdR, Math.round(2043 * k * s) + mods[1], 0.75 * diff)
+    let R = this._allpass(2, fwdR, Math.round(2043 * k * s) + this._mods[1], 0.75 * diff)
     R = this._allpass(3, R, Math.round(2087 * k * s), 0.75 * diff)
     this.dampR = R * (1 - this.dampCoeff) + this.dampR * this.dampCoeff
     R = this.dampR
@@ -967,7 +967,7 @@ export class ShimmerReverb {
     // L feedback (from R output, cross-coupled)
     let fbPathL = this._dcBlock(R * fb, 0)
     fbPathL = this._delay(0, fbPathL)  // 4325 samples
-    fbPathL = this._allpass(4, fbPathL, Math.round(2337 * k * s) + mods[2], 0.7 * diff)
+    fbPathL = this._allpass(4, fbPathL, Math.round(2337 * k * s) + this._mods[2], 0.7 * diff)
     fbPathL = this._allpass(5, fbPathL, Math.round(2377 * k * s), 0.4 * diff)
     fbPathL = this._delay(2, fbPathL)  // 2969 samples
     // Pitch shift with dry/wet blend
@@ -977,7 +977,7 @@ export class ShimmerReverb {
     // R feedback (from L output, cross-coupled)
     let fbPathR = this._dcBlock(L * fb, 1)
     fbPathR = this._delay(1, fbPathR)  // 4763 samples
-    fbPathR = this._allpass(6, fbPathR, Math.round(1087 * k * s) + mods[3], 0.7 * diff)
+    fbPathR = this._allpass(6, fbPathR, Math.round(1087 * k * s) + this._mods[3], 0.7 * diff)
     fbPathR = this._allpass(7, fbPathR, Math.round(1113 * k * s), 0.4 * diff)
     fbPathR = this._delay(3, fbPathR)  // 3111 samples
     const psR = this._pitchShift(1, fbPathR)

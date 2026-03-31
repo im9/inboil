@@ -371,46 +371,58 @@ export class FMVoice implements Voice {
       this.unisonDetune = value
       return
     }
-    // Apply param to all 12 cores
-    for (let i = 0; i < 12; i++) {
-      const core = this.cores[i]
-      if (key === 'algorithm') { core.algorithm = Math.round(value); continue }
-
-      const opMatch = key.match(/^op([1-4])(\w+)$/)
-      if (opMatch) {
-        const op = core.ops[parseInt(opMatch[1]) - 1]
-        const param = opMatch[2]
-        switch (param) {
-          case 'Ratio':   op.ratio    = value; break
-          case 'Detune':  op.detune   = value; break
-          case 'Level':   op.level    = value; break
-          case 'Fb':      op.feedback = value; break
-          case 'Attack':  op.env.attack  = value; break
-          case 'Decay':   op.env.decay   = value; break
-          case 'Sustain': op.env.sustain = value; break
-          case 'Release': op.env.release = value; break
-        }
-        continue
-      }
-
-      switch (key) {
-        case 'lfoRate':     core.lfo.rate     = value; break
-        case 'lfoSync':     core.lfo.sync     = value >= 0.5; break
-        case 'lfoDiv':      core.lfo.divIndex = Math.round(value); break
-        case 'lfoWave':     core.lfo.shape    = Math.round(value) as FMLFOShape; break
-        case 'lfoDest':     core.lfo.dest     = Math.round(value); break
-        case 'lfoDepth':    core.lfo.depth    = value; break
-        case 'bpm':         core.lfo.bpm      = value; break
-      }
-
+    // Apply param to all 12 cores — flat switch avoids regex/string allocation per call
+    switch (key) {
+      case 'algorithm':  for (let i = 0; i < 12; i++) this.cores[i].algorithm = Math.round(value); return
+      // Op 1
+      case 'op1Ratio':   for (let i = 0; i < 12; i++) this.cores[i].ops[0].ratio    = value; return
+      case 'op1Detune':  for (let i = 0; i < 12; i++) this.cores[i].ops[0].detune   = value; return
+      case 'op1Level':   for (let i = 0; i < 12; i++) this.cores[i].ops[0].level    = value; return
+      case 'op1Fb':      for (let i = 0; i < 12; i++) this.cores[i].ops[0].feedback = value; return
+      case 'op1Attack':  for (let i = 0; i < 12; i++) this.cores[i].ops[0].env.attack  = value; return
+      case 'op1Decay':   for (let i = 0; i < 12; i++) this.cores[i].ops[0].env.decay   = value; return
+      case 'op1Sustain': for (let i = 0; i < 12; i++) this.cores[i].ops[0].env.sustain = value; return
+      case 'op1Release': for (let i = 0; i < 12; i++) this.cores[i].ops[0].env.release = value; return
+      // Op 2
+      case 'op2Ratio':   for (let i = 0; i < 12; i++) this.cores[i].ops[1].ratio    = value; return
+      case 'op2Detune':  for (let i = 0; i < 12; i++) this.cores[i].ops[1].detune   = value; return
+      case 'op2Level':   for (let i = 0; i < 12; i++) this.cores[i].ops[1].level    = value; return
+      case 'op2Fb':      for (let i = 0; i < 12; i++) this.cores[i].ops[1].feedback = value; return
+      case 'op2Attack':  for (let i = 0; i < 12; i++) this.cores[i].ops[1].env.attack  = value; return
+      case 'op2Decay':   for (let i = 0; i < 12; i++) this.cores[i].ops[1].env.decay   = value; return
+      case 'op2Sustain': for (let i = 0; i < 12; i++) this.cores[i].ops[1].env.sustain = value; return
+      case 'op2Release': for (let i = 0; i < 12; i++) this.cores[i].ops[1].env.release = value; return
+      // Op 3
+      case 'op3Ratio':   for (let i = 0; i < 12; i++) this.cores[i].ops[2].ratio    = value; return
+      case 'op3Detune':  for (let i = 0; i < 12; i++) this.cores[i].ops[2].detune   = value; return
+      case 'op3Level':   for (let i = 0; i < 12; i++) this.cores[i].ops[2].level    = value; return
+      case 'op3Fb':      for (let i = 0; i < 12; i++) this.cores[i].ops[2].feedback = value; return
+      case 'op3Attack':  for (let i = 0; i < 12; i++) this.cores[i].ops[2].env.attack  = value; return
+      case 'op3Decay':   for (let i = 0; i < 12; i++) this.cores[i].ops[2].env.decay   = value; return
+      case 'op3Sustain': for (let i = 0; i < 12; i++) this.cores[i].ops[2].env.sustain = value; return
+      case 'op3Release': for (let i = 0; i < 12; i++) this.cores[i].ops[2].env.release = value; return
+      // Op 4
+      case 'op4Ratio':   for (let i = 0; i < 12; i++) this.cores[i].ops[3].ratio    = value; return
+      case 'op4Detune':  for (let i = 0; i < 12; i++) this.cores[i].ops[3].detune   = value; return
+      case 'op4Level':   for (let i = 0; i < 12; i++) this.cores[i].ops[3].level    = value; return
+      case 'op4Fb':      for (let i = 0; i < 12; i++) this.cores[i].ops[3].feedback = value; return
+      case 'op4Attack':  for (let i = 0; i < 12; i++) this.cores[i].ops[3].env.attack  = value; return
+      case 'op4Decay':   for (let i = 0; i < 12; i++) this.cores[i].ops[3].env.decay   = value; return
+      case 'op4Sustain': for (let i = 0; i < 12; i++) this.cores[i].ops[3].env.sustain = value; return
+      case 'op4Release': for (let i = 0; i < 12; i++) this.cores[i].ops[3].env.release = value; return
+      // LFO
+      case 'lfoRate':    for (let i = 0; i < 12; i++) this.cores[i].lfo.rate     = value; return
+      case 'lfoSync':    for (let i = 0; i < 12; i++) this.cores[i].lfo.sync     = value >= 0.5; return
+      case 'lfoDiv':     for (let i = 0; i < 12; i++) this.cores[i].lfo.divIndex = Math.round(value); return
+      case 'lfoWave':    for (let i = 0; i < 12; i++) this.cores[i].lfo.shape    = Math.round(value) as FMLFOShape; return
+      case 'lfoDest':    for (let i = 0; i < 12; i++) this.cores[i].lfo.dest     = Math.round(value); return
+      case 'lfoDepth':   for (let i = 0; i < 12; i++) this.cores[i].lfo.depth    = value; return
+      case 'bpm':        for (let i = 0; i < 12; i++) this.cores[i].lfo.bpm      = value; return
       // Backward compat: old 2-op param names
-      switch (key) {
-        case 'op2Ratio':     core.ops[1].ratio    = value; break
-        case 'fbAmt':        core.ops[0].feedback = value; break
-        case 'op2Index':     core.ops[1].level    = value / 8; break
-        case 'carrierIndex': core.ops[0].level    = value / 8; break
-        case 'decay':        core.ops[0].env.decay = value; core.ops[1].env.decay = value * 0.5; break
-      }
+      case 'fbAmt':        for (let i = 0; i < 12; i++) this.cores[i].ops[0].feedback = value; return
+      case 'op2Index':     for (let i = 0; i < 12; i++) this.cores[i].ops[1].level    = value / 8; return
+      case 'carrierIndex': for (let i = 0; i < 12; i++) this.cores[i].ops[0].level    = value / 8; return
+      case 'decay':        for (let i = 0; i < 12; i++) { this.cores[i].ops[0].env.decay = value; this.cores[i].ops[1].env.decay = value * 0.5 } return
     }
   }
 }

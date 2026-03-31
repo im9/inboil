@@ -391,6 +391,17 @@ export class CombFilter {
   }
 }
 
+// Vowel formant frequencies (F1, F2, F3) — standard values
+// A: 730, 1090, 2440  |  E: 660, 1720, 2410  |  I: 270, 2290, 3010
+// O: 570, 840, 2410   |  U: 300, 870, 2240
+const VOWEL_FORMANTS: readonly (readonly [number, number, number])[] = [
+  [730, 1090, 2440],  // A
+  [660, 1720, 2410],  // E
+  [270, 2290, 3010],  // I
+  [570,  840, 2410],  // O
+  [300,  870, 2240],  // U
+]
+
 /**
  * Formant Filter — 3 parallel bandpass filters for vowel sounds.
  * cutoff morphs between vowel presets (A→E→I→O→U), resonance controls bandwidth.
@@ -409,23 +420,12 @@ export class FormantFilter {
 
   /** Set vowel morph. cutoff = vowel position (0–1 maps A→E→I→O→U), resonance = bandwidth Q */
   setParams(cutoff: number, resonance: number) {
-    // Vowel formant frequencies (F1, F2, F3) — standard values
-    // A: 730, 1090, 2440  |  E: 660, 1720, 2410  |  I: 270, 2290, 3010
-    // O: 570, 840, 2410   |  U: 300, 870, 2240
-    const vowels: [number, number, number][] = [
-      [730, 1090, 2440],  // A
-      [660, 1720, 2410],  // E
-      [270, 2290, 3010],  // I
-      [570,  840, 2410],  // O
-      [300,  870, 2240],  // U
-    ]
-
     // Map cutoff (originally Hz range 50-8000) to vowel position 0-4
     const pos = Math.max(0, Math.min(1, (cutoff - 50) / (8000 - 50))) * 4
     const idx = Math.floor(pos)
     const frac = pos - idx
     const idxNext = Math.min(idx + 1, 4)
-    const vA = vowels[idx], vB = vowels[idxNext]
+    const vA = VOWEL_FORMANTS[idx], vB = VOWEL_FORMANTS[idxNext]
 
     const f0 = vA[0] + (vB[0] - vA[0]) * frac
     const f1 = vA[1] + (vB[1] - vA[1]) * frac
