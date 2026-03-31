@@ -25,17 +25,32 @@ A lightweight release process is needed as the project transitions from solo dev
 
 The `pages.dev` deployment already serves as a public beta. SemVer `0.x` communicates that the project format may still change (see §7 for v1.0 blockers). The custom domain marks the transition to stable: it signals permanence and format stability to users.
 
-### 1. Branch Model: main-only + tags
+### 1. Branch Model: feature branches + main
 
-No release branches. Keep `main` always deployable. Mark release points with **annotated git tags**.
+Development happens on feature branches. `main` is always deployable — never commit directly.
 
 ```
-main ──●──●──●──●──●──●──●──●──●
-                  ▲           ▲
-               v0.1.0      v0.2.0
+main    ──●──────────●──────────●──────●
+           \        / \        /       ▲
+            feat/a ●   feat/b ●     v0.2.0
 ```
 
-**Rationale**: Solo development doesn't justify the overhead of maintaining parallel branches. Tags provide lightweight, immutable release markers. Hotfixes go directly to `main` with a new patch tag.
+**Workflow**:
+
+1. `git checkout -b feat/xxx` (or `fix/xxx`, `docs/xxx`)
+2. Develop and commit on the branch
+3. `git push -u origin feat/xxx`
+4. Open PR → CI runs check/test/build → merge to main
+5. Main push triggers CI deploy automatically
+
+**Branch protection on `main`**:
+
+- Force push: blocked
+- Branch deletion: blocked
+- Enforce admins: enabled (applies to repo owner too)
+- Required status check: `check` job must pass before merge
+
+**Rationale**: Branch protection prevents accidental force pushes and reverts on main. Feature branches + PR workflow provides a CI quality gate before code reaches production. Tags mark release points.
 
 ### 2. Versioning: SemVer 0.x
 
@@ -170,11 +185,11 @@ SemVer `1.0` implies that the Song JSON export format is stable — breaking cha
 
 ## Considerations
 
-- **Why no release branches**: With a single developer and `main` always deployable, release branches add management cost with no benefit. Revisit if parallel hotfix work becomes necessary.
+- **Why no release branches**: Feature branches are short-lived (merged via PR). Long-lived release branches add management cost with no benefit for solo development.
 - **Why no `-beta` suffix**: SemVer `0.x` already communicates instability (§4: "anything MAY change at any time"). Adding `-beta` is redundant and makes version strings longer for no gain.
 - **Why `pages.dev` = beta**: The URL itself communicates "this is a preview". Users who find it understand it's not the final home. A custom domain signals "this is real" — that's the right moment for v1.0.
 - **Why not start at v1.0**: The Song JSON structure has a few pending optional field additions (ADR 093, 083). Starting at `0.x` gives freedom to evolve the format without violating SemVer's backward compatibility promise. Custom domain acquisition is the primary gate for v1.0.
-- **Cloudflare Pages integration**: Currently manual `pnpm deploy`. GitHub integration would auto-deploy on push, but manual deploys prevent accidental releases. Keep manual for now.
+- **Why not direct-to-main**: Branch protection blocks force push and requires CI status checks. Direct commits bypass the quality gate. The overhead of a branch + PR is minimal (especially with `/commit` skill) and prevents broken deploys.
 
 ### 8. `/release` Skill
 
