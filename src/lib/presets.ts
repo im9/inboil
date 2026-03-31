@@ -501,7 +501,7 @@ const FM_PRESETS: SynthPreset[] = [
 // ── Analog presets ──────────────────────────────────────────────────
 const ANALOG_PRESETS: SynthPreset[] = [
   { name: 'Warm Sub', voiceId: 'Analog', params: {
-    sub: 0.6, drive: 1.4, cutoffBase: 400, envMod: 2000, resonance: 2.0,
+    sub: 0.7, drive: 1.4, cutoffBase: 300, envMod: 1200, resonance: 1.5,
     attack: 0.008, decay: 0.35, sustain: 0.4, release: 0.4,
   }},
   { name: 'Biting', voiceId: 'Analog', params: {

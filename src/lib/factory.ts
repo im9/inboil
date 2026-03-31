@@ -76,9 +76,9 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
     // Techno: 303 is iconic — acid/squelch bass, dark minimal pads, cold arps
     id: 'techno', name: 'Techno',
     tracks: [
-      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
-      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
-      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00, presetName: 'Clicky' },
+      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15, presetName: 'Tight Clap' },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30, presetName: 'Sharp' },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'RIM',   voiceId: 'Rimshot',  note: 60, pan:  0.10 },
       { name: 'PAD',   voiceId: 'WT',       note: 60, pan: -0.15, presetName: 'Dark Pad' },
@@ -87,12 +87,12 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
     ],
   },
   {
-    // House: piano chords (iconic house piano), deep sub bass, smooth leads
+    // House: warm deep kick, big clap, soft hats
     id: 'house', name: 'House',
     tracks: [
-      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
-      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
-      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00, presetName: 'Punchy' },
+      { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15, presetName: 'Big Clap' },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30, presetName: 'Soft' },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'SHAK',  voiceId: 'Shaker',   note: 60, pan:  0.20 },
       { name: 'PAD',   voiceId: 'WT',       note: 60, pan: -0.15, presetName: 'Warm Pad' },
@@ -117,8 +117,8 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
     id: 'hiphop', name: 'HipHop',
     tracks: [
       { name: 'KICK',  voiceId: 'Kick808',  note: 60, pan:  0.00, presetName: '808 Sub' },
-      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
-      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10, presetName: 'Trap' },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30, presetName: 'Soft' },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'KEYS',  voiceId: 'FM',       note: 60, pan: -0.15, presetName: 'EP Piano' },
       { name: 'CONGA', voiceId: 'Sampler',  note: 60, pan:  0.20, sampleRef: { name: 'conga', poolFile: 'factory/percussion/perc_conga.webm' } },
@@ -160,8 +160,8 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
     id: 'breaks', name: 'Breaks',
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00, presetName: 'Punchy' },
-      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10 },
-      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'SNARE', voiceId: 'Snare',    note: 60, pan: -0.10, presetName: 'Blast' },
+      { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30, presetName: 'Sharp' },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'RIDE',  voiceId: 'Ride',     note: 60, pan:  0.30 },
       { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.00 },
@@ -172,9 +172,9 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
   {
     id: 'minimal', name: 'Minimal',
     tracks: [
-      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
+      { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00, presetName: 'Clicky' },
       { name: 'PERC',  voiceId: 'Rimshot',  note: 60, pan:  0.15 },
-      { name: 'HAT',   voiceId: 'Hat',      note: 60, pan: -0.30 },
+      { name: 'HAT',   voiceId: 'Hat',      note: 60, pan: -0.30, presetName: 'Sharp' },
       { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Tight' },
     ],
   },
