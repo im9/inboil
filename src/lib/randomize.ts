@@ -448,7 +448,8 @@ function randomizeWithGenre(genre: GenrePreset): void {
 
   for (const c of currentPat.cells) {
     const steps = c.steps
-    const isPoly = (c.voiceId === 'WT' || c.voiceId === 'FM') && (c.voiceParams?.polyMode ?? 0) >= 0.5
+    const isPoly = ((c.voiceId === 'WT' || c.voiceId === 'FM') && (c.voiceParams?.polyMode ?? 0) >= 0.5)
+      || (c.voiceId === 'Sampler' && !!c.sampleRef?.packId)
     const isBass = c.voiceId === 'Bass303' || c.voiceId === 'Analog'
       || (c.voiceId === 'MoogLead' && c.trigs[0]?.note <= 48)
     const isDrum = c.voiceId != null && DRUM_VOICES.has(c.voiceId)

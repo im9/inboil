@@ -61,6 +61,34 @@ export function patternApplyTemplate(patternIndex: number, templateId: string): 
 
   // Remove orphaned tracks (no cells in any pattern)
   pruneOrphanedTracks()
+
+  // Async: load factory sample packs referenced by template
+  void loadTemplatePacks(patternIndex, templateId)
+}
+
+/** Load factory sample packs/pool samples referenced by template cells (async, fire-and-forget) */
+export async function loadTemplatePacks(patternIndex = 0, templateId?: string): Promise<void> {
+  const pat = song.patterns[patternIndex]
+  if (!pat) return
+  const tmpl = getTemplate(templateId)
+  const { poolAssignPackToTrack, poolAssignToTrack } = await import('./poolActions.ts')
+  let poolReady = false
+  for (let i = 0; i < tmpl.tracks.length && i < pat.cells.length; i++) {
+    const td = tmpl.tracks[i]
+    const cell = pat.cells[i]
+    if (td.sampleRef?.packId) {
+      await poolAssignPackToTrack(td.sampleRef.packId, td.sampleRef.name, cell.trackId, patternIndex)
+    } else if (td.sampleRef?.poolFile) {
+      if (!poolReady) { const { initPool } = await import('./poolActions.ts'); await initPool(); poolReady = true }
+      const { pool } = await import('./state.svelte.ts')
+      const entry = pool.entries.find(e => e.path === td.sampleRef!.poolFile)
+      if (entry) {
+        await poolAssignToTrack(entry, cell.trackId, patternIndex)
+      } else {
+        console.warn(`[template] pool sample not found: ${td.sampleRef!.poolFile}`)
+      }
+    }
+  }
 }
 
 /** Remove song.tracks entries that have no cells in any pattern */

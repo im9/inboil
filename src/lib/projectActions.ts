@@ -6,6 +6,7 @@ import type { StoredProject } from './storage.ts'
 import { song, project, ui, cloneSong, restoreSong, clearUndoStacks, savePrefs, scheduleAutoSave } from './state.svelte.ts'
 import { clearSamples, restoreSamples, persistPendingSamples } from './sampleActions.ts'
 import { makeEmptySong } from './factory.ts'
+import { loadTemplatePacks } from './sectionActions.ts'
 import { showToast } from './toast.svelte.ts'
 import { validateRecoverySnapshot } from './validate.ts'
 
@@ -87,6 +88,8 @@ export function projectNew(): void {
   ui.selectedSceneEdge = null
   clearUndoStacks()
   savePrefs()
+  // Load factory sample packs referenced by default template
+  void loadTemplatePacks()
 }
 
 /** Delete a project and reset to new if it was current */

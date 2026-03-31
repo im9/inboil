@@ -55,7 +55,7 @@ export function makeTrack(id: number, pan = 0): Track {
 export interface PatternTemplate {
   id: string
   name: string
-  tracks: { name: string; voiceId: VoiceId; note: number; pan: number; voiceParams?: Record<string, number>; presetName?: string }[]
+  tracks: { name: string; voiceId: VoiceId; note: number; pan: number; voiceParams?: Record<string, number>; presetName?: string; sampleRef?: { name: string; packId?: string; poolFile?: string } }[]
 }
 
 export const PATTERN_TEMPLATES: PatternTemplate[] = [
@@ -67,7 +67,7 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'CLAP',  voiceId: 'Clap',     note: 60, pan:  0.15 },
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
-      { name: 'PAD',   voiceId: 'WT',       note: 60, pan:  0.25, presetName: 'Warm Pad' },
+      { name: 'PIANO', voiceId: 'Sampler',  note: 60, pan:  0.25, sampleRef: { name: 'Grand Piano', packId: 'grand-piano' } },
       { name: 'BASS',  voiceId: 'Analog',   note: 48, pan:  0.00, presetName: 'Warm Sub' },
       { name: 'LEAD',  voiceId: 'MoogLead', note: 64, pan:  0.10, presetName: 'Fat Lead' },
     ],
@@ -87,7 +87,7 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
     ],
   },
   {
-    // House: warm soulful pads, deep sub bass, smooth leads
+    // House: piano chords (iconic house piano), deep sub bass, smooth leads
     id: 'house', name: 'House',
     tracks: [
       { name: 'KICK',  voiceId: 'Kick',     note: 60, pan:  0.00 },
@@ -121,7 +121,7 @@ export const PATTERN_TEMPLATES: PatternTemplate[] = [
       { name: 'C.HH',  voiceId: 'Hat',      note: 60, pan: -0.30 },
       { name: 'O.HH',  voiceId: 'OpenHat',  note: 60, pan:  0.35 },
       { name: 'KEYS',  voiceId: 'FM',       note: 60, pan: -0.15, presetName: 'EP Piano' },
-      { name: 'SMP',   voiceId: 'Sampler',  note: 60, pan:  0.20 },
+      { name: 'CONGA', voiceId: 'Sampler',  note: 60, pan:  0.20, sampleRef: { name: 'conga', poolFile: 'factory/percussion/perc_conga.webm' } },
       { name: 'BASS',  voiceId: 'MoogLead', note: 36, pan:  0.00, presetName: 'Mono Bass' },
       { name: 'LEAD',  voiceId: 'FM',       note: 64, pan:  0.10, presetName: 'Brass' },
     ],
@@ -219,6 +219,7 @@ export function applyTemplateTrack(cell: Cell, d: PatternTemplate['tracks'][numb
   }
   // Explicit voiceParams override on top of preset (e.g. polyMode)
   if (d.voiceParams) Object.assign(cell.voiceParams, d.voiceParams)
+  if (d.sampleRef) cell.sampleRef = { ...d.sampleRef }
 }
 
 export function makeEmptyPattern(index: number, name = '', templateId?: string): Pattern {
