@@ -417,6 +417,10 @@ export function removeTrack(trackId: number): boolean {
   const cellIdx = pat.cells.findIndex(c => c.trackId === trackId)
   if (cellIdx < 0) return false
   pushUndo('Remove track')
+  // Clear solo/mute so removal doesn't affect remaining tracks
+  ui.soloTracks.delete(trackId)
+  ui.soloTracks = new Set(ui.soloTracks)
+  song.tracks[trackId].muted = false
   // Remove cell from current pattern only — song.tracks and other patterns untouched
   pat.cells.splice(cellIdx, 1)
   if (pat.cells.length === 0) {
