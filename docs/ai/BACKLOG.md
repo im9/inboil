@@ -34,6 +34,13 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 - [x] **Clone roundtrip tests** — Add tests that create fully-populated objects (SweepData, Scene, ModifierParams), clone them, and deepEqual. Catches missing fields on type changes. Triggered by: globalSweep/durationMs/offsetMs lost on reload because cloneScene/cloneModifierParams didn't copy them
 - [x] **SweepCanvas pure function extraction** — Extract label generators, hit-test calculations, and curve draw path builders from SweepCanvas.svelte (~1900 lines) into a separate `sweepCanvasHelpers.ts`. Improves testability without changing component structure
 
+## FM Synth Enhancements
+
+- [x] **FM operator detune UI** — `op1Detune`–`op4Detune` exist in DSP (`setParam` routes in FMSynth) but are not registered in `paramDefs.ts`. Adding them to the FM paramDefs exposes per-operator cent detune knobs for beat frequencies and thicker timbres
+- [x] **Multi-operator feedback** — Only `op1Fb` is exposed in paramDefs. DSP already accepts `op2Fb`–`op4Fb` (routes to `ops[n].feedback`). Exposing all four widens the timbral palette (cf. Dexed's per-OP feedback)
+- [ ] **LFO to feedback / algorithm crossfade** — FM LFO destinations are limited to level (L1–L4) and ratio (R1–R4). Adding feedback amount and algorithm crossfade as modulation targets enables evolving FM textures
+- [ ] **Exponential ADSR curves** — Shared `ADSR` class (`filters.ts`) uses linear ramps (`level += 1/time`). Exponential attack/decay curves (e.g. `level *= 1 - coeff`) give more natural response — affects FM, WT, Analog, and all voices using ADSR
+
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.
