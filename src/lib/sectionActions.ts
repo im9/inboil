@@ -59,9 +59,6 @@ export function patternApplyTemplate(patternIndex: number, templateId: string): 
     return cell
   })
 
-  // Remove orphaned tracks (no cells in any pattern)
-  pruneOrphanedTracks()
-
   // Reset selected track if it no longer exists in this pattern
   if (!pat.cells.some(c => c.trackId === ui.selectedTrack)) {
     ui.selectedTrack = pat.cells.length > 0 ? pat.cells[0].trackId : 0
@@ -94,15 +91,6 @@ export async function loadTemplatePacks(patternIndex = 0, templateId?: string): 
       }
     }
   }
-}
-
-/** Remove song.tracks entries that have no cells in any pattern */
-function pruneOrphanedTracks(): void {
-  const usedIds = new Set<number>()
-  for (const pat of song.patterns) {
-    for (const cell of pat.cells) usedIds.add(cell.trackId)
-  }
-  song.tracks = song.tracks.filter(t => usedIds.has(t.id))
 }
 
 /** Rename a pattern (max 12 chars, uppercase) */

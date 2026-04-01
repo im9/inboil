@@ -331,11 +331,11 @@ export class FMVoice implements Voice {
   private static readonly UNI_SCALE   = 1 / Math.sqrt(12)  // ≈0.29
 
   tick(): number {
-    if (this.polyMode === 0) return this.cores[0].tick()
+    if (this.polyMode === 0) return Math.tanh(this.cores[0].tick())
     let sum = 0
     for (let i = 0; i < 12; i++) sum += this.cores[i].tick()
-    return sum * (this.polyMode === 2 ? FMVoice.WIDE_SCALE
-      : this.polyMode === 3 ? FMVoice.UNI_SCALE : FMVoice.POLY_SCALE)
+    return Math.tanh(sum * (this.polyMode === 2 ? FMVoice.WIDE_SCALE
+      : this.polyMode === 3 ? FMVoice.UNI_SCALE : FMVoice.POLY_SCALE))
   }
 
   tickStereo(out: Float32Array) {
@@ -351,7 +351,7 @@ export class FMVoice implements Voice {
       sumR += this.cores[p * 2 + 1].tick()
     }
     const s = FMVoice.WIDE_SCALE
-    out[0] = sumL * s; out[1] = sumR * s
+    out[0] = Math.tanh(sumL * s); out[1] = Math.tanh(sumR * s)
   }
 
   setParam(key: string, value: number) {
