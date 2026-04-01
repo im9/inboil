@@ -37,7 +37,7 @@ import { DJFilter, PeakingEQ, ShelfEQ } from './dsp/filters.ts'
 import { SimpleReverb, LiteReverb, ModulatedReverb, ShimmerReverb, PingPongDelay, TapeDelay, SidechainDucker, BusCompressor, PeakLimiter, GranularProcessor, StutterBuffer, TapeSaturator, EarlyReflections, PreDelay, Distortion } from './dsp/effects.ts'
 import { makeVoice, DRUM_VOICES } from './dsp/voices.ts'
 import type { Voice, SampleZone } from './dsp/voices.ts'
-import type { WorkletCommand, WorkletTrack, WorkletInsertFx, WorkletEvent } from './dsp/types.ts'
+import type { WorkletCommand, WorkletTrack, WorkletInsertFx } from './dsp/types.ts'
 import { SCALE_TEMPLATES } from '../constants.ts'
 
 // Re-export types for engine.ts
@@ -260,8 +260,10 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private fillSeed       = 12321
   // Chance PRNG (step probability)
   private _chanceSeed    = 12345
-  // Pre-allocated postMessage buffer
+  // Pre-allocated postMessage buffers (avoid per-call object allocation)
   private _phBuf: number[] = []
+  private _stepMsg = { type: 'step' as const, playheads: this._phBuf, cycle: false }
+  private _levelsMsg = { type: 'levels' as const, peakL: 0, peakR: 0, gr: 1, cpu: 0 }
   // Tape delay (ADR 075 Phase 2)
   private tapeDelay      = new TapeDelay(1000, sampleRate)
   private delayTape      = false
@@ -445,7 +447,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             this.trackThreshold[i] = this._trackThresh(i)
           }
           // patternLen in 1/32 base ticks (steps × divisor)
-          const newLen = Math.max(1, ...p.tracks.map(t => t.steps * (t.scale ?? 2)))
+          let newLen = 1
+          for (let i = 0; i < n; i++) {
+            const v = p.tracks[i].steps * (p.tracks[i].scale ?? 2)
+            if (v > newLen) newLen = v
+          }
           this.patternLen = newLen
           // Clamp patternPos if patternLen shrank (valid range: 0..patternLen)
           if (this.patternPos > newLen) this.patternPos = 0
@@ -963,7 +969,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           const n = this.activeCount
           this._phBuf.length = n
           for (let i = 0; i < n; i++) this._phBuf[i] = this.playheads[i]
-          this.port.postMessage({ type: 'step', playheads: this._phBuf, cycle: this._pendingCycle } satisfies WorkletEvent)
+          this._stepMsg.playheads = this._phBuf
+          this._stepMsg.cycle = this._pendingCycle
+          this.port.postMessage(this._stepMsg)
           this._pendingCycle = false
         }
 
@@ -1229,7 +1237,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     this.meterCount += outL.length
     if (this.meterCount >= this.meterInterval) {
       const cpu = (this.cpuEma / this.budgetMs) * 100
-      this.port.postMessage({ type: 'levels', peakL: this.meterPeakL, peakR: this.meterPeakR, gr: this.meterGrMin, cpu })
+      this._levelsMsg.peakL = this.meterPeakL
+      this._levelsMsg.peakR = this.meterPeakR
+      this._levelsMsg.gr = this.meterGrMin
+      this._levelsMsg.cpu = cpu
+      this.port.postMessage(this._levelsMsg)
       this.meterPeakL = 0
       this.meterPeakR = 0
       this.meterGrMin = 1.0

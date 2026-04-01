@@ -76,10 +76,10 @@ export class SimpleReverb {
   private out = new Float64Array(2)
   process(x: number): Float64Array {
     const g = 0.015; let L = 0, R = 0
-    for (const c of this.combsL) L += c.process(x * g)
-    for (const c of this.combsR) R += c.process(x * g)
-    for (const a of this.apL) L = a.process(L)
-    for (const a of this.apR) R = a.process(R)
+    for (let i = 0; i < this.combsL.length; i++) L += this.combsL[i].process(x * g)
+    for (let i = 0; i < this.combsR.length; i++) R += this.combsR[i].process(x * g)
+    for (let i = 0; i < this.apL.length; i++) L = this.apL[i].process(L)
+    for (let i = 0; i < this.apR.length; i++) R = this.apR[i].process(R)
     this.out[0] = L; this.out[1] = R
     return this.out
   }
@@ -106,8 +106,8 @@ export class LiteReverb {
   private out = new Float64Array(2)
   process(x: number): Float64Array {
     const g = 0.015; let L = 0, R = 0
-    for (const c of this.combsL) L += c.process(x * g)
-    for (const c of this.combsR) R += c.process(x * g)
+    for (let i = 0; i < this.combsL.length; i++) L += this.combsL[i].process(x * g)
+    for (let i = 0; i < this.combsR.length; i++) R += this.combsR[i].process(x * g)
     L = this.apL.process(L)
     R = this.apR.process(R)
     this.out[0] = L; this.out[1] = R
@@ -1252,10 +1252,10 @@ export class ModulatedReverb {
   private out = new Float64Array(2)
   process(x: number): Float64Array {
     const g = 0.015; let L = 0, R = 0
-    for (const c of this.combsL) L += c.process(x * g)
-    for (const c of this.combsR) R += c.process(x * g)
-    for (const a of this.apL) L = a.process(L)
-    for (const a of this.apR) R = a.process(R)
+    for (let i = 0; i < this.combsL.length; i++) L += this.combsL[i].process(x * g)
+    for (let i = 0; i < this.combsR.length; i++) R += this.combsR[i].process(x * g)
+    for (let i = 0; i < this.apL.length; i++) L = this.apL[i].process(L)
+    for (let i = 0; i < this.apR.length; i++) R = this.apR[i].process(R)
     this.out[0] = L; this.out[1] = R
     return this.out
   }
