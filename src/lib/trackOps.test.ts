@@ -31,11 +31,17 @@ function cellFor(pat: Pattern, trackId: number): Cell | undefined {
 
 // ── Replicate the actual removeTrack / addTrack logic (ADR 079) ──
 
-function removeTrack(s: TestSong, currentPattern: number, trackId: number): boolean {
+function removeTrack(
+  s: TestSong, currentPattern: number, trackId: number,
+  soloTracks?: Set<number>
+): boolean {
   const pat = s.patterns[currentPattern]
   if (!pat) return false
   const cellIdx = pat.cells.findIndex(c => c.trackId === trackId)
   if (cellIdx < 0) return false
+  // Clear solo/mute so removal doesn't affect remaining tracks
+  if (soloTracks) soloTracks.delete(trackId)
+  s.tracks[trackId].muted = false
   // CRITICAL: only splice current pattern's cells. song.tracks untouched.
   pat.cells.splice(cellIdx, 1)
   return true
@@ -251,6 +257,27 @@ describe('patterns can have different track counts (ADR 079)', () => {
     expect(s.patterns[0].cells.length).toBe(6)
     expect(s.patterns[1].cells.length).toBe(9)
     expect(s.tracks.length).toBe(9)
+  })
+
+  it('removeTrack clears solo state of deleted track', () => {
+    const s = makeTestSong(1, 4)
+    const soloTracks = new Set([2])  // track 2 is solo'd
+    removeTrack(s, 0, 2, soloTracks)
+    expect(soloTracks.size).toBe(0)
+  })
+
+  it('removeTrack clears mute state of deleted track', () => {
+    const s = makeTestSong(1, 4)
+    s.tracks[1].muted = true
+    removeTrack(s, 0, 1)
+    expect(s.tracks[1].muted).toBe(false)
+  })
+
+  it('removeTrack preserves solo of other tracks', () => {
+    const s = makeTestSong(1, 4)
+    const soloTracks = new Set([1, 2])
+    removeTrack(s, 0, 2, soloTracks)
+    expect(soloTracks).toEqual(new Set([1]))
   })
 
   it('trackIds stay stable across pattern manipulation', () => {
