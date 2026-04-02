@@ -8,6 +8,7 @@ import {
   applyPerfToggle,
   buildTransitionSteps,
   applySweepValue,
+  findConnectedSweepPure,
 } from './scenePlaybackPure.ts'
 import { evaluateCurve } from './sweepEval.ts'
 
@@ -97,6 +98,73 @@ describe('buildTransitionSteps', () => {
   it('globalSweep always comes last', () => {
     const steps = buildTransitionSteps('walk')
     expect(steps[steps.length - 1]).toBe('globalSweep')
+  })
+})
+
+// ── findConnectedSweepPure ──
+
+describe('findConnectedSweepPure', () => {
+  const sweepA = { curves: [{ points: [] }], toggles: [] }
+  const sweepB = { curves: [{ points: [{ t: 0, v: 1 }] }] }
+
+  const nodes = [
+    { id: 'pat1', type: 'pattern' },
+    { id: 'pat2', type: 'pattern' },
+    { id: 'sw1', type: 'sweep', modifierParams: { sweep: sweepA } },
+    { id: 'sw2', type: 'sweep', modifierParams: { sweep: sweepB } },
+    { id: 'mod1', type: 'transpose' },
+  ] as const
+
+  const findNode = (id: string) => nodes.find(n => n.id === id)
+
+  it('returns sweep data for the correct pattern node', () => {
+    const edges = [
+      { from: 'sw1', to: 'pat1' },
+      { from: 'sw2', to: 'pat2' },
+    ]
+    // pat1 should get sweepA, not sweepB
+    expect(findConnectedSweepPure('pat1', edges, findNode)).toBe(sweepA)
+    expect(findConnectedSweepPure('pat2', edges, findNode)).toBe(sweepB)
+  })
+
+  it('returns null when no sweep node is connected', () => {
+    const edges = [
+      { from: 'mod1', to: 'pat1' },  // transpose, not sweep
+    ]
+    expect(findConnectedSweepPure('pat1', edges, findNode)).toBeNull()
+  })
+
+  it('returns null for unknown pattern node', () => {
+    const edges = [{ from: 'sw1', to: 'pat1' }]
+    expect(findConnectedSweepPure('nonexistent', edges, findNode)).toBeNull()
+  })
+
+  it('picks the first matching sweep when multiple are connected', () => {
+    const edges = [
+      { from: 'sw1', to: 'pat1' },
+      { from: 'sw2', to: 'pat1' },
+    ]
+    // First match wins
+    expect(findConnectedSweepPure('pat1', edges, findNode)).toBe(sweepA)
+  })
+
+  it('must use the NEW node id, not a stale one (regression: cache timing bug)', () => {
+    // Simulates the walkToNode scenario:
+    // oldNodeId = 'pat1', newNodeId = 'pat2'
+    // Cache must be built with newNodeId to get the correct sweep data
+    const edges = [
+      { from: 'sw1', to: 'pat1' },
+      { from: 'sw2', to: 'pat2' },
+    ]
+    const oldNodeId = 'pat1'
+    const newNodeId = 'pat2'
+    // Bug: using oldNodeId returns wrong sweep
+    expect(findConnectedSweepPure(oldNodeId, edges, findNode)).toBe(sweepA)
+    // Correct: using newNodeId returns the right sweep for pat2
+    expect(findConnectedSweepPure(newNodeId, edges, findNode)).toBe(sweepB)
+    // They must differ — this is the invariant the cache bug violated
+    expect(findConnectedSweepPure(oldNodeId, edges, findNode))
+      .not.toBe(findConnectedSweepPure(newNodeId, edges, findNode))
   })
 })
 

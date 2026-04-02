@@ -22,6 +22,17 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 - [x] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
 - [x] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
 
+## Performance: Pattern Transition Audio Glitch
+
+Pattern transitions during scene play can cause brief audio dropouts. Root cause unknown — need profiling to identify the bottleneck before optimizing. Candidates (measure with `performance.now()` around each step):
+
+- [ ] **Profile transition path** — Instrument `advanceSceneNode` → `startSceneNode`/`walkToNode` to find which step costs the most wall-clock time
+- [ ] **`snapshotAutomationTargets()` cost** — Snapshots all tracks × all params. May be heavy with many tracks
+- [ ] **`applyLiveGenerative()` reactive mutation storm** — Writing trigs into Svelte proxy cells may trigger synchronous reactive updates during the audio callback path
+- [ ] **`structuredClone` for WorkletPattern** — Pattern data sent to AudioWorklet via postMessage is cloned by the browser; large patterns could block the main thread
+- [ ] **UI re-render contention** — Pattern switch causes full sequencer re-render; if this overlaps with the audio scheduling tick it could delay message posting to the worklet
+- [ ] **Edge adjacency pre-index** — `edges.filter().sort()` in `walkToNode`/`advanceSceneNode`/`applyLiveGenerative` allocates intermediate arrays. Negligible at current scale (<20 edges) but would benefit from a `Map<nodeId, SceneEdge[]>` if scenes grow. Requires invalidation on scene edit
+
 ## Bug Fixes
 
 - [ ] **Rev cycle ~1 step early on scene transition** — `patternPos--` during rev fixes the main bug (mid-pattern transition) but leaves ~1 step timing drift because `patternPos` runs at 1/32 rate while playheads advance at 1/16 (divisor-dependent). Fix: resync `patternPos` from longest track's playhead position on rev release. Needs careful handling of multi-track divisors and swing. See `cycle-detect.ts` for pure-function test harness

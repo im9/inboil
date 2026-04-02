@@ -34,6 +34,21 @@ export function buildTransitionSteps(_kind: TransitionKind): TransitionStep[] {
   return ['satellite', 'snapshot', 'globalSweep']
 }
 
+/** Find sweep data connected to a pattern node (pure version — takes edges/nodes as args).
+ *  Used by scenePlayback.ts to cache sweep data on pattern transition. */
+export function findConnectedSweepPure(
+  patternNodeId: string,
+  edges: readonly { from: string; to: string }[],
+  findNode: (id: string) => { type: string; modifierParams?: { sweep?: { curves: unknown[]; toggles?: unknown[] } } } | undefined,
+): { curves: unknown[]; toggles?: unknown[] } | null {
+  for (const edge of edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = findNode(edge.from)
+    if (src?.type === 'sweep' && src.modifierParams?.sweep) return src.modifierParams.sweep
+  }
+  return null
+}
+
 /** Compute sweep application value with carry-over delta.
  *  Curve stores absolute normalized values (0–1).
  *  On playback, the result is offset so the curve starts from the carry-over value.
