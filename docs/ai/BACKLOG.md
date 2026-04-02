@@ -24,6 +24,7 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 
 ## Bug Fixes
 
+- [ ] **Rev cycle ~1 step early on scene transition** — `patternPos--` during rev fixes the main bug (mid-pattern transition) but leaves ~1 step timing drift because `patternPos` runs at 1/32 rate while playheads advance at 1/16 (divisor-dependent). Fix: resync `patternPos` from longest track's playhead position on rev release. Needs careful handling of multi-track divisors and swing. See `cycle-detect.ts` for pure-function test harness
 - [x] **Sweep absolute value curves** — Sweep curves stored offsets (`v = value * 2 - 1`, applied as `base + offset`) causing XY pad drift when snapshot baseline differed between recording and playback. Fixed: curves now store absolute values (0–1), applied directly without baseline. Legacy data auto-migrated via `migrateSweepCurvesToAbsolute()` in `restoreScene`
 - [x] **Stop→play sweep state not reset** — On stop, `restoreAutomationSnapshot` used the carry-over snapshot (from last pattern transition) instead of the pre-playback state. FX on/off and parameter values leaked across play sessions. Fixed: `markScenePlayStart()` saves an initial snapshot; stop restores from it
 

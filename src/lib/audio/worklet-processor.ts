@@ -939,13 +939,21 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         this.baseAccum += steps
         if (this.baseAccum >= this.baseSPS) {
           this.baseAccum -= this.baseSPS
-          this.patternPos++
-          // Commit pending state at 1/16 boundaries (every 2 base ticks)
+          // Commit reversing FIRST — must resolve before position advance
+          // to prevent cycle firing on the same tick rev activates.
+          if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
+          // Rev: patternPos runs backward (clamped at 0) so rewound steps
+          // create a proportional time debt before cycle fires.
+          if (this.reversing) {
+            if (this.patternPos > 0) this.patternPos--
+          } else {
+            this.patternPos++
+          }
+          // Commit other pending state at 1/16 boundaries (every 2 base ticks)
           if ((this.patternPos & 1) === 0) {
             if (this.pendingRootNote !== null) { this.rootNote = this.pendingRootNote; this.pendingRootNote = null }
             if (this.pendingBreaking !== null) { this.breaking = this.pendingBreaking; this.pendingBreaking = null }
             if (this.pendingFilling !== null) { this.filling = this.pendingFilling; this.pendingFilling = null }
-            if (this.pendingReversing !== null) { this.reversing = this.pendingReversing; this.pendingReversing = null }
           }
           if (this.patternPos >= this.patternLen) {
             this.patternPos = 0
