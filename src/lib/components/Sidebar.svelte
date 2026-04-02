@@ -29,8 +29,8 @@
 
   let confirmReset = $state(false)
 
-  function handleReset() {
-    factoryReset()
+  async function handleReset() {
+    await factoryReset()
     confirmReset = false
   }
 

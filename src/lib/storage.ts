@@ -186,6 +186,14 @@ export async function loadAllUserPresets(): Promise<StoredPreset[]> {
   return req(store.getAll())
 }
 
+/** Close connection and reset module state. */
+export async function closeDb(): Promise<void> {
+  if (dbPromise) {
+    try { (await dbPromise).close() } catch { /* already closed */ }
+    dbPromise = null
+  }
+}
+
 /** Reset module state (test only) */
 export function _resetForTest(): void {
   dbPromise = null

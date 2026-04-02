@@ -472,7 +472,7 @@ export const midiIn = $state({
 
 // ── Factory reset ────────────────────────────────────────────────────
 
-export function factoryReset(): void {
+export async function factoryReset(): Promise<void> {
   restoreSong(makeEmptySong())
   // Reset UI
   ui.selectedTrack = 0
@@ -525,10 +525,31 @@ export function factoryReset(): void {
   clearUndoStacks()
   // Reset prefs (keep lang)
   prefs.scaleMode = true
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY)
-  }
   prefs.visited = true
+
+  // ── Wipe all persistent storage ──
+  // Close open IDB connections first to unblock deleteDatabase
+  const { closeDb } = await import('./storage.ts')
+  const { closePoolDb } = await import('./audioPool.ts')
+  await closeDb()
+  await closePoolDb()
+
+  // Delete IndexedDB databases
+  try { indexedDB.deleteDatabase('inboil') } catch { /* ignore */ }
+  try { indexedDB.deleteDatabase('inboil-pool') } catch { /* ignore */ }
+
+  // Remove OPFS pool directory
+  try {
+    const opfsRoot = await navigator.storage.getDirectory()
+    await opfsRoot.removeEntry('inboil-pool', { recursive: true })
+  } catch { /* OPFS not available or already empty */ }
+
+  // Clear all localStorage
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear()
+  }
+
+  // Re-save prefs (lang + visited) so the app doesn't show onboarding
   savePrefs()
 }
 

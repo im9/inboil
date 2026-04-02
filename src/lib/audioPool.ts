@@ -172,6 +172,14 @@ function poolReq<T>(r: IDBRequest<T>): Promise<T> {
   })
 }
 
+/** Close connection and reset module state. */
+export async function closePoolDb(): Promise<void> {
+  if (poolDbPromise) {
+    try { (await poolDbPromise).close() } catch { /* already closed */ }
+    poolDbPromise = null
+  }
+}
+
 /** Reset module state (test only). */
 export function _resetPoolForTest(): void {
   poolDbPromise = null
