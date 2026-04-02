@@ -8,7 +8,7 @@ import { executeGenChain, findNode } from './sceneActions.ts'
 import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
 import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
-import { calcGlobalSweepProgress, applyPerfToggle, applySweepValue } from './scenePlaybackPure.ts'
+import { calcGlobalSweepProgress, applyPerfToggle, applySweepValue, findConnectedSweepPure } from './scenePlaybackPure.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
 
@@ -90,19 +90,25 @@ function isModifierNode(node: SceneNode): boolean {
 /** Apply satellite modifier nodes attached to a pattern node (ADR 110).
  *  FX resets to OFF when no FX modifier node is attached — scoped to pattern. */
 function applySatelliteModifiers(patternNodeId: string): void {
-  const satellites: SceneNode[] = []
+  let hasTranspose = false
+  // First pass: detect transpose satellite (needed before applying modifiers)
   for (const edge of song.scene.edges) {
     if (edge.to !== patternNodeId) continue
     const src = findNode(edge.from)
-    if (src && isModifierNode(src)) satellites.push(src)
+    if (src?.type === 'transpose') { hasTranspose = true; break }
   }
   // Reset transpose if no matching satellite (transpose is positional, not carry-over).
   // FX on/off is NOT reset — carries over from previous pattern's sweep values.
-  if (!satellites.some(n => n.type === 'transpose')) {
+  if (!hasTranspose) {
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
   }
-  for (const src of satellites) applyModifierNode(src)
+  // Second pass: apply all modifier satellites
+  for (const edge of song.scene.edges) {
+    if (edge.to !== patternNodeId) continue
+    const src = findNode(edge.from)
+    if (src && isModifierNode(src)) applyModifierNode(src)
+  }
 }
 
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
@@ -182,6 +188,7 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
     resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
     clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
+    refreshPatternCaches(node)  // cache sweep data & pattern for per-step use
     playback.automationSnapshot = snapshotAutomationTargets()
     reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
     applyLiveGenerative(node)
@@ -217,6 +224,7 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
       resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
       clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
       applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
+      refreshPatternCaches(node)  // cache sweep data & pattern for per-step use
       playback.automationSnapshot = snapshotAutomationTargets()
       reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
       applyLiveGenerative(node)
@@ -293,6 +301,8 @@ export function markScenePlayStart(): void {
   initialAutomationSnapshot = snapshotAutomationTargets()
   patternTransitionCount = 0
   curveCarryOverDeltas.clear()
+  cachedChainSweep = null
+  cachedPat = null
 }
 
 /** Return the snapshot taken at scene play start (before any sweep/modifier application).
@@ -304,6 +314,8 @@ export function getInitialAutomationSnapshot(): AutomationSnapshot | null {
 /** Clear the initial snapshot (call on stop). */
 export function clearInitialAutomationSnapshot(): void {
   initialAutomationSnapshot = null
+  cachedChainSweep = null
+  cachedPat = null
 }
 
 /** Returns ms elapsed since scene playback started. */
@@ -315,12 +327,7 @@ export function scenePlayElapsedMs(): number {
 
 /** Find sweep node connected to a pattern node */
 function findConnectedSweep(patternNodeId: string): SweepData | null {
-  for (const edge of song.scene.edges) {
-    if (edge.to !== patternNodeId) continue
-    const src = findNode(edge.from)
-    if (src?.type === 'sweep' && src.modifierParams?.sweep) return src.modifierParams.sweep
-  }
-  return null
+  return findConnectedSweepPure(patternNodeId, song.scene.edges, findNode) as SweepData | null
 }
 
 /** Re-apply global sweep at current progress after snapshot restore.
@@ -356,8 +363,8 @@ export function applySweepStep(step: number, totalSteps: number): boolean {
     changed = applySweepData(globalSweep, globalProgress, snap) || changed
   }
 
-  // Chain sweep evaluation
-  const sweepData = findConnectedSweep(playback.sceneNodeId)
+  // Chain sweep evaluation (use per-pattern cache)
+  const sweepData = cachedChainSweep
   if (!sweepData?.curves.length && !sweepData?.toggles?.length) return changed
 
   const progress = (playback.sceneRepeatIndex + step / totalSteps) / playback.sceneRepeatTotal
@@ -411,10 +418,26 @@ let patternTransitionCount = 0
 /** True when the current pattern is the first in the scene (use absolute values). */
 function isFirstPattern(): boolean { return patternTransitionCount <= 1 }
 
+// ── Per-pattern caches (refreshed on pattern transition) ──
+/** Cached sweep data for the current pattern node (avoids per-step edge scan). */
+let cachedChainSweep: SweepData | null = null
+/** Cached pattern object for the current pattern node (avoids per-step find). */
+let cachedPat: typeof song.patterns[number] | null = null
+
 /** Clear carry-over delta cache — call on pattern transition. */
 export function clearCurveCarryOverDeltas(): void {
   patternTransitionCount++
   curveCarryOverDeltas.clear()
+}
+
+/** Refresh per-pattern caches for the given pattern node.
+ *  Must be called AFTER clearCurveCarryOverDeltas and applySatelliteModifiers
+ *  with the NEW node id (not playback.sceneNodeId which may still be stale). */
+function refreshPatternCaches(patternNode: SceneNode): void {
+  cachedChainSweep = findConnectedSweep(patternNode.id)
+  cachedPat = patternNode.patternId
+    ? (song.patterns.find(p => p.id === patternNode.patternId) ?? null)
+    : null
 }
 
 /** Apply a single SweepData set at the given progress value.
@@ -425,10 +448,8 @@ export function clearCurveCarryOverDeltas(): void {
 function applySweepData(sweepData: SweepData, progress: number, _snap: AutomationSnapshot): boolean {
   let changed = false
 
-  // Cache pattern lookup once per call (fixes #2: nested find in hot path)
-  const patNode = playback.sceneNodeId ? song.scene.nodes.find(n => n.id === playback.sceneNodeId) : null
-  const patIdx = patNode?.patternId ? song.patterns.findIndex(p => p.id === patNode.patternId) : -1
-  const pat = patIdx >= 0 ? song.patterns[patIdx] : null
+  // Use per-pattern cache (refreshed on pattern transition in clearCurveCarryOverDeltas)
+  const pat = cachedPat
 
   for (const curve of sweepData.curves) {
     // Skip targets currently being controlled by user during recording (ADR 123 §8)
