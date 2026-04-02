@@ -265,7 +265,6 @@
     letter-spacing: 0.06em;
     color: var(--dz-text);
     cursor: pointer;
-    text-transform: uppercase;
   }
   .proj-rename-value:hover {
     color: var(--dz-text-bright);
