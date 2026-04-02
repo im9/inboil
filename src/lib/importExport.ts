@@ -84,17 +84,7 @@ export function exportProjectJSON(): void {
       samples[key] = { name: meta.name, buffer: bufferToBase64(meta.rawBuffer) }
     }
   }
-  // Strip empty patterns to reduce file size (restored on import via restoreSongPure)
-  const scenePatIds = new Set(
-    snapshot.scene.nodes.filter((n: { patternId?: string }) => n.patternId).map((n: { patternId?: string }) => n.patternId)
-  )
-  const stripped = {
-    ...snapshot,
-    patterns: snapshot.patterns.filter((p: { id: string; cells: { trigs: { active: boolean }[] }[] }) =>
-      scenePatIds.has(p.id) || p.cells.some(c => c.trigs.some(t => t.active))
-    ),
-  }
-  const payload = { v: 3 as const, ...stripped, samples, exportedAt: Date.now() }
+  const payload = { v: 3 as const, ...snapshot, samples, exportedAt: Date.now() }
   const json = JSON.stringify(payload)
   const blob = new Blob([json], { type: 'application/json' })
   const a = document.createElement('a')
