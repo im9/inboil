@@ -42,6 +42,15 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 - [ ] **LFO to feedback / algorithm crossfade** — FM LFO destinations are limited to level (L1–L4) and ratio (R1–R4). Adding feedback amount and algorithm crossfade as modulation targets enables evolving FM textures
 - [ ] **Exponential ADSR curves** — Shared `ADSR` class (`filters.ts`) uses linear ramps (`level += 1/time`). Exponential attack/decay curves (e.g. `level *= 1 - coeff`) give more natural response — affects FM, WT, Analog, and all voices using ADSR
 
+## Developer Tooling
+
+- [ ] **DSP A/B comparison CLI** — Offline render two branches' audio output and diff waveforms. Replaces manual browser ear-confirm for DSP changes. Needs headless AudioContext (or OfflineAudioContext wrapper) that can render a pattern to .wav
+- [ ] **Visual regression screenshots** — Playwright script that captures key screens (matrix, scene, dock, sidebar) and diffs against baseline PNGs. Catches unintended CSS changes without manual visual checks
+- [ ] **Save data migration test harness** — Archive historical save data snapshots and CI-test that `restoreSongPure` loads them without error. Protects backward compatibility invariant
+- [ ] **ADR dashboard** — Simple page that parses `docs/ai/adr/` and displays status/checklist progress at a glance
+- [ ] **Audio worklet playground** — Standalone browser tool for rapid DSP experimentation. Load inboil's worklet-processor directly, edit params, hear results instantly
+- [ ] **Svelte 5 component catalog** — Lightweight Storybook alternative for viewing/interacting with inboil components in isolation. Could extend existing playground
+
 ## Ideas
 
 Someday/maybe items — no commitment, just interesting directions.
