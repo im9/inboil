@@ -48,8 +48,8 @@
     <h1 class="welcome-title">inboil</h1>
     <p class="welcome-sub">
       {lang.value === 'ja'
-        ? 'ブラウザで動くグルーヴボックス'
-        : 'A groove box in your browser'}
+        ? 'ブラウザを楽器にするシーケンス・グルーヴボックス'
+        : 'A browser-native instrument for scene-based groove making'}
     </p>
 
     <div class="welcome-actions">
@@ -105,6 +105,7 @@
   .welcome-sub {
     font-size: var(--fs-lg);
     opacity: 0.55;
+    line-height: 1.5;
     margin-bottom: 28px;
   }
 
