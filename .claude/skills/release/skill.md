@@ -1,12 +1,12 @@
 ---
 name: release
 description: Bump version, generate changelog draft, tag, and deploy a release.
-allowed-tools: Bash(git log *), Bash(git tag *), Bash(git diff *), Bash(git status *), Bash(git add *), Bash(git commit *), Bash(git push *), Bash(pnpm deploy *), Bash(pnpm build *), Read, Edit, Write, AskUserQuestion
+allowed-tools: Bash(git *), Bash(gh *), Bash(pnpm check *), Bash(pnpm test *), Bash(node *), Read, Edit, Write, AskUserQuestion
 ---
 
 # Release
 
-Bump version, generate a changelog draft, create a tagged release, and deploy.
+Bump version, generate a changelog draft, open a release PR, and create a GitHub Release after merge.
 
 ## Usage
 
@@ -18,22 +18,22 @@ Bump version, generate a changelog draft, create a tagged release, and deploy.
 
 ### 1. Determine version
 
-- Read the latest git tag: `git tag --sort=-v:refnum | head -1`
+- Read the latest git tag: `git tag --sort=-v:refname | head -1`
 - If no tags exist, this is the first release — use `0.1.0`
 - Apply bump type (patch/minor/major) to compute next version
 - Confirm with user: "Release v{version}?"
 
 ### 2. Pre-flight checks
 
+- Must be on `main` branch with clean working tree
 - `pnpm check` and `pnpm test` must pass
-- Working tree must be clean (`git status` — no uncommitted changes)
 - If checks fail, stop and report
 
 ### 3. Generate changelog draft
 
 - Skip this step for the first release (no prior tag to diff against)
 - Collect commits since last tag: `git log v{prev}..HEAD --format='%s'`
-- Group by type prefix (feat → Added, fix → Fixed, refactor/style → Changed, docs → Documentation)
+- Group by type prefix (feat → Added, fix → Fixed, perf → Performance, refactor/style → Changed, docs → Documentation)
 - If `CHANGELOG.md` doesn't exist, create it with the [Keep a Changelog](https://keepachangelog.com/) header
 - Insert a new section at the top with the draft entries
 - **Ask the user to review and edit** the changelog draft before proceeding
@@ -44,24 +44,33 @@ Bump version, generate a changelog draft, create a tagged release, and deploy.
 
 - Update `version` in `package.json`
 
-### 5. Commit and tag
+### 5. Create release PR
 
 ```bash
-git add package.json CHANGELOG.md  # CHANGELOG.md only if it was created/updated
+git checkout -b release/v{version}
+git add package.json CHANGELOG.md
 git commit -m "chore: release v{version}"
-git tag -a v{version} -m "Release v{version}"
+git push -u origin release/v{version}
+gh pr create --title "chore: release v{version}" --body "Version bump and changelog for v{version}."
 ```
 
-### 6. Deploy
+- Show the PR URL to the user
 
-- Ask user: "Push tags and deploy? (git push origin main --tags && pnpm deploy)"
-- Only proceed with explicit confirmation
-- Run `git push origin main --tags`
-- Run `pnpm deploy`
+### 6. After merge — create GitHub Release
+
+- Wait for user to confirm the PR has been merged
+- Create the tag and GitHub Release in one step:
+
+```bash
+gh release create v{version} --target main --title "v{version}" --notes-file - <<< "$(changelog excerpt)"
+```
+
+- The `--notes` should contain the changelog section for this version
+- Deploy is automatic on merge to main — no manual deploy needed
 
 ## Safety
 
-- Never deploy without user confirmation
 - Never skip pre-flight checks
 - Never auto-generate final changelog text — always show draft and wait for user edit
-- First release (v0.1.0): version bump + tag + deploy only, no changelog
+- First release (v0.1.0): version bump + tag only, no changelog
+- Always use PR flow — never commit directly to main
