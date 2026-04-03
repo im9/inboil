@@ -36,9 +36,9 @@ Chrome trace profiling (2026-04-03) revealed the root cause: **AudioWorklet proc
 - [ ] **Edge adjacency pre-index** — Not profiled; negligible at current scale (<20 edges)
 
 ### AudioWorklet optimizations needed
-- [ ] **Zero-alloc FX returns** — FX `.process()` methods return `Float64Array` (new or shared). MinorGC fires 1613 times on AudioWorklet thread (avg 0.12ms each, 193ms total). Pre-allocate output buffers per FX instance, write in-place
+- [x] **Zero-alloc FX returns** — Already implemented: every stereo FX uses `private out = new Float64Array(2)` pre-allocated at construction. Mono FX return primitives. No per-sample allocation
 - [ ] **FX bypass optimization** — Inactive FX (verb/delay/granular/glitch off, EQ flat, sat off) still run `.process()` every sample. Skip when bypassed; only process tail-out
-- [ ] **Voice early-out** — Muted/silent voices still call `tick()`. Skip when gate is closed and envelope is idle
+- [x] **Voice early-out** — Already implemented: all voices (MoogVoice, TB303Voice, AnalogVoice, DrumMachine, FMCore) have `isIdle()` / amplitude-threshold early-return in `tick()`. Muted tracks skip after smooth fade completes
 - [ ] **Reduce per-sample overhead** — The 128-sample inner loop contains conditional branches (flavour routing, insert FX chains, stutter) evaluated per sample. Hoist invariants outside the loop where possible
 
 ## Bug Fixes
