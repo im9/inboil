@@ -8,6 +8,7 @@ import type { FxFlavours } from '../constants.ts'
 import { isSidechainSource } from './dsp/voices.ts'
 import { showToast } from '../toast.svelte.ts'
 import { showFatalError } from '../fatalError.svelte.ts'
+import { log as _profLog } from '../transitionProfile.ts'
 
 /** Decode audio to mono using OfflineAudioContext — works without user gesture */
 export async function decodeToMonoOffline(arrayBuf: ArrayBuffer): Promise<{ mono: Float32Array; sampleRate: number } | null> {
@@ -133,9 +134,14 @@ export class GrooveboxEngine {
     if (!this.node) return
     const pat = song.patterns[patternIndex]
     if (!pat) return
+    const _t0 = performance.now()
     const wp = buildWorkletPattern(song, pat, perf, fxPad, ctx)
+    const _t1 = performance.now()
     this._post({ type: 'setPattern', pattern: wp, reset })
+    const _t2 = performance.now()
     this._autoLoadSamples(song, wp, patternIndex)
+    const _t3 = performance.now()
+    if (import.meta.env.DEV) _profLog('sendPattern', `build=${(_t1-_t0).toFixed(2)} post=${(_t2-_t1).toFixed(2)} samples=${(_t3-_t2).toFixed(2)} total=${(_t3-_t0).toFixed(2)}ms`)
   }
 
   /** Auto-load built-in and user samples for sampler voices (ADR 012, 020, 110) */
