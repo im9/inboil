@@ -48,6 +48,8 @@ export class SimpleReverb {
   private combsL: CombFilter[]; private combsR: CombFilter[]
   private apL: AllpassFilter[];  private apR: AllpassFilter[]
   private _frozen = false; private _savedFb = 0.84; private _savedDamp = 0.2
+  private _idleCount = 0
+  get idle(): boolean { return this._idleCount > 256 }
   constructor(sr: number) {
     const k = sr / 44100, sp = Math.round(23 * k)
     // Full Freeverb: 8 parallel combs + 4 series allpass (classic Schroeder topology)
@@ -81,6 +83,7 @@ export class SimpleReverb {
     for (let i = 0; i < this.apL.length; i++) L = this.apL[i].process(L)
     for (let i = 0; i < this.apR.length; i++) R = this.apR[i].process(R)
     this.out[0] = L; this.out[1] = R
+    if (Math.abs(L) + Math.abs(R) < 1e-5) this._idleCount++; else this._idleCount = 0
     return this.out
   }
 }
@@ -121,6 +124,8 @@ export class PingPongDelay {
   private ds = 0; private targetDs = 0
   // Smoothing: ~10ms slew to avoid clicks on delay time changes
   private slewCoeff: number
+  private _idleCount = 0
+  get idle(): boolean { return this._idleCount > 256 }
   constructor(maxMs: number, private sr: number) {
     const max = Math.ceil(maxMs * sr / 1000)
     this.bL = new Float32Array(max); this.bR = new Float32Array(max)
@@ -145,6 +150,7 @@ export class PingPongDelay {
     if (++this.pL >= this.bL.length) this.pL = 0
     if (++this.pR >= this.bR.length) this.pR = 0
     this.out[0] = oL; this.out[1] = oR
+    if (Math.abs(oL) + Math.abs(oR) < 1e-5) this._idleCount++; else this._idleCount = 0
     return this.out
   }
 }
@@ -398,6 +404,8 @@ export class TapeDelay {
   // Smoothing: ~10ms slew to avoid clicks on delay time changes
   private slewCoeff: number
   private _drive = 1.6
+  private _idleCount = 0
+  get idle(): boolean { return this._idleCount > 256 }
 
   constructor(maxMs: number, private sr: number) {
     const max = Math.ceil(maxMs * sr / 1000)
@@ -457,6 +465,7 @@ export class TapeDelay {
     if (++this.pR >= this.bR.length) this.pR = 0
 
     this.out[0] = oL; this.out[1] = oR
+    if (Math.abs(oL) + Math.abs(oR) < 1e-5) this._idleCount++; else this._idleCount = 0
     return this.out
   }
 }
@@ -741,6 +750,8 @@ export class StutterBuffer {
  *   - Modulated fractional delays for chorus-like diffusion
  */
 export class ShimmerReverb {
+  private _idleCount = 0
+  get idle(): boolean { return this._idleCount > 256 }
   // Allpass with fractional delay modulation
   private apBufs: Float32Array[] = []
   private apPtrs: Int32Array
@@ -992,6 +1003,8 @@ export class ShimmerReverb {
     // Crossfade: shimmer output → frozen SimpleReverb output
     this.out[0] = L * (1 - fz) + holdOut[0] * fz
     this.out[1] = R * (1 - fz) + holdOut[1] * fz
+    const peak = Math.abs(this.out[0]) + Math.abs(this.out[1])
+    if (peak < 1e-5) this._idleCount++; else this._idleCount = 0
     return this.out
   }
 }
@@ -1206,6 +1219,8 @@ export class ModulatedReverb {
   private combsL: ModulatedCombFilter[]; private combsR: ModulatedCombFilter[]
   private apL: AllpassFilter[];  private apR: AllpassFilter[]
   private _frozen = false; private _savedFb = 0.84; private _savedDamp = 0.2
+  private _idleCount = 0
+  get idle(): boolean { return this._idleCount > 256 }
 
   constructor(sr: number) {
     const k = sr / 44100, sp = Math.round(23 * k)
@@ -1257,6 +1272,7 @@ export class ModulatedReverb {
     for (let i = 0; i < this.apL.length; i++) L = this.apL[i].process(L)
     for (let i = 0; i < this.apR.length; i++) R = this.apR[i].process(R)
     this.out[0] = L; this.out[1] = R
+    if (Math.abs(L) + Math.abs(R) < 1e-5) this._idleCount++; else this._idleCount = 0
     return this.out
   }
 }

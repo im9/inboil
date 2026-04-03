@@ -685,6 +685,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   /** Route input through the specified reverb flavour engine. */
   private _revOut = new Float64Array(2)
   private _revOutOld = new Float64Array(2)  // second buffer for crossfade
+  private _dlyOut = new Float64Array(2)
   private _processReverbFlavour(flavour: 'room' | 'hall' | 'shimmer', input: number, buf?: Float64Array): Float64Array {
     const out = buf ?? this._revOut
     if (flavour === 'room') {
@@ -701,6 +702,18 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       out[0] = rev[0]; out[1] = rev[1]
     }
     return out
+  }
+
+  /** Check if all reverb engines have fully decayed. */
+  private _isReverbIdle(): boolean {
+    if (!this.flavourActive) return this.reverb.idle
+    // During crossfade, both old and new engines must be idle
+    if (this.xfadeRemaining > 0 && this.prevFlavour !== null) return false
+    switch (this.reverbFlavour) {
+      case 'room': return this.reverb.idle
+      case 'hall': return this.hallReverb.idle
+      case 'shimmer': return this.shimmerReverb.idle
+    }
   }
 
   /** Process insert FX for a single sample. Returns [L, R] via this.insertOut. */
@@ -1111,12 +1124,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
       }
 
-      // FX run always (tails ring out after stop)
+      // Send FX: skip processing when idle (no input + tail decayed)
       // ADR 121: reverb hold — setFreeze on reverb engines handles feedback=1.0/damp=0
       // Input is NOT gated: BigSky-style, reverb accumulates while held
       // ADR 120: per-flavour reverb routing (only when verb XY pad is ON)
       let rev: Float64Array
-      if (!this.flavourActive) {
+      const reverbIdle = reverbIn === 0 && this._isReverbIdle()
+      if (reverbIdle) {
+        rev = this._revOut
+        rev[0] = 0; rev[1] = 0
+      } else if (!this.flavourActive) {
         // Verb pad OFF — plain reverb, no flavour routing
         rev = this.reverb.process(reverbIn)
       } else if (this.xfadeRemaining > 0 && this.prevFlavour !== null) {
@@ -1136,12 +1153,19 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         rev = this._processReverbFlavour(this.reverbFlavour, reverbIn)
       }
       // Delay: tape or digital — ADR 121: hold gates input + high fb
-      const dlyFb = this.delayHoldActive ? (this.delayTape ? 0.85 : 1.0) : this.delayFeedback
       const dlyIn = this.delayHoldActive ? 0 : delayIn
-      if (this.delayTape) this.tapeDelay.setDrive(this.delayHoldActive ? 1.3 : 1.6)
-      const del = this.delayTape
-        ? this.tapeDelay.process(dlyIn, dlyIn, dlyFb)
-        : this.delay.process(dlyIn, dlyIn, dlyFb)
+      const delayIdle = dlyIn === 0 && (this.delayTape ? this.tapeDelay.idle : this.delay.idle)
+      let del: Float64Array
+      if (delayIdle) {
+        del = this._dlyOut
+        del[0] = 0; del[1] = 0
+      } else {
+        const dlyFb = this.delayHoldActive ? (this.delayTape ? 0.85 : 1.0) : this.delayFeedback
+        if (this.delayTape) this.tapeDelay.setDrive(this.delayHoldActive ? 1.3 : 1.6)
+        del = this.delayTape
+          ? this.tapeDelay.process(dlyIn, dlyIn, dlyFb)
+          : this.delay.process(dlyIn, dlyIn, dlyFb)
+      }
       const grn = this.granular.process(granularIn, granularIn)
 
       // Glitch send: stutter, downsample, or bitcrush on send bus
