@@ -1066,7 +1066,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (insSlots) {
             for (let s = 0; s < 2; s++) {
               const slot = insSlots[s]
-              if (slot) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
+              if (slot && slot.mix > 1e-6) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
             }
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
@@ -1098,7 +1098,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           if (insSlots2) {
             for (let s = 0; s < 2; s++) {
               const slot = insSlots2[s]
-              if (slot) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
+              if (slot && slot.mix > 1e-6) { const io = this._processInsert(slot, sL, sR); sL = io[0]; sR = io[1] }
             }
           }
           if (this.scSource[t]) { sourceDry += (sL + sR) * 0.5 }
