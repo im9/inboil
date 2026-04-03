@@ -37,7 +37,7 @@ Chrome trace profiling (2026-04-03) revealed the root cause: **AudioWorklet proc
 
 ### AudioWorklet optimizations needed
 - [x] **Zero-alloc FX returns** — Already implemented: every stereo FX uses `private out = new Float64Array(2)` pre-allocated at construction. Mono FX return primitives. No per-sample allocation
-- [ ] **FX bypass optimization** — Inactive FX (verb/delay/granular/glitch off, EQ flat, sat off) still run `.process()` every sample. Skip when bypassed; only process tail-out
+- [x] **FX bypass optimization** — Send reverb/delay skip `.process()` when input is zero and engine reports idle (output peak < 1e-5 for 256 samples). Insert FX skip when `slot.mix < 1e-6`. EQ/filter already had smooth bypass
 - [x] **Voice early-out** — Already implemented: all voices (MoogVoice, TB303Voice, AnalogVoice, DrumMachine, FMCore) have `isIdle()` / amplitude-threshold early-return in `tick()`. Muted tracks skip after smooth fade completes
 - [ ] **Reduce per-sample overhead** — The 128-sample inner loop contains conditional branches (flavour routing, insert FX chains, stutter) evaluated per sample. Hoist invariants outside the loop where possible
 
