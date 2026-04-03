@@ -213,6 +213,7 @@ class FMCore {
 
   /** Tick at native sample rate — internally renders 2 samples at 2×SR and decimates. */
   tick(): number {
+    if (this.isIdle()) return 0
     const s0 = this._tickInner()
     const s1 = this._tickInner()
     return this.halfBand.process(s0, s1)
@@ -1162,6 +1163,7 @@ class WTCore {
 
   /** Stereo tick — writes [L, R] into out */
   tickStereo(out: Float32Array) {
+    if (this.ampEnv.isIdle()) { out[0] = 0; out[1] = 0; return }
     if (this.unisonVoices <= 1) {
       const mono = this._tickMono()
       out[0] = mono; out[1] = mono

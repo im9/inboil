@@ -29,6 +29,7 @@
   import WelcomeOverlay from './lib/components/WelcomeOverlay.svelte'
   import { song, songVer, playback, ui, prefs, session, randomizePattern, perf, fxPad, fxFlavours, masterPad, masterLevels, hasScenePlayback, advanceSceneNode, restoreAutomationSnapshot, soloPatternIndex, undo, redo, projectAutoSave, projectRestore, projectLoadDemo, writeRecoverySnapshot, initPool, setPlayFromNodeCallback } from './lib/state.svelte.ts'
   import { applySweepStep } from './lib/scenePlayback.ts'
+  import { log as _profLog, flushLog as _profFlush } from './lib/transitionProfile.ts'
   import { sweepRec, stopRecording } from './lib/sweepRecorder.svelte.ts'
   import { cellCopy, cellPaste, patternCopy, patternPaste, patternClear } from './lib/sectionActions.ts'
   import { clearSceneClipboard } from './lib/sceneActions.ts'
@@ -94,7 +95,10 @@
   // Sync song (incl. effects) → worklet on any state change
   // During playback: send immediately (Svelte effect batching is sufficient)
   // Stopped: rAF-throttled to avoid unnecessary work
+  // Dedup: onStep already sends pattern after sweep changes — skip $effect if recent
   let rafId = 0
+  let lastOnStepSendMs = 0
+  const DEDUP_MS = 4 // skip $effect send if onStep sent within this window
   $effect(() => {
     // Touch reactive deps without string allocation (perf/fxPad are $state proxies)
     void songVer.v; void ui.currentPattern; void playback.mode; void playback.playingPattern
@@ -117,8 +121,11 @@
     }
     if (playback.playing) {
       // During playback, send immediately to avoid stale trig data on live edits
+      // But skip if onStep already sent pattern within DEDUP_MS (sweep automation path)
       cancelAnimationFrame(rafId)
-      sendPattern()
+      if (performance.now() - lastOnStepSendMs > DEDUP_MS) {
+        sendPattern()
+      }
     } else {
       cancelAnimationFrame(rafId)
       rafId = requestAnimationFrame(sendPattern)
@@ -182,6 +189,7 @@
   let soloSent: string | null = null // tracks which solo node was last sent to engine
 
   engine.onStep = (heads: number[], cycle: boolean) => {
+    const _onStepT0 = performance.now()
     playback.playheads = heads
     // Sweep automation — apply on every step EXCEPT cycle boundaries where
     // pattern transition will happen (cycle step has wrapped-around heads=0,
@@ -198,6 +206,7 @@
       if (changed) {
         // Re-send pattern to worklet with updated track params (no reset to keep playhead)
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, false, patIdx)
+        lastOnStepSendMs = performance.now()
       }
     }
     // Broadcast playhead to connected guests
@@ -209,6 +218,7 @@
         const idx = soloPatternIndex()
         if (idx != null) engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, idx)
       }
+      if (import.meta.env.DEV) _profLog('onStep', `solo ${(performance.now()-_onStepT0).toFixed(2)}ms`)
       return
     }
     if (playback.soloNodeId == null) soloSent = null
@@ -221,6 +231,7 @@
         applyLoopModifiers()
         engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, next)
       }
+      if (import.meta.env.DEV) _profLog('onStep', `loop ${(performance.now()-_onStepT0).toFixed(2)}ms`)
       return
     }
     if (cycle) {
@@ -232,14 +243,17 @@
           const scenePatKey = song.patterns[patternIndex]?.rootNote ?? song.rootNote
           perf.rootNote = ((playback.sceneAbsoluteKey ?? (scenePatKey + playback.sceneTranspose)) % 12 + 12) % 12
           engine.sendPatternByIndex(song, perf, fxPad, engineCtx, true, patternIndex)
+          lastOnStepSendMs = performance.now()
           // Check if we just arrived at the solo target
           if (playback.soloNodeId != null && playback.sceneNodeId === playback.soloNodeId) {
             soloSent = playback.soloNodeId
           }
         }
+        if (import.meta.env.DEV) _profLog('onStep', `scene-cycle ${(performance.now()-_onStepT0).toFixed(2)}ms`)
         return
       }
     }
+    if (import.meta.env.DEV) _profLog('onStep', `passthrough ${(performance.now()-_onStepT0).toFixed(2)}ms`)
   }
 
   // Solo switching is handled in onStep at cycle boundary
@@ -324,6 +338,7 @@
     playback.automationSnapshot = null
     clearInitialAutomationSnapshot()
     playback.mode = 'loop'
+    if (import.meta.env.DEV) _profFlush()
     playback.playingPattern = null
     playback.queuedPattern = null
     // Save sweep recording AFTER engine is fully stopped (ADR 123)

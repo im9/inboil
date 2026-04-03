@@ -22,16 +22,24 @@ Hardening tasks for signaling server (see ADR 019 §Security Hardening for desig
 - [x] **IP rate limiting** — 5 failed joins per IP / 10s → temporary block
 - [x] **Room code 8-char** — Extend from 6 to 8 characters (30-bit → 40-bit entropy)
 
-## Performance: Pattern Transition Audio Glitch
+## Performance: Audio Glitch (process() Budget Overrun)
 
-Pattern transitions during scene play can cause brief audio dropouts. Root cause unknown — need profiling to identify the bottleneck before optimizing. Candidates (measure with `performance.now()` around each step):
+Chrome trace profiling (2026-04-03) revealed the root cause: **AudioWorklet process() p50=5.06ms consistently exceeds the 2.9ms budget** (128 samples @ 44.1kHz). 58.8% of calls overrun. The issue is not pattern-transition-specific — it is constant DSP weight.
 
-- [ ] **Profile transition path** — Instrument `advanceSceneNode` → `startSceneNode`/`walkToNode` to find which step costs the most wall-clock time
-- [ ] **`snapshotAutomationTargets()` cost** — Snapshots all tracks × all params. May be heavy with many tracks
-- [ ] **`applyLiveGenerative()` reactive mutation storm** — Writing trigs into Svelte proxy cells may trigger synchronous reactive updates during the audio callback path
-- [ ] **`structuredClone` for WorkletPattern** — Pattern data sent to AudioWorklet via postMessage is cloned by the browser; large patterns could block the main thread
-- [ ] **UI re-render contention** — Pattern switch causes full sequencer re-render; if this overlaps with the audio scheduling tick it could delay message posting to the worklet
-- [ ] **Edge adjacency pre-index** — `edges.filter().sort()` in `walkToNode`/`advanceSceneNode`/`applyLiveGenerative` allocates intermediate arrays. Negligible at current scale (<20 edges) but would benefit from a `Map<nodeId, SceneEdge[]>` if scenes grow. Requires invalidation on scene edit
+### Profiled & ruled out (main thread)
+- [x] **Profile transition path** — Transition logic total: 0.4-1.5ms. Not the cause
+- [x] **`snapshotAutomationTargets()` cost** — 0.3-0.5ms (JSON deep clone). Top cost within transition but not the bottleneck
+- [x] **`applyLiveGenerative()` reactive mutation storm** — 0-0.8ms (first call only). Not significant
+- [x] **`structuredClone` for WorkletPattern** — `buildWorkletPattern` 0.3-0.6ms + postMessage 0.1-0.2ms. Not the cause
+- [x] **UI re-render contention** — onStep total 0.3-1.1ms. Not the cause
+- [x] **$effect double sendPattern** — Sweep mutations triggered redundant $effect→sendPattern. Fixed with timestamp dedup (sendPattern calls -42%)
+- [ ] **Edge adjacency pre-index** — Not profiled; negligible at current scale (<20 edges)
+
+### AudioWorklet optimizations needed
+- [ ] **Zero-alloc FX returns** — FX `.process()` methods return `Float64Array` (new or shared). MinorGC fires 1613 times on AudioWorklet thread (avg 0.12ms each, 193ms total). Pre-allocate output buffers per FX instance, write in-place
+- [ ] **FX bypass optimization** — Inactive FX (verb/delay/granular/glitch off, EQ flat, sat off) still run `.process()` every sample. Skip when bypassed; only process tail-out
+- [ ] **Voice early-out** — Muted/silent voices still call `tick()`. Skip when gate is closed and envelope is idle
+- [ ] **Reduce per-sample overhead** — The 128-sample inner loop contains conditional branches (flavour routing, insert FX chains, stutter) evaluated per sample. Hoist invariants outside the loop where possible
 
 ## Bug Fixes
 
