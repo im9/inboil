@@ -1,9 +1,9 @@
 ---
 title: INBOIL Docs
-description: Documentation for INBOIL — a groove box in your browser.
+description: Documentation for INBOIL — a browser-native instrument.
 ---
 
-Welcome to the **INBOIL** documentation. INBOIL is a browser-based groove box and DAW — no install, no signup, just open and play.
+Welcome to the **INBOIL** documentation. INBOIL is a browser-native instrument for scene-based sequencing, performance, and generative play — no install, no signup, just open and play.
 
 ## Getting Started
 

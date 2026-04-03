@@ -2,7 +2,7 @@
 import pkg from '../../../package.json';
 const appUrl = import.meta.env.DEV ? 'http://localhost:5173' : 'https://app.inboil.app';
 const siteUrl = import.meta.env.DEV ? 'http://localhost:4321' : 'https://inboil.app';
-const description = 'A browser-based groove box with 19 sound engines, a graphical sequencer, and zero setup. No install. No signup. Just play.';
+const description = 'A browser-native instrument that turns any device into a playable groovebox for scene-based sequencing, performance, and controlled generative composition.';
 const ogImage = `${siteUrl}/og.png`;
 ---
 <html lang="en">
@@ -11,11 +11,11 @@ const ogImage = `${siteUrl}/og.png`;
   <script is:inline>if(localStorage.getItem('inboil-lang')==='ja'||(!localStorage.getItem('inboil-lang')&&/^ja/i.test(navigator.language)))document.documentElement.lang='ja';</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1E2028" />
-  <title>INBOIL — A groove box in your browser</title>
+  <title>INBOIL — A browser-native instrument</title>
   <meta name="description" content={description} />
   <!-- OGP -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="INBOIL — A groove box in your browser" />
+  <meta property="og:title" content="INBOIL — A browser-native instrument" />
   <meta property="og:description" content={description} />
   <meta property="og:url" content={siteUrl} />
   <meta property="og:image" content={ogImage} />
@@ -23,7 +23,7 @@ const ogImage = `${siteUrl}/og.png`;
   <meta property="og:image:height" content="630" />
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="INBOIL — A groove box in your browser" />
+  <meta name="twitter:title" content="INBOIL — A browser-native instrument" />
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={ogImage} />
   <link rel="canonical" href={siteUrl} />
@@ -1006,10 +1006,10 @@ const ogImage = `${siteUrl}/og.png`;
           <rect class="flap-cell" x="14" y="14" width="8" height="8" fill="#a3a145" style="--i:3"/>
           <rect x="24" y="4" width="4" height="18" rx="1" fill="#ede8dc" opacity="0.4"/>
         </svg>
-        <h1>INBOIL<span class="sr-only"> — Browser-based groove box</span></h1>
+        <h1>INBOIL<span class="sr-only"> — Browser-native instrument</span></h1>
       </div>
-      <p id="tagline" class="tagline">Make music anywhere, right now</p>
-      <p id="hero-sub" class="hero-sub">No install. No signup. Just play.</p>
+      <p id="tagline" class="tagline">Turn any device into an instrument</p>
+      <p id="hero-sub" class="hero-sub">Scene-based sequencing, performance, and generative play in the browser.</p>
       <div class="cta-row">
         <a id="app-link" class="cta primary" href={appUrl}>Open App</a>
         <a id="docs-link" class="cta" href="/docs/getting-started/first-beat/">Tutorial →</a>
@@ -1474,13 +1474,13 @@ const ogImage = `${siteUrl}/og.png`;
     function applyEn() {
       document.documentElement.lang = 'en';
       const srOnly = document.querySelector('.brand h1 .sr-only');
-      if (srOnly) srOnly.textContent = ' — Browser-based groove box';
+      if (srOnly) srOnly.textContent = ' — Browser-native instrument';
       const seq = document.getElementById('seq');
       if (seq) seq.setAttribute('aria-label', 'Interactive step sequencer demo');
       const a = document.getElementById('docs-link');
       if (a) { a.href = '/docs/getting-started/first-beat/'; a.textContent = 'Tutorial →'; }
-      t('tagline', 'Make music anywhere, right now');
-      t('hero-sub', 'No install. No signup. Just play.');
+      t('tagline', 'Turn any device into an instrument');
+      t('hero-sub', 'Scene-based sequencing, performance, and generative play in the browser.');
       t('feat-voice-title', 'Sound Engines');
       t('feat-voice-desc', '19 voices \u2014 from drum machines to wavetable synths, plus a polyphonic sampler with 90 built-in samples and a multi-sampled grand piano. Choose a different engine for each track.');
       t('feat-scene-title', 'Graphical Sequencer');

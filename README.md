@@ -1,7 +1,7 @@
 # inboil
 
-Browser-based groove box / DAW inspired by Elektron hardware and Teenage Engineering OP-XY.
-Step sequencing, analog-modeled synthesis, graphical sequencer arrangement — all running in a single AudioWorklet, zero npm runtime dependencies.
+Browser-native instrument inspired by Eurorack, Elektron hardware, and Teenage Engineering OP-XY.
+inboil turns any device with a browser into a playable groovebox for scene-based sequencing, performance, and controlled generative composition — all running in a single AudioWorklet, zero npm runtime dependencies.
 
 ## Features
 

@@ -8,7 +8,7 @@ sidebar:
 ## General
 
 ### What is INBOIL?
-A browser-based groove box and DAW. It runs entirely in your browser — no download, no account, no plugins required. Open the app and start making beats.
+A browser-native instrument for scene-based sequencing, performance, and generative play. It runs entirely in your browser — no download, no account, no plugins required. Open the app and start making beats.
 
 ### What browsers are supported?
 INBOIL requires a modern browser with **Web Audio API** and **AudioWorklet** support. Use the latest version of Chrome, Firefox, Safari, or Edge for the best experience.
