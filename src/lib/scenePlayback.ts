@@ -9,6 +9,7 @@ import { getParamDefs } from './paramDefs.ts'
 import type { SceneNode, SceneEdge, SweepData, VoiceId, AutomationSnapshot } from './types.ts'
 import { evaluateCurve, evaluateToggle, targetKey, isUserControlled } from './sweepEval.ts'
 import { calcGlobalSweepProgress, applyPerfToggle, applySweepValue, findConnectedSweepPure } from './scenePlaybackPure.ts'
+import { recordTiming } from './transitionProfile.ts'
 
 // ── Scene helpers ───────────────────────────────────────────────────
 
@@ -185,14 +186,24 @@ function startSceneNode(node: SceneNode): { advanced: boolean; patternIndex: num
   if (node.type === 'pattern') {
     // No snapshot restore — previous sweep values carry over as next pattern's baseline.
     // Satellite modifiers handle their own resets (fx on/off, transpose).
+    let _t0 = performance.now(), _t1 = 0
     resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
+    _t1 = performance.now(); const _a = _t1 - _t0; _t0 = _t1
     clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
+    _t1 = performance.now(); const _b = _t1 - _t0; _t0 = _t1
     applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
+    _t1 = performance.now(); const _c = _t1 - _t0; _t0 = _t1
     refreshPatternCaches(node)  // cache sweep data & pattern for per-step use
+    _t1 = performance.now(); const _d = _t1 - _t0; _t0 = _t1
     playback.automationSnapshot = snapshotAutomationTargets()
+    _t1 = performance.now(); const _e = _t1 - _t0; _t0 = _t1
     reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
+    _t1 = performance.now(); const _f = _t1 - _t0; _t0 = _t1
     applyLiveGenerative(node)
+    _t1 = performance.now(); const _g = _t1 - _t0; _t0 = _t1
     const pi = song.patterns.findIndex(p => p.id === node.patternId)
+    _t1 = performance.now(); const _h = _t1 - _t0
+    recordTiming({ resetPerfToggles: _a, clearCarryOver: _b, satelliteModifiers: _c, refreshCaches: _d, snapshot: _e, reapplyGlobalSweep: _f, liveGenerative: _g, patternLookup: _h, total: _a+_b+_c+_d+_e+_f+_g+_h })
     const idx = pi >= 0 ? pi : 0
     playback.playingPattern = idx
     return { advanced: true, patternIndex: idx }
@@ -221,16 +232,26 @@ function walkToNode(edge: SceneEdge): { advanced: boolean; patternIndex: number;
     if (node.type === 'pattern') {
       // No snapshot restore — previous sweep values carry over as next pattern's baseline.
       // Satellite modifiers handle their own resets (fx on/off, transpose).
+      let _t0 = performance.now(), _t1 = 0
       resetPerfToggles()  // perf triggers (fill/rev/brk) are momentary — reset on transition
+      _t1 = performance.now(); const _a = _t1 - _t0; _t0 = _t1
       clearCurveCarryOverDeltas()  // reset per-curve deltas for new pattern
+      _t1 = performance.now(); const _b = _t1 - _t0; _t0 = _t1
       applySatelliteModifiers(node.id)  // ADR 110: apply attached fn satellites
+      _t1 = performance.now(); const _c = _t1 - _t0; _t0 = _t1
       refreshPatternCaches(node)  // cache sweep data & pattern for per-step use
+      _t1 = performance.now(); const _d = _t1 - _t0; _t0 = _t1
       playback.automationSnapshot = snapshotAutomationTargets()
+      _t1 = performance.now(); const _e = _t1 - _t0; _t0 = _t1
       reapplyGlobalSweep()  // keep global sweep values across pattern transitions (after snapshot)
+      _t1 = performance.now(); const _f = _t1 - _t0; _t0 = _t1
       applyLiveGenerative(node)
+      _t1 = performance.now(); const _g = _t1 - _t0; _t0 = _t1
       playback.sceneNodeId = node.id
       playback.sceneEdgeId = currentEdge.id
       const pi = song.patterns.findIndex(p => p.id === node.patternId)
+      _t1 = performance.now(); const _h = _t1 - _t0
+      recordTiming({ resetPerfToggles: _a, clearCarryOver: _b, satelliteModifiers: _c, refreshCaches: _d, snapshot: _e, reapplyGlobalSweep: _f, liveGenerative: _g, patternLookup: _h, total: _a+_b+_c+_d+_e+_f+_g+_h })
       const idx = pi >= 0 ? pi : 0
       playback.playingPattern = idx
       return { advanced: true, patternIndex: idx }
