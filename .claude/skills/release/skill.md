@@ -56,17 +56,13 @@ gh pr create --title "chore: release v{version}" --body "Version bump and change
 
 - Show the PR URL to the user
 
-### 6. After merge — create GitHub Release
+### 6. Done
 
-- Wait for user to confirm the PR has been merged
-- Create the tag and GitHub Release in one step:
-
-```bash
-gh release create v{version} --target main --title "v{version}" --notes-file - <<< "$(changelog excerpt)"
-```
-
-- The `--notes` should contain the changelog section for this version
-- Deploy is automatic on merge to main — no manual deploy needed
+- After merge, CI automatically:
+  1. Deploys to Cloudflare Pages
+  2. Creates a GitHub Release with tag (extracts notes from CHANGELOG.md)
+- The CI auto-tag step triggers on merge commits containing "release v" in the message
+- No manual action needed after merge
 
 ## Safety
 
