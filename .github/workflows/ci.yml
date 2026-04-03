@@ -46,3 +46,20 @@ jobs:
         run: cd site && npx wrangler pages deploy dist --project-name=inboil-site
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Auto-tag release
+        if: >-
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          contains(github.event.head_commit.message, 'release v')
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          # Extract changelog section for this version
+          NOTES=$(sed -n "/^## \[${VERSION#v}\]/,/^## \[/{ /^## \[${VERSION#v}\]/d; /^## \[/d; p; }" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            echo "No changelog section found for ${VERSION}, using auto-generated notes"
+            gh release create "${VERSION}" --target main --title "${VERSION}" --generate-notes
+          else
+            echo "$NOTES" | gh release create "${VERSION}" --target main --title "${VERSION}" --notes-file -
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
