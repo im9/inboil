@@ -92,11 +92,14 @@ function isModifierNode(node: SceneNode): boolean {
  *  FX resets to OFF when no FX modifier node is attached — scoped to pattern. */
 function applySatelliteModifiers(patternNodeId: string): void {
   let hasTranspose = false
-  // First pass: detect transpose satellite (needed before applying modifiers)
+  // Single pass: collect incoming modifier nodes and detect transpose
+  const modifiers: SceneNode[] = []
   for (const edge of song.scene.edges) {
     if (edge.to !== patternNodeId) continue
     const src = findNode(edge.from)
-    if (src?.type === 'transpose') { hasTranspose = true; break }
+    if (!src) continue
+    if (src.type === 'transpose') hasTranspose = true
+    if (isModifierNode(src)) modifiers.push(src)
   }
   // Reset transpose if no matching satellite (transpose is positional, not carry-over).
   // FX on/off is NOT reset — carries over from previous pattern's sweep values.
@@ -104,12 +107,7 @@ function applySatelliteModifiers(patternNodeId: string): void {
     playback.sceneTranspose = 0
     playback.sceneAbsoluteKey = null
   }
-  // Second pass: apply all modifier satellites
-  for (const edge of song.scene.edges) {
-    if (edge.to !== patternNodeId) continue
-    const src = findNode(edge.from)
-    if (src && isModifierNode(src)) applyModifierNode(src)
-  }
+  for (const mod of modifiers) applyModifierNode(mod)
 }
 
 /** Apply live-mode generative nodes that feed into a pattern node (ADR 078 Phase 2). */
@@ -324,6 +322,8 @@ export function markScenePlayStart(): void {
   curveCarryOverDeltas.clear()
   cachedChainSweep = null
   cachedPat = null
+  trackIdxMap.clear()
+  cellByTrackId.clear()
 }
 
 /** Return the snapshot taken at scene play start (before any sweep/modifier application).
@@ -337,6 +337,8 @@ export function clearInitialAutomationSnapshot(): void {
   initialAutomationSnapshot = null
   cachedChainSweep = null
   cachedPat = null
+  trackIdxMap.clear()
+  cellByTrackId.clear()
 }
 
 /** Returns ms elapsed since scene playback started. */
@@ -444,6 +446,10 @@ function isFirstPattern(): boolean { return patternTransitionCount <= 1 }
 let cachedChainSweep: SweepData | null = null
 /** Cached pattern object for the current pattern node (avoids per-step find). */
 let cachedPat: typeof song.patterns[number] | null = null
+/** trackId → track index (avoids findIndex per curve per step). */
+let trackIdxMap: Map<number, number> = new Map()
+/** trackId → cell lookup for cachedPat (avoids cells.find per curve per step). */
+let cellByTrackId: Map<number, typeof song.patterns[number]['cells'][number]> = new Map()
 
 /** Clear carry-over delta cache — call on pattern transition. */
 export function clearCurveCarryOverDeltas(): void {
@@ -459,6 +465,13 @@ function refreshPatternCaches(patternNode: SceneNode): void {
   cachedPat = patternNode.patternId
     ? (song.patterns.find(p => p.id === patternNode.patternId) ?? null)
     : null
+  // Build trackId lookup maps (avoids findIndex/find per curve per step)
+  trackIdxMap.clear()
+  for (let i = 0; i < song.tracks.length; i++) trackIdxMap.set(song.tracks[i].id, i)
+  cellByTrackId.clear()
+  if (cachedPat) {
+    for (const c of cachedPat.cells) cellByTrackId.set(c.trackId, c)
+  }
 }
 
 /** Apply a single SweepData set at the given progress value.
@@ -468,9 +481,6 @@ function refreshPatternCaches(patternNode: SceneNode): void {
  *  This ensures seamless transitions at pattern boundaries. */
 function applySweepData(sweepData: SweepData, progress: number, _snap: AutomationSnapshot): boolean {
   let changed = false
-
-  // Use per-pattern cache (refreshed on pattern transition in clearCurveCarryOverDeltas)
-  const pat = cachedPat
 
   for (const curve of sweepData.curves) {
     // Skip targets currently being controlled by user during recording (ADR 123 §8)
@@ -484,8 +494,8 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
 
     if (curve.target.kind === 'track') {
       const tgt = curve.target
-      const trackIdx = song.tracks.findIndex(t => t.id === tgt.trackId)
-      if (trackIdx < 0) continue
+      const trackIdx = trackIdxMap.get(tgt.trackId)
+      if (trackIdx == null) continue
       const track = song.tracks[trackIdx]
       const param = curve.target.param
       if (param === 'volume') {
@@ -499,7 +509,7 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
         if (Math.abs(track.pan - newVal) > 0.001) { track.pan = newVal; changed = true }
       } else {
         // Voice params (TONE, CUT, RESO, etc.)
-        const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
+        const cell = cellByTrackId.get(tgt.trackId)
         if (cell?.voiceId && cell.voiceParams) {
           const defs = getParamDefs(cell.voiceId as VoiceId)
           const def = defs.find(d => d.key === param)
@@ -526,9 +536,8 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
       }
     } else if (curve.target.kind === 'send') {
       const tgt = curve.target
-      const trackIdx = song.tracks.findIndex(t => t.id === tgt.trackId)
-      if (trackIdx < 0) continue
-      const cell = pat?.cells.find(c => c.trackId === tgt.trackId)
+      if (!trackIdxMap.has(tgt.trackId)) continue
+      const cell = cellByTrackId.get(tgt.trackId)
       if (cell) {
         const param = tgt.param
         if (!curveCarryOverDeltas.has(key)) curveCarryOverDeltas.set(key, isFirstPattern() ? 0 : cell[param] - firstValue)
@@ -581,7 +590,8 @@ function applySweepData(sweepData: SweepData, progress: number, _snap: Automatio
         if (pad && pad.on !== on) { pad.on = on; changed = true }
       } else if (toggle.target.kind === 'mute') {
         const tgt = toggle.target
-        const track = song.tracks.find(t => t.id === tgt.trackId)
+        const idx = trackIdxMap.get(tgt.trackId)
+        const track = idx != null ? song.tracks[idx] : undefined
         if (track && track.muted !== on) { track.muted = on; changed = true }
       } else if (toggle.target.kind === 'perf') {
         const result = applyPerfToggle(toggle.target.param, on)
