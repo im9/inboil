@@ -156,6 +156,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private _errored = false
   private voices: (Voice | null)[] = new Array(MAX_VOICES).fill(null)
   private tracks: WorkletTrack[] = []
+  // Cached voiceParams/paramLocks keys per track (avoid for...in iterator allocation)
+  private vpKeys: string[][] = Array.from({length: MAX_VOICES}, () => [])
   private activeCount = 0          // number of active tracks (≤ MAX_VOICES)
   private playheads: number[] = new Array(MAX_VOICES).fill(0)
   private gateCounters = new Int32Array(MAX_VOICES)
@@ -438,8 +440,14 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
           for (let i = 0; i < n; i++) {
             const vp = p.tracks[i].voiceParams
-            if (vp && this.voices[i]) {
-              for (const k in vp) this.voices[i]!.setParam(k, vp[k])
+            if (vp) {
+              this.vpKeys[i] = Object.keys(vp)
+              if (this.voices[i]) {
+                const keys = this.vpKeys[i]
+                for (let ki = 0; ki < keys.length; ki++) this.voices[i]!.setParam(keys[ki], vp[keys[ki]])
+              }
+            } else {
+              this.vpKeys[i] = []
             }
             this.voices[i]?.setParam('bpm', this.bpm)
           }
@@ -779,10 +787,17 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
     // P-Lock: restore base params, then overlay per-step locks
     if (this.voices[t] && track.voiceParams) {
-      for (const k in track.voiceParams) this.voices[t]!.setParam(k, track.voiceParams[k])
+      const keys = this.vpKeys[t]
+      const vp = track.voiceParams
+      for (let ki = 0; ki < keys.length; ki++) this.voices[t]!.setParam(keys[ki], vp[keys[ki]])
     }
     if (this.voices[t] && trig?.active && trig.paramLocks) {
-      for (const k in trig.paramLocks) this.voices[t]!.setParam(k, trig.paramLocks[k])
+      const plk = trig.paramLocks
+      const keys = this.vpKeys[t]
+      for (let ki = 0; ki < keys.length; ki++) {
+        const k = keys[ki]
+        if (k in plk) this.voices[t]!.setParam(k, plk[k])
+      }
     }
     // Track-level paramLock targets (ADR 093) — update target only if key present (hold otherwise)
     const pl = trig?.paramLocks
@@ -802,16 +817,24 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     const insSlots = this.insertSlots[t]
     if (insSlots) {
       const insFx = this.tracks[t]?.insertFx
-      for (let s = 0; s < 2; s++) {
-        const slot = insSlots[s]
-        if (!slot) continue
-        const base = insFx?.[s]
-        if (base) { slot.mix = base.mix; slot.x = base.x; slot.y = base.y }
+      const s0 = insSlots[0]
+      if (s0) {
+        const b0 = insFx?.[0]
+        if (b0) { s0.mix = b0.mix; s0.x = b0.x; s0.y = b0.y }
         if (pl) {
-          const pre = s === 0 ? 'ins0' : 'ins1'
-          if (pl[pre + 'mix'] != null) slot.mix = pl[pre + 'mix']
-          if (pl[pre + 'x'] != null) slot.x = pl[pre + 'x']
-          if (pl[pre + 'y'] != null) slot.y = pl[pre + 'y']
+          if (pl.ins0mix != null) s0.mix = pl.ins0mix
+          if (pl.ins0x != null) s0.x = pl.ins0x
+          if (pl.ins0y != null) s0.y = pl.ins0y
+        }
+      }
+      const s1 = insSlots[1]
+      if (s1) {
+        const b1 = insFx?.[1]
+        if (b1) { s1.mix = b1.mix; s1.x = b1.x; s1.y = b1.y }
+        if (pl) {
+          if (pl.ins1mix != null) s1.mix = pl.ins1mix
+          if (pl.ins1x != null) s1.x = pl.ins1x
+          if (pl.ins1y != null) s1.y = pl.ins1y
         }
       }
     }
