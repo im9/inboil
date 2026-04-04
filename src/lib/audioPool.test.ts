@@ -53,6 +53,18 @@ describe('contentHash', () => {
     const b = new Uint8Array([1, 2, 3, 4]).buffer
     expect(await contentHash(a)).not.toBe(await contentHash(b))
   })
+
+  it('files differing only after 64KB → different hash', async () => {
+    const size = 65536 + 128
+    const a = new Uint8Array(size)
+    const b = new Uint8Array(size)
+    // Identical first 64KB, different tail
+    a.fill(0)
+    b.fill(0)
+    a[65536] = 0xAA
+    b[65536] = 0xBB
+    expect(await contentHash(a.buffer)).not.toBe(await contentHash(b.buffer))
+  })
 })
 
 // ── generateWaveform ──

@@ -52,7 +52,9 @@ function applyJsonPatch(target: Record<string, unknown>, patch: JsonPatch): bool
 
   switch (patch.op) {
     case 'add':
-    case 'replace':
+    case 'replace': {
+      if (!('value' in patch)) return false
+      if (typeof patch.value === 'function') return false
       if (Array.isArray(obj)) {
         const idx = lastKey === '-' ? obj.length : Number(lastKey)
         if (!Number.isInteger(idx) || idx < 0 || idx > obj.length) return false
@@ -60,9 +62,14 @@ function applyJsonPatch(target: Record<string, unknown>, patch: JsonPatch): bool
         else obj[idx] = patch.value
       } else {
         if (patch.op === 'replace' && !Object.prototype.hasOwnProperty.call(obj, lastKey)) return false
+        // Type guard: reject primitive type changes (number→string, etc.)
+        const existing = obj[lastKey]
+        if (patch.op === 'replace' && existing != null && patch.value != null
+          && typeof existing !== 'object' && typeof existing !== typeof patch.value) return false
         obj[lastKey] = patch.value
       }
       return true
+    }
 
     case 'remove':
       if (Array.isArray(obj)) {
@@ -149,6 +156,55 @@ describe('JSON Patch security', () => {
     const obj = { a: { b: { c: 1 } } } as Record<string, unknown>
     const applied = applyJsonPatch(obj, { op: 'replace', path: '/a/__proto__/evil', value: true })
     expect(applied).toBe(false)
+  })
+})
+
+describe('JSON Patch value validation', () => {
+  it('rejects add/replace with missing value', () => {
+    const obj = { a: 1 } as Record<string, unknown>
+    // patch has no value property
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/a' } as JsonPatch)).toBe(false)
+    expect(obj.a).toBe(1) // unchanged
+    expect(applyJsonPatch(obj, { op: 'add', path: '/b' } as JsonPatch)).toBe(false)
+    expect(obj).not.toHaveProperty('b')
+  })
+
+  it('rejects function values', () => {
+    const obj = { a: 1 } as Record<string, unknown>
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/a', value: () => {} })).toBe(false)
+    expect(obj.a).toBe(1)
+  })
+
+  it('rejects replace that changes primitive type', () => {
+    const obj = { count: 42, name: 'test', active: true } as Record<string, unknown>
+    // number → string
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/count', value: 'not-a-number' })).toBe(false)
+    expect(obj.count).toBe(42)
+    // string → number
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/name', value: 123 })).toBe(false)
+    expect(obj.name).toBe('test')
+    // boolean → string
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/active', value: 'yes' })).toBe(false)
+    expect(obj.active).toBe(true)
+  })
+
+  it('allows replace with same primitive type', () => {
+    const obj = { count: 42, name: 'test' } as Record<string, unknown>
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/count', value: 99 })).toBe(true)
+    expect(obj.count).toBe(99)
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/name', value: 'updated' })).toBe(true)
+    expect(obj.name).toBe('updated')
+  })
+
+  it('allows replace object with object', () => {
+    const obj = { nested: { x: 1 } } as Record<string, unknown>
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/nested', value: { x: 2 } })).toBe(true)
+  })
+
+  it('allows replace null with object and vice versa', () => {
+    const obj = { ref: null } as Record<string, unknown>
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/ref', value: { x: 1 } })).toBe(true)
+    expect(applyJsonPatch(obj, { op: 'replace', path: '/ref', value: null })).toBe(true)
   })
 })
 

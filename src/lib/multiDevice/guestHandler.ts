@@ -85,6 +85,8 @@ function applyJsonPatch(patch: JsonPatch) {
   switch (patch.op) {
     case 'add':
     case 'replace':
+      if (!('value' in patch)) return
+      if (typeof patch.value === 'function') return
       if (Array.isArray(target)) {
         const idx = lastKey === '-' ? target.length : Number(lastKey)
         if (!Number.isInteger(idx) || idx < 0 || idx > target.length) return
@@ -93,6 +95,10 @@ function applyJsonPatch(patch: JsonPatch) {
       } else {
         // Only allow replacing existing keys (no arbitrary injection)
         if (patch.op === 'replace' && !Object.prototype.hasOwnProperty.call(target, lastKey)) return
+        // Type guard: reject primitive type changes (number→string, etc.)
+        const existing = target[lastKey]
+        if (patch.op === 'replace' && existing != null && patch.value != null
+          && typeof existing !== 'object' && typeof existing !== typeof patch.value) return
         target[lastKey] = patch.value
       }
       break
