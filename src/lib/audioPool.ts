@@ -99,15 +99,9 @@ export async function listFolders(): Promise<string[]> {
 
 // ── Content hash (dedup) ─────────────────────────────────────────────
 
-/** SHA-256 of first 64KB + file size → hex string. Fast dedup without reading entire file. */
+/** SHA-256 of full file content → hex string for dedup. */
 export async function contentHash(buffer: ArrayBuffer): Promise<string> {
-  const slice = buffer.slice(0, 65536)
-  const sizeBytes = new Uint8Array(8)
-  new DataView(sizeBytes.buffer).setFloat64(0, buffer.byteLength)
-  const combined = new Uint8Array(slice.byteLength + 8)
-  combined.set(new Uint8Array(slice), 0)
-  combined.set(sizeBytes, slice.byteLength)
-  const hash = await crypto.subtle.digest('SHA-256', combined)
+  const hash = await crypto.subtle.digest('SHA-256', buffer)
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 

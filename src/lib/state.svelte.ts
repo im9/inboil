@@ -544,10 +544,9 @@ export async function factoryReset(): Promise<void> {
     await opfsRoot.removeEntry('inboil-pool', { recursive: true })
   } catch { /* OPFS not available or already empty */ }
 
-  // Clear all localStorage
-  if (typeof localStorage !== 'undefined') {
-    localStorage.clear()
-  }
+  // Clear only inboil-owned localStorage keys (not the entire origin)
+  const { clearOwnedLocalStorage } = await import('./storageKeys.ts')
+  clearOwnedLocalStorage()
 
   // Re-save prefs (lang + visited) so the app doesn't show onboarding
   savePrefs()
