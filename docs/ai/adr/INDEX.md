@@ -121,6 +121,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |
 | 106 | Multi-Sample Mapping & Factory Expansion | Implemented | Note-range zone map in SamplerVoice, factory grand piano (Salamander, PD), vocal chops+phrases (CC0), PolySampler dynamic gain |
 | 110 | Per-Cell Sample References | Implemented | Per-cell sample storage, IDB key migration, engine cache dedup, v3 export format |
+| 130 | Sampler Sheet & Sample Pack Expansion | Proposed | P1: overlay sheet + pads + visual chop + sample expansion (≤5 MB). P2: transient auto-chop + sweep mangling. P3: granular playback mode (Torso S4-inspired) |
 
 ## Performance / Live
 
