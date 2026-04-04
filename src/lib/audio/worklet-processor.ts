@@ -254,6 +254,9 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
   private arpIdx       = new Int32Array(MAX_VOICES)
   private arpCounter   = new Int32Array(MAX_VOICES)
   private arpTickSize  = new Int32Array(MAX_VOICES)
+  // Pre-computed arp params (refreshed once per process() block)
+  private _arpRateCache = new Int32Array(MAX_VOICES)
+  private _arpModeCache = new Int32Array(MAX_VOICES)
   private arpVel       = new Float64Array(MAX_VOICES)
   private arpSeed      = new Uint32Array(MAX_VOICES).fill(77777)
   // Fill PRNG
@@ -925,14 +928,51 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
     const outR = outputs[0]?.[1] ?? outputs[0]?.[0]
     if (!outL) return true
 
+    // ── Hoist block-invariant values (computed once per 128-sample block) ──
+    const _playing = this.playing
+    const _activeCount = this.activeCount
+    const _baseSPS = this.baseSPS
+    const _tapeStop = this.tapeStop
+    const _halfSpeed = this.halfSpeed
+    const _stuttering = this.stuttering
+    const _breaking = this.breaking
+    const _perfTouching = this.perfTouching
+    const _perfX = this.perfX
+    const _perfY = this.perfY
+    const _speedMul = _halfSpeed ? 0.5 : 1.0
+    const _stepRef = _baseSPS * 2  // 1/16 note in samples
+    const _stutterDiv = _perfTouching ? 2 + Math.floor(_perfY * 6) : 4
+    const _brkDuty = _perfTouching ? 0.1 + _perfY * 0.8 : 0.5
+    const _brkSubDiv = _perfTouching ? 1 + Math.floor(_perfX * 3) : 1
+    const _brkStep = _baseSPS * 2
+    const _brkSubStep = _brkStep / _brkSubDiv
+    const _eqLowShelf = this.eqShelfMode[0]
+    const _eqHighShelf = this.eqShelfMode[1]
+    const _satOn = this.satOn
+    const _delayTape = this.delayTape
+    const _flavourActive = this.flavourActive
+    const _glitchStutter = this.glitchStutter
+    const _glitchHoldActive = this.glitchHoldActive
+    const _glitchRedux = this.glitchRedux
+    const _verbReturn = this.verbReturn
+    const _dlyReturn = this.dlyReturn
+    const _masterGain = this.masterGain
+
+    // Pre-compute per-track arp params (avoid Math.round + optional chaining per sample)
+    for (let t = 0; t < _activeCount; t++) {
+      const vp = this.tracks[t]?.voiceParams
+      this._arpRateCache[t] = Math.round(vp?.arpRate ?? 1)
+      this._arpModeCache[t] = Math.round(vp?.arpMode ?? 1)
+    }
+
     for (let s = 0; s < outL.length; s++) {
       let sourceDry = 0
       let restL = 0, restR = 0
       let reverbIn = 0, delayIn = 0, glitchIn = 0, granularIn = 0
 
-      if (this.playing) {
+      if (_playing) {
         // ── Glitch: tape stop (exponential slowdown) ──
-        if (this.tapeStop) {
+        if (_tapeStop) {
           // Ramp down: multiply by 0.9998 per sample ≈ stops in ~0.5s at 44.1kHz
           this.tapeSpeed = Math.max(0.01, this.tapeSpeed * 0.9998)
         } else if (this.tapeSpeed < 1.0) {
@@ -941,8 +981,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
 
         // ── Glitch: half speed ──
-        const speedMul = this.halfSpeed ? 0.5 : 1.0
-        const increment = speedMul * this.tapeSpeed
+        const increment = _speedMul * this.tapeSpeed
 
         this.halfAccumFrac += increment
         const steps = Math.floor(this.halfAccumFrac)
@@ -976,7 +1015,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
         // ── Per-track step advancement (ADR 112) ──
         let anyAdvanced = false
-        for (let t = 0; t < this.activeCount; t++) {
+        for (let t = 0; t < _activeCount; t++) {
           this.trackAccum[t] += steps
           if (this.trackAccum[t] >= this.trackThreshold[t]) {
             this.trackAccum[t] -= this.trackThreshold[t]
@@ -987,7 +1026,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
         }
         if (anyAdvanced) {
-          const n = this.activeCount
+          const n = _activeCount
           this._phBuf.length = n
           for (let i = 0; i < n; i++) this._phBuf[i] = this.playheads[i]
           this._stepMsg.playheads = this._phBuf
@@ -997,23 +1036,21 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
 
         // ── Stutter timing (1/16 reference = baseSPS * 2) ──
-        const stepRef = this.baseSPS * 2  // 1/16 note in samples
         this.breakAccum += steps
-        if (this.breakAccum >= stepRef) {
-          this.breakAccum -= stepRef
+        if (this.breakAccum >= _stepRef) {
+          this.breakAccum -= _stepRef
           // Reset stutter on 1/16 boundary
           this.stutterAccum = 0
-          const stutterDiv = this.perfTouching ? 2 + Math.floor(this.perfY * 6) : 4
-          this.stutterThreshold = Math.floor(stepRef / stutterDiv)
+          this.stutterThreshold = Math.floor(_stepRef / _stutterDiv)
         }
 
         // ── Glitch: stutter (retrigger within step) ──
-        if (this.stuttering && this.stutterThreshold > 0) {
+        if (_stuttering && this.stutterThreshold > 0) {
           this.stutterAccum += steps
           if (this.stutterAccum >= this.stutterThreshold) {
             this.stutterAccum -= this.stutterThreshold
             // Retrigger all active voices at current step
-            for (let t = 0; t < this.activeCount; t++) {
+            for (let t = 0; t < _activeCount; t++) {
               const track = this.tracks[t]
               if (!track || track.muted) continue
               const ph = this.playheads[t]
@@ -1028,14 +1065,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           }
         }
         // Arp sub-step tick (rate>=2 only; rate=1 is step-synced in _advanceTrack)
-        for (let t = 0; t < this.activeCount; t++) {
+        for (let t = 0; t < _activeCount; t++) {
           if (this.arpNotes[t].length === 0) continue
-          const arpRate = Math.round(this.tracks[t]?.voiceParams?.arpRate ?? 1)
-          if (arpRate <= 1) continue
+          if (this._arpRateCache[t] <= 1) continue
           this.arpCounter[t]++
           if (this.arpCounter[t] >= this.arpTickSize[t]) {
             this.arpCounter[t] -= this.arpTickSize[t]
-            if (Math.round(this.tracks[t]?.voiceParams?.arpMode ?? 1) === 4) {
+            if (this._arpModeCache[t] === 4) {
               // RANDOM: LCG pick
               this.arpSeed[t] = (this.arpSeed[t] * 1664525 + 1013904223) >>> 0
               this.arpIdx[t] = (this.arpSeed[t] >>> 16) % this.arpNotes[t].length
@@ -1047,7 +1083,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
             }
           }
         }
-        for (let t = 0; t < this.activeCount; t++) {
+        for (let t = 0; t < _activeCount; t++) {
           const track = this.tracks[t]
           const muteTarget = track?.muted ? 0.0 : 1.0
           const mc = muteTarget > this.muteGains[t] ? 0.02 : 0.002
@@ -1092,7 +1128,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
         }
       } else {
         // Not playing — still tick voices for triggerNote audition
-        for (let t = 0; t < this.activeCount; t++) {
+        for (let t = 0; t < _activeCount; t++) {
           const voice = this.voices[t]
           if (!voice) continue
           const vol = this.plkVol[t]
@@ -1133,7 +1169,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       if (reverbIdle) {
         rev = this._revOut
         rev[0] = 0; rev[1] = 0
-      } else if (!this.flavourActive) {
+      } else if (!_flavourActive) {
         // Verb pad OFF — plain reverb, no flavour routing
         rev = this.reverb.process(reverbIn)
       } else if (this.xfadeRemaining > 0 && this.prevFlavour !== null) {
@@ -1154,15 +1190,15 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
       // Delay: tape or digital — ADR 121: hold gates input + high fb
       const dlyIn = this.delayHoldActive ? 0 : delayIn
-      const delayIdle = dlyIn === 0 && (this.delayTape ? this.tapeDelay.idle : this.delay.idle)
+      const delayIdle = dlyIn === 0 && (_delayTape ? this.tapeDelay.idle : this.delay.idle)
       let del: Float64Array
       if (delayIdle) {
         del = this._dlyOut
         del[0] = 0; del[1] = 0
       } else {
-        const dlyFb = this.delayHoldActive ? (this.delayTape ? 0.85 : 1.0) : this.delayFeedback
-        if (this.delayTape) this.tapeDelay.setDrive(this.delayHoldActive ? 1.3 : 1.6)
-        del = this.delayTape
+        const dlyFb = this.delayHoldActive ? (_delayTape ? 0.85 : 1.0) : this.delayFeedback
+        if (_delayTape) this.tapeDelay.setDrive(this.delayHoldActive ? 1.3 : 1.6)
+        del = _delayTape
           ? this.tapeDelay.process(dlyIn, dlyIn, dlyFb)
           : this.delay.process(dlyIn, dlyIn, dlyFb)
       }
@@ -1170,11 +1206,11 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
 
       // Glitch send: stutter, downsample, or bitcrush on send bus
       let gltL = 0, gltR = 0
-      if (this.glitchHoldActive) {
+      if (_glitchHoldActive) {
         // ADR 121: glitch hold — freeze current S&H output
         gltL = this.glitchHoldL
         gltR = this.glitchHoldR
-      } else if (this.glitchStutter) {
+      } else if (_glitchStutter) {
         // Stutter: buffer-repeat loop
         const st = this.stutter.process(glitchIn)
         gltL = st; gltR = st
@@ -1187,7 +1223,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
           this.glitchCounter = Math.max(1, holdMax - ((this.glitchSeed >>> 16) % Math.max(1, holdMax >> 1)))
         }
         this.glitchCounter--
-        if (this.glitchRedux) {
+        if (_glitchRedux) {
           // Redux: aggressive S&H only, no bit quantization
           gltL = this.glitchHoldL
           gltR = this.glitchHoldR
@@ -1200,20 +1236,16 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // ── Rhythmic break gate (pre-FX: dry signal only, FX tails ring through) ──
-      // perfY = duty cycle (0=choppy 10%, 1=wide 90%), perfX = subdivision (gate repeats within step)
-      const brkDuty = this.perfTouching ? 0.1 + this.perfY * 0.8 : 0.5
-      const brkSubDiv = this.perfTouching ? 1 + Math.floor(this.perfX * 3) : 1  // 1-4 sub-gates per step
-      const brkStep = this.baseSPS * 2  // 1/16 note reference
-      const subPhase = (this.breakAccum % (brkStep / brkSubDiv)) / (brkStep / brkSubDiv)
-      const gateTarget = this.breaking
-        ? (subPhase < brkDuty ? 1.0 : 0.0)
+      const subPhase = (this.breakAccum % _brkSubStep) / _brkSubStep
+      const gateTarget = _breaking
+        ? (subPhase < _brkDuty ? 1.0 : 0.0)
         : 1.0
       this.gateEnv += (gateTarget - this.gateEnv) * (gateTarget > this.gateEnv ? 0.02 : 0.002)
 
       // Sidechain: duck rest + FX returns; source tracks punch through untouched (ADR 064)
       const duck = this.ducker.tick()
-      const mixL = sourceDry * this.gateEnv + (restL * this.gateEnv + rev[0] * this.verbReturn + del[0] * this.dlyReturn + grn[0] + gltL) * duck
-      const mixR = sourceDry * this.gateEnv + (restR * this.gateEnv + rev[1] * this.verbReturn + del[1] * this.dlyReturn + grn[1] + gltR) * duck
+      const mixL = sourceDry * this.gateEnv + (restL * this.gateEnv + rev[0] * _verbReturn + del[0] * _dlyReturn + grn[0] + gltL) * duck
+      const mixR = sourceDry * this.gateEnv + (restR * this.gateEnv + rev[1] * _verbReturn + del[1] * _dlyReturn + grn[1] + gltR) * duck
 
       // Bus compressor
       const cmp = this.comp.process(mixL, mixR, this.compThreshold, this.compRatio, this.compMakeup)
@@ -1222,13 +1254,13 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       // ── 3-band EQ (peaking or shelf per band) ──────────
       let fL = cmp[0], fR = cmp[1]
       // Low band: shelf or peaking
-      const eqLow = this.eqShelfMode[0] ? this.shelfEq[0].process(fL, fR) : this.peakEq[0].process(fL, fR)
+      const eqLow = _eqLowShelf ? this.shelfEq[0].process(fL, fR) : this.peakEq[0].process(fL, fR)
       fL = eqLow[0]; fR = eqLow[1]
       // Mid band: always peaking
       const eqMid = this.peakEq[1].process(fL, fR)
       fL = eqMid[0]; fR = eqMid[1]
       // High band: shelf or peaking
-      const eqHigh = this.eqShelfMode[1] ? this.shelfEq[1].process(fL, fR) : this.peakEq[2].process(fL, fR)
+      const eqHigh = _eqHighShelf ? this.shelfEq[1].process(fL, fR) : this.peakEq[2].process(fL, fR)
       fL = eqHigh[0]; fR = eqHigh[1]
 
       // ── DJ Filter (XY pad sweep) ────────────────────────────────
@@ -1236,7 +1268,7 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       fL = filt[0]; fR = filt[1]
 
       // ── Tape Saturator ──────────────────────────────────────────
-      if (this.satOn) {
+      if (_satOn) {
         const sat = this.tapeSat.process(fL, fR)
         fL = sat[0]; fR = sat[1]
       }
@@ -1249,8 +1281,8 @@ class GrooveboxProcessor extends AudioWorkletProcessor {
       }
 
       // Master gain + peak limiter
-      fL *= this.masterGain * 0.8
-      fR *= this.masterGain * 0.8
+      fL *= _masterGain * 0.8
+      fR *= _masterGain * 0.8
       const lim = this.limiter.process(fL, fR)
       outL[s] = lim[0]
       if (outR) outR[s] = lim[1]
