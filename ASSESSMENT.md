@@ -7,51 +7,51 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 
 ## Overall
 
-- `pnpm test`: 29 files, 644 tests passed
+- `pnpm test`: 29 files, 654 tests passed
 - `pnpm check`: 0 errors, 0 warnings
 - Passing tests and static checks does not mean there are no quality weaknesses
 - The current codebase is held together well by test density, but several design boundaries and safety rails are still weak
 
 ## High Priority
 
-### 1. `audioPool` dedupe can collide on different files
+### 1. `audioPool` dedupe collision risk — resolved
 
 - Target: [src/lib/audioPool.ts](src/lib/audioPool.ts)
 - Relevant area: `contentHash()`
-- Current behavior: computes SHA-256 from only the first 64KB plus file size
-- Problem: two distinct files with the same prefix and size can be treated as the same sample
-- Impact: incorrect dedupe in the sample library can lead to data corruption or unexpected sample references
-- Suggested action:
-  - Prefer full-file hashing
-  - If full hashing is too expensive, use a much lower-collision scheme such as head + tail + size
-  - Add tests that cover realistic collision scenarios
+- Previous concern: the earlier implementation hashed only the first 64KB plus file size, which allowed realistic collisions
+- Current status: resolved; `contentHash()` now hashes the full file content
+- Notes:
+  - this item remains useful as historical context for why the change mattered
+  - it should not be treated as an open defect anymore
 
-### 2. Project reset clears all `localStorage`
+### 2. Project reset clears all `localStorage` — resolved
 
 - Target: [src/lib/state.svelte.ts](src/lib/state.svelte.ts)
-- Relevant area: `localStorage.clear()`
-- Problem: this removes unrelated data for the same origin, not just inboil-owned keys
-- Impact:
-  - Future app/site coexistence on the same origin can cause accidental data loss
-  - The reset action has broader side effects than its name suggests
-- Suggested action:
-  - Remove only explicitly owned keys
-  - Centralize persistent key names in one place and delete from that allowlist
+- Previous concern: reset cleared unrelated origin storage rather than only inboil-owned keys
+- Current status: resolved; reset now clears only inboil-owned keys via a dedicated helper
+- Notes:
+  - this item should also be treated as closed unless regressions reappear
 
-### 3. Guest-side JSON Patch application lacks value validation
+### 3. Guest-side JSON Patch validation remains partial
 
 - Target: [src/lib/multiDevice/guestHandler.ts](src/lib/multiDevice/guestHandler.ts)
 - Relevant area: `applyJsonPatch()`
-- Current behavior: blocks dangerous keys and validates path existence, but does not validate the shape of `patch.value`
-- Problem: protocol drift or a host-side bug can push invalid state directly into the guest
+- Current behavior:
+  - blocks dangerous keys
+  - validates path existence
+  - rejects function values
+  - rejects some primitive type changes on replace
+- Problem:
+  - validation is stronger than before, but still path-local and structural rather than schema-driven
+  - protocol drift or a host-side bug can still push semantically invalid state into the guest
 - Impact:
   - guest UI corruption
   - invalid local state
   - harder-to-debug sync failures
 - Suggested action:
-  - restrict writable patch paths and expected value types
-  - add a decode/validation layer for snapshot and delta messages
-  - add tests for contract violations
+  - if the current guard level is sufficient in practice, leave it as-is
+  - otherwise, move toward path allowlists or schema-based decode/validation for snapshot and delta messages
+  - add tests for protocol contract violations before tightening further
 
 ## Medium Priority
 
@@ -85,17 +85,21 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Target: [package.json](package.json)
 - Current state:
   - `test` and `check` exist
+  - a local pre-push hook exists in [.githooks/pre-push](.githooks/pre-push) and runs `pnpm check` + `pnpm test`
   - no `lint` script
-  - no ESLint config or CI config was found in the repo
+  - no committed ESLint config was found in the repo
 - Problem:
   - `any`
   - `eslint-disable`
   - loosely typed shortcuts
   are not being continuously constrained
-- Impact: code quality drift becomes review-dependent
+- Impact:
+  - local hooks improve discipline, but they are still bypassable and do not replace lint coverage
+  - code quality drift remains partly review-dependent
 - Suggested action:
   - add ESLint
-  - make `check`, `test`, and `lint` required in CI
+  - keep the existing pre-push hook, but add lint coverage rather than treating typecheck/tests as sufficient
+  - if CI is expected to be authoritative, verify that the committed workflow matches ADR 105
   - adopt stricter rules gradually if needed
 
 ### 6. Profiling log flush drops data on failure
@@ -104,10 +108,13 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Relevant area: `flushLog()`
 - Current behavior: fires `fetch('/api/log')` and clears the buffer immediately without failure handling
 - Problem: observability code silently drops logs when the write fails
-- Impact: profiling output becomes less trustworthy
+- Impact:
+  - low production impact because this is a dev-only profiling helper
+  - minor developer ergonomics / trust issue when profiling
 - Suggested action:
   - clear the buffer only on success
   - add `catch` handling and optionally retry or log failure explicitly
+  - treat this as cleanup, not a priority fix
 
 ## Medium / Long-Term
 
@@ -150,7 +157,9 @@ The assessment is based on local code inspection plus the results of `pnpm test`
   - extract behavior around the edges first: persistence, autosave, engine sync, multi-device sync, and pure computation helpers
   - avoid rewrites that replace the reactive model just to reduce file size
 
-## UI / UX
+## UI / UX / Product Questions
+
+These are not all "bugs." Several are product-direction questions that depend on inboil intentionally being a groovebox/instrument rather than a general-purpose productivity app. They should be read as design pressure points or bets to validate, not automatic defects.
 
 ### 8. Header density is high and primary actions compete with status noise
 
@@ -167,6 +176,9 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Problem:
   - primary actions such as play, tempo, and current mode compete visually with secondary status and auxiliary controls
   - first-time users have to work to understand what to touch first
+- Domain caveat:
+  - a groovebox can legitimately favor dense, performance-oriented control surfaces
+  - if the density is intentional for expert flow, the question is whether that density is helping performance or merely accumulating status noise
 - Impact:
   - higher learning cost
   - more visual scanning, especially on narrow layouts
@@ -183,15 +195,16 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Current labels: `SCENE / FX / EQ / MST / PERF`
 - Problem:
   - `SCENE` is the primary composition/playback canvas
-  - `FX / EQ / MST` are processing or editing views
-  - `PERF` is a performance layer
-  These are not the same conceptual level
+  - `FX / EQ / MST / PERF` are now implemented largely as sheet/overlay layers rather than fully equal primary screens
+  - the remaining question is whether the labels and controls communicate that model clearly enough
+- Domain caveat:
+  - ADR 054 already moved the product away from a true equal-sibling view model toward an overlay sheet model
+  - this item should now be read as "make sure the visible controls reflect the implemented hierarchy," not "the hierarchy is missing"
 - Impact:
-  - information architecture is harder to parse
-  - users get weaker cues about what level of the app they are currently in
+  - if labels still feel peer-level while behavior is sheet-based, users may get weaker cues about what level of the app they are currently in
 - Suggested action:
-  - keep Scene as the primary mode
-  - restructure editing views as subordinate layers rather than equal siblings
+  - preserve the current sheet-based model
+  - review whether the header labels, toggles, and transitions make that subordination legible
 
 ### 10. First-run flow is clean but does not strongly activate the core value quickly
 
@@ -200,6 +213,8 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Problem:
   - the first 30 seconds do not strongly guide the user toward the most satisfying interaction loop
   - after demo load, the next best action is still largely implicit
+- Domain caveat:
+  - if inboil is optimized primarily for returning expert use rather than broad onboarding, this may be a lower priority product choice rather than a quality flaw
 - Impact:
   - weaker activation
   - feature complexity can arrive before delight does
@@ -216,6 +231,8 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Problem:
   - it reads more like feature reference than task-oriented help
   - it is weakly connected to the screen the user is currently on
+- Domain caveat:
+  - this may be acceptable if Help is intended mainly as a dense operator reference for existing users
 - Impact:
   - users open Help but still need to translate the content into immediate action
 - Suggested action:
@@ -239,6 +256,9 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 - Problem:
   - this is efficient for users familiar with groovebox/tracker conventions
   - it is less discoverable for users without that background
+- Domain caveat:
+  - this may be a deliberate and defensible product choice
+  - the real question is not whether it is "mainstream-friendly," but whether the current audience benefits enough to justify the learning curve
 - Impact:
   - capability exists but is harder to reach
   - the app can feel harder than it needs to on first contact
@@ -286,6 +306,7 @@ The assessment is based on local code inspection plus the results of `pnpm test`
 
 - The backlog already shows awareness of performance, scaling, and tooling risks
 - The findings here focus on issues most likely to affect reliability, maintainability, and product clarity
+- Not every UI/UX item above should be interpreted as a fix request; some are prompts to re-evaluate product fit against the groovebox/instrument goals
 - The highest-value short-term fixes are:
   - improve `audioPool` dedupe
   - remove `localStorage.clear()`
