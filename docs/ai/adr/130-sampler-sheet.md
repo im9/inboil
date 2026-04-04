@@ -41,15 +41,37 @@ interactions into the browser within inboil's existing architecture.
 Add `'sampler'` to `ui.phraseView` and open a full-width overlay sheet
 following the ADR 054 pattern (SceneView always visible underneath).
 
-**Triggers:**
-- Double-tap sampler track name in DockPanel (existing `openPatternSheet` pattern)
-- Dedicated button in DockTrackEditor when `voiceId === 'Sampler'`
+**Triggers (A+B, two entry points):**
+- **(A) StepGrid track label double-tap** — when the track's voiceId is `'Sampler'`,
+  double-tapping the track label in StepGrid opens the SamplerSheet.
+  Consistent with MatrixView double-tap → PatternSheet pattern.
+  Non-sampler tracks: no action (or existing behaviour).
+- **(B) DockTrackEditor button** — dedicated [PAD] button in the sampler
+  section (alongside LOAD/POOL), visible when `voiceId === 'Sampler'`.
+  Follows existing `openPatternSheet` button pattern in DockPanel.
+
+Double-tap has low discoverability, but the DockPanel button compensates.
+Once learned, double-tap becomes the fast path — same muscle memory as
+hardware gear (Elektron's button combos, MPC's pad→screen shortcuts).
 
 **Dismiss:** Escape, backdrop tap, handle bar (standard sheet behaviour).
 
+**Relationship to PatternSheet:**
+SamplerSheet and PatternSheet are mutually exclusive (`ui.phraseView`
+can be `'sampler'` or `'pattern'`, not both). The SamplerSheet includes
+a **single-track StepGrid row** for the selected sampler track, so the
+user can chop → audition → place steps without leaving the sheet.
+Tracker and PianoRoll views are not available within the SamplerSheet —
+return to PatternSheet for melodic note editing.
+
+**Multi-track sampler handling:**
+The sheet always operates on **one selected track**. When multiple tracks
+use the Sampler voice, a track selector (tabs) appears in the sheet header:
+
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ ◂ SMPL  Track 5: "break"          [LOAD] [POOL] [AUTO] │
+│ [TR3: break] [TR7: vocal] [TR12: bass]                  │
+│ ◂ SMPL  Track 3: "break"          [LOAD] [POOL] [AUTO] │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌─ Waveform ────────────────────────────────────────┐  │
@@ -67,8 +89,14 @@ following the ADR 054 pattern (SceneView always visible underneath).
 │  │ [9 ] [10] [11] [12]│  │                              │  │
 │  │ [13] [14] [15] [16]│  │                              │  │
 │  └─────────────────┘  └──────────────────────────────┘  │
+│                                                         │
+│  ┌─ Step Sequencer (1 track) ────────────────────────┐  │
+│  │ [■][□][■][□] [■][■][□][□] [□][■][□][■] [■][□][□][■] │
+│  └──────────────────────────────────────────────────────┘
 └─────────────────────────────────────────────────────────┘
 ```
+
+Tab switching swaps waveform, pads, params, and step row together.
 
 #### 1.2 Waveform Display
 
