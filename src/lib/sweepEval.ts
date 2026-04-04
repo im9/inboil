@@ -8,31 +8,34 @@ import type { SweepCurve, SweepToggleCurve, SweepData, SweepTarget, SweepToggleT
  *  Returns NaN when progress is before the first recorded point (or empty),
  *  signaling that the previous value should be preserved (carry-over). */
 export function evaluateCurve(points: { t: number; v: number }[], progress: number): number {
-  if (points.length === 0) return NaN
+  const n = points.length
+  if (n === 0) return NaN
   if (progress < points[0].t) return NaN
-  if (progress >= points[points.length - 1].t) return points[points.length - 1].v
-  for (let i = 0; i < points.length - 1; i++) {
-    if (progress >= points[i].t && progress <= points[i + 1].t) {
-      const seg = (progress - points[i].t) / (points[i + 1].t - points[i].t)
-      if (points.length <= 2) {
-        // Linear for 2 points
-        return points[i].v + (points[i + 1].v - points[i].v) * seg
-      }
-      // Catmull-Rom spline for smooth interpolation
-      const p0 = points[Math.max(0, i - 1)]
-      const p1 = points[i]
-      const p2 = points[i + 1]
-      const p3 = points[Math.min(points.length - 1, i + 2)]
-      const t2 = seg * seg, t3 = t2 * seg
-      return 0.5 * (
-        (2 * p1.v) +
-        (-p0.v + p2.v) * seg +
-        (2 * p0.v - 5 * p1.v + 4 * p2.v - p3.v) * t2 +
-        (-p0.v + 3 * p1.v - 3 * p2.v + p3.v) * t3
-      )
-    }
+  if (progress >= points[n - 1].t) return points[n - 1].v
+  // Binary search for the segment containing progress
+  let lo = 0, hi = n - 2
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1
+    if (points[mid + 1].t < progress) lo = mid + 1
+    else hi = mid
   }
-  return 0
+  const i = lo
+  const seg = (progress - points[i].t) / (points[i + 1].t - points[i].t)
+  if (n <= 2) {
+    return points[i].v + (points[i + 1].v - points[i].v) * seg
+  }
+  // Catmull-Rom spline for smooth interpolation
+  const p0 = points[i > 0 ? i - 1 : 0]
+  const p1 = points[i]
+  const p2 = points[i + 1]
+  const p3 = points[i + 2 < n ? i + 2 : n - 1]
+  const t2 = seg * seg, t3 = t2 * seg
+  return 0.5 * (
+    (2 * p1.v) +
+    (-p0.v + p2.v) * seg +
+    (2 * p0.v - 5 * p1.v + 4 * p2.v - p3.v) * t2 +
+    (-p0.v + 3 * p1.v - 3 * p2.v + p3.v) * t3
+  )
 }
 
 /** Evaluate a boolean toggle curve at a given progress (0–1).
