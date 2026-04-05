@@ -185,51 +185,51 @@ library. Update `factory.json` manifest and pool category metadata.
 ### Phase 1 Implementation Checklist
 
 #### Step 1: Sheet skeleton + state wiring
-- [ ] Add `'sampler'` to `ui.phraseView` union type (`state.svelte.ts`)
-- [ ] Add `ui.samplerTrackId: number` state field (which sampler track is open)
-- [ ] Reset `samplerTrackId` in `factoryReset()` and `closeAllSheets()`
-- [ ] Create `SamplerSheet.svelte` — empty shell with `onclose` prop
-- [ ] Mount in `App.svelte` with backdrop + fly transition (ADR 054 pattern)
-- [ ] Wire trigger (C): [PAD] button in `DockTrackEditor` sampler section
-- [ ] Wire trigger (B): double-tap on StepGrid track label (`voiceId === 'Sampler'`)
-- [ ] Wire trigger (A): auto-open sheet when voice changes to Sampler
-- [ ] Verify open/close/Escape/backdrop-tap all work
+- [x] Add `'sampler'` to `ui.phraseView` union type (`state.svelte.ts`)
+- [x] Add `ui.samplerTrackId: number` state field (which sampler track is open)
+- [x] Reset `samplerTrackId` in `factoryReset()` and `closeAllSheets()`
+- [x] Create `SamplerSheet.svelte` — empty shell with `onclose` prop
+- [x] Mount in `App.svelte` with backdrop + fly transition (ADR 054 pattern)
+- [x] Wire trigger (C): [PAD] button in `DockTrackEditor` sampler section
+- [x] Wire trigger (B): double-tap on StepGrid track label (`voiceId === 'Sampler'`)
+- [x] Wire trigger (A): auto-open sheet when voice changes to Sampler
+- [x] Verify open/close/Escape/backdrop-tap all work
 
 #### Step 2: Waveform display
-- [ ] Create `SamplerWaveform.svelte` with dedicated canvas
-- [ ] Generate high-res peak array (2048+ points) from `rawBuffer` on sheet open
-- [ ] Render waveform with zoom slider + horizontal scroll
-- [ ] Draggable start/end handles → update `voiceParams.start` / `voiceParams.end`
-- [ ] Chop slice markers (vertical lines, equal-division from `chopSlices`)
+- [x] Create `SamplerWaveform.svelte` with dedicated canvas
+- [x] Generate high-res peak array (4096 points) from `rawBuffer` on sheet open
+- [x] Render waveform with zoom (wheel) + horizontal scroll (drag)
+- [x] Draggable start/end handles → update `voiceParams.start` / `voiceParams.end`
+- [x] Chop slice markers (vertical lines, equal-division from `chopSlices`)
 - [ ] Active slice highlight on playback
 
 #### Step 3: Pad UI
-- [ ] Create `SamplerPads.svelte` — 4×4 grid (adapts to slice count)
-- [ ] Tap → `noteOn` audition (pad N → `rootNote + N`)
+- [x] Create `SamplerPads.svelte` — 4×4 grid (adapts to slice count)
+- [x] Tap → `noteOn` audition (pad N → `rootNote + N`)
 - [ ] Visual feedback on active slice during playback
-- [ ] Velocity from `PointerEvent.pressure` when available
+- [x] Velocity from `PointerEvent.pressure` when available
 
 #### Step 4: Params in sheet
-- [ ] Create `SamplerParams.svelte` — compact knob layout
-- [ ] Knobs: DCY, STRT, END, PTCH, REV, CHOP, MODE, BPM, LOOP, STRC
-- [ ] Reuse existing `Knob.svelte` component
+- [x] Create `SamplerParams.svelte` — compact knob layout (light mode)
+- [x] Knobs: DCY, STRT, END, PTCH, REV, CHOP, MODE, BPM, LOOP, STRC
+- [x] Reuse existing `Knob.svelte` component
 - [ ] Two-way binding: knob ↔ voiceParams ↔ waveform handles
 
 #### Step 5: DockPanel Pool Browser
-- [ ] Expand `DockPoolBrowser` to full-height list mode when sheet is open
+- [x] Expand `DockPoolBrowser` to full-height list mode when sheet is open
+- [x] Search bar filtering (existing)
+- [x] Tap-to-audition, double-tap-to-assign (existing)
+- [x] Hide track param knobs in Dock while sampler sheet is open
 - [ ] Category groups (collapsible) with waveform thumbnails
-- [ ] Search bar filtering
-- [ ] Tap-to-audition, double-tap-to-assign
-- [ ] Hide track param knobs in Dock while sampler sheet is open
 
 #### Step 6: Embedded step sequencer
-- [ ] Single-track StepGrid row inside SamplerSheet
-- [ ] Extract reusable step row from existing `StepGrid.svelte`
+- [x] Single-track `SamplerStepRow.svelte` inside SamplerSheet
+- [x] 16-step paging with page indicator (Octatrack-style)
 - [ ] Pad tap while holding step → write note/slice into sequencer
 
 #### Step 7: Mobile layout
-- [ ] Full-width waveform (reduced height) on mobile
-- [ ] Pads + params stacked vertically, scrollable
+- [x] SamplerSheet mounts as mobile overlay with handle bar
+- [x] Pads + params stacked vertically, scrollable
 - [ ] Pool browser as full-height dock or bottom sheet
 
 ### Phase 2: Auto-Chop + Sample Mangling
