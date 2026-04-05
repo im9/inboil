@@ -334,7 +334,7 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
-  patternEditor: 'grid' | 'tracker'
+  patternEditor: 'grid' | 'pads' | 'tracker'
   showGuide: boolean
   randomGenre: string
   lastProjectId: string | null
@@ -383,7 +383,7 @@ export const lang = $state<{ value: Lang }>({ value: initialPrefs.lang })
 export const prefs = $state({
   visited: initialPrefs.visited,
   scaleMode: initialPrefs.scaleMode,
-  patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
+  patternEditor: initialPrefs.patternEditor as 'grid' | 'pads' | 'tracker',
   showGuide: initialPrefs.showGuide,
   randomGenre: initialPrefs.randomGenre,
 })
@@ -409,8 +409,8 @@ export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode
   savePrefs()
 }
-export function togglePatternEditor(): void {
-  prefs.patternEditor = prefs.patternEditor === 'grid' ? 'tracker' : 'grid'
+export function setPatternEditor(mode: 'grid' | 'pads' | 'tracker'): void {
+  prefs.patternEditor = mode
   savePrefs()
 }
 export function toggleShowGuide(): void {

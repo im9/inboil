@@ -1,6 +1,6 @@
 <script lang="ts">
   // NOTE: Large file by design — settings toggles + jam session UI are a single sidebar panel
-  import { lang, prefs, session, midiIn, toggleScaleMode, togglePatternEditor, toggleShowGuide, toggleLang } from '../state.svelte.ts'
+  import { lang, prefs, session, midiIn, toggleScaleMode, toggleShowGuide, toggleLang } from '../state.svelte.ts'
   import { initMidi, startListening, stopListening } from '../midi.ts'
   import { startHost, joinAsGuest, disconnect } from '../multiDevice/connection.ts'
   import { resetDeltaSync } from '../multiDevice/deltaSync.ts'
@@ -53,17 +53,6 @@
 
 <!-- ── SETTINGS tab ── -->
 <div class="settings-section">
-  <div class="setting-row">
-    <div class="setting-row-text">
-      <span class="setting-row-label">{L === 'ja' ? 'パターン入力' : 'PATTERN INPUT'}</span>
-      <span class="setting-row-desc">{L === 'ja'
-        ? (prefs.patternEditor === 'grid' ? 'グリッド — タップでリズム入力' : 'トラッカー — 数値で精密入力')
-        : (prefs.patternEditor === 'grid' ? 'Grid — tap to edit rhythm' : 'Tracker — precise numeric entry')}</span>
-    </div>
-    <button class="btn-toggle" onpointerdown={togglePatternEditor}>
-      {prefs.patternEditor === 'grid' ? 'GRID' : 'TRKR'}
-    </button>
-  </div>
   <div class="setting-row">
     <div class="setting-row-text">
       <span class="setting-row-label">{L === 'ja' ? 'スケール制限' : 'SCALE LOCK'}</span>
