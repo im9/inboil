@@ -41,18 +41,21 @@ interactions into the browser within inboil's existing architecture.
 Add `'sampler'` to `ui.phraseView` and open a full-width overlay sheet
 following the ADR 054 pattern (SceneView always visible underneath).
 
-**Triggers (A+B, two entry points):**
-- **(A) StepGrid track label double-tap** — when the track's voiceId is `'Sampler'`,
+**Triggers (A+B+C, three entry points):**
+- **(A) Voice selection** — when `voiceId` is changed to `'Sampler'` in DockPanel,
+  `ui.phraseView` automatically switches to `'sampler'` and the DockPanel
+  transitions to Pool Browser mode (see 1.4). This is the primary entry point.
+- **(B) StepGrid track label double-tap** — when the track's voiceId is `'Sampler'`,
   double-tapping the track label in StepGrid opens the SamplerSheet.
   Consistent with MatrixView double-tap → PatternSheet pattern.
   Non-sampler tracks: no action (or existing behaviour).
-- **(B) DockTrackEditor button** — dedicated [PAD] button in the sampler
-  section (alongside LOAD/POOL), visible when `voiceId === 'Sampler'`.
+- **(C) DockTrackEditor button** — dedicated [PAD] button in the sampler
+  section, visible when `voiceId === 'Sampler'`.
   Follows existing `openPatternSheet` button pattern in DockPanel.
 
-Double-tap has low discoverability, but the DockPanel button compensates.
-Once learned, double-tap becomes the fast path — same muscle memory as
-hardware gear (Elektron's button combos, MPC's pad→screen shortcuts).
+Voice selection (A) gives zero-friction entry — sampler-specific layout
+appears immediately. Double-tap (B) is the fast path once learned.
+DockPanel button (C) is the discoverable fallback.
 
 **Dismiss:** Escape, backdrop tap, handle bar (standard sheet behaviour).
 
@@ -69,32 +72,37 @@ The sheet always operates on **one selected track**. When multiple tracks
 use the Sampler voice, a track selector (tabs) appears in the sheet header:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [TR3: break] [TR7: vocal] [TR12: bass]                  │
-│ ◂ SMPL  Track 3: "break"          [LOAD] [POOL] [AUTO] │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌─ Waveform ────────────────────────────────────────┐  │
-│  │ ▏  ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕ │  │
-│  │ ▏██▕│▕██  ▕│▕ ██ ▕│▕██  ▕│▕ ██ ▕│▕██  ▕│▕ ██ ▕│▕ │  │
-│  │ ▏██▕│▕████▕│▕████▕│▕████▕│▕████▕│▕████▕│▕████▕│▕ │  │
-│  │ ▏  ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕ │  │
-│  │ S              │ markers             │            E  │
-│  └──────────────────────────────────────────────────────┘
-│  [zoom ─────●───────] [scroll ────●─────────]           │
-│                                                         │
-│  ┌─ Pads ──────────┐  ┌─ Params ─────────────────────┐  │
-│  │ [1 ] [2 ] [3 ] [4 ]│  │ DCY  STRT  END  PTCH  REV  │  │
-│  │ [5 ] [6 ] [7 ] [8 ]│  │ CHOP MODE  BPM  LOOP  STRC │  │
-│  │ [9 ] [10] [11] [12]│  │                              │  │
-│  │ [13] [14] [15] [16]│  │                              │  │
-│  └─────────────────┘  └──────────────────────────────┘  │
-│                                                         │
-│  ┌─ Step Sequencer (1 track) ────────────────────────┐  │
-│  │ [■][□][■][□] [■][■][□][□] [□][■][□][■] [■][□][□][■] │
-│  └──────────────────────────────────────────────────────┘
-└─────────────────────────────────────────────────────────┘
+ DockPanel (280px)              SamplerSheet (overlay)
+┌─────────────────┐  ┌──────────────────────────────────────────┐
+│ SMPL ▼          │  │ [TR3: break] [TR7: vocal] [TR12: bass]   │
+│                 │  │ ◂ SMPL  Track 3: "break"        [AUTO]   │
+│ ┌─ Pool ──────┐ │  ├──────────────────────────────────────────┤
+│ │ [🔍 search ]│ │  │                                          │
+│ │             │ │  │  ┌─ Waveform ─────────────────────────┐  │
+│ │ ▸ kicks     │ │  │  │ ▏  ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│ │  │
+│ │   kick-808  │ │  │  │ ▏██▕│▕██  ▕│▕ ██ ▕│▕████▕│▕ ██ ▕│ │  │
+│ │   kick-909  │ │  │  │ S                  markers        E  │
+│ │   kick-lo…  │ │  │  └────────────────────────────────────┘  │
+│ │ ▸ snares    │ │  │  [zoom ────●──────] [scroll ───●──────]  │
+│ │ ▸ claps     │ │  │                                          │
+│ │ ▸ hats      │ │  │  ┌─ Pads ────────┐  ┌─ Params ───────┐  │
+│ │ ▸ loops     │ │  │  │ [1] [2] [3] [4]│  │ DCY STRT END   │  │
+│ │ ▸ vocal     │ │  │  │ [5] [6] [7] [8]│  │ PTCH REV CHOP  │  │
+│ │ ▸ user      │ │  │  │ [9] [10][11][12]│  │ MODE BPM LOOP  │  │
+│ │             │ │  │  │ [13][14][15][16]│  │ STRC           │  │
+│ │  [LOAD]     │ │  │  └────────────────┘  └────────────────┘  │
+│ └─────────────┘ │  │                                          │
+│                 │  │  ┌─ Step Sequencer (1 track) ──────────┐  │
+└─────────────────┘  │  │ [■][□][■][□] [■][■][□][□] [□][■]…  │  │
+                     │  └─────────────────────────────────────┘  │
+                     └──────────────────────────────────────────┘
 ```
+
+**Role separation:** DockPanel becomes the sample browser (Pool list with
+search and categories). SamplerSheet owns waveform, pads, params, and
+step sequencer. Selecting a sample in Pool immediately loads it into the
+sheet's waveform display. This avoids duplicating the browser UI and
+gives Pool more vertical space than either a dropdown or in-sheet panel.
 
 Tab switching swaps waveform, pads, params, and step row together.
 
@@ -129,16 +137,24 @@ for a full-width display; decode the raw buffer to a higher-res peak array
 Pads sit alongside a compact param section so the sheet is self-contained —
 user doesn't need to switch back to DockPanel.
 
-#### 1.4 Sample Browser in Sheet
+#### 1.4 DockPanel Pool Browser (expanded mode)
 
-When POOL is tapped in the sheet header, the browser opens as a side panel
-within the sheet (not a DockPanel dropdown):
+When `voiceId === 'Sampler'` and SamplerSheet is open, DockPanel switches
+from the usual track-param knobs to an expanded Pool Browser view. This
+replaces the cramped dropdown with a full-height list that leverages the
+entire Dock height.
 
-- Full-height list with waveform previews
-- Category filter tabs (kicks, snares, loops, user, etc.)
-- Search (existing logic, more space)
-- Tap to audition, double-tap or drag to assign
-- Factory pack support preserved (multi-zone instruments)
+- **Full-height scrollable list** with waveform thumbnails per sample
+- **Category filter** — collapsible groups (kicks, snares, claps, hats,
+  loops, vocal, FX, user) with expand/collapse
+- **Search bar** at top — filters across all categories
+- **Tap to audition** — sends preview noteOn
+- **Double-tap or Enter to assign** — loads into current track's cell
+- **[LOAD] button** — file import from disk (existing `loadSample` flow)
+- **Factory pack support preserved** (multi-zone instruments)
+
+This keeps browsing in the Dock (where list UIs belong) and editing in
+the Sheet (where spatial UIs belong). No browser duplication needed.
 
 #### 1.5 Factory Sample Expansion
 
@@ -165,6 +181,56 @@ within the sheet (not a DockPanel dropdown):
 library. Update `factory.json` manifest and pool category metadata.
 
 **Licensing:** update `LICENSE-SAMPLES` with per-file attribution for CC0 sources.
+
+### Phase 1 Implementation Checklist
+
+#### Step 1: Sheet skeleton + state wiring
+- [ ] Add `'sampler'` to `ui.phraseView` union type (`state.svelte.ts`)
+- [ ] Add `ui.samplerTrackId: number` state field (which sampler track is open)
+- [ ] Reset `samplerTrackId` in `factoryReset()` and `closeAllSheets()`
+- [ ] Create `SamplerSheet.svelte` — empty shell with `onclose` prop
+- [ ] Mount in `App.svelte` with backdrop + fly transition (ADR 054 pattern)
+- [ ] Wire trigger (C): [PAD] button in `DockTrackEditor` sampler section
+- [ ] Wire trigger (B): double-tap on StepGrid track label (`voiceId === 'Sampler'`)
+- [ ] Wire trigger (A): auto-open sheet when voice changes to Sampler
+- [ ] Verify open/close/Escape/backdrop-tap all work
+
+#### Step 2: Waveform display
+- [ ] Create `SamplerWaveform.svelte` with dedicated canvas
+- [ ] Generate high-res peak array (2048+ points) from `rawBuffer` on sheet open
+- [ ] Render waveform with zoom slider + horizontal scroll
+- [ ] Draggable start/end handles → update `voiceParams.start` / `voiceParams.end`
+- [ ] Chop slice markers (vertical lines, equal-division from `chopSlices`)
+- [ ] Active slice highlight on playback
+
+#### Step 3: Pad UI
+- [ ] Create `SamplerPads.svelte` — 4×4 grid (adapts to slice count)
+- [ ] Tap → `noteOn` audition (pad N → `rootNote + N`)
+- [ ] Visual feedback on active slice during playback
+- [ ] Velocity from `PointerEvent.pressure` when available
+
+#### Step 4: Params in sheet
+- [ ] Create `SamplerParams.svelte` — compact knob layout
+- [ ] Knobs: DCY, STRT, END, PTCH, REV, CHOP, MODE, BPM, LOOP, STRC
+- [ ] Reuse existing `Knob.svelte` component
+- [ ] Two-way binding: knob ↔ voiceParams ↔ waveform handles
+
+#### Step 5: DockPanel Pool Browser
+- [ ] Expand `DockPoolBrowser` to full-height list mode when sheet is open
+- [ ] Category groups (collapsible) with waveform thumbnails
+- [ ] Search bar filtering
+- [ ] Tap-to-audition, double-tap-to-assign
+- [ ] Hide track param knobs in Dock while sampler sheet is open
+
+#### Step 6: Embedded step sequencer
+- [ ] Single-track StepGrid row inside SamplerSheet
+- [ ] Extract reusable step row from existing `StepGrid.svelte`
+- [ ] Pad tap while holding step → write note/slice into sequencer
+
+#### Step 7: Mobile layout
+- [ ] Full-width waveform (reduced height) on mobile
+- [ ] Pads + params stacked vertically, scrollable
+- [ ] Pool browser as full-height dock or bottom sheet
 
 ### Phase 2: Auto-Chop + Sample Mangling
 
@@ -303,13 +369,19 @@ sample mangling.
 
 ## Considerations
 
-### Why a dedicated sheet instead of enlarging DockPanel?
+### Why split DockPanel (browse) + Sheet (edit)?
 
-DockPanel is 280px and shared by all 20 voice types. Enlarging it would waste
-space for synths that don't need it. A sheet is contextual — appears only when
-the user is actively editing a sampler track, provides full viewport width,
-and follows the established overlay pattern (FX, EQ, Master, generative views
-all use sheets).
+DockPanel is 280px — too narrow for waveform editing and pads, but ideal for
+scrollable lists. Rather than duplicating the browser inside the sheet or
+cramming spatial UI into the dock, each surface does what it's good at:
+
+- **DockPanel** → list-based browsing (Pool, categories, search)
+- **SamplerSheet** → spatial editing (waveform, pads, knobs, step sequencer)
+
+When `voiceId === 'Sampler'`, the dock automatically becomes the Pool Browser
+and the sheet opens. Selecting a sample in the dock immediately reflects in
+the sheet's waveform. This is a natural split that avoids both the "cramped
+dropdown" problem and the "browser panel inside sheet" complexity.
 
 ### Why not a separate full view?
 
@@ -323,7 +395,7 @@ The sheet must work on mobile:
 - Waveform spans full width, reduced height
 - Pads below waveform in a scrollable region
 - Params collapse into a row of mini-knobs or a swipeable param strip
-- Browser opens as a full-screen sub-sheet on mobile
+- Pool Browser in dock uses standard mobile dock behaviour
 
 ### Variable-length slices (Phase 2)
 

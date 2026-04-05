@@ -21,6 +21,7 @@
   import TonnetzSheet from './lib/components/TonnetzSheet.svelte'
   import QuantizerSheet from './lib/components/QuantizerSheet.svelte'
   import TuringSheet from './lib/components/TuringSheet.svelte'
+  import SamplerSheet from './lib/components/SamplerSheet.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import { markScenePlayStart, getInitialAutomationSnapshot, clearInitialAutomationSnapshot } from './lib/scenePlayback.ts'
@@ -363,6 +364,7 @@
     ui.tonnetzNodeId = null
     ui.quantizerNodeId = null
     ui.turingNodeId = null
+    ui.samplerTrackId = null
   }
 
   function toggleLoop() {
@@ -381,7 +383,7 @@
     }
   }
 
-  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf' || ui.phraseView === 'tonnetz' || ui.phraseView === 'quantizer' || ui.phraseView === 'turing')
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf' || ui.phraseView === 'tonnetz' || ui.phraseView === 'quantizer' || ui.phraseView === 'turing' || ui.phraseView === 'sampler')
 
   // ── Keyboard routing (ADR 115) ─────────────────────────────────
 
@@ -495,6 +497,12 @@
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
               <TuringSheet onclose={closeAllSheets} />
+            </div>
+          {:else if ui.phraseView === 'sampler'}
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+              <SamplerSheet onclose={closeAllSheets} />
             </div>
           {:else if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->

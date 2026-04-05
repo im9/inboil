@@ -30,6 +30,16 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
+  // ADR 130: auto-open SamplerSheet when voice changes to Sampler
+  let prevIsSampler = false
+  $effect(() => {
+    if (isSampler && !prevIsSampler) {
+      ui.phraseView = 'sampler'
+      ui.samplerTrackId = track?.id ?? ui.selectedTrack
+    }
+    prevIsSampler = isSampler
+  })
+
   // ── Voice picker ──
   let voicePickerRef = $state<VoicePicker>(null!)
   let presetBrowserRef = $state<DockPresetBrowser>(null!)
@@ -111,6 +121,10 @@
         onpointerdown={() => poolOpen = !poolOpen}
         data-tip="Browse sample pool" data-tip-ja="サンプルプールから選択"
       >POOL</button>
+      <button class="btn-load" class:btn-active={ui.phraseView === 'sampler'}
+        onpointerdown={() => { ui.phraseView = 'sampler'; ui.samplerTrackId = track?.id ?? ui.selectedTrack }}
+        data-tip="Open sampler sheet" data-tip-ja="サンプラーシートを開く"
+      >PAD</button>
       <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || (currentSample?.packId ? '🎹 ' : '') + (currentSample?.name || '') || 'Drop audio file'}</span>
     </div>
     <canvas bind:this={waveformCanvas} class="waveform-canvas"></canvas>
