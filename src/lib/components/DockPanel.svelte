@@ -1,6 +1,6 @@
 <script lang="ts">
   // NOTE: Large file by design — scene/pattern bidirectional mapping + modifier walkback + sheet triggering are tightly coupled
-  import { song, ui, playback, selectPattern, lang, cellForTrack } from '../state.svelte.ts'
+  import { song, ui, prefs, playback, selectPattern, lang, cellForTrack } from '../state.svelte.ts'
   import type { SceneNode, ModifierType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams, findConnectedSweepNode } from '../sceneActions.ts'
@@ -14,8 +14,19 @@
   import DockPoolBrowser from './DockPoolBrowser.svelte'
   import VoicePicker from './VoicePicker.svelte'
 
+  // FX/EQ/Master overlay sheets use split layout
+  const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
+  // ADR 130: Pads tab + sampler voice → dock becomes pool browser
+  const padsTabSampler = $derived(
+    prefs.patternEditor === 'pads'
+    && ui.patternSheet
+    && cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack)?.voiceId === 'Sampler'
+  )
+  // ADR 130: Pads tab + sampler voice → dock becomes full-height pool browser
+  const isSamplerSheet = $derived(padsTabSampler)
+
   // Sampler dock: track selector + voice picker above pool browser
-  const samplerCell = $derived(ui.samplerTrackId != null ? cellForTrack(song.patterns[ui.currentPattern], ui.samplerTrackId) : undefined)
+  const samplerCell = $derived(padsTabSampler ? cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack) : undefined)
   const samplerTracks = $derived(
     song.tracks.filter(t => {
       const c = cellForTrack(song.patterns[ui.currentPattern], t.id)
@@ -24,23 +35,8 @@
   )
 
   function selectSamplerTrack(id: number) {
-    ui.samplerTrackId = id
     ui.selectedTrack = id
   }
-
-  // Exit sampler mode when voice is changed away from Sampler
-  $effect(() => {
-    if (ui.phraseView === 'sampler' && samplerCell && samplerCell.voiceId !== 'Sampler') {
-      ui.phraseView = 'pattern'
-      ui.samplerTrackId = null
-      ui.patternSheet = true
-    }
-  })
-
-  // FX/EQ/Master overlay sheets use split layout
-  const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
-  // ADR 130: SamplerSheet open → dock becomes full-height pool browser
-  const isSamplerSheet = $derived(ui.phraseView === 'sampler')
 
   // Pattern header: always shown (except during overlay sheets)
   const showPatternHeader = $derived(!isOverlaySheet)
@@ -169,7 +165,7 @@
           class="dock-tab"
           role="tab"
           aria-selected={false}
-          onpointerdown={() => { ui.dockTab = 'scene'; ui.phraseView = 'pattern'; ui.samplerTrackId = null; ui.patternSheet = true }}
+          onpointerdown={() => { ui.dockTab = 'scene'; ui.patternSheet = true }}
         >SCENE{#if sceneTabCount > 0}<span class="dock-tab-badge">{sceneTabCount}</span>{/if}</button>
       </div>
 
@@ -180,7 +176,7 @@
             {@const c = cellForTrack(song.patterns[ui.currentPattern], t.id)}
             <button
               class="sampler-track-tab"
-              class:active={t.id === ui.samplerTrackId}
+              class:active={t.id === ui.selectedTrack}
               onpointerdown={() => selectSamplerTrack(t.id)}
             >TR{t.id + 1}: {c?.name ?? ''}</button>
           {/each}
@@ -189,7 +185,7 @@
 
       <!-- Voice picker -->
       {#if samplerCell}
-        <VoicePicker voiceId={samplerCell.voiceId} trackId={ui.samplerTrackId ?? ui.selectedTrack} />
+        <VoicePicker voiceId={samplerCell.voiceId} trackId={ui.selectedTrack ?? ui.selectedTrack} />
       {/if}
 
       <div class="section-divider" aria-hidden="true"></div>
@@ -198,7 +194,7 @@
     <div class="pool-header">
       <span class="section-label">SAMPLE POOL</span>
     </div>
-    <DockPoolBrowser trackId={ui.samplerTrackId ?? ui.selectedTrack} />
+    <DockPoolBrowser trackId={ui.selectedTrack ?? ui.selectedTrack} />
   </div>
   {:else if isOverlaySheet}
   <!-- Split layout: scene navigator (upper) + overlay controls (lower) -->

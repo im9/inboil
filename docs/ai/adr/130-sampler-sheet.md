@@ -193,7 +193,7 @@ switch to any mode at any time.
 **Mode availability:**
 | Voice type | TRACK | SLICE | NOTE |
 |------------|-------|-------|------|
-| Sampler    | yes   | yes   | no   |
+| Sampler    | yes   | yes   | yes  |
 | Synth/Drum | yes   | no    | yes  |
 
 This tri-mode design means the Pads view works as a complete
@@ -278,55 +278,55 @@ library. Update `factory.json` manifest and pool category metadata.
 ### Phase 1 Implementation Checklist
 
 #### Step 1: Round out tab component + state wiring
-- [ ] Extend `prefs.patternEditor` type to `'grid' | 'pads' | 'tracker'`
-- [ ] Create `PatternModeTabs.svelte` — round out tab bar component
-- [ ] Mount tabs at top of pattern sheet in `App.svelte`
-- [ ] Wire tab clicks to set `prefs.patternEditor` directly
-- [ ] Remove system sidebar toggle (`togglePatternEditor`)
-- [ ] Verify Grid and Tracker render unchanged under new tab bar
+- [x] Extend `prefs.patternEditor` type to `'grid' | 'pads' | 'tracker'`
+- [x] Create `PatternModeTabs.svelte` — round out tab bar component
+- [x] Mount tabs at top of pattern sheet in `App.svelte`
+- [x] Wire tab clicks to set `prefs.patternEditor` directly
+- [x] Remove system sidebar toggle (`togglePatternEditor`)
+- [x] Verify Grid and Tracker render unchanged under new tab bar
 
 #### Step 2: Pads view skeleton
-- [ ] Refactor `SamplerSheet.svelte` → `PadsView.svelte` (remove overlay shell, keep layout)
-- [ ] Mount in pattern sheet when `prefs.patternEditor === 'pads'`
-- [ ] Track selection state: use `ui.selectedTrack` (existing)
-- [ ] Layout: flex column — viz top, pads+params middle, step row bottom
+- [x] Refactor `SamplerSheet.svelte` → `PadsView.svelte` (remove overlay shell, keep layout)
+- [x] Mount in pattern sheet when `prefs.patternEditor === 'pads'`
+- [x] Track selection state: use `ui.selectedTrack` (existing)
+- [x] Layout: flex column — viz top, pads+params middle, step row bottom
 
 #### Step 3: Pad tri-mode (TRACK / SLICE / NOTE)
-- [ ] Add 3-way mode switch above pad area (olive tier)
-- [ ] Refactor `SamplerPads.svelte` → tri-mode pad component
-- [ ] TRACK mode: pads show instrument labels, tap to select track
-- [ ] SLICE mode: pads trigger slices (existing behavior, sampler only)
-- [ ] NOTE mode: chromatic pads with note labels + OCT ▲▼ (non-sampler)
-- [ ] Auto-switch: sampler → SLICE, non-sampler → NOTE
-- [ ] Mode availability: TRACK always, SLICE/NOTE by voice type
-- [ ] Active track / active slice / active note highlight
+- [x] Add 3-way mode switch above pad area (olive tier)
+- [x] Refactor `SamplerPads.svelte` → tri-mode pad component
+- [x] TRACK mode: pads show instrument labels, tap to select track
+- [x] SLICE mode: pads trigger slices (existing behavior, sampler only)
+- [x] NOTE mode: chromatic pads with note labels + OCT ▲▼ (non-sampler)
+- [x] Auto-switch: sampler → SLICE, non-sampler → NOTE
+- [x] Mode availability: TRACK always, SLICE/NOTE by voice type
+- [x] Active track / active slice / active note highlight
 
 #### Step 4: Waveform / voice viz area
-- [ ] Mount `SamplerWaveform.svelte` for sampler voice tracks
-- [ ] Blank/placeholder for non-sampler voices (future viz)
-- [ ] Draggable start/end handles (existing)
-- [ ] Chop markers (existing)
-- [ ] Active slice highlight on playback
+- [x] Mount `SamplerWaveform.svelte` for sampler voice tracks
+- [x] Blank/placeholder for non-sampler voices (future viz)
+- [x] Draggable start/end handles (existing)
+- [x] Chop markers (existing)
+- [x] Active slice highlight on playback
 
 #### Step 5: Params + step row for any voice
-- [ ] Mount `SamplerParams.svelte` for sampler voice
-- [ ] Non-sampler: params area empty (use DockPanel for editing)
-- [ ] Mount `SamplerStepRow.svelte` for selected track (any voice)
-- [ ] P-Lock mode integration
+- [x] Mount `SamplerParams.svelte` for sampler voice
+- [x] Non-sampler: params area empty (use DockPanel for editing)
+- [x] Mount `SamplerStepRow.svelte` for selected track (any voice)
+- [x] P-Lock mode integration
 
 #### Step 6: DockPanel pool browser integration
-- [ ] DockPanel auto-switches to Pool Browser when Pads tab active
+- [x] DockPanel auto-switches to Pool Browser when Pads tab active
   AND selected track is sampler voice
-- [ ] Normal track params shown for non-sampler voices
-- [ ] Search, tap-to-audition, double-tap-to-assign (existing)
+- [x] Normal track params shown for non-sampler voices
+- [x] Search, tap-to-audition, double-tap-to-assign (existing)
 
 #### Step 7: Cleanup + mobile
-- [ ] Remove SamplerSheet overlay code from App.svelte
-- [ ] Remove `ui.phraseView === 'sampler'` overlay path
-- [ ] Remove `ui.samplerTrackId` (use `ui.selectedTrack` instead)
-- [ ] Remove sampler-specific triggers (A/B/C entry points)
+- [x] Remove SamplerSheet overlay code from App.svelte
+- [x] Remove `ui.phraseView === 'sampler'` overlay path
+- [x] Remove `ui.samplerTrackId` (use `ui.selectedTrack` instead)
+- [x] Remove sampler-specific triggers (A/B/C entry points)
 - [ ] Mobile: tabs stack or scroll, view scrollable vertically
-- [ ] Verify Escape/backdrop still works for other overlay sheets
+- [x] Verify Escape/backdrop still works for other overlay sheets
 
 ### Phase 2: Auto-Chop + Sample Mangling
 

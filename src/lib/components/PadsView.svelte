@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { song, ui, cellForTrack, ensureCells, samplesByCell, sampleCellKey, pushUndo, playback } from '../state.svelte.ts'
+  import { song, ui, cellForTrack, samplesByCell, sampleCellKey, pushUndo, playback, vkbd } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import SamplerWaveform from './SamplerWaveform.svelte'
   import SamplerPads from './SamplerPads.svelte'
@@ -10,6 +10,23 @@
   const trackId = $derived(ui.selectedTrack)
   const cell = $derived(cellForTrack(song.patterns[ui.currentPattern], trackId))
   const isSampler = $derived(cell?.voiceId === 'Sampler')
+
+  // Auto-switch pad mode when voice type changes
+  // Only switch away from unavailable modes — TRACK is always valid
+  $effect(() => {
+    if (isSampler && ui.padMode === 'note') {
+      ui.padMode = 'slice'
+    } else if (!isSampler && ui.padMode === 'slice') {
+      ui.padMode = 'note'
+    }
+  })
+
+  // Available modes: TRACK always, SLICE sampler only, NOTE always
+  const availableModes = $derived(
+    isSampler
+      ? (['track', 'slice', 'note'] as const)
+      : (['track', 'note'] as const)
+  )
 
   // Current sample data for waveform (sampler only)
   const currentSample = $derived(
@@ -53,6 +70,13 @@
     pushUndo('Set step note')
     setTrigNote(trackId, ui.selectedStep, note)
   }
+
+  // Octave controls for NOTE mode
+  function shiftOctave(dir: 1 | -1) {
+    const next = vkbd.octave + dir
+    if (next < 2 || next > 7) return
+    vkbd.octave = next
+  }
 </script>
 
 <div class="pads-view">
@@ -67,34 +91,33 @@
     onchangeend={isSampler ? onChangeEnd : undefined}
   />
 
-  <!-- Pads + Steps/Params (same layout as SamplerSheet) -->
+  <!-- Pads + Steps/Params -->
   <div class="bottom-row">
     <div class="col-pads">
-      {#if isSampler}
-        <SamplerPads
-          trackId={trackId}
-          rootNote={cell?.voiceParams?.rootNote ?? 60}
-          activeSlice={activeSlice}
-          onpadtap={onPadTap}
-        />
-      {:else}
-        <div class="track-pads">
-          {#each Array(16) as _, i}
-            {@const t = song.tracks[i]}
-            {@const c = t ? cellForTrack(song.patterns[ui.currentPattern], t.id) : undefined}
-            <button
-              class="track-pad"
-              class:active={t != null && t.id === trackId}
-              class:empty={t == null}
-              disabled={t == null}
-              onpointerdown={t ? () => {
-                ensureCells(song.patterns[ui.currentPattern])
-                ui.selectedTrack = t.id
-              } : undefined}
-            >{c?.name ?? (t ? `TR${t.id + 1}` : '')}</button>
-          {/each}
-        </div>
-      {/if}
+      <!-- Mode switch -->
+      <div class="mode-switch">
+        {#each availableModes as m}
+          <button
+            class="mode-btn"
+            class:active={ui.padMode === m}
+            onpointerdown={() => { ui.padMode = m }}
+          >{m.toUpperCase()}</button>
+        {/each}
+        {#if ui.padMode === 'note'}
+          <span class="oct-label">OCT</span>
+          <button class="oct-btn" onpointerdown={() => shiftOctave(1)}>▲</button>
+          <button class="oct-btn" onpointerdown={() => shiftOctave(-1)}>▼</button>
+          <span class="oct-val">{vkbd.octave}</span>
+        {/if}
+      </div>
+      <SamplerPads
+        trackId={trackId}
+        mode={ui.padMode}
+        rootNote={cell?.voiceParams?.rootNote ?? 60}
+        activeSlice={activeSlice}
+        octave={vkbd.octave}
+        onpadtap={onPadTap}
+      />
     </div>
     <div class="col-right">
       <SamplerStepRow trackId={trackId} />
@@ -106,7 +129,6 @@
 </div>
 
 <style>
-  /* ── Layout: identical to SamplerSheet minus overlay shell ── */
   .pads-view {
     display: flex;
     flex-direction: column;
@@ -128,6 +150,9 @@
     flex-shrink: 0;
     height: 100%;
     aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .col-right {
@@ -139,45 +164,70 @@
     min-height: 0;
   }
 
-  /* Track selector pads (TRACK mode, non-sampler) */
-  .track-pads {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(4, 1fr);
+  /* ── Mode switch (olive tier) ── */
+  .mode-switch {
+    display: flex;
+    align-items: center;
     gap: 2px;
-    width: 100%;
-    height: 100%;
+    flex-shrink: 0;
   }
 
-  .track-pad {
+  .mode-btn {
+    border: 1.5px solid var(--color-olive);
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-olive);
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .mode-btn.active {
+    background: var(--color-olive);
+    color: var(--color-bg);
+  }
+
+  /* ── Octave controls ── */
+  .oct-label {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--lz-text-hint);
+    margin-left: 8px;
+  }
+
+  .oct-btn {
+    border: 1.5px solid var(--color-olive);
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-olive);
+    font-size: 10px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    cursor: pointer;
+    touch-action: manipulation;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--lz-border-strong);
-    background: transparent;
-    color: var(--color-fg);
+  }
+
+  .oct-btn:active {
+    background: var(--olive-bg-subtle);
+  }
+
+  .oct-val {
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: var(--fs-sm);
     font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    cursor: pointer;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 2px;
-  }
-
-  .track-pad.active {
-    background: var(--color-olive);
-    color: var(--color-bg);
-    border-color: var(--color-olive);
-  }
-
-  .track-pad.empty {
-    border-color: var(--lz-border);
-    background: var(--lz-bg-hover);
-    cursor: default;
+    color: var(--color-olive);
+    min-width: 12px;
+    text-align: center;
   }
 
   @media (max-width: 639px) {

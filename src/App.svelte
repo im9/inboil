@@ -21,7 +21,6 @@
   import TonnetzSheet from './lib/components/TonnetzSheet.svelte'
   import QuantizerSheet from './lib/components/QuantizerSheet.svelte'
   import TuringSheet from './lib/components/TuringSheet.svelte'
-  import SamplerSheet from './lib/components/SamplerSheet.svelte'
   import PatternModeTabs from './lib/components/PatternModeTabs.svelte'
   import PadsView from './lib/components/PadsView.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
@@ -366,7 +365,6 @@
     ui.tonnetzNodeId = null
     ui.quantizerNodeId = null
     ui.turingNodeId = null
-    ui.samplerTrackId = null
   }
 
   function toggleLoop() {
@@ -385,7 +383,7 @@
     }
   }
 
-  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf' || ui.phraseView === 'tonnetz' || ui.phraseView === 'quantizer' || ui.phraseView === 'turing' || ui.phraseView === 'sampler')
+  const hasSheet = $derived(ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf' || ui.phraseView === 'tonnetz' || ui.phraseView === 'quantizer' || ui.phraseView === 'turing')
 
   // ── Keyboard routing (ADR 115) ─────────────────────────────────
 
@@ -452,15 +450,7 @@
       <MobileTrackView />
       <MobileSceneRibbon onplay={play} onstop={stop} />
       <!-- Overlay sheets (mobile: FX / EQ / Master / Perf) -->
-      {#if ui.phraseView === 'sampler'}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-        <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
-          <SamplerSheet onclose={closeAllSheets} />
-        </div>
-      {:else if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf'}
+      {#if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf'}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
@@ -508,21 +498,16 @@
             <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
               <TuringSheet onclose={closeAllSheets} />
             </div>
-          {:else if ui.phraseView === 'sampler'}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <SamplerSheet onclose={closeAllSheets} />
-            </div>
           {:else if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+            <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
             {#if ui.patternSheet && !(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')}
-              <div class="pattern-tabs" transition:fly={{ y: 12, duration: 100 }}>
+              <div class="pattern-tabs">
                 <PatternModeTabs />
               </div>
             {/if}
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+            <div class="pattern-sheet">
               <SweepTrailStrip />
               {#if ui.phraseView === 'fx'}
                 <FxPad />
@@ -547,6 +532,7 @@
                   {/if}
                 {/if}
               {/if}
+            </div>
             </div>
           {/if}
         </div>
@@ -602,15 +588,7 @@
     z-index: 50;
   }
 
-  .pattern-tabs {
-    position: absolute;
-    left: 0;
-    bottom: 90%;
-    z-index: 52;
-    padding-left: 8px;
-  }
-
-  .pattern-sheet {
+  .pattern-sheet-group {
     position: absolute;
     left: 0;
     right: 0;
@@ -619,9 +597,21 @@
     z-index: 51;
     display: flex;
     flex-direction: column;
+  }
+
+  .pattern-tabs {
+    flex-shrink: 0;
+    padding-left: 8px;
+  }
+
+  .pattern-sheet {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     background: var(--color-bg);
     border-top: 1px solid rgba(237, 232, 220, 0.10);
     overflow: hidden;
+    min-height: 0;
   }
 
   .pattern-sheet.mobile {

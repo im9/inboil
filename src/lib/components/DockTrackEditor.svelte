@@ -5,7 +5,7 @@
    * sample loader, remove track. (SEND/MIX moved to StepGrid)
    * Extracted from DockPanel.svelte for modularity.
    */
-  import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
+  import { song, activeCell, ui, prefs, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
   import { captureValue } from '../sweepRecorder.svelte.ts'
   import { clearAllParamLocks, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
   import { getParamDefs, normalizeParam, displayLabel, paramSteps } from '../paramDefs.ts'
@@ -30,14 +30,12 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
-  // ADR 130: auto-open SamplerSheet when voice changes to Sampler
-  // Track previous voiceId to detect actual voice changes (not re-mounts)
+  // ADR 130: auto-switch to Pads tab when voice changes to Sampler
   let prevVoiceId: string | null = null
   $effect(() => {
     const vid = cell?.voiceId ?? null
     if (prevVoiceId !== null && vid === 'Sampler' && prevVoiceId !== 'Sampler') {
-      ui.phraseView = 'sampler'
-      ui.samplerTrackId = track?.id ?? ui.selectedTrack
+      prefs.patternEditor = 'pads'
     }
     prevVoiceId = vid
   })
@@ -123,9 +121,9 @@
         onpointerdown={() => poolOpen = !poolOpen}
         data-tip="Browse sample pool" data-tip-ja="サンプルプールから選択"
       >POOL</button>
-      <button class="btn-load" class:btn-active={ui.phraseView === 'sampler'}
-        onpointerdown={() => { ui.phraseView = 'sampler'; ui.samplerTrackId = track?.id ?? ui.selectedTrack }}
-        data-tip="Open sampler sheet" data-tip-ja="サンプラーシートを開く"
+      <button class="btn-load" class:btn-active={prefs.patternEditor === 'pads'}
+        onpointerdown={() => { prefs.patternEditor = 'pads' }}
+        data-tip="Switch to Pads view" data-tip-ja="Padsビューに切替"
       >PAD</button>
       <span class="sample-name" class:sample-error={!!sampleError}>{sampleError || (currentSample?.packId ? '🎹 ' : '') + (currentSample?.name || '') || 'Drop audio file'}</span>
     </div>

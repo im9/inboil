@@ -208,7 +208,7 @@ export const playback = $state({
 export const ui = $state<{
   selectedTrack: number
   currentPattern: number
-  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf' | 'tonnetz' | 'quantizer' | 'turing' | 'sampler'
+  phraseView: 'pattern' | 'scene' | 'fx' | 'eq' | 'master' | 'perf' | 'tonnetz' | 'quantizer' | 'turing'
   viewFocus: 'pattern' | 'scene'
   patternSheet: boolean
   patternSheetOrigin: { x: number; y: number } | null
@@ -233,7 +233,7 @@ export const ui = $state<{
   tonnetzNodeId: string | null
   quantizerNodeId: string | null
   turingNodeId: string | null
-  samplerTrackId: number | null
+  padMode: 'track' | 'slice' | 'note'
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -262,7 +262,7 @@ export const ui = $state<{
   tonnetzNodeId: null,
   quantizerNodeId: null,
   turingNodeId: null,
-  samplerTrackId: null,
+  padMode: 'track' as const,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
@@ -489,7 +489,6 @@ export async function factoryReset(): Promise<void> {
   ui.mobileOverlay = false
   ui.selectedSceneNodes = {}
   ui.selectedSceneEdge = null
-  ui.samplerTrackId = null
   // Reset perf
   Object.assign(perf, DEFAULT_PERF)
   perf.rootNote = song.rootNote

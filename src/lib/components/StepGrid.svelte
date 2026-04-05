@@ -4,7 +4,7 @@
   // extensive prop drilling if split. Utility functions already extracted to
   // stepActions.ts; further splitting adds complexity without benefit.
   import { onDestroy, onMount, tick, untrack } from 'svelte'
-  import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, prefs, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, canAddTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
@@ -121,11 +121,11 @@
   function trackLabelDown(trackId: number) {
     const now = Date.now()
     if (lastLabelTapId === trackId && now - lastLabelTapTime < 300) {
-      // Double-tap: open sampler sheet if voiceId is Sampler
+      // Double-tap: switch to Pads tab if voiceId is Sampler
       const c = activeCell(trackId)
       if (c.voiceId === 'Sampler') {
-        ui.phraseView = 'sampler'
-        ui.samplerTrackId = trackId
+        prefs.patternEditor = 'pads'
+        ui.selectedTrack = trackId
       }
       lastLabelTapTime = 0
       lastLabelTapId = null
