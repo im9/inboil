@@ -7,6 +7,7 @@
     start = 0,
     end = 1,
     chopSlices = 0,
+    activeSlice = -1,
     onchangestart,
     onchangeend,
   }: {
@@ -14,6 +15,7 @@
     start: number
     end: number
     chopSlices: number
+    activeSlice: number
     onchangestart?: (v: number) => void
     onchangeend?: (v: number) => void
   } = $props()
@@ -128,6 +130,18 @@
       ctx.lineTo(w, mid)
       ctx.stroke()
 
+      // Active slice highlight
+      if (chopSlices > 0 && activeSlice >= 0 && activeSlice < chopSlices) {
+        const regionStart = start
+        const regionLen = end - start
+        const sliceStart = regionStart + (activeSlice / chopSlices) * regionLen
+        const sliceEnd = regionStart + ((activeSlice + 1) / chopSlices) * regionLen
+        const sx = normToX(sliceStart, w)
+        const ex = normToX(sliceEnd, w)
+        ctx.fillStyle = 'rgba(108,119,68,0.15)'
+        ctx.fillRect(sx, 0, ex - sx, h)
+      }
+
       // Chop slice markers
       if (chopSlices > 0) {
         const regionStart = start
@@ -174,7 +188,7 @@
 
   // Redraw on any reactive change
   $effect(() => {
-    void peaks; void start; void end; void chopSlices; void zoom; void scrollX
+    void peaks; void start; void end; void chopSlices; void activeSlice; void zoom; void scrollX
     draw()
   })
 
@@ -292,7 +306,7 @@
   .waveform-wrap {
     position: relative;
     flex: 1;
-    min-height: 100px;
+    min-height: 120px;
   }
 
   .waveform-canvas {

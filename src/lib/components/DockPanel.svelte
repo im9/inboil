@@ -1,6 +1,6 @@
 <script lang="ts">
   // NOTE: Large file by design — scene/pattern bidirectional mapping + modifier walkback + sheet triggering are tightly coupled
-  import { song, ui, playback, selectPattern, lang } from '../state.svelte.ts'
+  import { song, ui, playback, selectPattern, lang, cellForTrack } from '../state.svelte.ts'
   import type { SceneNode, ModifierType } from '../types.ts'
   import { patternRename, patternSetColor } from '../sectionActions.ts'
   import { sceneSetRoot, sceneDeleteNode, sceneUpdateModifierParams, findConnectedSweepNode } from '../sceneActions.ts'
@@ -12,6 +12,30 @@
   import DockMasterControls from './DockMasterControls.svelte'
 
   import DockPoolBrowser from './DockPoolBrowser.svelte'
+  import VoicePicker from './VoicePicker.svelte'
+
+  // Sampler dock: track selector + voice picker above pool browser
+  const samplerCell = $derived(ui.samplerTrackId != null ? cellForTrack(song.patterns[ui.currentPattern], ui.samplerTrackId) : undefined)
+  const samplerTracks = $derived(
+    song.tracks.filter(t => {
+      const c = cellForTrack(song.patterns[ui.currentPattern], t.id)
+      return c?.voiceId === 'Sampler'
+    })
+  )
+
+  function selectSamplerTrack(id: number) {
+    ui.samplerTrackId = id
+    ui.selectedTrack = id
+  }
+
+  // Exit sampler mode when voice is changed away from Sampler
+  $effect(() => {
+    if (ui.phraseView === 'sampler' && samplerCell && samplerCell.voiceId !== 'Sampler') {
+      ui.phraseView = 'pattern'
+      ui.samplerTrackId = null
+      ui.patternSheet = true
+    }
+  })
 
   // FX/EQ/Master overlay sheets use split layout
   const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
@@ -19,7 +43,7 @@
   const isSamplerSheet = $derived(ui.phraseView === 'sampler')
 
   // Pattern header: always shown (except during overlay sheets)
-  const showPatternHeader = $derived(!isOverlaySheet && !isSamplerSheet)
+  const showPatternHeader = $derived(!isOverlaySheet)
   const showNavigator = $derived(!ui.patternSheet && !isSamplerSheet)
   const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet && !isSamplerSheet)
 
@@ -102,8 +126,75 @@
 
 <div class="dock-panel" class:split={isOverlaySheet}>
   {#if isSamplerSheet}
-  <!-- ADR 130: Full-height pool browser when sampler sheet is open -->
+  <!-- ADR 130: Pattern header + track tabs + voice picker + pool browser -->
   <div class="dock-body dock-pool-full">
+    <div class="param-content">
+      {#if showPatternHeader && selectedPattern}
+        <span class="section-label">PATTERN</span>
+        <div class="pat-header">
+          <span class="pat-dot" style="background: {PATTERN_COLORS[selectedPattern.color ?? 0]}"></span>
+          <input
+            class="pat-input"
+            value={selectedPattern.name ?? ''}
+            maxlength="12"
+            placeholder="NAME"
+            onpointerdown={e => e.stopPropagation()}
+            onfocus={e => (e.target as HTMLInputElement).select()}
+            onblur={e => patternRename(ui.currentPattern, (e.target as HTMLInputElement).value)}
+            onkeydown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          />
+          <div class="color-row">
+            {#each PATTERN_COLORS as color, ci}
+              <button
+                class="color-swatch"
+                class:selected={selectedPattern.color === ci}
+                style="background: {color}"
+                aria-label="Color {ci}"
+                onpointerdown={() => patternSetColor(ui.currentPattern, ci)}
+              ></button>
+            {/each}
+          </div>
+        </div>
+        <div class="section-divider" aria-hidden="true"></div>
+      {/if}
+
+      <!-- TRACKS / SCENE tabs (same as normal mode, prevents layout shift) -->
+      <div class="dock-tabs" role="tablist" aria-label="Dock">
+        <button
+          class="dock-tab active"
+          role="tab"
+          aria-selected={true}
+        >TRACKS</button>
+        <button
+          class="dock-tab"
+          role="tab"
+          aria-selected={false}
+          onpointerdown={() => { ui.dockTab = 'scene'; ui.phraseView = 'pattern'; ui.samplerTrackId = null; ui.patternSheet = true }}
+        >SCENE{#if sceneTabCount > 0}<span class="dock-tab-badge">{sceneTabCount}</span>{/if}</button>
+      </div>
+
+      <!-- Track tabs -->
+      {#if samplerTracks.length > 1}
+        <div class="sampler-track-tabs">
+          {#each samplerTracks as t}
+            {@const c = cellForTrack(song.patterns[ui.currentPattern], t.id)}
+            <button
+              class="sampler-track-tab"
+              class:active={t.id === ui.samplerTrackId}
+              onpointerdown={() => selectSamplerTrack(t.id)}
+            >TR{t.id + 1}: {c?.name ?? ''}</button>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Voice picker -->
+      {#if samplerCell}
+        <VoicePicker voiceId={samplerCell.voiceId} trackId={ui.samplerTrackId ?? ui.selectedTrack} />
+      {/if}
+
+      <div class="section-divider" aria-hidden="true"></div>
+    </div>
+
     <div class="pool-header">
       <span class="section-label">SAMPLE POOL</span>
     </div>
@@ -822,8 +913,32 @@
     overflow: hidden;
   }
   .pool-header {
-    padding: 12px 16px 4px;
+    padding: 4px 16px;
     flex-shrink: 0;
+  }
+
+  .sampler-track-tabs {
+    display: flex;
+    gap: 2px;
+    padding-bottom: 4px;
+  }
+
+  .sampler-track-tab {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border: 1px solid var(--dz-border);
+    background: transparent;
+    color: var(--dz-text-mid);
+    cursor: pointer;
+    opacity: 0.5;
+  }
+
+  .sampler-track-tab.active {
+    background: var(--dz-bg-hover);
+    opacity: 1;
   }
   .dock-pool-full :global(.pool-inline) {
     flex: 1;

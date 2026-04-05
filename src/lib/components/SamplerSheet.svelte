@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { song, ui, cellForTrack, samplesByCell, sampleCellKey, pushUndo } from '../state.svelte.ts'
+  import { song, ui, cellForTrack, samplesByCell, sampleCellKey, pushUndo, playback } from '../state.svelte.ts'
+  import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import SamplerWaveform from './SamplerWaveform.svelte'
   import SamplerPads from './SamplerPads.svelte'
   import SamplerParams from './SamplerParams.svelte'
   import SamplerStepRow from './SamplerStepRow.svelte'
+  import { setTrigNote } from '../stepActions.ts'
 
   const { onclose }: { onclose: () => void } = $props()
 
@@ -46,6 +48,30 @@
     if (!cell) return
     pushUndo('Change sample end')
     cell.voiceParams.end = v
+  }
+
+  // Active slice index during playback (for highlight on pads + waveform)
+  const activeSlice = $derived.by(() => {
+    if (trackId == null || chopVal <= 0 || !isViewingPlayingPattern()) return -1
+    const head = playback.playheads[trackId]
+    if (head == null) return -1
+    const trig = cell?.trigs[head]
+    if (!trig?.active) return -1
+    const chopMode = cell?.voiceParams?.chopMode ?? 0
+    if (chopMode === 0) {
+      // MAP: slice = note - rootNote
+      const rootNote = cell?.voiceParams?.rootNote ?? 60
+      return (trig.note ?? 60) - rootNote
+    }
+    // SEQ: slice = playhead % slices
+    return head % chopVal
+  })
+
+  // Pad tap → write note into selected step (step input mode)
+  function onPadTap(_padIndex: number, note: number) {
+    if (trackId == null || ui.selectedStep == null) return
+    pushUndo('Set step note')
+    setTrigNote(trackId, ui.selectedStep, note)
   }
 
   function selectTrack(id: number) {
@@ -101,28 +127,30 @@
     start={startVal}
     end={endVal}
     chopSlices={chopVal}
+    activeSlice={activeSlice}
     onchangestart={onChangeStart}
     onchangeend={onChangeEnd}
   />
 
+  <!-- Pads + Steps/Params (2 columns) -->
   <div class="bottom-row">
-    <!-- Pads (ADR 130 Step 3) -->
     {#if trackId != null}
-      <SamplerPads
-        trackId={trackId}
-        chopSlices={chopVal}
-        rootNote={cell?.voiceParams?.rootNote ?? 60}
-      />
+      <div class="col-pads">
+        <SamplerPads
+          trackId={trackId}
+          rootNote={cell?.voiceParams?.rootNote ?? 60}
+          activeSlice={activeSlice}
+          onpadtap={onPadTap}
+        />
+      </div>
     {/if}
-
-    <!-- Params (ADR 130 Step 4) -->
-    <SamplerParams />
+    <div class="col-right">
+      {#if trackId != null}
+        <SamplerStepRow trackId={trackId} />
+      {/if}
+      <SamplerParams />
+    </div>
   </div>
-
-  <!-- Step sequencer row (ADR 130 Step 6) -->
-  {#if trackId != null}
-    <SamplerStepRow trackId={trackId} />
-  {/if}
 </div>
 
 <style>
@@ -221,12 +249,26 @@
 
   .bottom-row {
     display: flex;
-    gap: 12px;
-    height: 160px;
-    flex-shrink: 0;
+    gap: 16px;
+    flex: 1;
+    min-height: 200px;
   }
 
-  /* Mobile: stack vertically, allow scroll */
+  .col-pads {
+    flex-shrink: 0;
+    height: 100%;
+    aspect-ratio: 1;
+  }
+
+  .col-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+  }
+
   @media (max-width: 639px) {
     .sampler-sheet {
       overflow-y: auto;

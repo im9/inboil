@@ -35,7 +35,13 @@
     if (headPage !== page) page = headPage
   })
 
-  function toggle(stepIdx: number) {
+  function stepDown(stepIdx: number) {
+    if (ui.lockMode) {
+      // P-Lock: select/deselect step
+      ui.selectedTrack = trackId
+      ui.selectedStep = ui.selectedStep === stepIdx ? null : stepIdx
+      return
+    }
     pushUndo('Toggle step')
     toggleTrig(trackId, stepIdx)
   }
@@ -43,32 +49,47 @@
 
 {#if cell}
 <div class="step-wrap">
-  {#if needsPaging}
-    <div class="page-row">
-      {#each { length: totalPages } as _, p}
-        <button
-          class="page-dot"
-          class:active={p === page}
-          aria-label="Page {p + 1}"
-          onpointerdown={() => page = p}
-        ></button>
-      {/each}
-    </div>
-  {/if}
+  <div class="step-header">
+    <span class="step-title">STEP</span>
+    {#if needsPaging}
+      <div class="page-row">
+        {#each { length: totalPages } as _, p}
+          <button
+            class="page-btn"
+            class:active={p === page}
+            aria-label="Page {p + 1}"
+            onpointerdown={() => page = p}
+          >{p + 1}</button>
+        {/each}
+      </div>
+    {/if}
+  </div>
 
-  <div class="steps" style="--steps: {displayCount}">
+  <div class="step-line">
+
+    <div class="steps" style="--steps: {displayCount}">
     {#each { length: displayCount } as _, i}
       {@const stepIdx = pageStart + i}
       {@const trig = trigs[stepIdx]}
       {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === stepIdx}
+      {@const isLockSel = ui.lockMode && ui.selectedStep === stepIdx}
+      {@const hasLocks = !!(trig?.paramLocks && Object.keys(trig.paramLocks).length > 0)}
       <button
         class="step"
-        class:on={trig?.active}
         class:playhead={isPlayhead}
+        class:lock-selected={isLockSel}
         aria-label="Step {stepIdx + 1}"
-        onpointerdown={() => toggle(stepIdx)}
-      ></button>
+        onpointerdown={() => stepDown(stepIdx)}
+      >
+        <span class="flip-card" class:flipped={trig?.active}>
+          <span class="flip-face step-off"></span>
+          <span class="flip-face back step-on">
+            {#if hasLocks}<span class="lock-dot"></span>{/if}
+          </span>
+        </span>
+      </button>
     {/each}
+    </div>
   </div>
 </div>
 {/if}
@@ -78,6 +99,28 @@
     flex-shrink: 0;
   }
 
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  .step-title {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--lz-text-hint);
+    opacity: 0.5;
+  }
+
+  .step-line {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
   .page-row {
     display: flex;
     gap: 4px;
@@ -85,52 +128,74 @@
     padding: 2px 8px 0;
   }
 
-  .page-dot {
-    width: 16px;
-    height: 4px;
-    border: none;
-    background: var(--lz-step-border);
+  .page-btn {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    padding: 1px 6px;
+    border: 1px solid var(--lz-step-border);
+    background: transparent;
+    color: var(--lz-text-hint);
     cursor: pointer;
-    padding: 0;
-    opacity: 0.3;
   }
 
-  .page-dot.active {
+  .page-btn.active {
     background: var(--color-olive);
-    opacity: 1;
+    border-color: var(--color-olive);
+    color: var(--color-bg);
   }
 
-  .page-dot:hover {
-    opacity: 0.7;
-  }
-
-  /* Steps — matching StepGrid exactly */
+  /* Steps */
   .steps {
     display: grid;
-    grid-template-columns: repeat(var(--steps), 24px);
+    grid-template-columns: repeat(var(--steps), 32px);
     gap: 2px;
-    height: 40px;
-    padding: 6px 0;
     align-items: center;
-    justify-content: center;
   }
 
   .step {
-    width: 24px;
-    height: 24px;
-    border: 1px solid var(--lz-step-border);
-    background: var(--color-bg);
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
     cursor: pointer;
     padding: 0;
   }
 
-  .step:hover {
-    border-color: var(--lz-text-hint);
+  .step :global(.flip-card) {
+    position: absolute;
+    inset: 0;
   }
 
-  .step.on {
+  .step-off {
+    background: var(--color-bg);
+    border: 1px solid var(--lz-step-border);
+  }
+
+  .step-on {
     background: var(--color-olive);
+    border: 1px solid var(--color-olive);
+  }
+
+  .step.lock-selected .step-off {
     border-color: var(--color-olive);
+    box-shadow: 0 0 0 1px var(--color-olive);
+  }
+
+  .step.lock-selected .step-on {
+    box-shadow: inset 0 0 0 2px var(--color-bg);
+  }
+
+  .lock-dot {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    pointer-events: none;
   }
 
   .step.playhead {

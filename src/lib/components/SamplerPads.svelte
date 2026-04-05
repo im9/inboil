@@ -3,26 +3,27 @@
 
   const {
     trackId,
-    chopSlices = 0,
     rootNote = 60,
+    activeSlice = -1,
+    onpadtap,
   }: {
     trackId: number
-    chopSlices: number
     rootNote: number
+    activeSlice: number
+    onpadtap?: (padIndex: number, note: number) => void
   } = $props()
 
-  // Pad count adapts to chop slices: 0 = 1 pad, 8/16/32 slices
-  const padCount = $derived(chopSlices > 0 ? chopSlices : 16)
-  const cols = $derived(padCount <= 4 ? padCount : padCount <= 8 ? 4 : 4)
+  // Always 4×4 = 16 pads (MPC-style, ADR 130 spec)
+  const padCount = 16
 
   let activePad: number | null = $state(null)
 
   function padDown(index: number, e: PointerEvent) {
     activePad = index
     const note = rootNote + index
-    // Use pressure for velocity if available (pen/touch), otherwise 0.8
     const vel = e.pressure > 0 && e.pressure < 1 ? e.pressure : 0.8
     engine.triggerNote(trackId, note, vel)
+    onpadtap?.(index, note)
   }
 
   function padUp() {
@@ -33,12 +34,15 @@
   }
 </script>
 
-<div class="pads-grid" style="--cols: {cols}">
+<div class="pads-wrap">
+<span class="pads-label">PADS</span>
+<div class="pads-grid">
   {#each Array(padCount) as _, i}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="pad"
       class:active={activePad === i}
+      class:playing={activeSlice === i}
       onpointerdown={e => padDown(i, e)}
       onpointerup={padUp}
       onpointerleave={padUp}
@@ -48,16 +52,34 @@
     </div>
   {/each}
 </div>
+</div>
 
 <style>
+  .pads-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    height: 100%;
+  }
+
+  .pads-label {
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--lz-text-hint);
+    opacity: 0.5;
+  }
+
   .pads-grid {
     display: grid;
-    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
     gap: 2px;
-    aspect-ratio: 1;
-    height: 100%;
     touch-action: none;
     user-select: none;
+    flex: 1;
+    min-height: 0;
   }
 
   .pad {
@@ -79,12 +101,9 @@
     border-color: var(--color-olive);
   }
 
-  @media (max-width: 639px) {
-    .pads-grid {
-      height: auto;
-      width: 100%;
-      max-width: 200px;
-    }
+  .pad.playing {
+    border-color: var(--color-olive);
+    box-shadow: inset 0 0 0 1px var(--color-olive);
   }
 
   .pad-num {
