@@ -23,6 +23,7 @@
   import TuringSheet from './lib/components/TuringSheet.svelte'
   import SamplerSheet from './lib/components/SamplerSheet.svelte'
   import PatternModeTabs from './lib/components/PatternModeTabs.svelte'
+  import PadsView from './lib/components/PadsView.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import { markScenePlayStart, getInitialAutomationSnapshot, clearInitialAutomationSnapshot } from './lib/scenePlayback.ts'
@@ -534,11 +535,15 @@
                 {#if ui.sweepTab && hasSweep}
                   <SweepCanvas onClose={closeAllSheets} onstop={stop} />
                 {:else}
-                  <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
-                  {#if prefs.patternEditor === 'tracker'}
-                    <TrackerView />
+                  {#if prefs.patternEditor === 'pads'}
+                    <PadsView />
                   {:else}
-                    <StepGrid />
+                    <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
+                    {#if prefs.patternEditor === 'tracker'}
+                      <TrackerView />
+                    {:else}
+                      <StepGrid />
+                    {/if}
                   {/if}
                 {/if}
               {/if}
