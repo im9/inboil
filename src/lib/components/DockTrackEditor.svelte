@@ -31,13 +31,15 @@
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
   // ADR 130: auto-open SamplerSheet when voice changes to Sampler
-  let prevIsSampler = false
+  // Track previous voiceId to detect actual voice changes (not re-mounts)
+  let prevVoiceId: string | null = null
   $effect(() => {
-    if (isSampler && !prevIsSampler) {
+    const vid = cell?.voiceId ?? null
+    if (prevVoiceId !== null && vid === 'Sampler' && prevVoiceId !== 'Sampler') {
       ui.phraseView = 'sampler'
       ui.samplerTrackId = track?.id ?? ui.selectedTrack
     }
-    prevIsSampler = isSampler
+    prevVoiceId = vid
   })
 
   // ── Voice picker ──

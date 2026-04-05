@@ -3,6 +3,7 @@
   import SamplerWaveform from './SamplerWaveform.svelte'
   import SamplerPads from './SamplerPads.svelte'
   import SamplerParams from './SamplerParams.svelte'
+  import SamplerStepRow from './SamplerStepRow.svelte'
 
   const { onclose }: { onclose: () => void } = $props()
 
@@ -118,10 +119,10 @@
     <SamplerParams />
   </div>
 
-  <!-- Placeholder: Step sequencer (Step 6) -->
-  <div class="placeholder seq-placeholder">
-    <span class="placeholder-label">STEP SEQUENCER</span>
-  </div>
+  <!-- Step sequencer row (ADR 130 Step 6) -->
+  {#if trackId != null}
+    <SamplerStepRow trackId={trackId} />
+  {/if}
 </div>
 
 <style>
@@ -218,20 +219,6 @@
     background: var(--lz-bg-hover);
   }
 
-  .placeholder {
-    border: 1px dashed var(--lz-border-strong);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0.3;
-  }
-
-  .placeholder-label {
-    font-family: var(--font-data);
-    font-size: var(--fs-sm);
-    letter-spacing: 0.1em;
-  }
-
   .bottom-row {
     display: flex;
     gap: 12px;
@@ -239,7 +226,14 @@
     flex-shrink: 0;
   }
 
-  .seq-placeholder {
-    height: 36px;
+  /* Mobile: stack vertically, allow scroll */
+  @media (max-width: 639px) {
+    .sampler-sheet {
+      overflow-y: auto;
+    }
+    .bottom-row {
+      flex-direction: column;
+      height: auto;
+    }
   }
 </style>

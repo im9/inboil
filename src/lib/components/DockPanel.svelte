@@ -11,13 +11,17 @@
   import DockEqControls from './DockEqControls.svelte'
   import DockMasterControls from './DockMasterControls.svelte'
 
+  import DockPoolBrowser from './DockPoolBrowser.svelte'
+
   // FX/EQ/Master overlay sheets use split layout
   const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
+  // ADR 130: SamplerSheet open → dock becomes full-height pool browser
+  const isSamplerSheet = $derived(ui.phraseView === 'sampler')
 
   // Pattern header: always shown (except during overlay sheets)
-  const showPatternHeader = $derived(!isOverlaySheet)
-  const showNavigator = $derived(!ui.patternSheet)
-  const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet)
+  const showPatternHeader = $derived(!isOverlaySheet && !isSamplerSheet)
+  const showNavigator = $derived(!ui.patternSheet && !isSamplerSheet)
+  const showTrackParams = $derived(ui.patternSheet && !isOverlaySheet && !isSamplerSheet)
 
   const selectedPattern = $derived(song.patterns[ui.currentPattern] ?? null)
 
@@ -97,7 +101,15 @@
 </script>
 
 <div class="dock-panel" class:split={isOverlaySheet}>
-  {#if isOverlaySheet}
+  {#if isSamplerSheet}
+  <!-- ADR 130: Full-height pool browser when sampler sheet is open -->
+  <div class="dock-body dock-pool-full">
+    <div class="pool-header">
+      <span class="section-label">SAMPLE POOL</span>
+    </div>
+    <DockPoolBrowser trackId={ui.samplerTrackId ?? ui.selectedTrack} />
+  </div>
+  {:else if isOverlaySheet}
   <!-- Split layout: scene navigator (upper) + overlay controls (lower) -->
   <div class="dock-body dock-split">
     <div class="dock-upper">
@@ -801,5 +813,31 @@
     background: var(--dz-bg-active);
     color: var(--dz-text-strong);
     border-color: var(--dz-border-strong);
+  }
+
+  /* ADR 130: Full-height pool browser when sampler sheet is open */
+  .dock-pool-full {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .pool-header {
+    padding: 12px 16px 4px;
+    flex-shrink: 0;
+  }
+  .dock-pool-full :global(.pool-inline) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: none;
+    min-height: 0;
+    padding: 0 8px;
+  }
+  .dock-pool-full :global(.pool-list) {
+    max-height: none;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-bottom: 16px;
   }
 </style>

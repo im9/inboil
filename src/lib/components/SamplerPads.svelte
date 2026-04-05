@@ -64,19 +64,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--dz-bg);
-    border: 1px solid var(--lz-border-strong);
+    background: var(--color-bg);
+    border: 1px solid var(--lz-step-border);
     cursor: pointer;
     transition: background 60ms;
   }
 
   .pad:hover {
-    background: var(--lz-bg-hover);
+    border-color: var(--lz-text-hint);
   }
 
   .pad.active {
-    background: var(--olive-bg);
-    border-color: var(--olive-fg);
+    background: var(--color-olive);
+    border-color: var(--color-olive);
+  }
+
+  @media (max-width: 639px) {
+    .pads-grid {
+      height: auto;
+      width: 100%;
+      max-width: 200px;
+    }
   }
 
   .pad-num {

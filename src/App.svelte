@@ -450,7 +450,15 @@
       <MobileTrackView />
       <MobileSceneRibbon onplay={play} onstop={stop} />
       <!-- Overlay sheets (mobile: FX / EQ / Master / Perf) -->
-      {#if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf'}
+      {#if ui.phraseView === 'sampler'}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
+        <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="sheet-handle" onpointerdown={closeAllSheets}><span class="handle-bar"></span></div>
+          <SamplerSheet onclose={closeAllSheets} />
+        </div>
+      {:else if ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master' || ui.phraseView === 'perf'}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
         <div class="pattern-sheet mobile" transition:fly={{ y: 12, duration: 100 }}>
