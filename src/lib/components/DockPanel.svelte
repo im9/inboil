@@ -16,17 +16,16 @@
 
   // FX/EQ/Master overlay sheets use split layout
   const isOverlaySheet = $derived(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')
-  // ADR 130: Pads tab + sampler voice → dock becomes pool browser
-  const padsTabSampler = $derived(
-    prefs.patternEditor === 'pads'
+  // ADR 131: Grid tab + sampler voice → dock becomes pool browser
+  const gridTabSampler = $derived(
+    prefs.patternEditor === 'grid'
     && ui.patternSheet
     && cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack)?.voiceId === 'Sampler'
   )
-  // ADR 130: Pads tab + sampler voice → dock becomes full-height pool browser
-  const isSamplerSheet = $derived(padsTabSampler)
+  const isSamplerSheet = $derived(gridTabSampler)
 
   // Sampler dock: track selector + voice picker above pool browser
-  const samplerCell = $derived(padsTabSampler ? cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack) : undefined)
+  const samplerCell = $derived(gridTabSampler ? cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack) : undefined)
   const samplerTracks = $derived(
     song.tracks.filter(t => {
       const c = cellForTrack(song.patterns[ui.currentPattern], t.id)

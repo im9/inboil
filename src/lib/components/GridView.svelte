@@ -1,18 +1,27 @@
 <script lang="ts">
-  import { song, ui, cellForTrack, samplesByCell, sampleCellKey, pushUndo, playback, vkbd } from '../state.svelte.ts'
+  import { song, ui, cellForTrack, samplesByCell, sampleCellKey, pushUndo, playback, vkbd, prefs } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import SamplerWaveform from './SamplerWaveform.svelte'
   import SamplerPads from './SamplerPads.svelte'
-  import SamplerParams from './SamplerParams.svelte'
-  import SamplerStepRow from './SamplerStepRow.svelte'
+  import StepGrid from './StepGrid.svelte'
+  import PatternToolbar from './PatternToolbar.svelte'
   import { setTrigNote } from '../stepActions.ts'
+
+  const {
+    onRandom,
+    onClose,
+    onLoop,
+  }: {
+    onRandom: () => void
+    onClose: () => void
+    onLoop: () => void
+  } = $props()
 
   const trackId = $derived(ui.selectedTrack)
   const cell = $derived(cellForTrack(song.patterns[ui.currentPattern], trackId))
   const isSampler = $derived(cell?.voiceId === 'Sampler')
 
   // Auto-switch pad mode when voice type changes
-  // Only switch away from unavailable modes — TRACK is always valid
   $effect(() => {
     if (isSampler && ui.padMode === 'note') {
       ui.padMode = 'slice'
@@ -21,14 +30,12 @@
     }
   })
 
-  // Available modes: TRACK always, SLICE sampler only, NOTE always
   const availableModes = $derived(
     isSampler
       ? (['track', 'slice', 'note'] as const)
       : (['track', 'note'] as const)
   )
 
-  // Current sample data for waveform (sampler only)
   const currentSample = $derived(
     isSampler ? samplesByCell[sampleCellKey(trackId, ui.currentPattern)] : undefined
   )
@@ -49,7 +56,6 @@
     cell.voiceParams.end = v
   }
 
-  // Active slice index during playback (for highlight on pads + waveform)
   const activeSlice = $derived.by(() => {
     if (!isSampler || chopVal <= 0 || !isViewingPlayingPattern()) return -1
     const head = playback.playheads[trackId]
@@ -64,37 +70,66 @@
     return head % chopVal
   })
 
-  // Pad tap → write note into selected step (step input mode)
   function onPadTap(_padIndex: number, note: number) {
     if (ui.selectedStep == null) return
     pushUndo('Set step note')
     setTrigNote(trackId, ui.selectedStep, note)
   }
 
-  // Octave controls for NOTE mode
   function shiftOctave(dir: 1 | -1) {
     const next = vkbd.octave + dir
     if (next < 2 || next > 7) return
     vkbd.octave = next
   }
+
+  function toggleCanvas() {
+    prefs.canvasCollapsed = !prefs.canvasCollapsed
+  }
+
+  // ── Measure pads column height → derive square pad width ──
+  // Pads must be square, sized from available height, capped so grid has room for 16 steps
+  let mainRowEl: HTMLDivElement | undefined = $state(undefined)
+  let padSize = $state(200)
+  // Vertical chrome: mode-switch(24) + canvas-toggle(18) + 3 gaps(12) + padding(8) = 62
+  const PAD_CHROME = 62
+  // StepGrid min width for step picker (20 cells): head(237) + 20×26(520) + mix(128) + padding(24) = 909
+  const GRID_MIN_W = 909
+
+  $effect(() => {
+    if (!mainRowEl) return
+    const ro = new ResizeObserver(entries => {
+      const { width: w, height: h } = entries[0].contentRect
+      const fromHeight = Math.floor(h - PAD_CHROME)
+      // col-pads horizontal: padding(16) + border(1)
+      const maxFromWidth = Math.floor(w - GRID_MIN_W - 17)
+      padSize = Math.max(120, Math.min(fromHeight, maxFromWidth))
+    })
+    ro.observe(mainRowEl)
+    return () => ro.disconnect()
+  })
 </script>
 
-<div class="pads-view">
-  <!-- Waveform — always rendered (empty canvas when non-sampler) -->
-  <SamplerWaveform
-    sample={isSampler ? currentSample : undefined}
-    start={startVal}
-    end={endVal}
-    chopSlices={isSampler ? chopVal : 0}
-    activeSlice={isSampler ? activeSlice : -1}
-    onchangestart={isSampler ? onChangeStart : undefined}
-    onchangeend={isSampler ? onChangeEnd : undefined}
-  />
+<div class="grid-view">
+  <PatternToolbar {onRandom} {onClose} {onLoop} />
 
-  <!-- Pads + Steps/Params -->
-  <div class="bottom-row">
-    <div class="col-pads">
-      <!-- Mode switch -->
+  <!-- Track Canvas (collapsible) -->
+  {#if !prefs.canvasCollapsed}
+    <div class="track-canvas">
+      <SamplerWaveform
+        sample={isSampler ? currentSample : undefined}
+        start={startVal}
+        end={endVal}
+        chopSlices={isSampler ? chopVal : 0}
+        activeSlice={isSampler ? activeSlice : -1}
+        onchangestart={isSampler ? onChangeStart : undefined}
+        onchangeend={isSampler ? onChangeEnd : undefined}
+      />
+    </div>
+  {/if}
+
+  <!-- Main area: Pads (left) + StepGrid (right) -->
+  <div class="main-row" bind:this={mainRowEl}>
+    <div class="col-pads" style="width: {padSize}px">
       <div class="mode-switch">
         {#each availableModes as m}
           <button
@@ -110,58 +145,77 @@
           <span class="oct-val">{vkbd.octave}</span>
         {/if}
       </div>
-      <SamplerPads
-        trackId={trackId}
-        mode={ui.padMode}
-        rootNote={cell?.voiceParams?.rootNote ?? 60}
-        activeSlice={activeSlice}
-        octave={vkbd.octave}
-        onpadtap={onPadTap}
-      />
+      <div class="pads-area">
+        <SamplerPads
+          trackId={trackId}
+          mode={ui.padMode}
+          rootNote={cell?.voiceParams?.rootNote ?? 60}
+          activeSlice={activeSlice}
+          octave={vkbd.octave}
+          onpadtap={onPadTap}
+        />
+      </div>
+      <button class="canvas-toggle" onpointerdown={toggleCanvas}
+        data-tip={prefs.canvasCollapsed ? 'Show track canvas' : 'Hide track canvas'}
+        data-tip-ja={prefs.canvasCollapsed ? 'トラックキャンバスを表示' : 'トラックキャンバスを非表示'}
+      >{prefs.canvasCollapsed ? '▼ CANVAS' : '▲ CANVAS'}</button>
     </div>
-    <div class="col-right">
-      <SamplerStepRow trackId={trackId} />
-      {#if isSampler}
-        <SamplerParams />
-      {/if}
+    <div class="col-grid">
+      <StepGrid />
     </div>
   </div>
 </div>
 
 <style>
-  .pads-view {
+  .grid-view {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px 12px;
     flex: 1;
     min-height: 0;
     overflow: hidden;
   }
 
-  .bottom-row {
-    display: flex;
-    gap: 16px;
-    flex: 1;
-    min-height: 200px;
+  /* ── Track Canvas — fixed 120px ── */
+  .track-canvas {
+    flex: 0 0 200px;
+    padding: 0 12px;
+    overflow: hidden;
   }
 
+  /* ── Main row ── */
+  .main-row {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── Pads column — width set via JS (square pad sizing) ── */
   .col-pads {
     flex-shrink: 0;
-    height: 100%;
-    aspect-ratio: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .col-right {
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    padding: 4px 8px;
+    border-right: 1px solid var(--lz-border-subtle);
+    overflow: hidden;
+  }
+
+  .pads-area {
+    flex-shrink: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+
+  /* ── StepGrid column — takes remaining space ── */
+  .col-grid {
+    flex: 1;
     min-width: 0;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   /* ── Mode switch (olive tier) ── */
@@ -170,6 +224,7 @@
     align-items: center;
     gap: 2px;
     flex-shrink: 0;
+    height: 24px;
   }
 
   .mode-btn {
@@ -189,6 +244,30 @@
   .mode-btn.active {
     background: var(--color-olive);
     color: var(--color-bg);
+  }
+
+  /* ── Canvas toggle ── */
+  .canvas-toggle {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--lz-border-mid);
+    border-radius: 0;
+    background: transparent;
+    color: var(--lz-text-hint);
+    font-family: var(--font-data);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    height: 18px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .canvas-toggle:hover {
+    color: var(--color-fg);
+    border-color: var(--color-olive);
   }
 
   /* ── Octave controls ── */
@@ -230,13 +309,22 @@
     text-align: center;
   }
 
+  /* ── Mobile ── */
   @media (max-width: 639px) {
-    .pads-view {
-      overflow-y: auto;
-    }
-    .bottom-row {
+    .main-row {
       flex-direction: column;
-      height: auto;
+    }
+    .col-pads {
+      flex-shrink: 0;
+      border-right: none;
+      border-bottom: 1px solid var(--lz-border-subtle);
+      flex-direction: row;
+      gap: 8px;
+      width: 100% !important;
+    }
+    .pads-area {
+      height: 160px !important;
+      width: 160px !important;
     }
   }
 </style>

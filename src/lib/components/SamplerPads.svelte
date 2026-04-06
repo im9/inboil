@@ -102,24 +102,34 @@
     if (mode === 'track') return patCells[index] == null
     return false
   }
+
+  // MPC-style bottom-left origin: pad 1 (index 0) at bottom-left
+  // CSS grid goes top-to-bottom, so reverse row order
+  // Visual pos 0 (top-left) → logical 12, pos 15 (bottom-right) → logical 3
+  function visualToLogical(vis: number): number {
+    const row = Math.floor(vis / 4)     // 0=top, 3=bottom
+    const col = vis % 4
+    return (3 - row) * 4 + col          // flip rows
+  }
 </script>
 
 <div class="pads-wrap">
 <div class="pads-grid">
-  {#each Array(padCount) as _, i}
+  {#each Array(padCount) as _, vis}
+    {@const idx = visualToLogical(vis)}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="pad"
-      class:active={isActive(i)}
-      class:playing={isPlaying(i)}
-      class:empty={isEmpty(i)}
+      class:active={isActive(idx)}
+      class:playing={isPlaying(idx)}
+      class:empty={isEmpty(idx)}
       class:track-mode={mode === 'track'}
-      onpointerdown={e => padDown(i, e)}
+      onpointerdown={e => padDown(idx, e)}
       onpointerup={padUp}
       onpointerleave={padUp}
       onpointercancel={padUp}
     >
-      <span class="pad-label">{padLabel(i)}</span>
+      <span class="pad-label">{padLabel(idx)}</span>
     </div>
   {/each}
 </div>
@@ -130,6 +140,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    width: 100%;
     height: 100%;
   }
 

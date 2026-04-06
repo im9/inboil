@@ -334,7 +334,8 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
-  patternEditor: 'grid' | 'pads' | 'tracker'
+  patternEditor: 'grid' | 'tracker'
+  canvasCollapsed: boolean
   showGuide: boolean
   randomGenre: string
   lastProjectId: string | null
@@ -343,7 +344,7 @@ interface StoredPrefs {
 }
 
 function loadPrefs(): StoredPrefs {
-  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, patternEditor: 'grid', showGuide: true, randomGenre: 'house', lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
+  const defaults: StoredPrefs = { v: STORAGE_VERSION, lang: 'ja', visited: false, scaleMode: true, patternEditor: 'grid', canvasCollapsed: false, showGuide: true, randomGenre: 'house', lastProjectId: null, lastProjectName: 'Untitled', lastBpm: 120 }
   if (typeof localStorage === 'undefined') return defaults
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -357,7 +358,10 @@ function loadPrefs(): StoredPrefs {
     }
     const parsed = JSON.parse(raw)
     if (parsed.v !== STORAGE_VERSION) return defaults
-    return { ...defaults, ...parsed }
+    const merged = { ...defaults, ...parsed }
+    // ADR 131: migrate 'pads' → 'grid' (pads merged into grid view)
+    if (merged.patternEditor === 'pads') merged.patternEditor = 'grid'
+    return merged
   } catch (e) { console.warn('[state] loadPrefs failed:', e); return defaults }
 }
 
@@ -369,6 +373,7 @@ export function savePrefs(): void {
     visited: prefs.visited,
     scaleMode: prefs.scaleMode,
     patternEditor: prefs.patternEditor,
+    canvasCollapsed: prefs.canvasCollapsed,
     showGuide: prefs.showGuide,
     randomGenre: prefs.randomGenre,
     lastProjectId: project.id,
@@ -383,7 +388,8 @@ export const lang = $state<{ value: Lang }>({ value: initialPrefs.lang })
 export const prefs = $state({
   visited: initialPrefs.visited,
   scaleMode: initialPrefs.scaleMode,
-  patternEditor: initialPrefs.patternEditor as 'grid' | 'pads' | 'tracker',
+  patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
+  canvasCollapsed: initialPrefs.canvasCollapsed,
   showGuide: initialPrefs.showGuide,
   randomGenre: initialPrefs.randomGenre,
 })
@@ -409,7 +415,7 @@ export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode
   savePrefs()
 }
-export function setPatternEditor(mode: 'grid' | 'pads' | 'tracker'): void {
+export function setPatternEditor(mode: 'grid' | 'tracker'): void {
   prefs.patternEditor = mode
   savePrefs()
 }

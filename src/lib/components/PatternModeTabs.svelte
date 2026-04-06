@@ -1,8 +1,8 @@
 <script lang="ts">
   import { prefs, setPatternEditor } from '../state.svelte.ts'
 
-  const modes = ['grid', 'pads', 'tracker'] as const
-  const labels: Record<typeof modes[number], string> = { grid: 'Grid', pads: 'Pads', tracker: 'Tracker' }
+  const modes = ['grid', 'tracker'] as const
+  const labels: Record<typeof modes[number], string> = { grid: 'Grid', tracker: 'Tracker' }
 </script>
 
 <div class="tab-bar">

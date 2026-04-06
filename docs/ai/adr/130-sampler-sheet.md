@@ -1,6 +1,6 @@
 # ADR 130: Pads View & Sample Pack Expansion
 
-## Status: Proposed
+## Status: Implemented (Phase 1 UI) / Proposed (Phase 2–3, Sample Expansion)
 
 ## Context
 
@@ -325,8 +325,8 @@ library. Update `factory.json` manifest and pool category metadata.
 - [x] Remove `ui.phraseView === 'sampler'` overlay path
 - [x] Remove `ui.samplerTrackId` (use `ui.selectedTrack` instead)
 - [x] Remove sampler-specific triggers (A/B/C entry points)
-- [ ] Mobile: tabs stack or scroll, view scrollable vertically
 - [x] Verify Escape/backdrop still works for other overlay sheets
+- Mobile layout deferred to ADR 131 (Pattern Editor integration)
 
 ### Phase 2: Auto-Chop + Sample Mangling
 

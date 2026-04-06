@@ -4,7 +4,7 @@
   // extensive prop drilling if split. Utility functions already extracted to
   // stepActions.ts; further splitting adds complexity without benefit.
   import { onDestroy, onMount, tick, untrack } from 'svelte'
-  import { song, activeCell, playback, ui, prefs, trackDisplayName, pushUndo } from '../state.svelte.ts'
+  import { song, activeCell, playback, ui, trackDisplayName, pushUndo } from '../state.svelte.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, addTrack, canAddTrack, removeTrack, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
@@ -114,27 +114,9 @@
 
   onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
 
-  // ── Double-tap track label → open SamplerSheet (ADR 130) ──
-  let lastLabelTapTime = 0
-  let lastLabelTapId: number | null = null
-
+  // ── Track label tap → select/deselect track ──
   function trackLabelDown(trackId: number) {
-    const now = Date.now()
-    if (lastLabelTapId === trackId && now - lastLabelTapTime < 300) {
-      // Double-tap: switch to Pads tab if voiceId is Sampler
-      const c = activeCell(trackId)
-      if (c.voiceId === 'Sampler') {
-        prefs.patternEditor = 'pads'
-        ui.selectedTrack = trackId
-      }
-      lastLabelTapTime = 0
-      lastLabelTapId = null
-    } else {
-      // Single tap: existing toggle
-      ui.selectedTrack = ui.selectedTrack === trackId ? -1 : trackId
-      lastLabelTapTime = now
-      lastLabelTapId = trackId
-    }
+    ui.selectedTrack = ui.selectedTrack === trackId ? -1 : trackId
   }
 
   // ── Remove track (× button in expanded vel row) ──
