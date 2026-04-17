@@ -30,7 +30,6 @@
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
 
-  // ADR 131: Pads merged into Grid — no auto-switch needed
 
   // ── Voice picker ──
   let voicePickerRef = $state<VoicePicker>(null!)

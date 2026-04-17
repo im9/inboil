@@ -1,7 +1,7 @@
 <script lang="ts">
   // NOTE: Large file by design — engine lifecycle + playback orchestration + sweep automation + scene advancement are tightly coupled
   import AppHeader from './lib/components/AppHeader.svelte'
-  import GridView from './lib/components/GridView.svelte'
+  import StepGrid from './lib/components/StepGrid.svelte'
   import DockPanel from './lib/components/DockPanel.svelte'
 
   import MobileTrackView from './lib/components/MobileTrackView.svelte'
@@ -22,7 +22,7 @@
   import QuantizerSheet from './lib/components/QuantizerSheet.svelte'
   import TuringSheet from './lib/components/TuringSheet.svelte'
   import PatternModeTabs from './lib/components/PatternModeTabs.svelte'
-  // PadsView removed — merged into GridView (ADR 131)
+  import PadsView from './lib/components/PadsView.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import { markScenePlayStart, getInitialAutomationSnapshot, clearInitialAutomationSnapshot } from './lib/scenePlayback.ts'
@@ -520,11 +520,13 @@
                 {#if ui.sweepTab && hasSweep}
                   <SweepCanvas onClose={closeAllSheets} onstop={stop} />
                 {:else}
-                  {#if prefs.patternEditor === 'tracker'}
-                    <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
+                  <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
+                  {#if prefs.patternEditor === 'pads'}
+                    <PadsView />
+                  {:else if prefs.patternEditor === 'tracker'}
                     <TrackerView />
                   {:else}
-                    <GridView onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
+                    <StepGrid />
                   {/if}
                 {/if}
               {/if}
