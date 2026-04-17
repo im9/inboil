@@ -222,22 +222,17 @@ Implementation: extend existing `SamplerWaveform.svelte` or create a generic
 
 #### 1.5 Params in View
 
-Compact knob layout beside the pad grid. In Phase 1, params are shown
-**only for sampler voices** — reuses existing `SamplerParams.svelte`.
-For non-sampler voices, the params area is empty; voice parameters are
-edited in DockPanel as usual.
-
-P-Lock mode: toggle on → tap a step in the StepRow → knobs show/edit
-per-step parameter locks.
-
-> **Future:** consolidating synth params into the Pads view is a natural
-> extension but changes the DockPanel's role significantly — separate ADR.
+> **Superseded by ADR 131.** `SamplerParams.svelte` was removed. All voice
+> parameters are now accessed exclusively through DockPanel. The PadsView
+> right column is a single-track StepGrid replica (header, steps, vel bars,
+> mix/send knobs, PianoRoll) — see ADR 131 for details.
 
 #### 1.6 Embedded Step Sequencer
 
-Single-track step row for the selected track, at the bottom of the view.
-16-step paging with page indicator (Octatrack-style). Same interaction
-as existing `SamplerStepRow.svelte` but for any voice type.
+> **Superseded by ADR 131.** `SamplerStepRow.svelte` was removed. The
+> PadsView right column now contains a full single-track editor with
+> step cells, drag-to-paint, velocity/chance/param bars, and all vel
+> mode tabs (VEL/CHNC/MIX/FX/INS) — matching StepGrid's per-track UI.
 
 #### 1.7 DockPanel Integration
 
@@ -309,9 +304,8 @@ library. Update `factory.json` manifest and pool category metadata.
 - [x] Active slice highlight on playback
 
 #### Step 5: Params + step row for any voice
-- [x] Mount `SamplerParams.svelte` for sampler voice
-- [x] Non-sampler: params area empty (use DockPanel for editing)
-- [x] Mount `SamplerStepRow.svelte` for selected track (any voice)
+- [x] ~~Mount `SamplerParams.svelte` for sampler voice~~ → removed by ADR 131 (params in DockPanel only)
+- [x] ~~Mount `SamplerStepRow.svelte` for selected track~~ → replaced by ADR 131 single-track editor
 - [x] P-Lock mode integration
 
 #### Step 6: DockPanel pool browser integration
