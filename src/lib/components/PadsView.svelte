@@ -439,66 +439,7 @@
           </span>
         </div>
 
-        <!-- Step cells -->
-        <div class="step-seq" bind:this={seqEl}>
-          {#if stepSetActive}
-            <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
-              {#each { length: STEP_SET_MAX } as _, stepIdx}
-                {@const isActive = stepIdx < ph.steps}
-                <button
-                  class="step step-set-cell"
-                  class:active={isActive}
-                  class:current-end={stepIdx === ph.steps - 1}
-                  onpointerdown={() => pickStepCount(stepIdx + 1)}
-                >
-                  <span class="step-set-num">{stepIdx + 1}</span>
-                </button>
-              {/each}
-              {#each EXT_STEPS as ext}
-                <button
-                  class="step step-set-cell ext"
-                  class:active={ph.steps === ext}
-                  onpointerdown={() => pickStepCount(ext)}
-                >
-                  <span class="step-set-num">{ext}</span>
-                </button>
-              {/each}
-            </div>
-          {:else}
-            <div
-              class="steps"
-              class:wrapped={isWrapped}
-              role="application"
-              style="--steps: {displayCount}"
-              onpointermove={stepOnMove}
-              onpointerup={stepEndDrag}
-              onpointercancel={stepEndDrag}
-            >
-              {#each { length: displayCount } as _, i}
-                {@const sourceIdx = (pageStart + i) % steps}
-                {@const trig = ph.trigs[sourceIdx]}
-                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
-                {@const isLockSel = ui.lockMode && ui.selectedStep === sourceIdx}
-                {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
-                <button
-                  class="step flip-host"
-                  class:playhead={isPlayhead}
-                  class:lock-selected={isLockSel}
-                  onpointerdown={(e) => stepStartDrag(e, sourceIdx)}
-                >
-                  <span class="flip-card" class:flipped={trig.active}>
-                    <span class="flip-face step-off"></span>
-                    <span class="flip-face back step-on"></span>
-                  </span>
-                  {#if hasLocks}<span class="lock-dot"></span>{/if}
-                  {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
-                </button>
-              {/each}
-            </div>
-          {/if}
-        </div>
-
-        <!-- Vel mode tabs -->
+        <!-- Vel mode tabs (full width, outside 2-column layout) -->
         <div class="vel-tabs">
           <button class="head-action" onclick={() => resetSeqParams(trackId)}
             data-tip="Reset params to defaults" data-tip-ja="パラメータを初期値に戻す"
@@ -529,46 +470,108 @@
           >{isInsMode ? velMode : 'INS'}</button>
         </div>
 
-        <!-- Velocity bars (grow to fill remaining space) -->
-        <div
-          class="vel-bars"
-          class:plk-mode={isPlkMode}
-          class:chance-mode={velMode === 'CHNC'}
-          class:mounting={velMounting}
-          class:wrapped={isWrapped}
-          style="--steps: {displayCount}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
-          role="application"
-          bind:this={velContainer}
-          onpointermove={velOnMove}
-          onpointerup={velEndDrag}
-          onpointercancel={velEndDrag}
-          data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
-          data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
-        >
-          {#each { length: displayCount } as _, i}
-            {@const sourceIdx = (pageStart + i) % steps}
-            {@const trig = ph.trigs[sourceIdx]}
-            {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
-            {@const isActive = trig.active || shrinking.has(`${trackId}-${sourceIdx}`)}
-            {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
-            {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
-            <div
-              class="vel-cell"
-              role="slider"
-              tabindex="-1"
-              aria-valuenow={velReadValue(trig)}
-              onpointerdown={e => velStartDrag(e, sourceIdx)}
-            >
+        <!-- Step/vel editor: 2-column layout matching PianoRoll structure -->
+        <div class="editor-cols">
+          <div class="editor-spacer"></div>
+          <div class="editor-seq" bind:this={seqEl}>
+            {#if stepSetActive}
+              <div class="steps step-set-mode" role="application" style="--steps: {STEP_SET_MAX + EXT_STEPS.length}">
+                {#each { length: STEP_SET_MAX } as _, stepIdx}
+                  {@const isActive = stepIdx < ph.steps}
+                  <button
+                    class="step step-set-cell"
+                    class:active={isActive}
+                    class:current-end={stepIdx === ph.steps - 1}
+                    onpointerdown={() => pickStepCount(stepIdx + 1)}
+                  >
+                    <span class="step-set-num">{stepIdx + 1}</span>
+                  </button>
+                {/each}
+                {#each EXT_STEPS as ext}
+                  <button
+                    class="step step-set-cell ext"
+                    class:active={ph.steps === ext}
+                    onpointerdown={() => pickStepCount(ext)}
+                  >
+                    <span class="step-set-num">{ext}</span>
+                  </button>
+                {/each}
+              </div>
+            {:else}
               <div
-                class="vel-fill"
-                class:active={isPlkMode ? barHeight > 0 : isActive}
-                class:growing={growing.has(`${trackId}-${sourceIdx}`)}
-                class:shrinking={shrinking.has(`${trackId}-${sourceIdx}`)}
-                class:playhead={isPlayhead}
-                style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
-              ></div>
+                class="steps"
+                class:wrapped={isWrapped}
+                role="application"
+                style="--steps: {displayCount}"
+                onpointermove={stepOnMove}
+                onpointerup={stepEndDrag}
+                onpointercancel={stepEndDrag}
+              >
+                {#each { length: displayCount } as _, i}
+                  {@const sourceIdx = (pageStart + i) % steps}
+                  {@const trig = ph.trigs[sourceIdx]}
+                  {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
+                  {@const isLockSel = ui.lockMode && ui.selectedStep === sourceIdx}
+                  {@const hasLocks = !!(trig.paramLocks && Object.keys(trig.paramLocks).length > 0)}
+                  <button
+                    class="step flip-host"
+                    class:playhead={isPlayhead}
+                    class:lock-selected={isLockSel}
+                    onpointerdown={(e) => stepStartDrag(e, sourceIdx)}
+                  >
+                    <span class="flip-card" class:flipped={trig.active}>
+                      <span class="flip-face step-off"></span>
+                      <span class="flip-face back step-on"></span>
+                    </span>
+                    {#if hasLocks}<span class="lock-dot"></span>{/if}
+                    {#if trig.chance != null && trig.chance < 1}<span class="chance-dot"></span>{/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Velocity bars -->
+            <div
+              class="vel-bars"
+              class:plk-mode={isPlkMode}
+              class:chance-mode={velMode === 'CHNC'}
+              class:mounting={velMounting}
+              class:wrapped={isWrapped}
+              style="--steps: {displayCount}{modeColor ? `; --plk-color: ${modeColor}` : ''}"
+              role="application"
+              bind:this={velContainer}
+              onpointermove={velOnMove}
+              onpointerup={velEndDrag}
+              onpointercancel={velEndDrag}
+              data-tip={velMode === 'VEL' ? "Drag up/down to adjust velocity" : velMode === 'CHNC' ? "Drag to set step probability" : `Drag to set per-step ${velMode}`}
+              data-tip-ja={velMode === 'VEL' ? "上下ドラッグでベロシティを調整" : velMode === 'CHNC' ? "ドラッグで発火確率を調整" : `ドラッグでステップごとの${velMode}を調整`}
+            >
+              {#each { length: displayCount } as _, i}
+                {@const sourceIdx = (pageStart + i) % steps}
+                {@const trig = ph.trigs[sourceIdx]}
+                {@const isPlayhead = isViewingPlayingPattern() && playback.playheads[trackId] === sourceIdx}
+                {@const isActive = trig.active || shrinking.has(`${trackId}-${sourceIdx}`)}
+                {@const barHeight = isPlkMode ? velReadValue(trig) * 100 : (velMode === 'CHNC' && isActive ? (trig.chance ?? 1) * 100 : trig.velocity * 100)}
+                {@const hasChance = trig.active && trig.chance != null && trig.chance < 1}
+                <div
+                  class="vel-cell"
+                  role="slider"
+                  tabindex="-1"
+                  aria-valuenow={velReadValue(trig)}
+                  onpointerdown={e => velStartDrag(e, sourceIdx)}
+                >
+                  <div
+                    class="vel-fill"
+                    class:active={isPlkMode ? barHeight > 0 : isActive}
+                    class:growing={growing.has(`${trackId}-${sourceIdx}`)}
+                    class:shrinking={shrinking.has(`${trackId}-${sourceIdx}`)}
+                    class:playhead={isPlayhead}
+                    style="height: {barHeight}%{velMode === 'VEL' && hasChance ? `; opacity: ${(0.3 + (trig.chance!) * 0.4).toFixed(2)}` : ''}"
+                  ></div>
+                </div>
+              {/each}
             </div>
-          {/each}
+          </div>
         </div>
 
         <!-- Piano roll for melodic tracks -->
@@ -620,6 +623,14 @@
     background: var(--color-surface);
     border-left: 3px solid var(--color-olive);
     border-bottom: 1px solid var(--lz-border-subtle);
+    /* PianoRoll's .piano-spacer uses var(--head-w) for width.
+       Content: brush-bar(42px) + oct-keys(28px) = 70px */
+    --head-w: 70px;
+  }
+  /* PianoRoll's margin-right:135px compensates for StepGrid's track-mix column.
+     PadsView has no track-mix column — knobs are in the header row. */
+  .col-right :global(.piano-roll) {
+    margin-right: 0;
   }
 
   /* ── Mode switch (olive tier) ── */
@@ -837,11 +848,26 @@
     font-size: var(--fs-sm);
   }
 
-  .step-seq {
+  /* ── 2-column layout matching PianoRoll structure ── */
+  .editor-cols {
+    display: flex;
+    gap: 4px;
+    padding: 0 8px;
     flex-shrink: 0;
+  }
+  .editor-spacer {
+    width: var(--head-w);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-right: 1px solid var(--lz-border);
+  }
+  .editor-seq {
+    flex: 1;
     min-width: 0;
-    padding-left: 4px;
-    border-bottom: 1px solid var(--lz-border);
+    display: flex;
+    flex-direction: column;
   }
 
   .steps {
@@ -1019,7 +1045,7 @@
     gap: 2px;
     min-height: 40px;
     max-height: 80px;
-    padding: 4px 0 4px 4px;
+    padding: 4px 0;
     user-select: none;
     overflow: hidden;
     touch-action: none;

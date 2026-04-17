@@ -25,8 +25,9 @@
   // ADR 130: Pads tab + sampler voice → dock becomes full-height pool browser
   const isSamplerSheet = $derived(padsTabSampler)
 
-  // Sampler dock: track selector + voice picker above pool browser
+  // Sampler dock: track selector + voice picker + params/pool tab switch
   const samplerCell = $derived(padsTabSampler ? cellForTrack(song.patterns[ui.currentPattern], ui.selectedTrack) : undefined)
+  let samplerDockTab: 'params' | 'pool' = $state('params')
   const samplerTracks = $derived(
     song.tracks.filter(t => {
       const c = cellForTrack(song.patterns[ui.currentPattern], t.id)
@@ -189,12 +190,26 @@
       {/if}
 
       <div class="section-divider" aria-hidden="true"></div>
+
+      <!-- PARAMS / POOL tab switch -->
+      <div class="sampler-dock-tabs">
+        <button class="sampler-dock-tab" class:active={samplerDockTab === 'params'}
+          onpointerdown={() => { samplerDockTab = 'params' }}>PARAMS</button>
+        <button class="sampler-dock-tab" class:active={samplerDockTab === 'pool'}
+          onpointerdown={() => { samplerDockTab = 'pool' }}>POOL</button>
+      </div>
     </div>
 
-    <div class="pool-header">
-      <span class="section-label">SAMPLE POOL</span>
-    </div>
-    <DockPoolBrowser trackId={ui.selectedTrack ?? ui.selectedTrack} />
+    {#if samplerDockTab === 'params'}
+      <div class="sampler-params-scroll">
+        <DockTrackEditor hideVoicePicker hideSampleLoader />
+      </div>
+    {:else}
+      <div class="pool-header">
+        <span class="section-label">SAMPLE POOL</span>
+      </div>
+      <DockPoolBrowser trackId={ui.selectedTrack ?? ui.selectedTrack} />
+    {/if}
   </div>
   {:else if isOverlaySheet}
   <!-- Split layout: scene navigator (upper) + overlay controls (lower) -->
@@ -911,6 +926,36 @@
   .pool-header {
     padding: 4px 16px;
     flex-shrink: 0;
+  }
+
+  .sampler-dock-tabs {
+    display: flex;
+    gap: 2px;
+  }
+  .sampler-dock-tab {
+    flex: 1;
+    font-family: var(--font-data);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 0;
+    border: 1px solid var(--dz-border);
+    background: transparent;
+    color: var(--dz-text-mid);
+    cursor: pointer;
+    transition: color 80ms, border-color 80ms, background 80ms;
+  }
+  .sampler-dock-tab.active {
+    background: var(--dz-bg-active);
+    color: var(--dz-text-strong);
+    border-color: var(--dz-border-strong);
+  }
+
+  .sampler-params-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: 0 16px;
   }
 
   .sampler-track-tabs {
