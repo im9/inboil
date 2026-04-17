@@ -1,6 +1,6 @@
 # ADR 131: Pads View — Single-Track Editor
 
-## Status: Proposed
+## Status: Implemented (Phase 1) / Proposed (Phase 2–3)
 
 ## Context
 
@@ -46,21 +46,23 @@ Replace col-right content with a full single-track editor:
 ```
 ┌─ Grid ─┐┌─ Pads ─┐┌─ Tracker ─┐
 └────────┘└────────┘└───────────┘
-┌───────────────────────────────────────────────────────┐
-│  Waveform (Sampler only — existing SamplerWaveform)   │
-├───────────┬───────────────────────────────────────────┤
-│           │  909K ●  ∧  │24│1/16│ S │ M │             │ track header
-│           ├───────────────────────────────────────────┤
-│  4×4      │  [■][□][■][□][■][□][■][□]...  │VOL│PAN│  │ step cells + mix
-│  Pads     ├───────────────────────────────────────────┤
-│           │  RST │ VEL │CHNC│ MIX │ FX │ INS │       │ vel mode tabs
-│  ──────── ├───────────────────────────────────────────┤
-│  TRK/SLC  │  ████ ██ ████ ██ ████ █ ███  │VRB│DLY│  │ vel bars + sends
-│  /NOTE    ├───────────────────────────────────────────┤
-│           │  PianoRoll (melodic tracks only)          │
-│  oct ▲▼   │                                          │
-│           │                                          │
-└───────────┴───────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  Waveform (Sampler only — existing SamplerWaveform)           │
+├───────────┬───────────────────────────────────────────────────┤
+│           │  909K │24│1/16│S│M│    VOL PAN │ VERB DLY GLT GRN│ header + knobs
+│           ├───────────────────────────────────────────────────┤
+│           │  RST │ VEL │CHNC│ MIX │ FX │ INS │               │ vel mode tabs
+│  4×4      ├────┬──────────────────────────────────────────────┤
+│  Pads     │    │ [■][□][■][□][■][□][■][□]...                 │ step cells
+│           │ sp ├──────────────────────────────────────────────┤
+│  ──────── │    │ ████ ██ ████ ██ ████ █ ███                   │ vel bars
+│  TRK/SLC  ├────┴──────────────────────────────────────────────┤
+│  /NOTE    │  PianoRoll (melodic tracks only)                  │
+│           │  [brush][keys]│ note grid...                      │
+│  oct ▲▼   │               │                                   │
+└───────────┴───────────────────────────────────────────────────┘
+
+sp = editor-spacer (--head-w: 70px, aligned with PianoRoll's piano-spacer)
 ```
 
 ### Single-Track Editor (col-right)
@@ -68,27 +70,41 @@ Replace col-right content with a full single-track editor:
 The right column renders the selected track's StepGrid row in full,
 including all controls that currently appear only in StepGrid:
 
-| Element | Source | Notes |
-|---------|--------|-------|
-| Track header | StepGrid `.ctrl-main` | name, steps cycle, scale, solo, mute |
-| Step cells | StepGrid `.steps` | drag-to-paint, P-Lock dots, playhead |
-| Vel mode tabs | StepGrid `.ctrl-vel` | RST, VEL, CHNC, MIX, FX, INS |
-| Vel/chance bars | StepGrid `.vel-bars` | drag editing, all automation modes |
-| Mix knobs | StepGrid `.mix-knobs` | VOL, PAN |
-| Send knobs | StepGrid `.send-knobs` | VERB, DLY, GLT, GRN |
-| PianoRoll | StepGrid inline | melodic tracks only (existing component) |
+| Element | Location | Notes |
+|---------|----------|-------|
+| Track header | `.track-header` | name, steps cycle, scale, solo, mute, VOL/PAN + send knobs |
+| Vel mode tabs | `.vel-tabs` (full width) | RST, VEL, CHNC, MIX, FX, INS |
+| Step cells | `.editor-cols > .editor-seq` | drag-to-paint, P-Lock dots, playhead |
+| Vel/chance bars | `.editor-cols > .editor-seq` | drag editing, all automation modes |
+| PianoRoll | below `.editor-cols` | melodic tracks only (existing component) |
+
+**2-column alignment:** `.editor-cols` mirrors PianoRoll's layout structure.
+`.editor-spacer` uses `width: var(--head-w)` (70px) matching PianoRoll's
+`.piano-spacer` (brush-bar 42px + oct-keys 28px). PianoRoll's `margin-right`
+is overridden to 0 (PadsView has no track-mix column).
+
+**Knobs in header:** VOL, PAN, VERB, DLY, GLT, GRN moved to track header
+row (right-aligned with `header-spacer`). This frees the step/vel area for
+pure sequencer content.
 
 Step paging syncs with `ui.stepPage` / `ui.stepPageSize` (shared state
 with StepGrid — switching tabs preserves position).
 
 ### SamplerParams removal
 
-`SamplerParams.svelte` is removed from PadsView. All voice parameters
-(including Sampler's AMP, SAMPLE, CHOP, SYNC groups) are accessed through
-DockPanel's `DockTrackEditor`, which already renders them. This eliminates
-the duplication and clarifies roles:
+`SamplerParams.svelte` and `SamplerStepRow.svelte` are deleted. All voice
+parameters (including Sampler's AMP, SAMPLE, CHOP, SYNC groups) are
+accessed through DockPanel's `DockTrackEditor`.
 
-- **DockPanel** = parameter controls (knobs, voice picker, presets, FX)
+When Pads tab is active with a Sampler voice, DockPanel shows a
+**PARAMS / POOL tab switch**:
+- **PARAMS tab** — `DockTrackEditor` with `hideVoicePicker` + `hideSampleLoader`
+  (voice picker is already shown above, sample loader replaced by pool)
+- **POOL tab** — full-height Pool Browser
+
+This clarifies roles:
+
+- **DockPanel** = parameter controls + sample browsing (tab switch)
 - **Pads view** = performance surface (pads, steps, velocity, piano roll)
 
 ### Waveform
@@ -130,20 +146,20 @@ Three tabs remain: Grid / Pads / Tracker. Each has a clear role:
 
 ### Phase 1: Single-Track Editor in PadsView
 
-- [ ] Remove `SamplerParams` from PadsView col-right
-- [ ] Add track header row (name, steps cycle, scale, solo, mute)
-- [ ] Add step cells with drag-to-paint (reuse StepGrid logic)
-- [ ] Add vel mode tabs (RST / VEL / CHNC / MIX / FX / INS)
-- [ ] Add velocity/chance/param bars with drag editing
-- [ ] Add mix knobs (VOL, PAN) on step row
-- [ ] Add send knobs (VERB, DLY, GLT, GRN) on vel bar row
-- [ ] Add PianoRoll for melodic tracks (below vel bars)
-- [ ] Sync step paging with `ui.stepPage` / `ui.stepPageSize`
+- [x] Remove `SamplerParams` from PadsView col-right
+- [x] Add track header row (name, steps cycle, scale, solo, mute, VOL/PAN + sends)
+- [x] Add step cells with drag-to-paint (reuse StepGrid logic)
+- [x] Add vel mode tabs (RST / VEL / CHNC / MIX / FX / INS)
+- [x] Add velocity/chance/param bars with drag editing
+- [x] Add PianoRoll for melodic tracks (below vel bars)
+- [x] 2-column layout (editor-spacer + editor-seq) aligned with PianoRoll
+- [x] Sync step paging with `ui.stepPage` / `ui.stepPageSize`
+- [x] Delete `SamplerParams.svelte` and `SamplerStepRow.svelte`
+- [x] DockPanel: PARAMS/POOL tab switch for sampler voice on Pads tab
+- [x] DockTrackEditor: `hideVoicePicker` / `hideSampleLoader` props
 - [ ] Verify step-set mode (long-press steps button)
 - [ ] Verify P-Lock mode (lock toggle, step selection, lock dots)
 - [ ] Verify playhead highlighting
-- [ ] Delete `SamplerParams.svelte`
-- [ ] Verify DockPanel still shows all voice params correctly
 
 ### Phase 2: Voice Visualizations (canvas area)
 
@@ -182,19 +198,17 @@ if the duplication becomes a maintenance burden.
 ### Vertical space budget
 
 On a 900px-tall viewport (common laptop), PadsView col-right:
-- Track header: 32px
-- Step cells: 28px
-- Vel tabs: 28px
-- Vel bars: 60px
-- Send knobs: 36px
-- PianoRoll: ~250px (melodic) or absent (drum/sampler)
-- Total: ~184px (drum) to ~434px (melodic) — fits comfortably beside pads
+- Track header: 40px (name, steps, scale, S/M, knobs)
+- Vel tabs: 40px
+- editor-cols (steps + vel bars): ~120px (steps 40px + vel bars 40–80px)
+- PianoRoll: ~244px (melodic) or absent (drum/sampler)
+- Total: ~200px (drum) to ~444px (melodic) — fits comfortably beside pads
 
 ### What this ADR does NOT change
 
 - Grid tab: completely unchanged, keeps its own multi-track StepGrid
 - Tracker tab: completely unchanged
-- DockPanel: role unchanged — all voice params live here
+- DockPanel: role unchanged — all voice params live here (PARAMS/POOL tab for sampler)
 - Pad modes and behavior: identical to ADR 130
 - Audio/DSP: no changes
 - Data model: no changes to Song/Pattern/Cell/Track types
