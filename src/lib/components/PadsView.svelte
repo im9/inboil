@@ -617,6 +617,9 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior-y: contain;
+    background: var(--color-surface);
+    border-left: 3px solid var(--color-olive);
+    border-bottom: 1px solid var(--lz-border-subtle);
   }
 
   /* ── Mode switch (olive tier) ── */
@@ -690,8 +693,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 32px;
-    padding: 0 4px;
+    height: 40px;
+    padding: 0 8px;
     border-bottom: 1px solid var(--lz-border);
     flex-shrink: 0;
   }
@@ -837,6 +840,7 @@
   .step-seq {
     flex-shrink: 0;
     min-width: 0;
+    padding-left: 4px;
     border-bottom: 1px solid var(--lz-border);
   }
 
@@ -961,8 +965,8 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 28px;
-    padding: 0 4px;
+    height: 40px;
+    padding: 0 8px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--lz-border-subtle);
   }
@@ -1015,10 +1019,11 @@
     gap: 2px;
     min-height: 40px;
     max-height: 80px;
-    padding: 4px 0;
+    padding: 4px 0 4px 4px;
     user-select: none;
     overflow: hidden;
     touch-action: none;
+    border-bottom: 1px solid var(--lz-border-subtle);
   }
   .vel-bars.wrapped .vel-fill { opacity: 0.5; }
 
