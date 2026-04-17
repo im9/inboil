@@ -156,6 +156,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 019 | Multi-Device Collaboration | Implemented | WebRTC 1:1 (host+guest), CF Workers DO signaling, chunked DataChannel, delta sync |
 | 020 | Data Persistence & Storage | Implemented | localStorage + IndexedDB + JSON Export/Import; cloud sync cancelled (no external dependencies) |
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
+| 132 | Offline WAV Export | Proposed | OfflineAudioContext-based deterministic bounce, separate from header REC live capture. Disambiguates "REC" naming for future ADR 131 step recording |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; cloud sync/external API integration all cancelled — no auth needed |
 | 071 | Donate Feature | Implemented | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Implemented | Astro + Starlight LP with interactive demos, specs, bilingual docs. Playground/onboarding split to ADR 094 |
