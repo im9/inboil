@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-04-18
+
+### Added
+- **Pads view**: new third pattern editor tab alongside Grid and Tracker (ADR 130)
+  - 4×4 MPC-style pads with tri-mode (TRACK / SLICE / NOTE)
+  - Single-track deep editor: step cells, velocity/chance/param bars, PianoRoll
+  - SamplerWaveform with zoom, start/end handles, chop slice markers
+  - DockPanel PARAMS/POOL tab switch for sampler voices
+- **Voice visualizations** in PadsView canvas area (ADR 131 Phase 2)
+  - Drum: amplitude decay + pitch sweep curves
+  - WT: wavetable waveform + ADSR envelope
+  - FM: algorithm routing diagram with operator levels
+  - Analog: ADSR envelope
+- Waveform display for Crash/Ride (audio pool) and pack samples (Grand Piano)
+- Pad audition without requiring playback
+- Playhead highlighting on pads for all modes
+
+### Fixed
+- SamplerWaveform fallback to pre-computed waveform when rawBuffer decode fails
+
+### Changed
+- Bump svelte 5.55.4, gsap 3.15.0, astro 6.1.7, @astrojs/starlight 0.38.3, @astrojs/svelte 8.0.5
+
 ## [0.3.1] - 2026-04-03
 
 ### Performance
