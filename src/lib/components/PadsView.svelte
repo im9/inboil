@@ -18,8 +18,11 @@
   const trackId = $derived(ui.selectedTrack)
   const cell = $derived(cellForTrack(song.patterns[ui.currentPattern], trackId))
   const track = $derived(trackId >= 0 ? song.tracks[trackId] : null)
-  const SAMPLER_VOICE_IDS: ReadonlySet<string> = new Set(['Sampler', 'Crash', 'Ride'])
-  const isSampler = $derived(!!cell?.voiceId && SAMPLER_VOICE_IDS.has(cell.voiceId))
+  // Voices that use sample-based waveform display (SamplerWaveform)
+  const SAMPLE_VOICE_IDS: ReadonlySet<string> = new Set(['Sampler', 'Crash', 'Ride'])
+  const hasSampleWaveform = $derived(!!cell?.voiceId && SAMPLE_VOICE_IDS.has(cell.voiceId))
+  // Only Sampler gets slice mode — Crash/Ride are single-sample drums
+  const isSampler = $derived(cell?.voiceId === 'Sampler')
   const ph = $derived(trackId >= 0 ? activeCell(trackId) : null)
 
   // Auto-switch pad mode when voice type changes
@@ -37,9 +40,9 @@
       : (['track', 'note'] as const)
   )
 
-  // Current sample data for waveform (sampler only)
+  // Current sample data for waveform (sample-based voices)
   const currentSample = $derived(
-    isSampler ? samplesByCell[sampleCellKey(trackId, ui.currentPattern)] : undefined
+    hasSampleWaveform ? samplesByCell[sampleCellKey(trackId, ui.currentPattern)] : undefined
   )
 
   // Built-in drum pool names for Crash/Ride
@@ -49,7 +52,7 @@
 
   // Auto-load waveform for Crash/Ride (builtin) and pack-based Sampler (Grand Piano etc.)
   $effect(() => {
-    if (!isSampler || !cell) return
+    if (!hasSampleWaveform || !cell) return
     const key = sampleCellKey(trackId, ui.currentPattern)
     if (samplesByCell[key]) return // already loaded
     const vid = cell.voiceId
@@ -409,7 +412,7 @@
 
 <div class="pads-view">
   <!-- Voice visualization -->
-  {#if isSampler}
+  {#if hasSampleWaveform}
     <SamplerWaveform
       sample={currentSample}
       start={startVal}

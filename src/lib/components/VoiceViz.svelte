@@ -362,7 +362,7 @@
 <style>
   .voice-viz {
     flex: 1;
-    min-height: 80px;
+    min-height: 120px;
     display: flex;
     align-items: stretch;
     background: var(--color-surface);
