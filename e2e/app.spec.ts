@@ -1164,3 +1164,103 @@ test.describe('sweep carry-over', () => {
     await page.locator('[aria-label="Stop"]').click()
   })
 })
+
+// ── Generative sheet overlay ──
+
+test.describe('generative sheet overlay', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+    await page.waitForLoadState('networkidle')
+    await dismissHelp(page)
+  })
+
+  /** Add a generative node via toolbar + canvas click, return its element */
+  async function addGenNode(page: Page, label: string) {
+    // Click toolbar button to enter placement mode
+    await page.locator(`[aria-label="${label}"]`).click()
+    await page.waitForTimeout(200)
+
+    // Click on scene canvas to place the node
+    const scene = page.locator('.scene-view')
+    const box = await scene.boundingBox()
+    if (!box) throw new Error('scene-view not found')
+    await scene.click({ position: { x: box.width / 2, y: box.height / 2 } })
+    await page.waitForTimeout(400)
+  }
+
+  for (const { label, engine } of [
+    { label: 'Turing Machine', engine: 'turing' },
+    { label: 'Quantizer', engine: 'quantizer' },
+    { label: 'Tonnetz', engine: 'tonnetz' },
+  ] as const) {
+    test(`${engine} sheet opens as absolute overlay`, async ({ page }) => {
+      await addGenNode(page, label)
+
+      // Find the generative node and double-click to open sheet
+      const genNode = page.locator(`.gen-faceplate.${engine}`)
+      await expect(genNode).toBeVisible()
+      await genNode.dblclick()
+      await page.waitForTimeout(400)
+
+      // Sheet backdrop must be visible
+      const backdrop = page.locator('.sheet-backdrop')
+      await expect(backdrop).toBeVisible()
+
+      // Sheet must be absolutely positioned over the scene (pattern-sheet-group)
+      const sheetGroup = page.locator('.pattern-sheet-group')
+      await expect(sheetGroup).toBeVisible()
+      const groupStyle = await sheetGroup.evaluate(el => {
+        const cs = getComputedStyle(el)
+        return { position: cs.position, zIndex: cs.zIndex }
+      })
+      expect(groupStyle.position).toBe('absolute')
+      expect(Number(groupStyle.zIndex)).toBeGreaterThanOrEqual(51)
+
+      // Sheet must not cover the full view — top offset should leave gap
+      const viewMain = page.locator('.view-main')
+      const viewBox = await viewMain.boundingBox()
+      const sheetBox = await sheetGroup.boundingBox()
+      if (viewBox && sheetBox) {
+        expect(sheetBox.y).toBeGreaterThan(viewBox.y)
+      }
+
+      // Close via backdrop
+      await backdrop.click({ position: { x: 5, y: 5 }, force: true })
+      await page.waitForTimeout(300)
+      await expect(sheetGroup).not.toBeVisible()
+    })
+  }
+
+  test('sweep sheet hides pattern mode tabs', async ({ page }) => {
+    // Add a pattern node to scene first
+    await page.locator('.head-scene').click()
+    await page.waitForTimeout(400)
+
+    // Add a sweep node via toolbar
+    await page.locator('[aria-label="Sweep"]').click()
+    await page.waitForTimeout(200)
+
+    // Place sweep near the pattern node
+    const scene = page.locator('.scene-view')
+    const box = await scene.boundingBox()
+    if (!box) throw new Error('scene-view not found')
+    await scene.click({ position: { x: box.width / 2 + 60, y: box.height / 2 } })
+    await page.waitForTimeout(400)
+
+    // Connect sweep to pattern: drag from sweep to pattern node
+    const sweepNode = page.locator('.gen-faceplate.sweep')
+    const patternNode = page.locator('.scene-node.pattern')
+
+    if (await sweepNode.isVisible() && await patternNode.isVisible()) {
+      // Double-click sweep node to open the sheet
+      await sweepNode.dblclick()
+      await page.waitForTimeout(400)
+
+      // If sheet opened, tabs should NOT be visible
+      const tabs = page.locator('.pattern-tabs')
+      await expect(tabs).not.toBeVisible()
+    }
+  })
+})

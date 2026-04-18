@@ -81,6 +81,7 @@
     return () => window.removeEventListener('resize', onResize)
   })
   const isMobile = $derived(windowWidth < 640)
+  const hasSweep = $derived(!!findSweepNodeForPattern(song.patterns[ui.currentPattern]?.id))
 
   // ── Audio engine pre-warm ────────────────────────────────────────
   // Init AudioContext on first user interaction so it's ready by play time
@@ -483,26 +484,32 @@
           {#if ui.phraseView === 'tonnetz'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <TonnetzSheet onclose={closeAllSheets} />
+            <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
+              <div class="pattern-sheet">
+                <TonnetzSheet onclose={closeAllSheets} />
+              </div>
             </div>
           {:else if ui.phraseView === 'quantizer'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <QuantizerSheet onclose={closeAllSheets} />
+            <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
+              <div class="pattern-sheet">
+                <QuantizerSheet onclose={closeAllSheets} />
+              </div>
             </div>
           {:else if ui.phraseView === 'turing'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
-              <TuringSheet onclose={closeAllSheets} />
+            <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
+              <div class="pattern-sheet">
+                <TuringSheet onclose={closeAllSheets} />
+              </div>
             </div>
           {:else if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
             <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
-            {#if ui.patternSheet && !(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')}
+            {#if ui.patternSheet && !(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master') && !(ui.sweepTab && hasSweep)}
               <div class="pattern-tabs">
                 <PatternModeTabs />
               </div>
@@ -516,7 +523,6 @@
               {:else if ui.phraseView === 'master'}
                 <MasterView />
               {:else}
-                {@const hasSweep = !!findSweepNodeForPattern(song.patterns[ui.currentPattern]?.id)}
                 {#if ui.sweepTab && hasSweep}
                   <SweepCanvas onClose={closeAllSheets} onstop={stop} />
                 {:else}
@@ -596,7 +602,6 @@
     display: flex;
     flex-direction: column;
   }
-
   .pattern-tabs {
     flex-shrink: 0;
     padding-left: 8px;
