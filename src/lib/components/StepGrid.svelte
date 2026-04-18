@@ -114,6 +114,11 @@
 
   onDestroy(() => { if (longPressTimer) clearTimeout(longPressTimer) })
 
+  // ── Track label tap → select/deselect track ──
+  function trackLabelDown(trackId: number) {
+    ui.selectedTrack = ui.selectedTrack === trackId ? -1 : trackId
+  }
+
   // ── Remove track (× button in expanded vel row) ──
   let removeTrackId: number | null = $state(null)
 
@@ -382,8 +387,8 @@
             <button
               class="track-label"
               class:expanded={selected}
-              onpointerdown={() => { ui.selectedTrack = selected ? -1 : trackId }}
-              data-tip="Expand velocity lane" data-tip-ja="ベロシティレーンを展開"
+              onpointerdown={() => trackLabelDown(trackId)}
+              data-tip="Expand velocity lane / double-tap: sampler sheet" data-tip-ja="ベロシティレーン展開 / ダブルタップ: サンプラーシート"
             >
               <span class="track-name">{trackDisplayName(ph, ui.currentPattern)}{#if ph.insertFx?.[0]?.type || ph.insertFx?.[1]?.type}<span class="ins-fx-dot" data-tip="Insert FX active" data-tip-ja="インサートFX有効"></span>{/if}</span>
               <svg class="chevron" class:open={selected} viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

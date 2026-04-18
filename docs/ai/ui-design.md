@@ -782,6 +782,31 @@ M8-style vertical single-track step editor (`ui.phraseView === 'tracker'`). Show
 
 **Sidebar mix/send**: Bottom of the track sidebar, pushed down with `margin-top: auto`. Baseline-only knobs (20px, compact, dark theme) for VOL/PAN (MIX section) and VERB/DLY/GLT/GRN (SEND section). Per-step P-Lock editing uses the tracker columns instead.
 
+### PadsView — DECIDED
+
+MPC-style pad performance + single-track deep editor (`prefs.patternEditor === 'pads'`). Three tabs: Grid / Pads / Tracker, each with a distinct role (ADR 130, 131).
+
+**Layout** (two columns):
+- **col-pads** (left): 4×4 SamplerPads grid (aspect-ratio 1, flex-shrink 0) with mode switch above
+- **col-right** (flex 1): single-track editor — track header, vel mode tabs, step cells, vel bars, PianoRoll (melodic tracks)
+
+**Canvas area** (above bottom-row):
+- **Sampler/Crash/Ride**: SamplerWaveform with interactive start/end handles, zoom, chop slices
+- **Drum voices**: VoiceViz SVG — amplitude decay curve (olive) + pitch sweep (blue dashed)
+- **WT**: VoiceViz SVG — wavetable waveform + ADSR envelope (stacked)
+- **FM**: VoiceViz SVG — algorithm routing diagram with operator level indicators
+- **Analog** (Bass303/MoogLead/Analog): VoiceViz SVG — ADSR envelope
+
+**Pad modes** (SamplerPads):
+- **TRACK**: tap pad → select track (pad = track, up to 16)
+- **SLICE**: sampler chop slice auditioning (Sampler voice only)
+- **NOTE**: chromatic note input with octave shift
+- Auto-switch: sampler tracks default to SLICE, others to NOTE. Crash/Ride get TRACK/NOTE only (no SLICE — single-sample drums)
+
+**Single-track editor** (col-right): Replicates one StepGrid track row with full controls — header (name, steps, scale, S/M, VOL/PAN + sends), vel mode tabs (RST/VEL/CHNC/MIX/FX/INS), step cells with drag-to-paint, vel bars with drag editing, PianoRoll for melodic tracks. 2-column layout (editor-spacer + editor-seq) aligned with PianoRoll's piano-spacer.
+
+**Waveform auto-loading**: Crash/Ride waveforms loaded on-demand from audio pool OPFS. Pack-based samples (Grand Piano etc.) loaded via `loadPackZones`. Cached per voiceId/packId across patterns.
+
 ### VoicePicker (in DockPanel) — DECIDED
 
 Voice selection is integrated into DockPanel as category tabs + voice list (moved from separate bubble menu). Category tabs: DRUM / BASS / LEAD / SAMPLER. Clicking a voice calls `changeVoice(trackIdx, voiceId)` (resets cell voiceParams to new voice defaults).
