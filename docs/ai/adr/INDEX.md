@@ -103,7 +103,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 098 | Mobile Landscape Orientation | Proposed | Landscape-specific layout for mobile (split from ADR 095) |
 | 115 | Centralized Keyboard Routing | Implemented | Single dispatcher replaces distributed `<svelte:window onkeydown>`, priority-based layer routing |
 | 124 | Design Token Consolidation | Implemented | `--lz-*`/`--dz-*` color tokens + `--fs-*` font-size tokens, DockPanel `--dk-*` unified, 7px→8px minimum |
-| 131 | Pattern Editor Integration | Proposed | Merge Grid+Pads into single view (2 tabs: Grid/Tracker). Track Canvas (waveform/viz), pads column + StepGrid. Piano Roll redesign deferred to separate ADR |
+| 131 | Pattern Editor Integration | Implemented (P1–P2) | Single-track editor in PadsView col-right (steps, vel bars, PianoRoll, knobs). Voice visualizations (drum/WT/FM/analog SVG). P3 mobile layout remaining |
 
 ## Instruments / Sound Design
 
