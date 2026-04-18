@@ -38,30 +38,49 @@
   const HANDLE_W = 8        // hit zone width in px for start/end handles
   const PEAK_RESOLUTION = 4096
 
-  // Generate high-res peak array from raw buffer
+  // Convert pre-computed waveform (absolute peaks) to min/max pairs
+  function peaksFromWaveform() {
+    if (!sample || !sample.waveform.length) { peaks = new Float32Array(0); return }
+    const src = sample.waveform
+    const out = new Float32Array(src.length * 2)
+    for (let i = 0; i < src.length; i++) {
+      out[i * 2] = -src[i]
+      out[i * 2 + 1] = src[i]
+    }
+    peaks = out
+  }
+
+  // Generate high-res peak array from raw buffer, or use pre-computed waveform
   $effect(() => {
-    if (!sample?.rawBuffer) { peaks = new Float32Array(0); return }
-    const buf = sample.rawBuffer
-    const ctx = new OfflineAudioContext(1, 1, 44100)
-    ctx.decodeAudioData(buf.slice(0)).then(decoded => {
-      const ch = decoded.getChannelData(0)
-      const len = PEAK_RESOLUTION
-      const out = new Float32Array(len * 2) // min/max pairs
-      const blockSize = ch.length / len
-      for (let i = 0; i < len; i++) {
-        const from = Math.floor(i * blockSize)
-        const to = Math.min(Math.floor((i + 1) * blockSize), ch.length)
-        let mn = 1, mx = -1
-        for (let j = from; j < to; j++) {
-          const v = ch[j]
-          if (v < mn) mn = v
-          if (v > mx) mx = v
+    if (!sample) { peaks = new Float32Array(0); return }
+    // If rawBuffer has actual data, decode for high-res peaks
+    if (sample.rawBuffer.byteLength > 0) {
+      const buf = sample.rawBuffer
+      const ctx = new OfflineAudioContext(1, 1, 44100)
+      ctx.decodeAudioData(buf.slice(0)).then(decoded => {
+        const ch = decoded.getChannelData(0)
+        const len = PEAK_RESOLUTION
+        const out = new Float32Array(len * 2) // min/max pairs
+        const blockSize = ch.length / len
+        for (let i = 0; i < len; i++) {
+          const from = Math.floor(i * blockSize)
+          const to = Math.min(Math.floor((i + 1) * blockSize), ch.length)
+          let mn = 1, mx = -1
+          for (let j = from; j < to; j++) {
+            const v = ch[j]
+            if (v < mn) mn = v
+            if (v > mx) mx = v
+          }
+          out[i * 2] = mn
+          out[i * 2 + 1] = mx
         }
-        out[i * 2] = mn
-        out[i * 2 + 1] = mx
-      }
-      peaks = out
-    }).catch(() => { peaks = new Float32Array(0) })
+        peaks = out
+      }).catch(() => { peaksFromWaveform() })
+    } else if (sample.waveform.length > 0) {
+      peaksFromWaveform()
+    } else {
+      peaks = new Float32Array(0)
+    }
   })
 
   // Visible range in normalized [0,1] coordinates

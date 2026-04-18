@@ -163,10 +163,10 @@ Three tabs remain: Grid / Pads / Tracker. Each has a clear role:
 
 ### Phase 2: Voice Visualizations (canvas area)
 
-- [ ] Drum voice: tone shape + decay envelope
-- [ ] WT synth: wavetable shape + morph position
-- [ ] FM synth: algorithm routing diagram
-- [ ] ADSR envelope curve (shared across voice types)
+- [x] Drum voice: tone shape + decay envelope
+- [x] WT synth: wavetable shape + morph position
+- [x] FM synth: algorithm routing diagram
+- [x] ADSR envelope curve (shared across voice types)
 
 ### Phase 3: Mobile Layout
 

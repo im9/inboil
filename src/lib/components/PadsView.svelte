@@ -9,6 +9,7 @@
   import { relativeCoords, stepIndexFromX } from '../domHelpers.ts'
   import type { Trig } from '../types.ts'
   import SamplerWaveform from './SamplerWaveform.svelte'
+  import VoiceViz from './VoiceViz.svelte'
   import SamplerPads from './SamplerPads.svelte'
   import PianoRoll from './PianoRoll.svelte'
   import Knob from './Knob.svelte'
@@ -17,7 +18,8 @@
   const trackId = $derived(ui.selectedTrack)
   const cell = $derived(cellForTrack(song.patterns[ui.currentPattern], trackId))
   const track = $derived(trackId >= 0 ? song.tracks[trackId] : null)
-  const isSampler = $derived(cell?.voiceId === 'Sampler')
+  const SAMPLER_VOICE_IDS: ReadonlySet<string> = new Set(['Sampler', 'Crash', 'Ride'])
+  const isSampler = $derived(!!cell?.voiceId && SAMPLER_VOICE_IDS.has(cell.voiceId))
   const ph = $derived(trackId >= 0 ? activeCell(trackId) : null)
 
   // Auto-switch pad mode when voice type changes
@@ -39,6 +41,61 @@
   const currentSample = $derived(
     isSampler ? samplesByCell[sampleCellKey(trackId, ui.currentPattern)] : undefined
   )
+
+  // Built-in drum pool names for Crash/Ride
+  const BUILTIN_POOL: Record<string, string> = { Crash: '909-crash', Ride: '909-ride' }
+  // Waveform cache per voiceId/packId — avoids redundant OPFS reads across patterns
+  const waveformCache = new Map<string, { name: string; waveform: Float32Array }>()
+
+  // Auto-load waveform for Crash/Ride (builtin) and pack-based Sampler (Grand Piano etc.)
+  $effect(() => {
+    if (!isSampler || !cell) return
+    const key = sampleCellKey(trackId, ui.currentPattern)
+    if (samplesByCell[key]) return // already loaded
+    const vid = cell.voiceId
+    if (!vid) return
+
+    const poolName = BUILTIN_POOL[vid]
+    const packId = cell.sampleRef?.packId
+    const cacheKey = poolName ?? packId
+    if (!cacheKey) return
+
+    // Reuse cached waveform if already loaded for another pattern
+    const cached = waveformCache.get(cacheKey)
+    if (cached) {
+      samplesByCell[key] = { name: cached.name, waveform: cached.waveform, rawBuffer: new ArrayBuffer(0) }
+      return
+    }
+
+    if (poolName) {
+      // Crash/Ride: load from audio pool OPFS
+      void (async () => {
+        const { loadAllMeta, readSample, generateWaveform } = await import('../audioPool.ts')
+        const { decodeToMonoOffline } = await import('../audio/engine.ts')
+        const entries = await loadAllMeta()
+        const entry = entries.find(e => e.name === poolName && e.folder.startsWith('factory/'))
+        if (!entry) return
+        const raw = await readSample(entry)
+        if (!raw) return
+        const result = await decodeToMonoOffline(raw)
+        if (!result) return
+        const waveform = generateWaveform(result.mono)
+        waveformCache.set(cacheKey, { name: poolName, waveform })
+        samplesByCell[sampleCellKey(trackId, ui.currentPattern)] = { name: poolName, waveform, rawBuffer: new ArrayBuffer(0) }
+      })()
+    } else if (packId) {
+      // Pack-based sampler (Grand Piano etc.): load first zone waveform
+      void (async () => {
+        const { loadPackZones, generateWaveform } = await import('../audioPool.ts')
+        const zones = await loadPackZones(packId)
+        if (!zones.length) return
+        const name = cell.sampleRef?.name ?? packId
+        const waveform = generateWaveform(zones[0].buffer)
+        waveformCache.set(cacheKey, { name, waveform })
+        samplesByCell[sampleCellKey(trackId, ui.currentPattern)] = { name, waveform, rawBuffer: new ArrayBuffer(0) }
+      })()
+    }
+  })
 
   const startVal = $derived(cell?.voiceParams?.start ?? 0)
   const endVal = $derived(cell?.voiceParams?.end ?? 1)
@@ -351,16 +408,20 @@
 </script>
 
 <div class="pads-view">
-  <!-- Waveform — sampler only -->
-  <SamplerWaveform
-    sample={isSampler ? currentSample : undefined}
-    start={startVal}
-    end={endVal}
-    chopSlices={isSampler ? chopVal : 0}
-    activeSlice={isSampler ? activeSlice : -1}
-    onchangestart={isSampler ? onChangeStart : undefined}
-    onchangeend={isSampler ? onChangeEnd : undefined}
-  />
+  <!-- Voice visualization -->
+  {#if isSampler}
+    <SamplerWaveform
+      sample={currentSample}
+      start={startVal}
+      end={endVal}
+      chopSlices={chopVal}
+      activeSlice={activeSlice}
+      onchangestart={onChangeStart}
+      onchangeend={onChangeEnd}
+    />
+  {:else if cell}
+    <VoiceViz voiceId={cell.voiceId} voiceParams={cell.voiceParams ?? {}} />
+  {/if}
 
   <!-- Pads + Single-Track Editor -->
   <div class="bottom-row">
