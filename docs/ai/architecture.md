@@ -113,10 +113,15 @@ No `SharedArrayBuffer` is used in the current implementation. The UI sends the e
 │   ├── main.ts                     ← Entry point
 │   ├── app.css                     ← Global styles (reset, tokens, base)
 │   ├── lib/
-│   │   ├── components/ (56 files)  ← Svelte 5 UI components
+│   │   ├── components/ (61 files)  ← Svelte 5 UI components
 │   │   │   ├── AppHeader.svelte    ← BPM, transport, PAT navigation, CPY/PST/CLR
 │   │   │   ├── StepGrid.svelte     ← Desktop step sequencer grid
 │   │   │   ├── TrackerView.svelte  ← M8-style vertical tracker editor
+│   │   │   ├── PadsView.svelte     ← MPC-style pads + single-track editor (ADR 130/131)
+│   │   │   ├── SamplerPads.svelte  ← 4×4 pad grid (TRACK/SLICE/NOTE modes)
+│   │   │   ├── SamplerWaveform.svelte ← Interactive sample waveform display (zoom, handles)
+│   │   │   ├── VoiceViz.svelte     ← Voice-specific SVG visualizations (drum/WT/FM/analog)
+│   │   │   ├── PatternModeTabs.svelte ← Grid/Pads/Tracker tab switcher
 │   │   │   ├── PianoRoll.svelte    ← Note bar editor for melodic tracks (poly chord support)
 │   │   │   ├── SceneView.svelte    ← Node-based scene canvas
 │   │   │   ├── SceneCanvas.svelte  ← Canvas layer for scene edges/arrowheads

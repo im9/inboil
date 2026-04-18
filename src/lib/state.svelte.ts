@@ -233,6 +233,7 @@ export const ui = $state<{
   tonnetzNodeId: string | null
   quantizerNodeId: string | null
   turingNodeId: string | null
+  padMode: 'track' | 'slice' | 'note'
 }>({
   selectedTrack: 0,
   currentPattern: 0,    // index into song.patterns[] (ADR 044 Phase 1a)
@@ -261,6 +262,7 @@ export const ui = $state<{
   tonnetzNodeId: null,
   quantizerNodeId: null,
   turingNodeId: null,
+  padMode: 'track' as const,
 })
 
 /** Get the first selected scene node (for single-selection compatibility) */
@@ -332,7 +334,7 @@ interface StoredPrefs {
   lang: Lang
   visited: boolean
   scaleMode: boolean
-  patternEditor: 'grid' | 'tracker'
+  patternEditor: 'grid' | 'pads' | 'tracker'
   showGuide: boolean
   randomGenre: string
   lastProjectId: string | null
@@ -381,7 +383,7 @@ export const lang = $state<{ value: Lang }>({ value: initialPrefs.lang })
 export const prefs = $state({
   visited: initialPrefs.visited,
   scaleMode: initialPrefs.scaleMode,
-  patternEditor: initialPrefs.patternEditor as 'grid' | 'tracker',
+  patternEditor: initialPrefs.patternEditor as 'grid' | 'pads' | 'tracker',
   showGuide: initialPrefs.showGuide,
   randomGenre: initialPrefs.randomGenre,
 })
@@ -407,8 +409,8 @@ export function toggleScaleMode(): void {
   prefs.scaleMode = !prefs.scaleMode
   savePrefs()
 }
-export function togglePatternEditor(): void {
-  prefs.patternEditor = prefs.patternEditor === 'grid' ? 'tracker' : 'grid'
+export function setPatternEditor(mode: 'grid' | 'pads' | 'tracker'): void {
+  prefs.patternEditor = mode
   savePrefs()
 }
 export function toggleShowGuide(): void {

@@ -103,6 +103,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 098 | Mobile Landscape Orientation | Proposed | Landscape-specific layout for mobile (split from ADR 095) |
 | 115 | Centralized Keyboard Routing | Implemented | Single dispatcher replaces distributed `<svelte:window onkeydown>`, priority-based layer routing |
 | 124 | Design Token Consolidation | Implemented | `--lz-*`/`--dz-*` color tokens + `--fs-*` font-size tokens, DockPanel `--dk-*` unified, 7px→8px minimum |
+| 131 | Pattern Editor Integration | Implemented (P1–P2) | Single-track editor in PadsView col-right (steps, vel bars, PianoRoll, knobs). Voice visualizations (drum/WT/FM/analog SVG). P3 mobile layout remaining |
 
 ## Instruments / Sound Design
 
@@ -121,7 +122,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 065 | Sampler Chop & Timestretch | Implemented | Chop (NOTE-MAP/SEQ), repitch BPM sync, WSOLA timestretch |
 | 106 | Multi-Sample Mapping & Factory Expansion | Implemented | Note-range zone map in SamplerVoice, factory grand piano (Salamander, PD), vocal chops+phrases (CC0), PolySampler dynamic gain |
 | 110 | Per-Cell Sample References | Implemented | Per-cell sample storage, IDB key migration, engine cache dedup, v3 export format |
-| 130 | Sampler Sheet & Sample Pack Expansion | Proposed | P1: overlay sheet + pads + visual chop + sample expansion (≤5 MB). P2: transient auto-chop + sweep mangling. P3: granular playback mode (Torso S4-inspired) |
+| 130 | Pads View & Sample Pack Expansion | Implemented (P1 UI) | P1 UI done (pads tab, tri-mode, waveform, step row). Remaining: sample expansion (≤5 MB). P2: transient auto-chop + sweep mangling. P3: granular playback mode. UI integration → ADR 131 |
 
 ## Performance / Live
 
@@ -155,6 +156,7 @@ Quick reference for all Architecture Decision Records. Read individual ADRs only
 | 019 | Multi-Device Collaboration | Implemented | WebRTC 1:1 (host+guest), CF Workers DO signaling, chunked DataChannel, delta sync |
 | 020 | Data Persistence & Storage | Implemented | localStorage + IndexedDB + JSON Export/Import; cloud sync cancelled (no external dependencies) |
 | 030 | Audio & MIDI Export | Implemented | MIDI Type 1 export, WAV capture via MediaRecorder |
+| 132 | Offline WAV Export | Proposed | OfflineAudioContext-based deterministic bounce, separate from header REC live capture. Disambiguates "REC" naming for future ADR 131 step recording |
 | 061 | Authentication | Superseded | Self-hosted OAuth cancelled; cloud sync/external API integration all cancelled — no auth needed |
 | 071 | Donate Feature | Implemented | Ko-fi link in Sidebar SYSTEM panel, no feature gating |
 | 072 | Landing Page, Docs & Tutorial | Implemented | Astro + Starlight LP with interactive demos, specs, bilingual docs. Playground/onboarding split to ADR 094 |

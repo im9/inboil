@@ -116,7 +116,7 @@
   const pageSize = $derived(ui.stepPageSize)
   const maxSteps = $derived(Math.max(...song.patterns[ui.currentPattern].cells.map(c => c.steps)))
   const totalPages = $derived(Math.ceil(maxSteps / pageSize))
-  const needsPaging = $derived(maxSteps > pageSize && prefs.patternEditor === 'grid')
+  const needsPaging = $derived(maxSteps > pageSize && prefs.patternEditor !== 'tracker')
 
   // ── Mobile key menu ──
   const WHITE_IDX = [0, 2, 4, 5, 7, 9, 11]

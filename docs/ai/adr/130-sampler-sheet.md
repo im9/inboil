@@ -1,6 +1,6 @@
-# ADR 130: Sampler Sheet & Sample Pack Expansion
+# ADR 130: Pads View & Sample Pack Expansion
 
-## Status: Proposed
+## Status: Implemented (Phase 1 UI) / Proposed (Phase 2–3, Sample Expansion)
 
 ## Context
 
@@ -18,10 +18,22 @@ multi-sample zone support (ADR 012, ADR 106). But the UI is cramped into the
 5. **Factory samples lack genre coverage** — 111 files / 1.9 MB total; only 2 claps,
    zero bass oneshots, zero chord/stab, zero FX/risers. Hip-hop, DnB, and
    dariacore are unplayable without user imports
+6. **Sampler Sheet hierarchy is too deep** — reaching the sampler editing UI
+   requires voice selection, double-tap, or a dock button. Multiple layers
+   of navigation make it feel disconnected from the pattern workflow
 
 The sampler is fundamentally different from synth voices — it needs visual space
 for waveforms, spatial interaction for chop editing, and a pad grid for slice
 triggering. Synth knobs fit fine in 280px; sampler does not.
+
+### Key Insight: Pads as a Pattern View
+
+The 4×4 pad grid (16 pads) maps naturally to track selection (max 16 tracks).
+The step row is already a single-track step sequencer. The waveform area can
+display tone/ADSR/algorithm visualizations for non-sampler voices. This means
+the "Pads view" is not sampler-specific — it is a **third pattern editing
+mode** alongside Grid and Tracker, offering a pad-centric workflow for any
+voice type.
 
 ### Inspiration
 
@@ -34,113 +46,205 @@ interactions into the browser within inboil's existing architecture.
 
 ## Decision
 
-### Phase 1: Sampler Sheet + Pads + Sample Expansion
+### Phase 1: Pads View (Tab) + Sample Expansion
 
-#### 1.1 Sampler Sheet (Overlay)
+#### 1.1 Round Out Tabs — Grid / Pads / Tracker
 
-Add `'sampler'` to `ui.phraseView` and open a full-width overlay sheet
-following the ADR 054 pattern (SceneView always visible underneath).
-
-**Triggers (A+B, two entry points):**
-- **(A) StepGrid track label double-tap** — when the track's voiceId is `'Sampler'`,
-  double-tapping the track label in StepGrid opens the SamplerSheet.
-  Consistent with MatrixView double-tap → PatternSheet pattern.
-  Non-sampler tracks: no action (or existing behaviour).
-- **(B) DockTrackEditor button** — dedicated [PAD] button in the sampler
-  section (alongside LOAD/POOL), visible when `voiceId === 'Sampler'`.
-  Follows existing `openPatternSheet` button pattern in DockPanel.
-
-Double-tap has low discoverability, but the DockPanel button compensates.
-Once learned, double-tap becomes the fast path — same muscle memory as
-hardware gear (Elektron's button combos, MPC's pad→screen shortcuts).
-
-**Dismiss:** Escape, backdrop tap, handle bar (standard sheet behaviour).
-
-**Relationship to PatternSheet:**
-SamplerSheet and PatternSheet are mutually exclusive (`ui.phraseView`
-can be `'sampler'` or `'pattern'`, not both). The SamplerSheet includes
-a **single-track StepGrid row** for the selected sampler track, so the
-user can chop → audition → place steps without leaving the sheet.
-Tracker and PianoRoll views are not available within the SamplerSheet —
-return to PatternSheet for melodic note editing.
-
-**Multi-track sampler handling:**
-The sheet always operates on **one selected track**. When multiple tracks
-use the Sampler voice, a track selector (tabs) appears in the sheet header:
+Promote the pattern editor mode from a hidden system toggle to a first-class
+**round out tab bar** at the top of the pattern sheet. Three tabs:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [TR3: break] [TR7: vocal] [TR12: bass]                  │
-│ ◂ SMPL  Track 3: "break"          [LOAD] [POOL] [AUTO] │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌─ Waveform ────────────────────────────────────────┐  │
-│  │ ▏  ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕ │  │
-│  │ ▏██▕│▕██  ▕│▕ ██ ▕│▕██  ▕│▕ ██ ▕│▕██  ▕│▕ ██ ▕│▕ │  │
-│  │ ▏██▕│▕████▕│▕████▕│▕████▕│▕████▕│▕████▕│▕████▕│▕ │  │
-│  │ ▏  ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕    ▕│▕ │  │
-│  │ S              │ markers             │            E  │
-│  └──────────────────────────────────────────────────────┘
-│  [zoom ─────●───────] [scroll ────●─────────]           │
-│                                                         │
-│  ┌─ Pads ──────────┐  ┌─ Params ─────────────────────┐  │
-│  │ [1 ] [2 ] [3 ] [4 ]│  │ DCY  STRT  END  PTCH  REV  │  │
-│  │ [5 ] [6 ] [7 ] [8 ]│  │ CHOP MODE  BPM  LOOP  STRC │  │
-│  │ [9 ] [10] [11] [12]│  │                              │  │
-│  │ [13] [14] [15] [16]│  │                              │  │
-│  └─────────────────┘  └──────────────────────────────┘  │
-│                                                         │
-│  ┌─ Step Sequencer (1 track) ────────────────────────┐  │
-│  │ [■][□][■][□] [■][■][□][□] [□][■][□][■] [■][□][□][■] │
-│  └──────────────────────────────────────────────────────┘
-└─────────────────────────────────────────────────────────┘
+┌──────────┐╭──────────╮╭──────────╮
+│   Grid   ││   Pads   ││ Tracker  │
+└──────────┘╰──────────╯╰──────────╯
+┌──────────────────────────────────────────────┐
+│  (pattern content area)                      │
+│                                              │
+└──────────────────────────────────────────────┘
 ```
 
-Tab switching swaps waveform, pads, params, and step row together.
+The active tab has a light background (`--color-bg`) with rounded top corners
+that merge smoothly into the content area below via inverse border-radius
+("round out" or "cutout" corners). Inactive tabs use the dark zone
+(`--color-fg`) with `--dz-text-mid` text.
 
-#### 1.2 Waveform Display
+**State change:**
+```typescript
+// Before
+prefs.patternEditor: 'grid' | 'tracker'
 
-Full-width `<canvas>` with:
-- **Zoom/scroll** — pinch or slider; horizontal drag to scroll
-- **Start/End handles** — draggable markers on waveform, update `voiceParams.start` / `voiceParams.end`
-- **Chop slice markers** — vertical lines at slice boundaries; draggable for manual placement (future: Phase 2 auto-chop adds transient-based markers)
-- **Playback position** — real-time cursor showing current sample playhead (driven by worklet step message or `requestAnimationFrame` interpolation)
-- **Active slice highlight** — shaded region for currently triggered slice
+// After
+prefs.patternEditor: 'grid' | 'pads' | 'tracker'
+```
 
-Implementation: extend existing `drawWaveform()` in `domHelpers.ts` or create
-a dedicated `SamplerWaveform.svelte` component with its own canvas logic.
-The existing 128-point waveform overview (`SampleMeta.waveform`) is too low-res
-for a full-width display; decode the raw buffer to a higher-res peak array
-(e.g. 2048 points) on sheet open.
+The existing `togglePatternEditor()` becomes unnecessary — tab clicks set
+`prefs.patternEditor` directly. The system sidebar toggle can be removed.
 
-#### 1.3 Pad UI
+**Tab renders:**
+| Tab       | Content                                         |
+|-----------|-------------------------------------------------|
+| Grid      | Existing `StepGrid` (all tracks, horizontal)    |
+| Pads      | Pads + Waveform/Viz + StepRow + Params (new)    |
+| Tracker   | Existing `TrackerView` (vertical scroll)         |
 
-4×4 grid (16 pads), MPC-style:
+Grid and Tracker remain **exactly as they are** — no changes to their UX.
 
-- **Chop mapping**: when `chopSlices > 0`, each pad maps to a slice.
-  Pad count adapts to slice count (8 slices = 2×4, 16 = 4×4, 32 = scrollable or 4×8)
-- **Tap to audition**: sends `noteOn` for the corresponding note offset
-  (chopMode=MAP: pad N triggers `rootNote + N`)
-- **Visual feedback**: pad lights up on playback when its slice is active
-- **Step input mode**: tap pad while holding a step → writes the note/slice
-  into the sequencer (same as existing piano-roll note input pattern)
-- **Velocity**: if `PointerEvent.pressure` is available (pen/touch), map to velocity
+#### 1.2 Pads View Layout
 
-Pads sit alongside a compact param section so the sheet is self-contained —
-user doesn't need to switch back to DockPanel.
+The Pads tab is a full-pattern editing view, not a single-voice tool.
+It always operates on the **selected track** and adapts its display based
+on the track's `voiceId`.
 
-#### 1.4 Sample Browser in Sheet
+```
+ DockPanel (280px)             Pads View (pattern content area)
+┌─────────────────┐  ┌──────────────────────────────────────────────┐
+│ (track params   │  │ ┌─Grid──┐┌──Pads──────────────┐┌Tracker┐   │
+│  or Pool when   │  │ └───────┘│  (active, light bg) │└───────┘   │
+│  sampler voice) │  │ ─────────────────────────────────────────────│
+│                 │  │                                              │
+│ ┌─ Pool ──────┐ │  │  ┌─ Waveform / Voice Viz ────────────────┐  │
+│ │ [🔍 search ]│ │  │  │                                        │  │
+│ │ ▸ kicks     │ │  │  │  (sampler: waveform + chop markers)    │  │
+│ │ ▸ snares    │ │  │  │  (synth: tone / ADSR / algorithm)      │  │
+│ │ ▸ claps     │ │  │  │                                        │  │
+│ │             │ │  │  └────────────────────────────────────────┘  │
+│ └─────────────┘ │  │                                              │
+│                 │  │  ┌─ Pads ────────┐  ┌─ Params ───────────┐  │
+│                 │  │  │ [1] [2] [3] [4]│  │ DCY STRT END       │  │
+│                 │  │  │ [5] [6] [7] [8]│  │ PTCH REV CHOP      │  │
+│                 │  │  │ [9] [10][11][12]│  │ MODE BPM LOOP      │  │
+│                 │  │  │ [13][14][15][16]│  │ STRC               │  │
+│                 │  │  └────────────────┘  └────────────────────┘  │
+│                 │  │                                              │
+│                 │  │  ┌─ Step Sequencer (selected track) ──────┐  │
+│                 │  │  │ [■][□][■][□] [■][■][□][□] [□][■]…      │  │
+│                 │  │  └────────────────────────────────────────┘  │
+└─────────────────┘  └──────────────────────────────────────────────┘
+```
 
-When POOL is tapped in the sheet header, the browser opens as a side panel
-within the sheet (not a DockPanel dropdown):
+#### 1.3 Pad Modes (tri-mode)
 
-- Full-height list with waveform previews
-- Category filter tabs (kicks, snares, loops, user, etc.)
-- Search (existing logic, more space)
-- Tap to audition, double-tap or drag to assign
-- Factory pack support preserved (multi-zone instruments)
+The 4×4 pad grid has three modes, selected by a **mode switch** above
+the pad area:
 
-#### 1.5 Factory Sample Expansion
+```
+  [TRACK]  [SLICE]  [NOTE]    ← mode switch (olive tier, 3-way)
+ ┌────┬────┬────┬────┐
+ │KCK │SNR │HAT │CLP │        TRACK mode: instrument labels
+ ├────┼────┼────┼────┤
+ │BAS │PAD │WT  │FM  │
+ ├────┼────┼────┼────┤
+ │    │    │    │    │
+ ├────┼────┼────┼────┤
+ │    │    │    │    │
+ └────┴────┴────┴────┘
+
+  [TRACK]  [SLICE]  [NOTE]
+ ┌────┬────┬────┬────┐
+ │  1 │  2 │  3 │  4 │        SLICE mode: slice numbers
+ ├────┼────┼────┼────┤
+ │  5 │  6 │  7 │  8 │
+ ├────┼────┼────┼────┤
+ │  9 │ 10 │ 11 │ 12 │
+ ├────┼────┼────┼────┤
+ │ 13 │ 14 │ 15 │ 16 │
+ └────┴────┴────┴────┘
+
+  [TRACK]  [SLICE]  [NOTE]   OCT [▲][▼] 3
+ ┌────┬────┬────┬────┐
+ │ C3 │ C#3│ D3 │ D#3│        NOTE mode: note names + octave
+ ├────┼────┼────┼────┤
+ │ E3 │ F3 │ F#3│ G3 │
+ ├────┼────┼────┼────┤
+ │ G#3│ A3 │ A#3│ B3 │
+ ├────┼────┼────┼────┤
+ │ C4 │ C#4│ D4 │ D#4│
+ └────┴────┴────┴────┘
+```
+
+**TRACK mode:**
+- Each pad = **track selector** — label shows instrument name
+- Color-coded by voice type
+- Active track highlighted (olive)
+- Empty pads (beyond track count) are dimmed/inactive
+- Tap to switch the selected track — waveform/viz, params, and
+  step row all update to reflect the newly selected track
+
+**SLICE mode (sampler voice only):**
+- Each pad = chop slice (pad N → `rootNote + N` noteOn)
+- Tap to audition slice
+- Visual feedback on active slice during playback
+- Velocity from `PointerEvent.pressure` when available
+- Step input: tap pad while holding step → write note/slice
+
+**NOTE mode (non-sampler voices):**
+- Each pad = chromatic note, 16 consecutive semitones
+- Label shows note name (`C3`, `D#3`, etc.)
+- OCT ▲▼ buttons shift the base octave (reuses PatternToolbar logic)
+- Tap to audition note via `noteOn`
+- Step input: tap pad while holding step → write note into sequencer
+- Velocity from `PointerEvent.pressure` when available
+
+**Auto-switch:** When the selected track changes voice type, pad mode
+auto-switches: sampler → SLICE, non-sampler → NOTE. TRACK mode is
+always available regardless of voice type, and the user can manually
+switch to any mode at any time.
+
+**Mode availability:**
+| Voice type | TRACK | SLICE | NOTE |
+|------------|-------|-------|------|
+| Sampler    | yes   | yes   | yes  |
+| Synth/Drum | yes   | no    | yes  |
+
+This tri-mode design means the Pads view works as a complete
+pattern editing environment regardless of voice type.
+
+#### 1.4 Waveform / Voice Visualization Area
+
+Full-width display area that adapts to the selected track's voice:
+
+**Sampler voice:**
+- `<canvas>` waveform with zoom (wheel) + horizontal scroll (drag)
+- Draggable start/end handles → update `voiceParams.start` / `voiceParams.end`
+- Chop slice markers (vertical lines, equal-division from `chopSlices`)
+- Playback position cursor
+- Active slice highlight on playback
+- High-res peak array (4096 points) decoded on track select
+
+**Non-sampler voices (future — can be blank initially):**
+- Tone/oscillator shape visualization
+- ADSR envelope curve
+- Algorithm routing diagram (FM synth)
+- Can be implemented incrementally per voice type
+
+Implementation: extend existing `SamplerWaveform.svelte` or create a generic
+`VoiceViz.svelte` wrapper that delegates to voice-specific renderers.
+
+#### 1.5 Params in View
+
+> **Superseded by ADR 131.** `SamplerParams.svelte` was removed. All voice
+> parameters are now accessed exclusively through DockPanel. The PadsView
+> right column is a single-track StepGrid replica (header, steps, vel bars,
+> mix/send knobs, PianoRoll) — see ADR 131 for details.
+
+#### 1.6 Embedded Step Sequencer
+
+> **Superseded by ADR 131.** `SamplerStepRow.svelte` was removed. The
+> PadsView right column now contains a full single-track editor with
+> step cells, drag-to-paint, velocity/chance/param bars, and all vel
+> mode tabs (VEL/CHNC/MIX/FX/INS) — matching StepGrid's per-track UI.
+
+#### 1.7 DockPanel Integration
+
+When the Pads tab is active, DockPanel behavior adapts:
+
+- **Sampler voice selected:** DockPanel switches to Pool Browser mode
+  (full-height list with search, categories, tap-to-audition). Same as
+  current design — the dock is for browsing, the view is for editing.
+- **Non-sampler voice selected:** DockPanel shows normal track params
+  (existing DockTrackEditor behavior, unchanged).
+
+#### 1.8 Factory Sample Expansion
 
 **Budget:** ≤ 5 MB total (current 1.9 MB, ~3 MB headroom).
 
@@ -166,11 +270,63 @@ library. Update `factory.json` manifest and pool category metadata.
 
 **Licensing:** update `LICENSE-SAMPLES` with per-file attribution for CC0 sources.
 
+### Phase 1 Implementation Checklist
+
+#### Step 1: Round out tab component + state wiring
+- [x] Extend `prefs.patternEditor` type to `'grid' | 'pads' | 'tracker'`
+- [x] Create `PatternModeTabs.svelte` — round out tab bar component
+- [x] Mount tabs at top of pattern sheet in `App.svelte`
+- [x] Wire tab clicks to set `prefs.patternEditor` directly
+- [x] Remove system sidebar toggle (`togglePatternEditor`)
+- [x] Verify Grid and Tracker render unchanged under new tab bar
+
+#### Step 2: Pads view skeleton
+- [x] Refactor `SamplerSheet.svelte` → `PadsView.svelte` (remove overlay shell, keep layout)
+- [x] Mount in pattern sheet when `prefs.patternEditor === 'pads'`
+- [x] Track selection state: use `ui.selectedTrack` (existing)
+- [x] Layout: flex column — viz top, pads+params middle, step row bottom
+
+#### Step 3: Pad tri-mode (TRACK / SLICE / NOTE)
+- [x] Add 3-way mode switch above pad area (olive tier)
+- [x] Refactor `SamplerPads.svelte` → tri-mode pad component
+- [x] TRACK mode: pads show instrument labels, tap to select track
+- [x] SLICE mode: pads trigger slices (existing behavior, sampler only)
+- [x] NOTE mode: chromatic pads with note labels + OCT ▲▼ (non-sampler)
+- [x] Auto-switch: sampler → SLICE, non-sampler → NOTE
+- [x] Mode availability: TRACK always, SLICE/NOTE by voice type
+- [x] Active track / active slice / active note highlight
+
+#### Step 4: Waveform / voice viz area
+- [x] Mount `SamplerWaveform.svelte` for sampler voice tracks
+- [x] Blank/placeholder for non-sampler voices (future viz)
+- [x] Draggable start/end handles (existing)
+- [x] Chop markers (existing)
+- [x] Active slice highlight on playback
+
+#### Step 5: Params + step row for any voice
+- [x] ~~Mount `SamplerParams.svelte` for sampler voice~~ → removed by ADR 131 (params in DockPanel only)
+- [x] ~~Mount `SamplerStepRow.svelte` for selected track~~ → replaced by ADR 131 single-track editor
+- [x] P-Lock mode integration
+
+#### Step 6: DockPanel pool browser integration
+- [x] DockPanel auto-switches to Pool Browser when Pads tab active
+  AND selected track is sampler voice
+- [x] Normal track params shown for non-sampler voices
+- [x] Search, tap-to-audition, double-tap-to-assign (existing)
+
+#### Step 7: Cleanup + mobile
+- [x] Remove SamplerSheet overlay code from App.svelte
+- [x] Remove `ui.phraseView === 'sampler'` overlay path
+- [x] Remove `ui.samplerTrackId` (use `ui.selectedTrack` instead)
+- [x] Remove sampler-specific triggers (A/B/C entry points)
+- [x] Verify Escape/backdrop still works for other overlay sheets
+- Mobile layout deferred to ADR 131 (Pattern Editor integration)
+
 ### Phase 2: Auto-Chop + Sample Mangling
 
 #### 2.1 Transient Detection Auto-Chop
 
-[AUTO] button in sheet header runs transient detection on the loaded sample:
+[AUTO] button in waveform area runs transient detection on the loaded sample:
 
 - **Algorithm:** energy-based onset detection (spectral flux or simple
   amplitude-envelope threshold with adaptive sensitivity)
@@ -204,9 +360,23 @@ Expose `start` and `end` as sweep automation targets:
 The DSP already supports per-step parameter locks + chopMode=MAP, which
 effectively gives per-slice P-Locks. What's missing is UI:
 
-- In the sheet, show which steps target which slices
+- In the view, show which steps target which slices
 - Colour-code pads by whether their slice has P-Lock overrides
 - Tap pad + tap param knob = set P-Lock for all steps using that slice
+
+#### 2.4 Voice Visualizations (non-sampler)
+
+Incrementally add visualization renderers for the waveform/viz area:
+
+| Voice      | Visualization                                |
+|------------|----------------------------------------------|
+| WT (Wavetable) | Wavetable frame shape, morph position    |
+| FM         | Algorithm routing diagram, operator levels    |
+| Analog     | Oscillator shape + filter curve              |
+| Drum voices| Tone shape + decay envelope                  |
+
+Each renderer is a standalone Svelte component mounted by `VoiceViz.svelte`
+based on `voiceId`.
 
 ### Phase 3: Granular Playback Mode (Torso S4-inspired)
 
@@ -257,9 +427,9 @@ New `GrainCloud` class within sampler DSP (not reusing send FX GranularProcessor
 - **Polyphony:** grain cloud replaces normal voice tick when `playbackMode === GRAIN`;
   `noteOn` sets base `grainPos` from note (like chopMode=MAP), `noteOff` fades cloud
 
-#### 3.4 UI in Sampler Sheet
+#### 3.4 UI in Pads View
 
-When `playbackMode === GRAIN`, the sheet waveform view changes:
+When `playbackMode === GRAIN`, the waveform/viz area changes:
 
 ```
 ┌─ Waveform (Granular Mode) ──────────────────────────┐
@@ -303,27 +473,50 @@ sample mangling.
 
 ## Considerations
 
-### Why a dedicated sheet instead of enlarging DockPanel?
+### Why a tab instead of an overlay sheet?
 
-DockPanel is 280px and shared by all 20 voice types. Enlarging it would waste
-space for synths that don't need it. A sheet is contextual — appears only when
-the user is actively editing a sampler track, provides full viewport width,
-and follows the established overlay pattern (FX, EQ, Master, generative views
-all use sheets).
+The original design (v1) used an ADR 054 overlay sheet. This created a deep
+navigation hierarchy — three entry points (voice change, double-tap, dock
+button) but all required multiple steps to reach. More importantly, the
+sampler's 4×4 pad grid maps directly to track selection (max 16 tracks),
+and its step row is a single-track step sequencer. This means the "pads
+view" is naturally a **pattern editing mode**, not a voice-specific tool.
 
-### Why not a separate full view?
+Promoting it to a tab alongside Grid and Tracker:
+- **Zero hierarchy** — one click to switch, always available
+- **All-voice utility** — pads as track selectors, viz area for any voice
+- **Consistent mental model** — three ways to view the same pattern data
 
-ADR 054 established that SceneView is always the main canvas. Adding another
-top-level view would regress that decision. A sheet maintains the spatial
-context of the scene while providing workspace for the sampler.
+### Why split DockPanel (browse) + View (edit)?
+
+DockPanel is 280px — too narrow for waveform editing and pads, but ideal for
+scrollable lists. Rather than duplicating the browser inside the view or
+cramming spatial UI into the dock, each surface does what it's good at:
+
+- **DockPanel** → list-based browsing (Pool, categories, search)
+- **Pads View** → spatial editing (waveform, pads, knobs, step sequencer)
+
+When the selected track is a Sampler voice, the dock automatically becomes
+the Pool Browser. Selecting a sample in the dock immediately reflects in
+the view's waveform.
+
+### Round out tab design
+
+The round out tab style (active tab with inverse border-radius connecting
+to content area) gives a physical "folder tab" feel that matches the
+warm brutalist aesthetic. Implementation uses CSS `::before`/`::after`
+pseudo-elements with `radial-gradient` or SVG for the cutout corners.
+
+Active tab: `--color-bg` background, `--color-fg` text.
+Inactive tabs: `--color-fg` background, `--dz-text-mid` text.
+Border-radius on active tab top corners only (e.g. 8px).
 
 ### Mobile layout
 
-The sheet must work on mobile:
-- Waveform spans full width, reduced height
-- Pads below waveform in a scrollable region
-- Params collapse into a row of mini-knobs or a swipeable param strip
-- Browser opens as a full-screen sub-sheet on mobile
+- Tabs: horizontal scroll if needed, same round out style
+- View: single column, vertically scrollable
+- Pads + params stacked, waveform full-width reduced height
+- Pool Browser in dock uses standard mobile dock behaviour
 
 ### Variable-length slices (Phase 2)
 
@@ -338,10 +531,12 @@ placement require variable-length slices. This means:
 ### What this ADR does NOT change
 
 - Track = instrument 1:1 model (product direction decision)
-- Other voice types stay in DockPanel
+- Other voice types stay in DockPanel for parameter editing
 - Existing sample loading/pool/OPFS architecture unchanged
+- Grid and Tracker views: completely unchanged
 - Send FX GranularProcessor unchanged (Phase 3 adds a separate grain engine
   inside PolySampler, not a modification of the send FX)
+- Overlay sheets for FX, EQ, Tonnetz, etc. remain as overlays
 
 ## Future Extensions
 

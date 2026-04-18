@@ -21,6 +21,8 @@
   import TonnetzSheet from './lib/components/TonnetzSheet.svelte'
   import QuantizerSheet from './lib/components/QuantizerSheet.svelte'
   import TuringSheet from './lib/components/TuringSheet.svelte'
+  import PatternModeTabs from './lib/components/PatternModeTabs.svelte'
+  import PadsView from './lib/components/PadsView.svelte'
   import SweepTrailStrip from './lib/components/SweepTrailStrip.svelte'
   import { findSweepNodeForPattern } from './lib/sceneActions.ts'
   import { markScenePlayStart, getInitialAutomationSnapshot, clearInitialAutomationSnapshot } from './lib/scenePlayback.ts'
@@ -499,7 +501,13 @@
           {:else if ui.patternSheet || ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master'}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="sheet-backdrop" transition:fade={{ duration: 100 }} onpointerdown={closeAllSheets}></div>
-            <div class="pattern-sheet" transition:fly={{ y: 12, duration: 100 }}>
+            <div class="pattern-sheet-group" transition:fly={{ y: 12, duration: 100 }}>
+            {#if ui.patternSheet && !(ui.phraseView === 'fx' || ui.phraseView === 'eq' || ui.phraseView === 'master')}
+              <div class="pattern-tabs">
+                <PatternModeTabs />
+              </div>
+            {/if}
+            <div class="pattern-sheet">
               <SweepTrailStrip />
               {#if ui.phraseView === 'fx'}
                 <FxPad />
@@ -513,13 +521,16 @@
                   <SweepCanvas onClose={closeAllSheets} onstop={stop} />
                 {:else}
                   <PatternToolbar onRandom={randomizePattern} onClose={closeAllSheets} onLoop={toggleLoop} />
-                  {#if prefs.patternEditor === 'tracker'}
+                  {#if prefs.patternEditor === 'pads'}
+                    <PadsView />
+                  {:else if prefs.patternEditor === 'tracker'}
                     <TrackerView />
                   {:else}
                     <StepGrid />
                   {/if}
                 {/if}
               {/if}
+            </div>
             </div>
           {/if}
         </div>
@@ -575,7 +586,7 @@
     z-index: 50;
   }
 
-  .pattern-sheet {
+  .pattern-sheet-group {
     position: absolute;
     left: 0;
     right: 0;
@@ -584,9 +595,21 @@
     z-index: 51;
     display: flex;
     flex-direction: column;
+  }
+
+  .pattern-tabs {
+    flex-shrink: 0;
+    padding-left: 8px;
+  }
+
+  .pattern-sheet {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     background: var(--color-bg);
     border-top: 1px solid rgba(237, 232, 220, 0.10);
     overflow: hidden;
+    min-height: 0;
   }
 
   .pattern-sheet.mobile {

@@ -5,6 +5,11 @@
    * sample loader, remove track. (SEND/MIX moved to StepGrid)
    * Extracted from DockPanel.svelte for modularity.
    */
+  const { hideSampleLoader = false, hideVoicePicker = false }: {
+    hideSampleLoader?: boolean
+    hideVoicePicker?: boolean
+  } = $props()
+
   import { song, activeCell, ui, samplesByCell, sampleCellKey, setSample, poolImportFiles } from '../state.svelte.ts'
   import { captureValue } from '../sweepRecorder.svelte.ts'
   import { clearAllParamLocks, setInsertFxType, setInsertFxFlavour, setInsertFxParam, removeTrack } from '../stepActions.ts'
@@ -29,6 +34,7 @@
   const hasAnyLock = $derived(selTrig?.paramLocks && Object.keys(selTrig.paramLocks).length > 0)
   const isSampler = $derived(cell?.voiceId === 'Sampler')
   const chopSlices = $derived(isSampler ? (cell?.voiceParams?.chopSlices ?? 0) : 0)
+
 
   // ── Voice picker ──
   let voicePickerRef = $state<VoicePicker>(null!)
@@ -85,15 +91,17 @@
 
 {#if cell && track}
 
+{#if !hideVoicePicker}
 <!-- Voice selector (floating dropdown) -->
 <VoicePicker bind:this={voicePickerRef} voiceId={cell.voiceId} trackId={ui.selectedTrack}
   onselect={() => presetBrowserRef?.close()} />
 
 <!-- Preset browser -->
 <DockPresetBrowser bind:this={presetBrowserRef} onopen={() => { voicePickerRef?.close() }} />
+{/if}
 
 <!-- Sample loader (ADR 012 Phase 2) -->
-{#if isSampler}
+{#if isSampler && !hideSampleLoader}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="sample-section"
