@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.1] - 2026-04-18
+
+### Fixed
+- Generative sheets (Tonnetz, Quantizer, Turing) not rendering as overlay — displayed in normal document flow instead of absolute-positioned over scene view
+- Pattern mode tabs (GRID/PADS/TRACKER) showing when sweep canvas is active
+- CI auto-tag condition not matching release branch name
+
 ## [0.4.0] - 2026-04-18
 
 ### Added
