@@ -54,8 +54,8 @@ importers:
         specifier: ~6.1.7
         version: 6.1.7(@types/node@24.12.0)(lightningcss@1.32.0)(rollup@4.60.1)(typescript@5.9.3)
       gsap:
-        specifier: ~3.14.2
-        version: 3.14.2
+        specifier: ~3.15.0
+        version: 3.15.0
       svelte:
         specifier: ~5.55.4
         version: 5.55.4(@typescript-eslint/types@8.58.1)
@@ -1299,8 +1299,8 @@ packages:
   github-slugger@2.0.0:
     resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
 
-  gsap@3.14.2:
-    resolution: {integrity: sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==}
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   h3@1.15.11:
     resolution: {integrity: sha512-L3THSe2MPeBwgIZVSH5zLdBBU90TOxarvhK9d04IDY2AmVS8j2Jz2LIWtwsGOU3lu2I5jCN7FNvVfY2+XyF+mg==}
@@ -3654,7 +3654,7 @@ snapshots:
 
   github-slugger@2.0.0: {}
 
-  gsap@3.14.2: {}
+  gsap@3.15.0: {}
 
   h3@1.15.11:
     dependencies:
