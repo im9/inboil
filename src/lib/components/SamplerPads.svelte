@@ -10,6 +10,7 @@
     rootNote = 60,
     octave = 4,
     playingPads = new Set<number>(),
+    onensureengine,
     onpadtap,
   }: {
     trackId: number
@@ -17,6 +18,7 @@
     rootNote?: number
     octave?: number
     playingPads?: Set<number>
+    onensureengine?: () => Promise<void>
     onpadtap?: (padIndex: number, note: number) => void
   } = $props()
 
@@ -36,7 +38,7 @@
     return `${NOTE_NAMES[pc]}${oct}`
   }
 
-  function padDown(index: number, e: PointerEvent) {
+  async function padDown(index: number, e: PointerEvent) {
     if (mode === 'track') {
       const cell = patCells[index]
       if (cell) {
@@ -49,6 +51,7 @@
       return
     }
 
+    await onensureengine?.()
     activePad = index
     const vel = e.pressure > 0 && e.pressure < 1 ? e.pressure : 0.8
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from 'svelte'
-  import { song, ui, cellForTrack, activeCell, samplesByCell, sampleCellKey, playback, pushUndo, vkbd, trackDisplayName } from '../state.svelte.ts'
+  import { song, ui, cellForTrack, activeCell, samplesByCell, sampleCellKey, playback, pushUndo, vkbd, trackDisplayName, perf, fxPad, fxFlavours, masterPad, masterLevels } from '../state.svelte.ts'
+  import { engine, type EngineContext } from '../audio/engine.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
   import { captureValue, captureToggle } from '../sweepRecorder.svelte.ts'
   import { toggleTrig, toggleMute, toggleSolo, setTrigVelocity, setTrigChance, setParamLock, setTrackSteps, setTrackSend, isDrum, STEP_OPTIONS, resetSeqParams, cycleTrackScale, SCALE_OPTIONS } from '../stepActions.ts'
@@ -104,6 +105,15 @@
   })
 
   // Pad tap → write note into selected step
+  let engineReady = false
+  async function ensureEngine() {
+    if (engineReady) return
+    await engine.init({ onLevels: (peakL, peakR, gr, cpu) => { masterLevels.peakL = peakL; masterLevels.peakR = peakR; masterLevels.gr = gr; masterLevels.cpu = cpu } })
+    const ctx: EngineContext = { fxFlavours, masterPad, soloTracks: ui.soloTracks }
+    engine.sendPatternByIndex(song, perf, fxPad, ctx, false, ui.currentPattern)
+    engineReady = true
+  }
+
   function onPadTap(_padIndex: number, note: number) {
     if (ui.selectedStep == null) return
     pushUndo('Set step note')
@@ -377,6 +387,7 @@
         rootNote={cell?.voiceParams?.rootNote ?? 60}
         octave={vkbd.octave}
         {playingPads}
+        onensureengine={ensureEngine}
         onpadtap={onPadTap}
       />
     </div>
@@ -472,11 +483,14 @@
           </span>
         </div>
 
-        <!-- Vel mode tabs (full width, outside 2-column layout) -->
+        <!-- Vel mode tabs (2-column layout aligned with editor-cols) -->
         <div class="vel-tabs">
-          <button class="head-action" onclick={() => resetSeqParams(trackId)}
-            data-tip="Reset params to defaults" data-tip-ja="パラメータを初期値に戻す"
-          >RST</button>
+          <div class="vel-tabs-spacer">
+            <button class="head-action" onclick={() => resetSeqParams(trackId)}
+              data-tip="Reset params to defaults" data-tip-ja="パラメータを初期値に戻す"
+            >RST</button>
+          </div>
+          <div class="vel-tabs-seq">
           <button class="vel-tab" class:active={velMode === 'VEL'}
             onpointerdown={() => { velMode = 'VEL' }}
             data-tip="Velocity per step" data-tip-ja="ステップごとのベロシティ"
@@ -501,6 +515,7 @@
             onpointerdown={() => { isInsMode ? velNextIns() : (velMode = 'I1M') }}
             data-tip="Per-step insert FX (tap to cycle)" data-tip-ja="ステップごとのインサートFX（タップで切替）"
           >{isInsMode ? velMode : 'INS'}</button>
+          </div>
         </div>
 
         <!-- Step/vel editor: 2-column layout matching PianoRoll structure -->
@@ -655,15 +670,18 @@
     overscroll-behavior-y: contain;
     background: var(--color-surface);
     border-left: 3px solid var(--color-olive);
-    border-bottom: 1px solid var(--lz-border-subtle);
     /* PianoRoll's .piano-spacer uses var(--head-w) for width.
-       Content: brush-bar(42px) + oct-keys(28px) = 70px */
-    --head-w: 70px;
+       Content: brush-bar(1-col 20px + 2px gap) + oct-keys(28px) = 50px */
+    --head-w: 50px;
   }
   /* PianoRoll's margin-right:135px compensates for StepGrid's track-mix column.
      PadsView has no track-mix column — knobs are in the header row. */
   .col-right :global(.piano-roll) {
     margin-right: 0;
+  }
+  /* Narrow brush-bar to single column in PadsView */
+  .col-right :global(.brush-bar) {
+    grid-template-columns: 20px;
   }
 
   /* ── Mode switch (olive tier) ── */
@@ -887,6 +905,7 @@
     gap: 4px;
     padding: 0 8px;
     flex-shrink: 0;
+    border-bottom: 1px solid var(--lz-border-subtle);
   }
   .editor-spacer {
     width: var(--head-w);
@@ -1029,6 +1048,17 @@
     flex-shrink: 0;
     border-bottom: 1px solid var(--lz-border-subtle);
   }
+  .vel-tabs-spacer {
+    width: var(--head-w);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+  .vel-tabs-seq {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 
   .vel-tab {
     width: 32px;
@@ -1082,7 +1112,6 @@
     user-select: none;
     overflow: hidden;
     touch-action: none;
-    border-bottom: 1px solid var(--lz-border-subtle);
   }
   .vel-bars.wrapped .vel-fill { opacity: 0.5; }
 
