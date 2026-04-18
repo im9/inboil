@@ -157,9 +157,9 @@ Three tabs remain: Grid / Pads / Tracker. Each has a clear role:
 - [x] Delete `SamplerParams.svelte` and `SamplerStepRow.svelte`
 - [x] DockPanel: PARAMS/POOL tab switch for sampler voice on Pads tab
 - [x] DockTrackEditor: `hideVoicePicker` / `hideSampleLoader` props
-- [ ] Verify step-set mode (long-press steps button)
-- [ ] Verify P-Lock mode (lock toggle, step selection, lock dots)
-- [ ] Verify playhead highlighting
+- [x] Verify step-set mode (long-press steps button)
+- [x] Verify P-Lock mode (lock toggle, step selection, lock dots)
+- [x] Verify playhead highlighting
 
 ### Phase 2: Voice Visualizations (canvas area)
 

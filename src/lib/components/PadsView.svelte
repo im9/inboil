@@ -55,7 +55,7 @@
     cell.voiceParams.end = v
   }
 
-  // Active slice index during playback
+  // Active slice index during playback (waveform overlay)
   const activeSlice = $derived.by(() => {
     if (!isSampler || chopVal <= 0 || !isViewingPlayingPattern()) return -1
     const head = playback.playheads[trackId]
@@ -68,6 +68,39 @@
       return (trig.note ?? 60) - rootNote
     }
     return head % chopVal
+  })
+
+  // Playing pads — highlight pads at playhead position for all modes
+  const playingPads = $derived.by(() => {
+    const set = new Set<number>()
+    if (!isViewingPlayingPattern()) return set
+    const mode = ui.padMode
+
+    if (mode === 'track') {
+      const pat = song.patterns[ui.currentPattern]
+      const cells = pat?.cells ?? []
+      for (let i = 0; i < cells.length && i < 16; i++) {
+        const c = cells[i]
+        if (!c) continue
+        const head = playback.playheads[c.trackId]
+        if (head == null) continue
+        if (c.trigs[head]?.active) set.add(i)
+      }
+    } else if (mode === 'note' && ph) {
+      const head = playback.playheads[trackId]
+      if (head != null) {
+        const trig = ph.trigs[head]
+        if (trig?.active) {
+          const base = (vkbd.octave + 1) * 12
+          const padIdx = (trig.note ?? 60) - base
+          if (padIdx >= 0 && padIdx < 16) set.add(padIdx)
+        }
+      }
+    } else if (mode === 'slice') {
+      if (activeSlice >= 0 && activeSlice < 16) set.add(activeSlice)
+    }
+
+    return set
   })
 
   // Pad tap → write note into selected step
@@ -342,8 +375,8 @@
         trackId={trackId}
         mode={ui.padMode}
         rootNote={cell?.voiceParams?.rootNote ?? 60}
-        activeSlice={activeSlice}
         octave={vkbd.octave}
+        {playingPads}
         onpadtap={onPadTap}
       />
     </div>

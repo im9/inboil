@@ -8,15 +8,15 @@
     trackId,
     mode = 'slice',
     rootNote = 60,
-    activeSlice = -1,
     octave = 4,
+    playingPads = new Set<number>(),
     onpadtap,
   }: {
     trackId: number
     mode: 'track' | 'slice' | 'note'
     rootNote?: number
-    activeSlice?: number
     octave?: number
+    playingPads?: Set<number>
     onpadtap?: (padIndex: number, note: number) => void
   } = $props()
 
@@ -94,8 +94,7 @@
   }
 
   function isPlaying(index: number): boolean {
-    if (mode === 'slice') return activeSlice === index
-    return false
+    return playingPads.has(index)
   }
 
   function isEmpty(index: number): boolean {
@@ -181,8 +180,8 @@
   }
 
   .pad.playing {
-    border-color: var(--color-olive);
-    box-shadow: inset 0 0 0 1px var(--color-olive);
+    animation: ph-glow 180ms ease-out;
+    filter: brightness(1.45);
   }
 
   .pad.empty .pad-label {
