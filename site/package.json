@@ -13,7 +13,7 @@
     "@astrojs/sitemap": "~3.7.2",
     "@astrojs/starlight": "~0.38.4",
     "@astrojs/svelte": "~8.1.0",
-    "astro": "~6.1.9",
+    "astro": "~6.2.1",
     "gsap": "~3.15.0",
     "svelte": "~5.55.5"
   }
