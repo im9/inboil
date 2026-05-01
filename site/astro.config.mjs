@@ -15,6 +15,7 @@ export default defineConfig({
     sitemap(),
     starlight({
       title: 'INBOIL',
+      social: [],
       logo: {
         src: './public/favicon.svg',
         replacesTitle: false,
