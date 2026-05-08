@@ -69,7 +69,7 @@
           <button
             class="picker-item"
             class:selected={voiceId === v.id}
-            onpointerdown={() => selectVoice(v.id)}
+            onclick={() => selectVoice(v.id)}
             data-tip={v.id} data-tip-ja={v.id}
           ><span class="picker-tag">{v.label}</span><span class="picker-name">{v.fullName}</span></button>
         {/each}
