@@ -66,15 +66,15 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Getting Started',
-          autogenerate: { directory: 'docs/getting-started' },
+          items: [{ autogenerate: { directory: 'docs/getting-started' } }],
         },
         {
           label: 'Sequencer',
-          autogenerate: { directory: 'docs/sequencer' },
+          items: [{ autogenerate: { directory: 'docs/sequencer' } }],
         },
         {
           label: 'Sound',
-          autogenerate: { directory: 'docs/sound' },
+          items: [{ autogenerate: { directory: 'docs/sound' } }],
         },
         {
           label: 'Scene',
@@ -85,13 +85,13 @@ export default defineConfig({
             { slug: 'docs/scene/playback' },
             {
               label: 'Generators',
-              autogenerate: { directory: 'docs/scene/generators' },
+              items: [{ autogenerate: { directory: 'docs/scene/generators' } }],
             },
           ],
         },
         {
           label: 'Reference',
-          autogenerate: { directory: 'docs/reference' },
+          items: [{ autogenerate: { directory: 'docs/reference' } }],
         },
       ],
     }),
