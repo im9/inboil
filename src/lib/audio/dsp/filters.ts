@@ -489,29 +489,32 @@ export class ADSR {
 }
 
 // ── Half-band decimation filter for 2× oversampling ─────────────────
-// 6-tap symmetric FIR: [-0.0625, 0, 0.5625, 0.5625, 0, -0.0625]
-// ~40 dB attenuation at Nyquist. Only 3 multiplies per output sample
-// thanks to the half-band zero structure.
+// 6-tap symmetric FIR: h = [-1/16, 0, 9/16, 9/16, 0, -1/16]
+// Zero at 2×-rate Nyquist (ω=π); ≈ -1 dB at base-rate Nyquist (ω=π/2).
+// Mild anti-alias — adequate for content already band-limited inside
+// the synth core, not a sharp brick-wall filter.
 
 export class HalfBandDown {
-  private d0 = 0; private d1 = 0; private d2 = 0
-  private d3 = 0; private d4 = 0
+  // Delay-line state. With 2× input x[n] and call k receiving
+  // (even_k = x[2k], odd_k = x[2k+1]), the decimated output is
+  //   y[k] = -1/16·x[2k] + 9/16·x[2k-2] + 9/16·x[2k-3] - 1/16·x[2k-5]
+  // so we keep one previous even and the three most-recent odds.
+  private e1 = 0   // x[2(k-1)]
+  private o1 = 0   // x[2(k-1)+1]  (odd from previous call)
+  private o2 = 0   // x[2(k-2)+1]
+  private o3 = 0   // x[2(k-3)+1]
 
   /** Feed two consecutive samples (even, odd at 2×SR), return one decimated output. */
   process(even: number, odd: number): number {
-    // Shift delay line and insert new samples
-    this.d0 = this.d1
-    this.d1 = this.d2
-    this.d2 = this.d3
-    this.d3 = this.d4
-    this.d4 = even
-    // Apply FIR: coeffs = [-0.0625, 0, 0.5625, 0.5625, 0, -0.0625]
-    // d0 is oldest (coeff -0.0625), d4 is newest (maps to 'even')
-    // 'odd' is the most recent sample (coeff -0.0625 at position 5)
-    return -0.0625 * this.d0 + 0.5625 * this.d2 + 0.5625 * this.d3 - 0.0625 * odd
+    const out = -0.0625 * even + 0.5625 * this.e1 + 0.5625 * this.o2 - 0.0625 * this.o3
+    this.e1 = even
+    this.o3 = this.o2
+    this.o2 = this.o1
+    this.o1 = odd
+    return out
   }
 
   reset(): void {
-    this.d0 = this.d1 = this.d2 = this.d3 = this.d4 = 0
+    this.e1 = this.o1 = this.o2 = this.o3 = 0
   }
 }
