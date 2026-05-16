@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.2] - 2026-05-15
+
+### Fixed
+- FM synth oversampling artifacts: HalfBandDown FIR filter delay line was misaligned, causing aliasing/noise on FM voices
+- Voice picker not scrollable on mobile (changed to onclick)
+- Site build broken on starlight 0.38.4 (empty social array required)
+
+### Changed
+- Bump vite 8.0.13, vitest 4.1.6, svelte 5.55.7, @playwright/test 1.60.0
+- Bump astro 6.3.3, @astrojs/svelte 8.1.1, @astrojs/starlight 0.39.1, @astrojs/mdx 5.0.4
+
 ## [0.4.1] - 2026-04-18
 
 ### Fixed
