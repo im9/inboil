@@ -9,4 +9,6 @@ updates:
         patterns: ["svelte", "svelte-check", "@sveltejs/*"]
       vite:
         patterns: ["vite", "vitest"]
+      astro:
+        patterns: ["astro", "@astrojs/*"]
     open-pull-requests-limit: 5
