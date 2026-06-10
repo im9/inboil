@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.3] - 2026-06-10
+
+### Fixed
+- Mobile PadGrid chord input: tapping multiple pads on the same step now builds a chord instead of overwriting the previous note
+- Mobile POLY/MONO toggle in MobileParamOverlay: cycle through MONO → POLY → WIDE → UNISON correctly (value passed to knobChange wasn't normalized, landing on invalid mode values)
+- Mobile overlay sheets (FX / EQ / Master / Perf): tapping the XY pad area no longer dismisses the sheet — `.pattern-sheet.mobile` lost `position: absolute` / `z-index: 51` and was painted below the backdrop
+
+### Changed
+- Harden npm supply chain defenses
+- Bump vite group, svelte, astro 6.3.7, @astrojs/mdx 5.0.6, @astrojs/starlight 0.39.2
+
 ## [0.4.2] - 2026-05-15
 
 ### Fixed
