@@ -172,7 +172,7 @@
                 : ['MONO', 'POLY']}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="mode-row" onpointerdown={() => knobChange(p, (modeVal + 1) % (maxMode + 1))}>
+            <div class="mode-row" onpointerdown={() => knobChange(p, ((modeVal + 1) % (maxMode + 1)) / maxMode)}>
               <span class="mode-label">{modeLabels[modeVal] ?? 'MONO'}</span>
               <span class="mode-switch" class:on={modeVal >= 1}><span class="mode-thumb"></span></span>
             </div>
