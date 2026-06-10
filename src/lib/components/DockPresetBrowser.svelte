@@ -158,6 +158,24 @@
     if (renaming) return
     renamingId = null
   }
+
+  // Tap-vs-scroll detection for items in the scrollable .picker-list.
+  // onclick alone fires on release even after a swipe — blocks scrolling on mobile.
+  let tapStartX = 0
+  let tapStartY = 0
+  const TAP_THRESHOLD = 10
+
+  function recordTapStart(e: PointerEvent) {
+    tapStartX = e.clientX
+    tapStartY = e.clientY
+  }
+
+  function tryFireTap(e: PointerEvent, action: () => void) {
+    if (Math.abs(e.clientX - tapStartX) < TAP_THRESHOLD &&
+        Math.abs(e.clientY - tapStartY) < TAP_THRESHOLD) {
+      action()
+    }
+  }
 </script>
 
 {#if showPresets}
@@ -228,13 +246,16 @@
             </div>
           {:else}
             <button class="picker-item" class:selected={currentPreset === preset.name}
-              onpointerdown={() => isUserPreset(preset) ? handlePresetTap(preset) : selectPreset(preset)}
+              onpointerdown={recordTapStart}
+              onpointerup={(e) => tryFireTap(e, () => isUserPreset(preset) ? handlePresetTap(preset) : selectPreset(preset))}
             >
               {#if preset.category}<span class="picker-cat-tag">{CATEGORY_LABELS[preset.category] ?? preset.category.toUpperCase()}</span>{/if}
               <span class="picker-name">{preset.name}</span>
               {#if isUserPreset(preset)}
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <span class="preset-del" onpointerdown={(e) => { e.stopPropagation(); handleDeletePreset(preset) }}
+                <span class="preset-del"
+                  onpointerdown={(e) => { e.stopPropagation(); recordTapStart(e) }}
+                  onpointerup={(e) => { e.stopPropagation(); tryFireTap(e, () => handleDeletePreset(preset)) }}
                   data-tip="Delete preset" data-tip-ja="プリセットを削除"
                 >✕</span>
               {/if}
