@@ -618,7 +618,12 @@
   }
 
   .pattern-sheet.mobile {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     top: 25%;
+    z-index: 51;
   }
 
   .sheet-handle {
