@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>inboil v1 — Mobile Edge Config Popup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="mockups.css">
+  <style>
+    /* Edge popup — small overlay next to long-pressed edge */
+    .edge-popup {
+      position: absolute;
+      width: 220px;
+      background: var(--color-bg);
+      border: 1px solid var(--lz-border-strong);
+      box-shadow: 0 6px 16px var(--lz-bg-press);
+      display: flex;
+      flex-direction: column;
+    }
+    .edge-popup .ep-title {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--lz-divider);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lz-text-bright);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .edge-popup .ep-title .sub {
+      font-size: var(--fs-min);
+      color: var(--lz-text-mid);
+      font-weight: 600;
+    }
+    .ep-row {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 1px solid var(--lz-divider);
+      font-size: var(--fs-sm);
+      letter-spacing: 0.06em;
+      color: var(--lz-text-strong);
+      text-transform: uppercase;
+    }
+    .ep-row:last-child { border-bottom: none; }
+    .ep-toggle {
+      display: flex;
+      gap: 0;
+    }
+    .ep-toggle button {
+      padding: 4px 10px;
+      border: 1px solid var(--lz-border-strong);
+      background: var(--color-bg);
+      color: var(--lz-text-strong);
+      font-family: var(--font-data);
+      font-size: var(--fs-min);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 0;
+      margin-right: -1px;
+    }
+    .ep-toggle button.active {
+      background: var(--color-fg);
+      color: var(--color-bg);
+      border-color: var(--color-fg);
+    }
+    .ep-action {
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font-data);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-danger);
+      border-bottom: 1px solid var(--lz-divider);
+    }
+    .ep-action:last-child { border-bottom: none; }
+
+    /* Highlight on selected edge */
+    .selected-edge {
+      stroke: var(--color-fg) !important;
+      stroke-width: 2.5 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="device">
+    <header class="m-header">
+      <div class="h-title">SCENE 1<span class="chevron">▾</span></div>
+      <div class="h-bpm">
+        <span class="h-bpm-val">120</span>
+        <span class="h-bpm-label">BPM</span>
+      </div>
+      <div class="h-transport">
+        <button class="btn-t playing">▶</button>
+        <button class="btn-t">■</button>
+        <button class="btn-rec">●</button>
+      </div>
+      <button class="btn-menu">⋯</button>
+    </header>
+
+    <div class="m-canvas">
+      <svg class="edges" viewBox="0 0 390 788" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="currentColor"/>
+          </marker>
+          <marker id="arrow-sel" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="var(--color-fg)"/>
+          </marker>
+        </defs>
+        <!-- Edge for DRUM→KICK is selected (long-pressed) -->
+        <line class="selected-edge" x1="108" y1="60" x2="276" y2="60"
+              stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow-sel)"/>
+        <line x1="108" y1="160" x2="276" y2="160" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" style="opacity: 0.4;"/>
+        <line x1="108" y1="260" x2="276" y2="260" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)" style="opacity: 0.4;"/>
+      </svg>
+
+      <div class="node pattern" style="left: 12px; top: 16px;">
+        <div class="name">DRUM<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell playing"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+      </div>
+      <div class="node instrument kick" style="left: 282px; top: 16px;">
+        <div class="name">KICK<span class="badge">DRUM</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>VOL .78</span><span>C2</span></div>
+      </div>
+      <div class="node pattern dim" style="left: 12px; top: 116px;">
+        <div class="name">BASS<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+        </div>
+      </div>
+      <div class="node instrument bass dim" style="left: 282px; top: 116px;">
+        <div class="name">BASS<span class="badge">303</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>VOL .62</span><span>A1</span></div>
+      </div>
+      <div class="node pattern dim" style="left: 12px; top: 216px;">
+        <div class="name">LEAD<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+        </div>
+      </div>
+      <div class="node instrument lead dim" style="left: 282px; top: 216px;">
+        <div class="name">LEAD<span class="badge">WT</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>VOL .54</span><span>E4</span></div>
+      </div>
+
+      <!-- Edge config popup, positioned near edge midpoint -->
+      <div class="edge-popup" style="left: 84px; top: 96px;">
+        <div class="ep-title">
+          <span>EDGE</span>
+          <span class="sub">DRUM → KICK</span>
+        </div>
+        <div class="ep-row">
+          <span>MUTE</span>
+          <div class="ep-toggle">
+            <button>OFF</button>
+            <button class="active">ON</button>
+          </div>
+        </div>
+        <div class="ep-row">
+          <span>MERGE</span>
+          <div class="ep-toggle">
+            <button class="active">UNION</button>
+            <button>FILL</button>
+          </div>
+        </div>
+        <div class="ep-row">
+          <span>LABEL</span>
+          <span style="color: var(--lz-text-mid); font-weight: 400;">backbone</span>
+        </div>
+        <button class="ep-action">DISCONNECT</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">v1 / mockups / mobile-edge-config.html — edge long-pressed, config popup</div>
+</body>
+</html>

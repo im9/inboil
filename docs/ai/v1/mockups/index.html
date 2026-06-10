@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>inboil v1 — Mockup Storyboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    body {
+      margin: 0;
+      background: #1a1a1a;
+      color: rgba(255,255,255,0.85);
+      font-family: var(--font-data);
+      padding: 32px 24px 64px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      max-width: 1400px;
+      margin: 0 auto 32px;
+      text-align: center;
+    }
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 36px;
+      letter-spacing: 0.04em;
+      color: #fff;
+      margin: 0 0 8px;
+    }
+    .page-sub {
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+    }
+
+    .section {
+      max-width: 1400px;
+      margin: 0 auto 64px;
+    }
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      color: #fff;
+      letter-spacing: 0.04em;
+      margin: 0;
+    }
+    .section-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.05em;
+    }
+
+    /* Mockup card (frame + label + iframe) */
+    .mockup-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mockup-frame {
+      background: #0d0d0d;
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .mockup-frame iframe {
+      display: block;
+      border: none;
+      transform-origin: top left;
+      pointer-events: none;
+    }
+    /* Mobile portrait at 0.5 scale: 390×844 → 195×422 */
+    .mockup-frame.m-portrait {
+      width: 220px;
+      height: 446px;
+    }
+    .mockup-frame.m-portrait iframe {
+      width: 422px;
+      height: 880px;
+      transform: scale(0.52);
+    }
+    /* Mobile landscape at 0.4 scale: 844×390 → 338×156 */
+    .mockup-frame.m-landscape {
+      width: 360px;
+      height: 200px;
+    }
+    .mockup-frame.m-landscape iframe {
+      width: 900px;
+      height: 460px;
+      transform: scale(0.4);
+    }
+    /* Desktop at 0.45 scale: 1440×900 → 648×405 */
+    .mockup-frame.d-wide {
+      width: 720px;
+      height: 470px;
+    }
+    .mockup-frame.d-wide iframe {
+      width: 1500px;
+      height: 960px;
+      transform: scale(0.48);
+    }
+
+    .mockup-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.85);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .mockup-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.04em;
+      max-width: 220px;
+    }
+    .mockup-link {
+      font-size: 10px;
+      color: rgba(140,200,255,0.7);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+    }
+    .mockup-link:hover { color: rgba(140,200,255,1); }
+
+    /* ── Mobile flow grid ── */
+    .flow {
+      display: grid;
+      grid-template-columns: 220px 80px repeat(5, 220px);
+      gap: 16px;
+      align-items: start;
+    }
+    .flow .arrow-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: center;
+      padding-top: 200px;
+    }
+    .gesture {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.55);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .gesture .arrow {
+      font-size: 18px;
+      color: rgba(255,255,255,0.35);
+    }
+    .gesture .target {
+      font-size: 9px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.08em;
+    }
+
+    /* Section: special-case mockups laid in row */
+    .row {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    /* Footer */
+    .foot {
+      max-width: 1400px;
+      margin: 64px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.06em;
+    }
+    .foot a {
+      color: rgba(140,200,255,0.7);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1 class="page-title">inboil v1 — Mockup Storyboard</h1>
+    <div class="page-sub">scene-centric mobile redesign · ADR 133 · static HTML pictures</div>
+  </div>
+
+  <!-- ── Section 1: Mobile primary + 5 drill-downs ────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Mobile flows</h2>
+      <span class="section-desc">primary surface + tap-driven transitions</span>
+    </div>
+
+    <div class="flow">
+      <!-- Primary -->
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-primary.html"></iframe>
+        </div>
+        <div class="mockup-label">PRIMARY</div>
+        <div class="mockup-sub">scene-centric, always-playing canvas</div>
+        <a class="mockup-link" href="mobile-primary.html" target="_blank">open ↗</a>
+      </div>
+
+      <!-- Arrows column: 5 gestures going right -->
+      <div class="arrow-col">
+        <div class="gesture"><span>TAP KICK</span><span class="arrow">→</span><span class="target">instrument</span></div>
+        <div class="gesture"><span>TAP DRUM</span><span class="arrow">→</span><span class="target">pattern</span></div>
+        <div class="gesture"><span>TAP +</span><span class="arrow">→</span><span class="target">palette</span></div>
+        <div class="gesture"><span>TAP DRIFT</span><span class="arrow">→</span><span class="target">generative</span></div>
+        <div class="gesture"><span>HOLD EDGE</span><span class="arrow">→</span><span class="target">config</span></div>
+      </div>
+
+      <!-- 5 drill-down states -->
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-instrument-detail.html"></iframe>
+        </div>
+        <div class="mockup-label">INSTRUMENT DETAIL</div>
+        <div class="mockup-sub">voice picker, knobs, sends, fed-by sources</div>
+        <a class="mockup-link" href="mobile-instrument-detail.html" target="_blank">open ↗</a>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-pattern-detail.html"></iframe>
+        </div>
+        <div class="mockup-label">PATTERN DETAIL</div>
+        <div class="mockup-sub">step grid in bottom sheet, STEP / VEL / CHNC tabs</div>
+        <a class="mockup-link" href="mobile-pattern-detail.html" target="_blank">open ↗</a>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-palette-open.html"></iframe>
+        </div>
+        <div class="mockup-label">PALETTE OPEN</div>
+        <div class="mockup-sub">Pattern / Instrument / Drift / Cascade / Snap / Sweep</div>
+        <a class="mockup-link" href="mobile-palette-open.html" target="_blank">open ↗</a>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-generative-detail.html"></iframe>
+        </div>
+        <div class="mockup-label">GENERATIVE DETAIL</div>
+        <div class="mockup-sub">Drift register, 4-verb randomizer, knobs</div>
+        <a class="mockup-link" href="mobile-generative-detail.html" target="_blank">open ↗</a>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-edge-config.html"></iframe>
+        </div>
+        <div class="mockup-label">EDGE CONFIG</div>
+        <div class="mockup-sub">mute, merge mode, label, disconnect</div>
+        <a class="mockup-link" href="mobile-edge-config.html" target="_blank">open ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section 2: V1 novelty — fan-in ──────────────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">V1 novelty: fan-in</h2>
+      <span class="section-desc">multiple sources route to one instrument (was structurally impossible)</span>
+    </div>
+
+    <div class="row">
+      <div class="mockup-card">
+        <div class="mockup-frame m-portrait">
+          <iframe src="mobile-fan-in.html"></iframe>
+        </div>
+        <div class="mockup-label">FAN-IN</div>
+        <div class="mockup-sub">Backbone + Fills + Drift → KICK. Notes stack via polyphony. Per-edge mute/solo in detail view.</div>
+        <a class="mockup-link" href="mobile-fan-in.html" target="_blank">open ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section 3: Orientation — landscape ──────────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Orientation</h2>
+      <span class="section-desc">landscape unlocks denser layout, more nodes visible</span>
+    </div>
+
+    <div class="row">
+      <div class="mockup-card">
+        <div class="mockup-frame m-landscape">
+          <iframe src="mobile-landscape.html"></iframe>
+        </div>
+        <div class="mockup-label">MOBILE LANDSCAPE</div>
+        <div class="mockup-sub">844 × 390 — 3 rows with middle generative column</div>
+        <a class="mockup-link" href="mobile-landscape.html" target="_blank">open ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section 4: Desktop ──────────────────────────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Desktop</h2>
+      <span class="section-desc">1440 × 900 — matrix sidebar + scene canvas + dock panel</span>
+    </div>
+
+    <div class="row">
+      <div class="mockup-card">
+        <div class="mockup-frame d-wide">
+          <iframe src="desktop-scene.html"></iframe>
+        </div>
+        <div class="mockup-label">DESKTOP SCENE</div>
+        <div class="mockup-sub">free node placement, dock detail right, matrix strip left, full AppHeader on top</div>
+        <a class="mockup-link" href="desktop-scene.html" target="_blank">open ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    All values trace to <a href="tokens.css">tokens.css</a> (mirroring src/app.css) or the project spacing set {4,6,8,10,12,16}.
+    Display-tier values (BPM size, device dimensions) are marked with /* display: ... */ comments.
+    See <a href="../mobile.md">../mobile.md</a> for the design spec these mockups implement.
+  </div>
+</body>
+</html>

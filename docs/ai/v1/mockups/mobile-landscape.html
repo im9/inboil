@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>inboil v1 — Mobile Landscape</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="mockups.css">
+  <style>
+    /* Landscape: 844 × 390 (rotated iPhone 14 Pro) */
+    .device.landscape {
+      width: 844px;
+      height: 390px;
+    }
+    .device.landscape .m-canvas {
+      height: calc(390px - 56px);
+    }
+    .device.landscape .m-canvas svg.edges {
+      /* viewBox handled inline; landscape canvas 844 × 334 */
+    }
+  </style>
+</head>
+<body>
+  <div class="device landscape">
+    <header class="m-header">
+      <div class="h-title">SCENE 1<span class="chevron">▾</span></div>
+      <div class="h-bpm">
+        <span class="h-bpm-val">120</span>
+        <span class="h-bpm-label">BPM</span>
+      </div>
+      <div class="h-transport">
+        <button class="btn-t playing">▶</button>
+        <button class="btn-t">■</button>
+        <button class="btn-rec">●</button>
+      </div>
+      <button class="btn-menu">⋯</button>
+    </header>
+
+    <div class="m-canvas">
+      <!--
+        Landscape layout: more nodes visible side-by-side.
+        Source column at x=16, instrument column at x=730.
+        Vertical spacing tighter (gap 8 instead of 12) → 4 rows fit in 334.
+        Drift wraps to a second column at x=178.
+      -->
+      <svg class="edges" viewBox="0 0 844 334" preserveAspectRatio="none">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="currentColor"/>
+          </marker>
+          <marker id="arrow-gen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="var(--tool-turing)"/>
+          </marker>
+          <marker id="arrow-tnz" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="var(--tool-tonnetz)"/>
+          </marker>
+        </defs>
+        <!-- 4 patterns to instruments -->
+        <line x1="112" y1="44"  x2="724" y2="44"  stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="112" y1="140" x2="724" y2="140" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="112" y1="236" x2="724" y2="236" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- Drift → LEAD instrument -->
+        <path d="M 278,140 C 400,140 600,140 724,116" fill="none"
+              stroke="var(--tool-turing)" stroke-width="1.5" marker-end="url(#arrow-gen)"/>
+        <!-- Cascade → LEAD pattern -->
+        <path d="M 278,236 C 200,236 100,236 100,212"
+              fill="none" stroke="var(--tool-tonnetz)" stroke-width="1.5" marker-end="url(#arrow-tnz)"/>
+      </svg>
+
+      <!-- Row 1 -->
+      <div class="node pattern" style="left: 16px; top: 4px;">
+        <div class="name">DRUM<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell playing"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+      </div>
+      <div class="node instrument kick" style="left: 732px; top: 4px;">
+        <div class="name">KICK<span class="badge">DRUM</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>.78</span><span>C2</span></div>
+      </div>
+
+      <!-- Row 2: with Drift in middle column -->
+      <div class="node pattern" style="left: 16px; top: 100px;">
+        <div class="name">BASS<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+        </div>
+      </div>
+      <div class="node generative" style="left: 182px; top: 100px;">
+        <div class="name">DRIFT<span class="badge">TM</span></div>
+        <div class="bits">
+          <div class="bit on"></div><div class="bit"></div>
+          <div class="bit on current"></div><div class="bit on"></div>
+          <div class="bit"></div><div class="bit on"></div>
+          <div class="bit"></div><div class="bit on"></div>
+        </div>
+        <div class="meta"><span>LEN 8</span><span>.60</span></div>
+      </div>
+      <div class="node instrument bass" style="left: 732px; top: 100px;">
+        <div class="name">BASS<span class="badge">303</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>.62</span><span>A1</span></div>
+      </div>
+
+      <!-- Row 3: with Cascade in middle -->
+      <div class="node pattern" style="left: 16px; top: 196px;">
+        <div class="name">LEAD<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+        </div>
+      </div>
+      <div class="node cascade" style="left: 182px; top: 196px;">
+        <div class="name">CASCADE<span class="badge">TNZ</span></div>
+        <div class="bits">
+          <div class="bit on"></div><div class="bit on"></div><div class="bit on"></div>
+          <div class="bit"></div><div class="bit on"></div><div class="bit"></div>
+        </div>
+        <div class="meta"><span>P·L·R</span><span>2 bars</span></div>
+      </div>
+      <div class="node instrument lead" style="left: 732px; top: 196px;">
+        <div class="name">LEAD<span class="badge">WT</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>.54</span><span>E4</span></div>
+      </div>
+
+      <button class="add-btn" title="add node">+</button>
+    </div>
+  </div>
+
+  <div class="label">v1 / mockups / mobile-landscape.html — landscape 844 × 390, denser layout fits 6+ nodes</div>
+</body>
+</html>

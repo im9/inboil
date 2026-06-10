@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>inboil v1 — Desktop Scene</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="mockups.css">
+  <style>
+    body {
+      align-items: flex-start;
+      padding: 16px;
+    }
+
+    .desktop {
+      width: 1440px;  /* display: standard laptop width */
+      height: 900px;  /* display: standard laptop height */
+      background: var(--color-bg);
+      color: var(--color-fg);
+      border: 1px solid #2c2c2c;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      font-family: var(--font-data);
+    }
+
+    /* Top bar (matches AppHeader .app-header desktop) */
+    .d-topbar {
+      height: 40px;
+      background: var(--color-fg);
+      color: var(--color-bg);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 12px;
+      border-bottom: 1px solid var(--dz-divider);
+    }
+    .d-logo {
+      width: 18px;
+      height: 18px;
+      background:
+        linear-gradient(135deg, #a3a145 50%, rgba(163,161,69,0.5) 50%);
+    }
+    .d-brand {
+      font-size: var(--fs-md);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--color-bg);
+      text-transform: uppercase;
+    }
+    .d-version {
+      font-size: var(--fs-min);
+      font-weight: 700;
+      padding: 0 4px;
+      border: 1px solid var(--dz-border-mid);
+      color: var(--dz-transport-border);
+    }
+    .d-cpu {
+      margin-left: auto;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      font-size: var(--fs-sm);
+      letter-spacing: 0.08em;
+      color: var(--dz-text-dim);
+    }
+    .d-cpu-dots { display: flex; gap: 2px; }
+    .d-cpu-dot { width: 4px; height: 8px; background: var(--dz-bg-active); }
+    .d-cpu-dot.lit { background: rgba(163,161,69,0.55); }
+    .d-sys-btns {
+      display: flex;
+      gap: 4px;
+    }
+    .d-sys-btn {
+      border: 1.5px solid var(--dz-btn-border);
+      background: var(--dz-divider);
+      color: var(--dz-text-mid);
+      padding: 4px 10px;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-data);
+      border-radius: 0;
+    }
+
+    /* Sub-bar (matches AppHeader .sub-header desktop) */
+    .d-subbar {
+      height: 64px;
+      background: var(--color-fg);
+      color: var(--color-bg);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--dz-divider);
+    }
+    .d-bpm {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .d-bpm-val {
+      font-family: var(--font-data);
+      font-size: 18px; /* display: BPM (matches AppHeader desktop convention) */
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--color-bg);
+      min-width: 3ch;
+    }
+    .d-bpm-label {
+      font-size: var(--fs-sm);
+      letter-spacing: 0.1em;
+      color: var(--dz-text-dim);
+      text-transform: uppercase;
+    }
+    .d-transport {
+      display: flex;
+      gap: 4px;
+    }
+    .d-btn-t {
+      width: 40px;
+      height: 28px;
+      border: 1px solid var(--dz-transport-border);
+      background: transparent;
+      color: var(--color-bg);
+      font-family: var(--font-data);
+      font-size: var(--fs-lg);
+      border-radius: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .d-btn-t.playing { background: var(--color-bg); color: var(--color-fg); }
+    .d-btn-rec {
+      padding: 4px 10px;
+      border: 1px solid var(--dz-transport-border);
+      background: transparent;
+      color: var(--dz-text-mid);
+      font-family: var(--font-data);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border-radius: 0;
+    }
+    .d-sep {
+      width: 1px;
+      height: 28px;
+      background: var(--dz-bg-active);
+    }
+    .d-view-tabs {
+      display: flex;
+      gap: 4px;
+    }
+    .d-view-tab {
+      border: 1.5px solid var(--dz-btn-border);
+      background: var(--dz-divider);
+      color: var(--dz-text-mid);
+      padding: 4px 14px;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-family: var(--font-data);
+      border-radius: 0;
+    }
+    .d-view-tab.active {
+      background: var(--dz-bg-press);
+      color: var(--dz-text-bright);
+      border-color: var(--dz-transport-border);
+    }
+    .d-perf-btns {
+      display: flex;
+      gap: 4px;
+    }
+    .d-perf-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--color-salmon);
+      background: transparent;
+      color: var(--color-salmon);
+      font-family: var(--font-data);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      border-radius: 0;
+    }
+
+    /* Main area: matrix | canvas | dock */
+    .d-main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left: pattern matrix strip (matches MatrixView scale) */
+    .d-matrix {
+      width: 60px;
+      border-right: 1px solid var(--lz-border);
+      padding: 8px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      overflow-y: auto;
+      background: var(--color-bg);
+    }
+    .d-matrix .m-cell {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 1px solid var(--lz-text-hint);
+      background: var(--color-bg);
+    }
+    .d-matrix .m-cell.has-data { background: var(--color-olive); border-color: var(--color-olive); }
+    .d-matrix .m-cell.selected { border-width: 2px; border-color: var(--color-fg); }
+    .d-matrix .m-cell.playing { border-color: var(--color-olive); animation: cell-pulse var(--beat) ease-in-out infinite alternate; }
+
+    /* Center: scene canvas (free placement, larger area) */
+    .d-canvas {
+      flex: 1;
+      position: relative;
+      background: var(--color-bg);
+      overflow: hidden;
+    }
+    .d-canvas svg.edges {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      color: var(--lz-text-mid);
+    }
+
+    /* Right: dock panel for selected node detail */
+    .d-dock {
+      width: 320px;
+      border-left: 1px solid var(--lz-border);
+      background: var(--color-surface);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .d-dock-title {
+      font-size: var(--fs-lg);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--lz-text-bright);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--lz-divider);
+    }
+    .d-dock-title .sub {
+      font-size: var(--fs-sm);
+      color: var(--lz-text-mid);
+      font-weight: 600;
+    }
+    .d-dock-knobs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .d-knob-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 4px;
+      border: 1px solid var(--lz-border);
+      background: var(--color-bg);
+    }
+    .d-knob {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 1.5px solid var(--lz-text-strong);
+      background: var(--color-bg);
+      position: relative;
+    }
+    .d-knob::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 22px;
+      background: var(--lz-text-bright);
+      left: 50%;
+      top: 4px;
+      transform-origin: 50% 22px;
+      transform: translateX(-50%) rotate(var(--rot, 0deg));
+    }
+    .d-knob-label {
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--lz-text-strong);
+      text-transform: uppercase;
+    }
+    .d-knob-val {
+      font-size: var(--fs-min);
+      color: var(--lz-text-mid);
+      font-variant-numeric: tabular-nums;
+    }
+    .d-dock-sources {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .d-source {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--lz-divider);
+      font-size: var(--fs-sm);
+    }
+    .d-source-tag {
+      font-family: var(--font-data);
+      font-size: var(--fs-min);
+      font-weight: 700;
+      padding: 1px 4px;
+      border: 1px solid var(--lz-border-strong);
+      color: var(--lz-text-strong);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Selected node visual on canvas */
+    .node.d-selected {
+      border-width: 2px;
+      border-color: var(--color-fg);
+      padding: 5px 7px;
+      box-shadow: 0 0 0 4px rgba(30, 32, 40, 0.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop">
+    <!-- Top bar -->
+    <header class="d-topbar">
+      <div class="d-logo"></div>
+      <span class="d-brand">INBOIL</span>
+      <span class="d-version">β</span>
+      <div class="d-cpu">
+        <span>CPU</span>
+        <div class="d-cpu-dots">
+          <div class="d-cpu-dot lit"></div>
+          <div class="d-cpu-dot lit"></div>
+          <div class="d-cpu-dot lit"></div>
+          <div class="d-cpu-dot"></div>
+          <div class="d-cpu-dot"></div>
+          <div class="d-cpu-dot"></div>
+        </div>
+      </div>
+      <div class="d-sys-btns">
+        <button class="d-sys-btn">?</button>
+        <button class="d-sys-btn">SYSTEM</button>
+      </div>
+    </header>
+
+    <!-- Sub bar -->
+    <div class="d-subbar">
+      <div class="d-bpm">
+        <span class="d-bpm-val">120</span>
+        <span class="d-bpm-label">BPM</span>
+      </div>
+      <div class="d-transport">
+        <button class="d-btn-t playing">▶</button>
+        <button class="d-btn-t">■</button>
+        <button class="d-btn-rec">● REC</button>
+      </div>
+      <div class="d-sep"></div>
+      <div class="d-view-tabs">
+        <button class="d-view-tab active">SCENE</button>
+        <button class="d-view-tab">FX</button>
+        <button class="d-view-tab">EQ</button>
+        <button class="d-view-tab">MST</button>
+      </div>
+      <div class="d-sep"></div>
+      <div class="d-perf-btns">
+        <button class="d-perf-btn">FILL</button>
+        <button class="d-perf-btn">REV</button>
+        <button class="d-perf-btn">BRK</button>
+      </div>
+    </div>
+
+    <!-- Main: matrix | canvas | dock -->
+    <div class="d-main">
+      <!-- Left: pattern matrix -->
+      <div class="d-matrix">
+        <div class="m-cell has-data selected"></div>
+        <div class="m-cell has-data playing"></div>
+        <div class="m-cell has-data"></div>
+        <div class="m-cell has-data"></div>
+        <div class="m-cell"></div>
+        <div class="m-cell"></div>
+        <div class="m-cell"></div>
+        <div class="m-cell"></div>
+      </div>
+
+      <!-- Center: scene canvas with ~9 nodes free-placed -->
+      <div class="d-canvas">
+        <svg class="edges" viewBox="0 0 1000 740" preserveAspectRatio="none">
+          <defs>
+            <marker id="d-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0 0, 8 4, 0 8" fill="currentColor"/>
+            </marker>
+            <marker id="d-arrow-gen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0 0, 8 4, 0 8" fill="var(--tool-turing)"/>
+            </marker>
+            <marker id="d-arrow-tnz" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+              <polygon points="0 0, 8 4, 0 8" fill="var(--tool-tonnetz)"/>
+            </marker>
+          </defs>
+
+          <!-- Patterns → Instruments -->
+          <line x1="156" y1="84"  x2="554" y2="84"  stroke="currentColor" stroke-width="1.5" marker-end="url(#d-arrow)"/>
+          <line x1="156" y1="220" x2="554" y2="220" stroke="currentColor" stroke-width="1.5" marker-end="url(#d-arrow)"/>
+          <line x1="156" y1="356" x2="554" y2="356" stroke="currentColor" stroke-width="1.5" marker-end="url(#d-arrow)"/>
+          <line x1="156" y1="492" x2="554" y2="492" stroke="currentColor" stroke-width="1.5" marker-end="url(#d-arrow)"/>
+
+          <!-- DRIFT → LEAD instrument (direct) -->
+          <path d="M 380,628 C 480,628 540,628 554,376"
+                fill="none" stroke="var(--tool-turing)" stroke-width="1.5" marker-end="url(#d-arrow-gen)"/>
+          <!-- CASCADE → LEAD pattern -->
+          <path d="M 380,492 C 280,492 200,492 150,376"
+                fill="none" stroke="var(--tool-tonnetz)" stroke-width="1.5" marker-end="url(#d-arrow-tnz)"/>
+          <!-- SWEEP at top right, global -->
+          <path d="M 820,84 C 820,40 820,40 820,84"
+                fill="none" stroke="var(--tool-sweep)" stroke-width="1.5"/>
+        </svg>
+
+        <!-- 4 Patterns left column (x=60) -->
+        <div class="node pattern" style="left: 60px; top: 40px;">
+          <div class="name">DRUM<span class="badge">PAT</span></div>
+          <div class="grid">
+            <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+            <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell playing"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          </div>
+        </div>
+        <div class="node pattern" style="left: 60px; top: 176px;">
+          <div class="name">BASS<span class="badge">PAT</span></div>
+          <div class="grid">
+            <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+            <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          </div>
+        </div>
+        <div class="node pattern" style="left: 60px; top: 312px;">
+          <div class="name">LEAD<span class="badge">PAT</span></div>
+          <div class="grid">
+            <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell on"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+            <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+          </div>
+        </div>
+        <div class="node pattern" style="left: 60px; top: 448px;">
+          <div class="name">PAD<span class="badge">PAT</span></div>
+          <div class="grid">
+            <div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            <div class="cell on"></div><div class="cell on"></div><div class="cell on"></div><div class="cell on"></div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          </div>
+        </div>
+
+        <!-- 4 Instruments right column (x=556) — LEAD selected -->
+        <div class="node instrument kick" style="left: 556px; top: 40px;">
+          <div class="name">KICK<span class="badge">DRUM</span></div>
+          <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+          <div class="meta"><span>VOL .78</span><span>C2</span></div>
+        </div>
+        <div class="node instrument bass" style="left: 556px; top: 176px;">
+          <div class="name">BASS<span class="badge">303</span></div>
+          <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+          <div class="meta"><span>VOL .62</span><span>A1</span></div>
+        </div>
+        <div class="node instrument lead d-selected" style="left: 556px; top: 312px;">
+          <div class="name">LEAD<span class="badge">WT</span></div>
+          <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+          <div class="meta"><span>VOL .54</span><span>E4</span></div>
+        </div>
+        <div class="node instrument" style="left: 556px; top: 448px;">
+          <div class="name">PAD<span class="badge">FM</span></div>
+          <div class="vu">
+            <div class="bar" style="background: var(--purple-bg); height: 35%;"></div>
+            <div class="bar" style="background: var(--purple-bg); height: 50%;"></div>
+            <div class="bar" style="background: var(--purple-bg); height: 40%;"></div>
+            <div class="bar" style="background: var(--purple-bg); height: 30%;"></div>
+          </div>
+          <div class="meta"><span>VOL .42</span><span>D3</span></div>
+        </div>
+
+        <!-- Generative middle column (x=284) — CASCADE → LEAD pat, DRIFT → LEAD inst -->
+        <div class="node cascade" style="left: 284px; top: 448px;">
+          <div class="name">CASCADE<span class="badge">TNZ</span></div>
+          <div class="bits">
+            <div class="bit on"></div><div class="bit on"></div><div class="bit on"></div>
+            <div class="bit"></div><div class="bit on"></div><div class="bit"></div>
+          </div>
+          <div class="meta"><span>P·L·R</span><span>4 bars</span></div>
+        </div>
+        <div class="node generative" style="left: 284px; top: 584px;">
+          <div class="name">DRIFT<span class="badge">TM</span></div>
+          <div class="bits">
+            <div class="bit on"></div><div class="bit"></div>
+            <div class="bit on current"></div><div class="bit on"></div>
+            <div class="bit"></div><div class="bit on"></div>
+            <div class="bit"></div><div class="bit on"></div>
+          </div>
+          <div class="meta"><span>LEN 8</span><span>LOCK .60</span></div>
+        </div>
+
+        <!-- Sweep node (top right, global) -->
+        <div class="node" style="left: 820px; top: 40px; border-color: var(--tool-sweep);">
+          <div class="name" style="color: var(--tool-sweep);">SWEEP<span class="badge">GBL</span></div>
+          <div style="flex: 1; padding: 4px 0;">
+            <svg viewBox="0 0 80 32" width="100%" height="100%" preserveAspectRatio="none">
+              <path d="M 0,28 C 20,4 40,30 60,8 L 80,16" fill="none"
+                    stroke="var(--tool-sweep)" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="meta"><span>FILT</span><span>4 bars</span></div>
+        </div>
+      </div>
+
+      <!-- Right: dock panel (LEAD detail) -->
+      <div class="d-dock">
+        <div class="d-dock-title">
+          <span>LEAD</span>
+          <span class="sub">WT · SUPER SAW</span>
+        </div>
+
+        <div class="d-dock-knobs">
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: 20deg;"></div>
+            <div class="d-knob-label">VOL</div>
+            <div class="d-knob-val">.54</div>
+          </div>
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: 0deg;"></div>
+            <div class="d-knob-label">PAN</div>
+            <div class="d-knob-val">0</div>
+          </div>
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: -45deg;"></div>
+            <div class="d-knob-label">TUNE</div>
+            <div class="d-knob-val">+12</div>
+          </div>
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: 60deg;"></div>
+            <div class="d-knob-label">CUTOFF</div>
+            <div class="d-knob-val">.68</div>
+          </div>
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: -20deg;"></div>
+            <div class="d-knob-label">RES</div>
+            <div class="d-knob-val">.32</div>
+          </div>
+          <div class="d-knob-cell">
+            <div class="d-knob" style="--rot: 90deg;"></div>
+            <div class="d-knob-label">DECAY</div>
+            <div class="d-knob-val">.80</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: var(--fs-sm); font-weight: 700; letter-spacing: 0.1em; color: var(--lz-text-bright); text-transform: uppercase; margin-bottom: 8px;">
+            FED BY
+          </div>
+          <div class="d-dock-sources">
+            <div class="d-source">
+              <span class="d-source-tag">PAT</span>
+              <span>Lead pat</span>
+            </div>
+            <div class="d-source">
+              <span class="d-source-tag" style="color: var(--tool-turing); border-color: var(--tool-turing);">TM</span>
+              <span>Drift (ornament)</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: var(--fs-sm); font-weight: 700; letter-spacing: 0.1em; color: var(--lz-text-bright); text-transform: uppercase; margin-bottom: 8px;">
+            SENDS
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+            <div style="padding: 6px 0; text-align: center; border: 1px solid var(--color-olive); background: var(--olive-bg-subtle); color: var(--color-olive); font-size: var(--fs-min); font-weight: 700; letter-spacing: 0.06em;">VERB .40</div>
+            <div style="padding: 6px 0; text-align: center; border: 1px solid var(--color-olive); background: var(--olive-bg-subtle); color: var(--color-olive); font-size: var(--fs-min); font-weight: 700;">DLY .25</div>
+            <div style="padding: 6px 0; text-align: center; border: 1px solid var(--lz-border-mid); color: var(--lz-text-mid); font-size: var(--fs-min); font-weight: 700;">GLT 0</div>
+            <div style="padding: 6px 0; text-align: center; border: 1px solid var(--lz-border-mid); color: var(--lz-text-mid); font-size: var(--fs-min); font-weight: 700;">DRV 0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label" style="position: static; margin-top: 16px;">v1 / mockups / desktop-scene.html — 1440 × 900 desktop, modular patch view with dock</div>
+</body>
+</html>

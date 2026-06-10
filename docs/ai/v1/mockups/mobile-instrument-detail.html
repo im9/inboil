@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>inboil v1 — Mobile Instrument Detail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="mockups.css">
+  <style>
+    /* Full-screen instrument detail (replaces canvas content) */
+    .detail-canvas {
+      position: relative;
+      height: calc(844px - 56px);
+      background: var(--color-bg);
+      overflow-y: auto;
+      padding: 16px 16px 80px;
+    }
+
+    /* Voice header */
+    .voice-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--lz-border-strong);
+      background: var(--lz-bg-hover);
+      border-radius: 0;
+    }
+    .voice-icon-big {
+      width: 48px;
+      height: 48px;
+      border: 1.5px solid var(--lz-text-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 28px;
+      color: var(--lz-text-strong);
+    }
+    .voice-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .voice-name {
+      font-family: var(--font-display);
+      font-size: 24px; /* display: instrument name (matches MobileTrackView .track-name 32px tier) */
+      letter-spacing: 0.02em;
+      color: var(--color-fg);
+      line-height: 1;
+    }
+    .voice-meta {
+      display: flex;
+      gap: 8px;
+      font-size: var(--fs-min);
+      letter-spacing: 0.08em;
+      color: var(--lz-text-mid);
+      text-transform: uppercase;
+    }
+    .voice-pick {
+      border: 1px solid var(--lz-border-strong);
+      background: var(--color-bg);
+      color: var(--lz-text-bright);
+      padding: 6px 10px;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: var(--font-data);
+      border-radius: 0;
+    }
+
+    /* Knob grid */
+    .knob-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .knob-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 4px;
+      border: 1px solid var(--lz-border);
+      background: var(--color-bg);
+      border-radius: 0;
+    }
+    .knob {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 1.5px solid var(--lz-text-strong);
+      background: var(--color-bg);
+      position: relative;
+    }
+    .knob::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 24px;
+      background: var(--lz-text-bright);
+      left: 50%;
+      top: 4px;
+      transform-origin: 50% 24px;
+      transform: translateX(-50%) rotate(var(--rot, 0deg));
+    }
+    .knob-label {
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--lz-text-strong);
+      text-transform: uppercase;
+    }
+    .knob-val {
+      font-size: var(--fs-min);
+      color: var(--lz-text-mid);
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Sends row */
+    .sends-row {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid var(--lz-border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-bg);
+    }
+    .sends-label {
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--lz-text-bright);
+      text-transform: uppercase;
+    }
+    .send-pill {
+      flex: 1;
+      padding: 6px 4px;
+      border: 1px solid var(--lz-border-mid);
+      text-align: center;
+      font-size: var(--fs-min);
+      letter-spacing: 0.06em;
+      color: var(--lz-text-mid);
+      background: var(--color-bg);
+      text-transform: uppercase;
+      font-family: var(--font-data);
+    }
+    .send-pill.on {
+      color: var(--lz-text-bright);
+      border-color: var(--color-olive);
+      background: var(--olive-bg-subtle);
+    }
+    .send-pill .send-val {
+      display: block;
+      font-size: var(--fs-min);
+      color: var(--lz-text-hint);
+      margin-top: 2px;
+    }
+    .send-pill.on .send-val { color: var(--color-olive); }
+
+    /* Sources panel — what feeds this instrument */
+    .sources-panel {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px solid var(--lz-border);
+      background: var(--color-bg);
+    }
+    .panel-title {
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--lz-text-bright);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .source-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      border-bottom: 1px solid var(--lz-divider);
+    }
+    .source-row:last-child { border-bottom: none; }
+    .source-icon {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--lz-border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--fs-sm);
+      color: var(--lz-text-strong);
+      flex-shrink: 0;
+    }
+    .source-icon.gen { border-color: var(--tool-turing); color: var(--tool-turing); }
+    .source-name {
+      flex: 1;
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--lz-text-bright);
+      text-transform: uppercase;
+    }
+    .source-toggle {
+      display: flex;
+      gap: 4px;
+    }
+    .source-toggle button {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--lz-text-hint);
+      background: transparent;
+      color: var(--lz-text-hint);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      border-radius: 0;
+      font-family: var(--font-data);
+    }
+    .source-toggle button.on.solo {
+      border-color: var(--color-olive);
+      background: var(--color-olive);
+      color: var(--color-bg);
+    }
+    .source-toggle button.on.mute {
+      border-color: var(--color-salmon);
+      background: var(--color-salmon);
+      color: var(--color-bg);
+    }
+  </style>
+</head>
+<body>
+  <div class="device">
+    <header class="m-header">
+      <button class="h-back">←</button>
+      <div class="h-title">KICK<span class="chevron">▾</span></div>
+      <div class="h-transport">
+        <button class="btn-t playing">▶</button>
+        <button class="btn-t">■</button>
+      </div>
+      <button class="btn-menu">⋯</button>
+    </header>
+
+    <div class="detail-canvas">
+      <!-- Voice block (picker affordance) -->
+      <div class="voice-block">
+        <div class="voice-icon-big">♪</div>
+        <div class="voice-info">
+          <div class="voice-name">KICK</div>
+          <div class="voice-meta">
+            <span>DRUM</span>
+            <span>·</span>
+            <span>808 PRESET</span>
+          </div>
+        </div>
+        <button class="voice-pick">PICK ▾</button>
+      </div>
+
+      <!-- 6 knobs (3×2) -->
+      <div class="knob-grid">
+        <div class="knob-cell">
+          <div class="knob" style="--rot: 60deg;"></div>
+          <div class="knob-label">VOL</div>
+          <div class="knob-val">.78</div>
+        </div>
+        <div class="knob-cell">
+          <div class="knob" style="--rot: 0deg;"></div>
+          <div class="knob-label">PAN</div>
+          <div class="knob-val">0</div>
+        </div>
+        <div class="knob-cell">
+          <div class="knob" style="--rot: -30deg;"></div>
+          <div class="knob-label">TUNE</div>
+          <div class="knob-val">-1</div>
+        </div>
+        <div class="knob-cell">
+          <div class="knob" style="--rot: 110deg;"></div>
+          <div class="knob-label">DECAY</div>
+          <div class="knob-val">.62</div>
+        </div>
+        <div class="knob-cell">
+          <div class="knob" style="--rot: 40deg;"></div>
+          <div class="knob-label">DRIVE</div>
+          <div class="knob-val">.34</div>
+        </div>
+        <div class="knob-cell">
+          <div class="knob" style="--rot: -80deg;"></div>
+          <div class="knob-label">TONE</div>
+          <div class="knob-val">.20</div>
+        </div>
+      </div>
+
+      <!-- Send pills -->
+      <div class="sends-row">
+        <span class="sends-label">SENDS</span>
+        <div class="send-pill on">VERB<span class="send-val">.18</span></div>
+        <div class="send-pill">DELAY<span class="send-val">0</span></div>
+        <div class="send-pill">GLITCH<span class="send-val">0</span></div>
+        <div class="send-pill on">DRIVE<span class="send-val">.12</span></div>
+      </div>
+
+      <!-- Sources panel — fan-in routing -->
+      <div class="sources-panel">
+        <div class="panel-title">FED BY</div>
+        <div class="source-row">
+          <div class="source-icon">▦</div>
+          <div class="source-name">Drum pat</div>
+          <div class="source-toggle">
+            <button class="on solo">S</button>
+            <button>M</button>
+          </div>
+        </div>
+        <div class="source-row">
+          <div class="source-icon gen">◆</div>
+          <div class="source-name">Drift (fills)</div>
+          <div class="source-toggle">
+            <button>S</button>
+            <button>M</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">v1 / mockups / mobile-instrument-detail.html — KICK tile tapped, full-screen detail</div>
+</body>
+</html>

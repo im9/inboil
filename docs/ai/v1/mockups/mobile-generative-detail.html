@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>inboil v1 — Mobile Generative Detail (Drift)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="mockups.css">
+  <style>
+    .gen-sheet { max-height: 520px; }
+
+    /* Big Turing register (full-width) */
+    .gen-register {
+      padding: 16px 12px 8px;
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+    .gen-bit {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--lz-border-strong);
+      background: var(--color-bg);
+      border-radius: 0;
+    }
+    .gen-bit.on { background: var(--tool-turing); border-color: var(--tool-turing); }
+    .gen-bit.current {
+      box-shadow: 0 0 8px var(--lz-text-mid);
+      animation: bit-pulse var(--beat) ease-out infinite;
+    }
+
+    /* RND verb row (the 4-mode randomizer evolution) */
+    .rnd-row {
+      padding: 0 12px 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+    .rnd-btn {
+      padding: 10px 4px;
+      border: 1px solid var(--color-olive);
+      background: var(--color-bg);
+      color: var(--color-olive);
+      font-family: var(--font-data);
+      font-size: var(--fs-sm);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 0;
+    }
+    .rnd-btn.primary {
+      background: var(--color-olive);
+      color: var(--color-bg);
+    }
+
+    /* Param knobs (4 knobs in 4×1 row) */
+    .gen-knobs {
+      padding: 0 12px 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .gen-knob-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 4px;
+      border: 1px solid var(--lz-border);
+      background: var(--color-bg);
+    }
+    .gen-knob {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1.5px solid var(--lz-text-strong);
+      background: var(--color-bg);
+      position: relative;
+    }
+    .gen-knob::after {
+      content: '';
+      position: absolute;
+      width: 2px;
+      height: 18px;
+      background: var(--lz-text-bright);
+      left: 50%;
+      top: 4px;
+      transform-origin: 50% 18px;
+      transform: translateX(-50%) rotate(var(--rot, 0deg));
+    }
+    .gen-knob-label {
+      font-size: var(--fs-min);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--lz-text-strong);
+      text-transform: uppercase;
+    }
+    .gen-knob-val {
+      font-size: var(--fs-min);
+      color: var(--lz-text-mid);
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Routes-to row */
+    .gen-routing {
+      padding: 8px 16px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-top: 1px solid var(--lz-divider);
+      font-size: var(--fs-sm);
+      letter-spacing: 0.06em;
+      color: var(--lz-text-mid);
+      text-transform: uppercase;
+    }
+    .gen-routing strong {
+      color: var(--tool-turing);
+      font-weight: 700;
+    }
+    .gen-routing .arrow { color: var(--lz-text-hint); }
+  </style>
+</head>
+<body>
+  <div class="device">
+    <header class="m-header">
+      <div class="h-title">SCENE 1<span class="chevron">▾</span></div>
+      <div class="h-bpm">
+        <span class="h-bpm-val">120</span>
+        <span class="h-bpm-label">BPM</span>
+      </div>
+      <div class="h-transport">
+        <button class="btn-t playing">▶</button>
+        <button class="btn-t">■</button>
+        <button class="btn-rec">●</button>
+      </div>
+      <button class="btn-menu">⋯</button>
+    </header>
+
+    <div class="m-canvas">
+      <svg class="edges" viewBox="0 0 390 788" preserveAspectRatio="none" style="opacity: 0.4;">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="currentColor"/>
+          </marker>
+          <marker id="arrow-gen" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+            <polygon points="0 0, 8 4, 0 8" fill="var(--tool-turing)"/>
+          </marker>
+        </defs>
+        <line x1="108" y1="60" x2="276" y2="60" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="108" y1="260" x2="276" y2="260" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M 108,360 C 200,360 270,360 276,278"
+              fill="none" stroke="var(--tool-turing)" stroke-width="1.5" marker-end="url(#arrow-gen)"/>
+      </svg>
+
+      <div class="node pattern dim" style="left: 12px; top: 16px;">
+        <div class="name">DRUM<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+      </div>
+      <div class="node instrument kick dim" style="left: 282px; top: 16px;">
+        <div class="name">KICK<span class="badge">DRUM</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>VOL .78</span><span>C2</span></div>
+      </div>
+      <div class="node pattern dim" style="left: 12px; top: 216px;">
+        <div class="name">LEAD<span class="badge">PAT</span></div>
+        <div class="grid">
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell on"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell on"></div><div class="cell"></div>
+          <div class="cell"></div><div class="cell on"></div><div class="cell"></div><div class="cell"></div>
+          <div class="cell on"></div><div class="cell"></div><div class="cell"></div><div class="cell on"></div>
+        </div>
+      </div>
+      <div class="node instrument lead dim" style="left: 282px; top: 216px;">
+        <div class="name">LEAD<span class="badge">WT</span></div>
+        <div class="vu"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div class="meta"><span>VOL .54</span><span>E4</span></div>
+      </div>
+      <!-- DRIFT tile is selected -->
+      <div class="node generative selected" style="left: 12px; top: 316px;">
+        <div class="name">DRIFT<span class="badge">TM</span></div>
+        <div class="bits">
+          <div class="bit on"></div><div class="bit"></div>
+          <div class="bit on current"></div><div class="bit on"></div>
+          <div class="bit"></div><div class="bit on"></div>
+          <div class="bit"></div><div class="bit on"></div>
+        </div>
+        <div class="meta"><span>LEN 8</span><span>LOCK .60</span></div>
+      </div>
+
+      <div class="backdrop"></div>
+
+      <!-- Generative detail sheet -->
+      <div class="sheet gen-sheet">
+        <div class="handle"></div>
+        <div class="sheet-title">
+          <span style="color: var(--tool-turing);">DRIFT</span>
+          <span class="sub">Shift register · 8 steps</span>
+        </div>
+
+        <!-- Full-width Turing register -->
+        <div class="gen-register">
+          <div class="gen-bit on"></div>
+          <div class="gen-bit"></div>
+          <div class="gen-bit on current"></div>
+          <div class="gen-bit on"></div>
+          <div class="gen-bit"></div>
+          <div class="gen-bit on"></div>
+          <div class="gen-bit"></div>
+          <div class="gen-bit on"></div>
+        </div>
+
+        <!-- Randomizer 4-verb row -->
+        <div class="rnd-row">
+          <button class="rnd-btn primary">EVOLVE</button>
+          <button class="rnd-btn">VARIATIONS</button>
+          <button class="rnd-btn">LOCK&amp;ROLL</button>
+          <button class="rnd-btn">STYLE</button>
+        </div>
+
+        <!-- Param knobs -->
+        <div class="gen-knobs">
+          <div class="gen-knob-cell">
+            <div class="gen-knob" style="--rot: 0deg;"></div>
+            <div class="gen-knob-label">LEN</div>
+            <div class="gen-knob-val">8</div>
+          </div>
+          <div class="gen-knob-cell">
+            <div class="gen-knob" style="--rot: 50deg;"></div>
+            <div class="gen-knob-label">LOCK</div>
+            <div class="gen-knob-val">.60</div>
+          </div>
+          <div class="gen-knob-cell">
+            <div class="gen-knob" style="--rot: -40deg;"></div>
+            <div class="gen-knob-label">DENS</div>
+            <div class="gen-knob-val">.45</div>
+          </div>
+          <div class="gen-knob-cell">
+            <div class="gen-knob" style="--rot: 80deg;"></div>
+            <div class="gen-knob-label">RANGE</div>
+            <div class="gen-knob-val">2 oct</div>
+          </div>
+        </div>
+
+        <!-- Routing -->
+        <div class="gen-routing">
+          <span>ROUTES TO</span>
+          <span class="arrow">→</span>
+          <strong>LEAD</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="label">v1 / mockups / mobile-generative-detail.html — Drift tapped, engine config sheet</div>
+</body>
+</html>

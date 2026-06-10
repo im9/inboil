@@ -1,0 +1,397 @@
+/* Shared styles for v1 mockups.
+ * All values trace to:
+ *   (a) a CSS token from tokens.css
+ *   (b) the project spacing set {4, 6, 8, 10, 12, 16} px
+ *   (c) a "display: ..." marked value matching inboil's mobile conventions
+ *       (see MobileTrackView, AppHeader)
+ */
+
+:root {
+  /* BPM-synced animation timing — matches MobileMatrixView pattern.
+   * 120 BPM → 30 / 120 = 0.25s per beat. */
+  --beat: 0.25s;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #1f1f1f; /* display: dark page bg for phone visual separation */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  font-family: var(--font-data);
+  color: var(--color-fg);
+}
+
+/* ── Phone frame (390 × 844, iPhone 14 Pro) ── */
+.device {
+  width: 390px;  /* display: iPhone 14 Pro physical width */
+  height: 844px; /* display: iPhone 14 Pro physical height */
+  border-radius: 44px; /* display: iPhone device corner radius */
+  background: var(--color-bg);
+  box-shadow:
+    0 0 0 4px #2c2c2c, /* display: phone bezel */
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  position: relative;
+  color: var(--color-fg);
+  isolation: isolate;
+}
+
+/* ── Mobile header (dark zone, matches AppHeader.sub-header) ── */
+.m-header {
+  height: 56px;
+  background: var(--color-fg);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 8px 12px;
+  border-bottom: 1px solid var(--dz-divider);
+}
+.m-header .h-title {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--dz-text-bright);
+  text-transform: uppercase;
+}
+.m-header .h-title .chevron {
+  font-size: var(--fs-sm);
+  color: var(--dz-text-dim);
+}
+.m-header .h-back {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--dz-transport-border);
+  background: transparent;
+  color: var(--color-bg);
+  font-size: var(--fs-lg);
+  font-family: var(--font-data);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.m-header .h-bpm {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.m-header .h-bpm-val {
+  font-family: var(--font-data);
+  font-size: 16px; /* display: mobile BPM (matches MobileTrackView) */
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--color-bg);
+  min-width: 3ch;
+  text-align: right;
+}
+.m-header .h-bpm-label {
+  font-size: var(--fs-sm);
+  letter-spacing: 0.1em;
+  color: var(--dz-text-dim);
+  text-transform: uppercase;
+}
+.m-header .h-transport {
+  display: flex;
+  gap: 4px;
+}
+.m-header .btn-t,
+.m-header .btn-rec,
+.m-header .btn-menu {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-data);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+.m-header .btn-t {
+  border: 1px solid var(--dz-transport-border);
+  color: var(--color-bg);
+  font-size: var(--fs-lg);
+}
+.m-header .btn-t.playing {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+.m-header .btn-rec {
+  border: 1px solid var(--dz-transport-border);
+  color: var(--dz-text-mid);
+  font-size: var(--fs-md);
+}
+.m-header .btn-menu {
+  border: none;
+  color: var(--dz-transport-border);
+  font-size: var(--fs-lg);
+  letter-spacing: 0.1em;
+}
+
+/* ── Scene canvas (light zone) ── */
+.m-canvas {
+  position: relative;
+  height: calc(844px - 56px); /* display: device height - header */
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.m-canvas svg.edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: var(--lz-text-mid);
+}
+
+/* ── Node tile (base) ── */
+.node {
+  position: absolute;
+  width: 96px;
+  height: 88px;
+  background: var(--color-bg);
+  border: 1px solid var(--lz-border);
+  border-radius: 0;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-data);
+  color: var(--lz-text-bright);
+}
+.node.dim { opacity: 0.4; }
+.node.selected {
+  border-width: 2px;
+  border-color: var(--color-fg);
+  padding: 5px 7px;
+}
+.node .name {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lz-text-bright);
+}
+.node .badge {
+  font-size: var(--fs-min);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--lz-text-hint);
+  text-transform: uppercase;
+}
+.node .meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-min);
+  letter-spacing: 0.06em;
+  color: var(--lz-text-mid);
+  text-transform: uppercase;
+}
+
+/* Pattern tile (4×4) */
+.node.pattern .grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 2px;
+}
+.node.pattern .grid .cell {
+  background: var(--color-bg);
+  border: 1px solid var(--lz-text-hint);
+  border-radius: 0;
+}
+.node.pattern .grid .cell.on {
+  background: var(--color-olive);
+  border-color: var(--color-olive);
+}
+.node.pattern .grid .cell.playing {
+  background: var(--color-blue);
+  border-color: var(--color-blue);
+  animation: cell-pulse var(--beat) ease-in-out infinite alternate;
+}
+@keyframes cell-pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.4; }
+}
+
+/* Instrument tile */
+.node.instrument {
+  border-color: var(--lz-border-strong);
+}
+.node.instrument .vu {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.node.instrument .vu .bar {
+  flex: 1;
+  background: var(--olive-bg);
+  min-height: 4px;
+}
+.node.kick .vu .bar { animation: vu-kick var(--beat) cubic-bezier(.2,.7,.3,1) infinite; }
+.node.kick .vu .bar:nth-child(2) { animation-delay: calc(var(--beat) * 0.05); }
+.node.kick .vu .bar:nth-child(3) { animation-delay: calc(var(--beat) * 0.10); }
+.node.kick .vu .bar:nth-child(4) { animation-delay: calc(var(--beat) * 0.15); }
+@keyframes vu-kick {
+  0%   { height: 80%; background: var(--olive-border-strong); }
+  30%  { height: 30%; background: var(--olive-bg); }
+  100% { height: 30%; background: var(--olive-bg); }
+}
+.node.bass .vu .bar { animation: vu-bass calc(var(--beat) * 4) ease-in-out infinite; background: var(--salmon-bg); }
+.node.bass .vu .bar:nth-child(2) { animation-delay: calc(var(--beat) * 0.2); }
+.node.bass .vu .bar:nth-child(3) { animation-delay: calc(var(--beat) * 0.4); }
+.node.bass .vu .bar:nth-child(4) { animation-delay: calc(var(--beat) * 0.6); }
+@keyframes vu-bass {
+  0%   { height: 28%; background: var(--salmon-bg); }
+  35%  { height: 65%; background: var(--salmon-border); }
+  70%  { height: 40%; background: var(--salmon-bg); }
+  100% { height: 28%; background: var(--salmon-bg); }
+}
+.node.lead .vu .bar { animation: vu-lead calc(var(--beat) / 2) ease-out infinite; background: var(--blue-bg-subtle); }
+.node.lead .vu .bar:nth-child(2) { animation-delay: calc(var(--beat) * 0.04); }
+.node.lead .vu .bar:nth-child(3) { animation-delay: calc(var(--beat) * 0.08); }
+.node.lead .vu .bar:nth-child(4) { animation-delay: calc(var(--beat) * 0.12); }
+@keyframes vu-lead {
+  0%   { height: 30%; background: var(--blue-bg-subtle); }
+  40%  { height: 70%; background: var(--blue-bg); }
+  100% { height: 28%; background: var(--blue-bg-subtle); }
+}
+
+/* Generative tile (Drift / Turing) */
+.node.generative {
+  border-color: var(--tool-turing);
+}
+.node.generative .name {
+  color: var(--tool-turing);
+}
+.node.generative .bits {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.node.generative .bits .bit {
+  width: 8px;
+  height: 8px;
+  border-radius: 0;
+  background: var(--lz-border);
+  flex-shrink: 0;
+}
+.node.generative .bits .bit.on {
+  background: var(--lz-text-strong);
+}
+.node.generative .bits .bit.current {
+  background: var(--color-bg);
+  box-shadow: 0 0 6px var(--lz-text-mid);
+  animation: bit-pulse var(--beat) ease-out infinite;
+}
+@keyframes bit-pulse {
+  0%   { transform: scale(1.6); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* Cascade (Tonnetz) tile — same structure, different accent */
+.node.cascade {
+  border-color: var(--tool-tonnetz);
+}
+.node.cascade .name { color: var(--tool-tonnetz); }
+
+/* Snap (Quantizer) tile */
+.node.snap {
+  border-color: var(--tool-quantizer);
+}
+.node.snap .name { color: var(--tool-quantizer); }
+
+/* Floating + (palette opener) */
+.add-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--color-olive);
+  background: var(--color-bg);
+  color: var(--color-olive);
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  box-shadow: 0 4px 12px var(--lz-bg-press);
+}
+
+/* Page label outside device */
+.label {
+  position: fixed;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Bottom sheet (used in detail / palette mockups) ── */
+.sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-bg);
+  border-top: 1px solid var(--lz-border-strong);
+  box-shadow: 0 -8px 24px var(--lz-bg-press);
+  display: flex;
+  flex-direction: column;
+}
+.sheet .handle {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  background: var(--lz-border-strong);
+  margin: 8px 0;
+}
+.sheet .sheet-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 16px 12px;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lz-text-bright);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--lz-divider);
+}
+.sheet .sheet-title .sub {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--lz-text-mid);
+  letter-spacing: 0.06em;
+}
+
+/* Backdrop behind sheets/palette */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(30, 32, 40, 0.25);
+  pointer-events: none;
+}
