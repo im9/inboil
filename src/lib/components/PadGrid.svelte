@@ -1,7 +1,7 @@
 <script lang="ts">
   import { song, activeCell, playback, vkbd, pushUndo } from '../state.svelte.ts'
   import { isViewingPlayingPattern } from '../scenePlayback.ts'
-  import { placeNoteBar, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
+  import { addNoteToStep, removeNoteFromStep, trigHasNote } from '../stepActions.ts'
   import { NOTE_NAMES, SCALE_TEMPLATES } from '../constants.ts'
 
   interface Props {
@@ -66,7 +66,7 @@
     if (isNoteActive(note)) {
       removeNoteFromStep(trackId, selectedStep, note)
     } else {
-      placeNoteBar(trackId, selectedStep, note, 1)
+      addNoteToStep(trackId, selectedStep, note)
     }
   }
 
