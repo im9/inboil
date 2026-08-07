@@ -9,11 +9,11 @@
     "deploy": "astro build && npx wrangler pages deploy dist --project-name=inboil-site"
   },
   "dependencies": {
-    "@astrojs/mdx": "~7.0.2",
+    "@astrojs/mdx": "~7.0.5",
     "@astrojs/sitemap": "~3.7.3",
     "@astrojs/starlight": "~0.41.3",
     "@astrojs/svelte": "~9.0.1",
-    "astro": "~7.0.7",
+    "astro": "~7.1.6",
     "gsap": "~3.15.0",
     "svelte": "~5.56.4"
   }
