@@ -24,7 +24,7 @@
     "tauri:build": "cargo tauri build"
   },
   "devDependencies": {
-    "@playwright/test": "~1.62.1",
+    "@playwright/test": "~1.63.0",
     "@sveltejs/vite-plugin-svelte": "~7.3.0",
     "concurrently": "^10.0.5",
     "fake-indexeddb": "~6.2.5",
