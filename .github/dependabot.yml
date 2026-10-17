@@ -4,6 +4,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Match minimum-release-age in .npmrc (7 days): don't propose versions
+    # younger than pnpm is willing to resolve.
+    cooldown:
+      default-days: 7
     groups:
       svelte:
         patterns: ["svelte", "svelte-check", "@sveltejs/*"]
@@ -12,3 +16,11 @@ updates:
       astro:
         patterns: ["astro", "@astrojs/*"]
     open-pull-requests-limit: 5
+
+  # Keeps the SHA-pinned actions in .github/workflows up to date.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
