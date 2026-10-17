@@ -1,2 +1,11 @@
 packages:
   - "site"
+
+# Fail resolution when a package version has weaker publish trust
+# (provenance / trusted publisher) than an earlier-published version —
+# the typical signature of a hijacked maintainer account.
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Published by the maintainer without provenance (Dec 2024), between
+  # attested 4.0.1 and 5.0.0. Pulled in by svelte-check.
+  - 'chokidar@4.0.3'
