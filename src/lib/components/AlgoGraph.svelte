@@ -1,6 +1,6 @@
 <script lang="ts">
   /** FM algorithm routing visualizer (SVG) — shows 4-op carrier/modulator connections */
-  let { algorithm = 0 } = $props<{ algorithm?: number }>()
+  let { algorithm = 0 }: { algorithm?: number } = $props()
 
   const W = 248, H = 48
   const OPR = 9  // operator circle radius
