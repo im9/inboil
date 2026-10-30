@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Compact wavetable waveform visualizer (SVG) */
-  let { position = 0 } = $props<{ position?: number }>()
+  let { position = 0 }: { position?: number } = $props()
 
   const W = 248, H = 36, PAD = 2, SAMPLES = 128
 

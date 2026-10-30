@@ -1,8 +1,8 @@
 <script lang="ts">
   /** Compact ADSR envelope visualizer (SVG) */
-  let { attack = 0.005, decay = 0.3, sustain = 0.5, release = 0.3 } = $props<{
+  let { attack = 0.005, decay = 0.3, sustain = 0.5, release = 0.3 }: {
     attack?: number; decay?: number; sustain?: number; release?: number
-  }>()
+  } = $props()
 
   const W = 248, H = 36, PAD = 2
   const usableW = W - PAD * 2
